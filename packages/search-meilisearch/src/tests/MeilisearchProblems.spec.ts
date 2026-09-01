@@ -5,6 +5,7 @@ import {
   MeilisearchIndexNotFoundProblem,
   MeilisearchInvalidRequestProblem,
   MeilisearchRetryableUpstreamProblem,
+  MeilisearchTaskCanceledProblem,
   MeilisearchTerminalUpstreamProblem,
   MissingMeilisearchConfigProblem,
   normalizeMeilisearchError,
@@ -58,6 +59,24 @@ describe("MeilisearchProblems", () => {
     expect(problem.category).toBe(ProblemCategory.NotFound);
     expect(problem.extensions).toMatchObject({
       indexName: "products",
+      retryable: false,
+    });
+  });
+
+  it("MeilisearchTaskCanceledProblem preserves operation context", () => {
+    const problem = new MeilisearchTaskCanceledProblem({
+      documentId: "document-1",
+      indexName: "products",
+      operation: "indexDocument",
+    });
+
+    expect(problem.code).toBe("search-meilisearch/task-canceled");
+    expect(problem.category).toBe(ProblemCategory.InternalServerError);
+    expect(problem.extensions).toMatchObject({
+      documentId: "document-1",
+      indexName: "products",
+      operation: "indexDocument",
+      provider: "meilisearch",
       retryable: false,
     });
   });

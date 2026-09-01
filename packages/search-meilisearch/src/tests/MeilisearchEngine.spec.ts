@@ -792,6 +792,44 @@ describe("Meilisearch provider conformance", () => {
       );
     });
 
+    it("rejects canceled document tasks with document context", async () => {
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
+      mocks.clientMock.waitForTask.mockResolvedValueOnce({
+        error: null,
+        status: "canceled",
+      });
+
+      await expect(
+        engine.indexDocument("products", { id: "document-1", tenantId: "tenant-1" }),
+      ).rejects.toMatchObject({
+        code: "search-meilisearch/task-canceled",
+        extensions: {
+          documentId: "document-1",
+          indexName: "products",
+          operation: "indexDocument",
+          provider: "meilisearch",
+          retryable: false,
+        },
+      });
+    });
+
+    it("rejects canceled index tasks with index context", async () => {
+      mocks.clientMock.waitForTask.mockResolvedValueOnce({
+        error: null,
+        status: "canceled",
+      });
+
+      await expect(engine.deleteIndex("products")).rejects.toMatchObject({
+        code: "search-meilisearch/task-canceled",
+        extensions: {
+          indexName: "products",
+          operation: "deleteIndex",
+          provider: "meilisearch",
+          retryable: false,
+        },
+      });
+    });
+
     it("fails malformed async task responses while task waiting is enabled", async () => {
       vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
       mocks.indexMock.addDocuments.mockResolvedValueOnce({});

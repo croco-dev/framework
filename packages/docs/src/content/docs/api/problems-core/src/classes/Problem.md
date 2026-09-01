@@ -473,6 +473,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`MeilisearchIndexNotFoundProblem`](/api/search-meilisearch/src/classes/meilisearchindexnotfoundproblem/)
 - [`MeilisearchInvalidRequestProblem`](/api/search-meilisearch/src/classes/meilisearchinvalidrequestproblem/)
 - [`MeilisearchRetryableUpstreamProblem`](/api/search-meilisearch/src/classes/meilisearchretryableupstreamproblem/)
+- [`MeilisearchTaskCanceledProblem`](/api/search-meilisearch/src/classes/meilisearchtaskcanceledproblem/)
 - [`MeilisearchTerminalUpstreamProblem`](/api/search-meilisearch/src/classes/meilisearchterminalupstreamproblem/)
 - [`MissingMeilisearchConfigProblem`](/api/search-meilisearch/src/classes/missingmeilisearchconfigproblem/)
 - [`TenantTokenNotConfiguredProblem`](/api/search-meilisearch/src/classes/tenanttokennotconfiguredproblem/)

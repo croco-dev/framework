@@ -129,6 +129,34 @@ describe("problem-registry.mts", () => {
     });
   });
 
+  it("publishes non-retryable recovery for canceled Meilisearch tasks", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/search-meilisearch/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class MeilisearchTaskCanceledProblem extends Problem {",
+        "  constructor() {",
+        '    super("search-meilisearch/task-canceled", ProblemCategory.InternalServerError);',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+
+    expect(registry.problems[0]?.recovery).toMatchObject({
+      cause: expect.stringContaining("Meilisearch canceled"),
+      userAction: expect.stringContaining("Do not retry automatically"),
+      operatorAction: expect.stringContaining("extensions.operation"),
+      retryability: "not-retryable",
+      redactionPolicy: "operator-only",
+      telemetry: { severity: "error" },
+    });
+  });
+
   it("invalidates stale checks before validating a concurrent generated-state merge candidate", () => {
     const repo = createTempRepo();
     writeProblemFactories(

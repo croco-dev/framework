@@ -26841,6 +26841,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "MeilisearchTaskCanceledProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/MeilisearchProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "MeilisearchTerminalUpstreamProblem",
               "exportKind": "named",
               "source": "./libs/problems/MeilisearchProblems",

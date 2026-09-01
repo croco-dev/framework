@@ -54,6 +54,7 @@ await Context.run({ requestId: "req-1", tenantId: "tenant-1" }, async () => {
 | `MeilisearchInvalidRequestProblem`    | 안전하지 않은 필터/정렬 필드, 빈 index/document id를 나타냅니다. |
 | `MeilisearchIndexNotFoundProblem`     | upstream index-not-found를 안정적인 Problem으로 정규화합니다.    |
 | `MeilisearchRetryableUpstreamProblem` | timeout/429/5xx 등 재시도 가능한 upstream 장애를 나타냅니다.     |
+| `MeilisearchTaskCanceledProblem`      | 취소된 비동기 task를 non-retryable Problem으로 보고합니다.       |
 | `MeilisearchTerminalUpstreamProblem`  | 인증 실패 등 terminal upstream 장애를 나타냅니다.                |
 | `TenantTokenNotConfiguredProblem`     | tenant token 옵션 없이 토큰 발급을 시도할 때 발생합니다.         |
 
@@ -69,7 +70,8 @@ await Context.run({ requestId: "req-1", tenantId: "tenant-1" }, async () => {
   index 생성·삭제와 tenant token 발급은 재실행하지 않습니다.
 - `createIndex`, `indexDocument`, `bulkIndex`, `deleteDocument`, `deleteIndex`는 기본적으로
   Meilisearch task 완료를 기다린 뒤 resolve합니다. 필요하면 `taskWait.enabled: false`로
-  enqueue-only 동작을 선택할 수 있습니다.
+  enqueue-only 동작을 선택할 수 있습니다. 대기 중 task가 취소되면 영향을 받은 operation,
+  index, document 문맥을 포함한 `MeilisearchTaskCanceledProblem`으로 실패합니다.
 - 필터와 정렬 필드는 `A-Z`, `a-z`, 숫자, `_`, `.`, `-`만 허용합니다. 문자열 필터 값은
   quote/backslash를 escape해 tenant filter injection을 막습니다.
 

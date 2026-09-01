@@ -11,6 +11,7 @@ export {
   MeilisearchIndexNotFoundProblem,
   MeilisearchInvalidRequestProblem,
   MeilisearchRetryableUpstreamProblem,
+  MeilisearchTaskCanceledProblem,
   MeilisearchTerminalUpstreamProblem,
   MissingMeilisearchConfigProblem,
   TenantTokenNotConfiguredProblem,

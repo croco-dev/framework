@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 721,
+  problemCount: 722,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -17514,6 +17514,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "search-meilisearch/task-canceled",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#search-meilisearch-task-canceled",
+      recovery: {
+        cause: "Meilisearch canceled the provider task before the requested mutation completed.",
+        userAction:
+          "Do not retry automatically; submit a new mutation only after the cancellation cause is understood and repeating the operation is safe.",
+        operatorAction:
+          "Inspect the Meilisearch task and provider diagnostics using extensions.operation, extensions.indexName, and extensions.documentId, then correct the cancellation cause before reissuing the mutation.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/search-meilisearch/src/libs/problems/MeilisearchProblems.ts",
+          line: 136,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "search-meilisearch/tenant-token-not-configured",
       category: "InternalServerError",
       status: 500,
@@ -17540,7 +17572,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/search-meilisearch/src/libs/problems/MeilisearchProblems.ts",
-          line: 136,
+          line: 155,
           column: 5,
           kind: "problem-constructor",
         },
