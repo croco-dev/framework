@@ -740,6 +740,43 @@ describe("outbound webhook signing and URL policy", () => {
     ).toBe(true);
   });
 
+  it.each([-300, 300])(
+    "verifies signatures within the five-minute replay window at %s seconds",
+    (offsetSeconds) => {
+      const inWindowTimestamp = String(START.getTime() / 1_000 + offsetSeconds);
+
+      expect(
+        verifyOutboundWebhookSignature({
+          body,
+          timestamp: inWindowTimestamp,
+          signature: signOutboundWebhook(body, inWindowTimestamp, ACTIVE_SECRET),
+          secretVersion: "v2",
+          endpoint: ACTIVE_ENDPOINT,
+          secrets: [ACTIVE_SECRET],
+          now: START,
+        }),
+      ).toBe(true);
+    },
+  );
+
+  it.each([
+    { case: "stale", rejectedTimestamp: String(START.getTime() / 1_000 - 301) },
+    { case: "future", rejectedTimestamp: String(START.getTime() / 1_000 + 301) },
+    { case: "malformed", rejectedTimestamp: "not-a-date" },
+  ])("rejects $case signed timestamps outside the replay contract", ({ rejectedTimestamp }) => {
+    expect(
+      verifyOutboundWebhookSignature({
+        body,
+        timestamp: rejectedTimestamp,
+        signature: signOutboundWebhook(body, rejectedTimestamp, ACTIVE_SECRET),
+        secretVersion: "v2",
+        endpoint: ACTIVE_ENDPOINT,
+        secrets: [ACTIVE_SECRET],
+        now: START,
+      }),
+    ).toBe(false);
+  });
+
   it("returns false for an invalid signature without exposing secret material", () => {
     expect(
       verifyOutboundWebhookSignature({
