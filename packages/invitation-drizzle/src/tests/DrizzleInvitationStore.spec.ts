@@ -129,12 +129,17 @@ describe("DrizzleInvitationStore", () => {
     const invitation = createInvitation({
       tenantId: "tenant-1",
       email: "member@croco.dev",
+      expiresAt: new Date("2099-01-01T00:00:00.000Z"),
+    });
+    const orderBy = vi.fn().mockReturnValue({
+      limit: vi.fn().mockResolvedValue([invitation]),
     });
 
     mockDb.select.mockReturnValue({
       from: vi.fn().mockReturnValue({
         where: vi.fn().mockReturnValue({
           limit: vi.fn().mockResolvedValue([invitation]),
+          orderBy,
         }),
       }),
     });
@@ -142,6 +147,17 @@ describe("DrizzleInvitationStore", () => {
     const found = await store.findByTenantAndEmail("tenant-1", "member@croco.dev");
 
     expect(found?.id).toBe("inv-1");
+    expect(orderBy).toHaveBeenCalledTimes(1);
+    const orderExpressions = orderBy.mock.calls[0];
+    expect(orderExpressions).toBeDefined();
+    const orderQueries = orderExpressions?.map((expression) =>
+      new PgDialect().sqlToQuery(expression as SQL),
+    );
+    expect(orderQueries?.map((query) => query.sql)).toEqual([
+      'case when "invitations"."status" = \'pending\' and "invitations"."expires_at" > statement_timestamp() at time zone \'UTC\' then 1 else 0 end desc',
+      '"invitations"."created_at" desc',
+      '"invitations"."id" desc',
+    ]);
   });
 
   it("should return all invitations by tenant", async () => {

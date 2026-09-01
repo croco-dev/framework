@@ -75,6 +75,28 @@ describe("InMemoryInvitationStore", () => {
     expect(invitation?.id).toBe("inv-1");
   });
 
+  it("should prefer a live pending invitation over expired email history", async () => {
+    await store.save(
+      createInvitation({
+        id: "expired-invitation",
+        status: "expired",
+        expiresAt: new Date("2026-01-01T00:00:00.000Z"),
+      }),
+    );
+    await store.save(
+      createInvitation({
+        id: "live-invitation",
+        tokenHash: "hash-2",
+        expiresAt: new Date("2099-01-01T00:00:00.000Z"),
+        createdAt: new Date("2026-01-02T00:00:00.000Z"),
+      }),
+    );
+
+    const invitation = await store.findByTenantAndEmail("tenant-1", "member@croco.dev");
+
+    expect(invitation?.id).toBe("live-invitation");
+  });
+
   it("should return all invitations by tenant", async () => {
     await store.save(createInvitation({ id: "inv-1", tenantId: "tenant-1" }));
     await store.save(createInvitation({ id: "inv-2", tenantId: "tenant-1" }));

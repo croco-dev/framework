@@ -29,13 +29,22 @@ export class InMemoryInvitationStore extends InvitationStore {
   }
 
   async findByTenantAndEmail(tenantId: string, email: string): Promise<Invitation | null> {
-    for (const invitation of this.storage.values()) {
-      if (invitation.tenantId === tenantId && invitation.email === email) {
-        return snapshotInvitation(invitation);
-      }
-    }
+    const now = Date.now();
+    const invitation = [...this.storage.values()]
+      .filter((candidate) => candidate.tenantId === tenantId && candidate.email === email)
+      .sort((left, right) => {
+        const livePendingOrder =
+          Number(right.status === "pending" && right.expiresAt.getTime() > now) -
+          Number(left.status === "pending" && left.expiresAt.getTime() > now);
+        if (livePendingOrder !== 0) {
+          return livePendingOrder;
+        }
 
-    return null;
+        const createdAtOrder = right.createdAt.getTime() - left.createdAt.getTime();
+        return createdAtOrder !== 0 ? createdAtOrder : right.id.localeCompare(left.id);
+      })[0];
+
+    return invitation ? snapshotInvitation(invitation) : null;
   }
 
   async findAllByTenant(tenantId: string): Promise<Invitation[]> {

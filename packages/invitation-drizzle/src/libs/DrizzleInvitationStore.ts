@@ -12,7 +12,7 @@ import {
 // oxlint-disable-next-line typescript/consistent-type-imports
 import type { TxManager } from "@croco/tx-core";
 import type { DrizzleDb } from "@croco/tx-drizzle";
-import { and, count, eq, gt, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
+import { and, count, desc, eq, gt, gte, inArray, isNull, lte, or, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import {
   INVITATION_TOKEN_CIPHER,
@@ -142,6 +142,13 @@ export class DrizzleInvitationStore extends InvitationStore {
       .select()
       .from(invitations)
       .where(and(eq(invitations.tenantId, tenantId), eq(invitations.email, email)))
+      .orderBy(
+        desc(
+          sql<number>`case when ${invitations.status} = 'pending' and ${invitations.expiresAt} > statement_timestamp() at time zone 'UTC' then 1 else 0 end`,
+        ),
+        desc(invitations.createdAt),
+        desc(invitations.id),
+      )
       .limit(1)) as InvitationRow[];
 
     if (result.length === 0) {
