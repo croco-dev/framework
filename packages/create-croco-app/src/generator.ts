@@ -713,7 +713,7 @@ function createGeneratedRuntimeComposition(
       buildTarget: {
         name: "cloudflare-workers-workspace",
         format: "esm",
-        constraints: ["no-node-builtins", "web-standard-apis"],
+        constraints: ["cloudflare-nodejs-compat", "web-standard-apis"],
       },
     };
   }
