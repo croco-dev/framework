@@ -15,6 +15,7 @@ import {
   normalizePolarBillingError,
   PolarCheckoutIdempotencyConflictProblem,
   PolarRetryableUpstreamProblem,
+  PolarSubscriptionNotFoundProblem,
   validatePolarConfig,
 } from "./problems/PolarBillingProblems";
 
@@ -438,8 +439,13 @@ export class PolarBillingGateway implements BillingGateway {
       }
 
       return subscription.cancelAtPeriodEnd;
-    } catch {
-      return false;
+    } catch (error) {
+      const normalized = normalizePolarBillingError(error, "cancelSubscription.reconcile");
+      if (normalized instanceof PolarSubscriptionNotFoundProblem) {
+        return false;
+      }
+
+      throw normalized;
     }
   }
 }
