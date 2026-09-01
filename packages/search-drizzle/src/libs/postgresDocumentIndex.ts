@@ -5,7 +5,9 @@ import { BulkIndexDocumentTooWideProblem } from "./problems/BulkIndexProblems";
 import type { BulkIndexQueryPlan } from "./types";
 
 const DOCUMENT_ID_COLUMN = "id";
+const DOCUMENT_TENANT_ID_FIELD = "tenantId";
 const TENANT_ID_COLUMN = "tenant_id";
+const DOCUMENT_TENANT_FIELDS = new Set([DOCUMENT_TENANT_ID_FIELD, TENANT_ID_COLUMN]);
 const MAX_BULK_INDEX_DOCUMENTS_PER_QUERY = 100;
 const MAX_BULK_INDEX_PARAMETERS_PER_QUERY = 60_000;
 
@@ -24,9 +26,7 @@ export function buildPostgresDocumentUpsertQuery(
   document: SearchDocument,
   tenantId: string,
 ): SQL {
-  const documentEntries = Object.entries(document).filter(
-    ([column]) => column !== TENANT_ID_COLUMN,
-  );
+  const documentEntries = getDocumentEntries(document);
   const insertEntries = [...documentEntries, [TENANT_ID_COLUMN, tenantId] as const];
   const updateColumns = documentEntries
     .map(([column]) => column)
@@ -40,18 +40,13 @@ export function buildPostgresDocumentUpsertQuery(
     insertEntries.map(([, value]) => sql.param(value)),
     sql`, `,
   );
-  const updateChunks = sql.join(
-    updateColumns.map(
-      (column) => sql`${sql.identifier(column)} = EXCLUDED.${sql.identifier(column)}`,
-    ),
-    sql`, `,
-  );
+  const conflictAction = buildConflictAction(updateColumns);
 
   return sql`
     INSERT INTO ${sql.identifier(table)} (${columnChunks})
     VALUES (${valueChunks})
     ON CONFLICT (${sql.identifier(TENANT_ID_COLUMN)}, ${sql.identifier(DOCUMENT_ID_COLUMN)})
-    DO UPDATE SET ${updateChunks}
+    ${conflictAction}
   `;
 }
 
@@ -164,6 +159,7 @@ function buildGroupUpsertQuery(table: string, group: DocumentGroup, tenantId: st
     return sql`(${sql.join([...rowValues, sql.param(tenantId)], sql`, `)})`;
   });
   const updateColumns = group.columns.filter((column) => column !== DOCUMENT_ID_COLUMN);
+  const conflictAction = buildConflictAction(updateColumns);
 
   return sql`
     INSERT INTO ${sql.identifier(table)} (${sql.join(
@@ -172,17 +168,25 @@ function buildGroupUpsertQuery(table: string, group: DocumentGroup, tenantId: st
     )})
     VALUES ${sql.join(values, sql`, `)}
     ON CONFLICT (${sql.identifier(TENANT_ID_COLUMN)}, ${sql.identifier(DOCUMENT_ID_COLUMN)})
-    DO UPDATE SET ${sql.join(
-      updateColumns.map(
-        (column) => sql`${sql.identifier(column)} = EXCLUDED.${sql.identifier(column)}`,
-      ),
-      sql`, `,
-    )}
+    ${conflictAction}
   `;
+}
+
+function buildConflictAction(updateColumns: readonly string[]): SQL {
+  if (updateColumns.length === 0) {
+    return sql`DO NOTHING`;
+  }
+
+  return sql`DO UPDATE SET ${sql.join(
+    updateColumns.map(
+      (column) => sql`${sql.identifier(column)} = EXCLUDED.${sql.identifier(column)}`,
+    ),
+    sql`, `,
+  )}`;
 }
 
 function getDocumentEntries(document: SearchDocument): [string, unknown][] {
   return Object.entries(document)
-    .filter(([column]) => column !== TENANT_ID_COLUMN)
+    .filter(([column]) => !DOCUMENT_TENANT_FIELDS.has(column))
     .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0));
 }

@@ -28,11 +28,11 @@ export function registerStrategyIndexQueryTests(createStrategy: () => SearchStra
       const rendered = renderQuery(query);
 
       expect(rendered.sql).toMatch(/ON CONFLICT \("tenant_id", "id"\)\s+DO UPDATE SET/);
-      expect(rendered.sql).toContain('"tenantId" = EXCLUDED."tenantId"');
+      expect(rendered.sql).not.toContain('"tenantId"');
       expect(rendered.sql).toContain('"title" = EXCLUDED."title"');
       expect(rendered.sql).not.toContain('"tenant_id" = EXCLUDED."tenant_id"');
       expect(rendered.sql).not.toContain('"id" = EXCLUDED."id"');
-      expect(rendered.params).toEqual(["doc-1", "tenant-a", "Newest title", "tenant-a"]);
+      expect(rendered.params).toEqual(["doc-1", "Newest title", "tenant-a"]);
     });
 
     it("keeps identical document ids isolated by tenant", () => {
@@ -54,8 +54,24 @@ export function registerStrategyIndexQueryTests(createStrategy: () => SearchStra
 
       expect(tenantA.sql).toContain('ON CONFLICT ("tenant_id", "id")');
       expect(tenantB.sql).toContain('ON CONFLICT ("tenant_id", "id")');
-      expect(tenantA.params).toEqual(["shared-id", "tenant-a", "tenant-a"]);
-      expect(tenantB.params).toEqual(["shared-id", "tenant-b", "tenant-b"]);
+      expect(tenantA.sql).toMatch(/ON CONFLICT \("tenant_id", "id"\)\s+DO NOTHING/);
+      expect(tenantB.sql).toMatch(/ON CONFLICT \("tenant_id", "id"\)\s+DO NOTHING/);
+      expect(tenantA.params).toEqual(["shared-id", "tenant-a"]);
+      expect(tenantB.params).toEqual(["shared-id", "tenant-b"]);
+    });
+
+    it("does not let a document tenant override the active tenant", () => {
+      const query = createStrategy().buildIndexQuery(
+        "documents",
+        { id: "doc-1", tenantId: "tenant-b", title: "Tenant scoped" },
+        "tenant-a",
+      );
+
+      const rendered = renderQuery(query);
+
+      expect(rendered.sql).not.toContain('"tenantId"');
+      expect(rendered.params).toEqual(["doc-1", "Tenant scoped", "tenant-a"]);
+      expect(rendered.params).not.toContain("tenant-b");
     });
 
     it("uses the active tenant instead of a document-supplied tenant_id column", () => {
@@ -68,7 +84,8 @@ export function registerStrategyIndexQueryTests(createStrategy: () => SearchStra
       const rendered = renderQuery(query);
 
       expect(rendered.sql.match(/"tenant_id"/g)).toHaveLength(2);
-      expect(rendered.params).toEqual(["doc-1", "tenant-a", "tenant-a"]);
+      expect(rendered.sql).not.toContain('"tenantId"');
+      expect(rendered.params).toEqual(["doc-1", "tenant-a"]);
       expect(rendered.params).not.toContain("tenant-b");
     });
 
@@ -100,8 +117,8 @@ export function registerStrategyIndexQueryTests(createStrategy: () => SearchStra
           [
             {
               id: "doc-1",
-              tenantId: "tenant-a",
-              tenant_id: "untrusted-tenant",
+              tenantId: "untrusted-camel-tenant",
+              tenant_id: "untrusted-snake-tenant",
               title: "First",
             },
             { id: "doc-2", tenantId: "tenant-a", title: "Second" },
@@ -116,17 +133,17 @@ export function registerStrategyIndexQueryTests(createStrategy: () => SearchStra
 
       expect(rendered.sql).toMatch(/VALUES\s+\([^)]*\),\s*\([^)]*\)/);
       expect(rendered.sql).toContain('ON CONFLICT ("tenant_id", "id")');
+      expect(rendered.sql).not.toContain('"tenantId"');
       expect(rendered.params).toEqual([
         "doc-1",
-        "tenant-a",
         "First",
         "tenant-a",
         "doc-2",
-        "tenant-a",
         "Second",
         "tenant-a",
       ]);
-      expect(rendered.params).not.toContain("untrusted-tenant");
+      expect(rendered.params).not.toContain("untrusted-camel-tenant");
+      expect(rendered.params).not.toContain("untrusted-snake-tenant");
       expect(plans[0]?.documentIndexes).toEqual([0, 1]);
     });
 
@@ -153,14 +170,34 @@ export function registerStrategyIndexQueryTests(createStrategy: () => SearchStra
       expect(rendered.sql).toContain('"summary"');
       expect(rendered.params).toEqual([
         "doc-1",
-        "tenant-a",
         "Title",
         "tenant-a",
         "doc-2",
         "Summary",
         "tenant-a",
-        "tenant-a",
       ]);
+    });
+
+    it("uses a no-op conflict action for identity-only documents", () => {
+      const strategy = createStrategy();
+      const plans =
+        strategy.buildBulkIndexQueryPlans?.(
+          "documents",
+          [
+            { id: "doc-1", tenantId: "tenant-a" },
+            { id: "doc-2", tenantId: "tenant-a" },
+          ],
+          "tenant-a",
+        ) ?? [];
+
+      expect(plans).toHaveLength(1);
+      const rendered = renderQuery(
+        plans[0]?.query as ReturnType<SearchStrategy["buildIndexQuery"]>,
+      );
+
+      expect(rendered.sql).toMatch(/ON CONFLICT \("tenant_id", "id"\)\s+DO NOTHING/);
+      expect(rendered.sql).not.toContain('"tenantId"');
+      expect(rendered.params).toEqual(["doc-1", "tenant-a", "doc-2", "tenant-a"]);
     });
 
     it("coalesces repeated document identities with last-write field semantics", () => {
@@ -185,7 +222,7 @@ export function registerStrategyIndexQueryTests(createStrategy: () => SearchStra
         plans[0]?.query as ReturnType<SearchStrategy["buildIndexQuery"]>,
       );
 
-      expect(rendered.params).toEqual(["shared", "Preserved", "tenant-a", "Latest", "tenant-a"]);
+      expect(rendered.params).toEqual(["shared", "Preserved", "Latest", "tenant-a"]);
       expect(plans[0]?.documentIndexes).toEqual([0, 1]);
     });
   });
