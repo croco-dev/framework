@@ -1743,13 +1743,13 @@ function validateProviderWrite(
   }
 
   const normalizedToken = normalizeTokenInStates(token, state.moduleStates);
-  if (
-    moduleName === APPLICATION_MODULE_NAME &&
-    state.providerReplacements.some((replacement) =>
-      areEquivalentTokens(replacement.provider.provide, normalizedToken),
-    )
-  ) {
-    return;
+  const replacement = getProviderReplacement(state, normalizedToken);
+  if (replacement) {
+    if (moduleName === APPLICATION_MODULE_NAME) {
+      return;
+    }
+
+    throw new ModuleProviderWriteProblem(moduleName, normalizedToken, APPLICATION_MODULE_NAME);
   }
   if (hasEquivalentToken(state.moduleStates.get(moduleName)?.providers, normalizedToken)) {
     return;

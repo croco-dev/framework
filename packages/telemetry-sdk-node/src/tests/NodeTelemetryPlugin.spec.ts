@@ -16,13 +16,13 @@ describe("nodeTelemetry", () => {
     await TelemetryRuntime.reset();
   });
 
-  function createDisabledApplication() {
+  function createDisabledApplication(serviceName = "module-owned-telemetry") {
     const application = createApplicationRuntime(
       defineCrocoApplication({
         name: "telemetry-application",
         imports: [
           nodeTelemetry({
-            serviceName: "module-owned-telemetry",
+            serviceName,
             environment: "test",
             enabled: false,
             diagnostics: { requirement: "required" },
@@ -51,6 +51,45 @@ describe("nodeTelemetry", () => {
     expect(telemetry.isInitialized()).toBe(false);
 
     await application.dispose();
+
+    expect(telemetry.getConfig()).toBeNull();
+  });
+
+  it("keeps compatible telemetry active until every ApplicationRuntime owner is disposed", async () => {
+    const firstApplication = createDisabledApplication();
+    const secondApplication = createDisabledApplication();
+    const telemetry = TelemetryRuntime.getInstance();
+
+    await firstApplication.initialize();
+    await secondApplication.initialize();
+
+    await firstApplication.dispose();
+
+    expect(telemetry.getConfig()).toEqual({
+      serviceName: "module-owned-telemetry",
+      environment: "test",
+      enabled: false,
+    });
+    expect(secondApplication.get(TELEMETRY_RUNTIME_TOKEN)).toBe(telemetry);
+
+    await secondApplication.dispose();
+
+    expect(telemetry.getConfig()).toBeNull();
+  });
+
+  it("rejects an incompatible ApplicationRuntime without releasing the active owner", async () => {
+    const firstApplication = createDisabledApplication();
+    const incompatibleApplication = createDisabledApplication("incompatible-telemetry");
+    const telemetry = TelemetryRuntime.getInstance();
+
+    await firstApplication.initialize();
+
+    await expect(incompatibleApplication.initialize()).rejects.toThrow(
+      "cannot apply a different configuration",
+    );
+    expect(telemetry.getConfig()).toMatchObject({ serviceName: "module-owned-telemetry" });
+
+    await firstApplication.dispose();
 
     expect(telemetry.getConfig()).toBeNull();
   });

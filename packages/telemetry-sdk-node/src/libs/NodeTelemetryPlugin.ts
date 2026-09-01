@@ -14,6 +14,7 @@ import {
 
 const NODE_TELEMETRY_MODULE_NAME = "@croco/telemetry-sdk-node";
 const TELEMETRY_DIAGNOSTICS_CONTRIBUTION_ID = "@croco/telemetry-sdk-node/telemetry";
+let activeNodeTelemetryLifecycleOwners = 0;
 
 export const TELEMETRY_RUNTIME_TOKEN = TelemetryRuntime as unknown as ModuleToken<TelemetryRuntime>;
 
@@ -25,6 +26,7 @@ export const nodeTelemetry: PluginFactory<NodeTelemetryPluginOptions> = (options
   const { diagnostics, ...config } = options;
   const telemetryRuntime = TelemetryRuntime.getInstance();
   const diagnosticsProvider = new TelemetryDiagnosticsProvider(diagnostics);
+  let ownsTelemetryLifecycle = false;
 
   return defineCrocoPlugin({
     metadata: {
@@ -85,9 +87,21 @@ export const nodeTelemetry: PluginFactory<NodeTelemetryPluginOptions> = (options
         ],
         start: async () => {
           await telemetryRuntime.init(config);
+          if (!ownsTelemetryLifecycle) {
+            activeNodeTelemetryLifecycleOwners += 1;
+            ownsTelemetryLifecycle = true;
+          }
         },
         shutdown: async () => {
-          await telemetryRuntime.shutdown();
+          if (!ownsTelemetryLifecycle) {
+            return;
+          }
+
+          ownsTelemetryLifecycle = false;
+          activeNodeTelemetryLifecycleOwners -= 1;
+          if (activeNodeTelemetryLifecycleOwners === 0) {
+            await telemetryRuntime.shutdown();
+          }
         },
       }),
     ],

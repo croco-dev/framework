@@ -11,8 +11,9 @@ pnpm add @croco/telemetry-sdk-node
 ## Canonical module plugin
 
 `nodeTelemetry()` is the canonical application-owned integration. It provides the existing `TelemetryRuntime` singleton
-through the module graph, starts it with `ApplicationRuntime.initialize()`, contributes deterministic telemetry diagnostics,
-and shuts it down when the application runtime is disposed.
+through the module graph, starts it with `ApplicationRuntime.initialize()`, and contributes deterministic telemetry
+diagnostics. Application runtimes with the same configuration share lifecycle ownership; the singleton shuts down only
+after the final owner is disposed, while conflicting configurations fail explicitly.
 
 ```typescript
 import { createApplicationRuntime, defineCrocoApplication } from "@croco/framework-module";

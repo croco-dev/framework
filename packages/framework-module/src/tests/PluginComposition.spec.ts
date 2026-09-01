@@ -265,6 +265,46 @@ describe("plugin composition", () => {
     }
   });
 
+  it("rejects owner setup writes to application-replaced providers", async () => {
+    const replacedToken = new Token<string>("setup-overwrite-replacement");
+    const owner = defineCrocoModule({
+      name: "setup-overwrite-owner",
+      providers: [{ provide: replacedToken, useValue: "owner" }],
+      exports: [replacedToken],
+      setup: (ctx) => {
+        ctx.set(replacedToken, "overwritten");
+      },
+    });
+    const runtime = createApplicationRuntime(
+      defineCrocoApplication({
+        imports: [owner],
+        providerReplacements: [
+          {
+            provider: { provide: replacedToken, useValue: "application" },
+            replaces: ["setup-overwrite-owner"],
+          },
+        ],
+      }),
+    );
+
+    await expect(runtime.initialize()).rejects.toMatchObject({
+      code: "framework-module/lifecycle-failed",
+      cause: expect.objectContaining({
+        code: "framework-module/provider-write-not-owned",
+        extensions: {
+          declaredOwner: "<application>",
+          moduleName: "setup-overwrite-owner",
+          token: "setup-overwrite-replacement",
+        },
+      }),
+      extensions: {
+        moduleName: "setup-overwrite-owner",
+        phase: "setup",
+      },
+    });
+    await runtime.dispose();
+  });
+
   it("preserves dependency setup ordering when an application has replacements", async () => {
     const setupBoundToken = new Token<string>("setup-bound");
     const consumerToken = new Token<string>("setup-consumer");
