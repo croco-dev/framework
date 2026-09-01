@@ -72,9 +72,25 @@ export class DrizzleRoleRegistry implements AbstractRoleRegistry {
   /**
    * 역할에 연결된 권한 목록을 반환합니다.
    */
-  getRolePermissions(role: string): string[] {
+  getRolePermissions(role: string, visited: Set<string> = new Set()): string[] {
+    if (visited.has(role)) {
+      return [];
+    }
+    visited.add(role);
+
     const definition = this.roleDefinitions.get(role);
-    return definition?.permissions ?? [];
+    if (!definition) {
+      return [];
+    }
+
+    const permissions = new Set(definition.permissions);
+    for (const inheritedRole of definition.inherits ?? []) {
+      for (const permission of this.getRolePermissions(inheritedRole, visited)) {
+        permissions.add(permission);
+      }
+    }
+
+    return Array.from(permissions);
   }
 
   /**

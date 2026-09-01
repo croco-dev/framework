@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { RoleRegistry } from "@croco/auth-core";
 import { DrizzleRoleRegistry } from "../libs/DrizzleRoleRegistry";
 import type { userRoles as userRolesSchema } from "../schema";
 
@@ -75,6 +76,117 @@ describe("DrizzleRoleRegistry", () => {
 
       const permissions = registry.getRolePermissions("admin");
       expect(permissions).toEqual(["read", "write", "delete"]);
+    });
+
+    it("should include inherited permissions", () => {
+      registry.registerRole("viewer", { name: "viewer", permissions: ["posts:read"] });
+      registry.registerRole("editor", {
+        name: "editor",
+        permissions: ["posts:write"],
+        inherits: ["viewer"],
+      });
+
+      expect(registry.getRolePermissions("editor")).toEqual(["posts:write", "posts:read"]);
+    });
+
+    it("should include transitively inherited permissions", () => {
+      registry.registerRole("viewer", { name: "viewer", permissions: ["posts:read"] });
+      registry.registerRole("editor", {
+        name: "editor",
+        permissions: ["posts:write"],
+        inherits: ["viewer"],
+      });
+      registry.registerRole("admin", {
+        name: "admin",
+        permissions: ["posts:delete"],
+        inherits: ["editor"],
+      });
+
+      expect(registry.getRolePermissions("admin")).toEqual([
+        "posts:delete",
+        "posts:write",
+        "posts:read",
+      ]);
+    });
+
+    it("should deduplicate permissions inherited through multiple roles", () => {
+      registry.registerRole("viewer", {
+        name: "viewer",
+        permissions: ["posts:read", "posts:comment"],
+      });
+      registry.registerRole("editor", {
+        name: "editor",
+        permissions: ["posts:read", "posts:write"],
+        inherits: ["viewer"],
+      });
+
+      expect(registry.getRolePermissions("editor")).toEqual([
+        "posts:read",
+        "posts:write",
+        "posts:comment",
+      ]);
+    });
+
+    it("should terminate cyclic inheritance while preserving effective permissions", () => {
+      registry.registerRole("role-a", {
+        name: "role-a",
+        permissions: ["permission:a"],
+        inherits: ["role-b"],
+      });
+      registry.registerRole("role-b", {
+        name: "role-b",
+        permissions: ["permission:b"],
+        inherits: ["role-a"],
+      });
+
+      expect(registry.getRolePermissions("role-a")).toEqual(["permission:a", "permission:b"]);
+      expect(registry.getRolePermissions("role-b")).toEqual(["permission:b", "permission:a"]);
+    });
+
+    it("should match auth-core for diamond inheritance", () => {
+      const reference = new RoleRegistry();
+      const roles = [
+        { name: "viewer", permissions: ["posts:read"] },
+        { name: "author", permissions: ["posts:write"], inherits: ["viewer"] },
+        { name: "editor", permissions: ["posts:edit"], inherits: ["viewer"] },
+        {
+          name: "admin",
+          permissions: ["posts:manage"],
+          inherits: ["author", "editor"],
+        },
+      ];
+
+      for (const role of roles) {
+        reference.register(role);
+        registry.registerRole(role.name, role);
+      }
+
+      for (const role of roles) {
+        expect(registry.getRolePermissions(role.name)).toEqual(
+          reference.getRolePermissions(role.name),
+        );
+      }
+    });
+
+    it("should honor a seeded visited set like auth-core", () => {
+      const reference = new RoleRegistry();
+      const viewer = { name: "viewer", permissions: ["posts:read"] };
+      const editor = {
+        name: "editor",
+        permissions: ["posts:write"],
+        inherits: ["viewer"],
+      };
+
+      reference.register(viewer);
+      reference.register(editor);
+      registry.registerRole(viewer.name, viewer);
+      registry.registerRole(editor.name, editor);
+
+      const visited = new Set(["viewer"]);
+      expect(registry.getRolePermissions("editor", new Set(visited))).toEqual(["posts:write"]);
+      expect(registry.getRolePermissions("editor", new Set(visited))).toEqual(
+        reference.getRolePermissions("editor", new Set(visited)),
+      );
     });
   });
 
