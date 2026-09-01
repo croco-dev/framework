@@ -11,7 +11,7 @@ title: "RestControllerSourceProblems"
 
 ### controllerTypeScriptDiagnostics
 
-> `readonly` **controllerTypeScriptDiagnostics**: (`controllerPatterns`, `diagnostics`) => `Error`
+> `readonly` **controllerTypeScriptDiagnostics**: (`controllerPatterns`, `diagnostics`) => [`Problem`](/api/problems-core/src/classes/problem/)
 
 #### Parameters
 
@@ -25,13 +25,13 @@ readonly [`ControllerTypeScriptDiagnostic`](/api/protocol-codegen/src/type-alias
 
 #### Returns
 
-`Error`
+[`Problem`](/api/problems-core/src/classes/problem/)
 
 ---
 
 ### noControllersFound
 
-> `readonly` **noControllersFound**: (`controllerPatterns`) => `Error`
+> `readonly` **noControllersFound**: (`controllerPatterns`) => [`Problem`](/api/problems-core/src/classes/problem/)
 
 #### Parameters
 
@@ -41,4 +41,4 @@ readonly [`ControllerTypeScriptDiagnostic`](/api/protocol-codegen/src/type-alias
 
 #### Returns
 
-`Error`
+[`Problem`](/api/problems-core/src/classes/problem/)

@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import * as path from "node:path";
+import type { Problem } from "@croco/problems-core";
 import {
   type Constructor,
   discoverControllerConstructors,
@@ -62,11 +63,11 @@ export type LoadRestControllerSourcesOptions = {
 };
 
 export type RestControllerSourceProblems = {
-  readonly noControllersFound: (controllerPatterns: string) => Error;
+  readonly noControllersFound: (controllerPatterns: string) => Problem;
   readonly controllerTypeScriptDiagnostics: (
     controllerPatterns: string,
     diagnostics: readonly ControllerTypeScriptDiagnostic[],
-  ) => Error;
+  ) => Problem;
 };
 
 export type RestControllerSourceModule = {

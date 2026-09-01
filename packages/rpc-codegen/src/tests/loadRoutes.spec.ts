@@ -201,6 +201,7 @@ describe("loadRoutes", () => {
             module: "CommonJS",
             target: "ES2020",
           },
+          include: ["src/controllers/**/*.ts", "src/ImportedUserDto.ts"],
         }),
       );
       fs.writeFileSync(path.join(sourceDir, "ImportedUserDto.ts"), getLocalSupportSource());

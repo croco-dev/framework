@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { Problem, ProblemCategory, type ProblemExtensions } from "@croco/problems-core";
 import { buildContractGraph } from "@croco/protocols-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -14,20 +15,34 @@ const SHARED_FIXTURE_ROOT = new URL(
   import.meta.url,
 );
 const LOAD_CONTROLLER_TIMEOUT_MS = 120_000;
+class TestControllerSourceProblem extends Problem {
+  constructor(
+    code: string,
+    category: ProblemCategory,
+    detail: string,
+    extensions?: ProblemExtensions,
+  ) {
+    super(code, category, detail, extensions ? { extensions } : undefined);
+  }
+}
+
 const TEST_SOURCE_PROBLEMS = {
   noControllersFound: () =>
-    Object.assign(new Error("No controllers"), {
-      code: "test-codegen/no-rest-controllers-found",
-      status: 400,
-    }),
+    new TestControllerSourceProblem(
+      "test-codegen/no-rest-controllers-found",
+      ProblemCategory.BadRequest,
+      "No controllers",
+    ),
   controllerTypeScriptDiagnostics: (_controllerPatterns, diagnostics) =>
-    Object.assign(new Error("TypeScript diagnostics"), {
-      code: "test-codegen/controller-typescript-diagnostics",
-      extensions: {
+    new TestControllerSourceProblem(
+      "test-codegen/controller-typescript-diagnostics",
+      ProblemCategory.ValidationError,
+      "TypeScript diagnostics",
+      {
         crocoCode: CONTROLLER_TYPESCRIPT_DIAGNOSTIC_CODE,
         diagnostics,
       },
-    }),
+    ),
 } satisfies RestControllerSourceProblems;
 
 let tempRoot!: string;
@@ -99,6 +114,52 @@ describe("loadRestControllerSources", () => {
           ],
         },
       });
+    },
+    LOAD_CONTROLLER_TIMEOUT_MS,
+  );
+
+  it(
+    "ignores TypeScript errors from node_modules dependencies",
+    async () => {
+      const dependencyDir = path.join(tempRoot, "node_modules", "broken-dependency");
+      const controllerPath = path.join(sourceDir, "LocatedController.ts");
+      fs.mkdirSync(dependencyDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(dependencyDir, "package.json"),
+        JSON.stringify({
+          name: "broken-dependency",
+          version: "1.0.0",
+          main: "index.ts",
+          types: "index.ts",
+        }),
+      );
+      fs.writeFileSync(
+        path.join(dependencyDir, "index.ts"),
+        "export const dependencyValue: string = 123;\n",
+      );
+      fs.writeFileSync(
+        controllerPath,
+        readSharedFixture("LocatedController.ts.fixture").replace(
+          "import 'reflect-metadata';",
+          "import 'reflect-metadata';\nimport { dependencyValue } from 'broken-dependency';\nvoid dependencyValue;",
+        ),
+      );
+
+      const beforeEmitProblem = new TestControllerSourceProblem(
+        "test-codegen/before-emit",
+        ProblemCategory.InternalServerError,
+        "Reached beforeEmit",
+      );
+
+      await expect(
+        loadRestControllerSources({
+          controllers: controllerPath,
+          problems: TEST_SOURCE_PROBLEMS,
+          beforeEmit: async () => {
+            throw beforeEmitProblem;
+          },
+        }),
+      ).rejects.toBe(beforeEmitProblem);
     },
     LOAD_CONTROLLER_TIMEOUT_MS,
   );
