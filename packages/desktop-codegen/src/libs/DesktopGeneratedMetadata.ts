@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 
+import type { Problem } from "@croco/problems-core";
 import type { DesktopContractGraphV1, DesktopContractHandshakeV1 } from "@croco/protocols-desktop";
 
 export type DesktopGeneratedSurfaceMetadataVersion = "croco.desktop-generated-surface.v1";
@@ -45,7 +46,7 @@ export function createDesktopGeneratedSourcePath(
 
 export function assertUniqueDesktopGeneratedSourcePaths(
   artifacts: readonly { readonly windowId: string; readonly relativePath: string }[],
-  createProblem: (detail: string) => Error,
+  createProblem: (detail: string) => Problem,
 ): void {
   const windowByPath = new Map<string, string>();
   for (const artifact of artifacts) {

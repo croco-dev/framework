@@ -99,9 +99,7 @@ describe("DesktopMainRegistrationMetadata", () => {
 
     expect(stalePreload).toBeDefined();
     expect(staleRenderer).toBeDefined();
-    if (!stalePreload || !staleRenderer) {
-      throw new Error("Stale generated surface metadata is missing");
-    }
+    if (!stalePreload || !staleRenderer) return;
     expect(compareDesktopContractHandshakes(expected, stalePreload)).toEqual({
       compatible: false,
       code: "DESKTOP_SEMANTIC_HASH_MISMATCH",
@@ -115,9 +113,8 @@ describe("DesktopMainRegistrationMetadata", () => {
   it("rejects semantic graph changes that retain a stale hash", () => {
     const graph = createGraph(false);
     const command = graph.commands[0];
-    if (!command) {
-      throw new Error("Fixture command is missing");
-    }
+    expect(command).toBeDefined();
+    if (!command) return;
     const forged = {
       ...graph,
       commands: graph.commands.map((candidate) =>

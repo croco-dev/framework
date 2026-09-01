@@ -8,7 +8,11 @@ import {
   desktop,
   stringifyDesktopContractGraph,
 } from "../index";
-import type { DesktopContractGraphSourceLocations, DesktopContractHandshakeV1 } from "../index";
+import type {
+  DesktopContractGraphEffect,
+  DesktopContractGraphSourceLocations,
+  DesktopContractHandshakeV1,
+} from "../index";
 
 const POSIX_SOURCES: DesktopContractGraphSourceLocations = {
   app: { path: "/home/runner/framework/apps/editor/src/desktop.ts", line: 10 },
@@ -148,6 +152,38 @@ describe("DesktopContractGraph", () => {
     };
 
     expect(computeDesktopContractSemanticHash(reordered)).toBe(graph.semanticHash);
+  });
+
+  it("normalizes delimiter-colliding effect inventories when recomputing semantic hashes", () => {
+    const graph = compileDesktopContractGraph(createFixtureApp(false));
+    const command = graph.commands[0];
+    expect(command).toBeDefined();
+    if (!command) return;
+
+    const effects: readonly DesktopContractGraphEffect[] = [
+      { namespace: "filesystem", access: "read", methods: ["a.b", "c"], grantIds: [] },
+      { namespace: "filesystem", access: "read", methods: ["a", "b.c"], grantIds: [] },
+      { namespace: "filesystem", access: "read", methods: ["same"], grantIds: ["x.y", "z"] },
+      { namespace: "filesystem", access: "read", methods: ["same"], grantIds: ["x", "y.z"] },
+    ];
+    const withEffects = {
+      ...graph,
+      commands: graph.commands.map((candidate) =>
+        candidate.id === command.id ? { ...candidate, effects } : candidate,
+      ),
+    };
+    const withReversedEffects = {
+      ...withEffects,
+      commands: withEffects.commands.map((candidate) =>
+        candidate.id === command.id
+          ? { ...candidate, effects: [...candidate.effects].reverse() }
+          : candidate,
+      ),
+    };
+
+    expect(computeDesktopContractSemanticHash(withReversedEffects)).toBe(
+      computeDesktopContractSemanticHash(withEffects),
+    );
   });
 
   it("compares handshake metadata by handshake version, graph version, then semantic hash", () => {

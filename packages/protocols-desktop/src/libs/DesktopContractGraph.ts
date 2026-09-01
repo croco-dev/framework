@@ -1284,7 +1284,16 @@ function compareEffects(
   return (
     compareCodeUnits(left.namespace, right.namespace) ||
     compareCodeUnits(left.access, right.access) ||
-    compareCodeUnits(left.methods.join("."), right.methods.join(".")) ||
-    compareCodeUnits(left.grantIds.join("."), right.grantIds.join("."))
+    compareStringArrays(left.methods, right.methods) ||
+    compareStringArrays(left.grantIds, right.grantIds)
   );
+}
+
+function compareStringArrays(left: readonly string[], right: readonly string[]): number {
+  const sharedLength = Math.min(left.length, right.length);
+  for (let index = 0; index < sharedLength; index += 1) {
+    const result = compareCodeUnits(left[index] ?? "", right[index] ?? "");
+    if (result !== 0) return result;
+  }
+  return left.length - right.length;
 }

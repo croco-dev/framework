@@ -1,8 +1,9 @@
 import { ProblemCategory } from "@croco/problems-core";
 import { computeDesktopContractSemanticHash } from "@croco/protocols-desktop";
+import type { Problem } from "@croco/problems-core";
 import type { DesktopContractGraphProblem, DesktopContractGraphV1 } from "@croco/protocols-desktop";
 
-type GenerationProblemFactory = (detail: string) => Error;
+type GenerationProblemFactory = (detail: string) => Problem;
 
 export function assertDesktopContractGraphGeneratable(
   graph: DesktopContractGraphV1,
