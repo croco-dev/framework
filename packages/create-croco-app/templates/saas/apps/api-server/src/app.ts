@@ -32,6 +32,7 @@ const diGraphRootControllers: readonly Constructor[] = controllers;
 
 export type CreateCrocoAppOptions = {
   readonly additionalMiddlewares?: readonly MiddlewareFunction[];
+  readonly hostPlatform?: "node" | "lambda" | "cloudflare-workers";
 };
 
 export type RuntimeOwnedCrocoApp = CrocoApp & {
@@ -51,10 +52,11 @@ export function createCrocoApp(options: CreateCrocoAppOptions = {}): RuntimeOwne
     Container.set(LOGGER_TOKEN, new BootstrapLogger());
     Container.set(EntitlementManager, applicationSaasRuntime.entitlementManager);
 
-    const rateLimiter = new RateLimiter(
-      new SlidingWindowInMemoryStore(),
-      new RateLimitKeyBuilder(["ip"]),
-    );
+    const rateLimitStore =
+      options.hostPlatform === "cloudflare-workers"
+        ? new SlidingWindowInMemoryStore({ pruneIntervalMs: 0 })
+        : new SlidingWindowInMemoryStore();
+    const rateLimiter = new RateLimiter(rateLimitStore, new RateLimitKeyBuilder(["ip"]));
 
     return bindApplicationRuntime(
       createApp({

@@ -121,7 +121,10 @@ async function generateProject(
   mergeInto(join(TEMPLATES_DIR, "blank"), targetDir, vars);
 
   if (options.preset === "saas" || options.preset === "ai-saas") {
-    mergeInto(join(TEMPLATES_DIR, "saas"), targetDir, vars);
+    mergeInto(join(TEMPLATES_DIR, "saas"), targetDir, {
+      ...vars,
+      saasCloudflare: options.saasProviderProfile === "saas-cloudflare",
+    });
     if (options.preset === "ai-saas") {
       mergeInto(join(TEMPLATES_DIR, "ai-saas"), targetDir, vars);
     }
@@ -488,6 +491,7 @@ function writeSaasProviderPackageDependencies(
   const packageJsonPath = join(targetDir, "apps", "api-server", "package.json");
   const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
     dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
     main?: string;
     scripts?: Record<string, string>;
   };
@@ -500,11 +504,22 @@ function writeSaasProviderPackageDependencies(
   packageJson.dependencies = dependencies;
   const hostArtifact = SAAS_HOST_ARTIFACTS[manifest.profile.runtimeTarget];
   packageJson.main = hostArtifact.entry;
-  packageJson.scripts = {
-    ...packageJson.scripts,
-    build: hostArtifact.build,
-  };
+  const scripts: Record<string, string> = { ...packageJson.scripts, build: hostArtifact.build };
+  delete scripts["dev"];
+  if (manifest.profile.runtimeTarget === "node") {
+    scripts["dev"] = "tsx watch src/index.ts";
+  } else if (manifest.profile.runtimeTarget === "cloudflare-workers") {
+    scripts["dev:worker"] = "wrangler dev --config wrangler.toml";
+    scripts["build:worker"] = "wrangler deploy --dry-run --outdir dist/wrangler";
+    packageJson.devDependencies = {
+      ...packageJson.devDependencies,
+      wrangler: "^4.73.0",
+    };
+  }
+  packageJson.scripts = scripts;
   writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
+
+  writeSaasRootHostScripts(targetDir, manifest.profile.runtimeTarget);
 
   for (const artifact of Object.values(SAAS_HOST_ARTIFACTS)) {
     if (artifact.source !== hostArtifact.source) {
@@ -518,7 +533,38 @@ function writeSaasProviderPackageDependencies(
   }
   if (manifest.profile.runtimeTarget === "cloudflare-workers") {
     rmSync(join(targetDir, "apps", "api-server", "src", "telemetry.ts"), { force: true });
+  } else {
+    rmSync(join(targetDir, "apps", "api-server", "wrangler.toml"), { force: true });
   }
+}
+
+function writeSaasRootHostScripts(
+  targetDir: string,
+  runtimeTarget: SaasProviderProfileManifest["profile"]["runtimeTarget"],
+): void {
+  const packageJsonPath = join(targetDir, "package.json");
+  const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
+    scripts?: Record<string, string>;
+  };
+  const scripts: Record<string, string> = {
+    ...packageJson.scripts,
+    "build:api": "pnpm --filter ./apps/api-server build",
+  };
+
+  if (runtimeTarget === "node") {
+    packageJson.scripts = scripts;
+  } else if (runtimeTarget === "lambda") {
+    delete scripts["dev:api"];
+    scripts["build:lambda"] = "pnpm --filter ./apps/api-server build";
+    packageJson.scripts = scripts;
+  } else {
+    delete scripts["dev:api"];
+    scripts["dev:worker"] = "pnpm --filter ./apps/api-server dev:worker";
+    scripts["build:worker"] = "pnpm --filter ./apps/api-server build:worker";
+    packageJson.scripts = scripts;
+  }
+
+  writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 }
 
 const SAAS_HOST_ARTIFACTS = {
@@ -650,7 +696,7 @@ function createGeneratedRuntimeComposition(
         format,
         outputDirectory: "apps/api-server/dist",
         ...(platform === "cloudflare-workers"
-          ? { constraints: ["no-node-builtins", "web-standard-apis"] }
+          ? { constraints: ["cloudflare-nodejs-compat", "web-standard-apis"] }
           : {}),
       },
     };
