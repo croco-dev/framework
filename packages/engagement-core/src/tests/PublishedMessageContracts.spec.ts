@@ -24,6 +24,7 @@ describe("published message contracts", () => {
       try {
         ensureBuilt();
         const packageNames = [
+          "@croco/batch-core",
           "@croco/diagnostics-core",
           "@croco/engagement-core",
           "@croco/events-core",
@@ -84,6 +85,7 @@ describe("published message contracts", () => {
 
 function ensureBuilt(): void {
   const packages = [
+    "batch-core",
     "diagnostics-core",
     "engagement-core",
     "events-core",
@@ -161,7 +163,7 @@ function writeConsumerTypecheck(consumerRoot: string): void {
   writeFileSync(
     join(consumerRoot, "contracts.ts"),
     [
-      'import { defineMessage, type EngagementService, type MessageContext, type MessageData, type MessageDataInput, type MessageRenderer, Renders } from "@croco/engagement-core";',
+      'import { Audience, AudienceRegistry, CampaignSnapshotService, defineCampaign, defineMessage, InMemoryCampaignStore, type AudienceContext, type AudienceSource, type EngagementService, type MessageContext, type MessageData, type MessageDataInput, type MessageRenderer, Renders } from "@croco/engagement-core";',
       'import { z } from "zod";',
       "",
       "const TrialEnding = defineMessage({",
@@ -180,6 +182,31 @@ function writeConsumerTypecheck(consumerRoot: string): void {
       'const TRANSFORMED_INPUT: MessageDataInput<typeof TRANSFORMED_MESSAGE> = { name: "Ada" };',
       "const TRANSFORMED_OUTPUT: MessageData<typeof TRANSFORMED_MESSAGE> = { name: 3 };",
       "void TRANSFORMED_INPUT; void TRANSFORMED_OUTPUT;",
+      "",
+      "type TrialMember = { recipient: { tenantId: string; userId: string }; subscriptionId: string; firstName: string; upgradeUrl: string };",
+      '@Audience("packed.inactive-trials")',
+      "class InactiveTrials implements AudienceSource<TrialMember> {",
+      "  async *members(_context: AudienceContext): AsyncIterable<TrialMember> { return; }",
+      "}",
+      "const TrialReminder = defineCampaign({",
+      '  id: "packed.trial-reminder",',
+      '  version: "2026-09-02",',
+      "  audience: InactiveTrials,",
+      "  message: TrialEnding,",
+      "  map: (member) => ({ recipient: member.recipient, data: { firstName: member.firstName, upgradeUrl: member.upgradeUrl }, key: member.subscriptionId }),",
+      "});",
+      "defineCampaign({",
+      '  id: "packed.invalid-trial-reminder",',
+      '  version: "2026-09-02",',
+      "  audience: InactiveTrials,",
+      "  message: TrialEnding,",
+      "  // @ts-expect-error packed campaign declarations require every message data field",
+      "  map: (member) => ({ recipient: member.recipient, data: { firstName: member.firstName }, key: member.subscriptionId }),",
+      "});",
+      "const audienceRegistry = new AudienceRegistry();",
+      "audienceRegistry.register(InactiveTrials, new InactiveTrials());",
+      "const campaignSnapshots = new CampaignSnapshotService(audienceRegistry, new InMemoryCampaignStore());",
+      'campaignSnapshots.createSnapshot(TrialReminder, { tenantId: "tenant-1" });',
       "",
       "@Renders(TrialEnding)",
       "class TrialEndingRenderer implements MessageRenderer<typeof TrialEnding> {",
@@ -275,7 +302,7 @@ function writeConsumerTypecheck(consumerRoot: string): void {
 
 function writeRuntimeConsumers(consumerRoot: string): void {
   const source = [
-    "const { defineMessage, EngagementService, InMemoryMessageRendererResolver, InMemoryRecipientDirectory, MessageRendererRegistry, RegistryEngagementMessageRenderer, Renders } = PACKAGE;",
+    "const { Audience, AudienceRegistry, CampaignBroadcastService, CampaignRegistry, CampaignSnapshotService, defineCampaign, defineMessage, EngagementService, InMemoryCampaignStore, InMemoryMessageRendererResolver, InMemoryRecipientDirectory, MessageRendererRegistry, RegistryEngagementMessageRenderer, Renders, campaignScopeForTenant } = PACKAGE;",
     "const { z } = ZOD;",
     "let transformations = 0;",
     'const message = defineMessage({ id: "billing.packed", topic: "billing", data: z.object({ name: z.string().transform((value) => { transformations += 1; return value.length; }) }), channels: ["email"] });',
@@ -291,7 +318,28 @@ function writeRuntimeConsumers(consumerRoot: string): void {
     "let dispatchedPayload;",
     'const dispatcher = { prepareDispatch: () => ({ dispatch: async (payload) => { dispatchedPayload = payload; return { executionId: "execution-1" }; } }) };',
     "const engagement = new EngagementService(directory, new RegistryEngagementMessageRenderer(registry, resolver), dispatcher);",
-    'engagement.send(message, { recipient: { tenantId: "tenant-1", userId: "user-1" }, data: { name: "Ada" }, key: "message-1" }).then((result) => { if (result.status !== "queued" || result.executionIds[0] !== "execution-1" || transformations !== 1 || dispatchedPayload?.subject !== "3") { process.stderr.write("packed engagement send failed\\n"); process.exitCode = 1; } });',
+    'const engagementSend = engagement.send(message, { recipient: { tenantId: "tenant-1", userId: "user-1" }, data: { name: "Ada" }, key: "message-1" }).then((result) => { if (result.status !== "queued" || result.executionIds[0] !== "execution-1" || transformations !== 1 || dispatchedPayload?.subject !== "3") { throw new Error("packed engagement send failed"); } });',
+    "class PackedAudience { async *members() { yield { recipient: { tenantId: 'tenant-1', userId: 'user-1' }, memberKey: 'member-1', name: 'Ada' }; } estimate() { return 1; } }",
+    'Audience("packed.members")(PackedAudience);',
+    "const campaignMessage = defineMessage({ id: 'packed.campaign-message', topic: 'billing', data: z.object({ name: z.string() }), channels: ['email'] });",
+    "const packedCampaign = defineCampaign({ id: 'packed.campaign', version: '2026-09-02', audience: PackedAudience, message: campaignMessage, map: (member) => ({ recipient: member.recipient, data: { name: member.name }, key: member.memberKey }) });",
+    "const audiences = new AudienceRegistry(); audiences.register(PackedAudience, new PackedAudience());",
+    "const campaigns = new CampaignRegistry(); campaigns.register(packedCampaign);",
+    "const campaignStore = new InMemoryCampaignStore();",
+    "const executions = new Map(); let executionSequence = 0;",
+    "const executionManager = {",
+    "  create: async (input) => { const existing = [...executions.values()].find((entry) => entry.idempotencyKey === input.idempotencyKey); if (existing) return existing; const execution = { ...input, id: `packed-execution-${++executionSequence}`, status: 'pending', attempts: 0, maxAttempts: input.maxAttempts ?? 1, createdAt: new Date() }; executions.set(execution.id, execution); return execution; },",
+    "  get: async (id) => { const execution = executions.get(id); if (!execution) throw new Error(`missing execution ${id}`); return execution; },",
+    "  start: async (id) => { const execution = { ...await executionManager.get(id), status: 'running', attempts: 1, startedAt: new Date() }; executions.set(id, execution); return execution; },",
+    "  checkpoint: async (id, key, value) => { const execution = { ...await executionManager.get(id), checkpoints: { ...(await executionManager.get(id)).checkpoints, [key]: value } }; executions.set(id, execution); return execution; },",
+    "  updateProgress: async (id, progress) => { const execution = { ...await executionManager.get(id), progress }; executions.set(id, execution); return execution; },",
+    "  complete: async (id, result) => { const execution = { ...await executionManager.get(id), status: 'completed', result, completedAt: new Date() }; executions.set(id, execution); return execution; },",
+    "  fail: async (id, error) => { const execution = { ...await executionManager.get(id), status: 'failed', error }; executions.set(id, execution); return execution; },",
+    "};",
+    "const snapshots = new CampaignSnapshotService(audiences, campaignStore, () => new Date('2026-09-02T00:00:00.000Z'), () => 'packed-snapshot-1');",
+    "const broadcasts = new CampaignBroadcastService(campaigns, campaignStore, executionManager, { send: async () => ({ status: 'queued', executionIds: ['packed-send-1'], channelResults: [] }) });",
+    "const campaignRun = snapshots.createSnapshot(packedCampaign, { tenantId: 'tenant-1' }, { chunkSize: 1 }).then(({ snapshot }) => broadcasts.broadcast(packedCampaign, campaignScopeForTenant('tenant-1'), snapshot.id, { pageSize: 1, concurrency: 1 })).then((result) => { if (result.snapshot.memberCount !== 1 || result.execution.status !== 'completed' || result.progress.queued !== 1) { throw new Error('packed campaign broadcast failed'); } });",
+    "Promise.all([engagementSend, campaignRun]).catch((error) => { process.stderr.write(`${error.message}\\n`); process.exitCode = 1; });",
   ];
   writeFileSync(
     join(consumerRoot, "consumer.mjs"),

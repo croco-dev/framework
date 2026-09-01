@@ -8628,6 +8628,168 @@
               "declarationKind": "function"
             },
             {
+              "name": "Audience",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "AudienceAlreadyRegisteredProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "AudienceDefinitionInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "AudienceMetadataMissingProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "AudienceNotRegisteredProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "AudiencePreviewInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "AudienceRegistry",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "AudienceScopeInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CampaignAlreadyRegisteredProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CampaignBroadcastService",
+              "exportKind": "named",
+              "source": "./libs/CampaignServices",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CampaignDefinitionInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CampaignDefinitionMismatchProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignServices",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CampaignExecutionInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignServices",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CampaignExecutionNotReadyProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignServices",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CampaignExecutionPublisherMissingProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignServices",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CampaignNotRegisteredProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "campaignOutcomeFromSendResult",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore",
+              "declarationKind": "function"
+            },
+            {
+              "name": "CampaignRegistry",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "campaignScopeForTenant",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore",
+              "declarationKind": "function"
+            },
+            {
+              "name": "campaignScopeKey",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore",
+              "declarationKind": "function"
+            },
+            {
+              "name": "CampaignSnapshotCreationProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignServices",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CampaignSnapshotIncompleteProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CampaignSnapshotNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CampaignSnapshotPayloadProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CampaignSnapshotService",
+              "exportKind": "named",
+              "source": "./libs/CampaignServices",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CampaignStoreConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CampaignStoreValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore",
+              "declarationKind": "class"
+            },
+            {
               "name": "createEngagementDeliveryEventId",
               "exportKind": "named",
               "source": "./libs/EngagementStores",
@@ -8658,9 +8820,27 @@
               "declarationKind": "function"
             },
             {
+              "name": "decodeCampaignSnapshotData",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore",
+              "declarationKind": "function"
+            },
+            {
+              "name": "defineCampaign",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts",
+              "declarationKind": "function"
+            },
+            {
               "name": "defineMessage",
               "exportKind": "named",
               "source": "./libs/MessageContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "encodeCampaignSnapshotData",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore",
               "declarationKind": "function"
             },
             {
@@ -8730,10 +8910,22 @@
               "declarationKind": "class"
             },
             {
+              "name": "getAudienceDescriptor",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts",
+              "declarationKind": "function"
+            },
+            {
               "name": "getMessageRendererBinding",
               "exportKind": "named",
               "source": "./libs/MessageContracts",
               "declarationKind": "function"
+            },
+            {
+              "name": "InMemoryCampaignStore",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore",
+              "declarationKind": "class"
             },
             {
               "name": "InMemoryEngagementStore",
@@ -8876,9 +9068,159 @@
           ],
           "typeExports": [
             {
+              "name": "AnyCampaign",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts"
+            },
+            {
               "name": "AnyMessage",
               "exportKind": "named",
               "source": "./libs/MessageContracts"
+            },
+            {
+              "name": "AppendCampaignSnapshotMembersInput",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore"
+            },
+            {
+              "name": "AudienceBinding",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts"
+            },
+            {
+              "name": "AudienceConstructor",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts"
+            },
+            {
+              "name": "AudienceContext",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts"
+            },
+            {
+              "name": "AudienceDescriptor",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts"
+            },
+            {
+              "name": "AudienceOptions",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts"
+            },
+            {
+              "name": "AudienceScope",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts"
+            },
+            {
+              "name": "AudienceSource",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts"
+            },
+            {
+              "name": "CampaignBroadcastResult",
+              "exportKind": "named",
+              "source": "./libs/CampaignServices"
+            },
+            {
+              "name": "CampaignDefinitionInput",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts"
+            },
+            {
+              "name": "CampaignDescriptor",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts"
+            },
+            {
+              "name": "CampaignExecutionOptions",
+              "exportKind": "named",
+              "source": "./libs/CampaignServices"
+            },
+            {
+              "name": "CampaignExecutionPublication",
+              "exportKind": "named",
+              "source": "./libs/CampaignServices"
+            },
+            {
+              "name": "CampaignExecutionPublisher",
+              "exportKind": "named",
+              "source": "./libs/CampaignServices"
+            },
+            {
+              "name": "CampaignMemberOutcome",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore"
+            },
+            {
+              "name": "CampaignMemberOutcomeStatus",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore"
+            },
+            {
+              "name": "CampaignMessageSender",
+              "exportKind": "named",
+              "source": "./libs/CampaignServices"
+            },
+            {
+              "name": "CampaignProgress",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore"
+            },
+            {
+              "name": "CampaignScheduleOptions",
+              "exportKind": "named",
+              "source": "./libs/CampaignServices"
+            },
+            {
+              "name": "CampaignScopeRef",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore"
+            },
+            {
+              "name": "CampaignSnapshot",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore"
+            },
+            {
+              "name": "CampaignSnapshotCreationResult",
+              "exportKind": "named",
+              "source": "./libs/CampaignServices"
+            },
+            {
+              "name": "CampaignSnapshotMember",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore"
+            },
+            {
+              "name": "CampaignSnapshotMemberPage",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore"
+            },
+            {
+              "name": "CampaignSnapshotOptions",
+              "exportKind": "named",
+              "source": "./libs/CampaignServices"
+            },
+            {
+              "name": "CampaignSnapshotState",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore"
+            },
+            {
+              "name": "CampaignSnapshotValue",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore"
+            },
+            {
+              "name": "CampaignStore",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore"
+            },
+            {
+              "name": "CompleteCampaignSnapshotInput",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore"
             },
             {
               "name": "ContactEndpoint",
@@ -8894,6 +9236,16 @@
               "name": "ContactEndpointStore",
               "exportKind": "named",
               "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "CreateCampaignSnapshotInput",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore"
+            },
+            {
+              "name": "DefinedCampaign",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts"
             },
             {
               "name": "DefinedMessage",
@@ -9101,9 +9453,19 @@
               "source": "./libs/EngagementStores"
             },
             {
+              "name": "FailCampaignSnapshotInput",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore"
+            },
+            {
               "name": "InvalidateContactEndpointInput",
               "exportKind": "named",
               "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "ListCampaignSnapshotMembersOptions",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore"
             },
             {
               "name": "MessageChannel",
@@ -9196,6 +9558,11 @@
               "source": "./libs/EngagementService"
             },
             {
+              "name": "RecordCampaignMemberOutcomeInput",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore"
+            },
+            {
               "name": "RecordEngagementDeliveryEventInput",
               "exportKind": "named",
               "source": "./libs/EngagementStores"
@@ -9259,6 +9626,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "DrizzleCampaignStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleCampaignStore",
+              "declarationKind": "class"
+            },
+            {
               "name": "DrizzleEngagementStore",
               "exportKind": "named",
               "source": "./libs/DrizzleEngagementStore",
@@ -9269,6 +9642,24 @@
               "exportKind": "named",
               "source": "./migrations/engagementSchema",
               "declarationKind": "function"
+            },
+            {
+              "name": "engagementCampaignMemberOutcomes",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "engagementCampaignSnapshotMembers",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "engagementCampaignSnapshots",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
             },
             {
               "name": "engagementContactEndpoints",
@@ -9308,6 +9699,16 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "DrizzleCampaignClient",
+              "exportKind": "named",
+              "source": "./libs/DrizzleCampaignStore"
+            },
+            {
+              "name": "DrizzleCampaignTxManager",
+              "exportKind": "named",
+              "source": "./libs/DrizzleCampaignStore"
+            },
             {
               "name": "DrizzleEngagementClient",
               "exportKind": "named",

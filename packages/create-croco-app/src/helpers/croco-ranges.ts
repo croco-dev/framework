@@ -12,6 +12,7 @@ const EXTERNAL_CROCO_PACKAGE_RANGES = {
   "@croco/cli": "^0.0.4",
   "@croco/credits-core": "^0.0.1",
   "@croco/diagnostics-core": "^0.0.4",
+  "@croco/engagement-core": "^0.1.0",
   "@croco/entitlements-core": "^0.0.4",
   "@croco/execution-core": "^0.0.4",
   "@croco/events-core": "^0.0.4",

@@ -1,9 +1,9 @@
 # @croco/engagement-drizzle
 
 PostgreSQL/Drizzle persistence for the provider-neutral contracts in `@croco/engagement-core`.
-It stores contact endpoints, preferences, suppressions, logical dispatch evidence, and normalized
-delivery events. Application customer/profile records remain owned by the application's recipient
-directory.
+It stores contact endpoints, preferences, suppressions, logical dispatch evidence, normalized
+delivery events, and immutable campaign audience snapshots. Application customer/profile records
+remain owned by the application's recipient directory.
 
 ## Policy order
 
@@ -51,6 +51,13 @@ const engagement = new EngagementService(
   engagementStore,
 );
 ```
+
+Campaign broadcasts use `DrizzleCampaignStore` with the same database and transaction manager.
+Snapshots are assembled in contiguous chunks while in `building`, then atomically transition to
+`complete` or `failed`. Completed membership is immutable. Member outcomes keep the first terminal
+result while allowing a failed attempt to be replaced by a later successful or suppressed result.
+Every campaign row carries the non-null encoded scope key, so global and tenant-owned snapshots can
+reuse identifiers without crossing scope boundaries.
 
 `PushTokenResolver` is responsible for resolving secret references at send time. Never store a raw
 push token in `tokenReference`, Problems, logs, telemetry, fixtures, or administrative output.

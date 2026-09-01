@@ -1,4 +1,8 @@
 import type {
+  CampaignMemberOutcomeStatus,
+  CampaignSnapshotState,
+  CampaignSnapshotValue,
+  EngagementDeliveryPolicy,
   EndpointInvalidationReason,
   EngagementDeliveryEventType,
   EngagementDispatchOutcome,
@@ -246,7 +250,141 @@ export const engagementDeliveryEvents = pgTable(
   ],
 );
 
+export const engagementCampaignSnapshots = pgTable(
+  "engagement_campaign_snapshots",
+  {
+    scopeKey: text("scope_key").notNull(),
+    id: text("id").notNull(),
+    audienceId: text("audience_id").notNull(),
+    campaignId: text("campaign_id").notNull(),
+    campaignVersion: text("campaign_version").notNull(),
+    messageId: text("message_id").notNull(),
+    descriptorFingerprint: text("descriptor_fingerprint").notNull(),
+    state: text("state", { enum: ["building", "complete", "failed"] })
+      .$type<CampaignSnapshotState>()
+      .notNull(),
+    memberCount: integer("member_count").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull(),
+    completedAt: timestamp("completed_at", { withTimezone: true }),
+    failureCode: text("failure_code"),
+  },
+  (table) => [
+    primaryKey({
+      name: "engagement_campaign_snapshots_primary",
+      columns: [table.scopeKey, table.id],
+    }),
+    check("engagement_campaign_snapshots_member_count_nonnegative", sql`${table.memberCount} >= 0`),
+    check(
+      "engagement_campaign_snapshots_terminal_shape_valid",
+      sql`(
+        ${table.state} = 'building'
+        and ${table.completedAt} is null
+        and ${table.failureCode} is null
+      ) or (
+        ${table.state} = 'complete'
+        and ${table.completedAt} is not null
+        and ${table.failureCode} is null
+      ) or (
+        ${table.state} = 'failed'
+        and ${table.completedAt} is not null
+        and ${table.failureCode} is not null
+      )`,
+    ),
+  ],
+);
+
+export const engagementCampaignSnapshotMembers = pgTable(
+  "engagement_campaign_snapshot_members",
+  {
+    scopeKey: text("scope_key").notNull(),
+    snapshotId: text("snapshot_id").notNull(),
+    ordinal: integer("ordinal").notNull(),
+    memberKey: text("member_key").notNull(),
+    recipient: jsonb("recipient").$type<Readonly<{ tenantId: string; userId: string }>>(),
+    state: text("state", { enum: ["ready", "mapping-failed"] }).notNull(),
+    data: jsonb("data").$type<CampaignSnapshotValue>(),
+    policy: text("policy", {
+      enum: ["first-reachable", "all-reachable"],
+    }).$type<EngagementDeliveryPolicy>(),
+    failureCode: text("failure_code"),
+  },
+  (table) => [
+    primaryKey({
+      name: "engagement_campaign_snapshot_members_primary",
+      columns: [table.scopeKey, table.snapshotId, table.ordinal],
+    }),
+    uniqueIndex("engagement_campaign_snapshot_members_key_unique").on(
+      table.scopeKey,
+      table.snapshotId,
+      table.memberKey,
+    ),
+    foreignKey({
+      name: "engagement_campaign_snapshot_members_snapshot_fk",
+      columns: [table.scopeKey, table.snapshotId],
+      foreignColumns: [engagementCampaignSnapshots.scopeKey, engagementCampaignSnapshots.id],
+    }).onDelete("cascade"),
+    check("engagement_campaign_snapshot_members_ordinal_nonnegative", sql`${table.ordinal} >= 0`),
+    check(
+      "engagement_campaign_snapshot_members_shape_valid",
+      sql`(
+        ${table.state} = 'ready'
+        and ${table.recipient} is not null
+        and ${table.data} is not null
+        and ${table.failureCode} is null
+      ) or (
+        ${table.state} = 'mapping-failed'
+        and ${table.data} is null
+        and ${table.policy} is null
+        and ${table.failureCode} is not null
+      )`,
+    ),
+  ],
+);
+
+export const engagementCampaignMemberOutcomes = pgTable(
+  "engagement_campaign_member_outcomes",
+  {
+    scopeKey: text("scope_key").notNull(),
+    snapshotId: text("snapshot_id").notNull(),
+    memberKey: text("member_key").notNull(),
+    outcome: jsonb("outcome").notNull().$type<
+      Readonly<{
+        status: CampaignMemberOutcomeStatus;
+        executionIds?: readonly string[];
+        reason?: string;
+        failureCode?: string;
+        retryable?: boolean;
+      }>
+    >(),
+    recordedAt: timestamp("recorded_at", { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    primaryKey({
+      name: "engagement_campaign_member_outcomes_primary",
+      columns: [table.scopeKey, table.snapshotId, table.memberKey],
+    }),
+    foreignKey({
+      name: "engagement_campaign_member_outcomes_member_fk",
+      columns: [table.scopeKey, table.snapshotId, table.memberKey],
+      foreignColumns: [
+        engagementCampaignSnapshotMembers.scopeKey,
+        engagementCampaignSnapshotMembers.snapshotId,
+        engagementCampaignSnapshotMembers.memberKey,
+      ],
+    }).onDelete("cascade"),
+    check(
+      "engagement_campaign_member_outcomes_status_valid",
+      sql`${table.outcome} ->> 'status' in ('queued', 'suppressed', 'failed', 'skipped')`,
+    ),
+  ],
+);
+
 export type EngagementContactEndpointRow = typeof engagementContactEndpoints.$inferSelect;
 export type EngagementDispatchRow = typeof engagementDispatches.$inferSelect;
 export type EngagementDispatchTargetRow = typeof engagementDispatchTargets.$inferSelect;
 export type EngagementDeliveryEventRow = typeof engagementDeliveryEvents.$inferSelect;
+export type EngagementCampaignSnapshotRow = typeof engagementCampaignSnapshots.$inferSelect;
+export type EngagementCampaignSnapshotMemberRow =
+  typeof engagementCampaignSnapshotMembers.$inferSelect;
+export type EngagementCampaignMemberOutcomeRow =
+  typeof engagementCampaignMemberOutcomes.$inferSelect;

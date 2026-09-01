@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 728,
+  "problemCount": 747,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -5697,6 +5697,576 @@
         {
           "file": "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
           "line": 97,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/audience-already-registered",
+      "category": "Conflict",
+      "status": 409,
+      "title": "Conflict",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-audience-already-registered",
+      "recovery": {
+        "cause": "The request conflicts with current state or an idempotency constraint.",
+        "userAction": "Refresh state, resolve the conflict, and retry with the updated intent.",
+        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignContracts.ts",
+          "line": 290,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/audience-definition-invalid",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-audience-definition-invalid",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignContracts.ts",
+          "line": 271,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/audience-metadata-missing",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-audience-metadata-missing",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignContracts.ts",
+          "line": 279,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/audience-not-registered",
+      "category": "NotFound",
+      "status": 404,
+      "title": "Not Found",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-audience-not-registered",
+      "recovery": {
+        "cause": "The requested resource or route-visible record does not exist.",
+        "userAction": "Verify the identifier and refresh the resource list before retrying.",
+        "operatorAction": "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignContracts.ts",
+          "line": 301,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/audience-preview-invalid",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-audience-preview-invalid",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignContracts.ts",
+          "line": 328,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/audience-scope-invalid",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-audience-scope-invalid",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignContracts.ts",
+          "line": 320,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/campaign-already-registered",
+      "category": "Conflict",
+      "status": 409,
+      "title": "Conflict",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-campaign-already-registered",
+      "recovery": {
+        "cause": "The request conflicts with current state or an idempotency constraint.",
+        "userAction": "Refresh state, resolve the conflict, and retry with the updated intent.",
+        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignContracts.ts",
+          "line": 347,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/campaign-definition-invalid",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-campaign-definition-invalid",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignContracts.ts",
+          "line": 339,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/campaign-definition-mismatch",
+      "category": "Conflict",
+      "status": 409,
+      "title": "Conflict",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-campaign-definition-mismatch",
+      "recovery": {
+        "cause": "The request conflicts with current state or an idempotency constraint.",
+        "userAction": "Refresh state, resolve the conflict, and retry with the updated intent.",
+        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignServices.ts",
+          "line": 535,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/campaign-execution-invalid",
+      "category": "Conflict",
+      "status": 409,
+      "title": "Conflict",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-campaign-execution-invalid",
+      "recovery": {
+        "cause": "The request conflicts with current state or an idempotency constraint.",
+        "userAction": "Refresh state, resolve the conflict, and retry with the updated intent.",
+        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignServices.ts",
+          "line": 510,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/campaign-execution-not-ready",
+      "category": "Conflict",
+      "status": 409,
+      "title": "Conflict",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-campaign-execution-not-ready",
+      "recovery": {
+        "cause": "The request conflicts with current state or an idempotency constraint.",
+        "userAction": "Refresh state, resolve the conflict, and retry with the updated intent.",
+        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignServices.ts",
+          "line": 518,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/campaign-execution-publisher-missing",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-campaign-execution-publisher-missing",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignServices.ts",
+          "line": 546,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/campaign-not-registered",
+      "category": "NotFound",
+      "status": 404,
+      "title": "Not Found",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-campaign-not-registered",
+      "recovery": {
+        "cause": "The requested resource or route-visible record does not exist.",
+        "userAction": "Verify the identifier and refresh the resource list before retrying.",
+        "operatorAction": "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignContracts.ts",
+          "line": 358,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/campaign-snapshot-creation-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-campaign-snapshot-creation-failed",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignServices.ts",
+          "line": 499,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/campaign-snapshot-incomplete",
+      "category": "Conflict",
+      "status": 409,
+      "title": "Conflict",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-campaign-snapshot-incomplete",
+      "recovery": {
+        "cause": "The request conflicts with current state or an idempotency constraint.",
+        "userAction": "Refresh state, resolve the conflict, and retry with the updated intent.",
+        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignStore.ts",
+          "line": 447,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/campaign-snapshot-not-found",
+      "category": "NotFound",
+      "status": 404,
+      "title": "Not Found",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-campaign-snapshot-not-found",
+      "recovery": {
+        "cause": "The requested resource or route-visible record does not exist.",
+        "userAction": "Verify the identifier and refresh the resource list before retrying.",
+        "operatorAction": "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignStore.ts",
+          "line": 436,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/campaign-snapshot-payload-invalid",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-campaign-snapshot-payload-invalid",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignStore.ts",
+          "line": 458,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/campaign-store-conflict",
+      "category": "Conflict",
+      "status": 409,
+      "title": "Conflict",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-campaign-store-conflict",
+      "recovery": {
+        "cause": "The request conflicts with current state or an idempotency constraint.",
+        "userAction": "Refresh state, resolve the conflict, and retry with the updated intent.",
+        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignStore.ts",
+          "line": 425,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/campaign-store-invalid",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-campaign-store-invalid",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/CampaignStore.ts",
+          "line": 417,
           "column": 5,
           "kind": "problem-constructor"
         }

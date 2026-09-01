@@ -23,6 +23,28 @@ import type {
 import { PolarUsageDeliveryWorker } from "@croco/billing-polar";
 import { DiagnosticsCollector } from "@croco/diagnostics-core";
 import {
+  Audience,
+  AudienceRegistry,
+  CampaignBroadcastService,
+  CampaignRegistry,
+  CampaignSnapshotService,
+  EngagementService,
+  InMemoryCampaignStore,
+  InMemoryMessageRendererResolver,
+  InMemoryRecipientDirectory,
+  MessageRendererRegistry,
+  RegistryEngagementMessageRenderer,
+  Renders,
+  campaignScopeForTenant,
+  defineCampaign,
+  defineMessage,
+  type AudienceContext,
+  type AudienceSource,
+  type CampaignBroadcastResult,
+  type MessageContext,
+  type MessageRenderer,
+} from "@croco/engagement-core";
+import {
   EntitlementManager,
   EntitlementMeterLookup,
   EntitlementQuotaChecker,
@@ -83,6 +105,7 @@ import {
 } from "./demo/saasSmokeContract";
 import { FileBillableUsageJournal } from "./demo/FileBillableUsageJournal";
 import { FileUsageBillingGateway } from "./demo/FileUsageBillingGateway";
+import { renderDemoMemberHtml } from "./html";
 import { SaasBillableUsageProblem } from "./problems";
 import {
   InMemoryAccessProvider,
@@ -341,12 +364,81 @@ class EntitlementSeatLimitChecker extends SeatLimitChecker {
 }
 
 class DemoNotificationService extends NotificationService {
+  private dispatchCounter = 0;
+
   constructor() {
     super(undefined as never, undefined as never);
   }
 
   override async send(..._args: Parameters<NotificationService["send"]>): Promise<void> {}
+
+  override prepareDispatch(
+    ..._args: Parameters<NotificationService["prepareDispatch"]>
+  ): ReturnType<NotificationService["prepareDispatch"]> {
+    return Object.freeze({
+      dispatch: async () => ({ executionId: `demo-notification-${++this.dispatchCounter}` }),
+    });
+  }
 }
+
+type DemoCampaignMember = Readonly<{
+  recipient: Readonly<{ tenantId: string; userId: string }>;
+  membershipId: string;
+  role: string;
+}>;
+
+@Audience("saas.members")
+class DemoMembersAudience implements AudienceSource<DemoCampaignMember> {
+  constructor(private readonly memberships: MembershipStore) {}
+
+  async *members(context: AudienceContext): AsyncIterable<DemoCampaignMember> {
+    const tenantId = context.tenantId;
+    if (tenantId === undefined) return;
+    for (const membership of await this.memberships.findAllByTenant(tenantId)) {
+      yield {
+        recipient: { tenantId, userId: membership.userId },
+        membershipId: membership.id,
+        role: membership.role,
+      };
+    }
+  }
+
+  async estimate(context: AudienceContext): Promise<number> {
+    return context.tenantId === undefined
+      ? 0
+      : (await this.memberships.findAllByTenant(context.tenantId)).length;
+  }
+}
+
+const DEMO_MEMBER_MESSAGE = defineMessage({
+  id: "saas.member-welcome",
+  topic: "membership",
+  data: z.object({ userId: z.string(), role: z.string() }).strict(),
+  channels: ["email"],
+});
+
+@Renders(DEMO_MEMBER_MESSAGE)
+class DemoMemberMessageRenderer implements MessageRenderer<typeof DEMO_MEMBER_MESSAGE> {
+  email({ data }: MessageContext<typeof DEMO_MEMBER_MESSAGE>) {
+    return {
+      subject: "Welcome to the SaaS workspace",
+      html: renderDemoMemberHtml(data.userId, data.role),
+      text: `${data.userId} joined as ${data.role}.`,
+    };
+  }
+}
+
+const DEMO_MEMBER_CAMPAIGN = defineCampaign({
+  id: "saas.member-welcome",
+  version: "2026-09-02",
+  audience: DemoMembersAudience,
+  message: DEMO_MEMBER_MESSAGE,
+  map: (member) => ({
+    recipient: member.recipient,
+    data: { userId: member.recipient.userId, role: member.role },
+    key: member.membershipId,
+  }),
+});
 
 class DemoEventHandler {
   handle(_event: DomainEvent): void {}
@@ -397,6 +489,9 @@ export type SaasRuntime = {
   lifecycleRunStore: InMemoryLifecycleRunStore;
   lifecycleActionSink: InMemoryLifecycleActionSink;
   lifecycleEvaluator: LifecycleRuleEvaluator;
+  campaignSnapshots: CampaignSnapshotService;
+  campaignBroadcasts: CampaignBroadcastService;
+  campaignRecipients: InMemoryRecipientDirectory;
 };
 
 export type SaasRuntimeOptions = {
@@ -572,6 +667,7 @@ export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
   };
   const llmMeteringService = new LlmMeteringService(llmMeteringOptions);
   const membershipStore = new InMemoryMembershipStore();
+  const notificationService = new DemoNotificationService();
   const seatLimitChecker = new EntitlementSeatLimitChecker(membershipStore, entitlementManager);
   const membershipEventPublications = new Map<string, Promise<void>>();
   const membershipManager = new MembershipManager({
@@ -599,7 +695,7 @@ export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
   const invitationManager = new InvitationManager(
     new InMemoryInvitationStore(),
     membershipManager,
-    new DemoNotificationService(),
+    notificationService,
     eventPublisher,
     new TxManager(new NoopTxAdapter()),
   );
@@ -629,6 +725,36 @@ export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
     },
   });
   const executionManager = new ExecutionManagerImpl(new InMemoryExecutionStore());
+  const audiences = new AudienceRegistry();
+  audiences.register(DemoMembersAudience, new DemoMembersAudience(membershipStore));
+  const campaigns = new CampaignRegistry();
+  campaigns.register(DEMO_MEMBER_CAMPAIGN);
+  const campaignStore = new InMemoryCampaignStore();
+  const campaignRecipients = new InMemoryRecipientDirectory();
+  const messageRegistry = new MessageRendererRegistry();
+  messageRegistry.registerMessage(DEMO_MEMBER_MESSAGE);
+  messageRegistry.registerRenderer(DemoMemberMessageRenderer);
+  messageRegistry.bootstrap();
+  const rendererResolver = new InMemoryMessageRendererResolver();
+  rendererResolver.register(DEMO_MEMBER_MESSAGE, new DemoMemberMessageRenderer());
+  const engagement = new EngagementService(
+    campaignRecipients,
+    new RegistryEngagementMessageRenderer(messageRegistry, rendererResolver),
+    notificationService,
+  );
+  let campaignSnapshotSequence = 0;
+  const campaignSnapshots = new CampaignSnapshotService(
+    audiences,
+    campaignStore,
+    () => new Date("2026-09-02T00:00:00.000Z"),
+    () => `saas-campaign-snapshot-${++campaignSnapshotSequence}`,
+  );
+  const campaignBroadcasts = new CampaignBroadcastService(
+    campaigns,
+    campaignStore,
+    executionManager,
+    engagement,
+  );
   const lifecycleRuleRegistry = new LifecycleRuleRegistry();
   const lifecycleRunStore = new InMemoryLifecycleRunStore();
   const lifecycleActionSink = new InMemoryLifecycleActionSink();
@@ -691,6 +817,9 @@ export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
     lifecycleRunStore,
     lifecycleActionSink,
     lifecycleEvaluator,
+    campaignSnapshots,
+    campaignBroadcasts,
+    campaignRecipients,
   };
 }
 
@@ -1073,6 +1202,32 @@ export async function runSaasDemoFlow(
       },
     };
   });
+}
+
+export async function runSaasCampaignSmoke(
+  runtime: SaasRuntime,
+  tenantId: string,
+): Promise<CampaignBroadcastResult> {
+  const members = await runtime.membershipManager.listMembers(tenantId);
+  for (const member of members) {
+    runtime.campaignRecipients.set({
+      recipient: { tenantId, userId: member.userId },
+      email: { id: `email-${member.userId}`, address: `${member.userId}@example.test` },
+      push: [],
+    });
+  }
+
+  const { snapshot } = await runtime.campaignSnapshots.createSnapshot(
+    DEMO_MEMBER_CAMPAIGN,
+    { tenantId },
+    { chunkSize: 1 },
+  );
+  return runtime.campaignBroadcasts.broadcast(
+    DEMO_MEMBER_CAMPAIGN,
+    campaignScopeForTenant(tenantId),
+    snapshot.id,
+    { pageSize: 1, concurrency: 1 },
+  );
 }
 
 async function runBillableApiUsageScenario(

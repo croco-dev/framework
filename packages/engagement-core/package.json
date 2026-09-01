@@ -36,13 +36,15 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
-    "test": "vitest run src/tests/MessageContracts.spec.ts src/tests/EngagementService.spec.ts src/tests/EngagementStores.spec.ts",
+    "test": "vitest run src/tests/MessageContracts.spec.ts src/tests/EngagementService.spec.ts src/tests/EngagementStores.spec.ts src/tests/CampaignContracts.spec.ts src/tests/CampaignStore.spec.ts src/tests/CampaignServices.spec.ts",
     "test:published": "vitest run src/tests/PublishedMessageContracts.spec.ts",
     "test:packed": "vitest run src/tests/PublishedMessageContracts.spec.ts",
     "typecheck": "tsc --noEmit",
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
+    "@croco/batch-core": "workspace:*",
+    "@croco/execution-core": "workspace:*",
     "@croco/notifications-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/protocols-core": "workspace:*"

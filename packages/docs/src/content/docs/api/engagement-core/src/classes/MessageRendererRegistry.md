@@ -5,8 +5,6 @@ prev: false
 title: "MessageRendererRegistry"
 ---
 
-Typed message contracts and explicit, decorator-bound renderer registration for Croco engagement.
-
 ## Constructors
 
 ### Constructor

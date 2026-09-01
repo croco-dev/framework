@@ -1229,6 +1229,24 @@
       "owner": "@croco/docs"
     },
     {
+      "path": "packages/engagement-core/src/tests/CampaignContracts.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-core"
+    },
+    {
+      "path": "packages/engagement-core/src/tests/CampaignServices.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-core"
+    },
+    {
+      "path": "packages/engagement-core/src/tests/CampaignStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-core"
+    },
+    {
       "path": "packages/engagement-core/src/tests/EngagementService.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -1251,6 +1269,18 @@
       "lane": "published",
       "qualifiers": [],
       "owner": "@croco/engagement-core"
+    },
+    {
+      "path": "packages/engagement-drizzle/src/tests/DrizzleCampaignStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/engagement-drizzle"
+    },
+    {
+      "path": "packages/engagement-drizzle/src/tests/DrizzleCampaignStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-drizzle"
     },
     {
       "path": "packages/engagement-drizzle/src/tests/DrizzleEngagementStore.postgres.spec.ts",

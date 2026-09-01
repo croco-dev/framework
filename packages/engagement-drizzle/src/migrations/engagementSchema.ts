@@ -203,12 +203,91 @@ export async function createEngagementSchema(client: EngagementMigrationClient):
       create index if not exists engagement_delivery_events_dispatch_history_idx
         on engagement_delivery_events (tenant_id, dispatch_id, occurred_at, id)
     `);
+
+    await client.execute(sql`
+      create table if not exists engagement_campaign_snapshots (
+        scope_key text not null,
+        id text not null,
+        audience_id text not null,
+        campaign_id text not null,
+        campaign_version text not null,
+        message_id text not null,
+        descriptor_fingerprint text not null,
+        state text not null check (state in ('building', 'complete', 'failed')),
+        member_count integer not null default 0,
+        created_at timestamptz not null,
+        completed_at timestamptz,
+        failure_code text,
+        constraint engagement_campaign_snapshots_primary primary key (scope_key, id),
+        constraint engagement_campaign_snapshots_member_count_nonnegative
+          check (member_count >= 0),
+        constraint engagement_campaign_snapshots_terminal_shape_valid check (
+          (state = 'building' and completed_at is null and failure_code is null)
+          or (state = 'complete' and completed_at is not null and failure_code is null)
+          or (state = 'failed' and completed_at is not null and failure_code is not null)
+        )
+      )
+    `);
+
+    await client.execute(sql`
+      create table if not exists engagement_campaign_snapshot_members (
+        scope_key text not null,
+        snapshot_id text not null,
+        ordinal integer not null,
+        member_key text not null,
+        recipient jsonb,
+        state text not null check (state in ('ready', 'mapping-failed')),
+        data jsonb,
+        policy text check (policy in ('first-reachable', 'all-reachable')),
+        failure_code text,
+        constraint engagement_campaign_snapshot_members_primary
+          primary key (scope_key, snapshot_id, ordinal),
+        constraint engagement_campaign_snapshot_members_key_unique
+          unique (scope_key, snapshot_id, member_key),
+        constraint engagement_campaign_snapshot_members_ordinal_nonnegative
+          check (ordinal >= 0),
+        constraint engagement_campaign_snapshot_members_shape_valid check (
+          (state = 'ready' and recipient is not null and data is not null and failure_code is null)
+          or (
+            state = 'mapping-failed'
+            and data is null
+            and policy is null
+            and failure_code is not null
+          )
+        ),
+        constraint engagement_campaign_snapshot_members_snapshot_fk
+          foreign key (scope_key, snapshot_id)
+          references engagement_campaign_snapshots (scope_key, id)
+          on delete cascade
+      )
+    `);
+
+    await client.execute(sql`
+      create table if not exists engagement_campaign_member_outcomes (
+        scope_key text not null,
+        snapshot_id text not null,
+        member_key text not null,
+        outcome jsonb not null,
+        recorded_at timestamptz not null,
+        constraint engagement_campaign_member_outcomes_primary
+          primary key (scope_key, snapshot_id, member_key),
+        constraint engagement_campaign_member_outcomes_status_valid
+          check (outcome ->> 'status' in ('queued', 'suppressed', 'failed', 'skipped')),
+        constraint engagement_campaign_member_outcomes_member_fk
+          foreign key (scope_key, snapshot_id, member_key)
+          references engagement_campaign_snapshot_members (scope_key, snapshot_id, member_key)
+          on delete cascade
+      )
+    `);
   });
 }
 
 /** Removes the engagement adapter schema in dependency order. Intended for tests and local teardown. */
 export async function dropEngagementSchema(client: EngagementMigrationClient): Promise<void> {
   return migrate("drop-schema", async () => {
+    await client.execute(sql`drop table if exists engagement_campaign_member_outcomes`);
+    await client.execute(sql`drop table if exists engagement_campaign_snapshot_members`);
+    await client.execute(sql`drop table if exists engagement_campaign_snapshots`);
     await client.execute(sql`drop table if exists engagement_delivery_events`);
     await client.execute(sql`drop table if exists engagement_dispatch_targets`);
     await client.execute(sql`drop table if exists engagement_dispatches`);
