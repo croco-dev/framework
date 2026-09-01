@@ -128,6 +128,18 @@ function createDefaultIdempotencyKey(propertyKey: string | symbol, args: unknown
   return `${String(propertyKey)}:${hash}`;
 }
 
+function getResultModelMetadata(result: unknown): { modelId: string; provider: string } {
+  const metadata =
+    result && typeof result === "object"
+      ? ((result as { metadata?: { modelId?: string; provider?: string } }).metadata ?? {})
+      : {};
+
+  return {
+    modelId: metadata.modelId ?? "unknown",
+    provider: metadata.provider ?? "unknown",
+  };
+}
+
 /**
  * LlmMeteringService 인스턴스 설정 (앱 부트스트랩에서 호출)
  */
@@ -245,6 +257,45 @@ export function AiMetered(options: AiMeteredOptions = {}): MethodDecorator {
         });
       }
 
+      const extractedUsage = metadata.usageExtractor?.(args, result);
+
+      if (extractedUsage) {
+        const { modelId, provider } = getResultModelMetadata(result);
+
+        await service.recordUsage({
+          tenantId,
+          modelId,
+          provider,
+          usage: {
+            promptTokens: extractedUsage.promptTokens,
+            completionTokens: extractedUsage.completionTokens,
+            totalTokens: extractedUsage.promptTokens + extractedUsage.completionTokens,
+            accuracy: extractedUsage.accuracy,
+          },
+          idempotencyKey,
+          metadata: { ...additionalMetadata, operationType: "generate", modelId },
+        });
+
+        return result;
+      }
+
+      const extractedEmbeddingUsage = metadata.embeddingUsageExtractor?.(args, result);
+
+      if (extractedEmbeddingUsage) {
+        const { modelId, provider } = getResultModelMetadata(result);
+
+        await service.recordEmbeddingUsage({
+          tenantId,
+          modelId,
+          provider,
+          embeddingTokens: extractedEmbeddingUsage.tokens,
+          idempotencyKey,
+          accuracy: extractedEmbeddingUsage.accuracy,
+        });
+
+        return result;
+      }
+
       // GenerateResult 타입 감지 (usage 필드 확인)
       if (result && typeof result === "object" && "usage" in result) {
         const usageData = (result as { usage: unknown }).usage;
@@ -258,12 +309,7 @@ export function AiMetered(options: AiMeteredOptions = {}): MethodDecorator {
               totalTokens: number;
               accuracy?: "EXACT" | "ESTIMATED" | "UNKNOWN";
             };
-
-            // metadata에서 modelId, provider 추출
-            const resultMetadata =
-              (result as { metadata?: { modelId?: string; provider?: string } }).metadata ?? {};
-            const modelId = resultMetadata.modelId ?? "unknown";
-            const provider = resultMetadata.provider ?? "unknown";
+            const { modelId, provider } = getResultModelMetadata(result);
 
             // recordUsage 호출
             await service.recordUsage({
@@ -287,12 +333,7 @@ export function AiMetered(options: AiMeteredOptions = {}): MethodDecorator {
               "accuracy" in usageData
                 ? (usageData as { accuracy?: "EXACT" | "ESTIMATED" | "UNKNOWN" }).accuracy
                 : undefined;
-
-            // metadata에서 modelId, provider 추출
-            const resultMetadata =
-              (result as { metadata?: { modelId?: string; provider?: string } }).metadata ?? {};
-            const modelId = resultMetadata.modelId ?? "unknown";
-            const provider = resultMetadata.provider ?? "unknown";
+            const { modelId, provider } = getResultModelMetadata(result);
 
             // recordEmbeddingUsage 호출
             await service.recordEmbeddingUsage({
