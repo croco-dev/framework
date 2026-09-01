@@ -72,9 +72,5 @@ allowBuilds:
   ssh2: false
   workerd: true
 
-auditConfig:
-  ignoreGhsas:
-    - GHSA-f88m-g3jw-g9cj
-
 patchedDependencies:
   tsup@8.5.1: patches/tsup@8.5.1.patch
