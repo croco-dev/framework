@@ -1153,6 +1153,10 @@ describe("CI verification profile contract", () => {
     expect(DOCS_BUILD_JOB).toContain(
       "turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-docs-sync-check-${{ github.sha }}",
     );
+    expect(DOCS_BUILD_JOB).toContain(
+      "pnpm turbo run docs:build --cache=local:rw --cache-dir=.turbo/cache",
+    );
+    expect(DOCS_BUILD_JOB).toContain("--env-mode=strict --summarize");
   });
 
   it("runs independent CI surfaces in parallel and restores content-addressed Turbo state", () => {

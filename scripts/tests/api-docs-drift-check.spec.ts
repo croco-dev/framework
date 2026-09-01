@@ -66,7 +66,7 @@ describe("api-docs-drift-check.mts", () => {
     expect(result.stdout).toContain("generated API docs match the tracked checkout");
     expect(snapshotDocs(fixture.root)).toEqual(before);
     expect(calls[0]?.args.join(" ")).toBe(
-      "turbo run docs:api:render --filter=@croco/docs --env-mode=loose --output-logs=errors-only",
+      "turbo run docs:api:render --filter=@croco/docs --cache=local:rw --cache-dir=.turbo/cache --env-mode=strict --output-logs=errors-only",
     );
     expect(calls).toHaveLength(1);
     expect(calls.every((call) => call.cwd === realpathSync(fixture.root))).toBe(true);
