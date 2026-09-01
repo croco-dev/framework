@@ -21,6 +21,7 @@ import { validateMeilisearchOptions } from "./MeilisearchConfig";
 import {
   MeilisearchInvalidRequestProblem,
   MeilisearchRetryableUpstreamProblem,
+  MeilisearchTaskCanceledProblem,
   normalizeMeilisearchError,
   TenantTokenNotConfiguredProblem,
 } from "./problems/MeilisearchProblems";
@@ -536,6 +537,10 @@ export class MeilisearchEngine extends SearchEngine {
     if (this.isFailedTask(result)) {
       throw normalizeMeilisearchError(result.error, { operation: providerOperation, ...context });
     }
+
+    if (this.isCanceledTask(result)) {
+      throw new MeilisearchTaskCanceledProblem({ operation: providerOperation, ...context });
+    }
   }
 
   private getOperationClient(
@@ -570,6 +575,12 @@ export class MeilisearchEngine extends SearchEngine {
       "status" in task &&
       task.status === "failed" &&
       "error" in task
+    );
+  }
+
+  private isCanceledTask(task: unknown): boolean {
+    return (
+      typeof task === "object" && task !== null && "status" in task && task.status === "canceled"
     );
   }
 }

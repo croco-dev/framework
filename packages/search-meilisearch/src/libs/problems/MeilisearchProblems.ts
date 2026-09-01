@@ -129,6 +129,25 @@ export class MeilisearchTerminalUpstreamProblem extends Problem {
 }
 
 /**
+ * Meilisearch 비동기 task가 취소되었을 때 발생하는 Problem입니다.
+ */
+export class MeilisearchTaskCanceledProblem extends Problem {
+  constructor(context: MeilisearchErrorContext) {
+    super(
+      "search-meilisearch/task-canceled",
+      ProblemCategory.InternalServerError,
+      `Meilisearch task was canceled during ${context.operation}`,
+      {
+        extensions: {
+          ...toMeilisearchExtensions(context),
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
+/**
  * 테넌트 토큰 옵션 없이 토큰 발급을 시도할 때 발생하는 문제입니다.
  */
 export class TenantTokenNotConfiguredProblem extends Problem {
