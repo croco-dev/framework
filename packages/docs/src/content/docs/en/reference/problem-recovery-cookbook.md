@@ -5816,7 +5816,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:64:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:65:5` (problem-constructor)
 
 <a id="framework-module-duplicate-module-name"></a>
 
@@ -5870,7 +5870,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:130:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:131:5` (problem-constructor)
 
 <a id="framework-module-lifecycle-deadline-exceeded"></a>
 
@@ -5888,7 +5888,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:190:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:191:5` (problem-constructor)
 
 <a id="framework-module-lifecycle-deadline-invalid"></a>
 
@@ -5906,7 +5906,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:242:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:243:5` (problem-constructor)
 
 <a id="framework-module-lifecycle-failed"></a>
 
@@ -5924,7 +5924,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:87:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:88:5` (problem-constructor)
 
 <a id="framework-module-provider-not-visible"></a>
 
@@ -5942,7 +5942,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:339:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:340:5` (problem-constructor)
 
 <a id="framework-module-provider-ownership-conflict"></a>
 
@@ -5960,7 +5960,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:377:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:378:5` (problem-constructor)
 
 <a id="framework-module-provider-unavailable"></a>
 
@@ -5978,7 +5978,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:354:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:355:5` (problem-constructor)
 
 <a id="framework-module-provider-write-not-owned"></a>
 
@@ -5996,7 +5996,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:393:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:394:5` (problem-constructor)
 
 <a id="framework-module-registration-lifecycle-conflict"></a>
 
@@ -6014,7 +6014,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:259:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:260:5` (problem-constructor)
 
 <a id="framework-module-runtime-context-stale"></a>
 
@@ -6032,7 +6032,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:298:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:299:5` (problem-constructor)
 
 <a id="framework-module-runtime-disposed"></a>
 
@@ -6050,7 +6050,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:272:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:273:5` (problem-constructor)
 
 <a id="framework-module-runtime-reset-conflict"></a>
 
@@ -6068,7 +6068,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-module/src/problems.ts:285:5` (problem-constructor)
+- `packages/framework-module/src/problems.ts:286:5` (problem-constructor)
 
 <a id="frontend-problems-fetch-unavailable"></a>
 

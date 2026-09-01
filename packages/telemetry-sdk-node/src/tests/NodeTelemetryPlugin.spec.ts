@@ -5,7 +5,7 @@ import {
   defineCrocoModule,
 } from "@croco/framework-module";
 import type { CrocoPlugin } from "@croco/framework-module";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   nodeTelemetry,
   TELEMETRY_RUNTIME_TOKEN,
@@ -86,6 +86,40 @@ describe("nodeTelemetry", () => {
     });
     expect(secondApplication.get(TELEMETRY_RUNTIME_TOKEN)).toBe(telemetry);
 
+    await secondApplication.dispose();
+
+    expect(telemetry.getConfig()).toBeNull();
+  });
+
+  it("keeps telemetry owned while a compatible ApplicationRuntime is initializing", async () => {
+    const firstApplication = createDisabledApplication();
+    const secondApplication = createDisabledApplication();
+    const telemetry = TelemetryRuntime.getInstance();
+    const originalInit = telemetry.init.bind(telemetry);
+    let continueInitialization: () => void = () => undefined;
+    let markInitializationStarted: () => void = () => undefined;
+    const initializationCanContinue = new Promise<void>((resolve) => {
+      continueInitialization = resolve;
+    });
+    const initializationStarted = new Promise<void>((resolve) => {
+      markInitializationStarted = resolve;
+    });
+
+    await firstApplication.initialize();
+    vi.spyOn(telemetry, "init").mockImplementationOnce(async (config) => {
+      markInitializationStarted();
+      await initializationCanContinue;
+      await originalInit(config);
+    });
+
+    const secondInitialization = secondApplication.initialize();
+    await initializationStarted;
+    await firstApplication.dispose();
+
+    expect(telemetry.getConfig()).toMatchObject({ serviceName: "module-owned-telemetry" });
+
+    continueInitialization();
+    await secondInitialization;
     await secondApplication.dispose();
 
     expect(telemetry.getConfig()).toBeNull();

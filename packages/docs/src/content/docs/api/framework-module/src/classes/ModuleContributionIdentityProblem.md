@@ -5,7 +5,7 @@ prev: false
 title: "ModuleContributionIdentityProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+Reports a duplicate contribution identity for the same `kind:id` pair.
 
 ## Extends
 

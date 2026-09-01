@@ -31,6 +31,15 @@ export const nodeTelemetry: PluginFactory<NodeTelemetryPluginOptions> = (options
   const { diagnostics, ...config } = options;
   const telemetryRuntime = TelemetryRuntime.getInstance();
   const diagnosticsProvider = new TelemetryDiagnosticsProvider(diagnostics);
+  const releaseLifecycleOwner = async (lifecycleOwner: NodeTelemetryLifecycleOwner) => {
+    if (!activeNodeTelemetryLifecycleOwners.delete(lifecycleOwner)) {
+      return;
+    }
+
+    if (activeNodeTelemetryLifecycleOwners.size === 0) {
+      await telemetryRuntime.shutdown();
+    }
+  };
 
   return defineCrocoPlugin({
     metadata: {
@@ -96,19 +105,18 @@ export const nodeTelemetry: PluginFactory<NodeTelemetryPluginOptions> = (options
           },
         ],
         start: async (ctx) => {
-          await telemetryRuntime.init(config);
           const lifecycleOwner = ctx.get(TELEMETRY_LIFECYCLE_OWNER_TOKEN);
           activeNodeTelemetryLifecycleOwners.add(lifecycleOwner);
+          try {
+            await telemetryRuntime.init(config);
+          } catch (cause) {
+            await releaseLifecycleOwner(lifecycleOwner);
+            throw cause;
+          }
         },
         shutdown: async (ctx) => {
           const lifecycleOwner = ctx.get(TELEMETRY_LIFECYCLE_OWNER_TOKEN);
-          if (!activeNodeTelemetryLifecycleOwners.delete(lifecycleOwner)) {
-            return;
-          }
-
-          if (activeNodeTelemetryLifecycleOwners.size === 0) {
-            await telemetryRuntime.shutdown();
-          }
+          await releaseLifecycleOwner(lifecycleOwner);
         },
       }),
     ],

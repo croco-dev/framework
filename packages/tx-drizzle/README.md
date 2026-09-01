@@ -5,7 +5,7 @@ Drizzle ORM용 `@croco/tx-core` 트랜잭션 어댑터입니다. Drizzle의 `db.
 ## 설치
 
 ```bash
-pnpm add @croco/tx-drizzle @croco/tx-core drizzle-orm typedi
+pnpm add @croco/framework-module @croco/tx-drizzle @croco/tx-core drizzle-orm typedi
 ```
 
 ## 사용법

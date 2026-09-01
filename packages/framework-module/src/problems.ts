@@ -59,6 +59,7 @@ export class ModuleCircularDependencyProblem extends Problem {
   }
 }
 
+/** Reports a duplicate contribution identity for the same `kind:id` pair. */
 export class ModuleContributionIdentityProblem extends Problem {
   constructor(kind: string, id: string, owners: readonly string[]) {
     super(
