@@ -572,7 +572,7 @@ This cookbook documents 722 public Croco Problem codes. The deterministic JSON r
 | [`search-meilisearch/invalid-request`](#search-meilisearch-invalid-request)                                                           | ValidationError       |    422 | not-retryable | public        | active    |       1 |
 | [`search-meilisearch/missing-config`](#search-meilisearch-missing-config)                                                             | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`search-meilisearch/retryable-upstream`](#search-meilisearch-retryable-upstream)                                                     | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
-| [`search-meilisearch/task-canceled`](#search-meilisearch-task-canceled)                                                               | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
+| [`search-meilisearch/task-canceled`](#search-meilisearch-task-canceled)                                                               | InternalServerError   |    500 | not-retryable | operator-only | active    |       1 |
 | [`search-meilisearch/tenant-token-not-configured`](#search-meilisearch-tenant-token-not-configured)                                   | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`search-meilisearch/terminal-upstream`](#search-meilisearch-terminal-upstream)                                                       | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`SEAT_LIMIT_EXCEEDED`](#seat-limit-exceeded)                                                                                         | Forbidden             |    403 | not-retryable | safe-message  | active    |       1 |
@@ -10806,12 +10806,12 @@ Sources:
 
 - Category: `InternalServerError`
 - HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
+- Retryability: `not-retryable`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Cause: Meilisearch canceled the provider task before the requested mutation completed.
+- User action: Do not retry automatically; submit a new mutation only after the cancellation cause is understood and repeating the operation is safe.
+- Operator action: Inspect the Meilisearch task and provider diagnostics using extensions.operation, extensions.indexName, and extensions.documentId, then correct the cancellation cause before reissuing the mutation.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:

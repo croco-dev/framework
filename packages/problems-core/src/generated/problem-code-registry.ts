@@ -17520,12 +17520,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       title: "Internal Server Error",
       cookbookPath: "/reference/problem-recovery-cookbook/#search-meilisearch-task-canceled",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
+        cause: "Meilisearch canceled the provider task before the requested mutation completed.",
         userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+          "Do not retry automatically; submit a new mutation only after the cancellation cause is understood and repeating the operation is safe.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
+          "Inspect the Meilisearch task and provider diagnostics using extensions.operation, extensions.indexName, and extensions.documentId, then correct the cancellation cause before reissuing the mutation.",
+        retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
           eventName: "croco.problem.error",

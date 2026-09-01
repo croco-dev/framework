@@ -2460,6 +2460,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "public",
     severity: "info",
   }),
+  "search-meilisearch/task-canceled": recovery({
+    cause: "Meilisearch canceled the provider task before the requested mutation completed.",
+    userAction:
+      "Do not retry automatically; submit a new mutation only after the cancellation cause is understood and repeating the operation is safe.",
+    operatorAction:
+      "Inspect the Meilisearch task and provider diagnostics using extensions.operation, extensions.indexName, and extensions.documentId, then correct the cancellation cause before reissuing the mutation.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "search-core/searchable-index-conflict": recovery({
     cause: "More than one searchable metadata declaration owns the same index name.",
     userAction: "Give every searchable declaration a unique index name, then restart registration.",
