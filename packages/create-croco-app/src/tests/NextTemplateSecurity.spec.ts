@@ -8,13 +8,14 @@ const NEXT_ADDONS = ["graphql-nextjs", "trpc-nextjs", "web-graphql", "web-trpc"]
 const WORKSPACE_TEMPLATES = ["blank", "spa-be-split"] as const;
 
 describe("Next.js addon templates", () => {
-  it.each(NEXT_ADDONS)("pins %s to a Server Actions DoS-safe release", (addon) => {
+  it.each(NEXT_ADDONS)("pins %s to a Server Actions and Sharp-safe release", (addon) => {
     const manifestPath = join(TEMPLATES_DIR, "addons", addon, "apps", "web", "package.json.hbs");
     const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
       dependencies?: Record<string, string>;
     };
 
-    expect(manifest.dependencies?.next).toMatch(/^\^?15\.5\.21$/);
+    expect(manifest.dependencies?.next).toMatch(/^\^?15\.5\.25$/);
+    expect(manifest.dependencies?.sharp).toBe("^0.35.4");
   });
 
   it.each(["graphql-nextjs", "trpc-nextjs"] as const)(

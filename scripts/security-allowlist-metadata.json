@@ -1,14 +1,7 @@
 {
   "schemaVersion": 1,
   "audit": {
-    "ignoreGhsas": [
-      {
-        "id": "GHSA-f88m-g3jw-g9cj",
-        "owner": "kang-heewon",
-        "reason": "Generated Next.js 15.5.21 templates constrain their optional sharp dependency to the vulnerable 0.34 line; retain compatibility while the template migration to Next 16 and sharp 0.35 is reviewed.",
-        "reviewBy": "2026-08-31"
-      }
-    ]
+    "ignoreGhsas": []
   },
   "secretScan": {
     "gitleaks": {
