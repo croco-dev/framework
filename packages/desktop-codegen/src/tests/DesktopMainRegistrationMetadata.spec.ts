@@ -7,11 +7,13 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
 import {
+  DesktopPreloadGenerationProblem,
   generateDesktopMainRegistrationMetadata,
   generateDesktopPreloadBridges,
   generateDesktopRendererClients,
   stringifyDesktopMainRegistrationMetadata,
 } from "../index";
+import { assertUniqueDesktopGeneratedSourcePaths } from "../libs/DesktopGeneratedMetadata";
 
 describe("DesktopMainRegistrationMetadata", () => {
   it("generates byte-stable main registration and output metadata", () => {
@@ -170,6 +172,30 @@ describe("DesktopMainRegistrationMetadata", () => {
       expect(path.startsWith("/")).toBe(false);
       expect(path.split("/").at(-1)?.length).toBeLessThan(255);
     }
+  });
+
+  it("rejects duplicate generated paths before callers can persist artifacts", () => {
+    const createProblem = (detail: string) => new DesktopPreloadGenerationProblem(detail);
+    const collision = () =>
+      assertUniqueDesktopGeneratedSourcePaths(
+        [
+          { windowId: "window-a", relativePath: "preload/window-collision.generated.ts" },
+          { windowId: "window-b", relativePath: "preload/window-collision.generated.ts" },
+        ],
+        createProblem,
+      );
+
+    expect(collision).toThrow(DesktopPreloadGenerationProblem);
+    expect(collision).toThrow(/windows "window-a" and "window-b"/);
+    expect(() =>
+      assertUniqueDesktopGeneratedSourcePaths(
+        [
+          { windowId: "window-a", relativePath: "preload/window-a.generated.ts" },
+          { windowId: "window-b", relativePath: "preload/window-b.generated.ts" },
+        ],
+        createProblem,
+      ),
+    ).not.toThrow();
   });
 
   it("omits source evidence, timestamps, and handwritten module paths from main metadata", () => {
