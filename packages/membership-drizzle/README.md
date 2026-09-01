@@ -5,7 +5,7 @@
 ## 설치
 
 ```bash
-pnpm add @croco/membership-drizzle @croco/membership-core drizzle-orm
+pnpm add @croco/membership-drizzle @croco/membership-core @croco/tx-core drizzle-orm
 ```
 
 ## 사용법
