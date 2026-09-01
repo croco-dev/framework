@@ -14,7 +14,12 @@ import {
 
 const NODE_TELEMETRY_MODULE_NAME = "@croco/telemetry-sdk-node";
 const TELEMETRY_DIAGNOSTICS_CONTRIBUTION_ID = "@croco/telemetry-sdk-node/telemetry";
-let activeNodeTelemetryLifecycleOwners = 0;
+const TELEMETRY_LIFECYCLE_OWNER_TOKEN = Symbol(
+  "@croco/telemetry-sdk-node/lifecycle-owner",
+) as ModuleToken<NodeTelemetryLifecycleOwner>;
+const activeNodeTelemetryLifecycleOwners = new Set<NodeTelemetryLifecycleOwner>();
+
+type NodeTelemetryLifecycleOwner = object;
 
 export const TELEMETRY_RUNTIME_TOKEN = TelemetryRuntime as unknown as ModuleToken<TelemetryRuntime>;
 
@@ -26,7 +31,6 @@ export const nodeTelemetry: PluginFactory<NodeTelemetryPluginOptions> = (options
   const { diagnostics, ...config } = options;
   const telemetryRuntime = TelemetryRuntime.getInstance();
   const diagnosticsProvider = new TelemetryDiagnosticsProvider(diagnostics);
-  let ownsTelemetryLifecycle = false;
 
   return defineCrocoPlugin({
     metadata: {
@@ -75,7 +79,13 @@ export const nodeTelemetry: PluginFactory<NodeTelemetryPluginOptions> = (options
     modules: [
       defineCrocoModule({
         name: NODE_TELEMETRY_MODULE_NAME,
-        providers: [{ provide: TELEMETRY_RUNTIME_TOKEN, useValue: telemetryRuntime }],
+        providers: [
+          { provide: TELEMETRY_RUNTIME_TOKEN, useValue: telemetryRuntime },
+          {
+            provide: TELEMETRY_LIFECYCLE_OWNER_TOKEN,
+            useFactory: () => ({}),
+          },
+        ],
         exports: [TELEMETRY_RUNTIME_TOKEN],
         contributions: [
           {
@@ -85,21 +95,18 @@ export const nodeTelemetry: PluginFactory<NodeTelemetryPluginOptions> = (options
             value: diagnosticsProvider satisfies DiagnosticsProvider,
           },
         ],
-        start: async () => {
+        start: async (ctx) => {
           await telemetryRuntime.init(config);
-          if (!ownsTelemetryLifecycle) {
-            activeNodeTelemetryLifecycleOwners += 1;
-            ownsTelemetryLifecycle = true;
-          }
+          const lifecycleOwner = ctx.get(TELEMETRY_LIFECYCLE_OWNER_TOKEN);
+          activeNodeTelemetryLifecycleOwners.add(lifecycleOwner);
         },
-        shutdown: async () => {
-          if (!ownsTelemetryLifecycle) {
+        shutdown: async (ctx) => {
+          const lifecycleOwner = ctx.get(TELEMETRY_LIFECYCLE_OWNER_TOKEN);
+          if (!activeNodeTelemetryLifecycleOwners.delete(lifecycleOwner)) {
             return;
           }
 
-          ownsTelemetryLifecycle = false;
-          activeNodeTelemetryLifecycleOwners -= 1;
-          if (activeNodeTelemetryLifecycleOwners === 0) {
+          if (activeNodeTelemetryLifecycleOwners.size === 0) {
             await telemetryRuntime.shutdown();
           }
         },

@@ -1,5 +1,10 @@
 import type { DiagnosticsProvider } from "@croco/diagnostics-core";
-import { createApplicationRuntime, defineCrocoApplication } from "@croco/framework-module";
+import {
+  createApplicationRuntime,
+  defineCrocoApplication,
+  defineCrocoModule,
+} from "@croco/framework-module";
+import type { CrocoPlugin } from "@croco/framework-module";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   nodeTelemetry,
@@ -17,17 +22,21 @@ describe("nodeTelemetry", () => {
   });
 
   function createDisabledApplication(serviceName = "module-owned-telemetry") {
+    return createApplicationFromPlugin(
+      nodeTelemetry({
+        serviceName,
+        environment: "test",
+        enabled: false,
+        diagnostics: { requirement: "required" },
+      }),
+    );
+  }
+
+  function createApplicationFromPlugin(plugin: CrocoPlugin) {
     const application = createApplicationRuntime(
       defineCrocoApplication({
         name: "telemetry-application",
-        imports: [
-          nodeTelemetry({
-            serviceName,
-            environment: "test",
-            enabled: false,
-            diagnostics: { requirement: "required" },
-          }),
-        ],
+        imports: [plugin],
       }),
     );
     applications.push(application);
@@ -56,8 +65,13 @@ describe("nodeTelemetry", () => {
   });
 
   it("keeps compatible telemetry active until every ApplicationRuntime owner is disposed", async () => {
-    const firstApplication = createDisabledApplication();
-    const secondApplication = createDisabledApplication();
+    const plugin = nodeTelemetry({
+      serviceName: "module-owned-telemetry",
+      environment: "test",
+      enabled: false,
+    });
+    const firstApplication = createApplicationFromPlugin(plugin);
+    const secondApplication = createApplicationFromPlugin(plugin);
     const telemetry = TelemetryRuntime.getInstance();
 
     await firstApplication.initialize();
@@ -73,6 +87,42 @@ describe("nodeTelemetry", () => {
     expect(secondApplication.get(TELEMETRY_RUNTIME_TOKEN)).toBe(telemetry);
 
     await secondApplication.dispose();
+
+    expect(telemetry.getConfig()).toBeNull();
+  });
+
+  it("does not release an active owner when a shared plugin rolls back before telemetry start", async () => {
+    const plugin = nodeTelemetry({
+      serviceName: "module-owned-telemetry",
+      environment: "test",
+      enabled: false,
+    });
+    const activeApplication = createApplicationFromPlugin(plugin);
+    const failingApplication = createApplicationRuntime(
+      defineCrocoApplication({
+        name: "failing-telemetry-application",
+        imports: [
+          plugin,
+          defineCrocoModule({
+            name: "failing-setup",
+            setup: () => {
+              throw new Error("setup failed before telemetry start");
+            },
+          }),
+        ],
+      }),
+    );
+    applications.push(failingApplication);
+    const telemetry = TelemetryRuntime.getInstance();
+
+    await activeApplication.initialize();
+
+    await expect(failingApplication.initialize()).rejects.toThrow(
+      "setup failed before telemetry start",
+    );
+    expect(telemetry.getConfig()).toMatchObject({ serviceName: "module-owned-telemetry" });
+
+    await activeApplication.dispose();
 
     expect(telemetry.getConfig()).toBeNull();
   });
@@ -131,7 +181,13 @@ describe("nodeTelemetry", () => {
         modules: [
           {
             name: "@croco/telemetry-sdk-node",
-            providers: [{ token: "TelemetryRuntime", provider: "value" }],
+            providers: expect.arrayContaining([
+              { token: "TelemetryRuntime", provider: "value" },
+              {
+                token: "@croco/telemetry-sdk-node/lifecycle-owner",
+                provider: "factory",
+              },
+            ]),
             exports: ["TelemetryRuntime"],
             contributions: [
               {
