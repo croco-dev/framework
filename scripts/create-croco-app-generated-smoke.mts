@@ -884,7 +884,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
           },
         },
       },
-      runtimeCapabilityManifestValidation("node"),
+      runtimeCapabilityManifestValidation("node", "dual"),
       { label: "contract:snapshot", args: ["contract:snapshot"] },
       {
         label: "codegen",
@@ -975,7 +975,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
           },
         },
       },
-      runtimeCapabilityManifestValidation("node"),
+      runtimeCapabilityManifestValidation("node", "cjs"),
       { label: "dev:smoke", args: ["dev:smoke"] },
       { label: "Chromium install", args: ["test:browser:install"] },
       { label: "test", args: ["test"] },
@@ -1023,7 +1023,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
           },
         },
       },
-      runtimeCapabilityManifestValidation("cloudflare-workers"),
+      runtimeCapabilityManifestValidation("cloudflare-workers", "esm"),
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
       {
@@ -1069,7 +1069,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
           },
         },
       },
-      runtimeCapabilityManifestValidation("node"),
+      runtimeCapabilityManifestValidation("node", "cjs"),
       { label: "admin:smoke", args: ["admin:smoke"] },
       { label: "Chromium install", args: ["test:browser:install"] },
       { label: "test", args: ["test"] },
@@ -1839,7 +1839,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
           "apps/api-server/src/generatedTenantModel.ts",
         ],
       },
-      runtimeCapabilityManifestValidation("cloudflare-workers"),
+      runtimeCapabilityManifestValidation("cloudflare-workers", "esm"),
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
       {
@@ -1890,7 +1890,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
           "apps/api-server/src/generatedTenantModel.ts",
         ],
       },
-      runtimeCapabilityManifestValidation("lambda"),
+      runtimeCapabilityManifestValidation("lambda", "cjs"),
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
       {
@@ -2951,7 +2951,17 @@ function readSmokeCasePreset(smokeCase: SmokeCase): string {
 
 function runtimeCapabilityManifestValidation(
   platform: RuntimeCapabilitySmokePlatform,
+  format: "esm" | "cjs" | "dual",
 ): SmokeValidation {
+  const hostLifecycle =
+    platform === "node" ? "process" : platform === "lambda" ? "invocation" : "fetch";
+  const buildTargetName =
+    platform === "node"
+      ? "node-application"
+      : platform === "lambda"
+        ? "lambda-function"
+        : "cloudflare-worker";
+
   return {
     label: "runtime capability manifest",
     json: {
@@ -2959,6 +2969,26 @@ function runtimeCapabilityManifestValidation(
       matches: {
         version: "croco.runtime-capability.manifest.v1",
         platform,
+        composition: {
+          host: {
+            platform,
+            lifecycle: hostLifecycle,
+          },
+          transports: [
+            {
+              protocol: "http",
+              packageName: "@croco/transports-http",
+            },
+          ],
+          buildTarget: {
+            name: buildTargetName,
+            format,
+            outputDirectory: "dist",
+            ...(platform === "cloudflare-workers"
+              ? { constraints: ["no-node-builtins", "web-standard-apis"] }
+              : {}),
+          },
+        },
         capabilities: runtimeCapabilitySmokeSupport[platform],
         diagnostics: [],
       },
