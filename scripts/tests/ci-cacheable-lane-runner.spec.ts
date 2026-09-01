@@ -161,7 +161,8 @@ function generatedArtifactsRunner(rootDir: string): CommandRunner {
             );
           }
           const sourcePath = join(rootDir, entry.path);
-          const generatedPath = join(materializedRoot, generated.generatedPath);
+          const materializedPath = entry.path;
+          const generatedPath = join(materializedRoot, materializedPath);
           mkdirSync(dirname(sourcePath), { recursive: true });
           mkdirSync(dirname(generatedPath), { recursive: true });
           writeFileSync(sourcePath, `${entry.path}\n`);
@@ -170,6 +171,7 @@ function generatedArtifactsRunner(rootDir: string): CommandRunner {
             sourcePath: entry.path,
             sourceDigest: fileDigest(sourcePath),
             generatedPath: generated.generatedPath,
+            materializedPath,
             generatedDigest: fileDigest(generatedPath),
             inventoryDigest: inventoryDigest(inventory),
             commandId: generated.commandId,
