@@ -52,8 +52,7 @@
     "@croco/problems-core": "workspace:*",
     "@croco/protocol-codegen": "workspace:*",
     "@croco/protocols-core": "workspace:*",
-    "prettier": "^3.0.0",
-    "ts-morph": "^24.0.0"
+    "prettier": "^3.0.0"
   },
   "devDependencies": {
     "@asteasolutions/zod-to-openapi": "^7.3.4",
@@ -68,6 +67,7 @@
     "@croco/ratelimit-core": "workspace:*",
     "@croco/transports-http": "workspace:*",
     "reflect-metadata": "^0.2.2",
+    "ts-morph": "^24.0.0",
     "tsup": "^8.5.1",
     "typescript": "^5.0.0",
     "vitest": "4.1.8",

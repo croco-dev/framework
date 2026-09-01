@@ -46,7 +46,6 @@
     "@croco/problems-core": "workspace:*",
     "@croco/protocol-codegen": "workspace:*",
     "@croco/protocols-core": "workspace:*",
-    "ts-morph": "^24.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {

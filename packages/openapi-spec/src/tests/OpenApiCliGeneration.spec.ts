@@ -70,10 +70,10 @@ describe("openapi-spec CLI generation", () => {
       expect(stdout).toEqual(
         expect.arrayContaining([
           expect.stringContaining(
-            `ERROR contract-route-missing-response-schema WeakSchemaController.getUser ${controllerPath}:`,
+            "ERROR contract-route-missing-response-schema WeakSchemaController.getUser WeakSchemaController.ts:",
           ),
           expect.stringContaining(
-            `ERROR contract-route-missing-named-param-schema WeakSchemaController.getUser ${controllerPath}:`,
+            "ERROR contract-route-missing-named-param-schema WeakSchemaController.getUser WeakSchemaController.ts:",
           ),
         ]),
       );

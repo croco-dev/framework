@@ -22501,6 +22501,12 @@
           "sourceEntrypoint": "packages/protocol-codegen/src/index.ts",
           "runtimeExports": [
             {
+              "name": "CONTROLLER_TYPESCRIPT_DIAGNOSTIC_CODE",
+              "exportKind": "named",
+              "source": "./libs/RestControllerSources",
+              "declarationKind": "const"
+            },
+            {
               "name": "ControllerProjectConfigProblem",
               "exportKind": "named",
               "source": "./libs/ControllerProject",
@@ -22513,9 +22519,27 @@
               "declarationKind": "function"
             },
             {
+              "name": "formatControllerTypeScriptDiagnostics",
+              "exportKind": "named",
+              "source": "./libs/RestControllerSources",
+              "declarationKind": "function"
+            },
+            {
               "name": "getCommonSourceDirectory",
               "exportKind": "named",
               "source": "./libs/ControllerProject",
+              "declarationKind": "function"
+            },
+            {
+              "name": "getNoRestControllersFoundMessage",
+              "exportKind": "named",
+              "source": "./libs/RestControllerSources",
+              "declarationKind": "function"
+            },
+            {
+              "name": "loadRestControllerSources",
+              "exportKind": "named",
+              "source": "./libs/RestControllerSources",
               "declarationKind": "function"
             }
           ],
@@ -22531,9 +22555,34 @@
               "source": "./libs/ControllerProject"
             },
             {
+              "name": "ControllerTypeScriptDiagnostic",
+              "exportKind": "named",
+              "source": "./libs/RestControllerSources"
+            },
+            {
               "name": "CreateControllerProjectOptions",
               "exportKind": "named",
               "source": "./libs/ControllerProject"
+            },
+            {
+              "name": "LoadRestControllerSourcesOptions",
+              "exportKind": "named",
+              "source": "./libs/RestControllerSources"
+            },
+            {
+              "name": "RestControllerSourceModule",
+              "exportKind": "named",
+              "source": "./libs/RestControllerSources"
+            },
+            {
+              "name": "RestControllerSourceProblems",
+              "exportKind": "named",
+              "source": "./libs/RestControllerSources"
+            },
+            {
+              "name": "RestControllerSources",
+              "exportKind": "named",
+              "source": "./libs/RestControllerSources"
             }
           ]
         }
