@@ -22452,6 +22452,11 @@
               "source": "./handler"
             },
             {
+              "name": "LambdaFetchApplication",
+              "exportKind": "named",
+              "source": "./handler"
+            },
+            {
               "name": "LambdaHandler",
               "exportKind": "named",
               "source": "./handler"
@@ -22506,6 +22511,12 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "LambdaFetchApplication",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
             {
               "name": "LambdaHandlerOptions",
               "exportKind": "declaration",
@@ -22573,6 +22584,12 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "LambdaFetchApplication",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "type"
+            },
             {
               "name": "LambdaHandlerOptions",
               "exportKind": "declaration",
@@ -32634,6 +32651,12 @@
               "name": "getLambdaEvent",
               "exportKind": "named",
               "source": "./libs/CrocoLambdaAdapter",
+              "declarationKind": "function"
+            },
+            {
+              "name": "getRuntimeContextInitFromEnv",
+              "exportKind": "named",
+              "source": "./libs/runtimeContext",
               "declarationKind": "function"
             },
             {
