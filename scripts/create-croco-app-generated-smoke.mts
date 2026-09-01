@@ -339,14 +339,17 @@ function recordGeneratedTestMaterialization(
     if (!entry.generated || generatedMaterializationEvidence.has(entry.path)) continue;
     const generatedPath = join(projectDir, entry.generated.generatedPath);
     if (!existsSync(generatedPath)) continue;
+    const sourceDigest = fileSha256(join(rootDir, entry.path));
+    const generatedDigest = fileSha256(generatedPath);
+    if (sourceDigest !== generatedDigest) continue;
     const reportPath = join(materializedRoot, entry.generated.generatedPath);
     mkdirSync(dirname(reportPath), { recursive: true });
     copyFileSync(generatedPath, reportPath);
     generatedMaterializationEvidence.set(entry.path, {
       sourcePath: entry.path,
-      sourceDigest: fileSha256(join(rootDir, entry.path)),
+      sourceDigest,
       generatedPath: entry.generated.generatedPath,
-      generatedDigest: fileSha256(reportPath),
+      generatedDigest,
       inventoryDigest: testInventoryDigest,
       commandId: entry.generated.commandId,
     });
@@ -464,7 +467,7 @@ export function prepareGeneratedUnitEvidenceCapture(
   projectDir: string,
   inventoryEntries: readonly TestInventoryEntry[] = testInventory.tests,
 ): GeneratedUnitEvidenceCapture {
-  const grouped = new Map<string, string[]>();
+  const grouped = new Map<string, readonly string[]>();
   for (const entry of inventoryEntries.filter(({ lane }) => lane === "generated-app")) {
     const generatedPath = entry.generated?.generatedPath;
     if (
@@ -475,7 +478,7 @@ export function prepareGeneratedUnitEvidenceCapture(
       continue;
     }
     const packageDir = findGeneratedTestPackageDirectory(projectDir, generatedPath);
-    grouped.set(packageDir, [...(grouped.get(packageDir) ?? []), generatedPath]);
+    grouped.set(packageDir, normalizedPaths([...(grouped.get(packageDir) ?? []), generatedPath]));
   }
 
   const originals = new Map<string, string>();
@@ -3436,9 +3439,9 @@ function runValidation(
             : run(corepackCommand, commandArgs, rootDir, commandEnv),
         );
         if (unitCapture) {
-          const expected = unitCapture.reports
-            .flatMap(({ generatedPaths }) => generatedPaths)
-            .sort();
+          const expected = normalizedPaths(
+            unitCapture.reports.flatMap(({ generatedPaths }) => generatedPaths),
+          );
           const executed = [...new Set(readGeneratedUnitEvidence(unitCapture))].sort();
           if (JSON.stringify(executed) !== JSON.stringify(expected)) {
             throw new Error(
@@ -3448,15 +3451,16 @@ function runValidation(
           step.executedTestPaths = executed;
         }
         if (journeyReportPath) {
-          const expected = testInventory.tests
-            .filter(
-              (entry) =>
-                entry.lane === "generated-app" &&
-                entry.generated?.generatedPath.startsWith("tests/journeys/") &&
-                existsSync(join(projectDir, entry.generated.generatedPath)),
-            )
-            .flatMap((entry) => (entry.generated ? [entry.generated.generatedPath] : []))
-            .sort();
+          const expected = normalizedPaths(
+            testInventory.tests
+              .filter(
+                (entry) =>
+                  entry.lane === "generated-app" &&
+                  entry.generated?.generatedPath.startsWith("tests/journeys/") &&
+                  existsSync(join(projectDir, entry.generated.generatedPath)),
+              )
+              .flatMap((entry) => (entry.generated ? [entry.generated.generatedPath] : [])),
+          );
           const executed = existsSync(journeyReportPath)
             ? reconcileGeneratedTestPaths(
                 readCompletedPlaywrightPaths(journeyReportPath, projectDir),
