@@ -526,7 +526,7 @@ function validateTenantField(
     return;
   }
 
-  const tenantFieldIndex = fields.findIndex((field) => field.id === tenantFieldId);
+  const tenantFieldIndex = fields.findIndex((field) => field.id === normalizedTenantFieldId);
   const tenantField = fields[tenantFieldIndex];
   if (!tenantField) {
     diagnostics.push(
