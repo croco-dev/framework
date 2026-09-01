@@ -128,7 +128,13 @@ function toWindowRegistration(window: DesktopContractGraphWindow): DesktopMainWi
   return {
     id: window.id,
     trust: window.trust,
-    originPolicy: window.originPolicy,
+    originPolicy:
+      window.originPolicy.mode === "remote-allowlist"
+        ? {
+            ...window.originPolicy,
+            allowedOrigins: [...window.originPolicy.allowedOrigins].sort(compareCodeUnits),
+          }
+        : window.originPolicy,
     exposedCommandIds: [...window.exposedCommands].sort(compareCodeUnits),
     receivedEventIds: [...window.receivedEvents].sort(compareCodeUnits),
   };

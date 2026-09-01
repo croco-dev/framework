@@ -23,7 +23,16 @@ describe("DesktopMainRegistrationMetadata", () => {
       commands: [...graph.commands].reverse(),
       contracts: [...graph.contracts].reverse(),
       events: [...graph.events].reverse(),
-      windows: [...graph.windows].reverse(),
+      windows: [...graph.windows].reverse().map((window) => ({
+        ...window,
+        originPolicy:
+          window.originPolicy.mode === "remote-allowlist"
+            ? {
+                ...window.originPolicy,
+                allowedOrigins: [...window.originPolicy.allowedOrigins].reverse(),
+              }
+            : window.originPolicy,
+      })),
     });
 
     expect(repeated).toEqual(first);
@@ -139,6 +148,10 @@ describe("DesktopMainRegistrationMetadata", () => {
           "C:": empty,
           CON: empty,
           유니코드: empty,
+          "\uD800": empty,
+          "\uDFFF": empty,
+          "\uFFFD": empty,
+          ["x".repeat(1024)]: empty,
         },
       }),
     );
@@ -149,12 +162,13 @@ describe("DesktopMainRegistrationMetadata", () => {
     const paths = surfaceOutputs.map(({ relativePath }) => relativePath);
 
     expect(new Set(paths).size).toBe(paths.length);
-    expect(paths).toHaveLength(10);
+    expect(paths).toHaveLength(18);
     for (const path of paths) {
-      expect(path).toMatch(/^(preload|renderer)\/window-[0-9a-f]+\.generated\.ts$/);
+      expect(path).toMatch(/^(preload|renderer)\/window-[0-9a-f]{64}\.generated\.ts$/);
       expect(path).not.toContain("..");
       expect(path).not.toContain("\\");
       expect(path.startsWith("/")).toBe(false);
+      expect(path.split("/").at(-1)?.length).toBeLessThan(255);
     }
   });
 
@@ -210,7 +224,7 @@ function createApp(stale: boolean) {
       settings: desktop.window.local({ expose: [system.commands.status] }),
       login: desktop.window.remote({
         initialUrl: "https://login.example.com",
-        allowedOrigins: ["https://login.example.com"],
+        allowedOrigins: ["https://login.example.com", "https://auth.example.com"],
       }),
     },
   });

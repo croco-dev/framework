@@ -10,6 +10,7 @@ import {
   assertDesktopContractGraphSemanticHash,
 } from "./assertDesktopContractGraphGeneratable";
 import {
+  assertUniqueDesktopGeneratedSourcePaths,
   createDesktopGeneratedSourcePath,
   createDesktopGeneratedSurfaceMetadata,
   renderDesktopGeneratedSurfaceMetadata,
@@ -70,7 +71,7 @@ export function generateDesktopPreloadBridges(
     (detail) => new DesktopPreloadGenerationProblem(detail),
   );
 
-  return [...graph.windows].sort(compareById).flatMap((window) => {
+  const artifacts = [...graph.windows].sort(compareById).flatMap((window) => {
     if (window.trust === "remote") {
       return [];
     }
@@ -87,6 +88,11 @@ export function generateDesktopPreloadBridges(
       },
     ];
   });
+  assertUniqueDesktopGeneratedSourcePaths(
+    artifacts,
+    (detail) => new DesktopPreloadGenerationProblem(detail),
+  );
+  return artifacts;
 }
 
 function assertGeneratableGraph(graph: DesktopContractGraphV1): void {

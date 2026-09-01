@@ -16,6 +16,7 @@ import {
   assertDesktopContractGraphSemanticHash,
 } from "./assertDesktopContractGraphGeneratable";
 import {
+  assertUniqueDesktopGeneratedSourcePaths,
   createDesktopGeneratedSourcePath,
   createDesktopGeneratedSurfaceMetadata,
   renderDesktopGeneratedSurfaceMetadata,
@@ -71,7 +72,7 @@ export function generateDesktopRendererClients(
     (detail) => new DesktopRendererGenerationProblem(detail),
   );
 
-  return [...graph.windows].sort(compareById).flatMap((window) => {
+  const artifacts = [...graph.windows].sort(compareById).flatMap((window) => {
     if (window.trust === "remote") {
       return [];
     }
@@ -85,6 +86,11 @@ export function generateDesktopRendererClients(
       },
     ];
   });
+  assertUniqueDesktopGeneratedSourcePaths(
+    artifacts,
+    (detail) => new DesktopRendererGenerationProblem(detail),
+  );
+  return artifacts;
 }
 
 function assertGeneratableGraph(graph: DesktopContractGraphV1): void {

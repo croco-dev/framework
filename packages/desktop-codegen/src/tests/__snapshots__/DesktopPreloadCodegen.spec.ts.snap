@@ -13,7 +13,7 @@ exports[`generateDesktopPreloadBridges > generates deterministic minimal bridges
       "version": "croco.desktop-generated-surface.v1",
       "windowId": "empty",
     },
-    "relativePath": "preload/window-656d707479.generated.ts",
+    "relativePath": "preload/window-146c778cf74d0b095af8830712c1afae847bf64cc01281317aeec2da05ddf6a0.generated.ts",
     "source": "import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";
 
 export const desktopContractMetadata = Object.freeze({
@@ -54,7 +54,7 @@ export function installDesktopPreloadBridge(
       "version": "croco.desktop-generated-surface.v1",
       "windowId": "main",
     },
-    "relativePath": "preload/window-6d61696e.generated.ts",
+    "relativePath": "preload/window-229ca447080af0f86f81c47591bd2ca1a63ab2fcd4db74ffdf11a9dbab80db6e.generated.ts",
     "source": "import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";
 
 export const desktopContractMetadata = Object.freeze({
@@ -133,7 +133,7 @@ export function installDesktopPreloadBridge(
       "version": "croco.desktop-generated-surface.v1",
       "windowId": "settings",
     },
-    "relativePath": "preload/window-73657474696e6773.generated.ts",
+    "relativePath": "preload/window-7ea92678e29c0c7017fb11e35f94db14848e033e3fedbaf21e85eb8494a1ae40.generated.ts",
     "source": "import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";
 
 export const desktopContractMetadata = Object.freeze({

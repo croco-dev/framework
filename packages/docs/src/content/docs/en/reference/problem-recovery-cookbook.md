@@ -3998,7 +3998,7 @@ Sources:
 
 Sources:
 
-- `packages/desktop-codegen/src/libs/generateDesktopPreloadBridges.ts:45:5` (problem-constructor)
+- `packages/desktop-codegen/src/libs/generateDesktopPreloadBridges.ts:46:5` (problem-constructor)
 
 <a id="desktop-codegen-invalid-renderer-contract-graph"></a>
 
@@ -4016,7 +4016,7 @@ Sources:
 
 Sources:
 
-- `packages/desktop-codegen/src/libs/generateDesktopRendererClients.ts:35:5` (problem-constructor)
+- `packages/desktop-codegen/src/libs/generateDesktopRendererClients.ts:36:5` (problem-constructor)
 
 <a id="diagnostics-core-duplicate-provider"></a>
 

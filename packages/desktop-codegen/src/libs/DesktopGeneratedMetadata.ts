@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type { DesktopContractGraphV1, DesktopContractHandshakeV1 } from "@croco/protocols-desktop";
 
 export type DesktopGeneratedSurfaceMetadataVersion = "croco.desktop-generated-surface.v1";
@@ -38,7 +40,23 @@ export function createDesktopGeneratedSourcePath(
   surface: DesktopGeneratedSurface,
   windowId: string,
 ): string {
-  return `${surface}/window-${encodeUtf8Hex(windowId)}.generated.ts`;
+  return `${surface}/window-${hashWindowId(windowId)}.generated.ts`;
+}
+
+export function assertUniqueDesktopGeneratedSourcePaths(
+  artifacts: readonly { readonly windowId: string; readonly relativePath: string }[],
+  createProblem: (detail: string) => Error,
+): void {
+  const windowByPath = new Map<string, string>();
+  for (const artifact of artifacts) {
+    const existingWindowId = windowByPath.get(artifact.relativePath);
+    if (existingWindowId !== undefined) {
+      throw createProblem(
+        `Generated desktop output path ${JSON.stringify(artifact.relativePath)} is shared by windows ${JSON.stringify(existingWindowId)} and ${JSON.stringify(artifact.windowId)}.`,
+      );
+    }
+    windowByPath.set(artifact.relativePath, artifact.windowId);
+  }
 }
 
 export function renderDesktopGeneratedSurfaceMetadata(
@@ -58,8 +76,9 @@ export function renderDesktopGeneratedSurfaceMetadata(
   ];
 }
 
-function encodeUtf8Hex(value: string): string {
-  return [...new TextEncoder().encode(value)]
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
+function hashWindowId(value: string): string {
+  const codeUnits = Array.from({ length: value.length }, (_, index) =>
+    value.charCodeAt(index).toString(16).padStart(4, "0"),
+  ).join("");
+  return createHash("sha256").update(codeUnits, "ascii").digest("hex");
 }
