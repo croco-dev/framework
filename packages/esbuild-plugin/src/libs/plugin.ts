@@ -279,7 +279,7 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
 
         return {
           contents: finalContents,
-          loader: "ts",
+          loader: path.extname(args.path).toLowerCase() === ".tsx" ? "tsx" : "ts",
         };
       });
 
