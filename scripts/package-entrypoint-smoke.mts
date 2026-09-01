@@ -8,7 +8,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
-import { builtinModules } from "node:module";
+import { builtinModules, createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -110,6 +110,21 @@ type RunResult = {
   readonly stderr: string;
   readonly stdout: string;
 };
+
+type EsbuildMetafile = {
+  readonly outputs?: Readonly<
+    Record<
+      string,
+      {
+        readonly inputs?: Readonly<Record<string, { readonly bytesInOutput?: number }>>;
+      }
+    >
+  >;
+};
+
+const esbuildPath = createRequire(
+  join(defaultRootDir, "packages/esbuild-plugin/package.json"),
+).resolve("esbuild/bin/esbuild");
 
 main();
 
@@ -594,6 +609,192 @@ function runPackageSmoke(
   if (decoratorMetadataContract) {
     runDecoratorMetadataSmoke(packageSmokeRoot, graphPackages, decoratorMetadataContract);
   }
+
+  runPublishedBundleSmoke(packageSmokeRoot, packageInfo.packageName);
+}
+
+function runPublishedBundleSmoke(smokeRoot: string, packageName: string): void {
+  if (packageName === "@croco/problems-core") {
+    runPurePackageBundleSmoke(smokeRoot, packageName);
+    return;
+  }
+
+  if (packageName === "@croco/audit-core") {
+    runDecoratorBundleSmoke(smokeRoot);
+    return;
+  }
+
+  if (packageName === "@croco/ui-astryx") {
+    runCssBundleSmoke(smokeRoot);
+  }
+}
+
+function runPurePackageBundleSmoke(smokeRoot: string, packageName: string): void {
+  const entryPath = join(smokeRoot, "pure-bundle-entry.mjs");
+  const bundlePath = join(smokeRoot, "pure-bundle.mjs");
+  const metafilePath = join(smokeRoot, "pure-bundle-meta.json");
+  writeFileSync(
+    entryPath,
+    `import ${JSON.stringify(packageName)};\nconsole.log("pure bundle ok");\n`,
+  );
+
+  runEsbuild(
+    smokeRoot,
+    [entryPath, "--bundle", `--outfile=${bundlePath}`, `--metafile=${metafilePath}`],
+    {
+      label: `${packageName}: removable pure package bundle`,
+    },
+  );
+
+  const metafile = JSON.parse(readFileSync(metafilePath, "utf-8")) as EsbuildMetafile;
+  const bundledPackageBytes = bundledBytesForPackage(metafile, packageName);
+  if (bundledPackageBytes > 0) {
+    throw new Error(
+      `${packageName}: unused pure package import contributed ${bundledPackageBytes} byte(s) to the bundle`,
+    );
+  }
+
+  run("node", [bundlePath], smokeRoot, { label: `${packageName}: execute pure package bundle` });
+  console.log(`bundle tree-shaking ok ${packageName}`);
+}
+
+function runDecoratorBundleSmoke(smokeRoot: string): void {
+  const initializerEntryPath = join(smokeRoot, "metadata-initializer-bundle-entry.mjs");
+  const initializerBundlePath = join(smokeRoot, "metadata-initializer-bundle.mjs");
+  writeFileSync(
+    initializerEntryPath,
+    [
+      'import "@croco/audit-core";',
+      'if (typeof Reflect.getMetadata !== "function") throw new Error("bundled metadata initialization was not retained");',
+      'console.log("bundle metadata initialization ok @croco/audit-core");',
+      "",
+    ].join("\n"),
+  );
+  runEsbuild(smokeRoot, [initializerEntryPath, "--bundle", `--outfile=${initializerBundlePath}`], {
+    label: "@croco/audit-core: metadata initializer bundle",
+  });
+  run("node", [initializerBundlePath], smokeRoot, {
+    label: "@croco/audit-core: execute metadata initializer bundle",
+  });
+  console.log("bundle metadata initialization ok @croco/audit-core");
+
+  const entryPath = join(smokeRoot, "decorator-bundle-entry.mjs");
+  const bundlePath = join(smokeRoot, "decorator-bundle.mjs");
+  writeFileSync(
+    entryPath,
+    [
+      'import { AUDIT_PARAM_KEY, Auditable } from "@croco/audit-core";',
+      "class AuditBundleService { run(resourceId) { return resourceId; } }",
+      'const descriptor = Object.getOwnPropertyDescriptor(AuditBundleService.prototype, "run");',
+      'Auditable({ action: "bundle.smoke", resourceIdIndex: 0, resourceType: "bundle" })(AuditBundleService.prototype, "run", descriptor);',
+      'const metadata = Reflect.getMetadata?.(AUDIT_PARAM_KEY, AuditBundleService.prototype, "run");',
+      'if (metadata?.resourceIdIndex !== 0) throw new Error("bundled @Auditable metadata was not retained");',
+      'console.log("bundle decorator metadata ok @croco/audit-core");',
+      "",
+    ].join("\n"),
+  );
+
+  runEsbuild(smokeRoot, [entryPath, "--bundle", `--outfile=${bundlePath}`], {
+    label: "@croco/audit-core: decorator metadata bundle",
+  });
+  run("node", [bundlePath], smokeRoot, {
+    label: "@croco/audit-core: execute decorator metadata bundle",
+  });
+  console.log("bundle decorator metadata ok @croco/audit-core");
+}
+
+function runCssBundleSmoke(smokeRoot: string): void {
+  const outputRoot = join(smokeRoot, "ui-astryx-bundle");
+  const entryPath = join(smokeRoot, "ui-astryx-bundle-entry.mjs");
+  const cssPath = join(outputRoot, "ui-astryx-bundle-entry.css");
+  const metafilePath = join(smokeRoot, "ui-astryx-bundle-meta.json");
+  writeFileSync(
+    entryPath,
+    'import "@croco/ui-astryx/styles.css";\nconsole.log("ui-astryx bundle ok");\n',
+  );
+
+  runEsbuild(
+    smokeRoot,
+    [entryPath, "--bundle", `--outdir=${outputRoot}`, `--metafile=${metafilePath}`],
+    {
+      label: "@croco/ui-astryx: retained CSS bundle",
+    },
+  );
+  const metafile = JSON.parse(readFileSync(metafilePath, "utf-8")) as EsbuildMetafile;
+  if (
+    !existsSync(cssPath) ||
+    bundledCssBytes(metafile) === 0 ||
+    !bundleIncludesPackageInput(metafile, "@croco/ui-astryx", "/dist/styles.css")
+  ) {
+    throw new Error("@croco/ui-astryx: bundled CSS entrypoint was not retained");
+  }
+
+  run("node", [join(outputRoot, "ui-astryx-bundle-entry.js")], smokeRoot, {
+    label: "@croco/ui-astryx: execute CSS consumer bundle",
+  });
+  console.log("bundle css retained @croco/ui-astryx/styles.css");
+}
+
+function bundledCssBytes(metafile: EsbuildMetafile): number {
+  return Object.entries(metafile.outputs ?? {}).reduce((total, [outputPath, output]) => {
+    if (!outputPath.endsWith(".css")) {
+      return total;
+    }
+    return (
+      total +
+      Object.values(output.inputs ?? {}).reduce(
+        (outputTotal, contribution) => outputTotal + (contribution.bytesInOutput ?? 0),
+        0,
+      )
+    );
+  }, 0);
+}
+
+function bundleIncludesPackageInput(
+  metafile: EsbuildMetafile,
+  packageName: string,
+  inputSuffix: string,
+): boolean {
+  const packagePath = `/node_modules/${packageName}/`;
+  return Object.values(metafile.outputs ?? {}).some((output) =>
+    Object.keys(output.inputs ?? {}).some((input) => {
+      const normalizedInput = input.replaceAll("\\", "/");
+      return normalizedInput.includes(packagePath) && normalizedInput.endsWith(inputSuffix);
+    }),
+  );
+}
+
+function runEsbuild(
+  cwd: string,
+  args: readonly string[],
+  options: { readonly label: string },
+): void {
+  run(
+    esbuildPath,
+    [...args, "--format=esm", "--platform=node", "--tree-shaking=true"],
+    cwd,
+    options,
+  );
+}
+
+function bundledBytesForPackage(
+  metafile: EsbuildMetafile,
+  packageName: string,
+  inputSuffix = "",
+): number {
+  const packagePath = `/node_modules/${packageName}/`;
+  return Object.values(metafile.outputs ?? {}).reduce(
+    (outputTotal, output) =>
+      outputTotal +
+      Object.entries(output.inputs ?? {}).reduce((inputTotal, [input, contribution]) => {
+        const normalizedInput = input.replaceAll("\\", "/");
+        if (!normalizedInput.includes(packagePath) || !normalizedInput.endsWith(inputSuffix)) {
+          return inputTotal;
+        }
+        return inputTotal + (contribution.bytesInOutput ?? 0);
+      }, 0),
+    0,
+  );
 }
 
 function runFrameworkLoggerStartupSmoke(packageSmokeRoot: string): void {

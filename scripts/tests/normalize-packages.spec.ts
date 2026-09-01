@@ -69,6 +69,7 @@ describe("normalize-packages.mjs", () => {
         types: ["dist/index.d.ts", "dist/index.d.mts"],
         publishConfig: {
           files: ["dist"],
+          sideEffects: ["./dist/**"],
           main: "./src/index.ts",
           types: ["dist/index.d.ts", "dist/index.d.mts"],
           exports: {
@@ -93,10 +94,64 @@ describe("normalize-packages.mjs", () => {
     expect(pkg.types).toBe("./dist/index.d.ts");
     expect(pkg.publishConfig.access).toBe("public");
     expect(pkg.publishConfig.files).toBeUndefined();
+    expect(pkg.publishConfig.sideEffects).toBeUndefined();
     expect(pkg.publishConfig.main).toBe("./dist/index.js");
     expect(pkg.publishConfig.types).toBe("./dist/index.d.ts");
     expect(pkg.publishConfig.exports["."].types).toBe("./dist/index.d.ts");
     expect(Object.keys(pkg.publishConfig.exports["."])).toEqual(["types", "import", "require"]);
+  });
+
+  it("declares pure packages as side-effect free", () => {
+    const root = createTempRoot();
+    const packagePath = writePackage(root, "pure", publishablePackage("@croco/pure"));
+
+    const result = runScript(root, "--write");
+    const pkg = JSON.parse(readFileSync(packagePath, "utf-8"));
+
+    expect(result.status).toBe(0);
+    expect(pkg.sideEffects).toBe(false);
+  });
+
+  it("declares exact emitted paths for metadata side effects", () => {
+    const root = createTempRoot();
+    const packagePath = writePackage(
+      root,
+      "decorators",
+      publishablePackage("@croco/decorators", {
+        dependencies: { "reflect-metadata": "^0.2.2" },
+      }),
+      {
+        sourceContent: 'import "reflect-metadata";\nexport const value = 1;\n',
+      },
+    );
+
+    const result = runScript(root, "--write");
+    const pkg = JSON.parse(readFileSync(packagePath, "utf-8"));
+
+    expect(result.status).toBe(0);
+    expect(pkg.sideEffects).toEqual(["./dist/index.js", "./dist/index.mjs"]);
+  });
+
+  it("rejects over-broad side-effect declarations", () => {
+    const root = createTempRoot();
+    writePackage(root, "broad", publishablePackage("@croco/broad", { sideEffects: ["./dist/**"] }));
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('sideEffects must be false, received ["./dist/**"]');
+  });
+
+  it("rejects missing side-effect declarations", () => {
+    const root = createTempRoot();
+    writePackage(root, "missing", publishablePackage("@croco/missing"), {
+      sideEffects: false,
+    });
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("sideEffects must be false, received undefined");
   });
 
   it("normalizes workspace and published subpath conditions to the canonical order", () => {
@@ -159,6 +214,103 @@ describe("normalize-packages.mjs", () => {
       "import",
       "require",
     ]);
+  });
+
+  it("declares exact emitted paths for import-time component registration", () => {
+    const root = createTempRoot();
+    const packagePath = writePackage(
+      root,
+      "component",
+      publishablePackage("@croco/component", {
+        dependencies: { "@croco/framework-context": "^0.1.0" },
+      }),
+      {
+        sourceContent: [
+          'import { Component } from "@croco/framework-context";',
+          "@Component()",
+          "export class RegisteredService {}",
+          "",
+        ].join("\n"),
+      },
+    );
+
+    const result = runScript(root, "--write");
+    const pkg = JSON.parse(readFileSync(packagePath, "utf-8"));
+
+    expect(result.status).toBe(0);
+    expect(pkg.sideEffects).toEqual(["./dist/index.js", "./dist/index.mjs"]);
+  });
+
+  it("detects imported component registration across TypeScript module variants", () => {
+    const root = createTempRoot();
+    const packagePath = writePackage(
+      root,
+      "component-variants",
+      publishablePackage("@croco/component-variants", {
+        dependencies: { "@croco/framework-context": "^0.1.0" },
+      }),
+    );
+    const sourceDir = join(root, "packages", "component-variants", "src");
+    writeFileSync(
+      join(sourceDir, "Aliased.tsx"),
+      [
+        'import { Component as Register } from "@croco/framework-context";',
+        "@Register()",
+        "export class AliasedComponent {}",
+        "",
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(sourceDir, "Namespaced.mts"),
+      [
+        'import * as FrameworkContext from "@croco/framework-context";',
+        "@FrameworkContext.Component()",
+        "export class NamespacedComponent {}",
+        "",
+      ].join("\n"),
+    );
+    writeFileSync(
+      join(sourceDir, "Direct.cts"),
+      [
+        'import { Component } from "@croco/framework-context";',
+        "@Component()",
+        "export class CommonJsComponent {}",
+        "",
+      ].join("\n"),
+    );
+
+    const result = runScript(root, "--write");
+    const pkg = JSON.parse(readFileSync(packagePath, "utf-8"));
+
+    expect(result.status).toBe(0);
+    expect(pkg.sideEffects).toEqual(["./dist/index.js", "./dist/index.mjs"]);
+  });
+
+  it("does not infer registration from an unrelated component decorator", () => {
+    const root = createTempRoot();
+    writePackage(root, "local-component", publishablePackage("@croco/local-component"), {
+      sourceContent: [
+        "function Component(): ClassDecorator { return () => {}; }",
+        "@Component()",
+        "export class LocalComponent {}",
+        "",
+      ].join("\n"),
+    });
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(0);
+  });
+
+  it("does not infer component registration from string content", () => {
+    const root = createTempRoot();
+    writePackage(root, "component-text", publishablePackage("@croco/component-text"), {
+      sourceContent: 'export const example = "@Component()";\n',
+    });
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(0);
   });
 
   it("derives create-croco-app dependency metadata from the workspace catalog", () => {
@@ -1687,6 +1839,7 @@ function writePackage(
   pkg: Record<string, unknown>,
   options: {
     readonly repository?: boolean;
+    readonly sideEffects?: boolean;
     readonly sourceContent?: string;
     readonly sourceIndex?: boolean;
   } = {},
@@ -1694,21 +1847,96 @@ function writePackage(
   const packageDir = join(root, "packages", packageDirName);
   mkdirSync(packageDir, { recursive: true });
 
+  const sourceContent = options.sourceContent ?? "export const value = 1;\n";
+
   if (options.sourceIndex !== false) {
     const sourcePath = join(packageDir, "src", "index.ts");
     mkdirSync(dirname(sourcePath), { recursive: true });
-    writeFileSync(sourcePath, options.sourceContent ?? "export const value = 1;\n");
+    writeFileSync(sourcePath, sourceContent);
   }
 
   const packagePath = join(packageDir, "package.json");
+  const packageWithSideEffects =
+    pkg.private !== true && options.sideEffects !== false && !Object.hasOwn(pkg, "sideEffects")
+      ? withSideEffectsMetadata(pkg, expectedFixtureSideEffects(pkg, sourceContent))
+      : pkg;
   const manifest =
     options.repository !== false && pkg.private !== true
-      ? withRepositoryMetadata(pkg, repositoryFor(packageDirName))
-      : pkg;
+      ? withRepositoryMetadata(packageWithSideEffects, repositoryFor(packageDirName))
+      : packageWithSideEffects;
 
   writeFileSync(packagePath, `${JSON.stringify(manifest, null, 2)}\n`);
 
   return packagePath;
+}
+
+function expectedFixtureSideEffects(
+  pkg: Record<string, unknown>,
+  sourceContent: string,
+): false | string[] {
+  const paths = new Set<string>();
+
+  if (/^\s*import\s+(?:[^'"]+\s+from\s+)?["']reflect-metadata["']\s*;?/m.test(sourceContent)) {
+    const publishConfig = pkg.publishConfig as
+      | { readonly exports?: Record<string, unknown>; readonly main?: unknown }
+      | undefined;
+    collectFixtureRuntimePaths(publishConfig?.exports?.["."], paths);
+    collectFixtureRuntimePaths(publishConfig?.main, paths);
+  }
+
+  const bin = pkg.bin;
+  if (typeof bin === "string") {
+    paths.add(bin);
+  } else if (bin && typeof bin === "object" && !Array.isArray(bin)) {
+    for (const target of Object.values(bin)) {
+      if (typeof target === "string") {
+        paths.add(target);
+      }
+    }
+  }
+
+  return paths.size > 0 ? Array.from(paths).sort() : false;
+}
+
+function collectFixtureRuntimePaths(value: unknown, paths: Set<string>): void {
+  if (typeof value === "string") {
+    if (value.startsWith("./dist/") && /\.(?:cjs|js|mjs)$/.test(value)) {
+      paths.add(value);
+    }
+    return;
+  }
+
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return;
+  }
+
+  for (const nestedValue of Object.values(value)) {
+    collectFixtureRuntimePaths(nestedValue, paths);
+  }
+}
+
+function withSideEffectsMetadata(
+  pkg: Record<string, unknown>,
+  sideEffects: false | string[],
+): Record<string, unknown> {
+  const manifest: Record<string, unknown> = {};
+  const insertAfterKey = Object.hasOwn(pkg, "type") ? "type" : "files";
+  let inserted = false;
+
+  for (const [key, value] of Object.entries(pkg)) {
+    manifest[key] = value;
+
+    if (key === insertAfterKey) {
+      manifest.sideEffects = sideEffects;
+      inserted = true;
+    }
+  }
+
+  if (!inserted) {
+    manifest.sideEffects = sideEffects;
+  }
+
+  return manifest;
 }
 
 function writePublishablePackage(root: string, scripts: Record<string, string>): string {

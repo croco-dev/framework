@@ -10,6 +10,10 @@
     "dist"
   ],
   "type": "module",
+  "sideEffects": [
+    "./dist/index.cjs",
+    "./dist/index.js"
+  ],
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "exports": {

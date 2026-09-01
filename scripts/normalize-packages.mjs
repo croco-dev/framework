@@ -55,6 +55,29 @@ const DRIZZLE_PACKAGE_SUFFIX = "-drizzle";
 const REFLECT_METADATA_PACKAGE = "reflect-metadata";
 const REFLECT_METADATA_IMPORT_RE =
   /^\s*import\s+(?:[^'"]+\s+from\s+)?["']reflect-metadata["']\s*;?/m;
+const FRAMEWORK_CONTEXT_PACKAGE = "@croco/framework-context";
+const COMPONENT_DECORATOR_EXPORT = "Component";
+const TYPESCRIPT_SOURCE_EXTENSIONS = new Set([".cts", ".mts", ".ts", ".tsx"]);
+const ROOT_SIDE_EFFECT_SOURCE_PATHS = new Map([
+  ["@croco/openapi-spec", ["./src/libs/emitOpenAPI.ts"]],
+]);
+const ADDITIONAL_SIDE_EFFECT_PATHS = new Map([
+  ["@croco/cli", ["./dist/bin/croco.js"]],
+  ["create-croco-app", ["./dist/bin.js"]],
+  [
+    "@croco/framework-routes",
+    [
+      "./dist/compiler.js",
+      "./dist/compiler.mjs",
+      "./dist/metadata-reader.js",
+      "./dist/metadata-reader.mjs",
+    ],
+  ],
+  ["@croco/migration-runner", ["./dist/cli.js", "./dist/cli.mjs"]],
+  ["@croco/openapi-spec", ["./dist/cli.js", "./dist/cli.mjs"]],
+  ["@croco/rpc-codegen", ["./dist/cli.cjs", "./dist/cli.js"]],
+  ["@croco/ui-astryx", ["./dist/styles.css"]],
+]);
 const PACKAGE_MANAGER_COMMANDS = new Set(["bun", "npm", "pnpm", "yarn"]);
 const PACKAGE_MANAGER_EXEC_COMMANDS = new Set(["dlx", "exec"]);
 const PACKAGE_MANAGER_RUN_COMMANDS = new Set(["run", "run-script"]);
@@ -276,7 +299,7 @@ function parseArgs(args) {
 }
 
 function normalizePackage(pkg, pkgPath, rootDir, options = {}) {
-  const normalized = withRepositoryMetadata(
+  let normalized = withRepositoryMetadata(
     structuredClone(pkg),
     expectedRepositoryFor(pkgPath, rootDir),
   );
@@ -288,6 +311,7 @@ function normalizePackage(pkg, pkgPath, rootDir, options = {}) {
   normalized.publishConfig = normalizeObject(normalized.publishConfig);
   normalized.publishConfig.access = "public";
   delete normalized.publishConfig.files;
+  delete normalized.publishConfig.sideEffects;
 
   if (!FILES_EXEMPTIONS.has(normalized.name)) {
     normalized.files = expectedFilesFor(normalized.name);
@@ -301,6 +325,9 @@ function normalizePackage(pkg, pkgPath, rootDir, options = {}) {
       spineSourceRoot,
     });
   }
+
+  const sideEffects = expectedSideEffectsFor(normalized, path.dirname(pkgPath));
+  normalized = withSideEffects(normalized, sideEffects);
 
   normalizePackageScripts(normalized);
   normalizeGeneratedAppDependencyMetadata(normalized, rootDir);
@@ -373,6 +400,29 @@ function withRepositoryMetadata(pkg, repository) {
 
   if (!inserted) {
     normalized.repository = repository;
+  }
+
+  return normalized;
+}
+
+function withSideEffects(pkg, sideEffects) {
+  const withoutSideEffects = { ...pkg };
+  delete withoutSideEffects.sideEffects;
+  const normalized = {};
+  const insertAfterKey = Object.hasOwn(withoutSideEffects, "type") ? "type" : "files";
+  let inserted = false;
+
+  for (const [key, value] of Object.entries(withoutSideEffects)) {
+    normalized[key] = value;
+
+    if (key === insertAfterKey) {
+      normalized.sideEffects = sideEffects;
+      inserted = true;
+    }
+  }
+
+  if (!inserted) {
+    normalized.sideEffects = sideEffects;
   }
 
   return normalized;
@@ -773,6 +823,8 @@ function validatePackage(pkg, pkgPath, rootDir, context = {}) {
       violations.push(`files must be ${JSON.stringify(expectedFiles)}`);
     }
   }
+
+  validateSideEffects(pkg, path.dirname(pkgPath), violations);
 
   if (ENTRYPOINT_EXEMPTIONS.has(pkg.name)) {
     return violations;
@@ -1497,6 +1549,194 @@ function validateReflectMetadataDependency(pkg, packageDir, violations) {
   );
 }
 
+function validateSideEffects(pkg, packageDir, violations) {
+  const expected = expectedSideEffectsFor(pkg, packageDir);
+  if (JSON.stringify(pkg.sideEffects) === JSON.stringify(expected)) {
+    return;
+  }
+
+  violations.push(
+    `sideEffects must be ${JSON.stringify(expected)}, received ${JSON.stringify(pkg.sideEffects)}`,
+  );
+}
+
+function expectedSideEffectsFor(pkg, packageDir) {
+  const discoveredSourcePaths = findRuntimeSideEffectSourceFiles(path.join(packageDir, "src")).map(
+    (filePath) => `./${toPosixPath(path.relative(packageDir, filePath))}`,
+  );
+  const declaredRootSourcePaths = (ROOT_SIDE_EFFECT_SOURCE_PATHS.get(pkg.name) ?? []).filter(
+    (sourcePath) => fs.existsSync(path.join(packageDir, sourcePath.slice(2))),
+  );
+  const sourcePaths = Array.from(new Set([...discoveredSourcePaths, ...declaredRootSourcePaths]));
+  const emittedRootPaths =
+    sourcePaths.length > 0 ? publishedRootRuntimePaths(pkg.publishConfig) : [];
+  const additionalPaths = applicableAdditionalSideEffectPaths(pkg, packageDir);
+  const paths = Array.from(new Set([...emittedRootPaths, ...additionalPaths])).sort();
+
+  return paths.length > 0 ? paths : false;
+}
+
+function applicableAdditionalSideEffectPaths(pkg, packageDir) {
+  const candidates = ADDITIONAL_SIDE_EFFECT_PATHS.get(pkg.name) ?? [];
+  const declaredTargets = new Set([
+    ...objectStringValues(pkg.bin),
+    ...objectStringValues(pkg.publishConfig?.bin),
+  ]);
+
+  return candidates.filter((candidate) => {
+    if (declaredTargets.has(candidate)) {
+      return true;
+    }
+
+    if (!candidate.startsWith("./dist/")) {
+      return false;
+    }
+
+    const relativeOutputPath = candidate.slice("./dist/".length);
+    const sourceRelativePath = /\.(?:cjs|js|mjs)$/.test(relativeOutputPath)
+      ? relativeOutputPath.replace(/\.(?:cjs|js|mjs)$/, ".ts")
+      : relativeOutputPath;
+    const sourceRoot = candidate.endsWith(".css") ? packageDir : path.join(packageDir, "src");
+    return fs.existsSync(path.join(sourceRoot, sourceRelativePath));
+  });
+}
+
+function objectStringValues(value) {
+  if (typeof value === "string") {
+    return [value];
+  }
+
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return [];
+  }
+
+  return Object.values(value).filter((entry) => typeof entry === "string");
+}
+
+function publishedRootRuntimePaths(publishConfig) {
+  const paths = [];
+  collectRuntimePaths(publishConfig?.exports?.["."], paths);
+  collectRuntimePaths(publishConfig?.main, paths);
+  return Array.from(new Set(paths)).sort();
+}
+
+function collectRuntimePaths(value, paths) {
+  if (typeof value === "string") {
+    if (value.startsWith("./dist/") && /\.(?:cjs|js|mjs)$/.test(value)) {
+      paths.push(value);
+    }
+    return;
+  }
+
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return;
+  }
+
+  for (const nestedValue of Object.values(value)) {
+    collectRuntimePaths(nestedValue, paths);
+  }
+}
+
+function findRuntimeSideEffectSourceFiles(srcDir) {
+  if (!fs.existsSync(srcDir)) {
+    return [];
+  }
+
+  return findSourceFiles(srcDir)
+    .filter((filePath) => !isSideEffectTestSourceFile(filePath, srcDir))
+    .filter((filePath) => {
+      const source = fs.readFileSync(filePath, "utf-8");
+      return (
+        REFLECT_METADATA_IMPORT_RE.test(source) || hasGlobalRegistrationDecorator(filePath, source)
+      );
+    });
+}
+
+function hasGlobalRegistrationDecorator(filePath, source) {
+  const sourceFile = ts.createSourceFile(
+    filePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    scriptKindForSourceFile(filePath),
+  );
+  const namedBindings = new Set();
+  const namespaceBindings = new Set();
+  let found = false;
+
+  for (const statement of sourceFile.statements) {
+    if (
+      !ts.isImportDeclaration(statement) ||
+      !ts.isStringLiteral(statement.moduleSpecifier) ||
+      statement.moduleSpecifier.text !== FRAMEWORK_CONTEXT_PACKAGE ||
+      statement.importClause?.isTypeOnly
+    ) {
+      continue;
+    }
+
+    const bindings = statement.importClause?.namedBindings;
+    if (bindings && ts.isNamedImports(bindings)) {
+      for (const element of bindings.elements) {
+        const importedName = element.propertyName?.text ?? element.name.text;
+        if (!element.isTypeOnly && importedName === COMPONENT_DECORATOR_EXPORT) {
+          namedBindings.add(element.name.text);
+        }
+      }
+    } else if (bindings && ts.isNamespaceImport(bindings)) {
+      namespaceBindings.add(bindings.name.text);
+    }
+  }
+
+  function visit(node) {
+    if (found) {
+      return;
+    }
+
+    if (ts.isDecorator(node)) {
+      const expression = unwrapParentheses(
+        ts.isCallExpression(node.expression) ? node.expression.expression : node.expression,
+      );
+      const isNamedBinding = ts.isIdentifier(expression) && namedBindings.has(expression.text);
+      const isNamespaceBinding =
+        ts.isPropertyAccessExpression(expression) &&
+        ts.isIdentifier(expression.expression) &&
+        namespaceBindings.has(expression.expression.text) &&
+        expression.name.text === COMPONENT_DECORATOR_EXPORT;
+      if (isNamedBinding || isNamespaceBinding) {
+        found = true;
+        return;
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return found;
+}
+
+function unwrapParentheses(expression) {
+  let current = expression;
+  while (ts.isParenthesizedExpression(current)) {
+    current = current.expression;
+  }
+  return current;
+}
+
+function scriptKindForSourceFile(filePath) {
+  return path.extname(filePath) === ".tsx" ? ts.ScriptKind.TSX : ts.ScriptKind.TS;
+}
+
+function isSideEffectTestSourceFile(filePath, srcDir) {
+  const relativePath = path.relative(srcDir, filePath);
+  const segments = relativePath.split(path.sep);
+  return (
+    isTestSourceFile(filePath, srcDir) ||
+    segments.includes("type-tests") ||
+    segments.includes("test-fixtures")
+  );
+}
+
 function validateSourceRuntimeDependencies(pkg, packageDir, violations) {
   const srcDir = path.join(packageDir, "src");
   if (!fs.existsSync(srcDir)) {
@@ -1692,7 +1932,7 @@ function findSourceFiles(dir, results = []) {
         continue;
       }
       findSourceFiles(fullPath, results);
-    } else if (entry.isFile() && entry.name.endsWith(".ts")) {
+    } else if (entry.isFile() && TYPESCRIPT_SOURCE_EXTENSIONS.has(path.extname(entry.name))) {
       results.push(fullPath);
     }
   }
@@ -1708,8 +1948,6 @@ function isTestSourceFile(filePath, srcDir) {
   return (
     segments.includes("tests") ||
     segments.includes("__tests__") ||
-    fileName.endsWith(".spec.ts") ||
-    fileName.endsWith(".test.ts") ||
-    fileName.endsWith(".bench.ts")
+    /\.(?:spec|test|bench)\.(?:cts|mts|tsx?)$/.test(fileName)
   );
 }

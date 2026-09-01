@@ -19,6 +19,20 @@ imports `reflect-metadata`, that package must declare `reflect-metadata` in runt
 `dependencies`. Keeping it only in `devDependencies`, or relying on another Croco package to hoist it
 for consumers, is not valid because strict package managers may isolate transitive dependencies.
 
+Every publishable package also declares an explicit bundler side-effect contract:
+
+- Pure packages use `"sideEffects": false` so unused imports can be removed.
+- Packages with runtime metadata setup or import-time `@Component` registration list the exact
+  emitted root entrypoints that preserve that initialization. Source inspection determines the
+  requirement, but publish-facing `sideEffects` paths never reference files outside `files`.
+- CLI entrypoints and shipped CSS list only their exact published paths.
+- Broad declarations such as `true`, `"./dist/**"`, or other globs are rejected.
+
+`pnpm package-manifests:write` derives this field from audited source behavior and the package's
+publish entrypoints. `pnpm package-manifests:check` rejects missing, stale, or over-broad values.
+`pnpm package-entrypoints:smoke` then exercises packed consumers to prove a pure import is removed,
+decorator metadata still works after bundling, and `@croco/ui-astryx` retains its published CSS.
+
 Internal Croco package references use `workspace:*` in source manifests across `dependencies`,
 `devDependencies`, `peerDependencies`, and `optionalDependencies`. This includes internal peer
 dependencies: pnpm rewrites `workspace:*` to the target workspace package version during

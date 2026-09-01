@@ -14,6 +14,9 @@
     "templates"
   ],
   "type": "module",
+  "sideEffects": [
+    "./dist/bin.js"
+  ],
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "publishConfig": {
