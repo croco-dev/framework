@@ -520,6 +520,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`TaskExecutionTimeoutProblem`](/api/tasks-core/src/classes/taskexecutiontimeoutproblem/)
 - [`TaskNotFoundProblem`](/api/tasks-core/src/classes/tasknotfoundproblem/)
 - [`TaskRunnerDIFailureProblem`](/api/tasks-core/src/classes/taskrunnerdifailureproblem/)
+- [`InvalidTaskReferenceProblem`](/api/tasks-core/src/classes/invalidtaskreferenceproblem/)
 - [`QStashTaskConfigProblem`](/api/tasks-qstash/src/classes/qstashtaskconfigproblem/)
 - [`QStashTaskPublishProblem`](/api/tasks-qstash/src/classes/qstashtaskpublishproblem/)
 - [`QStashTaskValidationProblem`](/api/tasks-qstash/src/classes/qstashtaskvalidationproblem/)

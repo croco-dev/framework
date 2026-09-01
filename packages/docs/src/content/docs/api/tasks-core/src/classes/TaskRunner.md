@@ -39,23 +39,45 @@ title: "TaskRunner"
 
 ### execute()
 
+#### Call Signature
+
+> **execute**\<`TReference`\>(...`args`): `Promise`\<[`TaskReferenceResult`](/api/tasks-core/src/type-aliases/taskreferenceresult/)\<`TReference`\>\>
+
+##### Type Parameters
+
+###### TReference
+
+`TReference` _extends_ [`TaskReference`](/api/tasks-core/src/type-aliases/taskreference/)
+
+##### Parameters
+
+###### args
+
+...`TaskExecutionArguments`\<`TReference`\>
+
+##### Returns
+
+`Promise`\<[`TaskReferenceResult`](/api/tasks-core/src/type-aliases/taskreferenceresult/)\<`TReference`\>\>
+
+#### Call Signature
+
 > **execute**(`taskId`, `payload`, `options?`): `Promise`\<`unknown`\>
 
-#### Parameters
+##### Parameters
 
-##### taskId
+###### taskId
 
 `string`
 
-##### payload
+###### payload
 
 `unknown`
 
-##### options?
+###### options?
 
-[`TaskExecutionOptions`](/api/tasks-core/src/type-aliases/taskexecutionoptions/) = `{}`
+[`TaskExecutionOptions`](/api/tasks-core/src/type-aliases/taskexecutionoptions/)
 
-#### Returns
+##### Returns
 
 `Promise`\<`unknown`\>
 

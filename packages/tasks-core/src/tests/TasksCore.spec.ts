@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { taskRef } from "../index";
 import { TASK_METADATA_KEY, Task } from "../libs/decorators/Task";
 import { TaskRegistry } from "../libs/TaskRegistry";
 import { TaskRunner } from "../libs/TaskRunner";
@@ -11,6 +12,10 @@ describe("@croco/tasks-core package exports", () => {
 
   it("should export TASK_METADATA_KEY symbol", () => {
     expect(typeof TASK_METADATA_KEY).toBe("symbol");
+  });
+
+  it("should export taskRef factory", () => {
+    expect(typeof taskRef).toBe("function");
   });
 
   it("should export TaskRegistry class", () => {
@@ -56,6 +61,7 @@ describe("@croco/tasks-core package exports", () => {
       target: class Test {},
       methodName: "testMethod",
     };
-    expect(typeCheck).not.toBeUndefined();
+    typeCheck.name = "renamed-task";
+    expect(typeCheck.name).toBe("renamed-task");
   });
 });

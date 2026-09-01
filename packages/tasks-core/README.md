@@ -63,6 +63,29 @@ class BillingTasks {
 const synchronizeTask = taskRef(BillingTasks, "synchronize", "billing.synchronize");
 ```
 
+### 타입 안전한 `TaskRunner` 실행
+
+두 인자 `taskRef`는 `@Task` 메타데이터의 이름을 그대로 사용하면서 handler의 payload와 awaited result 타입을 보존합니다.
+기존 string 기반 호출도 계속 지원합니다.
+
+```typescript
+import { TaskRunner, taskRef } from "@croco/tasks-core";
+
+export const resizeImageTask = taskRef(ImageProcessor, "resizeImage");
+
+export async function resizeImage(taskRunner: TaskRunner) {
+  const result = await taskRunner.execute(resizeImageTask, {
+    imageUrl: "https://example.com/image.png",
+    width: 100,
+  });
+  // result: { status: string; url: string }
+  return result;
+}
+```
+
+reference를 만든 뒤 decorator metadata의 이름이나 handler 등록이 달라지면 `TaskRunner`는
+`InvalidTaskReferenceProblem`으로 계약 drift를 명시적으로 거부합니다.
+
 ### 실행 제한 시간과 협력적 취소
 
 `TaskRunner`로 실행할 때 `timeout`은 실행 저장소에 기록된 `startedAt + timeout` 기준으로 강제됩니다.

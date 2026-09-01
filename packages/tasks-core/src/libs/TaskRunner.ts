@@ -10,14 +10,31 @@ import { Container } from "@croco/framework-context";
 import { Problem } from "@croco/problems-core";
 import { recordError } from "@croco/telemetry-api";
 import {
+  InvalidTaskReferenceProblem,
   TaskExecutionTimeoutProblem,
   TaskNotFoundProblem,
   TaskRunnerDIFailureProblem,
 } from "./problems/TasksProblems";
+import { isFactoryTaskReference } from "./taskRef";
 import { TaskRegistry } from "./TaskRegistry";
-import type { TaskExecutionContext, TaskExecutionOptions, TaskTimeoutRetryPolicy } from "./types";
+import type {
+  TaskExecutionContext,
+  TaskExecutionOptions,
+  TaskReference,
+  TaskReferencePayload,
+  TaskReferenceResult,
+  TaskTimeoutRetryPolicy,
+} from "./types";
 
 type Constructor<T = object> = new (...args: unknown[]) => T;
+type RuntimeTaskReference = Pick<TaskReference, "name" | "target" | "methodName">;
+type TaskExecutionArguments<TReference extends TaskReference> = TReference extends TaskReference
+  ? [
+      reference: TReference,
+      payload: TaskReferencePayload<TReference>,
+      options?: TaskExecutionOptions,
+    ]
+  : never;
 
 const MAX_TIMER_DELAY_MS = 2_147_483_647;
 
@@ -131,6 +148,10 @@ function supportsAttemptFencing(
   );
 }
 
+function isRuntimeTaskReference(candidate: unknown): candidate is RuntimeTaskReference {
+  return typeof candidate === "object" && candidate !== null && isFactoryTaskReference(candidate);
+}
+
 export class TaskRunner {
   private readonly now: () => number;
   private readonly schedule: (callback: () => void, delayMs: number) => () => void;
@@ -150,12 +171,16 @@ export class TaskRunner {
       });
   }
 
+  execute<TReference extends TaskReference>(
+    ...args: TaskExecutionArguments<TReference>
+  ): Promise<TaskReferenceResult<TReference>>;
+  execute(taskId: string, payload: unknown, options?: TaskExecutionOptions): Promise<unknown>;
   async execute(
-    taskId: string,
+    taskIdentifier: unknown,
     payload: unknown,
     options: TaskExecutionOptions = {},
   ): Promise<unknown> {
-    return (await this.executeTracked(taskId, payload, options)).result;
+    return (await this.executeTrackedTask(taskIdentifier, payload, options)).result;
   }
 
   async executeTracked(
@@ -163,9 +188,48 @@ export class TaskRunner {
     payload: unknown,
     options: TaskExecutionOptions = {},
   ): Promise<TrackedTaskExecution> {
+    return this.executeTrackedTask(taskId, payload, options);
+  }
+
+  private async executeTrackedTask(
+    taskIdentifier: unknown,
+    payload: unknown,
+    options: TaskExecutionOptions,
+  ): Promise<TrackedTaskExecution> {
+    if (typeof taskIdentifier !== "string" && !isRuntimeTaskReference(taskIdentifier)) {
+      throw new InvalidTaskReferenceProblem(
+        "<unknown>",
+        "The task reference was not created by taskRef",
+      );
+    }
+
+    const taskId = typeof taskIdentifier === "string" ? taskIdentifier : taskIdentifier.name;
     const task = this.registry.get(taskId);
     if (!task) {
+      if (typeof taskIdentifier !== "string") {
+        throw new InvalidTaskReferenceProblem(
+          taskIdentifier.name,
+          "The registry does not contain the referenced task metadata",
+        );
+      }
+
       throw new TaskNotFoundProblem(taskId);
+    }
+
+    if (typeof taskIdentifier !== "string") {
+      if (
+        task.name !== taskIdentifier.name ||
+        task.metadata.name !== taskIdentifier.name ||
+        task.target !== taskIdentifier.target ||
+        task.methodName !== taskIdentifier.methodName ||
+        task.metadata.target !== taskIdentifier.target ||
+        String(task.metadata.methodName) !== taskIdentifier.methodName
+      ) {
+        throw new InvalidTaskReferenceProblem(
+          taskIdentifier.name,
+          "The registry handler does not match the referenced task metadata",
+        );
+      }
     }
 
     const taskOptions = task.metadata.options ?? {};
