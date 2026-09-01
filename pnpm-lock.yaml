@@ -1347,6 +1347,9 @@ importers:
       '@croco/notifications-core':
         specifier: workspace:*
         version: link:../notifications-core
+      '@croco/notifications-react-email':
+        specifier: workspace:*
+        version: link:../notifications-react-email
       '@croco/notifications-resend':
         specifier: workspace:*
         version: link:../notifications-resend

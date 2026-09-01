@@ -103,7 +103,7 @@ MeterDefinition 또는 null
 
 ### getCachedBillingRequirement()
 
-> **getCachedBillingRequirement**(`tenantId`, `meterId`): `"required"` \| `"unknown"` \| `"local"`
+> **getCachedBillingRequirement**(`tenantId`, `meterId`): `"local"` \| `"required"` \| `"unknown"`
 
 #### Parameters
 
@@ -117,7 +117,7 @@ MeterDefinition 또는 null
 
 #### Returns
 
-`"required"` \| `"unknown"` \| `"local"`
+`"local"` \| `"required"` \| `"unknown"`
 
 ---
 

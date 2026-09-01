@@ -21,7 +21,7 @@ title: "DomainAutoJoinRecoveryProblem"
 
 ##### phase
 
-`"membership"` \| `"event"`
+`"event"` \| `"membership"`
 
 #### Returns
 

@@ -21,7 +21,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ##### registryState
 
-`"shutting-down"` \| `"initializing"` \| `"initialized"`
+`"initializing"` \| `"shutting-down"` \| `"initialized"`
 
 #### Returns
 
@@ -115,7 +115,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### registryState
 
-> `readonly` **registryState**: `"shutting-down"` \| `"initializing"` \| `"initialized"`
+> `readonly` **registryState**: `"initializing"` \| `"shutting-down"` \| `"initialized"`
 
 ---
 

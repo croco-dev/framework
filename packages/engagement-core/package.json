@@ -38,7 +38,8 @@
     "test": "vitest run src/tests/MessageContracts.spec.ts src/tests/EngagementService.spec.ts src/tests/EngagementStores.spec.ts",
     "test:published": "vitest run src/tests/PublishedMessageContracts.spec.ts",
     "test:packed": "vitest run src/tests/PublishedMessageContracts.spec.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
     "@croco/notifications-core": "workspace:*",

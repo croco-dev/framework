@@ -231,7 +231,7 @@ readonly [`TestKernelResourceEvidence`](/api/testing/src/type-aliases/testkernel
 
 ##### path
 
-`string` \| `Request` \| `URL`
+`string` \| `URL` \| `Request`
 
 ##### options?
 

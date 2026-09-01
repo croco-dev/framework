@@ -33,7 +33,8 @@
     "build": "tsup src/index.ts --format esm --dts",
     "lint": "oxlint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
     "@croco/framework-context": "workspace:*",

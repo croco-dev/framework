@@ -30,7 +30,8 @@
     "test": "vitest run --exclude src/tests/RealResources.spec.ts",
     "test:live": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/RealResources.spec.ts",
     "test:real": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/RealResources.spec.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
     "@croco/framework-context": "workspace:*",

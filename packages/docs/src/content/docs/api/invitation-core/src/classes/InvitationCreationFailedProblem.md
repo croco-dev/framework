@@ -25,7 +25,7 @@ title: "InvitationCreationFailedProblem"
 
 ##### phase
 
-`"event"` \| `"persistence"` \| `"notification"`
+`"persistence"` \| `"notification"` \| `"event"`
 
 #### Returns
 

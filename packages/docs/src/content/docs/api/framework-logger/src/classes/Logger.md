@@ -102,7 +102,7 @@ Create a child logger with bound context
 
 ##### context?
 
-`Error` \| [`LogContext`](/api/framework-logger/src/type-aliases/logcontext/)
+[`LogContext`](/api/framework-logger/src/type-aliases/logcontext/) \| `Error`
 
 #### Returns
 
@@ -126,7 +126,7 @@ Create a child logger with bound context
 
 ##### context?
 
-`Error` \| [`LogContext`](/api/framework-logger/src/type-aliases/logcontext/)
+[`LogContext`](/api/framework-logger/src/type-aliases/logcontext/) \| `Error`
 
 #### Returns
 

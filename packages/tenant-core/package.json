@@ -53,7 +53,8 @@
     "build": "tsup src/index.ts src/tenant-model.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
     "@croco/access-core": "workspace:*",

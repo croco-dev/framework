@@ -2,23 +2,24 @@
 
 import { spawnSync } from "node:child_process";
 import {
-  chmodSync,
-  copyFileSync,
+  cpSync,
   existsSync,
   lstatSync,
   mkdirSync,
-  mkdtempSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { argv, env, exit, stdout } from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 type FileSnapshot = { readonly bytes: Buffer; readonly executable: boolean };
 type TreeSnapshot = ReadonlyMap<string, FileSnapshot>;
+type Mode = "check" | "write";
+type Options = { readonly mode: Mode; readonly root: string };
+type ReplaceApiDocsOperations = { readonly rename: typeof renameSync };
 type Drift = {
   readonly added: readonly string[];
   readonly changed: readonly string[];
@@ -26,19 +27,29 @@ type Drift = {
   readonly modeChanged: readonly string[];
 };
 
-const API_DOCS_PATH = join("packages", "docs", "src", "content", "docs", "api");
+const API_DOCS_PATH = "packages/docs/src/content/docs/api";
+const CACHED_API_DOCS_PATH = "packages/docs/.turbo/docs-api/rendered";
 const SCRIPT_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 
-function parseRoot(args: readonly string[]): string {
+function parseOptions(args: readonly string[]): Options {
   let root = SCRIPT_ROOT;
+  let mode: Mode = "check";
   for (let index = 0; index < args.length; index++) {
+    if (args[index] === "--check") {
+      mode = "check";
+      continue;
+    }
+    if (args[index] === "--write") {
+      mode = "write";
+      continue;
+    }
     if (args[index] !== "--root") throw new Error(`Unknown option: ${args[index]}`);
     const value = args[index + 1];
     if (!value) throw new Error("--root requires a path");
     root = resolve(value);
     index++;
   }
-  return root;
+  return { mode, root };
 }
 
 function trackedPaths(root: string): readonly string[] {
@@ -68,19 +79,6 @@ function snapshotTracked(root: string): TreeSnapshot {
   return snapshot;
 }
 
-function copyTrackedDocsSource(root: string, destination: string, snapshot: TreeSnapshot): void {
-  const docsSourcePrefix = join("packages", "docs", "src") + sep;
-  const contentConfigPath = join("packages", "docs", "src", "content.config.ts");
-  const apiDocsPrefix = API_DOCS_PATH + sep;
-  for (const [path, file] of snapshot) {
-    if (path !== contentConfigPath && !path.startsWith(apiDocsPrefix)) continue;
-    const target = join(destination, path.slice(docsSourcePrefix.length));
-    mkdirSync(dirname(target), { recursive: true });
-    copyFileSync(join(root, path), target);
-    chmodSync(target, file.executable ? 0o755 : 0o644);
-  }
-}
-
 function verifyInstalledDependencies(root: string): void {
   if (!existsSync(join(root, "node_modules"))) {
     throw new Error(
@@ -101,7 +99,7 @@ function runPnpm(root: string, args: readonly string[], environment: NodeJS.Proc
   }
 }
 
-function snapshotTree(root: string): TreeSnapshot {
+export function snapshotTree(root: string): TreeSnapshot {
   const snapshot = new Map<string, FileSnapshot>();
   if (!existsSync(root)) return snapshot;
   function visit(directory: string): void {
@@ -147,8 +145,15 @@ function detail(label: string, paths: readonly string[]): string | undefined {
   return paths.length === 0 ? undefined : `${label}: ${paths.join(", ")}`;
 }
 
-function verifyPrimaryUnchanged(before: TreeSnapshot, after: TreeSnapshot): void {
-  const drift = compareTrees(before, after);
+function withoutApiDocs(snapshot: TreeSnapshot): TreeSnapshot {
+  const prefix = `${API_DOCS_PATH}/`;
+  return new Map([...snapshot].filter(([path]) => !path.startsWith(prefix)));
+}
+
+function verifyPrimaryUnchanged(before: TreeSnapshot, after: TreeSnapshot, mode: Mode): void {
+  const expected = mode === "write" ? withoutApiDocs(before) : before;
+  const actual = mode === "write" ? withoutApiDocs(after) : after;
+  const drift = compareTrees(expected, actual);
   if (!hasDrift(drift)) return;
   const details = [
     detail("added", drift.added),
@@ -159,47 +164,94 @@ function verifyPrimaryUnchanged(before: TreeSnapshot, after: TreeSnapshot): void
   throw new Error(`primary tracked workspace changed during verification: ${details.join("; ")}`);
 }
 
-function verify(root: string): Drift {
+export function replaceApiDocs(
+  root: string,
+  generatedDocsPath: string,
+  generatedDocs: TreeSnapshot,
+  operations: ReplaceApiDocsOperations = { rename: renameSync },
+): void {
+  const target = join(root, API_DOCS_PATH);
+  const staged = `${target}.next-${process.pid}`;
+  const previous = `${target}.previous-${process.pid}`;
+  let movedPrevious = false;
+  let installed = false;
+  rmSync(staged, { force: true, recursive: true });
+  rmSync(previous, { force: true, recursive: true });
+  try {
+    mkdirSync(dirname(staged), { recursive: true });
+    cpSync(generatedDocsPath, staged, { recursive: true });
+    const stagedDrift = compareTrees(generatedDocs, snapshotTree(staged));
+    if (hasDrift(stagedDrift)) {
+      throw new Error("staged API docs do not match the generated candidate");
+    }
+
+    operations.rename(target, previous);
+    movedPrevious = true;
+    operations.rename(staged, target);
+    installed = true;
+
+    const writtenDrift = compareTrees(generatedDocs, snapshotTree(target));
+    if (hasDrift(writtenDrift)) {
+      throw new Error("written API docs do not match the generated candidate");
+    }
+    rmSync(previous, { force: true, recursive: true });
+    movedPrevious = false;
+  } catch (error) {
+    if (movedPrevious && existsSync(previous)) {
+      if (installed) rmSync(target, { force: true, recursive: true });
+      operations.rename(previous, target);
+      movedPrevious = false;
+    }
+    throw error;
+  } finally {
+    rmSync(staged, { force: true, recursive: true });
+    if (!movedPrevious) rmSync(previous, { force: true, recursive: true });
+  }
+}
+
+function verify(root: string, mode: Mode): Drift {
   verifyInstalledDependencies(root);
   const primaryBefore = snapshotTracked(root);
   const primaryDocs = snapshotTree(join(root, API_DOCS_PATH));
-  const temporaryRoot = mkdtempSync(join(tmpdir(), "croco-api-docs-check-"));
-  const temporarySource = join(temporaryRoot, "src");
-  const generatedDocsPath = join(temporarySource, "content", "docs", "api");
-  const isolatedEnvironment = {
-    ...env,
-    CROCO_DOCS_BUILD_ROOT: temporaryRoot,
-    TURBO_CACHE_DIR: join(temporaryRoot, "turbo-cache"),
-  };
+  const generatedDocsPath = join(root, CACHED_API_DOCS_PATH);
   try {
-    copyTrackedDocsSource(root, temporarySource, primaryBefore);
+    rmSync(generatedDocsPath, { force: true, recursive: true });
     runPnpm(
       root,
-      ["turbo", "run", "docs:build", "--force", "--env-mode=loose"],
-      isolatedEnvironment,
+      [
+        "turbo",
+        "run",
+        "docs:api:render",
+        "--filter=@croco/docs",
+        "--cache=local:rw",
+        "--cache-dir=.turbo/cache",
+        "--env-mode=strict",
+        "--output-logs=errors-only",
+      ],
+      env,
     );
-    const rawGeneratedDocs = snapshotTree(generatedDocsPath);
-    const rawDrift = compareTrees(primaryDocs, rawGeneratedDocs);
-    const generatedPathsToFormat = [...rawDrift.added, ...rawDrift.changed].map((path) =>
-      join(generatedDocsPath, path),
-    );
-    if (generatedPathsToFormat.length > 0) {
-      runPnpm(root, ["exec", "oxfmt", "--write", ...generatedPathsToFormat], isolatedEnvironment);
-    }
     const generatedDocs = snapshotTree(generatedDocsPath);
-    return compareTrees(primaryDocs, generatedDocs);
+    if (generatedDocs.size === 0) throw new Error("Turbo restored no generated API docs");
+    const drift = compareTrees(primaryDocs, generatedDocs);
+    if (mode === "write" && hasDrift(drift)) replaceApiDocs(root, generatedDocsPath, generatedDocs);
+    return drift;
   } finally {
-    try {
-      verifyPrimaryUnchanged(primaryBefore, snapshotTracked(root));
-    } finally {
-      rmSync(temporaryRoot, { force: true, recursive: true });
-    }
+    verifyPrimaryUnchanged(primaryBefore, snapshotTracked(root), mode);
   }
 }
 
 function main(): void {
   try {
-    const drift = verify(parseRoot(argv.slice(2)));
+    const options = parseOptions(argv.slice(2));
+    const drift = verify(options.root, options.mode);
+    if (options.mode === "write") {
+      stdout.write(
+        hasDrift(drift)
+          ? "api-docs-drift-check: wrote generated API docs to the tracked checkout.\n"
+          : "api-docs-drift-check: tracked API docs were already current.\n",
+      );
+      return;
+    }
     if (!hasDrift(drift)) {
       stdout.write("api-docs-drift-check: generated API docs match the tracked checkout.\n");
       return;
@@ -213,11 +265,7 @@ function main(): void {
     ]) {
       if (line) stdout.write(`- ${line}\n`);
     }
-    stdout.write("- generation: pnpm docs:build\n");
-    stdout.write(`- formatting: pnpm exec oxfmt --write ${API_DOCS_PATH}\n`);
-    stdout.write(
-      "- recovery: regenerate and format the API docs, then commit the resulting files.\n",
-    );
+    stdout.write("- recovery: pnpm docs:api:write, then commit the resulting files.\n");
     exit(1);
   } catch (error) {
     stdout.write(

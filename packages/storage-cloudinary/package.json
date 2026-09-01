@@ -37,7 +37,8 @@
     "lint": "oxlint .",
     "test": "vitest run --exclude src/tests/CloudinaryLiveSmoke.spec.ts",
     "test:live": "vitest run src/tests/CloudinaryLiveSmoke.spec.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
     "@croco/diagnostics-core": "workspace:*",

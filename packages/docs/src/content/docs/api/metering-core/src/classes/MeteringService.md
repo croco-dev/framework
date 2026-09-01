@@ -43,7 +43,7 @@ Usage Metering 핵심 서비스
 
 ### getBillableUsageRequirement()
 
-> **getBillableUsageRequirement**(`tenantId`, `meterId`): `"required"` \| `"unknown"` \| `"local"`
+> **getBillableUsageRequirement**(`tenantId`, `meterId`): `"local"` \| `"required"` \| `"unknown"`
 
 #### Parameters
 
@@ -57,7 +57,7 @@ Usage Metering 핵심 서비스
 
 #### Returns
 
-`"required"` \| `"unknown"` \| `"local"`
+`"local"` \| `"required"` \| `"unknown"`
 
 ---
 
@@ -163,7 +163,7 @@ InvalidUsageValueProblem value가 1부터 Number.MAX_SAFE_INTEGER까지의 정�
 
 ### resolveBillableUsageRequirement()
 
-> **resolveBillableUsageRequirement**(`tenantId`, `meterId`): `Promise`\<`"required"` \| `"local"`\>
+> **resolveBillableUsageRequirement**(`tenantId`, `meterId`): `Promise`\<`"local"` \| `"required"`\>
 
 #### Parameters
 
@@ -177,4 +177,4 @@ InvalidUsageValueProblem value가 1부터 Number.MAX_SAFE_INTEGER까지의 정�
 
 #### Returns
 
-`Promise`\<`"required"` \| `"local"`\>
+`Promise`\<`"local"` \| `"required"`\>

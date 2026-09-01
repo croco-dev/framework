@@ -11,7 +11,7 @@ title: "createPolicyTarget"
 
 ### kind
 
-`"service"` \| `"route"` \| `"event-handler"`
+`"route"` \| `"service"` \| `"event-handler"`
 
 ### id
 

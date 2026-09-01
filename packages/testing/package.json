@@ -55,7 +55,8 @@
     "build": "tsup src/index.ts src/drizzle.ts src/notifications.ts src/executable-assurance.ts src/playwright-reporter.ts src/vitest-reporter.ts --format esm,cjs --minify --clean --dts && node scripts/copy-schemas.mjs",
     "lint": "oxlint .",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
     "@croco/auth-core": "workspace:*",

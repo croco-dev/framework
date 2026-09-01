@@ -81,6 +81,8 @@ function workflowJobCondition(id: string): unknown {
 const VALIDATE_JOB = workflowJob("validate");
 const REPOSITORY_CONTRACTS_JOB = workflowJob("repository-contracts");
 const REAL_RESOURCE_JOB = workflowJob("real-resource-tests");
+const DOCS_SYNC_JOB_SOURCE = workflowJob("docs-sync-check");
+const DOCS_BUILD_JOB = workflowJob("docs-build");
 const SECRET_SCAN = (() => {
   const start = VALIDATE_JOB.indexOf("- name: Secret scan blocking report");
   const end = VALIDATE_JOB.indexOf("- name: Assemble security policy summary");
@@ -1144,6 +1146,17 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("run: pnpm docs:api:check");
     expect(WORKFLOW).toContain("--exclude-path '(^|/)packages/docs/README\\.md$'");
     expect((DOCS_SYNC_JOB as Readonly<Record<string, unknown>>).if).toBe("${{ always() }}");
+    expect(DOCS_SYNC_JOB_SOURCE).not.toContain("TURBO_TOKEN");
+    expect(DOCS_BUILD_JOB).not.toContain("TURBO_TOKEN");
+    expect(WORKFLOW).not.toContain("secrets.TURBO_TOKEN");
+    expect(DOCS_BUILD_JOB).toContain("needs: [changes, docs-sync-check]");
+    expect(DOCS_BUILD_JOB).toContain(
+      "turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-docs-sync-check-${{ github.sha }}",
+    );
+    expect(DOCS_BUILD_JOB).toContain(
+      "pnpm turbo run docs:build --cache=local:rw --cache-dir=.turbo/cache",
+    );
+    expect(DOCS_BUILD_JOB).toContain("--env-mode=strict --summarize");
   });
 
   it("runs independent CI surfaces in parallel and restores content-addressed Turbo state", () => {

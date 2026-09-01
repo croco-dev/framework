@@ -35,7 +35,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run --exclude src/tests/OpenAiLiveSmoke.spec.ts",
     "test:live": "vitest run src/tests/OpenAiLiveSmoke.spec.ts",
-    "lint": "oxlint ."
+    "lint": "oxlint .",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
     "@croco/llm-core": "workspace:*",

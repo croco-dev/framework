@@ -21,7 +21,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ##### operation
 
-`"shutdown"` \| `"initialize"`
+`"initialize"` \| `"shutdown"`
 
 ##### deadline
 
@@ -119,7 +119,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### operation
 
-> `readonly` **operation**: `"shutdown"` \| `"initialize"`
+> `readonly` **operation**: `"initialize"` \| `"shutdown"`
 
 ---
 

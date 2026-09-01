@@ -20,7 +20,7 @@ User-provided configuration
 
 ### environment
 
-`"node"` \| `"lambda"`
+`"lambda"` \| `"node"`
 
 Target environment ('lambda' | 'node')
 

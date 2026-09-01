@@ -9,20 +9,17 @@ title: "DomainEvent"
 
 ## Extended by
 
-- [`DocumentIndexedEvent`](/api/search-core/src/classes/documentindexedevent/)
-- [`DocumentDeletedEvent`](/api/search-core/src/classes/documentdeletedevent/)
-- [`SearchSyncFailedEvent`](/api/search-core/src/classes/searchsyncfailedevent/)
 - [`OrderPaidEvent`](/api/billing-core/src/classes/orderpaidevent/)
 - [`PlanChangedEvent`](/api/billing-core/src/classes/planchangedevent/)
+- [`PlanReleaseTransitionedEvent`](/api/billing-core/src/classes/planreleasetransitionedevent/)
 - [`SubscriptionActivatedEvent`](/api/billing-core/src/classes/subscriptionactivatedevent/)
 - [`SubscriptionCanceledEvent`](/api/billing-core/src/classes/subscriptioncanceledevent/)
 - [`SubscriptionPastDueEvent`](/api/billing-core/src/classes/subscriptionpastdueevent/)
-- [`SubscriptionRevokedEvent`](/api/billing-core/src/classes/subscriptionrevokedevent/)
-- [`PlanReleaseTransitionedEvent`](/api/billing-core/src/classes/planreleasetransitionedevent/)
 - [`SubscriptionQuantityDriftDetectedEvent`](/api/billing-core/src/classes/subscriptionquantitydriftdetectedevent/)
 - [`SubscriptionQuantityDriftRecoveredEvent`](/api/billing-core/src/classes/subscriptionquantitydriftrecoveredevent/)
 - [`SubscriptionQuantityReconciliationFailedEvent`](/api/billing-core/src/classes/subscriptionquantityreconciliationfailedevent/)
 - [`SubscriptionQuantityReconciliationSucceededEvent`](/api/billing-core/src/classes/subscriptionquantityreconciliationsucceededevent/)
+- [`SubscriptionRevokedEvent`](/api/billing-core/src/classes/subscriptionrevokedevent/)
 - [`CreditLedgerCommittedEvent`](/api/credits-core/src/classes/creditledgercommittedevent/)
 - [`HealthScoreDroppedEvent`](/api/customer-health-core/src/classes/healthscoredroppedevent/)
 - [`HealthStatusChangedEvent`](/api/customer-health-core/src/classes/healthstatuschangedevent/)
@@ -49,6 +46,9 @@ title: "DomainEvent"
 - [`MembershipUpdatedEvent`](/api/membership-core/src/classes/membershipupdatedevent/)
 - [`QuotaExceededEvent`](/api/metering-core/src/classes/quotaexceededevent/)
 - [`UsageRecordedEvent`](/api/metering-core/src/classes/usagerecordedevent/)
+- [`DocumentDeletedEvent`](/api/search-core/src/classes/documentdeletedevent/)
+- [`DocumentIndexedEvent`](/api/search-core/src/classes/documentindexedevent/)
+- [`SearchSyncFailedEvent`](/api/search-core/src/classes/searchsyncfailedevent/)
 
 ## Constructors
 

@@ -72,6 +72,8 @@ Token 기반 DI를 지원하며, 모든 구현체는 이 abstract class를 상�
 
 `string`
 
+인덱스 이름
+
 ##### documents
 
 [`SearchDocument`](/api/search-core/src/type-aliases/searchdocument/)[]
@@ -168,6 +170,8 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 
 `string`
 
+인덱스 이름
+
 ##### documentId
 
 `string`
@@ -248,6 +252,8 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 
 `string`
 
+인덱스 이름
+
 ##### document
 
 [`SearchDocument`](/api/search-core/src/type-aliases/searchdocument/)
@@ -321,6 +327,8 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 ##### indexName
 
 `string`
+
+인덱스 이름
 
 ##### query
 

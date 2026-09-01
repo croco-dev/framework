@@ -304,6 +304,54 @@ describe("auto-changeset.mts", () => {
     expect(changeset).toContain("'@croco/telemetry-sdk-node': patch");
   });
 
+  it("skips canonical API model script-only manifest changes", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "ci/api-model-script");
+    writePackageManifest(repo, "packages/telemetry-sdk-node", "@croco/telemetry-sdk-node", false, {
+      "docs:api:model":
+        "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts",
+    });
+    git(repo, ["add", "packages/telemetry-sdk-node/package.json"]);
+    git(repo, ["commit", "-m", "fix(ci): cache API model generation"]);
+
+    const result = runScript(
+      newBranchStdin("ci/api-model-script", git(repo, ["rev-parse", "HEAD"])),
+      repo,
+    );
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "auto-changeset: no publishable package changes found (skipping)",
+    );
+    expect(listChangesets(repo)).toEqual([]);
+  });
+
+  it("does not exempt other manifest changes alongside the API model script", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "ci/api-model-script-and-version");
+    writePackageManifest(
+      repo,
+      "packages/telemetry-sdk-node",
+      "@croco/telemetry-sdk-node",
+      false,
+      {
+        "docs:api:model":
+          "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts",
+      },
+      "0.0.1",
+    );
+    git(repo, ["add", "packages/telemetry-sdk-node/package.json"]);
+    git(repo, ["commit", "-m", "fix: update telemetry package"]);
+
+    const result = runScript(
+      newBranchStdin("ci/api-model-script-and-version", git(repo, ["rev-parse", "HEAD"])),
+      repo,
+    );
+
+    expect(result.status).toBe(1);
+    expect(readOnlyChangeset(repo)).toContain("'@croco/telemetry-sdk-node': patch");
+  });
+
   it("uses pnpm workspace package patterns outside packages", () => {
     const repo = createTempRepo();
     checkoutBranch(repo, "feature/workspace-pattern");
@@ -459,12 +507,14 @@ function writePackageManifest(
   packageDirectory: string,
   name: string,
   isPrivate = false,
+  scripts?: Readonly<Record<string, string>>,
+  version = "0.0.0",
 ): void {
   const directory = join(repo, packageDirectory);
   mkdirSync(directory, { recursive: true });
   writeFileSync(
     join(directory, "package.json"),
-    `${JSON.stringify({ name, private: isPrivate, version: "0.0.0" }, null, 2)}\n`,
+    `${JSON.stringify({ name, private: isPrivate, version, ...(scripts ? { scripts } : {}) }, null, 2)}\n`,
   );
 }
 

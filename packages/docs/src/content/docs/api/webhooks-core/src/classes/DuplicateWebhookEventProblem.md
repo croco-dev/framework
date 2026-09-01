@@ -33,7 +33,7 @@ title: "DuplicateWebhookEventProblem"
 
 ###### state
 
-`"completed"` \| `"failed"` \| `"in-flight"`
+`"in-flight"` \| `"completed"` \| `"failed"`
 
 #### Returns
 

@@ -7,7 +7,7 @@ title: "createCrocoPageConfig"
 
 ## Call Signature
 
-> **createCrocoPageConfig**(`options`): `Required`\<`Pick`\<[`PageRouteDefinition`](/api/meta-vite/src/type-aliases/pageroutedefinition/), `"mode"`\>\> & `Partial`\<`Pick`\<[`PageRouteDefinition`](/api/meta-vite/src/type-aliases/pageroutedefinition/), `"path"` \| `"revalidate"` \| `"head"`\>\> & `Required`\<`Pick`\<[`PageRouteDefinition`](/api/meta-vite/src/type-aliases/pageroutedefinition/), `"path"`\>\>
+> **createCrocoPageConfig**(`options`): `Required`\<`Pick`\<[`PageRouteDefinition`](/api/meta-vite/src/type-aliases/pageroutedefinition/), `"mode"`\>\> & `Partial`\<`Pick`\<[`PageRouteDefinition`](/api/meta-vite/src/type-aliases/pageroutedefinition/), `"revalidate"` \| `"head"` \| `"path"`\>\> & `Required`\<`Pick`\<[`PageRouteDefinition`](/api/meta-vite/src/type-aliases/pageroutedefinition/), `"path"`\>\>
 
 ### Parameters
 
@@ -17,7 +17,7 @@ title: "createCrocoPageConfig"
 
 ### Returns
 
-`Required`\<`Pick`\<[`PageRouteDefinition`](/api/meta-vite/src/type-aliases/pageroutedefinition/), `"mode"`\>\> & `Partial`\<`Pick`\<[`PageRouteDefinition`](/api/meta-vite/src/type-aliases/pageroutedefinition/), `"path"` \| `"revalidate"` \| `"head"`\>\> & `Required`\<`Pick`\<[`PageRouteDefinition`](/api/meta-vite/src/type-aliases/pageroutedefinition/), `"path"`\>\>
+`Required`\<`Pick`\<[`PageRouteDefinition`](/api/meta-vite/src/type-aliases/pageroutedefinition/), `"mode"`\>\> & `Partial`\<`Pick`\<[`PageRouteDefinition`](/api/meta-vite/src/type-aliases/pageroutedefinition/), `"revalidate"` \| `"head"` \| `"path"`\>\> & `Required`\<`Pick`\<[`PageRouteDefinition`](/api/meta-vite/src/type-aliases/pageroutedefinition/), `"path"`\>\>
 
 ## Call Signature
 

@@ -21,7 +21,7 @@ A TelemetryRuntime initialization request conflicts with the configuration alrea
 
 ##### runtimeState
 
-`"disabled"` \| `"shutting-down"` \| `"initializing"` \| `"initialized"` \| `"shutdown-timed-out"` \| `"shutdown-failed"`
+`"disabled"` \| `"initialized"` \| `"initializing"` \| `"shutting-down"` \| `"shutdown-timed-out"` \| `"shutdown-failed"`
 
 #### Returns
 
@@ -115,7 +115,7 @@ A TelemetryRuntime initialization request conflicts with the configuration alrea
 
 ### runtimeState
 
-> `readonly` **runtimeState**: `"disabled"` \| `"shutting-down"` \| `"initializing"` \| `"initialized"` \| `"shutdown-timed-out"` \| `"shutdown-failed"`
+> `readonly` **runtimeState**: `"disabled"` \| `"initialized"` \| `"initializing"` \| `"shutting-down"` \| `"shutdown-timed-out"` \| `"shutdown-failed"`
 
 ---
 

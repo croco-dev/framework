@@ -30,7 +30,8 @@
     "test": "vitest run --exclude src/tests/DrizzleExecutionStore.postgres.spec.ts",
     "test:live": "vitest run src/tests/DrizzleExecutionStore.postgres.spec.ts",
     "test:postgres": "vitest run src/tests/DrizzleExecutionStore.postgres.spec.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
     "@croco/execution-core": "workspace:*",

@@ -21,7 +21,7 @@ Reports a repeated scalar pagination query parameter and records its field and s
 
 ##### field
 
-`"limit"` \| `"offset"` \| `"cursor"` \| `"direction"`
+`"cursor"` \| `"direction"` \| `"limit"` \| `"offset"`
 
 ##### valueCount
 
@@ -89,7 +89,7 @@ Reports a repeated scalar pagination query parameter and records its field and s
 
 ### field
 
-> `readonly` **field**: `"limit"` \| `"offset"` \| `"cursor"` \| `"direction"`
+> `readonly` **field**: `"cursor"` \| `"direction"` \| `"limit"` \| `"offset"`
 
 ---
 

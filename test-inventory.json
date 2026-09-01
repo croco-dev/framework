@@ -4205,6 +4205,12 @@
       "owner": "repo:ci"
     },
     {
+      "path": "scripts/tests/api-docs-pipeline.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
       "path": "scripts/tests/api-docs-trigger-check.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -4386,6 +4392,12 @@
     },
     {
       "path": "scripts/tests/doc-examples-check.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
+      "path": "scripts/tests/docs-cache-contract.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:ci"

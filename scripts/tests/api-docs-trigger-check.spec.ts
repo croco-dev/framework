@@ -6,6 +6,20 @@ import { afterEach, describe, expect, it } from "vitest";
 
 const scriptPath = resolve(__dirname, "../api-docs-trigger-check.mts");
 const tempRoots: string[] = [];
+const sharedApiSourceGlobs = [
+  "packages/*/package.json",
+  ".oxfmtrc.json",
+  "pnpm-lock.yaml",
+  "turbo.json",
+  "packages/docs/api-docs.config.mjs",
+  "packages/docs/astro.config.mjs",
+  "packages/docs/src/content.config.ts",
+  "packages/docs/scripts/build-docs.mts",
+  "packages/docs/scripts/generate-package-api-model.mts",
+  "packages/docs/scripts/prepare-api-models.mjs",
+  "packages/docs/scripts/sanitize-typedoc-index.mjs",
+  "packages/docs/scripts/typedoc-merge-normalizer.mjs",
+] as const;
 
 type ScriptResult = {
   readonly stdout: string;
@@ -24,11 +38,7 @@ describe("api-docs-trigger-check.mts", () => {
     const root = createTempRoot();
     writeDocumentedPackage(root, "billing-core");
     writeDocumentedPackage(root, "retry-core");
-    writeWorkflow(root, [
-      "packages/retry-core/src/**",
-      "packages/docs/astro.config.mjs",
-      "packages/docs/tsconfig.typedoc.json",
-    ]);
+    writeWorkflow(root, ["packages/retry-core/src/**", ...sharedApiSourceGlobs]);
 
     const result = runScript(root, "--check");
 
@@ -44,8 +54,7 @@ describe("api-docs-trigger-check.mts", () => {
     writeDocumentedPackage(root, "retry-core");
     const workflowPath = writeWorkflow(root, [
       "packages/retry-core/src/**",
-      "packages/docs/astro.config.mjs",
-      "packages/docs/tsconfig.typedoc.json",
+      ...sharedApiSourceGlobs,
     ]);
 
     const result = runScript(root, "--write");
@@ -56,8 +65,9 @@ describe("api-docs-trigger-check.mts", () => {
     expect(workflow).toContain("api-source:");
     expect(workflow).toContain("- 'packages/billing-core/src/**'");
     expect(workflow).toContain("- 'packages/retry-core/src/**'");
-    expect(workflow).toContain("- 'packages/docs/astro.config.mjs'");
-    expect(workflow).toContain("- 'packages/docs/tsconfig.typedoc.json'");
+    for (const glob of sharedApiSourceGlobs) {
+      expect(workflow).toContain(`- '${glob}'`);
+    }
   });
 
   it("passes when the CI api-source filter matches generated API docs directories", () => {
@@ -67,8 +77,7 @@ describe("api-docs-trigger-check.mts", () => {
     writeWorkflow(root, [
       "packages/billing-core/src/**",
       "packages/retry-core/src/**",
-      "packages/docs/astro.config.mjs",
-      "packages/docs/tsconfig.typedoc.json",
+      ...sharedApiSourceGlobs,
     ]);
 
     const result = runScript(root, "--check");

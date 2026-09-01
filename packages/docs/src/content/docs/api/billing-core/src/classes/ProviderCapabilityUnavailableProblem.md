@@ -25,7 +25,7 @@ billing 도메인에서 사용하는 Problem 하위 타입들입니다.
 
 ##### capability
 
-`"usage"` \| `"checkout"` \| `"licensed-quantity"`
+`"checkout"` \| `"usage"` \| `"licensed-quantity"`
 
 #### Returns
 

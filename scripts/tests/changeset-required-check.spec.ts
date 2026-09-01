@@ -537,6 +537,48 @@ describe("changeset-required-check.mts", () => {
     expect(result.stdout).toContain("packages/public/package.json");
   });
 
+  it("passes when a public package only gains the CI API model task", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "ci/package-api-model-task");
+    const packagePath = join(repo, "packages/public/package.json");
+    const pkg = JSON.parse(readFileSync(packagePath, "utf-8"));
+    pkg.scripts = {
+      "docs:api:model":
+        "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts",
+    };
+    writeFileSync(packagePath, `${JSON.stringify(pkg, null, 2)}\n`);
+    git(repo, ["add", "packages/public/package.json"]);
+    git(repo, ["commit", "-m", "ci: generate a package API model"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "changeset-required: no publishable package behavior changes detected (passing)",
+    );
+  });
+
+  it("does not exempt other manifest changes bundled with the CI API model task", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "ci/package-api-model-and-contract");
+    const packagePath = join(repo, "packages/public/package.json");
+    const pkg = JSON.parse(readFileSync(packagePath, "utf-8"));
+    pkg.scripts = {
+      "docs:api:model":
+        "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts",
+      build: "tsup src/index.ts",
+    };
+    writeFileSync(packagePath, `${JSON.stringify(pkg, null, 2)}\n`);
+    git(repo, ["add", "packages/public/package.json"]);
+    git(repo, ["commit", "-m", "ci: change package scripts"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("@croco/public");
+    expect(result.stdout).toContain("packages/public/package.json");
+  });
+
   it("passes generated Changesets version metadata that consumes pending changesets", () => {
     const repo = createTempRepo();
     commitFile(

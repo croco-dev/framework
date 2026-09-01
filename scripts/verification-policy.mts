@@ -45,7 +45,8 @@ const ROOT_SCRIPT_RECOVERY = {
     "Restore the reviewed TypeScript 6 decorator signature fixtures and policy",
   "dependency-boundaries:check": "Fix the reported package boundary",
   "docs:api-triggers:check": "pnpm docs:api-triggers:write",
-  "docs:api:check": "pnpm docs:build, format the generated API docs, and commit them",
+  "docs:api:check": "pnpm docs:api:write",
+  "docs:cache:check": "Fix the reported Turbo documentation cache contract",
   "docs:catalog:check": "pnpm docs:catalog:write",
   "docs:examples:check": "pnpm docs:examples:write",
   "first-success:verify": "Follow the reported scaffold or documentation recovery command",
@@ -317,7 +318,10 @@ function rootNonmutationEvidence(name: string): string {
     return "The verification dispatcher guards the policy command and the policy itself only reads repository files";
   }
   if (name === "docs:api:check") {
-    return "Generation, sanitization, and formatting run in an isolated temporary workspace";
+    return "Generation writes only declared ignored Turbo outputs and snapshots tracked files before and after comparison";
+  }
+  if (name === "docs:cache:check") {
+    return "Cold and restored builds use an isolated cache directory and snapshot tracked files before and after execution";
   }
   if (name.startsWith("verify:") || name === "check") {
     return "The shared verification manifest guards mutation-prone leaf commands at their authoritative definition";
