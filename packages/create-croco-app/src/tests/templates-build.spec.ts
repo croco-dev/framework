@@ -109,6 +109,7 @@ function checkSpaBeSplitStructure() {
   );
   checkFileContains("spa-be-split", ["apps", "api-server", "src", "index.ts"], /createCrocoApp/);
   checkFileContains("spa-be-split", ["apps", "api-server", "src", "index.ts"], /TelemetryRuntime/);
+  checkFileContains("spa-be-split", ["apps", "api-server", "src", "index.ts"], /createNodeHost/);
   checkFileContains(
     "spa-be-split",
     ["apps", "api-server", "src", "lambda.ts"],
@@ -117,7 +118,12 @@ function checkSpaBeSplitStructure() {
   checkFileContains(
     "spa-be-split",
     ["apps", "api-server", "src", "lambda.ts"],
-    /lambdaHandler\(\{[\s\S]*flush:[\s\S]*flush\.outcome === "failed"[\s\S]*flush\.outcome === "unsupported"/,
+    /createLambdaHost\([\s\S]*flush:[\s\S]*flush\.outcome === "failed"[\s\S]*flush\.outcome === "unsupported"/,
+  );
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "app.ts"],
+    /createApplicationRuntime/,
   );
   checkFileContains(
     "spa-be-split",
@@ -266,6 +272,9 @@ function checkSpaBeSplitStructure() {
     dependencies: expect.objectContaining({
       "@croco/events-core": "workspace:*",
       "@croco/events-inmemory": "workspace:*",
+      "@croco/framework-module": "workspace:*",
+      "@croco/preset-lambda": "workspace:*",
+      "@croco/preset-node": "workspace:*",
       "@croco/problems-core": "workspace:*",
       "@croco/repository-core": "workspace:*",
       "@croco/retry-core": "workspace:*",
