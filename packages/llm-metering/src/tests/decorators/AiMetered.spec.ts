@@ -110,6 +110,122 @@ describe("@AiMetered decorator", () => {
       expect(mockMeteringService.record).toHaveBeenCalledTimes(3);
     });
 
+    it("should record usage returned by a custom usage extractor", async () => {
+      const usageExtractor = vi.fn((_args: unknown[], _result: unknown) => ({
+        promptTokens: 17,
+        completionTokens: 29,
+        accuracy: "ESTIMATED" as const,
+      }));
+
+      class TestService {
+        @AiMetered({ usageExtractor })
+        async generate(prompt: string) {
+          return {
+            data: { prompt, response: "custom" },
+            metadata: { modelId: "custom-model", provider: "custom-provider" },
+          };
+        }
+      }
+
+      const result = await new TestService().generate("hello");
+
+      expect(usageExtractor).toHaveBeenCalledWith(["hello"], result);
+      expect(mockMeteringService.record).toHaveBeenCalledTimes(3);
+      expect(mockMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          meterId: "llm.prompt_tokens",
+          value: 17,
+          metadata: expect.objectContaining({
+            accuracy: "ESTIMATED",
+            modelId: "custom-model",
+            provider: "custom-provider",
+          }),
+        }),
+      );
+      expect(mockMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ meterId: "llm.completion_tokens", value: 29 }),
+      );
+    });
+
+    it("should prefer custom usage over automatically detected usage", async () => {
+      const embeddingUsageExtractor = vi.fn(() => ({ tokens: 29 }));
+
+      class TestService {
+        @AiMetered({
+          usageExtractor: () => ({ promptTokens: 7, completionTokens: 11 }),
+          embeddingUsageExtractor,
+        })
+        async generate() {
+          return {
+            usage: { promptTokens: 101, completionTokens: 103, totalTokens: 204 },
+            metadata: { modelId: "gpt-4", provider: "openai" },
+          };
+        }
+      }
+
+      await new TestService().generate();
+
+      expect(mockMeteringService.record).toHaveBeenCalledTimes(3);
+      expect(mockMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ meterId: "llm.prompt_tokens", value: 7 }),
+      );
+      expect(mockMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ meterId: "llm.completion_tokens", value: 11 }),
+      );
+      expect(embeddingUsageExtractor).not.toHaveBeenCalled();
+    });
+
+    it("should fall back to automatic usage detection when custom extractors return null", async () => {
+      const usageExtractor = vi.fn().mockReturnValue(null);
+      const embeddingUsageExtractor = vi.fn().mockReturnValue(null);
+
+      class TestService {
+        @AiMetered({ usageExtractor, embeddingUsageExtractor })
+        async generate() {
+          return {
+            usage: { promptTokens: 13, completionTokens: 19, totalTokens: 32 },
+            metadata: { modelId: "gpt-4", provider: "openai" },
+          };
+        }
+      }
+
+      await new TestService().generate();
+
+      expect(usageExtractor).toHaveBeenCalledOnce();
+      expect(embeddingUsageExtractor).toHaveBeenCalledOnce();
+      expect(mockMeteringService.record).toHaveBeenCalledTimes(3);
+      expect(mockMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ meterId: "llm.prompt_tokens", value: 13 }),
+      );
+      expect(mockMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ meterId: "llm.completion_tokens", value: 19 }),
+      );
+    });
+
+    it("should not inspect metadata when custom extractors return null without usage", async () => {
+      const metadataGetter = vi.fn(() => {
+        throw new Error("metadata should not be read");
+      });
+
+      class TestService {
+        @AiMetered({
+          usageExtractor: () => null,
+          embeddingUsageExtractor: () => null,
+        })
+        async generate() {
+          return Object.defineProperty({ data: "unchanged" }, "metadata", {
+            get: metadataGetter,
+          });
+        }
+      }
+
+      const result = await new TestService().generate();
+
+      expect(result.data).toBe("unchanged");
+      expect(metadataGetter).not.toHaveBeenCalled();
+      expect(mockMeteringService.record).not.toHaveBeenCalled();
+    });
+
     it("should use custom idempotencyKeyExtractor", async () => {
       class TestService {
         @AiMetered({
@@ -390,6 +506,62 @@ describe("@AiMetered decorator", () => {
 
       expect(result.embedding).toEqual([0.1, 0.2, 0.3]);
       expect(mockMeteringService.record).toHaveBeenCalled();
+    });
+
+    it("should record tokens returned by a custom embedding usage extractor", async () => {
+      const embeddingUsageExtractor = vi.fn((_args: unknown[], _result: unknown) => ({
+        tokens: 23,
+        accuracy: "EXACT" as const,
+      }));
+
+      class TestService {
+        @AiMetered({ embeddingUsageExtractor })
+        async embed(text: string) {
+          return {
+            data: { text, vector: [0.1, 0.2] },
+            metadata: { modelId: "custom-embedding", provider: "custom-provider" },
+          };
+        }
+      }
+
+      const result = await new TestService().embed("hello");
+
+      expect(embeddingUsageExtractor).toHaveBeenCalledWith(["hello"], result);
+      expect(mockMeteringService.record).toHaveBeenCalledTimes(2);
+      expect(mockMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({
+          meterId: "llm.embedding_tokens",
+          value: 23,
+          metadata: expect.objectContaining({
+            accuracy: "EXACT",
+            model: "custom-embedding",
+            provider: "custom-provider",
+          }),
+        }),
+      );
+    });
+
+    it("should fall back to automatic embedding usage when the custom extractor returns null", async () => {
+      const embeddingUsageExtractor = vi.fn().mockReturnValue(null);
+
+      class TestService {
+        @AiMetered({ embeddingUsageExtractor })
+        async embed() {
+          return {
+            embedding: [0.1, 0.2],
+            usage: { tokens: 31 },
+            metadata: { modelId: "text-embedding-3-small", provider: "openai" },
+          };
+        }
+      }
+
+      await new TestService().embed();
+
+      expect(embeddingUsageExtractor).toHaveBeenCalledOnce();
+      expect(mockMeteringService.record).toHaveBeenCalledTimes(2);
+      expect(mockMeteringService.record).toHaveBeenCalledWith(
+        expect.objectContaining({ meterId: "llm.embedding_tokens", value: 31 }),
+      );
     });
   });
 
