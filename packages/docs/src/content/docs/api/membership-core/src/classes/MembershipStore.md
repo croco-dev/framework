@@ -10,6 +10,7 @@ title: "MembershipStore"
 ## Description
 
 멤버십 데이터 영속성을 위한 추상 인터페이스입니다. 데이터베이스, 인메모리 저장소 등 다양한 구현체가 가능합니다.
+지원되는 공개 쓰기 경계는 idempotency key와 recoverable event intent를 함께 처리하는 `execute()`입니다.
 
 ## Example
 
@@ -80,26 +81,6 @@ class PostgresMembershipStore extends MembershipStore {
 #### Returns
 
 `Promise`\<`number`\>
-
----
-
-### delete()
-
-> `abstract` **delete**(`tenantId`, `userId`): `Promise`\<`void`\>
-
-#### Parameters
-
-##### tenantId
-
-`string`
-
-##### userId
-
-`string`
-
-#### Returns
-
-`Promise`\<`void`\>
 
 ---
 
@@ -232,74 +213,3 @@ class PostgresMembershipStore extends MembershipStore {
 #### Returns
 
 `Promise`\<`void`\>
-
----
-
-### mutateOwner()
-
-> `abstract` **mutateOwner**(`input`): `Promise`\<[`MembershipOwnerMutationResult`](/api/membership-core/src/type-aliases/membershipownermutationresult/)\>
-
-Applies an owner removal or demotion as one atomic transition.
-
-Implementations must serialize competing mutations for the same tenant so the final owner
-cannot be removed or demoted between validation and persistence. Serialization failures must
-be returned as `conflict`.
-
-#### Parameters
-
-##### input
-
-[`MembershipOwnerMutationInput`](/api/membership-core/src/type-aliases/membershipownermutationinput/)
-
-#### Returns
-
-`Promise`\<[`MembershipOwnerMutationResult`](/api/membership-core/src/type-aliases/membershipownermutationresult/)\>
-
----
-
-### save()
-
-> `abstract` **save**(`input`): `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
-
-#### Parameters
-
-##### input
-
-###### id
-
-`string`
-
-###### role
-
-[`MembershipRole`](/api/membership-core/src/type-aliases/membershiprole/)
-
-###### tenantId
-
-`string`
-
-###### userId
-
-`string`
-
-#### Returns
-
-`Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
-
----
-
-### transferOwnership()
-
-> `abstract` **transferOwnership**(`input`): `Promise`\<[`MembershipOwnershipTransferResult`](/api/membership-core/src/type-aliases/membershipownershiptransferresult/)\>
-
-Transfers ownership as one atomic transition. Serialization failures must be returned as
-`conflict`.
-
-#### Parameters
-
-##### input
-
-[`MembershipOwnershipTransferInput`](/api/membership-core/src/type-aliases/membershipownershiptransferinput/)
-
-#### Returns
-
-`Promise`\<[`MembershipOwnershipTransferResult`](/api/membership-core/src/type-aliases/membershipownershiptransferresult/)\>

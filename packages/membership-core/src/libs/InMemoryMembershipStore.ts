@@ -111,7 +111,7 @@ export class InMemoryMembershipStore extends MembershipStore {
     return [...this.storage.values()].filter((membership) => membership.userId === userId);
   }
 
-  async save(input: MembershipCreateInput): Promise<Membership> {
+  protected override async save(input: MembershipCreateInput): Promise<Membership> {
     const key = this.getKey(input.tenantId, input.userId);
     const now = new Date();
     const previous = this.storage.get(key);
@@ -129,12 +129,14 @@ export class InMemoryMembershipStore extends MembershipStore {
     return membership;
   }
 
-  async delete(tenantId: string, userId: string): Promise<void> {
+  protected override async delete(tenantId: string, userId: string): Promise<void> {
     const key = this.getKey(tenantId, userId);
     this.storage.delete(key);
   }
 
-  async mutateOwner(input: MembershipOwnerMutationInput): Promise<MembershipOwnerMutationResult> {
+  protected override async mutateOwner(
+    input: MembershipOwnerMutationInput,
+  ): Promise<MembershipOwnerMutationResult> {
     const key = this.getKey(input.tenantId, input.userId);
     const membership = this.storage.get(key);
     if (!membership) {
@@ -159,7 +161,7 @@ export class InMemoryMembershipStore extends MembershipStore {
     return { status: "applied", membership: updated };
   }
 
-  async transferOwnership(
+  protected override async transferOwnership(
     input: MembershipOwnershipTransferInput,
   ): Promise<MembershipOwnershipTransferResult> {
     const fromKey = this.getKey(input.tenantId, input.fromUserId);

@@ -10,21 +10,18 @@ title: "InMemoryMembershipStore"
 ## Description
 
 [MembershipStore](/api/membership-core/src/classes/membershipstore/) 인터페이스의 인메모리 구현체입니다. 테스트 및 프로토타이핑에 적합합니다.
+멤버십 쓰기는 [MembershipManager](/api/membership-core/src/classes/membershipmanager/) 또는 MembershipService의 명령 API를 통해 수행합니다.
 
 ## Example
 
 **저장소 생성 및 사용**
 
 ```typescript
-import { InMemoryMembershipStore } from "@croco/membership-core";
+import { InMemoryMembershipStore, MembershipManager } from "@croco/membership-core";
 
 const store = new InMemoryMembershipStore();
-const membership = await store.save({
-  id: "mem-1",
-  tenantId: "tenant-1",
-  userId: "user-1",
-  role: "admin",
-});
+const manager = new MembershipManager({ store, eventDelivery: "development" });
+const membership = await manager.addMember("tenant-1", "user-1", "admin", "member:add:user-1");
 ```
 
 ## Extends
@@ -98,30 +95,6 @@ const membership = await store.save({
 #### Overrides
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`countByRole`](/api/membership-core/src/classes/membershipstore/#countbyrole)
-
----
-
-### delete()
-
-> **delete**(`tenantId`, `userId`): `Promise`\<`void`\>
-
-#### Parameters
-
-##### tenantId
-
-`string`
-
-##### userId
-
-`string`
-
-#### Returns
-
-`Promise`\<`void`\>
-
-#### Overrides
-
-[`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`delete`](/api/membership-core/src/classes/membershipstore/#delete)
 
 ---
 
@@ -286,72 +259,3 @@ const membership = await store.save({
 #### Overrides
 
 [`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`markEventIntentPublished`](/api/membership-core/src/classes/membershipstore/#markeventintentpublished)
-
----
-
-### mutateOwner()
-
-> **mutateOwner**(`input`): `Promise`\<[`MembershipOwnerMutationResult`](/api/membership-core/src/type-aliases/membershipownermutationresult/)\>
-
-Applies an owner removal or demotion as one atomic transition.
-
-Implementations must serialize competing mutations for the same tenant so the final owner
-cannot be removed or demoted between validation and persistence. Serialization failures must
-be returned as `conflict`.
-
-#### Parameters
-
-##### input
-
-[`MembershipOwnerMutationInput`](/api/membership-core/src/type-aliases/membershipownermutationinput/)
-
-#### Returns
-
-`Promise`\<[`MembershipOwnerMutationResult`](/api/membership-core/src/type-aliases/membershipownermutationresult/)\>
-
-#### Overrides
-
-[`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`mutateOwner`](/api/membership-core/src/classes/membershipstore/#mutateowner)
-
----
-
-### save()
-
-> **save**(`input`): `Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
-
-#### Parameters
-
-##### input
-
-[`MembershipCreateInput`](/api/membership-core/src/type-aliases/membershipcreateinput/)
-
-#### Returns
-
-`Promise`\<[`Membership`](/api/membership-core/src/type-aliases/membership/)\>
-
-#### Overrides
-
-[`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`save`](/api/membership-core/src/classes/membershipstore/#save)
-
----
-
-### transferOwnership()
-
-> **transferOwnership**(`input`): `Promise`\<[`MembershipOwnershipTransferResult`](/api/membership-core/src/type-aliases/membershipownershiptransferresult/)\>
-
-Transfers ownership as one atomic transition. Serialization failures must be returned as
-`conflict`.
-
-#### Parameters
-
-##### input
-
-[`MembershipOwnershipTransferInput`](/api/membership-core/src/type-aliases/membershipownershiptransferinput/)
-
-#### Returns
-
-`Promise`\<[`MembershipOwnershipTransferResult`](/api/membership-core/src/type-aliases/membershipownershiptransferresult/)\>
-
-#### Overrides
-
-[`MembershipStore`](/api/membership-core/src/classes/membershipstore/).[`transferOwnership`](/api/membership-core/src/classes/membershipstore/#transferownership)

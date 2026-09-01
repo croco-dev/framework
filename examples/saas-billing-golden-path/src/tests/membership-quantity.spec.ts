@@ -14,9 +14,11 @@ import type {
 } from "@croco/billing-core";
 import { InMemoryMembershipStore, MembershipManager } from "@croco/membership-core";
 import type {
+  MembershipCreateInput,
   MembershipCreatedEvent,
+  MembershipOwnerMutationInput,
+  MembershipOwnershipTransferInput,
   MembershipRemovedEvent,
-  MembershipStore,
   MembershipUpdatedEvent,
 } from "@croco/membership-core";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -78,19 +80,23 @@ class VersionedInMemoryMembershipStore
     super();
   }
 
-  override async save(input: Parameters<MembershipStore["save"]>[0]) {
+  async seed(input: MembershipCreateInput) {
+    return this.save(input);
+  }
+
+  protected override async save(input: MembershipCreateInput) {
     const membership = await super.save(input);
     await this.capture(input.tenantId);
     return membership;
   }
 
-  override async mutateOwner(input: Parameters<MembershipStore["mutateOwner"]>[0]) {
+  protected override async mutateOwner(input: MembershipOwnerMutationInput) {
     const result = await super.mutateOwner(input);
     if (result.status === "applied") await this.capture(input.tenantId);
     return result;
   }
 
-  override async transferOwnership(input: Parameters<MembershipStore["transferOwnership"]>[0]) {
+  protected override async transferOwnership(input: MembershipOwnershipTransferInput) {
     const result = await super.transferOwnership(input);
     if (result.status === "applied" && input.fromUserId !== input.toUserId) {
       await this.capture(input.tenantId);
@@ -136,7 +142,7 @@ describe("membership-to-billing licensed quantity golden path", () => {
 
   beforeEach(async () => {
     membershipStore = new VersionedInMemoryMembershipStore(PLAN_VERSION_REF);
-    await membershipStore.save({
+    await membershipStore.seed({
       id: "membership-owner",
       tenantId: "tenant-1",
       userId: "owner-1",
@@ -255,7 +261,7 @@ describe("membership-to-billing licensed quantity golden path", () => {
   });
 
   it("recovers the first missed membership event before any quantity intent exists", async () => {
-    await membershipStore.save({
+    await membershipStore.seed({
       id: "membership-missed-first",
       tenantId: "tenant-1",
       userId: "member-missed-first",
@@ -285,7 +291,7 @@ describe("membership-to-billing licensed quantity golden path", () => {
     await reconciler.repair(1);
     expect(gateway.quantity).toBe(1);
 
-    await membershipStore.save({
+    await membershipStore.seed({
       id: "membership-missed",
       tenantId: "tenant-1",
       userId: "member-missed",

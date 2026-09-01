@@ -1,7 +1,29 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { InMemoryMembershipStore } from "../libs/InMemoryMembershipStore";
+import { InMemoryMembershipStore as BaseInMemoryMembershipStore } from "../libs/InMemoryMembershipStore";
 import { createMembershipStoreConformanceSuite } from "../libs/conformance";
-import type { MembershipCreateInput } from "../libs/types";
+import type {
+  MembershipCreateInput,
+  MembershipOwnerMutationInput,
+  MembershipOwnershipTransferInput,
+} from "../libs/types";
+
+class InMemoryMembershipStore extends BaseInMemoryMembershipStore {
+  public override save(input: MembershipCreateInput) {
+    return super.save(input);
+  }
+
+  public override delete(tenantId: string, userId: string) {
+    return super.delete(tenantId, userId);
+  }
+
+  public override mutateOwner(input: MembershipOwnerMutationInput) {
+    return super.mutateOwner(input);
+  }
+
+  public override transferOwnership(input: MembershipOwnershipTransferInput) {
+    return super.transferOwnership(input);
+  }
+}
 
 describe("InMemoryMembershipStore", () => {
   let store!: InMemoryMembershipStore;

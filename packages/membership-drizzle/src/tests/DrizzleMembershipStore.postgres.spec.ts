@@ -2,10 +2,12 @@ import "reflect-metadata";
 import {
   AlreadyMemberProblem,
   createMembershipStoreConformanceSuite,
+  LastOwnerProblem,
   LastOwnerCannotBeRemovedProblem,
   MembershipConstraintProblem,
   MembershipService,
   SeatLimitExceededProblem,
+  type MembershipOwnerMutationInput,
 } from "@croco/membership-core";
 import { TxManager } from "@croco/tx-core";
 import { createDrizzleTxAdapter } from "@croco/tx-drizzle";
@@ -21,12 +23,18 @@ import { addMembershipSeatOrdinals } from "../migrations/addMembershipSeatOrdina
 
 const connectionString = process.env.MEMBERSHIP_POSTGRES_URL ?? "";
 
+class TestDrizzleMembershipStore extends DrizzleMembershipStore {
+  mutateOwnerPrimitive(input: MembershipOwnerMutationInput) {
+    return this.mutateOwner(input);
+  }
+}
+
 describe.skipIf(connectionString.length === 0)(
   "DrizzleMembershipStore PostgreSQL concurrency",
   () => {
     let pool!: Pool;
     let service!: MembershipService;
-    let store!: DrizzleMembershipStore;
+    let store!: TestDrizzleMembershipStore;
     let txManager!: TxManager<DrizzleMembershipClient>;
 
     beforeAll(async () => {
@@ -34,7 +42,7 @@ describe.skipIf(connectionString.length === 0)(
       const db = drizzle(pool);
       const client = db as unknown as DrizzleMembershipClient;
       txManager = new TxManager(createDrizzleTxAdapter(client));
-      store = new DrizzleMembershipStore(client, txManager);
+      store = new TestDrizzleMembershipStore(client, txManager);
       service = new MembershipService({
         store,
         eventPublisher: { publishIdempotently: async () => undefined },
@@ -59,22 +67,95 @@ describe.skipIf(connectionString.length === 0)(
       await pool.query(
         "truncate table membership_event_intents, membership_idempotency_records, memberships",
       );
-      await store.save({
-        id: "membership-a",
-        tenantId: "tenant-1",
-        userId: "owner-a",
-        role: "owner",
-      });
-      await store.save({
-        id: "membership-b",
-        tenantId: "tenant-1",
-        userId: "owner-b",
-        role: "owner",
-      });
+      await pool.query(
+        `insert into memberships (id, tenant_id, user_id, role)
+         values ('membership-a', 'tenant-1', 'owner-a', 'owner'),
+                ('membership-b', 'tenant-1', 'owner-b', 'owner')`,
+      );
     });
 
     afterAll(async () => {
       await pool.end();
+    });
+
+    it("rejects sole-owner demotion without recording a command or event intent", async () => {
+      await pool.query(
+        "insert into memberships (id, tenant_id, user_id, role) values ($1, $2, $3, $4)",
+        ["membership-sole-demotion", "tenant-sole-demotion", "owner", "owner"],
+      );
+
+      await expect(
+        service.updateRole("tenant-sole-demotion", "owner", "admin", "demote:sole-owner"),
+      ).rejects.toBeInstanceOf(LastOwnerProblem);
+      await expect(
+        store.findByTenantAndUser("tenant-sole-demotion", "owner"),
+      ).resolves.toMatchObject({ role: "owner" });
+      await expect(store.hasExecutedCommand("demote:sole-owner")).resolves.toBe(false);
+      await expect(store.getPendingEventIntent("demote:sole-owner")).resolves.toBeNull();
+    });
+
+    it("rejects sole-owner removal without recording a command or event intent", async () => {
+      await pool.query(
+        "insert into memberships (id, tenant_id, user_id, role) values ($1, $2, $3, $4)",
+        ["membership-sole-removal", "tenant-sole-removal", "owner", "owner"],
+      );
+
+      await expect(
+        service.removeMember("tenant-sole-removal", "owner", "remove:sole-owner"),
+      ).rejects.toBeInstanceOf(LastOwnerCannotBeRemovedProblem);
+      await expect(
+        store.findByTenantAndUser("tenant-sole-removal", "owner"),
+      ).resolves.toMatchObject({ role: "owner" });
+      await expect(store.hasExecutedCommand("remove:sole-owner")).resolves.toBe(false);
+      await expect(store.getPendingEventIntent("remove:sole-owner")).resolves.toBeNull();
+    });
+
+    it("replays a successful owner removal with one recoverable event intent", async () => {
+      const command = {
+        operation: "remove" as const,
+        idempotencyKey: "remove:owner-a",
+        tenantId: "tenant-1",
+        userId: "owner-a",
+      };
+
+      await expect(store.execute(command)).resolves.toMatchObject({
+        operation: "remove",
+        replayed: false,
+      });
+      await expect(store.execute(command)).resolves.toMatchObject({
+        operation: "remove",
+        replayed: true,
+      });
+      await expect(store.findByTenantAndUser("tenant-1", "owner-a")).resolves.toBeNull();
+      await expect(store.countByRole("tenant-1", "owner")).resolves.toBe(1);
+      await expect(store.getPendingEventIntent(command.idempotencyKey)).resolves.toMatchObject({
+        events: [{ eventName: "membership.removed" }],
+      });
+    });
+
+    it("replays a successful owner demotion with one recoverable event intent", async () => {
+      const command = {
+        operation: "update_role" as const,
+        idempotencyKey: "demote:owner-a",
+        tenantId: "tenant-1",
+        userId: "owner-a",
+        role: "admin" as const,
+      };
+
+      await expect(store.execute(command)).resolves.toMatchObject({
+        operation: "update_role",
+        membership: { role: "admin" },
+        replayed: false,
+      });
+      await expect(store.execute(command)).resolves.toMatchObject({
+        operation: "update_role",
+        membership: { role: "admin" },
+        replayed: true,
+      });
+      await expect(store.countByRole("tenant-1", "owner")).resolves.toBe(1);
+      await expect(store.getPendingEventIntent(command.idempotencyKey)).resolves.toMatchObject({
+        events: [{ eventName: "membership.updated" }],
+      });
     });
 
     it.each([
@@ -97,7 +178,7 @@ describe.skipIf(connectionString.length === 0)(
                 release();
               }
               await barrier;
-              return store.mutateOwner({
+              return store.mutateOwnerPrimitive({
                 tenantId: "tenant-1",
                 userId,
                 operation: "remove",
@@ -177,7 +258,10 @@ describe.skipIf(connectionString.length === 0)(
         });
       }
       for (let index = 1; index <= 4; index += 1) {
-        await store.delete("tenant-1", `user-${index}`);
+        await pool.query("delete from memberships where tenant_id = $1 and user_id = $2", [
+          "tenant-1",
+          `user-${index}`,
+        ]);
       }
 
       await expect(
@@ -283,7 +367,7 @@ describe.skipIf(connectionString.length === 0)(
               release();
             }
             await barrier;
-            return store.mutateOwner({
+            return store.mutateOwnerPrimitive({
               tenantId: "tenant-1",
               userId,
               operation: "demote",
@@ -382,6 +466,15 @@ describe.skipIf(connectionString.length === 0)(
         reason: expect.any(LastOwnerCannotBeRemovedProblem),
       });
       await expect(store.countByRole("tenant-1", "owner")).resolves.toBe(1);
+      await expect(
+        Promise.all([
+          store.hasExecutedCommand("remove:owner-a"),
+          store.hasExecutedCommand("remove:owner-b"),
+        ]),
+      ).resolves.toEqual(expect.arrayContaining([true, false]));
+      await expect(store.listPendingEventIntents()).resolves.toMatchObject([
+        { events: [{ eventName: "membership.removed" }] },
+      ]);
     });
   },
 );
