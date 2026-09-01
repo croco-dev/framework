@@ -30,6 +30,13 @@ Declared `Content-Length` values and actual streamed bytes use an inclusive boun
 a request with exactly the configured number of bytes is accepted, while a request that
 exceeds an otherwise valid limit is rejected with `transports-graphql/request-body-too-large`.
 
+`requestTimeoutMs` optionally bounds the lifetime of Node-hosted requests created by
+`GraphQLServer.start()`. It must be an integer from 1 through 2,147,483,647 and is validated
+when the server is constructed. When the deadline expires, the request signal is aborted,
+GraphQL execution is cancelled, and the Node adapter returns an `application/problem+json`
+response with status 500 and code `transports-graphql/request-timeout`. Client disconnects
+abort the same request signal. Omitting the option preserves the existing unbounded deadline.
+
 Schemas compiled through `SchemaCompiler` execute the `UseGuards`, `Roles`, and
 `UseInterceptors` declarations recorded by `@croco/protocols-graphql`. Request
 headers are available as `context.headers`, custom server context is preserved, and

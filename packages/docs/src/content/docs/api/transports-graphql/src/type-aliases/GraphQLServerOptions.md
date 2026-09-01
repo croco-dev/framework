@@ -51,6 +51,12 @@ GraphQL server and schema compilation option types.
 
 ---
 
+### requestTimeoutMs?
+
+> `optional` **requestTimeoutMs?**: `number`
+
+---
+
 ### schema?
 
 > `optional` **schema?**: `GraphQLSchema`

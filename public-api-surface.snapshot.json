@@ -31429,6 +31429,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "GraphQLRequestTimeoutConfigurationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/GraphQLTransportProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "GraphQLRequestTimeoutProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/GraphQLTransportProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "GraphQLResolversNotConfiguredProblem",
               "exportKind": "named",
               "source": "./libs/problems/GraphQLTransportProblems",

@@ -1,5 +1,6 @@
 import "reflect-metadata";
-import { request as httpRequest, ServerResponse } from "node:http";
+import { getEventListeners } from "node:events";
+import { IncomingMessage, request as httpRequest, ServerResponse } from "node:http";
 import { connect } from "node:net";
 import { Container } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
@@ -7,6 +8,7 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   Field,
   FieldResolver,
+  Ctx,
   ObjectType,
   Query,
   Resolver,
@@ -26,6 +28,7 @@ import { GraphQLServer } from "../libs/GraphQLServer";
 import { SchemaCompiler } from "../libs/SchemaCompiler";
 import {
   GraphQLBodyLimitConfigurationProblem,
+  GraphQLRequestTimeoutConfigurationProblem,
   GraphQLResolversNotConfiguredProblem,
   GraphQLSchemaNotConfiguredProblem,
   GraphQLServerNotInitializedProblem,
@@ -461,6 +464,214 @@ describe("GraphQLServer integration", () => {
     }
   });
 
+  it("should abort GraphQL execution and return a stable timeout Problem", async () => {
+    let executionSignal: AbortSignal | undefined;
+    const testServer = new GraphQLServer({
+      schemaOptions: {
+        resolvers: [UserResolver],
+        autoDiscover: false,
+      },
+      requestTimeoutMs: 100,
+    });
+
+    await testServer.initialize();
+    Reflect.set(testServer, "yogaHandler", async (request: Request) => {
+      executionSignal = request.signal;
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      return new Response("late response");
+    });
+    await testServer.start(42209);
+
+    try {
+      const response = await fetch("http://localhost:42209/graphql");
+      const responseBody = await response.text();
+
+      expect(response.status).toBe(500);
+      expect(response.headers.get("content-type")).toContain("application/problem+json");
+      expect(JSON.parse(responseBody)).toMatchObject({
+        code: "transports-graphql/request-timeout",
+        status: 500,
+      });
+      expect(executionSignal?.aborted).toBe(true);
+    } finally {
+      await testServer.stop();
+    }
+  });
+
+  it("should propagate the timeout signal through Yoga to the active resolver", async () => {
+    const logger = createLoggerMock();
+    Container.set(Logger, logger);
+    let resolveExecutionSignal: ((signal: AbortSignal) => void) | undefined;
+    const executionSignalPromise = new Promise<AbortSignal>((resolve) => {
+      resolveExecutionSignal = resolve;
+    });
+    let resolverAborted = false;
+
+    @Resolver()
+    class TimeoutResolver {
+      @Query(() => String)
+      slow(@Ctx() context: { request: Request }): Promise<string> {
+        const signal = context.request.signal;
+        resolveExecutionSignal?.(signal);
+        return new Promise<string>((_resolve, reject) => {
+          signal.addEventListener(
+            "abort",
+            () => {
+              resolverAborted = true;
+              reject(signal.reason);
+            },
+            { once: true },
+          );
+        });
+      }
+    }
+
+    const testServer = new GraphQLServer({
+      schemaOptions: { resolvers: [TimeoutResolver], autoDiscover: false },
+      requestTimeoutMs: 100,
+    });
+
+    await testServer.start(42210);
+
+    try {
+      const responsePromise = fetch("http://localhost:42210/graphql", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query: "{ slow }" }),
+      });
+      const executionSignal = await executionSignalPromise;
+      const response = await responsePromise;
+      const responseBody = (await response.json()) as Record<string, unknown>;
+
+      expect(response.status).toBe(500);
+      expect(responseBody).toMatchObject({
+        code: "transports-graphql/request-timeout",
+        status: 500,
+      });
+      expect(executionSignal.aborted).toBe(true);
+      expect(resolverAborted).toBe(true);
+      expect(logger.error).toHaveBeenCalledWith("GraphQL request failed", {
+        phase: "yoga-execution",
+        problemCode: "transports-graphql/request-timeout",
+      });
+    } finally {
+      await testServer.stop();
+      Container.reset();
+    }
+  });
+
+  it("should release the deadline and disconnect listeners after a normal request", async () => {
+    const requestOnceSpy = vi.spyOn(IncomingMessage.prototype, "once");
+    const requestOffSpy = vi.spyOn(IncomingMessage.prototype, "off");
+    const responseOnceSpy = vi.spyOn(ServerResponse.prototype, "once");
+    const responseOffSpy = vi.spyOn(ServerResponse.prototype, "off");
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+    const testServer = new GraphQLServer({
+      schemaOptions: {
+        resolvers: [UserResolver],
+        autoDiscover: false,
+      },
+      requestTimeoutMs: 1_000,
+    });
+
+    await testServer.start(42211);
+
+    try {
+      const response = await fetch("http://localhost:42211/graphql");
+      await response.text();
+
+      const timeoutCallIndex = setTimeoutSpy.mock.calls.findIndex(([, delay]) => delay === 1_000);
+      const timeoutHandle = setTimeoutSpy.mock.results[timeoutCallIndex]?.value;
+      const requestAbortListener = requestOnceSpy.mock.calls.find(
+        ([eventName, listener]) =>
+          eventName === "aborted" &&
+          typeof listener === "function" &&
+          listener.name === "onRequestAborted",
+      )?.[1];
+      const responseCloseListener = responseOnceSpy.mock.calls.find(
+        ([eventName, listener]) =>
+          eventName === "close" &&
+          typeof listener === "function" &&
+          listener.name === "onResponseClose",
+      )?.[1];
+
+      expect(timeoutCallIndex).toBeGreaterThanOrEqual(0);
+      expect(timeoutHandle).toBeDefined();
+      expect(requestAbortListener).toBeDefined();
+      expect(responseCloseListener).toBeDefined();
+      await vi.waitFor(() => {
+        expect(clearTimeoutSpy).toHaveBeenCalledWith(timeoutHandle);
+        expect(requestOffSpy).toHaveBeenCalledWith("aborted", requestAbortListener);
+        expect(responseOffSpy).toHaveBeenCalledWith("close", responseCloseListener);
+      });
+    } finally {
+      await testServer.stop();
+      requestOnceSpy.mockRestore();
+      requestOffSpy.mockRestore();
+      responseOnceSpy.mockRestore();
+      responseOffSpy.mockRestore();
+      setTimeoutSpy.mockRestore();
+      clearTimeoutSpy.mockRestore();
+    }
+  });
+
+  it("should abort execution and clear its deadline when the client disconnects", async () => {
+    const logger = createLoggerMock();
+    Container.set(Logger, logger);
+    const setTimeoutSpy = vi.spyOn(globalThis, "setTimeout");
+    const clearTimeoutSpy = vi.spyOn(globalThis, "clearTimeout");
+    let resolveExecutionSignal: ((signal: AbortSignal) => void) | undefined;
+    const executionSignalPromise = new Promise<AbortSignal>((resolve) => {
+      resolveExecutionSignal = resolve;
+    });
+    const testServer = new GraphQLServer({
+      schemaOptions: {
+        resolvers: [UserResolver],
+        autoDiscover: false,
+      },
+      requestTimeoutMs: 60_000,
+    });
+
+    await testServer.initialize();
+    Reflect.set(testServer, "yogaHandler", async (request: Request) => {
+      const signal = request.signal;
+      resolveExecutionSignal?.(signal);
+      return new Promise<Response>((_resolve, reject) => {
+        signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+      });
+    });
+    await testServer.start(42212);
+
+    const request = httpRequest({ host: "localhost", port: 42212, path: "/graphql" });
+    request.on("error", () => undefined);
+
+    try {
+      request.end();
+      const executionSignal = await executionSignalPromise;
+      const timeoutCallIndex = setTimeoutSpy.mock.calls.findIndex(([, delay]) => delay === 60_000);
+      const timeoutHandle = setTimeoutSpy.mock.results[timeoutCallIndex]?.value;
+
+      request.destroy();
+
+      await vi.waitFor(() => {
+        expect(executionSignal.aborted).toBe(true);
+        expect(getEventListeners(executionSignal, "abort")).toHaveLength(0);
+        expect(clearTimeoutSpy).toHaveBeenCalledWith(timeoutHandle);
+      });
+      expect(logger.error).toHaveBeenCalledWith(
+        "GraphQL request failed",
+        expect.objectContaining({ phase: "yoga-execution" }),
+      );
+    } finally {
+      request.destroy();
+      await testServer.stop();
+      setTimeoutSpy.mockRestore();
+      clearTimeoutSpy.mockRestore();
+      Container.reset();
+    }
+  });
+
   it("should throw a typed problem when no schema is configured", async () => {
     const testServer = new GraphQLServer();
 
@@ -484,6 +695,25 @@ describe("GraphQLServer integration", () => {
       GraphQLResolversNotConfiguredProblem,
     );
   });
+
+  it.each([
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+    -1,
+    0,
+    0.5,
+    2_147_483_648,
+    null as unknown as number,
+  ])(
+    "should reject unsafe requestTimeoutMs configuration %s during construction",
+    (requestTimeoutMs) => {
+      const construct = () => new GraphQLServer({ requestTimeoutMs });
+
+      expect(construct).toThrow(GraphQLRequestTimeoutConfigurationProblem);
+      expect(construct).toThrow("requestTimeoutMs must be an integer between 1 and 2147483647");
+    },
+  );
 
   it.each([
     Number.NaN,
