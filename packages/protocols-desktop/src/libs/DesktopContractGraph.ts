@@ -35,6 +35,26 @@ import type {
 
 export type DesktopContractGraphVersion = "croco.desktop-contract-graph.v1";
 
+export type DesktopContractSemanticHash = `sha256:${string}`;
+
+export type DesktopContractHandshakeVersion = "croco.desktop-contract-handshake.v1";
+
+export type DesktopContractHandshakeV1 = {
+  readonly version: DesktopContractHandshakeVersion;
+  readonly graphVersion: DesktopContractGraphVersion;
+  readonly semanticHash: DesktopContractSemanticHash;
+};
+
+export type DesktopContractHandshakeComparison =
+  | { readonly compatible: true }
+  | {
+      readonly compatible: false;
+      readonly code:
+        | "DESKTOP_HANDSHAKE_VERSION_MISMATCH"
+        | "DESKTOP_GRAPH_VERSION_MISMATCH"
+        | "DESKTOP_SEMANTIC_HASH_MISMATCH";
+    };
+
 export type DesktopContractGraphSourceLocations = Readonly<
   Record<string, DesktopWireSourceLocation>
 >;
@@ -149,7 +169,7 @@ export type DesktopContractGraphWindow = {
 
 export type DesktopContractGraphV1 = {
   readonly version: DesktopContractGraphVersion;
-  readonly semanticHash: `sha256:${string}`;
+  readonly semanticHash: DesktopContractSemanticHash;
   readonly app: {
     readonly contractIds: readonly string[];
     readonly windowIds: readonly string[];
@@ -238,35 +258,11 @@ export function compileDesktopContractGraph(
   const appSourceLocation = sourceLocations.app;
   const effects = [...parts.effects].sort(compareCodeUnits);
   parts.diagnostics.sort(compareDesktopContractGraphDiagnostics);
-  const semanticGraph = {
+  const graphWithoutSemanticHash = {
     version: "croco.desktop-contract-graph.v1" as const,
     app: {
       contractIds: parts.contracts.map((contract) => contract.id),
       windowIds: windows.map((window) => window.id),
-    },
-    contracts: stripSourceLocations(parts.contracts),
-    commands: stripSourceLocations(parts.commands),
-    events: stripSourceLocations(parts.events),
-    effects,
-    grants: stripSourceLocations(parts.grants),
-    problems,
-    windows: stripSourceLocations(windows),
-    diagnostics: parts.diagnostics
-      .map(({ code, severity, targetKind, memberId, schemaPath }) => ({
-        code,
-        severity,
-        targetKind,
-        memberId,
-        schemaPath,
-      }))
-      .sort(compareDesktopContractGraphDiagnostics),
-  };
-
-  return {
-    version: semanticGraph.version,
-    semanticHash: `sha256:${sha256(stringifyCanonicalJson(semanticGraph))}`,
-    app: {
-      ...semanticGraph.app,
       ...(appSourceLocation ? { sourceLocation: appSourceLocation } : {}),
     },
     contracts: parts.contracts,
@@ -278,6 +274,46 @@ export function compileDesktopContractGraph(
     windows,
     diagnostics: parts.diagnostics,
   };
+
+  return {
+    ...graphWithoutSemanticHash,
+    semanticHash: computeDesktopContractSemanticHash(graphWithoutSemanticHash),
+  };
+}
+
+export function computeDesktopContractSemanticHash(
+  graph: Omit<DesktopContractGraphV1, "semanticHash">,
+): DesktopContractSemanticHash {
+  return `sha256:${sha256(stringifyCanonicalJson(createDesktopContractSemanticProjection(graph)))}`;
+}
+
+export function compareDesktopContractHandshakes(
+  expected: DesktopContractHandshakeV1,
+  actual: {
+    readonly version: string;
+    readonly graphVersion: string;
+    readonly semanticHash: string;
+  },
+): DesktopContractHandshakeComparison {
+  if (expected.version !== actual.version) {
+    return {
+      compatible: false,
+      code: "DESKTOP_HANDSHAKE_VERSION_MISMATCH",
+    };
+  }
+  if (expected.graphVersion !== actual.graphVersion) {
+    return {
+      compatible: false,
+      code: "DESKTOP_GRAPH_VERSION_MISMATCH",
+    };
+  }
+  if (expected.semanticHash !== actual.semanticHash) {
+    return {
+      compatible: false,
+      code: "DESKTOP_SEMANTIC_HASH_MISMATCH",
+    };
+  }
+  return { compatible: true };
 }
 
 export function stringifyDesktopContractGraph(graph: DesktopContractGraphV1): string {
@@ -1157,6 +1193,71 @@ function stripSourceLocations<T>(value: T): T {
     ) as T;
   }
   return value;
+}
+
+function createDesktopContractSemanticProjection(
+  graph: Omit<DesktopContractGraphV1, "semanticHash">,
+): unknown {
+  return {
+    version: graph.version,
+    app: {
+      contractIds: sortStrings(graph.app.contractIds),
+      windowIds: sortStrings(graph.app.windowIds),
+    },
+    contracts: graph.contracts
+      .map((contract) => ({
+        ...stripSourceLocations(contract),
+        commandIds: sortStrings(contract.commandIds),
+        eventIds: sortStrings(contract.eventIds),
+        grantIds: sortStrings(contract.grantIds),
+      }))
+      .sort(compareById),
+    commands: graph.commands
+      .map((command) => ({
+        ...stripSourceLocations(command),
+        effects: command.effects
+          .map((effect) => ({
+            ...effect,
+            methods: sortStrings(effect.methods),
+            grantIds: sortStrings(effect.grantIds),
+          }))
+          .sort(compareEffects),
+        problems: sortStrings(command.problems),
+        events: sortStrings(command.events),
+      }))
+      .sort(compareById),
+    events: [...stripSourceLocations(graph.events)].sort(compareById),
+    effects: sortStrings(graph.effects),
+    grants: [...stripSourceLocations(graph.grants)].sort(compareById),
+    problems: [...graph.problems].sort((left, right) => compareCodeUnits(left.code, right.code)),
+    windows: graph.windows
+      .map((window) => ({
+        ...stripSourceLocations(window),
+        originPolicy:
+          window.originPolicy.mode === "remote-allowlist"
+            ? {
+                ...window.originPolicy,
+                allowedOrigins: sortStrings(window.originPolicy.allowedOrigins),
+              }
+            : window.originPolicy,
+        exposedCommands: sortStrings(window.exposedCommands),
+        receivedEvents: sortStrings(window.receivedEvents),
+      }))
+      .sort(compareById),
+    diagnostics: graph.diagnostics
+      .map(({ code, severity, targetKind, memberId, schemaPath }) => ({
+        code,
+        severity,
+        targetKind,
+        memberId,
+        schemaPath,
+      }))
+      .sort(compareDesktopContractGraphDiagnostics),
+  };
+}
+
+function sortStrings(values: readonly string[]): string[] {
+  return [...values].sort(compareCodeUnits);
 }
 
 function sortedEntries<T>(record: Readonly<Record<string, T>>): readonly (readonly [string, T])[] {

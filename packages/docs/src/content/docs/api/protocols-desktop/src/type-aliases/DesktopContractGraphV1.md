@@ -71,7 +71,7 @@ title: "DesktopContractGraphV1"
 
 ### semanticHash
 
-> `readonly` **semanticHash**: `` `sha256:${string}` ``
+> `readonly` **semanticHash**: [`DesktopContractSemanticHash`](/api/protocols-desktop/src/type-aliases/desktopcontractsemantichash/)
 
 ---
 

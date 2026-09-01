@@ -1,5 +1,10 @@
 import { Problem, ProblemCategory, defineProblemRegistry } from "@croco/problems-core";
-import { compileDesktopContractGraph, desktop } from "@croco/protocols-desktop";
+import {
+  compileDesktopContractGraph,
+  computeDesktopContractSemanticHash,
+  desktop,
+} from "@croco/protocols-desktop";
+import type { DesktopContractGraphV1 } from "@croco/protocols-desktop";
 import ts from "typescript";
 import { assert, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -19,6 +24,10 @@ type RuntimeClient = {
     };
   };
 };
+
+function withCurrentSemanticHash(graph: DesktopContractGraphV1): DesktopContractGraphV1 {
+  return { ...graph, semanticHash: computeDesktopContractSemanticHash(graph) };
+}
 
 describe("generateDesktopRendererClients", () => {
   it("generates deterministic typed clients for local window capabilities only", () => {
@@ -197,12 +206,12 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
 
   it("emits strict-clean artifacts for command, event-only, and empty windows", () => {
     const graph = createGraph(false);
-    const eventOnlyGraph = {
+    const eventOnlyGraph = withCurrentSemanticHash({
       ...graph,
       windows: graph.windows.map((window) =>
         window.id === "settings" ? { ...window, exposedCommands: [] } : window,
       ),
-    };
+    });
     const sources = new Map<string, string>();
     for (const artifact of generateDesktopRendererClients(graph)) {
       sources.set(`/virtual/${artifact.windowId}.generated.ts`, artifact.source);
@@ -219,14 +228,14 @@ desktop.project.fileChanged.subscribe((_payload, _event) => undefined);
     const readFile = graph.commands.find((command) => command.id === "project.readFile");
     assert(readFile, "Fixture readFile command is missing");
     const stale = requireClientSource(
-      {
+      withCurrentSemanticHash({
         ...graph,
         commands: graph.commands.map((command) =>
           command.id === readFile.id
-            ? { ...command, output: { ...command.output, descriptor: { kind: "number" } } }
+            ? { ...command, output: { ...command.output, descriptor: { kind: "number" } as const } }
             : command,
         ),
-      },
+      }),
       "main",
     );
 

@@ -1,4 +1,5 @@
 import { ProblemCategory } from "@croco/problems-core";
+import { computeDesktopContractSemanticHash } from "@croco/protocols-desktop";
 import type { DesktopContractGraphProblem, DesktopContractGraphV1 } from "@croco/protocols-desktop";
 
 type GenerationProblemFactory = (detail: string) => Error;
@@ -21,6 +22,18 @@ export function assertDesktopContractGraphGeneratable(
   }
   assertGraphScalarFields(graph, artifactDescription, createProblem);
   assertGraphAuthorityIntegrity(graph, createProblem);
+}
+
+export function assertDesktopContractGraphSemanticHash(
+  graph: DesktopContractGraphV1,
+  createProblem: GenerationProblemFactory,
+): void {
+  const computed = computeDesktopContractSemanticHash(graph);
+  if (computed !== graph.semanticHash) {
+    throw createProblem(
+      `Desktop contract graph semantic hash mismatch: expected ${JSON.stringify(computed)}, received ${JSON.stringify(graph.semanticHash)}. Regenerate the graph from its current definitions before generating desktop artifacts.`,
+    );
+  }
 }
 
 function assertGraphAuthorityIntegrity(
@@ -311,6 +324,12 @@ function assertGraphScalarFields(
   artifactDescription: "preload bridges" | "renderer clients",
   createProblem: GenerationProblemFactory,
 ): void {
+  assertStringIdentifier(graph.semanticHash, "contract graph semantic hash", createProblem);
+  if (!/^sha256:[0-9a-f]{64}$/.test(graph.semanticHash)) {
+    throw createProblem(
+      `Desktop contract graph semantic hash must use canonical lowercase SHA-256 format, received ${JSON.stringify(graph.semanticHash)}.`,
+    );
+  }
   assertStringIdentifiers(graph.app.contractIds, "app contract reference", createProblem);
   assertStringIdentifiers(graph.app.windowIds, "app window reference", createProblem);
   assertStringIdentifiers(graph.effects, "effect namespace", createProblem);

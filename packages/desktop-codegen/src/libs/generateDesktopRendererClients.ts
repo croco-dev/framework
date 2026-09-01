@@ -11,10 +11,21 @@ import type {
   DesktopContractGraphWindow,
   DesktopWireSchemaDescriptor,
 } from "@croco/protocols-desktop";
-import { assertDesktopContractGraphGeneratable } from "./assertDesktopContractGraphGeneratable";
+import {
+  assertDesktopContractGraphGeneratable,
+  assertDesktopContractGraphSemanticHash,
+} from "./assertDesktopContractGraphGeneratable";
+import {
+  createDesktopGeneratedSourcePath,
+  createDesktopGeneratedSurfaceMetadata,
+  renderDesktopGeneratedSurfaceMetadata,
+} from "./DesktopGeneratedMetadata";
+import type { DesktopGeneratedSurfaceMetadataV1 } from "./DesktopGeneratedMetadata";
 
 export type DesktopRendererClientSource = {
   readonly windowId: string;
+  readonly relativePath: string;
+  readonly metadata: DesktopGeneratedSurfaceMetadataV1;
   readonly source: string;
 };
 
@@ -55,17 +66,25 @@ export function generateDesktopRendererClients(
   assertGeneratableGraph(graph);
   const indexes = createGraphIndexes(graph);
   assertGraphIntegrity(graph, indexes);
-
-  return [...graph.windows].sort(compareById).flatMap((window) =>
-    window.trust === "remote"
-      ? []
-      : [
-          {
-            windowId: window.id,
-            source: generateWindowSource(collectWindowCapabilities(window, indexes), indexes),
-          },
-        ],
+  assertDesktopContractGraphSemanticHash(
+    graph,
+    (detail) => new DesktopRendererGenerationProblem(detail),
   );
+
+  return [...graph.windows].sort(compareById).flatMap((window) => {
+    if (window.trust === "remote") {
+      return [];
+    }
+    const metadata = createDesktopGeneratedSurfaceMetadata(graph, "renderer", window.id);
+    return [
+      {
+        windowId: window.id,
+        relativePath: createDesktopGeneratedSourcePath("renderer", window.id),
+        metadata,
+        source: generateWindowSource(collectWindowCapabilities(window, indexes), indexes, metadata),
+      },
+    ];
+  });
 }
 
 function assertGeneratableGraph(graph: DesktopContractGraphV1): void {
@@ -424,7 +443,11 @@ function requireCapability<T>(
   return record;
 }
 
-function generateWindowSource(capabilities: RendererCapabilities, indexes: GraphIndexes): string {
+function generateWindowSource(
+  capabilities: RendererCapabilities,
+  indexes: GraphIndexes,
+  metadata: DesktopGeneratedSurfaceMetadataV1,
+): string {
   const contracts = collectContracts(capabilities, indexes.contracts);
   const hasCommands = capabilities.commands.length > 0;
   const hasCapabilities = hasCommands || capabilities.events.length > 0;
@@ -442,6 +465,8 @@ function generateWindowSource(capabilities: RendererCapabilities, indexes: Graph
 
   return [
     ...imports,
+    ...renderDesktopGeneratedSurfaceMetadata(metadata),
+    "",
     ...(hasCommands
       ? [
           "export type DesktopRendererCommandOptions = {",

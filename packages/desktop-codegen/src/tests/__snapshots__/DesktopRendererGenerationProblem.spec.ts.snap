@@ -3,13 +3,57 @@
 exports[`generateDesktopRendererClients > generates deterministic typed clients for local window capabilities only 1`] = `
 [
   {
-    "source": "export const desktop = Object.freeze({
+    "metadata": {
+      "handshake": {
+        "graphVersion": "croco.desktop-contract-graph.v1",
+        "semanticHash": "sha256:f56cac5b9ecfedb2d50234404de678e457fe8bc7b39c8b41fc4ab74c1607ccf3",
+        "version": "croco.desktop-contract-handshake.v1",
+      },
+      "surface": "renderer",
+      "version": "croco.desktop-generated-surface.v1",
+      "windowId": "empty",
+    },
+    "relativePath": "renderer/window-656d707479.generated.ts",
+    "source": "export const desktopContractMetadata = Object.freeze({
+  version: "croco.desktop-generated-surface.v1",
+  surface: "renderer",
+  windowId: "empty",
+  handshake: Object.freeze({
+    version: "croco.desktop-contract-handshake.v1",
+    graphVersion: "croco.desktop-contract-graph.v1",
+    semanticHash: "sha256:f56cac5b9ecfedb2d50234404de678e457fe8bc7b39c8b41fc4ab74c1607ccf3",
+  }),
+} as const);
+
+export const desktop = Object.freeze({
 });
 ",
     "windowId": "empty",
   },
   {
+    "metadata": {
+      "handshake": {
+        "graphVersion": "croco.desktop-contract-graph.v1",
+        "semanticHash": "sha256:f56cac5b9ecfedb2d50234404de678e457fe8bc7b39c8b41fc4ab74c1607ccf3",
+        "version": "croco.desktop-contract-handshake.v1",
+      },
+      "surface": "renderer",
+      "version": "croco.desktop-generated-surface.v1",
+      "windowId": "main",
+    },
+    "relativePath": "renderer/window-6d61696e.generated.ts",
     "source": "import type { DesktopGrantReference, DesktopResult } from '@croco/protocols-desktop';
+
+export const desktopContractMetadata = Object.freeze({
+  version: "croco.desktop-generated-surface.v1",
+  surface: "renderer",
+  windowId: "main",
+  handshake: Object.freeze({
+    version: "croco.desktop-contract-handshake.v1",
+    graphVersion: "croco.desktop-contract-graph.v1",
+    semanticHash: "sha256:f56cac5b9ecfedb2d50234404de678e457fe8bc7b39c8b41fc4ab74c1607ccf3",
+  }),
+} as const);
 
 export type DesktopRendererCommandOptions = {
   readonly signal?: AbortSignal;
@@ -85,7 +129,29 @@ export const desktop = Object.freeze({
     "windowId": "main",
   },
   {
+    "metadata": {
+      "handshake": {
+        "graphVersion": "croco.desktop-contract-graph.v1",
+        "semanticHash": "sha256:f56cac5b9ecfedb2d50234404de678e457fe8bc7b39c8b41fc4ab74c1607ccf3",
+        "version": "croco.desktop-contract-handshake.v1",
+      },
+      "surface": "renderer",
+      "version": "croco.desktop-generated-surface.v1",
+      "windowId": "settings",
+    },
+    "relativePath": "renderer/window-73657474696e6773.generated.ts",
     "source": "import type { DesktopResult } from '@croco/protocols-desktop';
+
+export const desktopContractMetadata = Object.freeze({
+  version: "croco.desktop-generated-surface.v1",
+  surface: "renderer",
+  windowId: "settings",
+  handshake: Object.freeze({
+    version: "croco.desktop-contract-handshake.v1",
+    graphVersion: "croco.desktop-contract-graph.v1",
+    semanticHash: "sha256:f56cac5b9ecfedb2d50234404de678e457fe8bc7b39c8b41fc4ab74c1607ccf3",
+  }),
+} as const);
 
 export type DesktopRendererCommandOptions = {
   readonly signal?: AbortSignal;

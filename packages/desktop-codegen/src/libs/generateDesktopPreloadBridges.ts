@@ -5,10 +5,21 @@ import type {
   DesktopContractGraphV1,
   DesktopContractGraphWindow,
 } from "@croco/protocols-desktop";
-import { assertDesktopContractGraphGeneratable } from "./assertDesktopContractGraphGeneratable";
+import {
+  assertDesktopContractGraphGeneratable,
+  assertDesktopContractGraphSemanticHash,
+} from "./assertDesktopContractGraphGeneratable";
+import {
+  createDesktopGeneratedSourcePath,
+  createDesktopGeneratedSurfaceMetadata,
+  renderDesktopGeneratedSurfaceMetadata,
+} from "./DesktopGeneratedMetadata";
+import type { DesktopGeneratedSurfaceMetadataV1 } from "./DesktopGeneratedMetadata";
 
 export type DesktopPreloadBridgeSource = {
   readonly windowId: string;
+  readonly relativePath: string;
+  readonly metadata: DesktopGeneratedSurfaceMetadataV1;
   readonly source: string;
 };
 
@@ -54,19 +65,28 @@ export function generateDesktopPreloadBridges(
   createUniqueIndex(graph.windows, "window");
   const commandsById = createUniqueIndex(graph.commands, "command");
   const eventsById = createUniqueIndex(graph.events, "event");
-
-  return [...graph.windows].sort(compareById).flatMap((window) =>
-    window.trust === "remote"
-      ? []
-      : [
-          {
-            windowId: window.id,
-            source: generateWindowSource(
-              collectWindowCapabilities(window, commandsById, eventsById),
-            ),
-          },
-        ],
+  assertDesktopContractGraphSemanticHash(
+    graph,
+    (detail) => new DesktopPreloadGenerationProblem(detail),
   );
+
+  return [...graph.windows].sort(compareById).flatMap((window) => {
+    if (window.trust === "remote") {
+      return [];
+    }
+    const metadata = createDesktopGeneratedSurfaceMetadata(graph, "preload", window.id);
+    return [
+      {
+        windowId: window.id,
+        relativePath: createDesktopGeneratedSourcePath("preload", window.id),
+        metadata,
+        source: generateWindowSource(
+          collectWindowCapabilities(window, commandsById, eventsById),
+          metadata,
+        ),
+      },
+    ];
+  });
 }
 
 function assertGeneratableGraph(graph: DesktopContractGraphV1): void {
@@ -125,7 +145,10 @@ function requireCapability<T>(
   return record;
 }
 
-function generateWindowSource(capabilities: WindowCapabilities): string {
+function generateWindowSource(
+  capabilities: WindowCapabilities,
+  metadata: DesktopGeneratedSurfaceMetadataV1,
+): string {
   const contracts = collectContracts(capabilities);
   const commandContracts = contracts.filter((contract) => contract.commands.length > 0);
   const eventContracts = contracts.filter((contract) => contract.events.length > 0);
@@ -135,6 +158,8 @@ function generateWindowSource(capabilities: WindowCapabilities): string {
 
   return [
     'import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";',
+    "",
+    ...renderDesktopGeneratedSurfaceMetadata(metadata),
     "",
     ...(hasCommands
       ? [

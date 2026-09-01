@@ -3,7 +3,29 @@
 exports[`generateDesktopPreloadBridges > generates deterministic minimal bridges for local window profiles only 1`] = `
 [
   {
+    "metadata": {
+      "handshake": {
+        "graphVersion": "croco.desktop-contract-graph.v1",
+        "semanticHash": "sha256:c5006bb856ba5de60aabead470d7cbbe53ee5dadd88d62f517630aa34fe83000",
+        "version": "croco.desktop-contract-handshake.v1",
+      },
+      "surface": "preload",
+      "version": "croco.desktop-generated-surface.v1",
+      "windowId": "empty",
+    },
+    "relativePath": "preload/window-656d707479.generated.ts",
     "source": "import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";
+
+export const desktopContractMetadata = Object.freeze({
+  version: "croco.desktop-generated-surface.v1",
+  surface: "preload",
+  windowId: "empty",
+  handshake: Object.freeze({
+    version: "croco.desktop-contract-handshake.v1",
+    graphVersion: "croco.desktop-contract-graph.v1",
+    semanticHash: "sha256:c5006bb856ba5de60aabead470d7cbbe53ee5dadd88d62f517630aa34fe83000",
+  }),
+} as const);
 
 export function installDesktopPreloadBridge(
   contextBridge: DesktopPreloadContextBridge,
@@ -22,7 +44,29 @@ export function installDesktopPreloadBridge(
     "windowId": "empty",
   },
   {
+    "metadata": {
+      "handshake": {
+        "graphVersion": "croco.desktop-contract-graph.v1",
+        "semanticHash": "sha256:c5006bb856ba5de60aabead470d7cbbe53ee5dadd88d62f517630aa34fe83000",
+        "version": "croco.desktop-contract-handshake.v1",
+      },
+      "surface": "preload",
+      "version": "croco.desktop-generated-surface.v1",
+      "windowId": "main",
+    },
+    "relativePath": "preload/window-6d61696e.generated.ts",
     "source": "import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";
+
+export const desktopContractMetadata = Object.freeze({
+  version: "croco.desktop-generated-surface.v1",
+  surface: "preload",
+  windowId: "main",
+  handshake: Object.freeze({
+    version: "croco.desktop-contract-handshake.v1",
+    graphVersion: "croco.desktop-contract-graph.v1",
+    semanticHash: "sha256:c5006bb856ba5de60aabead470d7cbbe53ee5dadd88d62f517630aa34fe83000",
+  }),
+} as const);
 
 type DesktopAbortRegistration = (abort: () => void) => () => void;
 
@@ -79,7 +123,29 @@ export function installDesktopPreloadBridge(
     "windowId": "main",
   },
   {
+    "metadata": {
+      "handshake": {
+        "graphVersion": "croco.desktop-contract-graph.v1",
+        "semanticHash": "sha256:c5006bb856ba5de60aabead470d7cbbe53ee5dadd88d62f517630aa34fe83000",
+        "version": "croco.desktop-contract-handshake.v1",
+      },
+      "surface": "preload",
+      "version": "croco.desktop-generated-surface.v1",
+      "windowId": "settings",
+    },
+    "relativePath": "preload/window-73657474696e6773.generated.ts",
     "source": "import type { DesktopPreloadContextBridge, DesktopPreloadTransport } from "@croco/desktop-codegen";
+
+export const desktopContractMetadata = Object.freeze({
+  version: "croco.desktop-generated-surface.v1",
+  surface: "preload",
+  windowId: "settings",
+  handshake: Object.freeze({
+    version: "croco.desktop-contract-handshake.v1",
+    graphVersion: "croco.desktop-contract-graph.v1",
+    semanticHash: "sha256:c5006bb856ba5de60aabead470d7cbbe53ee5dadd88d62f517630aa34fe83000",
+  }),
+} as const);
 
 type DesktopAbortRegistration = (abort: () => void) => () => void;
 
