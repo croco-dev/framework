@@ -903,7 +903,14 @@ function checkSaasStructure() {
       "@croco/problems-core": "workspace:*",
     }),
   });
-  checkFileContains("saas", ["apps", "api-server", "src", "index.ts"], /TelemetryRuntime/);
+  checkFileContains("saas", ["apps", "api-server", "src", "index.ts"], /createNodeHost/);
+  checkFileContains("saas", ["apps", "api-server", "src", "lambda.ts"], /createLambdaHost/);
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "worker.ts"],
+    /createCloudflareWorkersHost/,
+  );
+  checkFileContains("saas", ["apps", "api-server", "src", "telemetry.ts"], /TelemetryRuntime/);
   checkFileDoesNotContain(
     "saas",
     ["apps", "api-server", "src", "index.ts"],

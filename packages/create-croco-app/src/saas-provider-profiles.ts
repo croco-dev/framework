@@ -179,6 +179,7 @@ export const SAAS_PROVIDER_PROFILES = {
     description:
       "Node API profile with Postgres-backed domain state, Polar billing, Upstash queues, Cloudinary storage, and OTLP telemetry.",
     packages: [
+      "@croco/preset-node",
       "@croco/auth-better-auth",
       "@croco/auth-drizzle",
       "@croco/billing-polar",

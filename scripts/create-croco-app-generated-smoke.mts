@@ -112,6 +112,7 @@ const GENERATED_SMOKE_WORKSPACE_BUILD_ROOTS = [
   "@croco/problems-core",
   "@croco/preset-cloudflare",
   "@croco/preset-lambda",
+  "@croco/preset-node",
   "@croco/repository-core",
   "@croco/retry-core",
   "@croco/rpc-codegen",
@@ -655,7 +656,7 @@ const apiWorkerFetchSmokeScript = [
   "const fetchHandler = typeof worker === 'function' ? worker : worker && typeof worker.fetch === 'function' " +
     "? worker.fetch.bind(worker) : undefined;",
   'if (typeof fetchHandler !== "function") throw new Error("API worker default export must be a fetch handler or Worker object");',
-  "const executionContext = { waitUntil: () => {}, passThroughOnException: () => {} };",
+  "const executionContext = { waitUntil: () => {}, passThroughOnException: () => {}, props: undefined };",
   'const response = await fetchHandler(new Request("http://localhost/health", { headers: { origin: "http://localhost:5173", "cf-connecting-ip": "203.0.113.10" } }), { WEB_ORIGIN: "http://localhost:5173" }, executionContext);',
   "const body = await response.json();",
   "if (response.status !== 200) throw new Error(`Expected /health status 200, received ${response.status}`);",
@@ -884,7 +885,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
           },
         },
       },
-      runtimeCapabilityManifestValidation("node", "dual"),
+      runtimeCapabilityManifestValidation("saas-node"),
       { label: "contract:snapshot", args: ["contract:snapshot"] },
       {
         label: "codegen",
@@ -899,7 +900,11 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       },
       { label: "doctor", args: ["doctor"] },
       { label: "typecheck", args: ["typecheck"] },
-      { label: "build", args: ["build"] },
+      {
+        label: "build",
+        args: ["build"],
+        paths: ["apps/api-server/dist/index.js", "apps/api-server/dist/index.mjs"],
+      },
       { label: "test", args: ["test"] },
       { label: "demo:smoke", args: ["demo:smoke"] },
       {
@@ -975,12 +980,12 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
           },
         },
       },
-      runtimeCapabilityManifestValidation("node", "cjs"),
+      runtimeCapabilityManifestValidation("node-application"),
       { label: "dev:smoke", args: ["dev:smoke"] },
       { label: "Chromium install", args: ["test:browser:install"] },
       { label: "test", args: ["test"] },
       { label: "typecheck", args: ["typecheck"] },
-      { label: "build", args: ["build"] },
+      { label: "build", args: ["build"], paths: ["apps/api-server/dist/index.js"] },
       { label: "contract:snapshot", args: ["contract:snapshot"] },
       {
         label: "codegen",
@@ -1023,7 +1028,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
           },
         },
       },
-      runtimeCapabilityManifestValidation("cloudflare-workers", "esm"),
+      runtimeCapabilityManifestValidation("cloudflare-workers-workspace"),
       { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
       {
@@ -1069,12 +1074,12 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
           },
         },
       },
-      runtimeCapabilityManifestValidation("node", "cjs"),
+      runtimeCapabilityManifestValidation("node-application"),
       { label: "admin:smoke", args: ["admin:smoke"] },
       { label: "Chromium install", args: ["test:browser:install"] },
       { label: "test", args: ["test"] },
       { label: "typecheck", args: ["typecheck"] },
-      { label: "build", args: ["build"] },
+      { label: "build", args: ["build"], paths: ["apps/api-server/dist/index.js"] },
       { label: "contract:snapshot", args: ["contract:snapshot"] },
       {
         label: "codegen",
@@ -1108,6 +1113,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     runtimeTarget: "node",
     matrixTargets: ["base-ddd"],
     validations: [
+      runtimeCapabilityManifestValidation("graphql-node-application"),
       {
         label: GRAPHQL_CONTRACT_CHECK_LABEL,
         packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
@@ -1125,7 +1131,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
         packagePath: ["apps", "graphql-api"],
         args: ["exec", "tsx", "--eval", graphqlStandaloneProtectedRouteSmokeScript],
       },
-      { label: "build", args: ["build"] },
+      { label: "build", args: ["build"], paths: ["apps/graphql-api/dist/index.js"] },
     ],
   },
   {
@@ -1149,6 +1155,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     runtimeTarget: "lambda",
     matrixTargets: ["base-ddd"],
     validations: [
+      runtimeCapabilityManifestValidation("graphql-lambda"),
       {
         label: GRAPHQL_CONTRACT_CHECK_LABEL,
         packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
@@ -1166,7 +1173,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
         packagePath: ["apps", "graphql-api"],
         args: ["exec", "tsx", "--eval", graphqlLambdaProtectedRouteSmokeScript],
       },
-      { label: "build", args: ["build"] },
+      { label: "build", args: ["build"], paths: ["apps/graphql-api/dist/handler.js"] },
       { label: "test", args: ["test"] },
     ],
   },
@@ -1380,6 +1387,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     runtimeTarget: "cloudflare-workers+browser",
     matrixTargets: ["base-ddd"],
     validations: [
+      runtimeCapabilityManifestValidation("graphql-node-application"),
       {
         label: GRAPHQL_CONTRACT_CHECK_LABEL,
         packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
@@ -1390,6 +1398,12 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
         packagePath: GRAPHQL_STANDALONE_CONTRACT_PACKAGE_PATH,
         args: ["contract:snapshot"],
         paths: [GRAPHQL_CONTRACT_SNAPSHOT_PATH],
+      },
+      {
+        label: "apps/graphql-api host build",
+        packagePath: ["apps", "graphql-api"],
+        args: ["build"],
+        paths: ["dist/index.js"],
       },
       {
         label: "apps/web vite config load",
@@ -1440,7 +1454,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       {
         label: "api-worker secure fetch smoke",
         packagePath: ["ssr-worker"],
-        args: ["exec", "tsx", "--eval", apiWorkerFetchSmokeScript],
+        args: ["exec", "tsx", "--input-type=module", "--eval", apiWorkerFetchSmokeScript],
       },
       {
         label: "ssr-worker vite config load",
@@ -1839,9 +1853,9 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
           "apps/api-server/src/generatedTenantModel.ts",
         ],
       },
-      runtimeCapabilityManifestValidation("cloudflare-workers", "esm"),
+      runtimeCapabilityManifestValidation("saas-cloudflare"),
       { label: "typecheck", args: ["typecheck"] },
-      { label: "build", args: ["build"] },
+      { label: "build", args: ["build"], paths: ["apps/api-server/dist/worker.mjs"] },
       {
         label: "Contract snapshot",
         args: ["contract:snapshot"],
@@ -1890,9 +1904,9 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
           "apps/api-server/src/generatedTenantModel.ts",
         ],
       },
-      runtimeCapabilityManifestValidation("lambda", "cjs"),
+      runtimeCapabilityManifestValidation("saas-lambda"),
       { label: "typecheck", args: ["typecheck"] },
-      { label: "build", args: ["build"] },
+      { label: "build", args: ["build"], paths: ["apps/api-server/dist/lambda.js"] },
       {
         label: "Contract snapshot",
         args: ["contract:snapshot"],
@@ -2949,18 +2963,108 @@ function readSmokeCasePreset(smokeCase: SmokeCase): string {
   return goal ? `goal:${goal}` : "unknown";
 }
 
+type RuntimeCompositionSmokeProfile =
+  | "saas-node"
+  | "saas-lambda"
+  | "saas-cloudflare"
+  | "node-application"
+  | "cloudflare-workers-workspace"
+  | "graphql-node-application"
+  | "graphql-lambda";
+
 function runtimeCapabilityManifestValidation(
-  platform: RuntimeCapabilitySmokePlatform,
-  format: "esm" | "cjs" | "dual",
+  profile: RuntimeCompositionSmokeProfile,
 ): SmokeValidation {
-  const hostLifecycle =
-    platform === "node" ? "process" : platform === "lambda" ? "invocation" : "fetch";
-  const buildTargetName =
-    platform === "node"
-      ? "node-application"
-      : platform === "lambda"
-        ? "lambda-function"
-        : "cloudflare-worker";
+  const compositionByProfile = {
+    "saas-node": {
+      platform: "node",
+      host: { platform: "node", lifecycle: "process", packageName: "@croco/preset-node" },
+      transports: [{ protocol: "http", packageName: "@croco/transports-http" }],
+      buildTarget: {
+        name: "node-application",
+        format: "dual",
+        outputDirectory: "apps/api-server/dist",
+      },
+    },
+    "saas-lambda": {
+      platform: "lambda",
+      host: { platform: "lambda", lifecycle: "invocation", packageName: "@croco/preset-lambda" },
+      transports: [{ protocol: "http", packageName: "@croco/transports-http" }],
+      buildTarget: {
+        name: "lambda-function",
+        format: "cjs",
+        outputDirectory: "apps/api-server/dist",
+      },
+    },
+    "saas-cloudflare": {
+      platform: "cloudflare-workers",
+      host: {
+        platform: "cloudflare-workers",
+        lifecycle: "fetch",
+        packageName: "@croco/preset-cloudflare",
+      },
+      transports: [{ protocol: "http", packageName: "@croco/transports-http" }],
+      buildTarget: {
+        name: "cloudflare-worker",
+        format: "esm",
+        outputDirectory: "apps/api-server/dist",
+        constraints: ["no-node-builtins", "web-standard-apis"],
+      },
+    },
+    "node-application": {
+      platform: "node",
+      host: { platform: "node", lifecycle: "process" },
+      transports: [{ protocol: "http", packageName: "@croco/transports-http" }],
+      buildTarget: {
+        name: "node-application",
+        format: "cjs",
+        outputDirectory: "apps/api-server/dist",
+      },
+    },
+    "cloudflare-workers-workspace": {
+      platform: "cloudflare-workers",
+      host: {
+        platform: "cloudflare-workers",
+        lifecycle: "fetch",
+        packageName: "@croco/preset-cloudflare",
+      },
+      transports: [{ protocol: "http", packageName: "@croco/transports-http" }],
+      buildTarget: {
+        name: "cloudflare-workers-workspace",
+        format: "esm",
+        constraints: ["no-node-builtins", "web-standard-apis"],
+      },
+    },
+    "graphql-node-application": {
+      platform: "node",
+      host: { platform: "node", lifecycle: "process", packageName: "@apollo/server" },
+      transports: [{ protocol: "graphql", packageName: "@croco/protocols-graphql" }],
+      buildTarget: {
+        name: "node-application",
+        format: "cjs",
+        outputDirectory: "apps/graphql-api/dist",
+      },
+    },
+    "graphql-lambda": {
+      platform: "lambda",
+      host: { platform: "lambda", lifecycle: "invocation", packageName: "@apollo/server" },
+      transports: [{ protocol: "graphql", packageName: "@croco/protocols-graphql" }],
+      buildTarget: {
+        name: "lambda-function",
+        format: "cjs",
+        outputDirectory: "apps/graphql-api/dist",
+      },
+    },
+  } as const satisfies Record<
+    RuntimeCompositionSmokeProfile,
+    {
+      platform: RuntimeCapabilitySmokePlatform;
+      host: Record<string, string>;
+      transports: readonly Record<string, string>[];
+      buildTarget: Record<string, string | readonly string[]>;
+    }
+  >;
+  const composition = compositionByProfile[profile];
 
   return {
     label: "runtime capability manifest",
@@ -2968,28 +3072,13 @@ function runtimeCapabilityManifestValidation(
       path: "croco-runtime-capability.manifest.json",
       matches: {
         version: "croco.runtime-capability.manifest.v1",
-        platform,
+        platform: composition.platform,
         composition: {
-          host: {
-            platform,
-            lifecycle: hostLifecycle,
-          },
-          transports: [
-            {
-              protocol: "http",
-              packageName: "@croco/transports-http",
-            },
-          ],
-          buildTarget: {
-            name: buildTargetName,
-            format,
-            outputDirectory: "dist",
-            ...(platform === "cloudflare-workers"
-              ? { constraints: ["no-node-builtins", "web-standard-apis"] }
-              : {}),
-          },
+          host: composition.host,
+          transports: composition.transports,
+          buildTarget: composition.buildTarget,
         },
-        capabilities: runtimeCapabilitySmokeSupport[platform],
+        capabilities: runtimeCapabilitySmokeSupport[composition.platform],
         diagnostics: [],
       },
     },
