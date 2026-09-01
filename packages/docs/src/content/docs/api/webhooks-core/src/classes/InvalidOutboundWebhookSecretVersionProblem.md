@@ -27,7 +27,7 @@ title: "InvalidOutboundWebhookSecretVersionProblem"
 
 ##### reason
 
-`"unknown"` \| `"expired"`
+`"expired"` \| `"unknown"`
 
 #### Returns
 

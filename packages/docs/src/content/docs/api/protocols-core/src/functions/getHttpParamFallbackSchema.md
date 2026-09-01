@@ -11,7 +11,7 @@ title: "getHttpParamFallbackSchema"
 
 ### kind
 
-`"query"` \| `"path"` \| `"header"`
+`"path"` \| `"query"` \| `"header"`
 
 ## Returns
 

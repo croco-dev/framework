@@ -5,6 +5,7 @@
  *
  * Narrow exemptions:
  * - package docs and tests do not require a changeset;
+ * - adding the canonical CI-only API model script does not change published behavior;
  * - private packages do not require a changeset;
  * - root-only lockfile/package-manager changes do not require a changeset here;
  * - public API snapshot-only changes may instead carry an explicit no-release reason;
@@ -16,6 +17,8 @@ import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { basename, join, relative, resolve } from "node:path";
 import { env, exit, stdout } from "node:process";
+
+import { isDocsApiModelScriptOnlyManifestChange } from "./package-manifest-contracts.mjs";
 
 type CheckOptions = {
   readonly baseRef: string;
@@ -981,6 +984,7 @@ function isReleaseSignificantPackageFile(packageRelativeFile: string): boolean {
 }
 
 function getReleaseSignificantChanges(
+  options: CheckOptions,
   changedFiles: readonly string[],
   packages: readonly PackageInfo[],
 ): Map<string, ReleaseSignificantChange> {
@@ -993,6 +997,16 @@ function getReleaseSignificantChanges(
     }
 
     const packageRelativeFile = file.slice(`${pkg.relativeDir}/`.length);
+    if (
+      packageRelativeFile === "package.json" &&
+      isDocsApiModelScriptOnlyManifestChange(
+        readJsonObjectAtRef(options, options.baseRef, file),
+        readJsonObjectAtRef(options, options.headRef, file),
+      )
+    ) {
+      continue;
+    }
+
     if (!isReleaseSignificantPackageFile(packageRelativeFile)) {
       continue;
     }
@@ -1255,7 +1269,7 @@ function main(): void {
     const options = parseArgs(process.argv.slice(2));
     const changedFiles = getChangedFiles(options);
     const packages = readPackages(options.rootDir);
-    const significantChanges = getReleaseSignificantChanges(changedFiles, packages);
+    const significantChanges = getReleaseSignificantChanges(options, changedFiles, packages);
     addPublicApiSnapshotChanges(significantChanges, options, changedFiles);
     const changesets = getChangedChangesetMetadata(options, changedFiles);
     const coverage = getChangesetCoverage(changesets, packages, significantChanges);

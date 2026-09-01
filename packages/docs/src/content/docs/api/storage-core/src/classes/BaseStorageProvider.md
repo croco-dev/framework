@@ -9,9 +9,9 @@ title: "BaseStorageProvider"
 
 ## Extended by
 
+- [`InMemoryStorageProvider`](/api/storage-core/src/classes/inmemorystorageprovider/)
 - [`CloudflareImagesProvider`](/api/storage-cloudflare/src/classes/cloudflareimagesprovider/)
 - [`CloudinaryProvider`](/api/storage-cloudinary/src/classes/cloudinaryprovider/)
-- [`InMemoryStorageProvider`](/api/storage-core/src/classes/inmemorystorageprovider/)
 - [`R2StorageProvider`](/api/storage-r2/src/classes/r2storageprovider/)
 
 ## Implements

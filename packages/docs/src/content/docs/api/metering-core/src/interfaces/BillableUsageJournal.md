@@ -16,7 +16,7 @@ fencing token.
 
 ### durability
 
-> `readonly` **durability**: `"persistent"` \| `"volatile"`
+> `readonly` **durability**: `"volatile"` \| `"persistent"`
 
 ## Methods
 

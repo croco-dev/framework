@@ -37,6 +37,7 @@ import {
   packageHasSourceEntrypoint,
 } from "./package-manifest-contracts.mjs";
 import { isBoundedPeerDependencyRange } from "./peer-dependency-range-policy.mjs";
+import { apiDocPackages } from "../packages/docs/api-docs.config.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -98,6 +99,9 @@ const DRIZZLE_ORM_DEPENDENCY_SECTIONS = [
   "peerDependencies",
   "optionalDependencies",
 ];
+const API_DOC_PACKAGE_NAMES = new Set(apiDocPackages.map(({ packageName }) => packageName));
+const API_DOC_MODEL_SCRIPT =
+  "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts";
 const RUNTIME_DEPENDENCY_SECTIONS = ["dependencies", "peerDependencies", "optionalDependencies"];
 const CATALOG_METADATA_PATH = path.join("docs", "package-catalog.json");
 const nodeBuiltinModules = new Set([
@@ -329,6 +333,10 @@ function readWorkspaceCatalogRange(rootDir, packageName) {
 function normalizePackageScripts(pkg) {
   if (!pkg.scripts || typeof pkg.scripts !== "object" || Array.isArray(pkg.scripts)) {
     return;
+  }
+
+  if (API_DOC_PACKAGE_NAMES.has(pkg.name)) {
+    pkg.scripts["docs:api:model"] = API_DOC_MODEL_SCRIPT;
   }
 
   for (const [scriptName, command] of Object.entries(pkg.scripts)) {

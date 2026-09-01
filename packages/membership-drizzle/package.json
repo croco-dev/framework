@@ -39,7 +39,8 @@
     "test": "vitest run --exclude src/tests/DrizzleMembershipStore.postgres.spec.ts",
     "test:live": "vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint ."
+    "lint": "oxlint .",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
     "@croco/framework-context": "workspace:*",

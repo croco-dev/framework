@@ -145,7 +145,7 @@ title: "EngagementPersistence"
 
 ### listByDispatch()
 
-> **listByDispatch**(`tenantId`, `dispatchId`): `Promise`\<readonly `Readonly`\<\{ `dispatchId`: `string`; `endpointId`: `string`; `evidence?`: `Readonly`\<\{ `bounceKind?`: `"hard"` \| `"soft"`; `providerCategory?`: `string`; `providerCode?`: `string`; \}\>; `id`: `string`; `occurredAt`: `Date`; `provider`: `string`; `providerEventId`: `string`; `recordedAt`: `Date`; `tenantId`: `string`; `type`: `"accepted"` \| `"expired"` \| `"delivered"` \| `"failed"` \| `"opened"` \| `"clicked"` \| `"bounced"` \| `"complained"` \| `"unsubscribed"` \| `"token-invalid"`; \}\>[]\>
+> **listByDispatch**(`tenantId`, `dispatchId`): `Promise`\<readonly `Readonly`\<\{ `dispatchId`: `string`; `endpointId`: `string`; `evidence?`: `Readonly`\<\{ `bounceKind?`: `"hard"` \| `"soft"`; `providerCategory?`: `string`; `providerCode?`: `string`; \}\>; `id`: `string`; `occurredAt`: `Date`; `provider`: `string`; `providerEventId`: `string`; `recordedAt`: `Date`; `tenantId`: `string`; `type`: `"accepted"` \| `"delivered"` \| `"opened"` \| `"clicked"` \| `"bounced"` \| `"complained"` \| `"unsubscribed"` \| `"token-invalid"` \| `"expired"` \| `"failed"`; \}\>[]\>
 
 #### Parameters
 
@@ -159,7 +159,7 @@ title: "EngagementPersistence"
 
 #### Returns
 
-`Promise`\<readonly `Readonly`\<\{ `dispatchId`: `string`; `endpointId`: `string`; `evidence?`: `Readonly`\<\{ `bounceKind?`: `"hard"` \| `"soft"`; `providerCategory?`: `string`; `providerCode?`: `string`; \}\>; `id`: `string`; `occurredAt`: `Date`; `provider`: `string`; `providerEventId`: `string`; `recordedAt`: `Date`; `tenantId`: `string`; `type`: `"accepted"` \| `"expired"` \| `"delivered"` \| `"failed"` \| `"opened"` \| `"clicked"` \| `"bounced"` \| `"complained"` \| `"unsubscribed"` \| `"token-invalid"`; \}\>[]\>
+`Promise`\<readonly `Readonly`\<\{ `dispatchId`: `string`; `endpointId`: `string`; `evidence?`: `Readonly`\<\{ `bounceKind?`: `"hard"` \| `"soft"`; `providerCategory?`: `string`; `providerCode?`: `string`; \}\>; `id`: `string`; `occurredAt`: `Date`; `provider`: `string`; `providerEventId`: `string`; `recordedAt`: `Date`; `tenantId`: `string`; `type`: `"accepted"` \| `"delivered"` \| `"opened"` \| `"clicked"` \| `"bounced"` \| `"complained"` \| `"unsubscribed"` \| `"token-invalid"` \| `"expired"` \| `"failed"`; \}\>[]\>
 
 #### Inherited from
 

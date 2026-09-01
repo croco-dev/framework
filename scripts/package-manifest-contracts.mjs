@@ -7,6 +7,10 @@ export const FILES_EXEMPTIONS = new Map();
 
 export const EXPORT_CONDITION_ORDER = ["types", "import", "require"];
 
+const DOCS_API_MODEL_SCRIPT_NAME = "docs:api:model";
+const DOCS_API_MODEL_SCRIPT_COMMAND =
+  "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts";
+
 export const BUNDLED_RUNTIME_DEPENDENCY_EXEMPTIONS = new Map([
   [
     "create-croco-app",
@@ -188,6 +192,52 @@ export function effectivePublishManifest(sourceManifest) {
   };
   delete publishManifest.publishConfig;
   return publishManifest;
+}
+
+/**
+ * @param {unknown} baseManifest
+ * @param {unknown} headManifest
+ */
+export function isDocsApiModelScriptOnlyManifestChange(baseManifest, headManifest) {
+  if (!isRecord(baseManifest) || !isRecord(headManifest)) {
+    return false;
+  }
+
+  for (const key of new Set([...Object.keys(baseManifest), ...Object.keys(headManifest)])) {
+    if (key !== "scripts" && !valuesMatch(baseManifest[key], headManifest[key])) {
+      return false;
+    }
+  }
+
+  const baseScripts = baseManifest.scripts;
+  const headScripts = headManifest.scripts;
+  if ((baseScripts !== undefined && !isRecord(baseScripts)) || !isRecord(headScripts)) {
+    return false;
+  }
+
+  const originalScripts = baseScripts ?? {};
+
+  for (const scriptName of new Set([
+    ...Object.keys(originalScripts),
+    ...Object.keys(headScripts),
+  ])) {
+    if (scriptName === DOCS_API_MODEL_SCRIPT_NAME) {
+      continue;
+    }
+
+    if (!valuesMatch(originalScripts[scriptName], headScripts[scriptName])) {
+      return false;
+    }
+  }
+
+  return (
+    originalScripts[DOCS_API_MODEL_SCRIPT_NAME] === undefined &&
+    headScripts[DOCS_API_MODEL_SCRIPT_NAME] === DOCS_API_MODEL_SCRIPT_COMMAND
+  );
+}
+
+function isRecord(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function valuesMatch(left, right) {

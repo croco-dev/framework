@@ -31,7 +31,7 @@ title: "TestNetwork"
 
 ##### input
 
-`string` \| `Request` \| `URL`
+`string` \| `URL` \| `Request`
 
 ##### init?
 

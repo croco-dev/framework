@@ -28,9 +28,19 @@ type Drift = {
 const apiDocsDir = join("packages", "docs", "src", "content", "docs", "api");
 const ciWorkflowPath = join(".github", "workflows", "ci.yml");
 const apiSourceFilterName = "api-source";
+const packageContractGlobs = ["packages/*/package.json"] as const;
 const docsConfigGlobs = [
+  ".oxfmtrc.json",
+  "pnpm-lock.yaml",
+  "turbo.json",
+  "packages/docs/api-docs.config.mjs",
   "packages/docs/astro.config.mjs",
-  "packages/docs/tsconfig.typedoc.json",
+  "packages/docs/src/content.config.ts",
+  "packages/docs/scripts/build-docs.mts",
+  "packages/docs/scripts/generate-package-api-model.mts",
+  "packages/docs/scripts/prepare-api-models.mjs",
+  "packages/docs/scripts/sanitize-typedoc-index.mjs",
+  "packages/docs/scripts/typedoc-merge-normalizer.mjs",
 ] as const;
 const scriptRootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
@@ -63,7 +73,7 @@ export function expectedApiSourceGlobs(rootDir: string): readonly string[] {
     return `packages/${packageName}/src/**`;
   });
 
-  return [...sourceGlobs, ...docsConfigGlobs];
+  return [...sourceGlobs, ...packageContractGlobs, ...docsConfigGlobs];
 }
 
 export function readApiSourceFilter(workflow: string): ApiSourceFilter {

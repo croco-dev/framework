@@ -29,7 +29,8 @@
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
     "@croco/problems-core": "workspace:*",

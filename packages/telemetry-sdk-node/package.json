@@ -29,7 +29,8 @@
     "lint": "oxlint .",
     "test": "vitest run --exclude src/tests/PublishedTypes.spec.ts",
     "test:published": "vitest run src/tests/PublishedTypes.spec.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
     "@croco/diagnostics-core": "workspace:*",

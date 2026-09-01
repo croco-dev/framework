@@ -57,7 +57,7 @@ title: "ScenarioRuntime"
 
 ##### boundary
 
-`"telemetry"` \| `"transaction"` \| `"retry"` \| `"provider"` \| `"task"` \| `"event"` \| `"trigger"`
+`"event"` \| `"task"` \| `"provider"` \| `"retry"` \| `"telemetry"` \| `"transaction"` \| `"trigger"`
 
 ##### failure
 
@@ -87,7 +87,7 @@ title: "ScenarioRuntime"
 
 ##### boundary
 
-`"telemetry"` \| `"transaction"` \| `"retry"` \| `"provider"` \| `"task"` \| `"event"` \| `"trigger"`
+`"event"` \| `"task"` \| `"provider"` \| `"retry"` \| `"telemetry"` \| `"transaction"` \| `"trigger"`
 
 ##### operation
 

@@ -37,7 +37,8 @@
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint ."
+    "lint": "oxlint .",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
     "@croco/entitlements-core": "workspace:*",

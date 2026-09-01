@@ -800,8 +800,18 @@ jobs:
               - 'packages/ui-astryx/src/**'
               - 'packages/webhooks-core/src/**'
               - 'packages/workflow-core/src/**'
+              - 'packages/*/package.json'
+              - '.oxfmtrc.json'
+              - 'pnpm-lock.yaml'
+              - 'turbo.json'
+              - 'packages/docs/api-docs.config.mjs'
               - 'packages/docs/astro.config.mjs'
-              - 'packages/docs/tsconfig.typedoc.json'
+              - 'packages/docs/src/content.config.ts'
+              - 'packages/docs/scripts/build-docs.mts'
+              - 'packages/docs/scripts/generate-package-api-model.mts'
+              - 'packages/docs/scripts/prepare-api-models.mjs'
+              - 'packages/docs/scripts/sanitize-typedoc-index.mjs'
+              - 'packages/docs/scripts/typedoc-merge-normalizer.mjs'
         run: >-
           node --experimental-strip-types scripts/verification-change-classifier.mts
           --event "$GITHUB_EVENT_NAME" --workflow ci
@@ -1659,7 +1669,7 @@ jobs:
         run: pnpm docs:api:check
 
   docs-build:
-    needs: changes
+    needs: [changes, docs-sync-check]
     if: ${{ needs.changes.outputs.docs == 'true' || (github.event_name != 'pull_request' && needs.changes.outputs.api-source == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -1682,6 +1692,7 @@ jobs:
           path: .turbo
           key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-${{ github.sha }}
           restore-keys: |
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-docs-sync-check-${{ github.sha }}
             turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-
             turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
             turbo-${{ runner.os }}-

@@ -84,6 +84,10 @@ describe("verification policy", () => {
     });
   });
 
+  it("routes API documentation drift recovery through the explicit writer", () => {
+    expect(ROOT_VERIFICATION_POLICY["docs:api:check"]?.recoveryCommand).toBe("pnpm docs:api:write");
+  });
+
   it("fails closed for a new workflow verification command", () => {
     const discoveries = discoverWorkflowVerificationCommands({
       ".github/workflows/synthetic.yml": "steps:\n  - run: pnpm synthetic:check",

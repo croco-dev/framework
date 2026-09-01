@@ -27,8 +27,8 @@ class PostgresMembershipStore extends MembershipStore {
 
 ## Extended by
 
-- [`DrizzleMembershipStore`](/api/membership-drizzle/src/classes/drizzlemembershipstore/)
 - [`InMemoryMembershipStore`](/api/membership-core/src/classes/inmemorymembershipstore/)
+- [`DrizzleMembershipStore`](/api/membership-drizzle/src/classes/drizzlemembershipstore/)
 
 ## Constructors
 
@@ -44,7 +44,7 @@ class PostgresMembershipStore extends MembershipStore {
 
 ### eventIntentDurability
 
-> `abstract` `readonly` **eventIntentDurability**: `"persistent"` \| `"volatile"`
+> `abstract` `readonly` **eventIntentDurability**: `"volatile"` \| `"persistent"`
 
 ## Methods
 

@@ -211,7 +211,7 @@ title: "CrocoTestingApp"
 
 ##### path
 
-`string` \| `Request` \| `URL`
+`string` \| `URL` \| `Request`
 
 ##### options?
 
@@ -237,7 +237,7 @@ title: "CrocoTestingApp"
 
 ###### input
 
-`RequestInfo` \| `URL`
+`URL` \| `RequestInfo`
 
 ###### init?
 
@@ -255,7 +255,7 @@ title: "CrocoTestingApp"
 
 ###### input
 
-`string` \| `Request` \| `URL`
+`string` \| `URL` \| `Request`
 
 ###### init?
 

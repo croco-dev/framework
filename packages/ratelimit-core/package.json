@@ -37,7 +37,8 @@
     "lint": "oxlint .",
     "test": "vitest run --exclude src/tests/PublishedPolicyTypes.spec.ts",
     "test:published": "vitest run src/tests/PublishedPolicyTypes.spec.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
     "@croco/framework-context": "workspace:*",

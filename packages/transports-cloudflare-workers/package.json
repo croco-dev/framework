@@ -29,7 +29,8 @@
     "test": "vitest run --exclude src/tests/PublishedWorkerTypes.spec.ts",
     "test:published": "vitest run src/tests/PublishedWorkerTypes.spec.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "oxlint ."
+    "lint": "oxlint .",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.0.0",

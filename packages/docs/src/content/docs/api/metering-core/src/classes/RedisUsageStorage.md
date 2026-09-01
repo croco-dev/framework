@@ -215,9 +215,13 @@ Redis Sorted Set에 저장
 
 `string`
 
+테넌트 ID
+
 ##### meterId?
 
 `string`
+
+Meter ID (optional, 없으면 해당 테넌트의 모든 meter 리셋)
 
 #### Returns
 

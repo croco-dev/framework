@@ -27,7 +27,7 @@ title: "AppConfig"
 
 ### diValidation?
 
-> `optional` **diValidation?**: `"warn"` \| `"enforce"` \| `"off"`
+> `optional` **diValidation?**: `"enforce"` \| `"warn"` \| `"off"`
 
 ---
 
@@ -63,7 +63,7 @@ title: "AppConfig"
 
 ### securityValidation?
 
-> `optional` **securityValidation?**: `"warn"` \| `"enforce"` \| `"off"`
+> `optional` **securityValidation?**: `"enforce"` \| `"warn"` \| `"off"`
 
 ---
 

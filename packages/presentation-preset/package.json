@@ -30,7 +30,8 @@
     "lint": "oxlint .",
     "test": "vitest run --exclude src/__tests__/e2e.spec.ts",
     "test:integration": "vitest run src/__tests__/e2e.spec.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
     "@croco/framework-preset": "workspace:*",

@@ -4,6 +4,8 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve, sep } from "node:path";
 import { env, exit, stdout } from "node:process";
 
+import { isDocsApiModelScriptOnlyManifestChange } from "./package-manifest-contracts.mjs";
+
 type BumpType = "major" | "minor" | "patch";
 
 type ParsedCommit = {
@@ -287,7 +289,21 @@ function toGitPath(path: string): string {
   return path.split(sep).join("/");
 }
 
-function resolveChangedPackageNames(changedFiles: readonly string[]): string[] {
+function readJsonAtRef(ref: string, file: string): unknown | null {
+  const result = spawnSync("git", ["show", `${ref}:${file}`], { encoding: "utf-8" });
+
+  if (result.error) {
+    throw result.error;
+  }
+
+  if (result.status !== 0) {
+    return null;
+  }
+
+  return JSON.parse(result.stdout) as unknown;
+}
+
+function resolveChangedPackageNames(baseRef: string, changedFiles: readonly string[]): string[] {
   const packages = getWorkspacePackages();
   const packageNames = new Set<string>();
 
@@ -299,6 +315,16 @@ function resolveChangedPackageNames(changedFiles: readonly string[]): string[] {
     );
 
     if (owner && !owner.private) {
+      if (
+        file === `${owner.directory}/package.json` &&
+        isDocsApiModelScriptOnlyManifestChange(
+          readJsonAtRef(baseRef, file),
+          readJsonAtRef("HEAD", file),
+        )
+      ) {
+        continue;
+      }
+
       packageNames.add(owner.name);
     }
   }
@@ -370,7 +396,7 @@ function main(): void {
       exit(0);
     }
 
-    const packageNames = resolveChangedPackageNames(changedFiles);
+    const packageNames = resolveChangedPackageNames(baseRef, changedFiles);
 
     if (packageNames.length === 0) {
       log("auto-changeset: no publishable package changes found (skipping)");

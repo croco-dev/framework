@@ -225,12 +225,12 @@ The snapshot is only present if [getSnapshotBeforeUpdate](/api/frontend-react/sr
 Called immediately before mounting occurs, and before Component.render.
 Avoid introducing any side-effects or subscriptions in this method.
 
-Note: the presence of NewLifecycle.getSnapshotBeforeUpdate getSnapshotBeforeUpdate
+Note: the presence of [getSnapshotBeforeUpdate](/api/frontend-react/src/classes/problemboundary/#getsnapshotbeforeupdate)
 or StaticLifecycle.getDerivedStateFromProps getDerivedStateFromProps prevents
 this from being invoked.
 
 :::caution[Deprecated]
-16.3, use ComponentLifecycle.componentDidMount componentDidMount or the constructor instead; will stop working in React 17
+16.3, use [componentDidMount](/api/frontend-react/src/classes/problemboundary/#componentdidmount) or the constructor instead; will stop working in React 17
 :::
 
 #### Returns
@@ -256,9 +256,9 @@ Called when the component may be receiving new props.
 React may call this even if props have not changed, so be sure to compare new and existing
 props if you only want to handle changes.
 
-Calling Component.setState generally does not trigger this method.
+Calling [Component.setState](/api/frontend-react/src/classes/problemboundary/#setstate) generally does not trigger this method.
 
-Note: the presence of NewLifecycle.getSnapshotBeforeUpdate getSnapshotBeforeUpdate
+Note: the presence of [getSnapshotBeforeUpdate](/api/frontend-react/src/classes/problemboundary/#getsnapshotbeforeupdate)
 or StaticLifecycle.getDerivedStateFromProps getDerivedStateFromProps prevents
 this from being invoked.
 
@@ -314,9 +314,9 @@ cancelled network requests, or cleaning up any DOM elements created in `componen
 
 Called immediately before rendering when new props or state is received. Not called for the initial render.
 
-Note: You cannot call Component.setState here.
+Note: You cannot call [Component.setState](/api/frontend-react/src/classes/problemboundary/#setstate) here.
 
-Note: the presence of NewLifecycle.getSnapshotBeforeUpdate getSnapshotBeforeUpdate
+Note: the presence of [getSnapshotBeforeUpdate](/api/frontend-react/src/classes/problemboundary/#getsnapshotbeforeupdate)
 or StaticLifecycle.getDerivedStateFromProps getDerivedStateFromProps prevents
 this from being invoked.
 
@@ -494,12 +494,12 @@ Avoid introducing any side-effects or subscriptions in this method.
 
 This method will not stop working in React 17.
 
-Note: the presence of NewLifecycle.getSnapshotBeforeUpdate getSnapshotBeforeUpdate
+Note: the presence of [getSnapshotBeforeUpdate](/api/frontend-react/src/classes/problemboundary/#getsnapshotbeforeupdate)
 or StaticLifecycle.getDerivedStateFromProps getDerivedStateFromProps prevents
 this from being invoked.
 
 :::caution[Deprecated]
-16.3, use ComponentLifecycle.componentDidMount componentDidMount or the constructor instead
+16.3, use [componentDidMount](/api/frontend-react/src/classes/problemboundary/#componentdidmount) or the constructor instead
 :::
 
 #### Returns
@@ -525,11 +525,11 @@ Called when the component may be receiving new props.
 React may call this even if props have not changed, so be sure to compare new and existing
 props if you only want to handle changes.
 
-Calling Component.setState generally does not trigger this method.
+Calling [Component.setState](/api/frontend-react/src/classes/problemboundary/#setstate) generally does not trigger this method.
 
 This method will not stop working in React 17.
 
-Note: the presence of NewLifecycle.getSnapshotBeforeUpdate getSnapshotBeforeUpdate
+Note: the presence of [getSnapshotBeforeUpdate](/api/frontend-react/src/classes/problemboundary/#getsnapshotbeforeupdate)
 or StaticLifecycle.getDerivedStateFromProps getDerivedStateFromProps prevents
 this from being invoked.
 
@@ -568,11 +568,11 @@ this from being invoked.
 
 Called immediately before rendering when new props or state is received. Not called for the initial render.
 
-Note: You cannot call Component.setState here.
+Note: You cannot call [Component.setState](/api/frontend-react/src/classes/problemboundary/#setstate) here.
 
 This method will not stop working in React 17.
 
-Note: the presence of NewLifecycle.getSnapshotBeforeUpdate getSnapshotBeforeUpdate
+Note: the presence of [getSnapshotBeforeUpdate](/api/frontend-react/src/classes/problemboundary/#getsnapshotbeforeupdate)
 or StaticLifecycle.getDerivedStateFromProps getDerivedStateFromProps prevents
 this from being invoked.
 

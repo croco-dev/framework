@@ -131,7 +131,7 @@ title: "TestKernelHttp"
 
 ##### path
 
-`string` \| `Request` \| `URL`
+`string` \| `URL` \| `Request`
 
 ##### options?
 

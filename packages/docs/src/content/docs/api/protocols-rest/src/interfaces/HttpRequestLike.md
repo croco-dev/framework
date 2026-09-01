@@ -9,7 +9,7 @@ title: "HttpRequestLike"
 
 ### headers
 
-> **headers**: `Record`\<`string`, `string`\> \| `Headers`
+> **headers**: `Headers` \| `Record`\<`string`, `string`\>
 
 ---
 

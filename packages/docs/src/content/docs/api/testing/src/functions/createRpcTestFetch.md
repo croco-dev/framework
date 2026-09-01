@@ -27,7 +27,7 @@ title: "createRpcTestFetch"
 
 #### input
 
-`RequestInfo` \| `URL`
+`URL` \| `RequestInfo`
 
 #### init?
 
@@ -45,7 +45,7 @@ title: "createRpcTestFetch"
 
 #### input
 
-`string` \| `Request` \| `URL`
+`string` \| `URL` \| `Request`
 
 #### init?
 

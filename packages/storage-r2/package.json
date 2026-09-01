@@ -37,7 +37,8 @@
     "lint": "oxlint .",
     "test": "vitest run --exclude src/tests/R2LiveSmoke.spec.ts",
     "test:live": "vitest run src/tests/R2LiveSmoke.spec.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1057.0",

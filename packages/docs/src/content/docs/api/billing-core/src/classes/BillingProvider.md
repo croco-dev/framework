@@ -49,7 +49,7 @@ Explicit billing provider capability profiles and runtime composition.
 
 ##### Capability
 
-`Capability` _extends_ `"usage"` \| `"checkout"` \| `"licensed-quantity"`
+`Capability` _extends_ `"checkout"` \| `"usage"` \| `"licensed-quantity"`
 
 #### Parameters
 
@@ -71,7 +71,7 @@ Explicit billing provider capability profiles and runtime composition.
 
 ##### capability
 
-`"usage"` \| `"checkout"` \| `"licensed-quantity"`
+`"checkout"` \| `"usage"` \| `"licensed-quantity"`
 
 #### Returns
 
