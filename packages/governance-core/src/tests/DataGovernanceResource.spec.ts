@@ -242,7 +242,7 @@ describe("DataGovernanceResource", () => {
     } satisfies DataGovernanceResource;
     const tenantWithUnknownField = {
       ...tenantWithoutField,
-      subject: { ...resource.subject, tenantField: "workspaceId" },
+      subject: { ...resource.subject, tenantField: " workspaceId " },
     } satisfies DataGovernanceResource;
     const tenantWithNonIdentifierField = {
       ...tenantWithoutField,
@@ -327,6 +327,8 @@ describe("DataGovernanceResource", () => {
       diagnostics: [
         {
           code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectFieldUnknown,
+          fieldId: "workspaceId",
+          message: "Data governance subject tenantField 'workspaceId' is not declared in fields",
           path: "resources[0].subject.tenantField",
         },
       ],
@@ -341,17 +343,19 @@ describe("DataGovernanceResource", () => {
       ],
       valid: false,
     });
-    for (const paddedResource of [tenantWithPaddedReference, tenantWithPaddedFieldId]) {
-      expect(validateDataGovernanceResources([paddedResource])).toMatchObject({
-        diagnostics: [
-          {
-            code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectFieldUnknown,
-            path: "resources[0].subject.tenantField",
-          },
-        ],
-        valid: false,
-      });
-    }
+    expect(validateDataGovernanceResources([tenantWithPaddedReference])).toEqual({
+      diagnostics: [],
+      valid: true,
+    });
+    expect(validateDataGovernanceResources([tenantWithPaddedFieldId])).toMatchObject({
+      diagnostics: [
+        {
+          code: DATA_GOVERNANCE_DIAGNOSTIC_CODES.subjectFieldUnknown,
+          path: "resources[0].subject.tenantField",
+        },
+      ],
+      valid: false,
+    });
     expect(validateDataGovernanceResources([tenantWithPaddedValueType])).toMatchObject({
       diagnostics: [
         {
