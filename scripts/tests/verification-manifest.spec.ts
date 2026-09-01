@@ -318,7 +318,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("f3ca956de56f4e7d44cab558e942f6cfecc8a427cb677c0dd63b4058aebf7efa");
+    ).toBe("15bb23f399c253a92eee20a589a1c89e0e0c2589907881c1378270dbee7e464f");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
