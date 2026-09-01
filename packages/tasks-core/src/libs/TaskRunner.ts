@@ -28,6 +28,13 @@ import type {
 
 type Constructor<T = object> = new (...args: unknown[]) => T;
 type RuntimeTaskReference = Pick<TaskReference, "name" | "target" | "methodName">;
+type TaskExecutionArguments<TReference extends TaskReference> = TReference extends TaskReference
+  ? [
+      reference: TReference,
+      payload: TaskReferencePayload<TReference>,
+      options?: TaskExecutionOptions,
+    ]
+  : never;
 
 const MAX_TIMER_DELAY_MS = 2_147_483_647;
 
@@ -165,9 +172,7 @@ export class TaskRunner {
   }
 
   execute<TReference extends TaskReference>(
-    reference: TReference,
-    payload: TaskReferencePayload<TReference>,
-    options?: TaskExecutionOptions,
+    ...args: TaskExecutionArguments<TReference>
   ): Promise<TaskReferenceResult<TReference>>;
   execute(taskId: string, payload: unknown, options?: TaskExecutionOptions): Promise<unknown>;
   async execute(
@@ -216,7 +221,9 @@ export class TaskRunner {
         task.name !== taskIdentifier.name ||
         task.metadata.name !== taskIdentifier.name ||
         task.target !== taskIdentifier.target ||
-        task.methodName !== taskIdentifier.methodName
+        task.methodName !== taskIdentifier.methodName ||
+        task.metadata.target !== taskIdentifier.target ||
+        String(task.metadata.methodName) !== taskIdentifier.methodName
       ) {
         throw new InvalidTaskReferenceProblem(
           taskIdentifier.name,

@@ -41,7 +41,7 @@ title: "TaskRunner"
 
 #### Call Signature
 
-> **execute**\<`TReference`\>(`reference`, `payload`, `options?`): `Promise`\<[`TaskReferenceResult`](/api/tasks-core/src/type-aliases/taskreferenceresult/)\<`TReference`\>\>
+> **execute**\<`TReference`\>(...`args`): `Promise`\<[`TaskReferenceResult`](/api/tasks-core/src/type-aliases/taskreferenceresult/)\<`TReference`\>\>
 
 ##### Type Parameters
 
@@ -51,17 +51,9 @@ title: "TaskRunner"
 
 ##### Parameters
 
-###### reference
+###### args
 
-`TReference`
-
-###### payload
-
-[`TaskReferencePayload`](/api/tasks-core/src/type-aliases/taskreferencepayload/)\<`TReference`\>
-
-###### options?
-
-[`TaskExecutionOptions`](/api/tasks-core/src/type-aliases/taskexecutionoptions/)
+...`TaskExecutionArguments`\<`TReference`\>
 
 ##### Returns
 

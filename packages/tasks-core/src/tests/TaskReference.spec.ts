@@ -1,6 +1,6 @@
 import type { ExecutionManager } from "@croco/execution-core";
 import { Container, MetadataStorage } from "@croco/framework-context";
-import { beforeEach, describe, expect, expectTypeOf, it } from "vitest";
+import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import { TASK_METADATA_KEY, Task } from "../libs/decorators/Task";
 import { InvalidTaskReferenceProblem } from "../libs/problems/TasksProblems";
 import { taskRef } from "../libs/taskRef";
@@ -69,8 +69,23 @@ describe("taskRef", () => {
       // @ts-expect-error typed task references reject incompatible payloads
       runner.execute(reference, { value: "2" });
 
+    class StringTaskHandler {
+      execute(payload: { value: string }): string {
+        return payload.value;
+      }
+    }
+
+    const stringReference = taskRef(StringTaskHandler, "execute", "string-task");
+    const rejectUnionReferencePayload = (
+      runner: TaskRunner,
+      unionReference: typeof reference | typeof stringReference,
+    ) =>
+      // @ts-expect-error union references cannot preserve the reference and payload correlation
+      runner.execute(unionReference, { value: 2 });
+
     expectTypeOf(execute).returns.toEqualTypeOf<Promise<{ doubled: number }>>();
     expectTypeOf(rejectInvalidPayload).returns.toEqualTypeOf<Promise<{ doubled: number }>>();
+    expect(rejectUnionReferencePayload).toBeTypeOf("function");
     expectTypeOf<
       TaskReferencePayload<TaskReference<never, { doubled: number }>>
     >().toEqualTypeOf<never>();
@@ -143,6 +158,61 @@ describe("taskRef", () => {
     await expect(runner.execute(reference, { value: 1 })).rejects.toBeInstanceOf(
       InvalidTaskReferenceProblem,
     );
+  });
+
+  it("rejects registry metadata target or method drift before execution creation", async () => {
+    class RegistryTaskHandler {
+      @Task({ name: "registry-task" })
+      execute(payload: { value: number }): number {
+        return payload.value;
+      }
+    }
+
+    class OtherTaskHandler {}
+
+    const reference = taskRef(RegistryTaskHandler, "execute");
+    const metadata = MetadataStorage.get<TaskMetadata>(
+      TASK_METADATA_KEY,
+      RegistryTaskHandler,
+      "execute",
+    );
+    expect(metadata).toBeDefined();
+    if (metadata === undefined) return;
+
+    const driftedMetadata = [
+      { ...metadata, target: OtherTaskHandler },
+      { ...metadata, methodName: "otherMethod" },
+    ];
+
+    for (const drift of driftedMetadata) {
+      const create = vi.fn();
+      const registry = new TaskRegistry();
+      registry.register(reference.name, RegistryTaskHandler, "execute", drift);
+      const runner = new TaskRunner({ create } as unknown as ExecutionManager, registry);
+
+      await expect(runner.execute(reference, { value: 1 })).rejects.toBeInstanceOf(
+        InvalidTaskReferenceProblem,
+      );
+      expect(create).not.toHaveBeenCalled();
+    }
+  });
+
+  it("rejects factory references missing from the registry before execution creation", async () => {
+    class UnregisteredTaskHandler {
+      @Task({ name: "unregistered-task" })
+      execute(payload: { value: number }): number {
+        return payload.value;
+      }
+    }
+
+    const create = vi.fn();
+    const reference = taskRef(UnregisteredTaskHandler, "execute");
+    const runner = new TaskRunner({ create } as unknown as ExecutionManager, new TaskRegistry());
+
+    await expect(runner.execute(reference, { value: 1 })).rejects.toBeInstanceOf(
+      InvalidTaskReferenceProblem,
+    );
+    expect(create).not.toHaveBeenCalled();
   });
 
   it("rejects copied or independently constructed references", async () => {
