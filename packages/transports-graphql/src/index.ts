@@ -10,6 +10,8 @@ export {
   GraphQLRequestBodyAbortedProblem,
   GraphQLRequestBodyTooLargeProblem,
   GraphQLRequestHandlingFailedProblem,
+  GraphQLRequestTimeoutConfigurationProblem,
+  GraphQLRequestTimeoutProblem,
   GraphQLResolversNotConfiguredProblem,
   GraphQLSchemaNotConfiguredProblem,
   GraphQLServerNotInitializedProblem,

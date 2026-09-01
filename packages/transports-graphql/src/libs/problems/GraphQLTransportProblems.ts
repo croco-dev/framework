@@ -16,6 +16,20 @@ export class GraphQLBodyLimitConfigurationProblem extends Problem {
   }
 }
 
+/** The configured request deadline cannot be represented safely by a Node.js timer. */
+export class GraphQLRequestTimeoutConfigurationProblem extends Problem {
+  constructor() {
+    super(
+      "transports-graphql/request-timeout-invalid-configuration",
+      ProblemCategory.InternalServerError,
+      "requestTimeoutMs must be an integer between 1 and 2147483647",
+      {
+        type: `${PROBLEM_TYPE_BASE}/request-timeout-invalid-configuration`,
+      },
+    );
+  }
+}
+
 export class GraphQLResolversNotConfiguredProblem extends Problem {
   readonly code = "transports-graphql/resolvers-not-configured";
   readonly category = ProblemCategory.InternalServerError;
@@ -72,5 +86,20 @@ export class GraphQLRequestHandlingFailedProblem extends Problem {
   readonly category = ProblemCategory.InternalServerError;
   constructor() {
     super(undefined, undefined, "An internal error occurred");
+  }
+}
+
+/** A Node-hosted GraphQL request exceeded its configured execution deadline. */
+export class GraphQLRequestTimeoutProblem extends Problem {
+  constructor(requestTimeoutMs: number) {
+    super(
+      "transports-graphql/request-timeout",
+      ProblemCategory.InternalServerError,
+      `GraphQL request timed out after ${requestTimeoutMs}ms`,
+      {
+        type: `${PROBLEM_TYPE_BASE}/request-timeout`,
+        extensions: { requestTimeoutMs },
+      },
+    );
   }
 }

@@ -9,18 +9,25 @@ import {
   resolveProblemResponseRedactionPolicy,
 } from "@croco/problems-core";
 import { isProblem, problemToGraphQLError } from "@croco/protocols-graphql";
-import { createYoga, maskError } from "graphql-yoga";
+import { createYoga, maskError, useExecutionCancellation } from "graphql-yoga";
 import {
   GraphQLBodyLimitConfigurationProblem,
   GraphQLRequestBodyAbortedProblem,
   GraphQLRequestBodyTooLargeProblem,
   GraphQLRequestHandlingFailedProblem,
+  GraphQLRequestTimeoutConfigurationProblem,
+  GraphQLRequestTimeoutProblem,
   GraphQLSchemaNotConfiguredProblem,
   GraphQLServerNotInitializedProblem,
 } from "./problems/GraphQLTransportProblems";
 import type { GraphQLServerOptions } from "./types";
 
 type YogaHandler = (request: Request) => Promise<Response>;
+type NodeRequestAbortScope = {
+  readonly aborted: Promise<never>;
+  readonly signal: AbortSignal;
+  dispose(): void;
+};
 type NodeRequestPhase =
   | "request-context"
   | "request-url"
@@ -32,6 +39,7 @@ type NodeRequestPhase =
   | "response-write";
 
 const DEFAULT_MAX_BODY_SIZE_BYTES = 1024 * 1024;
+const MAX_REQUEST_TIMEOUT_MS = 2_147_483_647;
 
 const CROCO_YOGA_LOGGER = {
   debug: (...args: unknown[]) => console.debug(...args),
@@ -55,8 +63,20 @@ export class GraphQLServer {
   private server: Server | null = null;
   private initialized = false;
   private maxBodySizeBytes = DEFAULT_MAX_BODY_SIZE_BYTES;
+  private readonly requestTimeoutMs: number | undefined;
 
-  constructor(private options: GraphQLServerOptions = {}) {}
+  constructor(private options: GraphQLServerOptions = {}) {
+    const { requestTimeoutMs } = options;
+    if (
+      requestTimeoutMs !== undefined &&
+      (!Number.isInteger(requestTimeoutMs) ||
+        requestTimeoutMs <= 0 ||
+        requestTimeoutMs > MAX_REQUEST_TIMEOUT_MS)
+    ) {
+      throw new GraphQLRequestTimeoutConfigurationProblem();
+    }
+    this.requestTimeoutMs = requestTimeoutMs;
+  }
 
   async initialize(): Promise<void> {
     if (this.initialized) return;
@@ -94,7 +114,7 @@ export class GraphQLServer {
       schema: graphqlSchema,
       graphqlEndpoint,
       cors,
-      plugins,
+      plugins: [useExecutionCancellation(), ...(plugins ?? [])],
       logging: CROCO_YOGA_LOGGER,
       maskedErrors: {
         maskError: maskCrocoProblemError,
@@ -105,6 +125,7 @@ export class GraphQLServer {
         return {
           ...userContext,
           headers: Object.fromEntries(request.headers),
+          request,
         };
       },
     });
@@ -134,11 +155,13 @@ export class GraphQLServer {
 
     const handler = (req: IncomingMessage, res: ServerResponse): void => {
       let phase: NodeRequestPhase = "request-context";
+      const abortScope = this.createNodeRequestAbortScope(req, res);
 
-      const requestLifecycle = Promise.resolve().then(() => {
+      const nodeRequest = Promise.resolve().then(() => {
         const requestId = randomUUID();
         phase = "request-url";
         return FrameworkContext.run({ requestId }, async () => {
+          abortScope.signal.throwIfAborted();
           const url = req.url
             ? new URL(req.url, `http://${req.headers.host}`)
             : new URL("http://localhost");
@@ -148,7 +171,7 @@ export class GraphQLServer {
 
           if (req.method !== "GET" && req.method !== "HEAD") {
             phase = "request-body";
-            body = await this.getBody(req);
+            body = await this.getBody(req, abortScope.signal);
           }
 
           phase = "request-construction";
@@ -156,6 +179,7 @@ export class GraphQLServer {
             method,
             headers: req.headers as HeadersInit,
             body,
+            signal: abortScope.signal,
           });
 
           if (!this.yogaHandler) {
@@ -164,6 +188,7 @@ export class GraphQLServer {
 
           phase = "yoga-execution";
           const response = await this.yogaHandler(request);
+          abortScope.signal.throwIfAborted();
 
           phase = "response-headers";
           res.statusCode = response.status;
@@ -178,10 +203,12 @@ export class GraphQLServer {
 
           phase = "response-body";
           const responseBody = await response.text();
+          abortScope.signal.throwIfAborted();
           phase = "response-write";
           await this.writeNodeResponse(res, responseBody);
         });
       });
+      const requestLifecycle = Promise.race([nodeRequest, abortScope.aborted]);
 
       void requestLifecycle
         .catch((error: unknown) => this.handleNodeRequestFailure(error, phase, res))
@@ -190,7 +217,8 @@ export class GraphQLServer {
           if (!res.destroyed) {
             this.destroyNodeResponse(res);
           }
-        });
+        })
+        .finally(() => abortScope.dispose());
     };
 
     this.server = createServer(handler);
@@ -214,7 +242,7 @@ export class GraphQLServer {
     });
   }
 
-  private getBody(req: IncomingMessage): Promise<string> {
+  private getBody(req: IncomingMessage, signal: AbortSignal): Promise<string> {
     return new Promise((resolve, reject) => {
       const maxBodySizeBytes = this.maxBodySizeBytes;
       const contentLength = req.headers["content-length"];
@@ -236,6 +264,7 @@ export class GraphQLServer {
         req.off("end", onEnd);
         req.off("error", onError);
         req.off("aborted", onAborted);
+        signal.removeEventListener("abort", onSignalAbort);
       };
 
       const onData = (chunk: Buffer) => {
@@ -266,11 +295,72 @@ export class GraphQLServer {
         reject(new GraphQLRequestBodyAbortedProblem());
       };
 
+      const onSignalAbort = () => {
+        cleanup();
+        reject(signal.reason);
+      };
+
+      if (signal.aborted) {
+        reject(signal.reason);
+        return;
+      }
+
       req.on("data", onData);
       req.on("end", onEnd);
       req.on("error", onError);
       req.on("aborted", onAborted);
+      signal.addEventListener("abort", onSignalAbort, { once: true });
     });
+  }
+
+  private createNodeRequestAbortScope(
+    req: IncomingMessage,
+    res: ServerResponse,
+  ): NodeRequestAbortScope {
+    const controller = new AbortController();
+    let rejectAbort: (reason: unknown) => void = () => undefined;
+    const aborted = new Promise<never>((_resolve, reject) => {
+      rejectAbort = reject;
+    });
+    const abort = (reason: Error) => {
+      if (controller.signal.aborted) return;
+      controller.abort(reason);
+      rejectAbort(reason);
+    };
+    const onRequestAborted = () =>
+      abort(
+        req.complete
+          ? new GraphQLRequestHandlingFailedProblem()
+          : new GraphQLRequestBodyAbortedProblem(),
+      );
+    const onResponseClose = () => {
+      if (!res.writableFinished) {
+        abort(new GraphQLRequestHandlingFailedProblem());
+      }
+    };
+    const requestTimeoutMs = this.requestTimeoutMs;
+    const timeout =
+      requestTimeoutMs === undefined
+        ? undefined
+        : setTimeout(
+            () => abort(new GraphQLRequestTimeoutProblem(requestTimeoutMs)),
+            requestTimeoutMs,
+          );
+
+    req.once("aborted", onRequestAborted);
+    res.once("close", onResponseClose);
+
+    return {
+      aborted,
+      signal: controller.signal,
+      dispose: () => {
+        if (timeout !== undefined) {
+          clearTimeout(timeout);
+        }
+        req.off("aborted", onRequestAborted);
+        res.off("close", onResponseClose);
+      },
+    };
   }
 
   private async handleNodeRequestFailure(

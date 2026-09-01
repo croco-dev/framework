@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 723,
+  problemCount: 725,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -20139,7 +20139,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
-          line: 62,
+          line: 76,
           column: 1,
           kind: "problem-class",
         },
@@ -20171,7 +20171,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
-          line: 49,
+          line: 63,
           column: 5,
           kind: "problem-constructor",
         },
@@ -20204,9 +20204,74 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
-          line: 70,
+          line: 84,
           column: 1,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "transports-graphql/request-timeout",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#transports-graphql-request-timeout",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
+          line: 95,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "transports-graphql/request-timeout-invalid-configuration",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#transports-graphql-request-timeout-invalid-configuration",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
+          line: 22,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
@@ -20237,7 +20302,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
-          line: 19,
+          line: 33,
           column: 1,
           kind: "problem-class",
         },
@@ -20270,7 +20335,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
-          line: 31,
+          line: 45,
           column: 1,
           kind: "problem-class",
         },
@@ -20303,7 +20368,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-graphql/src/libs/problems/GraphQLTransportProblems.ts",
-          line: 39,
+          line: 53,
           column: 1,
           kind: "problem-class",
         },

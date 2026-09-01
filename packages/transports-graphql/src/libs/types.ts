@@ -21,4 +21,5 @@ export type GraphQLServerOptions = {
   cors?: boolean | YogaServerOptions<Record<string, unknown>, unknown>["cors"];
   plugins?: YogaServerOptions<Record<string, unknown>, unknown>["plugins"];
   maxBodySizeBytes?: number;
+  requestTimeoutMs?: number;
 };
