@@ -74,7 +74,7 @@ export class RateLimitedInvitationService {
     const normalizedEmail = input.email.trim().toLowerCase();
     const existing = await this.store.findByTenantAndEmail(input.tenantId, normalizedEmail);
 
-    if (existing && existing.status === "pending") {
+    if (existing && existing.status === "pending" && existing.expiresAt.getTime() > Date.now()) {
       throw new DuplicateInvitationProblem(input.tenantId, normalizedEmail);
     }
 

@@ -210,6 +210,58 @@ describe("RateLimitedInvitationService", () => {
       ).rejects.toBeInstanceOf(DuplicateInvitationProblem);
     });
 
+    it("should re-invite an email after its pending invitation expires", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+
+      try {
+        const firstToken = await service.createEmailInvitationWithRateLimit({
+          idempotencyKey: "expired-invitation-1",
+          tenantId: "tenant-1",
+          inviterId: "inviter-1",
+          email: "user@example.com",
+          role: "member",
+          expiresInDays: 1,
+        });
+
+        vi.setSystemTime(new Date("2026-01-02T00:00:00.001Z"));
+
+        const secondToken = await service.createEmailInvitationWithRateLimit({
+          idempotencyKey: "expired-invitation-2",
+          tenantId: "tenant-1",
+          inviterId: "inviter-1",
+          email: "user@example.com",
+          role: "member",
+          expiresInDays: 1,
+        });
+
+        const invitations = await store.findAllByTenant("tenant-1");
+        const expiredInvitation = invitations.find(
+          (invitation) => invitation.tokenHash === hashToken(firstToken),
+        );
+        const newInvitation = invitations.find(
+          (invitation) => invitation.tokenHash === hashToken(secondToken),
+        );
+
+        expect(secondToken).not.toBe(firstToken);
+        expect(expiredInvitation?.status).toBe("expired");
+        expect(newInvitation?.status).toBe("pending");
+
+        await expect(
+          service.createEmailInvitationWithRateLimit({
+            idempotencyKey: "expired-invitation-3",
+            tenantId: "tenant-1",
+            inviterId: "inviter-1",
+            email: "user@example.com",
+            role: "member",
+            expiresInDays: 1,
+          }),
+        ).rejects.toBeInstanceOf(DuplicateInvitationProblem);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it("should normalize email addresses", async () => {
       const token = await service.createEmailInvitationWithRateLimit({
         idempotencyKey: "normalize-email-1",
