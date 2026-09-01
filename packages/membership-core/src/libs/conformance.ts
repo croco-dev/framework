@@ -41,12 +41,23 @@ export function createMembershipStoreConformanceSuite(options: {
         name: "stores both ownership events in one intent",
         run: async () => {
           const store = await options.createStore();
-          await store.save({ id: "owner", tenantId: "tenant-2", userId: "owner", role: "owner" });
-          await store.save({
-            id: "member",
+          await store.execute({
+            operation: "add",
+            idempotencyKey: "conformance-transfer-owner",
+            membershipId: "owner",
+            tenantId: "tenant-2",
+            userId: "owner",
+            role: "owner",
+            maxSeats: null,
+          });
+          await store.execute({
+            operation: "add",
+            idempotencyKey: "conformance-transfer-member",
+            membershipId: "member",
             tenantId: "tenant-2",
             userId: "member",
             role: "member",
+            maxSeats: null,
           });
           await store.execute({
             operation: "transfer_ownership",
@@ -95,11 +106,14 @@ export function createMembershipStoreConformanceSuite(options: {
         name: "binds successful no-op commands without creating events",
         run: async () => {
           const store = await options.createStore();
-          await store.save({
-            id: "membership-noop",
+          await store.execute({
+            operation: "add",
+            idempotencyKey: "conformance-noop-setup",
+            membershipId: "membership-noop",
             tenantId: "tenant-noop",
             userId: "user-noop",
             role: "member",
+            maxSeats: null,
           });
           const command = {
             operation: "update_role" as const,

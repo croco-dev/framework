@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import type { DomainEvent } from "@croco/events-core";
 import { describe, expect, it, vi } from "vitest";
-import { InMemoryMembershipStore } from "../libs/InMemoryMembershipStore";
+import { InMemoryMembershipStore as BaseInMemoryMembershipStore } from "../libs/InMemoryMembershipStore";
 import { MembershipService } from "../libs/MembershipService";
 import {
   InvalidRoleProblem,
@@ -13,7 +13,13 @@ import {
   SeatLimitExceededProblem,
 } from "../libs/problems/MembershipProblems";
 import { LastOwnerCannotBeRemovedProblem } from "../libs/problems/LastOwnerCannotBeRemovedProblem";
-import type { Membership } from "../libs/types";
+import type { Membership, MembershipCreateInput } from "../libs/types";
+
+class InMemoryMembershipStore extends BaseInMemoryMembershipStore {
+  public seed(input: MembershipCreateInput): Promise<Membership> {
+    return super.save(input);
+  }
+}
 
 function createService(
   store: InMemoryMembershipStore,
@@ -116,8 +122,8 @@ describe("MembershipService atomic commands", () => {
 
   it("allows only one concurrent owner removal and exposes the stable Problem", async () => {
     const store = new InMemoryMembershipStore();
-    await store.save({ id: "owner-1", tenantId: "tenant-1", userId: "owner-1", role: "owner" });
-    await store.save({ id: "owner-2", tenantId: "tenant-1", userId: "owner-2", role: "owner" });
+    await store.seed({ id: "owner-1", tenantId: "tenant-1", userId: "owner-1", role: "owner" });
+    await store.seed({ id: "owner-2", tenantId: "tenant-1", userId: "owner-2", role: "owner" });
     const service = createService(store, async () => undefined);
 
     const results = await Promise.allSettled([
@@ -133,8 +139,8 @@ describe("MembershipService atomic commands", () => {
 
   it("allows only one concurrent owner demotion", async () => {
     const store = new InMemoryMembershipStore();
-    await store.save({ id: "owner-1", tenantId: "tenant-1", userId: "owner-1", role: "owner" });
-    await store.save({ id: "owner-2", tenantId: "tenant-1", userId: "owner-2", role: "owner" });
+    await store.seed({ id: "owner-1", tenantId: "tenant-1", userId: "owner-1", role: "owner" });
+    await store.seed({ id: "owner-2", tenantId: "tenant-1", userId: "owner-2", role: "owner" });
     const service = createService(store, async () => undefined);
 
     const results = await Promise.allSettled([
@@ -178,8 +184,8 @@ describe("MembershipService atomic commands", () => {
       }
     }
     const store = new PausedReadStore();
-    await store.save({ id: "owner", tenantId: "tenant-1", userId: "owner", role: "owner" });
-    await store.save({ id: "member", tenantId: "tenant-1", userId: "member", role: "member" });
+    await store.seed({ id: "owner", tenantId: "tenant-1", userId: "owner", role: "owner" });
+    await store.seed({ id: "member", tenantId: "tenant-1", userId: "member", role: "member" });
     const service = createService(store, async () => undefined);
 
     const stale = service.updateRole("tenant-1", "member", "admin", "stale-update");
@@ -211,7 +217,7 @@ describe("MembershipService atomic commands", () => {
       service.addMember("tenant-1", "user-1", "member", "seat-limit"),
     ).rejects.toBeInstanceOf(SeatLimitExceededProblem);
 
-    await store.save({ id: "owner", tenantId: "tenant-1", userId: "owner", role: "owner" });
+    await store.seed({ id: "owner", tenantId: "tenant-1", userId: "owner", role: "owner" });
     const unconstrained = createService(store, async () => undefined);
     await expect(
       unconstrained.removeMember("tenant-1", "owner", "remove-owner"),
@@ -224,12 +230,12 @@ describe("MembershipService atomic commands", () => {
   it("preserves ownership transfer validation Problems", async () => {
     const store = new InMemoryMembershipStore();
     const service = createService(store, async () => undefined);
-    await store.save({ id: "member", tenantId: "tenant-1", userId: "member", role: "member" });
-    await store.save({ id: "target", tenantId: "tenant-1", userId: "target", role: "member" });
+    await store.seed({ id: "member", tenantId: "tenant-1", userId: "member", role: "member" });
+    await store.seed({ id: "target", tenantId: "tenant-1", userId: "target", role: "member" });
     await expect(
       service.transferOwnership("tenant-1", "member", "target", "invalid-source"),
     ).rejects.toBeInstanceOf(OwnershipTransferRequiredProblem);
-    await store.save({ id: "owner", tenantId: "tenant-1", userId: "owner", role: "owner" });
+    await store.seed({ id: "owner", tenantId: "tenant-1", userId: "owner", role: "owner" });
     await expect(
       service.transferOwnership("tenant-1", "owner", "missing", "missing-target"),
     ).rejects.toBeInstanceOf(MembershipNotFoundProblem);
@@ -280,7 +286,7 @@ describe("MembershipService atomic commands", () => {
 
   it("replays an update result while its original intent remains pending", async () => {
     const store = new InMemoryMembershipStore();
-    await store.save({
+    await store.seed({
       id: "membership-1",
       tenantId: "tenant-1",
       userId: "user-1",
@@ -307,8 +313,8 @@ describe("MembershipService atomic commands", () => {
 
   it("keeps both ownership events in one intent and recovers partial publication", async () => {
     const store = new InMemoryMembershipStore();
-    await store.save({ id: "owner", tenantId: "tenant-1", userId: "owner", role: "owner" });
-    await store.save({ id: "member", tenantId: "tenant-1", userId: "member", role: "member" });
+    await store.seed({ id: "owner", tenantId: "tenant-1", userId: "owner", role: "owner" });
+    await store.seed({ id: "member", tenantId: "tenant-1", userId: "member", role: "member" });
     const delivered = new Set<string>();
     let attempts = 0;
     const publish = vi.fn(async (event: DomainEvent) => {

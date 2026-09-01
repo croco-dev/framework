@@ -1,5 +1,6 @@
 import { getTableColumns } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import type { MembershipCreateInput } from "@croco/membership-core";
 import { ProblemFactory } from "@croco/problems-core";
 import { createDrizzleProviderConformanceSuite } from "@croco/testing/drizzle";
 import { DrizzleHealthIndicator } from "@croco/tx-drizzle";
@@ -8,9 +9,14 @@ import { memberships } from "../libs/schema";
 
 type DrizzleMembershipClient = ConstructorParameters<typeof DrizzleMembershipStore>[0];
 type MembershipTxManager = ConstructorParameters<typeof DrizzleMembershipStore>[1];
-type MembershipSaveInput = Parameters<DrizzleMembershipStore["save"]>[0];
 
-const createInput = (tenantId = "tenant-a"): MembershipSaveInput => ({
+class TestDrizzleMembershipStore extends DrizzleMembershipStore {
+  seedMembership(input: MembershipCreateInput) {
+    return this.save(input);
+  }
+}
+
+const createInput = (tenantId = "tenant-a"): MembershipCreateInput => ({
   id: "membership-1",
   tenantId,
   userId: "user-1",
@@ -105,14 +111,14 @@ describe("membership-drizzle provider conformance", () => {
                     );
                   }),
                 };
-                const store = new DrizzleMembershipStore(
+                const store = new TestDrizzleMembershipStore(
                   fallbackClient as unknown as DrizzleMembershipClient,
                   {
                     getClient: vi.fn().mockReturnValue(txClient),
                   } as unknown as MembershipTxManager,
                 );
 
-                await store.save(createInput());
+                await store.seedMembership(createInput());
 
                 expect(txClient.insert).toHaveBeenCalledTimes(1);
                 expect(fallbackClient.insert).not.toHaveBeenCalled();
@@ -160,7 +166,7 @@ describe("membership-drizzle provider conformance", () => {
             {
               name: "returns null for missing tenant user membership",
               run: async () => {
-                const store = new DrizzleMembershipStore(
+                const store = new TestDrizzleMembershipStore(
                   {
                     select: vi.fn().mockReturnValue({
                       from: vi.fn().mockReturnValue({
@@ -195,7 +201,7 @@ describe("membership-drizzle provider conformance", () => {
                 const onConflictDoUpdate = vi.fn().mockReturnValue({
                   returning: vi.fn().mockResolvedValue([createMembershipRow()]),
                 });
-                const store = new DrizzleMembershipStore(
+                const store = new TestDrizzleMembershipStore(
                   {
                     insert: vi.fn().mockReturnValue({
                       values: vi.fn().mockReturnValue({ onConflictDoUpdate }),
@@ -206,7 +212,7 @@ describe("membership-drizzle provider conformance", () => {
                   } as unknown as MembershipTxManager,
                 );
 
-                await store.save(createInput());
+                await store.seedMembership(createInput());
 
                 expect(onConflictDoUpdate).toHaveBeenCalledTimes(1);
               },

@@ -101,18 +101,20 @@ export { createMembershipEventIntent } from "./libs/eventIntent";
  * 인메모리 멤버십 저장소 구현체
  *
  * @description {@link MembershipStore} 인터페이스의 인메모리 구현체입니다. 테스트 및 프로토타이핑에 적합합니다.
+ * 멤버십 쓰기는 {@link MembershipManager} 또는 {@link MembershipService}의 명령 API를 통해 수행합니다.
  *
  * @example 저장소 생성 및 사용
  * ```typescript
- * import { InMemoryMembershipStore } from '@croco/membership-core';
+ * import { InMemoryMembershipStore, MembershipManager } from '@croco/membership-core';
  *
  * const store = new InMemoryMembershipStore();
- * const membership = await store.save({
- *   id: 'mem-1',
- *   tenantId: 'tenant-1',
- *   userId: 'user-1',
- *   role: 'admin'
- * });
+ * const manager = new MembershipManager({ store, eventDelivery: 'development' });
+ * const membership = await manager.addMember(
+ *   'tenant-1',
+ *   'user-1',
+ *   'admin',
+ *   'member:add:user-1',
+ * );
  * ```
  */
 export { InMemoryMembershipStore } from "./libs/InMemoryMembershipStore";
@@ -164,7 +166,7 @@ export { MembershipManager } from "./libs/MembershipManager";
  * 멤버십 소유자 변경 가드
  *
  * @deprecated 검증과 저장 사이의 동시성 경쟁을 막을 수 없습니다. 소유자 변경에는
- * {@link MembershipStore.mutateOwner} 또는 {@link MembershipStore.transferOwnership}을 사용하세요.
+ * {@link MembershipManager} 또는 {@link MembershipService}의 명령 API를 사용하세요.
  *
  * @example 가드 사용
  * ```typescript
@@ -216,6 +218,7 @@ export type { MembershipEventPublisher, MembershipServiceOptions } from "./libs/
  * 멤버십 저장소 인터페이스
  *
  * @description 멤버십 데이터 영속성을 위한 추상 인터페이스입니다. 데이터베이스, 인메모리 저장소 등 다양한 구현체가 가능합니다.
+ * 지원되는 공개 쓰기 경계는 idempotency key와 recoverable event intent를 함께 처리하는 `execute()`입니다.
  *
  * @example 커스텀 저장소 구현
  * ```typescript

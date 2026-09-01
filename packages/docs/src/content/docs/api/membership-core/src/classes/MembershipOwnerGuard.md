@@ -7,7 +7,7 @@ title: "MembershipOwnerGuard"
 
 :::caution[Deprecated]
 Validation-only owner checks cannot enforce invariants under concurrency. Use
-[MembershipStore.mutateOwner](/api/membership-core/src/classes/membershipstore/#mutateowner) or [MembershipStore.transferOwnership](/api/membership-core/src/classes/membershipstore/#transferownership) for writes.
+MembershipManager or MembershipService command APIs for writes.
 :::
 
 ## Constructors

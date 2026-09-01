@@ -1,9 +1,14 @@
 import "reflect-metadata";
-import type { Membership, MembershipCreateInput } from "@croco/membership-core";
+import type {
+  Membership,
+  MembershipCreateInput,
+  MembershipOwnerMutationInput,
+  MembershipOwnershipTransferInput,
+} from "@croco/membership-core";
 import type { TxManager } from "@croco/tx-core";
 import type { DrizzleDb } from "@croco/tx-drizzle";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import {
   type DrizzleMembershipClient,
   DrizzleMembershipStore,
@@ -30,8 +35,31 @@ const createMembership = (input: MembershipCreateInput): Membership => {
   };
 };
 
+class TestDrizzleMembershipStore extends DrizzleMembershipStore {
+  seedMembership(input: MembershipCreateInput): Promise<Membership> {
+    return this.save(input);
+  }
+
+  deleteFixtureMembership(tenantId: string, userId: string): Promise<void> {
+    return this.delete(tenantId, userId);
+  }
+
+  mutateOwnerPrimitive(input: MembershipOwnerMutationInput) {
+    return this.mutateOwner(input);
+  }
+
+  transferOwnershipPrimitive(input: MembershipOwnershipTransferInput) {
+    return this.transferOwnership(input);
+  }
+}
+
+type RawMembershipWrite = Extract<
+  keyof DrizzleMembershipStore,
+  "save" | "delete" | "mutateOwner" | "transferOwnership"
+>;
+
 describe("DrizzleMembershipStore", () => {
-  let store!: DrizzleMembershipStore;
+  let store!: TestDrizzleMembershipStore;
 
   let mockDb!: {
     select: ReturnType<typeof vi.fn>;
@@ -59,10 +87,14 @@ describe("DrizzleMembershipStore", () => {
       run: vi.fn(async (operation: () => Promise<unknown>) => operation()),
     };
 
-    store = new DrizzleMembershipStore(
+    store = new TestDrizzleMembershipStore(
       mockDb as unknown as DrizzleMembershipClient,
       mockTxManager as unknown as TxManager<DrizzleMembershipClient>,
     );
+  });
+
+  it("exposes only command-based membership writes", () => {
+    expectTypeOf<RawMembershipWrite>().toEqualTypeOf<never>();
   });
 
   it("should save and find membership by tenant and user", async () => {
@@ -85,7 +117,7 @@ describe("DrizzleMembershipStore", () => {
       }),
     });
 
-    await store.save(input);
+    await store.seedMembership(input);
     const membership = await store.findByTenantAndUser("tenant-1", "user-1");
 
     expect(membership).not.toBeNull();
@@ -134,7 +166,7 @@ describe("DrizzleMembershipStore", () => {
       where: vi.fn().mockResolvedValue(undefined),
     });
 
-    await expect(store.delete("tenant-1", "user-1")).resolves.toBeUndefined();
+    await expect(store.deleteFixtureMembership("tenant-1", "user-1")).resolves.toBeUndefined();
     expect(mockDb.delete).toHaveBeenCalled();
   });
 
@@ -165,7 +197,7 @@ describe("DrizzleMembershipStore", () => {
       }),
     });
 
-    const result = await store.mutateOwner({
+    const result = await store.mutateOwnerPrimitive({
       tenantId: "tenant-1",
       userId: "user-1",
       operation: "remove",
@@ -202,7 +234,7 @@ describe("DrizzleMembershipStore", () => {
       });
 
     await expect(
-      store.mutateOwner({
+      store.mutateOwnerPrimitive({
         tenantId: "tenant-1",
         userId: "user-1",
         operation: "remove",
@@ -230,7 +262,7 @@ describe("DrizzleMembershipStore", () => {
     });
 
     await expect(
-      store.mutateOwner({
+      store.mutateOwnerPrimitive({
         tenantId: "tenant-1",
         userId: "user-1",
         operation: "demote",
@@ -282,8 +314,8 @@ describe("DrizzleMembershipStore", () => {
       }),
     }));
     const results = await Promise.allSettled([
-      store.mutateOwner({ tenantId: "tenant-1", userId: "user-1", operation: "remove" }),
-      store.mutateOwner({ tenantId: "tenant-1", userId: "user-2", operation: "remove" }),
+      store.mutateOwnerPrimitive({ tenantId: "tenant-1", userId: "user-1", operation: "remove" }),
+      store.mutateOwnerPrimitive({ tenantId: "tenant-1", userId: "user-2", operation: "remove" }),
     ]);
 
     expect(results).toEqual([
@@ -309,7 +341,7 @@ describe("DrizzleMembershipStore", () => {
     });
 
     await expect(
-      store.mutateOwner({
+      store.mutateOwnerPrimitive({
         tenantId: "tenant-1",
         userId: "user-1",
         operation: "remove",
@@ -347,7 +379,7 @@ describe("DrizzleMembershipStore", () => {
     });
 
     await expect(
-      store.transferOwnership({
+      store.transferOwnershipPrimitive({
         tenantId: "tenant-1",
         fromUserId: "user-1",
         toUserId: "user-2",
@@ -383,8 +415,8 @@ describe("DrizzleMembershipStore", () => {
         }),
       });
 
-    const first = await store.save(createInput({ id: "mem-1", role: "member" }));
-    const next = await store.save(createInput({ id: "mem-1", role: "admin" }));
+    const first = await store.seedMembership(createInput({ id: "mem-1", role: "member" }));
+    const next = await store.seedMembership(createInput({ id: "mem-1", role: "admin" }));
 
     expect(first.role).toBe("member");
     expect(next.role).toBe("admin");

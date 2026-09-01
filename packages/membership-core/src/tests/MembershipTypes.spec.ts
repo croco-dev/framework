@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import type { MembershipStore } from "../libs/MembershipStore";
 import type {
   Membership,
   MembershipCreateInput,
@@ -15,7 +16,16 @@ import {
   VALID_MEMBERSHIP_ROLES,
 } from "../libs/types";
 
+type RawMembershipWrite = Extract<
+  keyof MembershipStore,
+  "save" | "delete" | "mutateOwner" | "transferOwnership"
+>;
+
 describe("Membership Types", () => {
+  it("should expose only command-based membership writes", () => {
+    expectTypeOf<RawMembershipWrite>().toEqualTypeOf<never>();
+  });
+
   describe("MembershipRole", () => {
     it("should accept valid role values", () => {
       const owner: MembershipRole = "owner";

@@ -5,7 +5,7 @@ import type { Membership, MembershipRole } from "./types";
 
 /**
  * @deprecated Validation-only owner checks cannot enforce invariants under concurrency. Use
- * {@link MembershipStore.mutateOwner} or {@link MembershipStore.transferOwnership} for writes.
+ * MembershipManager or MembershipService command APIs for writes.
  */
 export class MembershipOwnerGuard {
   constructor(private readonly store: MembershipStore) {}

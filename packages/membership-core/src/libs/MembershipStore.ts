@@ -20,13 +20,13 @@ export abstract class MembershipStore {
   abstract findByTenantAndUser(tenantId: string, userId: string): Promise<Membership | null>;
   abstract findAllByTenant(tenantId: string): Promise<Membership[]>;
   abstract findAllByUser(userId: string): Promise<Membership[]>;
-  abstract save(input: {
+  protected abstract save(input: {
     id: string;
     tenantId: string;
     userId: string;
     role: MembershipRole;
   }): Promise<Membership>;
-  abstract delete(tenantId: string, userId: string): Promise<void>;
+  protected abstract delete(tenantId: string, userId: string): Promise<void>;
   /**
    * Applies an owner removal or demotion as one atomic transition.
    *
@@ -34,12 +34,14 @@ export abstract class MembershipStore {
    * cannot be removed or demoted between validation and persistence. Serialization failures must
    * be returned as `conflict`.
    */
-  abstract mutateOwner(input: MembershipOwnerMutationInput): Promise<MembershipOwnerMutationResult>;
+  protected abstract mutateOwner(
+    input: MembershipOwnerMutationInput,
+  ): Promise<MembershipOwnerMutationResult>;
   /**
    * Transfers ownership as one atomic transition. Serialization failures must be returned as
    * `conflict`.
    */
-  abstract transferOwnership(
+  protected abstract transferOwnership(
     input: MembershipOwnershipTransferInput,
   ): Promise<MembershipOwnershipTransferResult>;
   abstract countByRole(tenantId: string, role: MembershipRole): Promise<number>;

@@ -220,7 +220,7 @@ export class DrizzleMembershipStore extends MembershipStore {
   /**
    * 멤버십을 upsert 방식으로 저장합니다.
    */
-  async save(input: MembershipCreateInput): Promise<Membership> {
+  protected override async save(input: MembershipCreateInput): Promise<Membership> {
     const client = this.txManager.getClient() ?? this.db;
 
     const rows = (await client
@@ -247,7 +247,7 @@ export class DrizzleMembershipStore extends MembershipStore {
   /**
    * 테넌트와 사용자 조합의 멤버십을 삭제합니다.
    */
-  async delete(tenantId: string, userId: string): Promise<void> {
+  protected override async delete(tenantId: string, userId: string): Promise<void> {
     const client = this.txManager.getClient() ?? this.db;
 
     await client
@@ -258,7 +258,9 @@ export class DrizzleMembershipStore extends MembershipStore {
   /**
    * 현재 소유자 행을 잠근 뒤 조건부 변경으로 마지막 소유자 제약을 확인하고 제거 또는 강등합니다.
    */
-  async mutateOwner(input: MembershipOwnerMutationInput): Promise<MembershipOwnerMutationResult> {
+  protected override async mutateOwner(
+    input: MembershipOwnerMutationInput,
+  ): Promise<MembershipOwnerMutationResult> {
     try {
       return await this.txManager.run(async () => {
         const client = this.txManager.getClient() ?? this.db;
@@ -324,7 +326,7 @@ export class DrizzleMembershipStore extends MembershipStore {
   /**
    * 두 멤버십의 역할을 하나의 조건부 UPDATE로 변경하여 소유권을 이전합니다.
    */
-  async transferOwnership(
+  protected override async transferOwnership(
     input: MembershipOwnershipTransferInput,
   ): Promise<MembershipOwnershipTransferResult> {
     try {
