@@ -1,8 +1,6 @@
 import { randomUUID } from "node:crypto";
-import {
-  type DomainEvent,
-  EventAfterCommitRequiresActiveTransactionProblem,
-} from "@croco/events-core";
+import type { DomainEvent } from "@croco/events-core";
+import { Problem } from "@croco/problems-core";
 import type { CreditLedgerStore } from "./CreditLedgerStore";
 import type { CreditLedgerEventIntent } from "./eventIntent";
 import { CreditLedgerCommittedEvent } from "./events/CreditLedgerCommittedEvent";
@@ -42,6 +40,23 @@ type CommandMetadata = {
   readonly reference: CreditSemanticReference;
   readonly expectedPosition?: number;
 };
+
+type AfterCommitFallback = "keep-pending" | "publish-now";
+
+function resolveAfterCommitFallback(error: unknown): AfterCommitFallback | undefined {
+  if (!(error instanceof Problem)) return undefined;
+
+  switch (error.code) {
+    case "events-core/after-commit-requires-active-transaction":
+    case "tx-core/missing-transaction-context":
+      return "publish-now";
+    case "events-core/after-commit-outcome-required":
+    case "tx-core/after-commit-outcome-required":
+      return "keep-pending";
+    default:
+      return undefined;
+  }
+}
 
 export type OpenCreditAccountInput = CommandMetadata & {
   readonly tenantId: string;
@@ -318,15 +333,21 @@ export class CreditLedgerService {
         await this.store.markEventIntentPublished(intent.eventId);
       });
     } catch (error) {
-      if (!(error instanceof EventAfterCommitRequiresActiveTransactionProblem)) {
+      const fallback = resolveAfterCommitFallback(error);
+      if (!fallback) {
         const cause = error instanceof Error ? error : new Error(String(error));
         throw new CreditEventPublicationProblem(intent.idempotencyKey, cause);
       }
-      await this.publishIntentNow(intent);
+      if (fallback === "publish-now") {
+        await this.publishIntentNow(intent, "keep-pending");
+      }
     }
   }
 
-  private async publishIntentNow(intent: CreditLedgerEventIntent): Promise<void> {
+  private async publishIntentNow(
+    intent: CreditLedgerEventIntent,
+    failureMode: "keep-pending" | "report" = "report",
+  ): Promise<void> {
     if (!this.eventPublisher) return;
     try {
       await this.eventPublisher.publishIdempotently(
@@ -334,6 +355,7 @@ export class CreditLedgerService {
       );
       await this.store.markEventIntentPublished(intent.eventId);
     } catch (error) {
+      if (failureMode === "keep-pending") return;
       const cause = error instanceof Error ? error : new Error(String(error));
       throw new CreditEventPublicationProblem(intent.idempotencyKey, cause);
     }

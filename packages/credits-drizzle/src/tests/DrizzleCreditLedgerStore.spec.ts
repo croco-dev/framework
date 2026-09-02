@@ -1,4 +1,11 @@
-import type { CreditAccountId } from "@croco/credits-core";
+import {
+  type CreditAccountId,
+  type CreditLedgerCommand,
+  CreditLedgerService,
+  creditAmount,
+  InMemoryCreditLedgerStore,
+} from "@croco/credits-core";
+import { type TxAdapter, TxManager } from "@croco/tx-core";
 import { describe, expect, it } from "vitest";
 import {
   createCreditsSchema,
@@ -7,6 +14,34 @@ import {
   DrizzleCreditLedgerStore,
   type DrizzleCreditTxManager,
 } from "../index";
+
+type TestClient = { readonly id: string };
+
+function createTxManager(): TxManager<TestClient> {
+  const adapter: TxAdapter<TestClient> = {
+    async transaction<T>(fn: (client: TestClient) => Promise<T>): Promise<T> {
+      return fn({ id: "test-client" });
+    },
+    async savepoint<T>(client: TestClient, fn: (client: TestClient) => Promise<T>): Promise<T> {
+      return fn(client);
+    },
+    supportsSavepoint(): boolean {
+      return true;
+    },
+  };
+
+  return new TxManager(adapter);
+}
+
+class TxAwareInMemoryCreditLedgerStore extends InMemoryCreditLedgerStore {
+  constructor(private readonly txManager: TxManager<TestClient>) {
+    super();
+  }
+
+  override async execute(command: CreditLedgerCommand) {
+    return this.txManager.run(() => super.execute(command));
+  }
+}
 
 describe("DrizzleCreditLedgerStore", () => {
   it("redacts driver details from read failures", async () => {
@@ -42,5 +77,80 @@ describe("DrizzleCreditLedgerStore", () => {
 
     expect(failure).toBeInstanceOf(CreditLedgerPersistenceProblem);
     expect((failure as CreditLedgerPersistenceProblem).detail).not.toContain(driverDetail);
+  });
+});
+
+describe("CreditLedgerService README publisher integration", () => {
+  const reference = { type: "test", id: "readme-publisher" };
+
+  async function setup() {
+    const txManager = createTxManager();
+    const store = new TxAwareInMemoryCreditLedgerStore(txManager);
+    const setupService = new CreditLedgerService({
+      store,
+      eventDelivery: "development",
+      idGenerator: () => "account-id",
+    });
+    const opened = await setupService.openAccount({
+      tenantId: "tenant-readme",
+      idempotencyKey: "open-readme",
+      reference,
+    });
+    const publishedEventIds: string[] = [];
+    const service = new CreditLedgerService({
+      store,
+      eventDelivery: "development",
+      idGenerator: () => "transaction-id",
+      eventPublisher: {
+        publishIdempotentlyAfterCommit(event, onPublished) {
+          txManager.onAfterCommit(async () => {
+            publishedEventIds.push(event.eventId);
+            await onPublished();
+          });
+        },
+        async publishIdempotently(event) {
+          publishedEventIds.push(event.eventId);
+        },
+      },
+    });
+
+    return { opened, publishedEventIds, service, store, txManager };
+  }
+
+  it("publishes after the adapter-owned transaction commits without an ambient transaction", async () => {
+    const { opened, publishedEventIds, service, store } = await setup();
+
+    await expect(
+      service.grantCredits({
+        accountId: opened.account.id,
+        amount: creditAmount("10"),
+        idempotencyKey: "grant-no-ambient",
+        reference,
+      }),
+    ).resolves.toMatchObject({ replayed: false });
+
+    expect(publishedEventIds).toHaveLength(1);
+    expect(await store.listPendingEventIntents()).toHaveLength(0);
+  });
+
+  it("leaves the committed intent pending inside a plain run until explicit recovery", async () => {
+    const { opened, publishedEventIds, service, store, txManager } = await setup();
+
+    await expect(
+      txManager.run(() =>
+        service.grantCredits({
+          accountId: opened.account.id,
+          amount: creditAmount("10"),
+          idempotencyKey: "grant-plain-run",
+          reference,
+        }),
+      ),
+    ).resolves.toMatchObject({ replayed: false });
+
+    expect(publishedEventIds).toHaveLength(0);
+    expect(await store.listPendingEventIntents()).toHaveLength(1);
+    await expect(service.publishPendingEvents()).resolves.toBe(1);
+    expect(publishedEventIds).toHaveLength(1);
+    expect(await store.listPendingEventIntents()).toHaveLength(0);
   });
 });

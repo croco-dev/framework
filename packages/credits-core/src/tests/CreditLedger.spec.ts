@@ -1,5 +1,6 @@
 import {
   type DomainEvent,
+  EventAfterCommitOutcomeRequiredProblem,
   EventAfterCommitRequiresActiveTransactionProblem,
 } from "@croco/events-core";
 import { beforeEach, describe, expect, it } from "vitest";
@@ -147,7 +148,7 @@ describe("CreditLedgerService", () => {
     });
   });
 
-  it("replays a retained event intent on a new service without moving the balance twice", async () => {
+  it("reports committed command success while a retained event intent is retried", async () => {
     const published: DomainEvent[] = [];
     let publicationAttempts = 0;
     service = new CreditLedgerService({
@@ -180,11 +181,12 @@ describe("CreditLedgerService", () => {
       reference: ref("event-retry-grant"),
     };
 
-    await expect(service.grantCredits(grantInput)).rejects.toThrow(CreditEventPublicationProblem);
+    await expect(service.grantCredits(grantInput)).resolves.toMatchObject({ replayed: false });
     expect(await service.getBalance(opened.account.id)).toMatchObject({
       position: 1,
       available: "5",
     });
+    expect(await store.listPendingEventIntents()).toHaveLength(1);
     const restartedService = new CreditLedgerService({
       store,
       eventDelivery: "development",
@@ -208,10 +210,43 @@ describe("CreditLedgerService", () => {
     expect(published).toHaveLength(1);
     expect(published[0]?.eventId).toMatch(/^[a-f0-9]{64}$/);
     expect(published[0]?.timestamp).toEqual(new Date("2026-07-26T12:00:00.000Z"));
+    expect(await store.listPendingEventIntents()).toHaveLength(0);
     expect(await service.getBalance(opened.account.id)).toMatchObject({
       position: 1,
       available: "5",
     });
+  });
+
+  it("keeps the intent pending when the ambient transaction cannot report after-commit outcomes", async () => {
+    const opened = await service.openAccount({
+      tenantId: "tenant-event-outcome",
+      idempotencyKey: "event-outcome-open",
+      reference: ref("event-outcome-open"),
+    });
+    service = new CreditLedgerService({
+      store,
+      eventDelivery: "development",
+      clock: () => new Date("2026-07-26T12:00:00.000Z"),
+      idGenerator: () => `outcome-event-id-${++sequence}`,
+      eventPublisher: {
+        publishIdempotentlyAfterCommit() {
+          throw new EventAfterCommitOutcomeRequiredProblem();
+        },
+        async publishIdempotently() {
+          throw new InvalidCreditAmountProblem("unexpected pre-commit publication");
+        },
+      },
+    });
+
+    await expect(
+      service.grantCredits({
+        accountId: opened.account.id,
+        amount: creditAmount("3"),
+        idempotencyKey: "event-outcome-grant",
+        reference: ref("event-outcome-grant"),
+      }),
+    ).resolves.toMatchObject({ replayed: false });
+    expect(await store.listPendingEventIntents()).toHaveLength(1);
   });
 
   it("keeps scheduled intent pending until idempotent publication is acknowledged", async () => {

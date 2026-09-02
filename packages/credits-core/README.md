@@ -128,6 +128,11 @@ do {
 published; a crash before acknowledgement leaves it available to command replay or
 `publishPendingEvents()` without applying the balance movement twice.
 
+If the ambient transaction cannot report after-commit outcomes, the service leaves the intent pending
+instead of publishing before commit. A command whose ledger mutation already committed also remains
+successful when immediate publication fails; retry the idempotent command or call
+`publishPendingEvents()` to deliver the retained intent.
+
 Event intents carry their tenant identity, and stores resolve a command-specific pending intent with
 `getPendingEventIntent(tenantId, idempotencyKey)`. Event IDs bind both values so equal client-generated
 keys in independent tenant ledgers cannot alias during publication.
