@@ -16,6 +16,7 @@ import { SUPPORTED_CREATE_CROCO_APP_CHOICES } from "../../packages/create-croco-
 import {
   assertGeneratedBrowserWorkflowLeastPrivilege,
   assertGeneratedVerificationValidationsAreReadOnly,
+  collectDisallowedGeneratedDotenvFiles,
   markWorkspacePackageClosureBuilt,
   assertGeneratedPresentationProfileMatchesCatalog,
   createSaasMonetizationCanarySource,
@@ -97,6 +98,25 @@ describe("generated environment template validation", () => {
         isActiveDotenvAssignment,
       ),
     ).toEqual([false, false, false, false]);
+  });
+
+  it("finds nested dotenv files while ignoring examples, dependencies, and unrelated names", () => {
+    const projectDir = mkdtempSync(join(tmpdir(), "croco-generated-env-test-"));
+
+    try {
+      writeFile(join(projectDir, ".env.example"), "# ROOT=value\n");
+      writeFile(join(projectDir, "apps/api/.env.local"), "TOKEN=value\n");
+      writeFile(join(projectDir, "apps/web/.env.development.local"), "URL=value\n");
+      writeFile(join(projectDir, "apps/web/.environment"), "ignored\n");
+      writeFile(join(projectDir, "node_modules/example/.env"), "IGNORED=value\n");
+
+      expect(collectDisallowedGeneratedDotenvFiles(projectDir)).toEqual([
+        "apps/api/.env.local",
+        "apps/web/.env.development.local",
+      ]);
+    } finally {
+      rmSync(projectDir, { force: true, recursive: true });
+    }
   });
 });
 

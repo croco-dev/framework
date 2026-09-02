@@ -626,13 +626,6 @@ const securityValidationScanFileExtensions = new Set([
   ".yaml",
   ".yml",
 ]);
-const securityValidationScanFileNames = new Set([
-  ".env",
-  ".env.example",
-  ".env.local",
-  ".env.development",
-  ".env.production",
-]);
 const securityValidationScanIgnoredDirectories = new Set([
   ".git",
   ".output",
@@ -3076,12 +3069,7 @@ function assertGeneratedEnvironmentTemplate(projectDir: string, smokeCase: Smoke
 
   assertExists(envExamplePath, `${smokeCase.name} did not generate .env.example`);
 
-  const generatedEnvironmentFiles = readdirSync(projectDir, { withFileTypes: true })
-    .filter(
-      (entry) => entry.isFile() && entry.name !== ".env.example" && isDotenvFileName(entry.name),
-    )
-    .map((entry) => entry.name)
-    .sort();
+  const generatedEnvironmentFiles = collectDisallowedGeneratedDotenvFiles(projectDir);
 
   if (generatedEnvironmentFiles.length > 0) {
     throw new Error(
@@ -3110,6 +3098,16 @@ export function isDotenvFileName(fileName: string): boolean {
 
 export function isActiveDotenvAssignment(line: string): boolean {
   return /^\s*(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*\s*=/.test(line);
+}
+
+export function collectDisallowedGeneratedDotenvFiles(projectDir: string): string[] {
+  return collectGeneratedSecurityValidationScanFiles(projectDir)
+    .filter((filePath) => {
+      const fileName = basename(filePath);
+      return fileName !== ".env.example" && isDotenvFileName(fileName);
+    })
+    .map((filePath) => toPosixPath(relative(projectDir, filePath)))
+    .sort();
 }
 
 function assertNoGeneratedCredentialLookingValues(projectDir: string, smokeCase: SmokeCase): void {
@@ -3184,7 +3182,7 @@ function collectGeneratedSecurityValidationScanFiles(directory: string): string[
     }
 
     return securityValidationScanFileExtensions.has(extname(entry.name)) ||
-      securityValidationScanFileNames.has(entry.name)
+      isDotenvFileName(entry.name)
       ? [entryPath]
       : [];
   });
