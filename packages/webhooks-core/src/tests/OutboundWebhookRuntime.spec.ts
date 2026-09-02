@@ -475,6 +475,75 @@ describe("OutboundWebhookRuntime", () => {
     expect(await store.listDeliveries(EVENT.tenantId, EVENT.id)).toHaveLength(1);
   });
 
+  it("resets the retry budget when replaying a dead delivery", async () => {
+    const store = new InMemoryOutboundWebhookStore();
+    const publishedKeys: string[] = [];
+    const publisher: OutboundWebhookTaskPublisher = {
+      publish: vi.fn(async ({ idempotencyKey }) => {
+        publishedKeys.push(idempotencyKey);
+      }),
+    };
+    let now = new Date(START);
+    const transport = new FakeOutboundWebhookTransport([
+      { kind: "http", status: 500 },
+      { kind: "http", status: 500 },
+      { kind: "http", status: 500 },
+      { kind: "http", status: 500 },
+      { kind: "http", status: 500 },
+      { kind: "http", status: 500 },
+    ]);
+    const runtime = createRuntime({
+      store,
+      transport,
+      publisher,
+      retryPolicy: { maxAttempts: 2, backoff: { getDelay: () => 1 } },
+      now: () => new Date(now),
+    });
+    const deliveryId = (await runtime.publish(EVENT)).deliveries[0]?.id ?? "";
+
+    expect((await runtime.dispatch(EVENT.tenantId, deliveryId)).status).toBe("retrying");
+    now = new Date(START.getTime() + 1);
+    expect((await runtime.dispatch(EVENT.tenantId, deliveryId)).status).toBe("dead");
+
+    const replay = await runtime.replay(EVENT.tenantId, deliveryId, "operator_1");
+
+    expect(replay).toMatchObject({ status: "pending", attemptCount: 0 });
+    expect(await store.listAttempts(EVENT.tenantId, deliveryId)).toHaveLength(2);
+    expect(await runtime.dispatch(EVENT.tenantId, deliveryId)).toMatchObject({
+      status: "retrying",
+      attemptCount: 1,
+    });
+    now = new Date(START.getTime() + 2);
+    expect(await runtime.dispatch(EVENT.tenantId, deliveryId)).toMatchObject({
+      status: "dead",
+      attemptCount: 2,
+    });
+
+    const secondReplay = await runtime.replay(EVENT.tenantId, deliveryId, "operator_22");
+
+    expect(secondReplay).toMatchObject({ status: "pending", attemptCount: 0 });
+    expect(await runtime.dispatch(EVENT.tenantId, deliveryId)).toMatchObject({
+      status: "retrying",
+      attemptCount: 1,
+    });
+    now = new Date(START.getTime() + 3);
+    expect(await runtime.dispatch(EVENT.tenantId, deliveryId)).toMatchObject({
+      status: "dead",
+      attemptCount: 2,
+    });
+    expect(
+      (await store.listAttempts(EVENT.tenantId, deliveryId)).map((attempt) => attempt.number),
+    ).toEqual([1, 2, 1, 2, 1, 2]);
+    expect(publishedKeys).toEqual([
+      `${deliveryId}:attempt:1`,
+      `${deliveryId}:attempt:2`,
+      `${deliveryId}:replay:operator_1`,
+      `${deliveryId}:replay-attempt:10:operator_1:2`,
+      `${deliveryId}:replay:operator_22`,
+      `${deliveryId}:replay-attempt:11:operator_22:2`,
+    ]);
+  });
+
   it("keeps committed evidence for paused and disabled subscribed endpoints without dispatching", async () => {
     const paused = {
       ...ACTIVE_ENDPOINT,

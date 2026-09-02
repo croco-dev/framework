@@ -208,6 +208,113 @@ export function createOutboundWebhookStoreConformanceSuite(
         },
       },
       {
+        name: "gives each replay a fresh retry budget and dispatch identity",
+        run: async () => {
+          const store = await options.createStore();
+          const committed = await store.commitEvent({
+            event: options.event,
+            endpoints: [options.endpoint],
+          });
+          const delivery = committed.deliveries[0];
+          const initialIntent = committed.intents[0];
+          assert(delivery !== undefined, "delivery must exist");
+          assert(initialIntent !== undefined, "initial dispatch intent must exist");
+          await store.markIntentPublished(
+            options.event.tenantId,
+            initialIntent.id,
+            options.event.committedAt,
+          );
+
+          const firstRetryAt = new Date(options.event.committedAt.getTime() + 2);
+          await store.recordAttempt({
+            tenantId: options.event.tenantId,
+            attempt: createAttempt(delivery.id, 1, options, "retryable"),
+            status: "retrying",
+            nextAttemptAt: firstRetryAt,
+          });
+          const originalRetryIntent = (
+            await store.listUnpublishedIntents(options.event.tenantId)
+          )[0];
+          assert(originalRetryIntent !== undefined, "original retry intent must exist");
+          await store.markIntentPublished(
+            options.event.tenantId,
+            originalRetryIntent.id,
+            firstRetryAt,
+          );
+          await store.recordAttempt({
+            tenantId: options.event.tenantId,
+            attempt: createAttempt(delivery.id, 2, options, "permanent"),
+            status: "dead",
+          });
+
+          const replay = await store.createReplay({
+            tenantId: options.event.tenantId,
+            deliveryId: delivery.id,
+            replayId: "replay-conformance",
+            createdAt: new Date(options.event.committedAt.getTime() + 3),
+          });
+          assert(
+            replay.status === "pending" && replay.attemptCount === 0,
+            "replay must start pending with a fresh retry budget",
+          );
+          assert(
+            (await store.listAttempts(options.event.tenantId, delivery.id))
+              .map((attempt) => attempt.number)
+              .join(",") === "1,2",
+            "replay must preserve original attempt evidence",
+          );
+          const replayIntent = (await store.listUnpublishedIntents(options.event.tenantId))[0];
+          assert(replayIntent !== undefined, "replay dispatch intent must exist");
+          await store.markIntentPublished(
+            options.event.tenantId,
+            replayIntent.id,
+            replay.updatedAt,
+          );
+
+          const replayRetryAt = new Date(options.event.committedAt.getTime() + 5);
+          const retryingReplay = await store.recordAttempt({
+            tenantId: options.event.tenantId,
+            attempt: {
+              ...createAttempt(delivery.id, 1, options, "retryable"),
+              id: "attempt-conformance-replay-1",
+              completedAt: new Date(options.event.committedAt.getTime() + 4),
+            },
+            status: "retrying",
+            nextAttemptAt: replayRetryAt,
+          });
+          const replayRetryIntent = (await store.listUnpublishedIntents(options.event.tenantId))[0];
+          assert(replayRetryIntent !== undefined, "replay retry intent must exist");
+          assert(
+            replayRetryIntent.idempotencyKey !== originalRetryIntent.idempotencyKey,
+            "replay retry intent must not collide with the original retry cycle",
+          );
+          assert(
+            retryingReplay.status === "retrying" && retryingReplay.attemptCount === 1,
+            "first replay attempt must retain one remaining retry",
+          );
+
+          const deadReplay = await store.recordAttempt({
+            tenantId: options.event.tenantId,
+            attempt: {
+              ...createAttempt(delivery.id, 2, options, "permanent"),
+              id: "attempt-conformance-replay-2",
+              completedAt: new Date(options.event.committedAt.getTime() + 6),
+            },
+            status: "dead",
+          });
+          assert(
+            deadReplay.attemptCount === 2,
+            "replay must consume the same complete retry budget as an original delivery",
+          );
+          assert(
+            (await store.listAttempts(options.event.tenantId, delivery.id))
+              .map((attempt) => attempt.number)
+              .join(",") === "1,2,1,2",
+            "replay must append its attempts without removing original evidence",
+          );
+        },
+      },
+      {
         name: "marks each intent publication exactly once under concurrency",
         run: async () => {
           const store = await options.createStore();

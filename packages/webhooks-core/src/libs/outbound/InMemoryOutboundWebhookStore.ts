@@ -32,6 +32,7 @@ export class InMemoryOutboundWebhookStore implements OutboundWebhookStore {
   private readonly intents = new Map<string, OutboundWebhookDispatchIntent>();
   private readonly claimedDeliveryIds = new Set<string>();
   private readonly replayIds = new Map<string, string>();
+  private readonly activeReplayIds = new Map<string, string>();
 
   async commitEvent(input: {
     readonly event: OutboundWebhookEvent;
@@ -241,7 +242,12 @@ export class InMemoryOutboundWebhookStore implements OutboundWebhookStore {
     this.deliveries.set(key, updated);
 
     if (input.status === "retrying" && input.nextAttemptAt !== undefined) {
-      const intent = createIntent(updated, input.nextAttemptAt);
+      const activeReplayId = this.activeReplayIds.get(key);
+      const identity =
+        activeReplayId === undefined
+          ? `attempt:${updated.attemptCount + 1}`
+          : createReplayAttemptIdentity(activeReplayId, updated.attemptCount + 1);
+      const intent = createIntent(updated, input.nextAttemptAt, identity);
       this.intents.set(intent.id, intent);
     }
     return cloneDelivery(updated);
@@ -274,12 +280,13 @@ export class InMemoryOutboundWebhookStore implements OutboundWebhookStore {
       endpointId: source.endpointId,
       tenantId: source.tenantId,
       status: "pending",
-      attemptCount: source.attemptCount,
+      attemptCount: 0,
       createdAt: new Date(source.createdAt),
       updatedAt: new Date(input.createdAt),
     };
     this.deliveries.set(key, replay);
     this.replayIds.set(replayKey, source.id);
+    this.activeReplayIds.set(key, input.replayId);
     const intent = createIntent(replay, input.createdAt, `replay:${input.replayId}`);
     this.intents.set(intent.id, intent);
     return cloneDelivery(replay);
@@ -406,6 +413,10 @@ function createIntent(
     executionId: `webhook-delivery:${attemptKey}`,
     visibleAt: new Date(visibleAt),
   };
+}
+
+function createReplayAttemptIdentity(replayId: string, attemptNumber: number): string {
+  return `replay-attempt:${replayId.length}:${replayId}:${attemptNumber}`;
 }
 
 function equalEvent(left: OutboundWebhookEvent, right: OutboundWebhookEvent): boolean {
