@@ -278,6 +278,10 @@ describe("AccessEngine", () => {
         field: "tuple.subject",
         tuple: { object: "document:document-1", relation: "viewer", subject: "account:user-1" },
       },
+      {
+        field: "tuple",
+        tuple: null,
+      },
     ])("should reject an invalid $field before calling the provider", async ({ field, tuple }) => {
       const request = {
         tenantId: "tenant-1",
