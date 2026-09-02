@@ -3,7 +3,12 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { extractRouteIR } from "../libs/extractRouteIR";
-import { REST_ROUTES_KEY, type RouteMetadata } from "../libs/sharedTypes";
+import {
+  REST_PARAMS_KEY,
+  REST_ROUTES_KEY,
+  type ParamMetadata,
+  type RouteMetadata,
+} from "../libs/sharedTypes";
 import {
   Body,
   Controller,
@@ -13,6 +18,7 @@ import {
   Post,
   ProblemResponse,
   Query,
+  Raw,
 } from "./helpers/test-decorators";
 
 const RESPONSE_SCHEMA_KEY = Symbol.for("croco:rest:responseSchema");
@@ -78,6 +84,35 @@ describe("extractRouteIR", () => {
     expect(routes[0]?.params).toEqual([
       { index: 0, kind: "body", name: "", schema: createOrderSchema },
     ]);
+  });
+
+  it("should preserve raw parameter positions as context parameters", () => {
+    const createOrderSchema = z.object({ productId: z.string() });
+
+    @Controller("/orders")
+    class OrdersController {
+      @Post("/")
+      createOrder(
+        @Raw() _raw: unknown,
+        @Body(createOrderSchema) _body: z.infer<typeof createOrderSchema>,
+      ): void {}
+    }
+
+    const paramsMap = Reflect.getMetadata(REST_PARAMS_KEY, OrdersController) as Map<
+      string | symbol,
+      ParamMetadata[]
+    >;
+    const originalParams = paramsMap.get("createOrder");
+    expect(originalParams?.map((param) => param.index)).toEqual([1, 0]);
+
+    const route = extractRouteIR(OrdersController)[0];
+
+    expect(route?.params).toEqual([
+      { index: 0, kind: "ctx", name: "", schema: null },
+      { index: 1, kind: "body", name: "", schema: createOrderSchema },
+    ]);
+    expect(route?.inputSchemas.body).toBe(createOrderSchema);
+    expect(originalParams?.map((param) => param.index)).toEqual([1, 0]);
   });
 
   it("should preserve the declared successful response status", () => {

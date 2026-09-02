@@ -51,8 +51,9 @@ await caller.users.update({
 });
 ```
 
-The location schemas run before the controller method. `@Ctx()` receives the tRPC procedure
-context and is not client input.
+The location schemas run before the controller method. `@Ctx()` and `@Raw()` both receive the
+unmodified tRPC procedure context and are not client input. For HTTP adapters, include the raw
+request or other transport envelope fields in `createContext` when a controller needs them.
 
 ## Verification
 
