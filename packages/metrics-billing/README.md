@@ -18,7 +18,7 @@ pnpm add @croco/metrics-billing
 | --------------------------- | -------------- | ------------------------------------------------- |
 | `OrderPaidEvent`            | 주문 결제 완료 | 결제 사유에 따라 `new`, `reactivation`, 또는 없음 |
 | `PlanChangedEvent`          | 플랜 변경      | `expansion` 또는 `contraction`                    |
-| `SubscriptionCanceledEvent` | 구독 취소      | `churned`                                         |
+| `SubscriptionCanceledEvent` | 구독 취소      | 실제 취소 시 `churned`, 기간 말 예약 시 없음      |
 
 ## 사용법
 
@@ -66,7 +66,8 @@ Container.register(BillingEventHandler, {
 
 ### SubscriptionCanceledEvent
 
-- `churned` MRR 기록
+- `cancelAtPeriodEnd: false`: `churned` MRR 기록
+- `cancelAtPeriodEnd: true`: 구독이 활성 상태이므로 MRR movement를 기록하지 않음
 - 취소 시점의 플랜 금액 기준
 
 ## 멱등성
