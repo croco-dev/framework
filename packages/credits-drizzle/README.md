@@ -57,6 +57,11 @@ adapter:
 - lets `CreditLedgerService` register idempotent publication against the same outer transaction, or
   publishes only after the adapter-owned transaction commits.
 
+Use `txManager.runWithOutcome()` when an outer transaction must schedule publication. A plain
+`txManager.run()` cannot report after-commit failures, so the service completes the committed command
+with its event intent still pending; retry the command or call `publishPendingEvents()` after the outer
+transaction commits.
+
 ### Existing-row migration
 
 `createCreditsSchema` backfills an unpublished intent for every existing idempotency record whose stored
