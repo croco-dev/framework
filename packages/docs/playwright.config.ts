@@ -23,10 +23,11 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:4321",
   },
   webServer: {
-    command: "pnpm exec astro dev --host 127.0.0.1 --port 4321",
+    command:
+      "pnpm --workspace-root turbo run docs:api:model --env-mode=loose --output-logs=errors-only && pnpm exec astro dev --host 127.0.0.1 --port 4321",
     env: { CROCO_DOCS_BUILD_ROOT: isolatedBuildRoot },
     reuseExistingServer: false,
-    timeout: 120_000,
+    timeout: 600_000,
     url: "http://127.0.0.1:4321/en/",
   },
 });

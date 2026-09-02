@@ -13,6 +13,9 @@
     "dist"
   ],
   "type": "module",
+  "sideEffects": [
+    "./dist/bin/croco.js"
+  ],
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "publishConfig": {

@@ -13,6 +13,12 @@
     "dist"
   ],
   "type": "commonjs",
+  "sideEffects": [
+    "./dist/cli.js",
+    "./dist/cli.mjs",
+    "./dist/index.js",
+    "./dist/index.mjs"
+  ],
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "publishConfig": {

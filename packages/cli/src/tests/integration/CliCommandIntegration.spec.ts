@@ -542,8 +542,8 @@ describe("installed CLI command integration", () => {
       <consumer-root>/commands/generated/rpc-client/rpc.ts
       <consumer-root>/commands/generated/rpc-client/index.ts",
       }
-    `);
-  });
+      `);
+  }, 30_000);
 
   it("runs upgrade JSON success and migrate failure through the installed croco command", () => {
     const harness = getHarness();

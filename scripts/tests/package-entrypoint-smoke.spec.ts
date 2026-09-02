@@ -359,6 +359,114 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.stdout).toContain("framework logger production startup ok");
   });
 
+  it("proves pure imports, decorator metadata, and UI CSS behavior in packed bundles", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "problems-core", {
+      esmContent: 'globalThis.__crocoPureImportRetained = true;\nexport const value = "ok";\n',
+      packageName: "@croco/problems-core",
+      sideEffects: false,
+      sourceExports: defaultPublishExports(),
+      sourceMain: "./dist/index.js",
+      sourceTypes: "./dist/index.d.ts",
+    });
+    writeImportablePackage(root, "audit-core", {
+      declarationContent:
+        "export declare const AUDIT_PARAM_KEY: symbol;\nexport declare function Auditable(options: { resourceIdIndex?: number }): MethodDecorator;\n",
+      esmContent: decoratorBundleFixtureSource(),
+      packageName: "@croco/audit-core",
+      sideEffects: ["./dist/index.js", "./dist/index.mjs"],
+    });
+    writeImportablePackage(root, "ui-astryx", {
+      exportsValue: {
+        ".": {
+          types: "./dist/index.d.ts",
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+        },
+        "./styles.css": "./dist/styles.css",
+      },
+      packageName: "@croco/ui-astryx",
+      sideEffects: ["./dist/styles.css"],
+    });
+    writeFileSync(
+      join(root, "packages", "ui-astryx", "dist", "styles.css"),
+      '@import "./theme.css";\n',
+    );
+    writeFileSync(
+      join(root, "packages", "ui-astryx", "dist", "theme.css"),
+      ".croco-bundle-smoke { color: green; }\n",
+    );
+
+    const result = runScript(root);
+
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(result.stdout).toContain("bundle tree-shaking ok @croco/problems-core");
+    expect(result.stdout).toContain("bundle metadata initialization ok @croco/audit-core");
+    expect(result.stdout).toContain("bundle decorator metadata ok @croco/audit-core");
+    expect(result.stdout).toContain("bundle css retained @croco/ui-astryx/styles.css");
+  });
+
+  it("fails bundle smoke when a pure package import cannot be removed", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "problems-core", {
+      esmContent: 'globalThis.__crocoPureImportRetained = true;\nexport const value = "ok";\n',
+      packageName: "@croco/problems-core",
+      sideEffects: ["./dist/index.js", "./dist/index.mjs"],
+      sourceExports: defaultPublishExports(),
+      sourceMain: "./dist/index.js",
+      sourceTypes: "./dist/index.d.ts",
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(`${result.stdout}\n${result.stderr}`).toContain(
+      "@croco/problems-core: unused pure package import contributed",
+    );
+  });
+
+  it("fails bundle smoke when metadata initialization is declared side-effect free", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "audit-core", {
+      declarationContent:
+        "export declare const AUDIT_PARAM_KEY: symbol;\nexport declare function Auditable(options: { resourceIdIndex?: number }): MethodDecorator;\n",
+      esmContent: decoratorBundleFixtureSource(),
+      packageName: "@croco/audit-core",
+      sideEffects: false,
+    });
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(`${result.stdout}\n${result.stderr}`).toContain(
+      "bundled metadata initialization was not retained",
+    );
+  });
+
+  it("fails bundle smoke when the packed UI stylesheet has no retained content", () => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "ui-astryx", {
+      exportsValue: {
+        ".": {
+          types: "./dist/index.d.ts",
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+        },
+        "./styles.css": "./dist/styles.css",
+      },
+      packageName: "@croco/ui-astryx",
+      sideEffects: ["./dist/styles.css"],
+    });
+    writeFileSync(join(root, "packages", "ui-astryx", "dist", "styles.css"), "");
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(`${result.stdout}\n${result.stderr}`).toContain(
+      "@croco/ui-astryx: bundled CSS entrypoint was not retained",
+    );
+  });
+
   it(
     "verifies packed ESM and CJS decorator metadata with implicit DI",
     () => {
@@ -607,6 +715,8 @@ function writeImportablePackage(
     readonly packageName?: string;
     readonly peerDependencies?: Record<string, string>;
     readonly publishConfig?: Record<string, unknown>;
+    readonly sideEffects?: boolean | readonly string[];
+    readonly sourceExports?: unknown;
     readonly sourceMain?: string;
     readonly sourceTypes?: string;
     readonly typesTarget?: string;
@@ -638,9 +748,10 @@ function writeImportablePackage(
     join(packageDir, "package.json"),
     `${JSON.stringify(
       {
-        ...(options.dependencies ? { dependencies: options.dependencies } : {}),
         name: packageName,
         peerDependencies: options.peerDependencies,
+        sideEffects: options.sideEffects,
+        exports: options.sourceExports,
         version: "0.0.0",
         dependencies: options.dependencies,
         files: ["dist"],
@@ -666,6 +777,35 @@ function writeImportablePackage(
       2,
     )}\n`,
   );
+}
+
+function defaultPublishExports(): Record<string, unknown> {
+  return {
+    ".": {
+      types: "./dist/index.d.ts",
+      import: "./dist/index.mjs",
+      require: "./dist/index.js",
+    },
+  };
+}
+
+function decoratorBundleFixtureSource(): string {
+  return [
+    'export const AUDIT_PARAM_KEY = Symbol("audit:param");',
+    "const metadata = new WeakMap();",
+    "Reflect.defineMetadata = (key, value, target, propertyKey) => {",
+    "  const values = metadata.get(target) ?? new Map();",
+    "  values.set(`${String(key)}:${String(propertyKey)}`, value);",
+    "  metadata.set(target, values);",
+    "};",
+    "Reflect.getMetadata = (key, target, propertyKey) => metadata.get(target)?.get(`${String(key)}:${String(propertyKey)}`);",
+    "export function Auditable(options) {",
+    "  return (target, propertyKey) => {",
+    "    Reflect.defineMetadata(AUDIT_PARAM_KEY, { resourceIdIndex: options.resourceIdIndex }, target, propertyKey);",
+    "  };",
+    "}",
+    "",
+  ].join("\n");
 }
 
 function writeDecoratorMetadataPackages(

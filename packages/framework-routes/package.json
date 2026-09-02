@@ -10,6 +10,14 @@
     "dist"
   ],
   "type": "commonjs",
+  "sideEffects": [
+    "./dist/compiler.js",
+    "./dist/compiler.mjs",
+    "./dist/index.js",
+    "./dist/index.mjs",
+    "./dist/metadata-reader.js",
+    "./dist/metadata-reader.mjs"
+  ],
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "publishConfig": {
