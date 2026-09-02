@@ -598,7 +598,20 @@ describe("BillingEventHandler", () => {
   });
 
   describe("SubscriptionCanceledEvent", () => {
-    it("should record churned MRR when subscription is canceled", async () => {
+    it("should not record churned MRR when cancellation is scheduled for period end", async () => {
+      const event = new SubscriptionCanceledEvent("tenant-1", "sub-stripe", true);
+
+      vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
+      vi.mocked(planRegistry.getPlanVersion).mockResolvedValue(asPlanVersion(mockPlan));
+
+      await handler.handle(event);
+
+      expect(metricsRepository.recordMRRMovement).not.toHaveBeenCalled();
+      expect(billingStore.findSubscriptionByExternalId).not.toHaveBeenCalled();
+      expect(planRegistry.getPlanVersion).not.toHaveBeenCalled();
+    });
+
+    it("should record churned MRR when cancellation takes effect immediately", async () => {
       const event = new SubscriptionCanceledEvent("tenant-1", "sub-stripe", false);
 
       vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);

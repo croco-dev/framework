@@ -179,6 +179,10 @@ export class BillingEventHandler
   }
 
   private async handleSubscriptionCanceled(event: SubscriptionCanceledEvent): Promise<void> {
+    if (event.cancelAtPeriodEnd) {
+      return;
+    }
+
     const subscription = await this.billingStore.findSubscriptionByExternalId(
       event.externalSubscriptionId,
     );
