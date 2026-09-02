@@ -3073,17 +3073,25 @@ function assertNoGeneratedSecurityValidationOptOut(projectDir: string, smokeCase
 
 function assertGeneratedEnvironmentTemplate(projectDir: string, smokeCase: SmokeCase): void {
   const envExamplePath = join(projectDir, ".env.example");
-  const envPath = join(projectDir, ".env");
 
   assertExists(envExamplePath, `${smokeCase.name} did not generate .env.example`);
 
-  if (existsSync(envPath)) {
-    throw new Error(`${smokeCase.name} generated .env; only .env.example is allowed`);
+  const generatedEnvironmentFiles = readdirSync(projectDir, { withFileTypes: true })
+    .filter(
+      (entry) => entry.isFile() && entry.name !== ".env.example" && isDotenvFileName(entry.name),
+    )
+    .map((entry) => entry.name)
+    .sort();
+
+  if (generatedEnvironmentFiles.length > 0) {
+    throw new Error(
+      `${smokeCase.name} generated dotenv files other than .env.example: ${generatedEnvironmentFiles.join(", ")}`,
+    );
   }
 
   const activeAssignments = readFileSync(envExamplePath, "utf8")
     .split(/\r?\n/)
-    .filter((line) => /^[A-Z][A-Z0-9_]*=/.test(line));
+    .filter(isActiveDotenvAssignment);
 
   if (activeAssignments.length > 0) {
     throw new Error(
@@ -3094,6 +3102,14 @@ function assertGeneratedEnvironmentTemplate(projectDir: string, smokeCase: Smoke
   console.log(
     `create-croco-app-generated-smoke: ${smokeCase.name} generated a commented .env.example only`,
   );
+}
+
+export function isDotenvFileName(fileName: string): boolean {
+  return fileName === ".env" || fileName.startsWith(".env.");
+}
+
+export function isActiveDotenvAssignment(line: string): boolean {
+  return /^\s*(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*\s*=/.test(line);
 }
 
 function assertNoGeneratedCredentialLookingValues(projectDir: string, smokeCase: SmokeCase): void {

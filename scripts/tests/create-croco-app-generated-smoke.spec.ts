@@ -22,6 +22,8 @@ import {
   getGeneratedGoalSmokeCaseInputs,
   getGeneratedSmokeDependencyCaseInputs,
   hasCompleteTapTestEvidence,
+  isActiveDotenvAssignment,
+  isDotenvFileName,
   prepareGeneratedUnitEvidenceCapture,
   readCommandOutputSegment,
   readGeneratedSmokeAllowlistMetadata,
@@ -71,6 +73,32 @@ import {
   rewriteExternalCrocoRanges,
   writePnpmWorkspaceOverrides,
 } from "../create-croco-app-generated-smoke-support.mts";
+
+describe("generated environment template validation", () => {
+  it("recognizes dotenv files while excluding unrelated dot-prefixed names", () => {
+    expect(
+      [".env", ".env.local", ".env.development", ".env.test.local"].map(isDotenvFileName),
+    ).toEqual([true, true, true, true]);
+    expect([".environment", ".envrc", "env.local"].map(isDotenvFileName)).toEqual([
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  it("recognizes active dotenv assignments with supported whitespace and export syntax", () => {
+    expect(
+      ["NAME=value", " NAME = value", "export NAME=value", "\texport\tNAME = value"].map(
+        isActiveDotenvAssignment,
+      ),
+    ).toEqual([true, true, true, true]);
+    expect(
+      ["# NAME=value", "  # export NAME=value", "NAME", "export NAME"].map(
+        isActiveDotenvAssignment,
+      ),
+    ).toEqual([false, false, false, false]);
+  });
+});
 
 const tempRoots: string[] = [];
 const journeySourceCaseNames = [
