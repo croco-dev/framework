@@ -8289,6 +8289,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "generateDesktopMainRegistrationMetadata",
+              "exportKind": "named",
+              "source": "./libs/generateDesktopMainRegistrationMetadata",
+              "declarationKind": "function"
+            },
+            {
               "name": "generateDesktopPreloadBridges",
               "exportKind": "named",
               "source": "./libs/generateDesktopPreloadBridges",
@@ -8299,9 +8305,65 @@
               "exportKind": "named",
               "source": "./libs/generateDesktopRendererClients",
               "declarationKind": "function"
+            },
+            {
+              "name": "stringifyDesktopMainRegistrationMetadata",
+              "exportKind": "named",
+              "source": "./libs/generateDesktopMainRegistrationMetadata",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
+            {
+              "name": "DesktopGeneratedOutputMetadata",
+              "exportKind": "named",
+              "source": "./libs/generateDesktopMainRegistrationMetadata"
+            },
+            {
+              "name": "DesktopGeneratedSurface",
+              "exportKind": "named",
+              "source": "./libs/DesktopGeneratedMetadata"
+            },
+            {
+              "name": "DesktopGeneratedSurfaceMetadataV1",
+              "exportKind": "named",
+              "source": "./libs/DesktopGeneratedMetadata"
+            },
+            {
+              "name": "DesktopGeneratedSurfaceMetadataVersion",
+              "exportKind": "named",
+              "source": "./libs/DesktopGeneratedMetadata"
+            },
+            {
+              "name": "DesktopMainCommandRegistration",
+              "exportKind": "named",
+              "source": "./libs/generateDesktopMainRegistrationMetadata"
+            },
+            {
+              "name": "DesktopMainEventRegistration",
+              "exportKind": "named",
+              "source": "./libs/generateDesktopMainRegistrationMetadata"
+            },
+            {
+              "name": "DesktopMainPreloadRegistration",
+              "exportKind": "named",
+              "source": "./libs/generateDesktopMainRegistrationMetadata"
+            },
+            {
+              "name": "DesktopMainRegistrationMetadataV1",
+              "exportKind": "named",
+              "source": "./libs/generateDesktopMainRegistrationMetadata"
+            },
+            {
+              "name": "DesktopMainRegistrationMetadataVersion",
+              "exportKind": "named",
+              "source": "./libs/generateDesktopMainRegistrationMetadata"
+            },
+            {
+              "name": "DesktopMainWindowRegistration",
+              "exportKind": "named",
+              "source": "./libs/generateDesktopMainRegistrationMetadata"
+            },
             {
               "name": "DesktopPreloadBridgeSource",
               "exportKind": "named",
@@ -23271,6 +23333,12 @@
           "sourceEntrypoint": "packages/protocols-desktop/src/index.ts",
           "runtimeExports": [
             {
+              "name": "compareDesktopContractHandshakes",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph",
+              "declarationKind": "function"
+            },
+            {
               "name": "compileDesktopContractGraph",
               "exportKind": "named",
               "source": "./libs/DesktopContractGraph",
@@ -23280,6 +23348,12 @@
               "name": "compileDesktopWireSchema",
               "exportKind": "named",
               "source": "./libs/DesktopWireSchema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "computeDesktopContractSemanticHash",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph",
               "declarationKind": "function"
             },
             {
@@ -23629,6 +23703,21 @@
               "source": "./libs/DesktopContractGraph"
             },
             {
+              "name": "DesktopContractHandshakeComparison",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph"
+            },
+            {
+              "name": "DesktopContractHandshakeV1",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph"
+            },
+            {
+              "name": "DesktopContractHandshakeVersion",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph"
+            },
+            {
               "name": "DesktopContractImplementation",
               "exportKind": "named",
               "source": "./libs/types"
@@ -23652,6 +23741,11 @@
               "name": "DesktopContractRecord",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "DesktopContractSemanticHash",
+              "exportKind": "named",
+              "source": "./libs/DesktopContractGraph"
             },
             {
               "name": "DesktopDefinitionProblemCode",

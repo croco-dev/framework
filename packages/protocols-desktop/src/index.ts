@@ -1,6 +1,8 @@
 export { DesktopDefinitionProblem } from "./libs/DesktopDefinitionProblem";
 export {
+  compareDesktopContractHandshakes,
   compileDesktopContractGraph,
+  computeDesktopContractSemanticHash,
   stringifyDesktopContractGraph,
 } from "./libs/DesktopContractGraph";
 export {
@@ -25,6 +27,9 @@ export { desktop } from "./libs/desktop";
 export type { DesktopDefinitionProblemCode } from "./libs/DesktopDefinitionProblem";
 export type {
   CompileDesktopContractGraphOptions,
+  DesktopContractHandshakeComparison,
+  DesktopContractHandshakeV1,
+  DesktopContractHandshakeVersion,
   DesktopContractGraphCommand,
   DesktopContractGraphContract,
   DesktopContractGraphEffect,
@@ -38,6 +43,7 @@ export type {
   DesktopContractGraphV1,
   DesktopContractGraphVersion,
   DesktopContractGraphWindow,
+  DesktopContractSemanticHash,
 } from "./libs/DesktopContractGraph";
 export type {
   DesktopContractAuthority,

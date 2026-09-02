@@ -1,4 +1,9 @@
-import { compileDesktopContractGraph, desktop } from "@croco/protocols-desktop";
+import {
+  compileDesktopContractGraph,
+  computeDesktopContractSemanticHash,
+  desktop,
+} from "@croco/protocols-desktop";
+import type { DesktopContractGraphV1 } from "@croco/protocols-desktop";
 import ts from "typescript";
 import { assert, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
@@ -35,6 +40,10 @@ type GeneratedBridge = {
 
 type DesktopAbortRegistration = (abort: () => void) => () => void;
 
+function withCurrentSemanticHash(graph: DesktopContractGraphV1): DesktopContractGraphV1 {
+  return { ...graph, semanticHash: computeDesktopContractSemanticHash(graph) };
+}
+
 describe("generateDesktopPreloadBridges", () => {
   it("generates deterministic minimal bridges for local window profiles only", () => {
     const graph = createGraph(false);
@@ -54,12 +63,12 @@ describe("generateDesktopPreloadBridges", () => {
 
   it("emits strict-clean artifacts for command, event-only, and empty windows", () => {
     const graph = createGraph(false);
-    const eventOnlyGraph = {
+    const eventOnlyGraph = withCurrentSemanticHash({
       ...graph,
       windows: graph.windows.map((window) =>
         window.id === "settings" ? { ...window, exposedCommands: [] } : window,
       ),
-    };
+    });
     const sources = new Map<string, string>();
     for (const artifact of generateDesktopPreloadBridges(graph)) {
       sources.set(`/virtual/${artifact.windowId}.generated.ts`, artifact.source);
@@ -78,7 +87,7 @@ describe("generateDesktopPreloadBridges", () => {
     if (!remote) {
       throw new Error("Fixture remote window is missing");
     }
-    const forged = {
+    const forged = withCurrentSemanticHash({
       ...graph,
       windows: [
         ...graph.windows.filter((window) => window.id !== "login"),
@@ -88,7 +97,7 @@ describe("generateDesktopPreloadBridges", () => {
           receivedEvents: ["project.changed"],
         },
       ],
-    };
+    });
 
     expect(
       generateDesktopPreloadBridges(forged).some((artifact) => artifact.windowId === "login"),
@@ -291,7 +300,7 @@ describe("generateDesktopPreloadBridges", () => {
       grantIds: [],
     };
     const source = requireBridgeSource(
-      {
+      withCurrentSemanticHash({
         ...graph,
         app: { ...graph.app, contractIds: [forgedContract.id], windowIds: [main.id] },
         contracts: [forgedContract],
@@ -300,7 +309,7 @@ describe("generateDesktopPreloadBridges", () => {
         effects: forgedCommand.effects.map((effect) => effect.namespace),
         grants: [],
         windows: [{ ...main, exposedCommands: [forgedCommand.id], receivedEvents: [] }],
-      },
+      }),
       "main",
     );
     const invoke = vi.fn(async () => undefined);

@@ -25,7 +25,8 @@ or subscribe to a fixed event ID, and subscriptions receive payloads rather than
 Electron runtime adapter owns the concrete transport implementation, executes each installer, and validates senders.
 
 The generator does not write files, import Electron, expose handwritten preload extension points, or implement IPC
-runtime behavior. Callers choose where to persist the returned `{ windowId, source }` artifacts.
+runtime behavior. Each returned artifact contains `{ windowId, relativePath, metadata, source }`; callers choose only
+the output root, while generated relative paths remain portable and deterministic.
 
 ## Renderer clients
 
@@ -47,7 +48,36 @@ output, grant-reference, Problem-union, and event-payload types are derived from
 `DesktopContractGraph` rather than caller-selected generics.
 
 Generation fails when the graph has diagnostics, duplicate or missing records, inconsistent member IDs, unresolved
-Problems or grants, or missing schema descriptors. Output ordering is independent of declaration order.
+Problems or grants, missing schema descriptors, or a semantic hash that no longer matches the graph. Output ordering
+is independent of declaration order.
+
+## Main registration and handshake metadata
+
+`generateDesktopMainRegistrationMetadata(graph)` produces a deterministic registration table for main-process
+commands, events, windows, preload modules, and generated outputs. It names generated public exports and relative
+paths only; source locations, handwritten handler paths, timestamps, and Electron runtime behavior are excluded.
+
+Main metadata and every generated preload and renderer module carry the same versioned handshake:
+
+```typescript
+import {
+  generateDesktopMainRegistrationMetadata,
+  generateDesktopPreloadBridges,
+  generateDesktopRendererClients,
+} from "@croco/desktop-codegen";
+import { compareDesktopContractHandshakes } from "@croco/protocols-desktop";
+
+const main = generateDesktopMainRegistrationMetadata(graph);
+const preload = generateDesktopPreloadBridges(graph)[0];
+const renderer = generateDesktopRendererClients(graph)[0];
+
+compareDesktopContractHandshakes(main.handshake, preload.metadata.handshake);
+compareDesktopContractHandshakes(main.handshake, renderer.metadata.handshake);
+```
+
+The comparison is browser-safe and side-effect free so a later runtime adapter can reject stale surfaces before
+dispatch. This package defines the identity and metadata contract only; it does not install an Electron startup or
+IPC handshake.
 
 ## Verification
 

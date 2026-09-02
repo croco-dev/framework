@@ -1,8 +1,18 @@
 import { defineProblemRegistry, Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { compileDesktopContractGraph, desktop, stringifyDesktopContractGraph } from "../index";
-import type { DesktopContractGraphSourceLocations } from "../index";
+import {
+  compareDesktopContractHandshakes,
+  compileDesktopContractGraph,
+  computeDesktopContractSemanticHash,
+  desktop,
+  stringifyDesktopContractGraph,
+} from "../index";
+import type {
+  DesktopContractGraphEffect,
+  DesktopContractGraphSourceLocations,
+  DesktopContractHandshakeV1,
+} from "../index";
 
 const POSIX_SOURCES: DesktopContractGraphSourceLocations = {
   app: { path: "/home/runner/framework/apps/editor/src/desktop.ts", line: 10 },
@@ -44,6 +54,164 @@ describe("DesktopContractGraph", () => {
     expect(graph.semanticHash).toBe(
       "sha256:1802f6861221422ba8cda7c6051562587540bbb21433f0e4f3c3b8674dcaa222",
     );
+    expect(computeDesktopContractSemanticHash(graph)).toBe(graph.semanticHash);
+  });
+
+  it("covers schemas, Problems, effects, events, grants, and window exposure in the semantic hash", () => {
+    const fixtureGraph = compileDesktopContractGraph(createFixtureApp(false));
+    const { app, registry } = createProblemFixture();
+    const problemGraph = compileDesktopContractGraph(app, { problemRegistries: [registry] });
+    const command = fixtureGraph.commands[0];
+    const window = fixtureGraph.windows.find((candidate) => candidate.id === "main");
+
+    expect(command).toBeDefined();
+    expect(window).toBeDefined();
+    if (!command || !window) return;
+
+    const changedHashes = [
+      computeDesktopContractSemanticHash({
+        ...fixtureGraph,
+        commands: [
+          { ...command, output: { ...command.output, descriptor: { kind: "string" } } },
+          ...fixtureGraph.commands.slice(1),
+        ],
+      }),
+      computeDesktopContractSemanticHash({ ...problemGraph, problems: [] }),
+      computeDesktopContractSemanticHash({
+        ...problemGraph,
+        commands: problemGraph.commands.map((candidate) => ({ ...candidate, effects: [] })),
+        effects: [],
+      }),
+      computeDesktopContractSemanticHash({ ...fixtureGraph, events: [] }),
+      computeDesktopContractSemanticHash({ ...fixtureGraph, grants: [] }),
+      computeDesktopContractSemanticHash({
+        ...fixtureGraph,
+        windows: fixtureGraph.windows.map((candidate) =>
+          candidate.id === window.id ? { ...candidate, exposedCommands: [] } : candidate,
+        ),
+      }),
+    ];
+
+    expect(changedHashes).not.toContain(fixtureGraph.semanticHash);
+    expect(changedHashes[1]).not.toBe(problemGraph.semanticHash);
+    expect(changedHashes[2]).not.toBe(problemGraph.semanticHash);
+  });
+
+  it("excludes source locations and diagnostic prose from semantic hash recomputation", () => {
+    const invalid = desktop.contract({
+      commands: {
+        unsafe: desktop.query({ input: z.unknown(), output: z.string() }),
+      },
+    });
+    const graph = compileDesktopContractGraph(desktop.app({ contracts: { invalid }, windows: {} }));
+    const changedEvidence = {
+      ...graph,
+      app: { ...graph.app, sourceLocation: { path: "/absolute/app.ts", line: 100 } },
+      diagnostics: graph.diagnostics.map((diagnostic) => ({
+        ...diagnostic,
+        message: "different platform prose",
+        recovery: "different recovery prose",
+        sourceLocation: { path: "C:\\absolute\\contract.ts", line: 200 },
+      })),
+    };
+
+    expect(computeDesktopContractSemanticHash(changedEvidence)).toBe(graph.semanticHash);
+  });
+
+  it("normalizes compiler-sorted inventories when recomputing semantic hashes", () => {
+    const graph = compileDesktopContractGraph(createFixtureApp(false));
+    const reordered = {
+      ...graph,
+      app: {
+        ...graph.app,
+        contractIds: [...graph.app.contractIds].reverse(),
+        windowIds: [...graph.app.windowIds].reverse(),
+      },
+      contracts: [...graph.contracts].reverse().map((contract) => ({
+        ...contract,
+        commandIds: [...contract.commandIds].reverse(),
+        eventIds: [...contract.eventIds].reverse(),
+        grantIds: [...contract.grantIds].reverse(),
+      })),
+      commands: [...graph.commands].reverse().map((command) => ({
+        ...command,
+        effects: [...command.effects].reverse(),
+        problems: [...command.problems].reverse(),
+        events: [...command.events].reverse(),
+      })),
+      events: [...graph.events].reverse(),
+      effects: [...graph.effects].reverse(),
+      grants: [...graph.grants].reverse(),
+      problems: [...graph.problems].reverse(),
+      windows: [...graph.windows].reverse().map((candidate) => ({
+        ...candidate,
+        exposedCommands: [...candidate.exposedCommands].reverse(),
+        receivedEvents: [...candidate.receivedEvents].reverse(),
+      })),
+      diagnostics: [...graph.diagnostics].reverse(),
+    };
+
+    expect(computeDesktopContractSemanticHash(reordered)).toBe(graph.semanticHash);
+  });
+
+  it("normalizes delimiter-colliding effect inventories when recomputing semantic hashes", () => {
+    const graph = compileDesktopContractGraph(createFixtureApp(false));
+    const command = graph.commands[0];
+    expect(command).toBeDefined();
+    if (!command) return;
+
+    const effects: readonly DesktopContractGraphEffect[] = [
+      { namespace: "filesystem", access: "read", methods: ["a.b", "c"], grantIds: [] },
+      { namespace: "filesystem", access: "read", methods: ["a", "b.c"], grantIds: [] },
+      { namespace: "filesystem", access: "read", methods: ["same"], grantIds: ["x.y", "z"] },
+      { namespace: "filesystem", access: "read", methods: ["same"], grantIds: ["x", "y.z"] },
+    ];
+    const withEffects = {
+      ...graph,
+      commands: graph.commands.map((candidate) =>
+        candidate.id === command.id ? { ...candidate, effects } : candidate,
+      ),
+    };
+    const withReversedEffects = {
+      ...withEffects,
+      commands: withEffects.commands.map((candidate) =>
+        candidate.id === command.id
+          ? { ...candidate, effects: [...candidate.effects].reverse() }
+          : candidate,
+      ),
+    };
+
+    expect(computeDesktopContractSemanticHash(withReversedEffects)).toBe(
+      computeDesktopContractSemanticHash(withEffects),
+    );
+  });
+
+  it("compares handshake metadata by handshake version, graph version, then semantic hash", () => {
+    const expected: DesktopContractHandshakeV1 = {
+      version: "croco.desktop-contract-handshake.v1",
+      graphVersion: "croco.desktop-contract-graph.v1",
+      semanticHash: "sha256:expected",
+    };
+
+    expect(compareDesktopContractHandshakes(expected, expected)).toEqual({ compatible: true });
+    expect(
+      compareDesktopContractHandshakes(expected, {
+        ...expected,
+        version: "croco.desktop-contract-handshake.v2",
+      }),
+    ).toMatchObject({ compatible: false, code: "DESKTOP_HANDSHAKE_VERSION_MISMATCH" });
+    expect(
+      compareDesktopContractHandshakes(expected, {
+        ...expected,
+        graphVersion: "croco.desktop-contract-graph.v2",
+      }),
+    ).toMatchObject({ compatible: false, code: "DESKTOP_GRAPH_VERSION_MISMATCH" });
+    expect(
+      compareDesktopContractHandshakes(expected, {
+        ...expected,
+        semanticHash: "sha256:actual",
+      }),
+    ).toMatchObject({ compatible: false, code: "DESKTOP_SEMANTIC_HASH_MISMATCH" });
   });
 
   it("compiles every desktop definition into explicit deterministic graph records", () => {
