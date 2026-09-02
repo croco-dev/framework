@@ -56,3 +56,9 @@ title: "CompiledRoute"
 ### pipelineGraphConfig?
 
 > `optional` **pipelineGraphConfig?**: [`CompiledRoutePipelineGraphConfig`](/api/transports-http/src/type-aliases/compiledroutepipelinegraphconfig/)
+
+---
+
+### successStatus?
+
+> `optional` **successStatus?**: `number`

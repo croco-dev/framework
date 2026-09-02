@@ -98,6 +98,7 @@ export type CompiledRoutePipelineGraphConfig = {
 export interface CompiledRoute {
   method: string;
   path: string;
+  successStatus?: number;
   handler: (ctx: CrocoHttpContext) => Promise<unknown>;
   controllerInstance?: unknown;
   methodName: string | symbol;
