@@ -7,7 +7,11 @@ import {
   type KnownRuntimePlatform,
   type RuntimeCapabilityManifest,
 } from "@croco/framework-context";
-import { createRawHonoWorkerFetchHandler, type RawHonoFetch } from "@croco/preset-cloudflare";
+import {
+  createRawHonoWorkerFetchHandler,
+  createWorkerFetchHandler,
+  type RawHonoFetch,
+} from "@croco/preset-cloudflare";
 import { buildContractGraph, type ContractGraphRoute } from "@croco/protocols-core";
 import {
   Body,
@@ -64,6 +68,7 @@ type RuntimeEvidence = {
 };
 
 const runtimeEvidence = new Map<KnownRuntimePlatform, RuntimeEvidence>();
+let observedWorkerAbortSignal: AbortSignal | undefined;
 
 @Controller("/runtime-differential")
 class ContractRuntimeDifferentialIntegrationController {
@@ -100,6 +105,12 @@ class ContractRuntimeDifferentialIntegrationController {
     evidence.shutdownReturned = true;
 
     return { accepted: true, greeting: `Hello, ${body.name}` };
+  }
+
+  @Get("/worker-context")
+  workerContext() {
+    observedWorkerAbortSignal = FrameworkContext.getRuntimeContext()?.abortSignal;
+    return { ok: true };
   }
 }
 
@@ -149,11 +160,13 @@ describe("ContractRuntimeDifferentialIntegration", () => {
   beforeEach(() => {
     Container.reset();
     runtimeEvidence.clear();
+    observedWorkerAbortSignal = undefined;
   });
 
   afterEach(async () => {
     await Promise.all(servers.splice(0).map(closeServer));
     runtimeEvidence.clear();
+    observedWorkerAbortSignal = undefined;
     Container.reset();
   });
 
@@ -280,6 +293,26 @@ describe("ContractRuntimeDifferentialIntegration", () => {
       "lambda",
       "node",
     ]);
+  });
+
+  it("passes the Worker request signal through a real CrocoApp runtime handler", async () => {
+    const app = createApp({
+      controllers: [ContractRuntimeDifferentialIntegrationController],
+      securityValidation: "off",
+      diValidation: "off",
+    });
+    const handler = createWorkerFetchHandler(app);
+    const request = new Request("https://worker.test/runtime-differential/worker-context");
+    const executionContext: Parameters<RawHonoFetch>[2] = {
+      waitUntil: () => {},
+      passThroughOnException: () => {},
+    };
+
+    const response = await handler(request, {}, executionContext);
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ ok: true });
+    expect(observedWorkerAbortSignal).toBe(request.signal);
   });
 
   it("omits nullish and empty query values while string-encoding array entries through TestKernel", async () => {

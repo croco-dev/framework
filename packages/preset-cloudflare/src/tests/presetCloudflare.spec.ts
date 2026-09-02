@@ -11,6 +11,17 @@ const createExecutionContext = (): ExecutionContext => ({
   passThroughOnException: vi.fn(),
 });
 
+type PreviousExecutionContext = {
+  readonly waitUntil: (promise: Promise<unknown>) => void;
+  readonly passThroughOnException: () => void;
+};
+
+type PreviousCloudflareFetchHandler = (
+  request: Request,
+  env: CloudflareFetchEnv,
+  ctx: PreviousExecutionContext,
+) => Response | Promise<Response>;
+
 describe("createCloudflarePreset", () => {
   it("returns a cloudflare preset", () => {
     const preset = createCloudflarePreset();
@@ -31,6 +42,24 @@ describe("createWorkerFetchHandler", () => {
     const handler = createWorkerFetchHandler({ fetch: async () => new Response("ok") });
 
     expect(typeof handler).toBe("function");
+  });
+
+  it("accepts execution contexts from the previous public contract", async () => {
+    const request = new Request("https://example.com/users");
+    const env: CloudflareFetchEnv = {};
+    const ctx: PreviousExecutionContext = {
+      waitUntil: vi.fn(),
+      passThroughOnException: vi.fn(),
+    };
+    const fetch = vi.fn(async () => new Response("ok"));
+    const handler: PreviousCloudflareFetchHandler = createWorkerFetchHandler({ fetch });
+
+    await expect(handler(request, env, ctx)).resolves.toBeInstanceOf(Response);
+    expect(fetch).toHaveBeenCalledWith(
+      request,
+      expect.objectContaining({ native: { executionContext: ctx } }),
+      { env, executionContext: expect.objectContaining({ props: undefined }) },
+    );
   });
 
   it("passes requests with runtime context to the app", async () => {
@@ -63,7 +92,23 @@ describe("createWorkerFetchHandler", () => {
           shutdown: false,
         }),
       }),
-      { env, executionContext: ctx },
+      { env, executionContext: expect.objectContaining({ props: undefined }) },
+    );
+  });
+
+  it("passes the request abort signal through runtime context", async () => {
+    const request = new Request("https://example.com/users");
+    const env: CloudflareFetchEnv = {};
+    const ctx = createExecutionContext();
+    const fetch = vi.fn(async () => new Response("ok"));
+    const handler = createWorkerFetchHandler({ fetch });
+
+    await handler(request, env, ctx);
+
+    expect(fetch).toHaveBeenCalledWith(
+      request,
+      expect.objectContaining({ abortSignal: request.signal }),
+      { env, executionContext: expect.objectContaining({ props: undefined }) },
     );
   });
 

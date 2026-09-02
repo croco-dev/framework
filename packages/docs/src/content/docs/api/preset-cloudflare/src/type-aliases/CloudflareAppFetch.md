@@ -5,7 +5,13 @@ prev: false
 title: "CloudflareAppFetch"
 ---
 
-> **CloudflareAppFetch** = (`request`, `runtimeContext?`, `options?`) => `Response` \| `Promise`\<`Response`\>
+> **CloudflareAppFetch**\<`TExecutionContext`\> = (`request`, `runtimeContext?`, `options?`) => `Response` \| `Promise`\<`Response`\>
+
+## Type Parameters
+
+### TExecutionContext
+
+`TExecutionContext` _extends_ `ExecutionContext` = `ExecutionContext`
 
 ## Parameters
 
@@ -25,7 +31,7 @@ title: "CloudflareAppFetch"
 
 #### executionContext?
 
-`ExecutionContext`
+`TExecutionContext`
 
 ## Returns
 
