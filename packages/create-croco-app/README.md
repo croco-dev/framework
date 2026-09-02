@@ -96,6 +96,11 @@ apply to meta-vite profiles in this release.
 Generated projects include the package manager command and next-step instructions in
 the CLI result.
 
+Every scaffold also includes a commented `.env.example` limited to the capabilities selected at
+generation time. Copy it to `.env` only when you are ready to configure local values, and extend it
+from the documentation for each integration you add. The generator never creates `.env` or writes
+provider credentials.
+
 Generated Drizzle dependencies use the exact semver range from the repository's
 `pnpm-workspace.yaml` catalog. Package-manifest normalization copies that range into
 the published generator metadata, so catalog upgrades require no template or provider-profile edit.

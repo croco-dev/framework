@@ -7,11 +7,12 @@ import {
   type TenantModelName,
 } from "@croco/tenant-core/tenant-model";
 import {
-  renderSafeEnvExampleValue,
   renderSecretPlaceholderPolicyTable,
   renderSecretsChecklistPlaceholderItems,
 } from "./secret-placeholder-policy.js";
+import { getEnvironmentVariable, renderSaasEnvironmentTemplate } from "./environment-template.js";
 import { getGeneratedAppDependencyRange } from "./package-version.js";
+import type { EnvironmentVariableName } from "./environment-template.js";
 
 export const SAAS_PROVIDER_PROFILE_CHOICES = [
   "saas-node-postgres",
@@ -49,7 +50,7 @@ export type SaasProviderCapabilityName =
 type CapabilityStatus = "configured" | "documented";
 
 export type SaasProviderEnvVar = {
-  name: string;
+  name: EnvironmentVariableName;
   description: string;
   requiredForRealProvider: boolean;
   secret: boolean;
@@ -160,15 +161,14 @@ const GENERATED_SAAS_TENANT_MODEL_PACKAGES = [
 ] as const;
 
 const commonEnv = [
-  envVar("SAAS_PROVIDER_PROFILE", "Selected generated provider profile name.", true, false),
-  envVar("SAAS_DEMO_ENDPOINTS_ENABLED", "Opt-in local HTTP demo endpoints.", false, false, "false"),
-  envVar("TELEMETRY_ENABLED", "Enable OpenTelemetry exporter wiring.", false, false, "true"),
-  envVar(
-    "OTEL_EXPORTER_OTLP_ENDPOINT",
-    "OTLP endpoint used by telemetry init and flush.",
-    false,
-    false,
-  ),
+  envVar("SAAS_PROVIDER_PROFILE", true),
+  envVar("SAAS_DEMO_ENDPOINTS_ENABLED", false, "false"),
+  envVar("NODE_ENV", false),
+  envVar("PORT", false),
+  envVar("WEB_ORIGIN", false),
+  envVar("TELEMETRY_ENABLED", false, "true"),
+  envVar("OTEL_EXPORTER_OTLP_ENDPOINT", false),
+  envVar("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", false),
 ] as const;
 
 export const SAAS_PROVIDER_PROFILES = {
@@ -195,21 +195,16 @@ export const SAAS_PROVIDER_PROFILES = {
     ],
     env: [
       ...commonEnv,
-      envVar("DATABASE_URL", "Postgres connection URL for Drizzle-backed providers.", true, true),
-      envVar("BETTER_AUTH_SECRET", "Better Auth signing secret.", true, true),
-      envVar("BETTER_AUTH_URL", "Public API origin used by Better Auth callbacks.", true, false),
-      envVar("POLAR_ACCESS_TOKEN", "Polar API access token.", true, true),
-      envVar("POLAR_WEBHOOK_SECRET", "Polar webhook signature secret.", true, true),
-      envVar("POLAR_PRODUCT_ID_TEAM", "Polar product id for the team plan.", true, false),
-      envVar("UPSTASH_QSTASH_TOKEN", "QStash token for task delivery.", true, true),
-      envVar(
-        "UPSTASH_QSTASH_CURRENT_SIGNING_KEY",
-        "Current QStash webhook signing key.",
-        true,
-        true,
-      ),
-      envVar("UPSTASH_QSTASH_NEXT_SIGNING_KEY", "Next QStash webhook signing key.", true, true),
-      envVar("CLOUDINARY_URL", "Cloudinary URL for generated object storage.", true, true),
+      envVar("DATABASE_URL", true),
+      envVar("BETTER_AUTH_SECRET", true),
+      envVar("BETTER_AUTH_URL", true),
+      envVar("POLAR_ACCESS_TOKEN", true),
+      envVar("POLAR_WEBHOOK_SECRET", true),
+      envVar("POLAR_PRODUCT_ID_TEAM", true),
+      envVar("UPSTASH_QSTASH_TOKEN", true),
+      envVar("UPSTASH_QSTASH_CURRENT_SIGNING_KEY", true),
+      envVar("UPSTASH_QSTASH_NEXT_SIGNING_KEY", true),
+      envVar("CLOUDINARY_URL", true),
     ],
     capabilities: capabilities({
       runtime: capability("runtime", "Node HTTP", "configured", "@croco/transports-http", ["PORT"]),
@@ -288,23 +283,18 @@ export const SAAS_PROVIDER_PROFILES = {
     ],
     env: [
       ...commonEnv,
-      envVar("CLOUDFLARE_ACCOUNT_ID", "Cloudflare account id for Workers and R2.", true, true),
-      envVar("CLOUDFLARE_API_TOKEN", "Cloudflare deploy token.", true, true),
-      envVar("R2_BUCKET", "R2 bucket name for object storage.", true, false),
-      envVar("CLERK_SECRET_KEY", "Clerk backend secret key.", true, true),
-      envVar("POLAR_ACCESS_TOKEN", "Polar API access token.", true, true),
-      envVar("POLAR_WEBHOOK_SECRET", "Polar webhook signature secret.", true, true),
-      envVar("POLAR_PRODUCT_ID_TEAM", "Polar product id for the team plan.", true, false),
-      envVar("UPSTASH_REDIS_REST_URL", "Upstash Redis REST URL for metering state.", true, true),
-      envVar("UPSTASH_REDIS_REST_TOKEN", "Upstash Redis REST token.", true, true),
-      envVar("UPSTASH_QSTASH_TOKEN", "QStash token for task delivery.", true, true),
-      envVar(
-        "UPSTASH_QSTASH_CURRENT_SIGNING_KEY",
-        "Current QStash webhook signing key.",
-        true,
-        true,
-      ),
-      envVar("UPSTASH_QSTASH_NEXT_SIGNING_KEY", "Next QStash webhook signing key.", true, true),
+      envVar("CLOUDFLARE_ACCOUNT_ID", true),
+      envVar("CLOUDFLARE_API_TOKEN", true),
+      envVar("R2_BUCKET", true),
+      envVar("CLERK_SECRET_KEY", true),
+      envVar("POLAR_ACCESS_TOKEN", true),
+      envVar("POLAR_WEBHOOK_SECRET", true),
+      envVar("POLAR_PRODUCT_ID_TEAM", true),
+      envVar("UPSTASH_REDIS_REST_URL", true),
+      envVar("UPSTASH_REDIS_REST_TOKEN", true),
+      envVar("UPSTASH_QSTASH_TOKEN", true),
+      envVar("UPSTASH_QSTASH_CURRENT_SIGNING_KEY", true),
+      envVar("UPSTASH_QSTASH_NEXT_SIGNING_KEY", true),
     ],
     capabilities: capabilities({
       runtime: capability(
@@ -383,22 +373,17 @@ export const SAAS_PROVIDER_PROFILES = {
     ],
     env: [
       ...commonEnv,
-      envVar("AWS_REGION", "AWS region for Lambda deployment.", true, false),
-      envVar("CLERK_SECRET_KEY", "Clerk backend secret key.", true, true),
-      envVar("POLAR_ACCESS_TOKEN", "Polar API access token.", true, true),
-      envVar("POLAR_WEBHOOK_SECRET", "Polar webhook signature secret.", true, true),
-      envVar("POLAR_PRODUCT_ID_TEAM", "Polar product id for the team plan.", true, false),
-      envVar("UPSTASH_REDIS_REST_URL", "Upstash Redis REST URL for metering state.", true, true),
-      envVar("UPSTASH_REDIS_REST_TOKEN", "Upstash Redis REST token.", true, true),
-      envVar("UPSTASH_QSTASH_TOKEN", "QStash token for task delivery.", true, true),
-      envVar(
-        "UPSTASH_QSTASH_CURRENT_SIGNING_KEY",
-        "Current QStash webhook signing key.",
-        true,
-        true,
-      ),
-      envVar("UPSTASH_QSTASH_NEXT_SIGNING_KEY", "Next QStash webhook signing key.", true, true),
-      envVar("CLOUDINARY_URL", "Cloudinary URL for generated object storage.", true, true),
+      envVar("AWS_REGION", true),
+      envVar("CLERK_SECRET_KEY", true),
+      envVar("POLAR_ACCESS_TOKEN", true),
+      envVar("POLAR_WEBHOOK_SECRET", true),
+      envVar("POLAR_PRODUCT_ID_TEAM", true),
+      envVar("UPSTASH_REDIS_REST_URL", true),
+      envVar("UPSTASH_REDIS_REST_TOKEN", true),
+      envVar("UPSTASH_QSTASH_TOKEN", true),
+      envVar("UPSTASH_QSTASH_CURRENT_SIGNING_KEY", true),
+      envVar("UPSTASH_QSTASH_NEXT_SIGNING_KEY", true),
+      envVar("CLOUDINARY_URL", true),
     ],
     capabilities: capabilities({
       runtime: capability("runtime", "AWS Lambda", "documented", "@croco/preset-lambda", [
@@ -580,17 +565,7 @@ export function assertSaasProviderTenantModelCompatibility(
 }
 
 export function renderSaasEnvExample(manifest: SaasProviderProfileManifest): string {
-  const lines = [
-    "# Generated by create-croco-app. Keep in sync with croco-saas-profile.manifest.json.",
-    ...[...manifest.env.required, ...manifest.env.optional].flatMap((entry) => [
-      "",
-      `# ${entry.description}`,
-      `${entry.name}=${renderSafeEnvExampleValue(entry, manifest.profile.name)}`,
-    ]),
-    "",
-  ];
-
-  return lines.join("\n");
+  return renderSaasEnvironmentTemplate(manifest);
 }
 
 export function renderSaasSecretsChecklist(manifest: SaasProviderProfileManifest): string {
@@ -688,14 +663,20 @@ export function formatSaasProviderProfileChoices(): string {
 }
 
 function envVar(
-  name: string,
-  description: string,
+  name: EnvironmentVariableName,
   requiredForRealProvider: boolean,
-  secret: boolean,
   example?: string,
 ): SaasProviderEnvVar {
-  const base = { name, description, requiredForRealProvider, secret };
-  return example === undefined ? base : { ...base, example };
+  const variable = getEnvironmentVariable(name, example);
+  const resolvedExample = variable.example;
+  const base = {
+    name,
+    description: variable.description,
+    requiredForRealProvider,
+    secret: variable.secret,
+  };
+
+  return resolvedExample === undefined ? base : { ...base, example: resolvedExample };
 }
 
 function capability(

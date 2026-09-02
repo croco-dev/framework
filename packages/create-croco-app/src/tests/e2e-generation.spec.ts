@@ -1699,6 +1699,27 @@ describe("E2E: generate()", () => {
               "secret": false,
             },
             {
+              "description": "Runtime environment used for production defaults and telemetry sampling.",
+              "example": "development",
+              "name": "NODE_ENV",
+              "requiredForRealProvider": false,
+              "secret": false,
+            },
+            {
+              "description": "Port used by the generated Node API server.",
+              "example": "3000",
+              "name": "PORT",
+              "requiredForRealProvider": false,
+              "secret": false,
+            },
+            {
+              "description": "Browser origin allowed by the generated API CORS policy.",
+              "example": "http://localhost:5173",
+              "name": "WEB_ORIGIN",
+              "requiredForRealProvider": false,
+              "secret": false,
+            },
+            {
               "description": "Enable OpenTelemetry exporter wiring.",
               "example": "true",
               "name": "TELEMETRY_ENABLED",
@@ -1707,7 +1728,15 @@ describe("E2E: generate()", () => {
             },
             {
               "description": "OTLP endpoint used by telemetry init and flush.",
+              "example": "http://localhost:4318",
               "name": "OTEL_EXPORTER_OTLP_ENDPOINT",
+              "requiredForRealProvider": false,
+              "secret": false,
+            },
+            {
+              "description": "Optional trace-specific OTLP endpoint that overrides the shared OTLP endpoint.",
+              "example": "http://localhost:4318/v1/traces",
+              "name": "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT",
               "requiredForRealProvider": false,
               "secret": false,
             },
@@ -2357,9 +2386,10 @@ describe("E2E: generate()", () => {
       "telemetry",
       "webhookVerification",
     ]);
-    expect(envExample).toContain("SAAS_PROVIDER_PROFILE=saas-cloudflare");
-    expect(envExample).toContain("CLOUDFLARE_ACCOUNT_ID=<croco-secret:CLOUDFLARE_ACCOUNT_ID>");
-    expect(envExample).toContain("R2_BUCKET=<croco-config:R2_BUCKET>");
+    expect(envExample).toContain("# SAAS_PROVIDER_PROFILE=saas-cloudflare");
+    expect(envExample).toContain("# CLOUDFLARE_ACCOUNT_ID=<croco-secret:CLOUDFLARE_ACCOUNT_ID>");
+    expect(envExample).toContain("# R2_BUCKET=<croco-config:R2_BUCKET>");
+    expect(existsSync(join(testDir, ".env"))).toBe(false);
     expect(providerProfileDocs).toContain("Capability Matrix");
     expect(providerProfileDocs).toContain("Manifest Contract");
     expect(providerProfileDocs).toContain("Schema version: `croco.saas-provider-profile/v1`");

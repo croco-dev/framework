@@ -9,8 +9,9 @@ import {
   createRuntimeCapabilityManifest,
   stringifyRuntimeCapabilityManifest,
 } from "@croco/framework-context";
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { renderEnvironmentTemplate } from "./environment-template.js";
 import { recordStagingCleanupFailure } from "./generation-failure-evidence.js";
 import { createGenerationResult } from "./generation-result.js";
 import type { GeneratorOptions } from "./types.js";
@@ -512,19 +513,46 @@ async function finalize(
   writeGoalManifest(targetDir, options);
   writeRuntimeCapabilityManifest(targetDir, options);
 
-  // Step 10: .env.example → .env 복사
-  const envExample = join(targetDir, ".env.example");
-  const envFile = join(targetDir, ".env");
-  if (existsSync(envExample) && !existsSync(envFile)) {
-    copyFileSync(envExample, envFile);
+  if (!saasPreset) {
+    const scaffold =
+      options.preset === "blank"
+        ? "blank"
+        : options.preset === "production-app"
+          ? "production-app"
+          : options.preset === "admin-console"
+            ? "admin-console"
+            : "ddd";
+    const hasWebApps = options.webApps.length > 0;
+    const frontendDeployOwnsWebApp =
+      options.frontendDeploy === "cloudflare-meta-vite" || options.frontendDeploy === "vite-spa";
+    const nextjsApiClient =
+      options.preset === "ddd-fullstack" &&
+      hasWebApps &&
+      (options.apiHosting === "nextjs" || !frontendDeployOwnsWebApp);
+
+    writeFileSync(
+      join(targetDir, ".env.example"),
+      renderEnvironmentTemplate({
+        scaffold,
+        graphqlAuth:
+          options.preset !== "ddd-vike-fullstack" &&
+          options.api === "graphql" &&
+          options.apiHosting === "standalone",
+        nextjsApiClient,
+        viteApiClient: options.frontendDeploy === "vite-spa" && hasWebApps,
+        workerRuntime:
+          options.preset === "ddd-vike-fullstack" &&
+          options.frontendDeploy === "cloudflare-meta-vite",
+      }),
+    );
   }
 
-  // Step 11: git init
+  // Step 10: git init
   if (options.initGit) {
     execSync("git init", { cwd: targetDir, stdio: "ignore" });
   }
 
-  // Step 12: pnpm install
+  // Step 11: pnpm install
   if (options.installDeps) {
     await installPnpmDependencies(targetDir, executionOptions);
   }

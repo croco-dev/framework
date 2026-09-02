@@ -2171,6 +2171,7 @@ if (isMainModule()) {
         );
         assertGeneratedReadme(projectDir, smokeCase);
         assertGeneratedNodeRuntimeContract(projectDir, smokeCase);
+        assertGeneratedEnvironmentTemplate(projectDir, smokeCase);
         assertNoGeneratedSecurityValidationOptOut(projectDir, smokeCase);
         assertNoGeneratedCredentialLookingValues(projectDir, smokeCase);
         writePnpmWorkspaceOverrides(projectDir, generatedSmokeRangeOverrides);
@@ -3067,6 +3068,31 @@ function assertNoGeneratedSecurityValidationOptOut(projectDir: string, smokeCase
 
   console.log(
     `create-croco-app-generated-smoke: ${smokeCase.name} keeps HTTP security validation enabled`,
+  );
+}
+
+function assertGeneratedEnvironmentTemplate(projectDir: string, smokeCase: SmokeCase): void {
+  const envExamplePath = join(projectDir, ".env.example");
+  const envPath = join(projectDir, ".env");
+
+  assertExists(envExamplePath, `${smokeCase.name} did not generate .env.example`);
+
+  if (existsSync(envPath)) {
+    throw new Error(`${smokeCase.name} generated .env; only .env.example is allowed`);
+  }
+
+  const activeAssignments = readFileSync(envExamplePath, "utf8")
+    .split(/\r?\n/)
+    .filter((line) => /^[A-Z][A-Z0-9_]*=/.test(line));
+
+  if (activeAssignments.length > 0) {
+    throw new Error(
+      `${smokeCase.name} generated active .env.example assignments: ${activeAssignments.join(", ")}`,
+    );
+  }
+
+  console.log(
+    `create-croco-app-generated-smoke: ${smokeCase.name} generated a commented .env.example only`,
   );
 }
 

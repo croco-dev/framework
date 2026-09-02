@@ -64,6 +64,7 @@ describe("generated-secret-placeholder-policy.mts", () => {
           "CLOUDFLARE_API_TOKEN=unsafeSecretValue123",
           "CLOUDINARY_URL=cloudinary://unsafeSecretValue123",
           "DATABASE_URL=postgres://unsafeSecretValue123",
+          "# GRAPHQL_AUTH_TOKEN=unsafeSecretValue123",
           "POLAR_ACCESS_TOKEN=unsafeSecretValue123",
           "POLAR_WEBHOOK_SECRET=unsafeSecretValue123",
           "UPSTASH_QSTASH_CURRENT_SIGNING_KEY=unsafeSecretValue123",
@@ -78,7 +79,7 @@ describe("generated-secret-placeholder-policy.mts", () => {
     const result = runScript(root);
 
     expect(result.status).toBe(1);
-    expect(result.stdout.match(/contains secret-env-assignment/g)).toHaveLength(13);
+    expect(result.stdout.match(/contains secret-env-assignment/g)).toHaveLength(14);
     expect(result.stdout).toContain(
       "templates/.env.example:3 contains secret-env-assignment shaped value CLOUDFLARE_ACCOUNT_ID=0123456789abcdef0123456789abcdef",
     );
