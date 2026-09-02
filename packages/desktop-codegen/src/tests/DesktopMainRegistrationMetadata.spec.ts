@@ -2,7 +2,9 @@ import {
   compareDesktopContractHandshakes,
   compileDesktopContractGraph,
   desktop,
+  stringifyDesktopContractGraph,
 } from "@croco/protocols-desktop";
+import type { DesktopContractGraphV1 } from "@croco/protocols-desktop";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 
@@ -71,6 +73,19 @@ describe("DesktopMainRegistrationMetadata", () => {
       }),
       expect.objectContaining({ kind: "renderer-client", windowId: "settings" }),
     ]);
+  });
+
+  it("preserves main registration bytes after a canonical graph round trip", () => {
+    const graph = createGraph(false);
+    const roundTripped = JSON.parse(stringifyDesktopContractGraph(graph)) as DesktopContractGraphV1;
+
+    expect(
+      stringifyDesktopMainRegistrationMetadata(
+        generateDesktopMainRegistrationMetadata(roundTripped),
+      ),
+    ).toBe(
+      stringifyDesktopMainRegistrationMetadata(generateDesktopMainRegistrationMetadata(graph)),
+    );
   });
 
   it("embeds one versioned semantic identity in main, preload, and renderer artifacts", () => {
