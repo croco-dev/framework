@@ -16,6 +16,7 @@ This cookbook documents 727 public Croco Problem codes. The deterministic JSON r
 | [`ACCESS_DENIED`](#access-denied)                                                                                                     | Forbidden             |    403 | not-retryable | safe-message  | active    |       1 |
 | [`access-core/forbidden`](#access-core-forbidden)                                                                                     | Forbidden             |    403 | not-retryable | safe-message  | active    |       1 |
 | [`access-core/invalid-provider-result`](#access-core-invalid-provider-result)                                                         | InternalServerError   |    500 | not-retryable | operator-only | active    |       1 |
+| [`access-core/invalid-relation-tuple`](#access-core-invalid-relation-tuple)                                                           | BadRequest            |    400 | not-retryable | public        | active    |       1 |
 | [`ADMIN_LIFECYCLE_DEMO_INVARIANT`](#admin-lifecycle-demo-invariant)                                                                   | InternalServerError   |    500 | conditional   | operator-only | active    |       1 |
 | [`admin-console/user-not-found`](#admin-console-user-not-found)                                                                       | NotFound              |    404 | not-retryable | public        | active    |       1 |
 | [`admin-core/credit-operations-permission-denied`](#admin-core-credit-operations-permission-denied)                                   | Forbidden             |    403 | not-retryable | safe-message  | active    |       1 |
@@ -795,7 +796,25 @@ Sources:
 
 Sources:
 
-- `packages/access-core/src/libs/AccessEngine.ts:107:10` (problem-factory)
+- `packages/access-core/src/libs/AccessEngine.ts:109:10` (problem-factory)
+
+<a id="access-core-invalid-relation-tuple"></a>
+
+## `access-core/invalid-relation-tuple`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/access-core/src/libs/AccessEngine.ts:142:10` (problem-factory)
 
 <a id="admin-lifecycle-demo-invariant"></a>
 

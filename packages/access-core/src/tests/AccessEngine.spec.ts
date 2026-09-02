@@ -264,6 +264,33 @@ describe("AccessEngine", () => {
 
       expect(mockProvider.grant).toHaveBeenCalledWith(request);
     });
+
+    it.each([
+      {
+        field: "tuple.object",
+        tuple: { object: "documents", relation: "viewer", subject: "user:user-1" },
+      },
+      {
+        field: "tuple.relation",
+        tuple: { object: "document:document-1", relation: "", subject: "user:user-1" },
+      },
+      {
+        field: "tuple.subject",
+        tuple: { object: "document:document-1", relation: "viewer", subject: "account:user-1" },
+      },
+    ])("should reject an invalid $field before calling the provider", async ({ field, tuple }) => {
+      const request = {
+        tenantId: "tenant-1",
+        tuple,
+      } as unknown as GrantRequest;
+
+      await expect(accessEngine.grant(request)).rejects.toMatchObject({
+        category: ProblemCategory.BadRequest,
+        code: "access-core/invalid-relation-tuple",
+        extensions: { field },
+      });
+      expect(mockProvider.grant).not.toHaveBeenCalled();
+    });
   });
 
   describe("revoke", () => {

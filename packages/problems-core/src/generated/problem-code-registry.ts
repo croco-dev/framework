@@ -92,7 +92,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/access-core/src/libs/AccessEngine.ts",
-          line: 107,
+          line: 109,
+          column: 10,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "access-core/invalid-relation-tuple",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#access-core-invalid-relation-tuple",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/access-core/src/libs/AccessEngine.ts",
+          line: 142,
           column: 10,
           kind: "problem-factory",
         },
