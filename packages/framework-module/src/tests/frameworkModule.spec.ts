@@ -102,6 +102,33 @@ describe("CrocoModule", () => {
     await CrocoModule.initialize();
   });
 
+  it("removes default-runtime providers when reset before reinitialization", async () => {
+    const staleToken = new Token<string>("stale-service");
+    const currentToken = new Token<string>("current-service");
+
+    CrocoModule.use({
+      name: "first",
+      providers: [{ provide: staleToken, useValue: "stale" }],
+    });
+    await CrocoModule.initialize();
+
+    expect(Container.get(staleToken)).toBe("stale");
+
+    CrocoModule.reset();
+
+    expect(Container.has(staleToken)).toBe(false);
+    expect(() => Container.get(staleToken)).toThrow();
+
+    CrocoModule.use({
+      name: "second",
+      providers: [{ provide: currentToken, useValue: "current" }],
+    });
+    await CrocoModule.initialize();
+
+    expect(Container.has(staleToken)).toBe(false);
+    expect(Container.get(currentToken)).toBe("current");
+  });
+
   it("runs setup before start", async () => {
     const calls: string[] = [];
 
