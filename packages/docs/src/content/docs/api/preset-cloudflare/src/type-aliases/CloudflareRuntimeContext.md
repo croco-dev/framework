@@ -9,6 +9,12 @@ title: "CloudflareRuntimeContext"
 
 ## Properties
 
+### abortSignal
+
+> `readonly` **abortSignal**: `AbortSignal`
+
+---
+
 ### capabilities
 
 > `readonly` **capabilities**: `object`
