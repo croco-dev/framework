@@ -497,7 +497,7 @@ export class LifecycleRuleEvaluator {
       signalId: context.signal.id,
       severity: registration.rule.severity,
       status,
-      skipReason: status === "skipped" ? "no_actions" : undefined,
+      skipReason: status === "skipped" ? "all_actions_skipped" : undefined,
       actionResults,
       error: firstFailure?.error,
       startedAt,

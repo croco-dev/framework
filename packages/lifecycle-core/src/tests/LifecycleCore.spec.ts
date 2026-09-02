@@ -400,6 +400,60 @@ function createEvaluator(input?: {
 }
 
 describe("lifecycle-core", () => {
+  it("distinguishes runs with no actions from runs where every action is skipped", async () => {
+    const sink = new InMemoryLifecycleActionSink({
+      skipActionIds: ["skip-first-action", "skip-second-action"],
+    });
+    const { evaluator, registry } = createEvaluator({ sink });
+    registry.register({
+      id: "no-actions",
+      description: "Skip when the rule produces no actions",
+      severity: "low",
+      triggers: [{ type: "scheduled.reevaluation" }],
+      actions: () => [],
+    });
+    registry.register({
+      id: "all-actions-skipped",
+      description: "Preserve action-level skip evidence",
+      severity: "low",
+      triggers: [{ type: "scheduled.reevaluation" }],
+      actions: [
+        { id: "skip-first-action", type: "cs.follow_up" },
+        { id: "skip-second-action", type: "cs.follow_up" },
+      ],
+    });
+
+    const result = await evaluator.evaluate(
+      createLifecycleContext({
+        now: new Date("2026-01-01T00:00:00.000Z"),
+        signal: createScheduledLifecycleSignal({
+          signalId: "scheduled-skip-reasons",
+          tenantId: "tenant-1",
+          reason: "verify-skip-reasons",
+          occurredAt: new Date("2026-01-01T00:00:00.000Z"),
+        }),
+      }),
+    );
+
+    expect(result.runs).toMatchObject([
+      {
+        ruleId: "no-actions",
+        status: "skipped",
+        skipReason: "no_actions",
+        actionResults: [],
+      },
+      {
+        ruleId: "all-actions-skipped",
+        status: "skipped",
+        skipReason: "all_actions_skipped",
+        actionResults: [
+          { actionId: "skip-first-action", status: "skipped" },
+          { actionId: "skip-second-action", status: "skipped" },
+        ],
+      },
+    ]);
+  });
+
   it("runs a health-driven retention action exactly once for the same signal", async () => {
     const now = new Date("2026-01-01T00:00:00.000Z");
     const { evaluator, registry, sink } = createEvaluator();
