@@ -54,6 +54,10 @@ export function Header(name: string, schema?: z.ZodType): ParameterDecorator {
   return createParamDecorator(ParamType.HEADER, name, schema);
 }
 
+export function Raw(): ParameterDecorator {
+  return createParamDecorator(ParamType.RAW, undefined, undefined);
+}
+
 export function ResponseSchema(schema: z.ZodType): MethodDecorator {
   return (target, propertyKey) => {
     Reflect.defineMetadata(RESPONSE_SCHEMA_KEY, schema, target.constructor, propertyKey);

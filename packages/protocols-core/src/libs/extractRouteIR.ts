@@ -231,8 +231,7 @@ function compareProblemResponses(left: ProblemResponseIR, right: ProblemResponse
 }
 
 function extractParams(paramsMeta: ParamMetadata[]): ParamIR[] {
-  return paramsMeta
-    .filter((paramMeta) => paramMeta.type !== ParamType.RAW)
+  return [...paramsMeta]
     .sort((left, right) => left.index - right.index)
     .map((paramMeta) => ({
       index: paramMeta.index,

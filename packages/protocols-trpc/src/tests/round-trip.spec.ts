@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import type { AddressInfo } from "node:net";
-import { Body, Controller, Get, Param, Post } from "@croco/protocols-rest";
+import { Body, Controller, Get, Param, Post, Raw } from "@croco/protocols-rest";
 import { createTRPCClient, httpBatchLink, type TRPCClientError } from "@trpc/client";
 import type { AnyRouter } from "@trpc/server";
 import { createHTTPServer } from "@trpc/server/adapters/standalone";
@@ -20,10 +20,22 @@ type UserRouterClient = {
       query: (input: { readonly path: { readonly id: string } }) => Promise<User | undefined>;
     };
     readonly create: { mutate: (input: { readonly name: string }) => Promise<User> };
+    readonly inspectRaw: {
+      mutate: (input: { readonly name: string }) => Promise<{
+        readonly input: { readonly name: string };
+        readonly raw: TrpcContext;
+      }>;
+    };
   };
 };
 
+type TrpcContext = {
+  readonly requestId: string;
+  readonly source: "trpc";
+};
+
 const createUserSchema = z.object({ name: z.string().min(1) });
+const trpcContext: TrpcContext = { requestId: "raw-request", source: "trpc" };
 
 @Controller("/users")
 class UserController {
@@ -50,6 +62,14 @@ class UserController {
 
     return newUser;
   }
+
+  @Post("/raw")
+  inspectRaw(
+    @Raw() raw: TrpcContext,
+    @Body(createUserSchema) input: z.infer<typeof createUserSchema>,
+  ): { readonly input: z.infer<typeof createUserSchema>; readonly raw: TrpcContext } {
+    return { input, raw };
+  }
 }
 
 describe("tRPC round trip", () => {
@@ -59,7 +79,7 @@ describe("tRPC round trip", () => {
   beforeAll(async () => {
     const router = createTrpcRouter([UserController]);
 
-    server = createHTTPServer({ router });
+    server = createHTTPServer({ router, createContext: () => trpcContext });
     await new Promise<void>((resolve) => server.listen(0, resolve));
 
     client = createTRPCClient<typeof router>({
@@ -91,6 +111,13 @@ describe("tRPC round trip", () => {
     await expect(client.user.create.mutate({ name: "Carol" })).resolves.toEqual({
       id: "3",
       name: "Carol",
+    });
+  });
+
+  it("should resolve raw parameters to the tRPC procedure context without shifting body arguments", async () => {
+    await expect(client.user.inspectRaw.mutate({ name: "Raw" })).resolves.toEqual({
+      input: { name: "Raw" },
+      raw: trpcContext,
     });
   });
 
