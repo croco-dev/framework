@@ -635,9 +635,7 @@ function resetModulesInState(state: ModuleRegistryState): void {
   state.isInitializing = false;
   state.initializedModules = [];
   state.activeContext = null;
-  if (state.containerId) {
-    state.container.reset({ strategy: "resetServices" });
-  }
+  state.container.reset({ strategy: "resetServices" });
 }
 
 export function isModuleInitialized(): boolean {
