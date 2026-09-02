@@ -1,5 +1,6 @@
 ---
 "@croco/openapi-spec": patch
+"@croco/problems-core": patch
 "@croco/protocol-codegen": minor
 "@croco/rpc-codegen": patch
 ---

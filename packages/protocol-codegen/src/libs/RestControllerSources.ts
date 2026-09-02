@@ -1,17 +1,12 @@
 import "reflect-metadata";
 import * as path from "node:path";
 import type { Problem } from "@croco/problems-core";
-import {
-  type Constructor,
-  discoverControllerConstructors,
-  type RouteContractSourceLocation,
-} from "@croco/protocols-core";
-import { type Decorator, type Diagnostic, Node, type SourceFile, ts } from "ts-morph";
-import {
-  createControllerProject,
-  type ControllerModule,
-  getCommonSourceDirectory,
-} from "./ControllerProject";
+import { discoverControllerConstructors } from "@croco/protocols-core";
+import type { Constructor, RouteContractSourceLocation } from "@croco/protocols-core";
+import { Node, ts } from "ts-morph";
+import type { Decorator, Diagnostic, SourceFile } from "ts-morph";
+import { createControllerProject, getCommonSourceDirectory } from "./ControllerProject";
+import type { ControllerModule } from "./ControllerProject";
 
 export const CONTROLLER_TYPESCRIPT_DIAGNOSTIC_CODE = "CROCO_BUILD_003";
 const REST_ROUTES_KEY = Symbol.for("croco:rest:routes");
@@ -183,8 +178,6 @@ function applyControllerSourceLocations(
   controller: Constructor,
   sourceLocations: ControllerSourceLocations | undefined,
 ): void {
-  if (!sourceLocations) return;
-
   const routes = Reflect.getMetadata(REST_ROUTES_KEY, controller) as
     | RestRouteMetadata[]
     | undefined;
@@ -192,8 +185,11 @@ function applyControllerSourceLocations(
     Reflect.defineMetadata(
       REST_ROUTES_KEY,
       routes.map((route) => {
-        const sourceLocation = sourceLocations.get(String(route.methodName))?.route;
-        return sourceLocation ? { ...route, sourceLocation } : route;
+        const sourceLocation = sourceLocations?.get(String(route.methodName))?.route;
+        if (sourceLocation) return { ...route, sourceLocation };
+        return isTemporaryCodegenSourceLocation(route.sourceLocation)
+          ? { ...route, sourceLocation: undefined }
+          : route;
       }),
       controller,
     );
@@ -206,12 +202,15 @@ function applyControllerSourceLocations(
 
   const mappedParams = new Map<string | symbol, RestParamMetadata[]>();
   for (const [methodName, params] of paramsMap) {
-    const methodSourceLocations = sourceLocations.get(String(methodName));
+    const methodSourceLocations = sourceLocations?.get(String(methodName));
     mappedParams.set(
       methodName,
       params.map((param) => {
         const sourceLocation = methodSourceLocations?.params.get(param.index);
-        return sourceLocation ? { ...param, sourceLocation } : param;
+        if (sourceLocation) return { ...param, sourceLocation };
+        return isTemporaryCodegenSourceLocation(param.sourceLocation)
+          ? { ...param, sourceLocation: undefined }
+          : param;
       }),
     );
   }
@@ -231,9 +230,18 @@ function getDecoratorName(decorator: Decorator): string {
   const nameExpression = Node.isCallExpression(expression)
     ? expression.getExpression()
     : expression;
+  const aliasedName = nameExpression.getSymbol()?.getAliasedSymbol()?.getName();
+  if (aliasedName) return aliasedName;
+
   const text = nameExpression.getText();
   const parts = text.split(".");
   return parts[parts.length - 1] ?? text;
+}
+
+function isTemporaryCodegenSourceLocation(
+  sourceLocation: RouteContractSourceLocation | undefined,
+): boolean {
+  return sourceLocation?.path.replace(/\\/g, "/").includes("/.croco-protocol-codegen-") ?? false;
 }
 
 function toSourceLocation(decorator: Decorator, sourceRoot: string): RouteContractSourceLocation {

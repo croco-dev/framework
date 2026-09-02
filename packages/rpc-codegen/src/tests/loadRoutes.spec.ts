@@ -5,8 +5,8 @@ import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadContractGraph, loadRoutes } from "../libs/loadRoutes";
 
-let tempRoot!: string;
-let sourceDir!: string;
+let tempRoot: string;
+let sourceDir: string;
 
 const LOAD_ROUTES_TIMEOUT_MS = 120_000;
 const SHARED_FIXTURE_ROOT = new URL(
