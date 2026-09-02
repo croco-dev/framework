@@ -11,7 +11,10 @@
     "dist"
   ],
   "type": "commonjs",
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/index.js",
+    "./dist/index.mjs"
+  ],
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "publishConfig": {
