@@ -183,7 +183,9 @@ reopen hook) to verify durability and concurrent-claim behavior.
 Each attempt includes `webhook-id`, `webhook-delivery-id`, `webhook-timestamp`,
 `webhook-signature-version`, and `webhook-signature`. HMAC-SHA256 signs
 `<timestamp>.<exact payload bytes>`. Previous secret versions verify only during their configured
-grace period; secret material is never included in Problems or diagnostics.
+grace period. `verifyOutboundWebhookSignature()` accepts only canonical Unix-second timestamps no
+more than five minutes older or newer than `now`, bounding replay and clock-skew tolerance. Secret
+material is never included in Problems or diagnostics.
 
 ### Delivery policies
 

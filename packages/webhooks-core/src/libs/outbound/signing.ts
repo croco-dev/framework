@@ -13,6 +13,7 @@ import type {
 } from "./types";
 
 const BLOCKED_HOSTNAMES = new Set(["localhost", "metadata.google.internal"]);
+const OUTBOUND_WEBHOOK_SIGNATURE_TOLERANCE_MS = 300_000;
 
 export function createOutboundWebhookUrlPolicy(options: {
   readonly resolveHostname: (hostname: string) => Promise<readonly string[]>;
@@ -147,9 +148,28 @@ export function verifyOutboundWebhookSignature(input: {
     );
   }
 
+  const timestampMs = parseUnixTimestampMilliseconds(input.timestamp);
+  const nowMs = input.now.getTime();
+  if (
+    timestampMs === undefined ||
+    !Number.isFinite(nowMs) ||
+    Math.abs(nowMs - timestampMs) > OUTBOUND_WEBHOOK_SIGNATURE_TOLERANCE_MS
+  ) {
+    return false;
+  }
+
   const expected = Buffer.from(signOutboundWebhook(input.body, input.timestamp, secret));
   const actual = Buffer.from(input.signature);
   return expected.length === actual.length && timingSafeEqual(expected, actual);
+}
+
+function parseUnixTimestampMilliseconds(timestamp: string): number | undefined {
+  if (!/^(?:0|[1-9]\d*)$/.test(timestamp)) {
+    return undefined;
+  }
+
+  const timestampMs = Number(timestamp) * 1_000;
+  return Number.isSafeInteger(timestampMs) ? timestampMs : undefined;
 }
 
 function normalizeHostname(hostname: string): string {
