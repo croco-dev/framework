@@ -7,6 +7,7 @@ import type { Guard, RouteExecutionContext } from "../interfaces/Guard";
 import { UnauthorizedProblem } from "../problems/AuthProblems";
 import { authenticateWithProvider } from "./authenticateWithProvider";
 import { getHeaderValue } from "./headerUtils";
+import { isApiKeyRequiredRoute } from "./isApiKeyRequiredRoute";
 import { requireRouteMetadataTarget } from "./requireRouteMetadataTarget";
 
 function isPublicRoute(controllerTarget: object, handler: string | symbol): boolean {
@@ -33,8 +34,9 @@ export class UnifiedAuthGuard implements Guard<RouteExecutionContext> {
     const handler = context.getHandler();
 
     const isPublic = isPublicRoute(target, handler);
+    const isApiKeyRequired = isApiKeyRequiredRoute(target, handler);
 
-    if (isPublic) {
+    if (isPublic && !isApiKeyRequired) {
       return true;
     }
 
@@ -49,6 +51,10 @@ export class UnifiedAuthGuard implements Guard<RouteExecutionContext> {
         return true;
       }
       throw new UnauthorizedProblem("Invalid API key");
+    }
+
+    if (isApiKeyRequired) {
+      throw new UnauthorizedProblem("Missing API key");
     }
 
     const user = await authenticateWithProvider(this.authProvider, request);
