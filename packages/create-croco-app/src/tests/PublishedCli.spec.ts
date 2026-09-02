@@ -21,7 +21,13 @@ const packageDir = resolve(__dirname, "../..");
 const rootDir = resolve(packageDir, "../..");
 const spawnTimeoutMs = 180_000;
 // These tarballs cover the packed CLI's local Croco runtime dependency graph, including transitive deps.
-const packedRuntimeWorkspacePackages = ["problems-core", "diagnostics-core", "telemetry-sdk-node"];
+const packedRuntimeWorkspacePackages = [
+  "problems-core",
+  "diagnostics-core",
+  "framework-context",
+  "framework-module",
+  "telemetry-sdk-node",
+];
 const requiredPackageArtifacts = [
   ...packedRuntimeWorkspacePackages.flatMap((packageName) => requiredLibraryArtifacts(packageName)),
   join(packageDir, "dist", "bin.js"),
@@ -55,6 +61,8 @@ describe("published create-croco-app CLI", () => {
 
         const problemsCoreTarball = findTarball(packRoot, "croco-problems-core-");
         const diagnosticsCoreTarball = findTarball(packRoot, "croco-diagnostics-core-");
+        const frameworkContextTarball = findTarball(packRoot, "croco-framework-context-");
+        const frameworkModuleTarball = findTarball(packRoot, "croco-framework-module-");
         const telemetrySdkNodeTarball = findTarball(packRoot, "croco-telemetry-sdk-node-");
         const createCrocoAppTarball = findTarball(packRoot, "create-croco-app-");
 
@@ -73,6 +81,8 @@ describe("published create-croco-app CLI", () => {
         writePnpmWorkspaceOverrides(consumerRoot, {
           "@croco/problems-core": `file:${problemsCoreTarball}`,
           "@croco/diagnostics-core": `file:${diagnosticsCoreTarball}`,
+          "@croco/framework-context": `file:${frameworkContextTarball}`,
+          "@croco/framework-module": `file:${frameworkModuleTarball}`,
           "@croco/telemetry-sdk-node": `file:${telemetrySdkNodeTarball}`,
         });
 

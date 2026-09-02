@@ -7,6 +7,20 @@ export type {
   ApplicationRuntimeGraphManifest,
   ApplicationRuntimeOptions,
 } from "./ApplicationRuntime";
+export { defineCrocoApplication, defineCrocoPlugin } from "./Plugin";
+export type {
+  ApplicationProviderReplacement,
+  CrocoApplicationDefinition,
+  CrocoApplicationImport,
+  CrocoPlugin,
+  CrocoPluginCapability,
+  CrocoPluginConfigurationRequirement,
+  CrocoPluginMaturity,
+  CrocoPluginMetadata,
+  CrocoPluginVerificationReference,
+  DefineCrocoApplicationOptions,
+  PluginFactory,
+} from "./Plugin";
 
 export class CrocoModule {
   static use(module: ModuleOptions): void {
@@ -37,10 +51,17 @@ export function defineCrocoModule(module: ModuleOptions): ModuleOptions {
     providers: module.providers ? Object.freeze([...module.providers]) : undefined,
     exports: module.exports ? Object.freeze([...module.exports]) : undefined,
     controllers: module.controllers ? Object.freeze([...module.controllers]) : undefined,
+    contributions: module.contributions
+      ? Object.freeze(
+          module.contributions.map((contribution) => Object.freeze({ ...contribution })),
+        )
+      : undefined,
   });
 }
 
 export { detectCircularDependency } from "./CircularDependencyDetector";
+export { MODULE_CONTRIBUTION_KINDS } from "./ContributionKinds";
+export type { ModuleContributionKind } from "./ContributionKinds";
 export {
   createModuleGraphManifest,
   createModuleRuntime,
@@ -53,6 +74,7 @@ export {
   InvalidModuleDefinitionProblem,
   InvalidModuleLifecycleDeadlineProblem,
   ModuleCircularDependencyProblem,
+  ModuleContributionIdentityProblem,
   ModuleDuplicateNameProblem,
   ModuleLifecycleCancelledProblem,
   ModuleLifecycleDeadlineExceededProblem,
@@ -71,6 +93,7 @@ export type {
   ModuleCleanupFailure,
   ModuleDiagnosticsSnapshot,
   ModuleGraphDiagnostic,
+  ModuleGraphContribution,
   ModuleGraphDiagnosticCode,
   ModuleGraphManifest,
   ModuleGraphManifestStatus,
@@ -83,9 +106,11 @@ export type {
   ModuleLifecycleExecutionOptions,
   ModuleLifecyclePhase,
   ModuleOptions,
+  ModuleContribution,
   ModuleProvider,
   ModuleProviderDefinition,
   ModuleProviderFactory,
+  ResolvedModuleContribution,
   ModuleRuntimePhase,
 } from "./types";
 export type { ModuleToken } from "./types/ModuleToken";

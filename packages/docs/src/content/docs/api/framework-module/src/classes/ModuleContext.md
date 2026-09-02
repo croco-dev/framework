@@ -49,6 +49,32 @@ title: "ModuleContext"
 
 ---
 
+### getContributions()
+
+> **getContributions**\<`T`, `TKind`\>(`kind`): readonly [`ResolvedModuleContribution`](/api/framework-module/src/type-aliases/resolvedmodulecontribution/)\<`T`, `TKind`\>[]
+
+#### Type Parameters
+
+##### T
+
+`T`
+
+##### TKind
+
+`TKind` _extends_ `string` = `string`
+
+#### Parameters
+
+##### kind
+
+`TKind`
+
+#### Returns
+
+readonly [`ResolvedModuleContribution`](/api/framework-module/src/type-aliases/resolvedmodulecontribution/)\<`T`, `TKind`\>[]
+
+---
+
 ### set()
 
 > **set**\<`T`\>(`token`, `value`): `void`

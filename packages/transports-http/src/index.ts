@@ -218,4 +218,16 @@ export {
 } from "./libs/middleware/SecurityMiddlewareMarker";
 export type { PipelineConfig } from "./libs/PipelineRunner";
 export type { HttpPipelineGraphConfig } from "./libs/PipelineRunner";
+
+export {
+  createHttpAppConfig,
+  HTTP_TRANSPORT_OPTIONS_TOKEN,
+  httpTransport,
+} from "./libs/HttpTransportPlugin";
+export type {
+  HttpControllerContribution,
+  HttpMiddlewareContribution,
+  HttpTransportPluginOptions,
+  HttpTransportRuntimeOptions,
+} from "./libs/HttpTransportPlugin";
 export type { CompileOptions } from "./libs/RouteCompiler";

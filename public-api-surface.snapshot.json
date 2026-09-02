@@ -3543,6 +3543,12 @@
           "sourceEntrypoint": "packages/auth-clerk/src/index.ts",
           "runtimeExports": [
             {
+              "name": "clerkAuth",
+              "exportKind": "named",
+              "source": "./libs/ClerkAuthPlugin",
+              "declarationKind": "const"
+            },
+            {
               "name": "ClerkAuthDiagnosticsProvider",
               "exportKind": "named",
               "source": "./libs/ClerkAuthDiagnosticsProvider",
@@ -3683,6 +3689,11 @@
               "name": "ClerkAuthOptions",
               "exportKind": "named",
               "source": "./libs/ClerkAuthProvider"
+            },
+            {
+              "name": "ClerkAuthPluginOptions",
+              "exportKind": "named",
+              "source": "./libs/ClerkAuthPlugin"
             },
             {
               "name": "ClerkAuthReadinessCheckContext",
@@ -12787,6 +12798,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "defineCrocoApplication",
+              "exportKind": "named",
+              "source": "./Plugin",
+              "declarationKind": "function"
+            },
+            {
+              "name": "defineCrocoPlugin",
+              "exportKind": "named",
+              "source": "./Plugin",
+              "declarationKind": "function"
+            },
+            {
               "name": "detectCircularDependency",
               "exportKind": "named",
               "source": "./CircularDependencyDetector",
@@ -12805,6 +12828,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "MODULE_CONTRIBUTION_KINDS",
+              "exportKind": "named",
+              "source": "./ContributionKinds",
+              "declarationKind": "const"
+            },
+            {
               "name": "ModuleCircularDependencyProblem",
               "exportKind": "named",
               "source": "./problems",
@@ -12814,6 +12843,12 @@
               "name": "ModuleContext",
               "exportKind": "named",
               "source": "./ModuleContext",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ModuleContributionIdentityProblem",
+              "exportKind": "named",
+              "source": "./problems",
               "declarationKind": "class"
             },
             {
@@ -12903,6 +12938,11 @@
           ],
           "typeExports": [
             {
+              "name": "ApplicationProviderReplacement",
+              "exportKind": "named",
+              "source": "./Plugin"
+            },
+            {
               "name": "ApplicationRuntimeGraphManifest",
               "exportKind": "named",
               "source": "./ApplicationRuntime"
@@ -12913,10 +12953,55 @@
               "source": "./ApplicationRuntime"
             },
             {
+              "name": "CrocoApplicationDefinition",
+              "exportKind": "named",
+              "source": "./Plugin"
+            },
+            {
+              "name": "CrocoApplicationImport",
+              "exportKind": "named",
+              "source": "./Plugin"
+            },
+            {
               "name": "CrocoModuleDefinition",
               "exportKind": "named",
               "source": "./types",
               "localName": "CrocoModule"
+            },
+            {
+              "name": "CrocoPlugin",
+              "exportKind": "named",
+              "source": "./Plugin"
+            },
+            {
+              "name": "CrocoPluginCapability",
+              "exportKind": "named",
+              "source": "./Plugin"
+            },
+            {
+              "name": "CrocoPluginConfigurationRequirement",
+              "exportKind": "named",
+              "source": "./Plugin"
+            },
+            {
+              "name": "CrocoPluginMaturity",
+              "exportKind": "named",
+              "source": "./Plugin"
+            },
+            {
+              "name": "CrocoPluginMetadata",
+              "exportKind": "named",
+              "source": "./Plugin"
+            },
+            {
+              "name": "CrocoPluginVerificationReference",
+              "exportKind": "named",
+              "source": "./Plugin"
+            },
+            {
+              "name": "DefineCrocoApplicationOptions",
+              "exportKind": "named",
+              "source": "./Plugin"
             },
             {
               "name": "ModuleCleanupFailure",
@@ -12924,7 +13009,22 @@
               "source": "./types"
             },
             {
+              "name": "ModuleContribution",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "ModuleContributionKind",
+              "exportKind": "named",
+              "source": "./ContributionKinds"
+            },
+            {
               "name": "ModuleDiagnosticsSnapshot",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "ModuleGraphContribution",
               "exportKind": "named",
               "source": "./types"
             },
@@ -13022,6 +13122,16 @@
               "name": "ModuleToken",
               "exportKind": "named",
               "source": "./types/ModuleToken"
+            },
+            {
+              "name": "PluginFactory",
+              "exportKind": "named",
+              "source": "./Plugin"
+            },
+            {
+              "name": "ResolvedModuleContribution",
+              "exportKind": "named",
+              "source": "./types"
             }
           ]
         }
@@ -27887,6 +27997,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "nodeTelemetry",
+              "exportKind": "named",
+              "source": "./libs/NodeTelemetryPlugin",
+              "declarationKind": "const"
+            },
+            {
               "name": "normalizeAutoInstrumentationConfig",
               "exportKind": "named",
               "source": "./libs/instrumentation/AutoInstrumentation",
@@ -27909,6 +28025,12 @@
               "exportKind": "named",
               "source": "./libs/problems/TelemetryProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "TELEMETRY_RUNTIME_TOKEN",
+              "exportKind": "named",
+              "source": "./libs/NodeTelemetryPlugin",
+              "declarationKind": "const"
             },
             {
               "name": "TelemetryAutoInstrumentationProblem",
@@ -27974,6 +28096,11 @@
               "name": "ForceFlushResult",
               "exportKind": "named",
               "source": "./runtime"
+            },
+            {
+              "name": "NodeTelemetryPluginOptions",
+              "exportKind": "named",
+              "source": "./libs/NodeTelemetryPlugin"
             },
             {
               "name": "ShutdownResult",
@@ -31550,6 +31677,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createHttpAppConfig",
+              "exportKind": "named",
+              "source": "./libs/HttpTransportPlugin",
+              "declarationKind": "function"
+            },
+            {
               "name": "createRateLimitMiddlewareFactory",
               "exportKind": "named",
               "source": "./libs/middleware/RateLimitMiddleware",
@@ -31666,6 +31799,12 @@
               "source": null
             },
             {
+              "name": "HTTP_TRANSPORT_OPTIONS_TOKEN",
+              "exportKind": "named",
+              "source": "./libs/HttpTransportPlugin",
+              "declarationKind": "const"
+            },
+            {
               "name": "HttpBodyLimitConfigurationProblem",
               "exportKind": "named",
               "source": "./libs/problems/HttpRequestBodyProblems",
@@ -31693,6 +31832,12 @@
               "exportKind": "named",
               "source": "./libs/problems/HttpRequestBodyProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "httpTransport",
+              "exportKind": "named",
+              "source": "./libs/HttpTransportPlugin",
+              "declarationKind": "const"
             },
             {
               "name": "isMiddlewareShortCircuit",
@@ -31978,6 +32123,16 @@
               "source": "./libs/HealthCheckRegistry"
             },
             {
+              "name": "HttpControllerContribution",
+              "exportKind": "named",
+              "source": "./libs/HttpTransportPlugin"
+            },
+            {
+              "name": "HttpMiddlewareContribution",
+              "exportKind": "named",
+              "source": "./libs/HttpTransportPlugin"
+            },
+            {
               "name": "HttpPipelineGraphConfig",
               "exportKind": "named",
               "source": "./libs/PipelineRunner"
@@ -31986,6 +32141,16 @@
               "name": "HttpRequestBodyTooLargeProblemOptions",
               "exportKind": "named",
               "source": "./libs/problems/HttpRequestBodyProblems"
+            },
+            {
+              "name": "HttpTransportPluginOptions",
+              "exportKind": "named",
+              "source": "./libs/HttpTransportPlugin"
+            },
+            {
+              "name": "HttpTransportRuntimeOptions",
+              "exportKind": "named",
+              "source": "./libs/HttpTransportPlugin"
             },
             {
               "name": "InterceptorProvider",
@@ -32654,6 +32819,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "drizzleTransaction",
+              "exportKind": "named",
+              "source": "./libs/DrizzleTransactionPlugin",
+              "declarationKind": "const"
+            },
+            {
               "name": "RlsConfigurationProblem",
               "exportKind": "named",
               "source": "./libs/problems/TxDrizzleProblems",
@@ -32714,6 +32885,11 @@
               "name": "DrizzleSelectFn",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "DrizzleTransactionPluginOptions",
+              "exportKind": "named",
+              "source": "./libs/DrizzleTransactionPlugin"
             },
             {
               "name": "DrizzleTx",

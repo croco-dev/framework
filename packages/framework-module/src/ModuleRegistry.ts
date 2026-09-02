@@ -6,12 +6,14 @@ import { detectCircularDependency } from "./CircularDependencyDetector";
 import { ModuleContext } from "./ModuleContext";
 import { getModuleTokenLabel } from "./moduleTokenLabels";
 import { getProviderToken, isConstructorToken, isProviderDefinition } from "./moduleTokens";
+import type { ApplicationProviderReplacement } from "./Plugin";
 import {
   attachModuleCleanupFailures,
   attachModuleLifecycleHookFailure,
   InvalidModuleDefinitionProblem,
   formatModuleProviderOwnershipDetail,
   ModuleCircularDependencyProblem,
+  ModuleContributionIdentityProblem,
   ModuleDuplicateNameProblem,
   ModuleLifecycleCancelledProblem,
   ModuleLifecycleDeadlineExceededProblem,
@@ -44,6 +46,7 @@ import type {
   ModuleOptions,
   ModuleProvider,
   ModuleProviderDefinition,
+  ResolvedModuleContribution,
   ModuleRuntimePhase,
 } from "./types";
 import type { Constructor, ModuleToken } from "./types/ModuleToken";
@@ -97,6 +100,7 @@ type ModuleRegistryState = {
   readonly container: ContainerInstance;
   readonly containerId?: string;
   readonly rejectGlobalProviderFallback: boolean;
+  readonly providerReplacements: readonly ApplicationProviderReplacement[];
   isInitialized: boolean;
   initializedModules: ModuleOptions[];
   activeContext: ModuleContext | null;
@@ -118,6 +122,8 @@ const IGNORED_CONSTRUCTOR_DEPENDENCIES = new Set<unknown>([
   String,
 ]);
 const MAX_TIMER_DELAY_MS = 2_147_483_647;
+const APPLICATION_MODULE_NAME = "<application>";
+const APPLICATION_REPLACEMENT_PHASE = Symbol("application-replacement-phase");
 let moduleRuntimeSequence = 0;
 export interface ModuleRuntime extends AsyncDisposable {
   use(module: ModuleOptions): void;
@@ -127,6 +133,9 @@ export interface ModuleRuntime extends AsyncDisposable {
   dispose(): Promise<void>;
   createGraphManifest(): ModuleGraphManifest;
   getRegisteredModules(): readonly ModuleDiagnosticsSnapshot[];
+  getContributions<T, TKind extends string = string>(
+    kind: TKind,
+  ): readonly ResolvedModuleContribution<T, TKind>[];
 }
 
 class ModuleRuntimeImplementation implements ModuleRuntime {
@@ -183,12 +192,22 @@ class ModuleRuntimeImplementation implements ModuleRuntime {
     return getRegisteredModulesInState(this.state);
   }
 
+  getContributions<T, TKind extends string = string>(
+    kind: TKind,
+  ): readonly ResolvedModuleContribution<T, TKind>[] {
+    assertRuntimeAvailable(this.state);
+    return getResolvedContributions<T, TKind>(this.state, kind);
+  }
+
   async [Symbol.asyncDispose](): Promise<void> {
     await this.dispose();
   }
 }
 
-function createModuleRegistryState(containerId?: string): ModuleRegistryState {
+function createModuleRegistryState(
+  containerId?: string,
+  providerReplacements: readonly ApplicationProviderReplacement[] = [],
+): ModuleRegistryState {
   const container = Container.of(containerId);
   if (containerId) {
     makeContainerResolutionRuntimeLocal(container);
@@ -201,6 +220,7 @@ function createModuleRegistryState(containerId?: string): ModuleRegistryState {
     container,
     ...(containerId ? { containerId } : {}),
     rejectGlobalProviderFallback: Boolean(containerId),
+    providerReplacements,
     isInitialized: false,
     initializedModules: [],
     activeContext: null,
@@ -224,8 +244,13 @@ export function createModuleRuntime(): ModuleRuntime {
   return new ModuleRuntimeImplementation(createModuleRegistryState(containerId));
 }
 
-export function createModuleRuntimeForContainer(containerId: string): ModuleRuntime {
-  return new ModuleRuntimeImplementation(createModuleRegistryState(containerId));
+export function createModuleRuntimeForContainer(
+  containerId: string,
+  providerReplacements: readonly ApplicationProviderReplacement[] = [],
+): ModuleRuntime {
+  return new ModuleRuntimeImplementation(
+    createModuleRegistryState(containerId, providerReplacements),
+  );
 }
 
 function assertRuntimeAvailable(state: ModuleRegistryState): void {
@@ -369,9 +394,14 @@ async function performInitializeModules(
   const attemptGeneration = state.registryGeneration;
   const modules = collectModules(Array.from(state.registeredModules.values()), state.moduleSources);
   detectCircularDependency(modules);
-  assertUnambiguousProviderOwnership(modules);
+  assertValidProviderReplacements(modules, state.providerReplacements);
+  assertUnambiguousProviderOwnership(modules, state.providerReplacements);
+  assertUniqueContributionIdentities(modules);
 
-  const sortedModules = sortModules(modules);
+  const initializationUnits = sortModuleInitializationUnits(modules, state.providerReplacements);
+  const sortedModules = initializationUnits.filter(
+    (unit): unit is ModuleOptions => unit !== APPLICATION_REPLACEMENT_PHASE,
+  );
   const container = state.container;
   const context = createRootContext(state, container);
   const containerSnapshot = snapshotContainerServices(container, sortedModules);
@@ -383,7 +413,30 @@ async function performInitializeModules(
   }
 
   try {
-    for (const module of sortedModules) {
+    for (const unit of initializationUnits) {
+      if (unit === APPLICATION_REPLACEMENT_PHASE) {
+        const applicationModule: ModuleOptions = { name: APPLICATION_MODULE_NAME };
+        const applicationContext = createApplicationContext(state, container);
+        await runLifecycle(
+          state,
+          applicationModule,
+          "setup",
+          options,
+          applicationContext,
+          true,
+          async (execution) => {
+            await registerApplicationProviderReplacements(
+              state,
+              applicationContext,
+              container,
+              execution.signal,
+            );
+          },
+        );
+        continue;
+      }
+
+      const module = unit;
       compensationStack.push(module);
       const moduleContext = createModuleContext(state, module.name, container);
       await runLifecycle(
@@ -852,11 +905,13 @@ function createModuleGraphManifestInState(
   rootModules: readonly ModuleOptions[] = Array.from(state.registeredModules.values()),
 ): ModuleGraphManifest {
   const modules = collectModules(rootModules, state.moduleSources);
+  assertValidProviderReplacements(modules, state.providerReplacements);
   const states = new Map(modules.map((module) => [module.name, createModuleState(module)]));
   const diagnostics = createModuleGraphDiagnostics(
     modules,
     states,
     state.rejectGlobalProviderFallback,
+    state.providerReplacements,
   );
 
   return {
@@ -885,7 +940,8 @@ function validateModule(module: ModuleOptions): void {
     (module.imports?.length ?? 0) === 0 &&
     (module.providers?.length ?? 0) === 0 &&
     (module.exports?.length ?? 0) === 0 &&
-    (module.controllers?.length ?? 0) === 0
+    (module.controllers?.length ?? 0) === 0 &&
+    (module.contributions?.length ?? 0) === 0
   ) {
     throw new InvalidModuleDefinitionProblem(
       `Module '${module.name}' must define metadata or lifecycle hooks.`,
@@ -898,10 +954,11 @@ function createModuleGraphDiagnostics(
   modules: readonly ModuleOptions[],
   states: ReadonlyMap<string, ModuleRuntimeState>,
   rejectUnknownProvider = false,
+  providerReplacements: readonly ApplicationProviderReplacement[] = [],
 ): ModuleGraphDiagnostic[] {
   const diagnostics: ModuleGraphDiagnostic[] = [];
 
-  for (const conflict of getProviderOwnershipConflicts(modules)) {
+  for (const conflict of getUnresolvedProviderOwnershipConflicts(modules, providerReplacements)) {
     const token = getModuleTokenLabel(conflict.token);
     diagnostics.push({
       code: "framework-module/provider-ownership-conflict",
@@ -909,6 +966,17 @@ function createModuleGraphDiagnostics(
       moduleName: conflict.owners[0] ?? "<unknown>",
       token,
       message: formatModuleProviderOwnershipDetail(token, conflict.owners),
+      path: conflict.owners,
+    });
+  }
+
+  for (const conflict of getContributionIdentityConflicts(modules)) {
+    diagnostics.push({
+      code: "framework-module/contribution-identity-conflict",
+      severity: "error",
+      moduleName: conflict.owners[0] ?? "<unknown>",
+      token: `${conflict.kind}:${conflict.id}`,
+      message: `Contribution '${conflict.kind}:${conflict.id}' is declared more than once by: ${conflict.owners.join(", ")}.`,
       path: conflict.owners,
     });
   }
@@ -996,6 +1064,13 @@ function createModuleGraphModule(module: ModuleOptions): ModuleGraphModule {
     ),
     exports: (module.exports?.map(getModuleTokenLabel) ?? []).sort(),
     controllers: (module.controllers?.map(getModuleTokenLabel) ?? []).sort(),
+    contributions: (module.contributions ?? [])
+      .map((contribution) => ({
+        id: contribution.id,
+        kind: contribution.kind,
+        order: contribution.order ?? 0,
+      }))
+      .sort(compareContributionMetadata),
   };
 }
 
@@ -1053,6 +1128,7 @@ function collectModules(
     const sourceProviders = module.providers;
     const sourceExports = module.exports;
     const sourceControllers = module.controllers;
+    const sourceContributions = module.contributions;
     const setup = module.setup;
     const start = module.start;
     const shutdown = module.shutdown;
@@ -1062,6 +1138,13 @@ function collectModules(
       ...(sourceProviders ? { providers: Array.from(sourceProviders, snapshotProvider) } : {}),
       ...(sourceExports ? { exports: Array.from(sourceExports) } : {}),
       ...(sourceControllers ? { controllers: Array.from(sourceControllers) } : {}),
+      ...(sourceContributions
+        ? {
+            contributions: Array.from(sourceContributions, (contribution) => ({
+              ...contribution,
+            })),
+          }
+        : {}),
       ...(setup ? { setup } : {}),
       ...(start ? { start } : {}),
       ...(shutdown ? { shutdown } : {}),
@@ -1110,16 +1193,74 @@ function snapshotProvider(provider: ModuleProvider): ModuleProvider {
   return { provide: token, useFactory: provider.useFactory };
 }
 
-function assertUnambiguousProviderOwnership(modules: readonly ModuleOptions[]): void {
-  const conflict = getProviderOwnershipConflicts(modules)[0];
+function assertUnambiguousProviderOwnership(
+  modules: readonly ModuleOptions[],
+  replacements: readonly ApplicationProviderReplacement[] = [],
+): void {
+  const conflict = getUnresolvedProviderOwnershipConflicts(modules, replacements)[0];
   if (conflict) {
     throw new ModuleProviderOwnershipProblem(conflict.token, conflict.owners);
   }
 }
 
-function getProviderOwnershipConflicts(
+function getUnresolvedProviderOwnershipConflicts(
   modules: readonly ModuleOptions[],
+  replacements: readonly ApplicationProviderReplacement[],
 ): ModuleProviderOwnershipConflict[] {
+  const replacementIdentifiers = new Set(
+    replacements.map((replacement) =>
+      FrameworkContainer.toTypeDIServiceIdentifier(replacement.provider.provide),
+    ),
+  );
+  return getProviderOwnershipConflicts(modules).filter(
+    (conflict) =>
+      !replacementIdentifiers.has(FrameworkContainer.toTypeDIServiceIdentifier(conflict.token)),
+  );
+}
+
+function assertValidProviderReplacements(
+  modules: readonly ModuleOptions[],
+  replacements: readonly ApplicationProviderReplacement[],
+): void {
+  const seen = new Set<ServiceIdentifier<unknown>>();
+  const ownership = getProviderOwnership(modules);
+
+  for (const replacement of replacements) {
+    const identifier = FrameworkContainer.toTypeDIServiceIdentifier(replacement.provider.provide);
+    if (seen.has(identifier)) {
+      throw new InvalidModuleDefinitionProblem(
+        `Application defines multiple replacements for provider '${getModuleTokenLabel(replacement.provider.provide)}'.`,
+      );
+    }
+    seen.add(identifier);
+
+    const owners = ownership.get(identifier)?.owners ?? new Set<string>();
+    const actualOwners = [...owners].sort();
+    const declaredOwners = [...replacement.replaces].sort();
+    if (
+      declaredOwners.length === 0 ||
+      new Set(declaredOwners).size !== declaredOwners.length ||
+      actualOwners.length !== declaredOwners.length ||
+      actualOwners.some((owner, index) => owner !== declaredOwners[index])
+    ) {
+      throw new InvalidModuleDefinitionProblem(
+        `Application replacement for provider '${getModuleTokenLabel(replacement.provider.provide)}' must name its exact owners.`,
+        {
+          token: getModuleTokenLabel(replacement.provider.provide),
+          actualOwners,
+          declaredOwners,
+        },
+      );
+    }
+  }
+}
+
+function getProviderOwnership(
+  modules: readonly ModuleOptions[],
+): Map<
+  ServiceIdentifier<unknown>,
+  { readonly token: ModuleToken<unknown>; readonly owners: Set<string> }
+> {
   const ownership = new Map<
     ServiceIdentifier<unknown>,
     { readonly token: ModuleToken<unknown>; readonly owners: Set<string> }
@@ -1135,7 +1276,13 @@ function getProviderOwnershipConflicts(
     }
   }
 
-  return Array.from(ownership.values())
+  return ownership;
+}
+
+function getProviderOwnershipConflicts(
+  modules: readonly ModuleOptions[],
+): ModuleProviderOwnershipConflict[] {
+  return Array.from(getProviderOwnership(modules).values())
     .flatMap(({ token, owners }) => {
       const sortedOwners = Array.from(owners).sort();
       return sortedOwners.length > 1 ? [{ token, owners: sortedOwners }] : [];
@@ -1181,6 +1328,123 @@ function sortModules(modules: readonly ModuleOptions[]): ModuleOptions[] {
   return sorted;
 }
 
+function sortModuleInitializationUnits(
+  modules: readonly ModuleOptions[],
+  replacements: readonly ApplicationProviderReplacement[],
+): Array<ModuleOptions | typeof APPLICATION_REPLACEMENT_PHASE> {
+  if (replacements.length === 0) {
+    return sortModules(modules);
+  }
+
+  const units: Array<ModuleOptions | typeof APPLICATION_REPLACEMENT_PHASE> = [];
+  const visited = new Set<string>();
+  const visiting = new Set<string>();
+  const moduleMap = new Map(modules.map((module) => [module.name, module]));
+  const ownerNames = getApplicationReplacementOwnerNames(replacements);
+  const dependencies = getApplicationReplacementDependencies(modules, replacements);
+  let applicationVisited = false;
+  let applicationVisiting = false;
+
+  const visitApplication = (): void => {
+    if (applicationVisited) {
+      return;
+    }
+    if (applicationVisiting) {
+      throw new InvalidModuleDefinitionProblem(
+        "Application provider replacement dependencies must not depend on a replaced provider owner.",
+        { owners: [...ownerNames].sort() },
+      );
+    }
+
+    applicationVisiting = true;
+    for (const dependency of dependencies) {
+      visitModule(dependency);
+    }
+    applicationVisiting = false;
+    applicationVisited = true;
+    units.push(APPLICATION_REPLACEMENT_PHASE);
+  };
+
+  const visitModule = (module: ModuleOptions): void => {
+    if (visited.has(module.name)) {
+      return;
+    }
+    if (visiting.has(module.name)) {
+      return;
+    }
+
+    visiting.add(module.name);
+    for (const importedModule of module.imports ?? []) {
+      visitModule(moduleMap.get(importedModule.name) ?? importedModule);
+    }
+    if (ownerNames.has(module.name)) {
+      visitApplication();
+    }
+    visiting.delete(module.name);
+    visited.add(module.name);
+    units.push(module);
+  };
+
+  for (const module of modules) {
+    visitModule(module);
+  }
+
+  if (!applicationVisited) {
+    visitApplication();
+  }
+  return units;
+}
+
+function getApplicationReplacementOwnerNames(
+  replacements: readonly ApplicationProviderReplacement[],
+): ReadonlySet<string> {
+  return new Set(replacements.flatMap((replacement) => replacement.replaces));
+}
+
+function getApplicationReplacementDependencies(
+  modules: readonly ModuleOptions[],
+  replacements: readonly ApplicationProviderReplacement[],
+): readonly ModuleOptions[] {
+  const moduleMap = new Map(modules.map((module) => [module.name, module]));
+  const ownerNames = getApplicationReplacementOwnerNames(replacements);
+  const dependencies = new Map<string, ModuleOptions>();
+  const visitedOwners = new Set<string>();
+
+  const collectOwnerDependencies = (owner: ModuleOptions): void => {
+    if (visitedOwners.has(owner.name)) {
+      return;
+    }
+    visitedOwners.add(owner.name);
+
+    for (const importedModule of owner.imports ?? []) {
+      const imported = moduleMap.get(importedModule.name) ?? importedModule;
+      if (ownerNames.has(imported.name)) {
+        collectOwnerDependencies(imported);
+        continue;
+      }
+      dependencies.set(imported.name, imported);
+    }
+  };
+
+  for (const ownerName of ownerNames) {
+    const owner = moduleMap.get(ownerName);
+    if (owner) {
+      collectOwnerDependencies(owner);
+    }
+  }
+
+  return [...dependencies.values()].sort((left, right) => left.name.localeCompare(right.name));
+}
+
+function getApplicationReplacementDependenciesInState(
+  state: ModuleRegistryState,
+): readonly ModuleOptions[] {
+  return getApplicationReplacementDependencies(
+    [...state.moduleStates.values()].map((moduleState) => moduleState.module),
+    state.providerReplacements,
+  );
+}
+
 function createModuleState(module: ModuleOptions): ModuleRuntimeState {
   return {
     module,
@@ -1193,6 +1457,106 @@ function createModuleState(module: ModuleOptions): ModuleRuntimeState {
       module.providers?.map(getClassProviderEntry).filter((entry) => entry !== null) ?? [],
     ),
   };
+}
+
+type ModuleContributionIdentityConflict = {
+  readonly id: string;
+  readonly kind: string;
+  readonly owners: readonly string[];
+};
+
+function getContributionIdentityConflicts(
+  modules: readonly ModuleOptions[],
+): ModuleContributionIdentityConflict[] {
+  const identities = new Map<
+    string,
+    { id: string; kind: string; owners: Set<string>; declarationCount: number }
+  >();
+  for (const module of modules) {
+    for (const contribution of module.contributions ?? []) {
+      validateContribution(module.name, contribution);
+      const key = `${contribution.kind}\u0000${contribution.id}`;
+      const entry = identities.get(key) ?? {
+        id: contribution.id,
+        kind: contribution.kind,
+        owners: new Set<string>(),
+        declarationCount: 0,
+      };
+      entry.owners.add(module.name);
+      entry.declarationCount += 1;
+      identities.set(key, entry);
+    }
+  }
+
+  return [...identities.values()]
+    .filter((entry) => entry.declarationCount > 1)
+    .map((entry) => ({ ...entry, owners: [...entry.owners].sort() }))
+    .sort((left, right) =>
+      left.kind === right.kind
+        ? left.id.localeCompare(right.id)
+        : left.kind.localeCompare(right.kind),
+    );
+}
+
+function assertUniqueContributionIdentities(modules: readonly ModuleOptions[]): void {
+  const conflict = getContributionIdentityConflicts(modules)[0];
+  if (conflict) {
+    throw new ModuleContributionIdentityProblem(conflict.kind, conflict.id, conflict.owners);
+  }
+}
+
+function validateContribution(
+  moduleName: string,
+  contribution: NonNullable<ModuleOptions["contributions"]>[number],
+): void {
+  if (contribution.kind.trim().length === 0 || contribution.id.trim().length === 0) {
+    throw new InvalidModuleDefinitionProblem(
+      `Module '${moduleName}' contribution kind and id must be non-empty strings.`,
+      { moduleName },
+    );
+  }
+  const order = contribution.order ?? 0;
+  if (!Number.isSafeInteger(order)) {
+    throw new InvalidModuleDefinitionProblem(
+      `Module '${moduleName}' contribution '${contribution.kind}:${contribution.id}' order must be a safe integer.`,
+      { moduleName, kind: contribution.kind, id: contribution.id, order },
+    );
+  }
+}
+
+function compareContributionMetadata(
+  left: { readonly id: string; readonly kind: string; readonly order: number },
+  right: { readonly id: string; readonly kind: string; readonly order: number },
+): number {
+  return (
+    left.kind.localeCompare(right.kind) ||
+    left.order - right.order ||
+    left.id.localeCompare(right.id)
+  );
+}
+
+function getResolvedContributions<T, TKind extends string>(
+  state: ModuleRegistryState,
+  kind: TKind,
+): readonly ResolvedModuleContribution<T, TKind>[] {
+  return [...state.moduleStates.values()]
+    .flatMap((moduleState) =>
+      (moduleState.module.contributions ?? [])
+        .filter((contribution) => contribution.kind === kind)
+        .map((contribution) => ({
+          id: contribution.id,
+          kind,
+          moduleName: moduleState.module.name,
+          order: contribution.order ?? 0,
+          value: contribution.value as T,
+        })),
+    )
+    .sort(
+      (left, right) =>
+        left.order - right.order ||
+        left.id.localeCompare(right.id) ||
+        left.moduleName.localeCompare(right.moduleName),
+    );
 }
 
 function createRootContext(
@@ -1214,6 +1578,7 @@ function createRootContext(
     validateProviderWrite: (moduleName, token) => {
       validateProviderWrite(state, moduleName, token);
     },
+    getContributions: (kind) => getResolvedContributions(state, kind),
   });
 }
 
@@ -1246,6 +1611,38 @@ function createModuleContext(
     validateProviderAccess: (ownerModuleName, token) => {
       validateProviderAccess(state, ownerModuleName, token, container);
     },
+    getContributions: (kind) => getResolvedContributions(state, kind),
+  });
+}
+
+function createApplicationContext(
+  state: ModuleRegistryState,
+  container: ReturnType<typeof Container.of>,
+): ModuleContext {
+  const contextGeneration = state.registryGeneration;
+
+  return new ModuleContext(container, {
+    moduleName: APPLICATION_MODULE_NAME,
+    validateRuntime: () => assertRuntimeContextAvailable(state, contextGeneration),
+    rejectUnknownProvider: state.rejectGlobalProviderFallback,
+    ...(state.rejectGlobalProviderFallback
+      ? {
+          resolveProvider: <T>(token: ModuleToken<T>) =>
+            resolveRuntimeProvider(container, APPLICATION_MODULE_NAME, token),
+        }
+      : {}),
+    canAccessToken: (_moduleName, token) => canApplicationAccessToken(state, token),
+    isKnownToken: (token) => isKnownTokenInStates(token, state.moduleStates),
+    validateProviderWrite: (moduleName, token) => {
+      validateProviderWrite(state, moduleName, token);
+    },
+    validateClassProvider: (moduleName, providerClass) => {
+      validateClassProviderVisibility(state, moduleName, providerClass);
+    },
+    validateProviderAccess: (moduleName, token) => {
+      validateProviderAccess(state, moduleName, token, container);
+    },
+    getContributions: (kind) => getResolvedContributions(state, kind),
   });
 }
 
@@ -1258,6 +1655,10 @@ async function registerProviders(
 ): Promise<void> {
   for (const provider of module.providers ?? []) {
     signal.throwIfAborted();
+    const replacement = getProviderReplacement(state, provider);
+    if (replacement) {
+      continue;
+    }
     if (!isProviderDefinition(provider)) {
       if (isConstructorToken(provider)) {
         validateClassProviderVisibility(state, module.name, provider);
@@ -1274,6 +1675,35 @@ async function registerProviders(
     await registerProviderDefinition(state, module.name, provider, context, container);
     signal.throwIfAborted();
   }
+}
+
+async function registerApplicationProviderReplacements(
+  state: ModuleRegistryState,
+  context: ModuleContext,
+  container: ReturnType<typeof Container.of>,
+  signal: AbortSignal,
+): Promise<void> {
+  for (const replacement of state.providerReplacements) {
+    signal.throwIfAborted();
+    await registerProviderDefinition(
+      state,
+      APPLICATION_MODULE_NAME,
+      replacement.provider,
+      context,
+      container,
+    );
+  }
+}
+
+function getProviderReplacement(
+  state: ModuleRegistryState,
+  provider: ModuleProvider,
+): ApplicationProviderReplacement | undefined {
+  const identifier = FrameworkContainer.toTypeDIServiceIdentifier(getProviderToken(provider));
+  return state.providerReplacements.find(
+    (replacement) =>
+      FrameworkContainer.toTypeDIServiceIdentifier(replacement.provider.provide) === identifier,
+  );
 }
 
 async function registerProviderDefinition<T>(
@@ -1313,6 +1743,14 @@ function validateProviderWrite(
   }
 
   const normalizedToken = normalizeTokenInStates(token, state.moduleStates);
+  const replacement = getProviderReplacement(state, normalizedToken);
+  if (replacement) {
+    if (moduleName === APPLICATION_MODULE_NAME) {
+      return;
+    }
+
+    throw new ModuleProviderWriteProblem(moduleName, normalizedToken, APPLICATION_MODULE_NAME);
+  }
   if (hasEquivalentToken(state.moduleStates.get(moduleName)?.providers, normalizedToken)) {
     return;
   }
@@ -1365,13 +1803,55 @@ function canAccessTokenInStates(
   );
 }
 
+function canApplicationAccessToken(
+  state: ModuleRegistryState,
+  token: ModuleToken<unknown>,
+): boolean {
+  if (
+    state.providerReplacements.some((replacement) =>
+      areEquivalentTokens(replacement.provider.provide, token),
+    )
+  ) {
+    return true;
+  }
+
+  const normalizedToken = normalizeTokenInStates(token, state.moduleStates);
+  const dependencies = getApplicationReplacementDependenciesInState(state);
+  return dependencies.some((dependency) =>
+    hasEquivalentToken(state.moduleStates.get(dependency.name)?.exports, normalizedToken),
+  );
+}
+
 function validateProviderAccess(
   state: ModuleRegistryState,
   moduleName: string,
   token: ModuleToken<unknown>,
   container: ContainerInstance,
 ): void {
-  const provider = getAccessibleClassProvider(moduleName, token, state.moduleStates);
+  const replacement = state.providerReplacements.find((candidate) =>
+    areEquivalentTokens(candidate.provider.provide, token),
+  );
+  if (replacement) {
+    if ("useClass" in replacement.provider) {
+      validateClassProviderVisibility(
+        state,
+        APPLICATION_MODULE_NAME,
+        replacement.provider.useClass,
+      );
+    }
+    return;
+  }
+
+  const applicationDependencies =
+    moduleName === APPLICATION_MODULE_NAME
+      ? new Set(getApplicationReplacementDependenciesInState(state).map((module) => module.name))
+      : undefined;
+  const provider = getAccessibleClassProvider(
+    moduleName,
+    token,
+    state.moduleStates,
+    applicationDependencies,
+  );
   if (!provider) {
     if (hasUndeclaredTypediClassProvider(container, token)) {
       throw new ModuleProviderVisibilityProblem(moduleName, token);
@@ -1387,10 +1867,30 @@ function getAccessibleClassProvider(
   moduleName: string,
   token: ModuleToken<unknown>,
   states: ReadonlyMap<string, ModuleRuntimeState>,
+  applicationDependencies?: ReadonlySet<string>,
 ): {
   readonly moduleName: string;
   readonly providerClass: Constructor<unknown>;
 } | null {
+  if (moduleName === APPLICATION_MODULE_NAME) {
+    const normalizedToken = normalizeTokenInStates(token, states);
+    for (const [ownerModuleName, ownerState] of states) {
+      if (!applicationDependencies?.has(ownerModuleName)) {
+        continue;
+      }
+      if (!hasEquivalentToken(ownerState.exports, normalizedToken)) {
+        continue;
+      }
+
+      const providerClass = getEquivalentTokenValue(ownerState.classProviders, normalizedToken);
+      if (providerClass) {
+        return { moduleName: ownerModuleName, providerClass };
+      }
+    }
+
+    return null;
+  }
+
   const state = states.get(moduleName);
   if (!state) {
     return null;
@@ -1429,6 +1929,9 @@ function validateClassProviderVisibility<T>(
     providerClass,
     state.moduleStates,
     state.rejectGlobalProviderFallback,
+    moduleName === APPLICATION_MODULE_NAME
+      ? (token) => canApplicationAccessToken(state, token)
+      : undefined,
   )[0];
 
   if (failure) {
@@ -1441,6 +1944,8 @@ function getClassProviderVisibilityFailures<T>(
   providerClass: Constructor<T>,
   states: ReadonlyMap<string, ModuleRuntimeState>,
   rejectUnknownProvider = false,
+  canAccessProvider: (token: ModuleToken<unknown>) => boolean = (token) =>
+    canAccessTokenInStates(moduleName, token, states),
 ): ModuleProviderVisibilityFailure[] {
   const failures: ModuleProviderVisibilityFailure[] = [];
   const dependencies = getConstructorDependencies(providerClass);
@@ -1452,10 +1957,7 @@ function getClassProviderVisibilityFailures<T>(
 
     const dependencyToken = dependency as ModuleToken<unknown>;
     const known = isKnownTokenInStates(dependencyToken, states);
-    if (
-      (known && !canAccessTokenInStates(moduleName, dependencyToken, states)) ||
-      (!known && rejectUnknownProvider)
-    ) {
+    if ((known && !canAccessProvider(dependencyToken)) || (!known && rejectUnknownProvider)) {
       failures.push({ moduleName, providerClass, token: dependencyToken });
     }
   }
@@ -1463,10 +1965,7 @@ function getClassProviderVisibilityFailures<T>(
   for (const dependency of getTypediHandlerDependencies(providerClass)) {
     const dependencyToken = normalizeTokenInStates(dependency, states);
     const known = isKnownTokenInStates(dependencyToken, states);
-    if (
-      (known && !canAccessTokenInStates(moduleName, dependencyToken, states)) ||
-      (!known && rejectUnknownProvider)
-    ) {
+    if ((known && !canAccessProvider(dependencyToken)) || (!known && rejectUnknownProvider)) {
       failures.push({ moduleName, providerClass, token: dependencyToken });
     }
   }

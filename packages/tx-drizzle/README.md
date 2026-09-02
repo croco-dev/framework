@@ -5,10 +5,40 @@ Drizzle ORM용 `@croco/tx-core` 트랜잭션 어댑터입니다. Drizzle의 `db.
 ## 설치
 
 ```bash
-pnpm add @croco/tx-drizzle @croco/tx-core drizzle-orm typedi
+pnpm add @croco/framework-module @croco/tx-drizzle @croco/tx-core drizzle-orm typedi
 ```
 
 ## 사용법
+
+### Application plugin
+
+`drizzleTransaction`은 애플리케이션의 격리된 모듈 컨테이너에 `TxManager`를 등록하고 Drizzle 상태 확인을
+`diagnostics.provider` contribution으로 제공합니다. 이 경로는 전역 `TxManagerRegistry`를 사용하지 않습니다.
+
+```ts
+import { createApplicationRuntime, defineCrocoApplication } from "@croco/framework-module";
+import { TxManager } from "@croco/tx-core";
+import { drizzleTransaction } from "@croco/tx-drizzle";
+
+const application = defineCrocoApplication({
+  imports: [
+    drizzleTransaction({
+      db,
+      transaction: { defaultNesting: "join" },
+      diagnostics: { name: "primary-database" },
+    }),
+  ],
+});
+const runtime = createApplicationRuntime(application);
+
+await runtime.initialize();
+const txManager = runtime.get(TxManager);
+const diagnostics = runtime.getContributions("diagnostics.provider");
+```
+
+기존 `TxManagerRegistry`와 `Container.set` 경로는 호환성을 위해 유지되지만 새 애플리케이션 구성에는 plugin
+factory를 사용하세요. plugin factory의 `db`, transaction 설정, diagnostics 이름은 명시적 입력이며 ambient
+package discovery를 사용하지 않습니다.
 
 ### 1. Drizzle DB 생성 및 어댑터 연결
 

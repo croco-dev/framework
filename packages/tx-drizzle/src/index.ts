@@ -112,6 +112,8 @@ export {
  */
 
 export { AbstractDrizzleRepository } from "./libs/AbstractDrizzleRepository";
+export { drizzleTransaction } from "./libs/DrizzleTransactionPlugin";
+export type { DrizzleTransactionPluginOptions } from "./libs/DrizzleTransactionPlugin";
 export type { DrizzleHealthIndicatorOptions } from "./libs/DrizzleHealthIndicator";
 export { DrizzleHealthIndicator } from "./libs/DrizzleHealthIndicator";
 export type {

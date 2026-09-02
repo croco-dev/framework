@@ -1,7 +1,13 @@
 import type { ModuleContext } from "./ModuleContext";
+import type { ModuleContribution, ModuleGraphContribution } from "./types/ModuleContribution";
 import type { ModuleCleanupFailure, ModuleLifecyclePhase } from "./types/ModuleLifecycle";
 import type { Constructor, ModuleToken } from "./types/ModuleToken";
 
+export type {
+  ModuleContribution,
+  ModuleGraphContribution,
+  ResolvedModuleContribution,
+} from "./types/ModuleContribution";
 export type {
   ModuleCleanupFailure,
   ModuleLifecycleExecutionOptions,
@@ -65,6 +71,7 @@ export type ModuleGraphManifestStatus = "ready" | "failed";
 
 export type ModuleGraphDiagnosticCode =
   | "framework-module/circular-dependency"
+  | "framework-module/contribution-identity-conflict"
   | "framework-module/provider-injection-uninspectable"
   | "framework-module/provider-ownership-conflict"
   | "framework-module/provider-not-visible";
@@ -90,6 +97,7 @@ export type ModuleGraphModule = {
   readonly providers: readonly ModuleGraphProvider[];
   readonly exports: readonly string[];
   readonly controllers: readonly string[];
+  readonly contributions: readonly ModuleGraphContribution[];
 };
 
 export type ModuleGraphManifest = {
@@ -125,6 +133,11 @@ export type ModuleOptions = {
    * for diagnostics; transport packages decide how to bind them.
    */
   readonly controllers?: readonly ModuleToken<unknown>[];
+  /**
+   * Deterministically ordered extension values. Duplicate `kind` + `id` pairs
+   * are rejected across the complete application graph.
+   */
+  readonly contributions?: readonly ModuleContribution[];
   readonly setup?: ModuleLifecycleHook;
   readonly start?: ModuleLifecycleHook;
   readonly shutdown?: ModuleLifecycleHook;
@@ -136,6 +149,7 @@ export interface CrocoModule {
   readonly providers?: readonly ModuleProvider[];
   readonly exports?: readonly ModuleToken<unknown>[];
   readonly controllers?: readonly ModuleToken<unknown>[];
+  readonly contributions?: readonly ModuleContribution[];
   readonly setup?: ModuleLifecycleHook;
   readonly start?: ModuleLifecycleHook;
   readonly shutdown?: ModuleLifecycleHook;

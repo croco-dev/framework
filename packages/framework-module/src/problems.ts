@@ -59,6 +59,18 @@ export class ModuleCircularDependencyProblem extends Problem {
   }
 }
 
+/** Reports a duplicate contribution identity for the same `kind:id` pair. */
+export class ModuleContributionIdentityProblem extends Problem {
+  constructor(kind: string, id: string, owners: readonly string[]) {
+    super(
+      "framework-module/contribution-identity-conflict",
+      ProblemCategory.Conflict,
+      `Contribution '${kind}:${id}' is declared more than once by: ${owners.join(", ")}.`,
+      { extensions: { kind, id, owners } },
+    );
+  }
+}
+
 export class ModuleLifecycleProblem extends Problem {
   private readonly lifecycleCause: unknown;
   private readonly lifecycleModuleName: string;

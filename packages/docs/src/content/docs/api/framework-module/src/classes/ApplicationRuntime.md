@@ -21,7 +21,7 @@ Owns one isolated DI scope and one module lifecycle for a Croco application.
 
 ##### options?
 
-[`ApplicationRuntimeOptions`](/api/framework-module/src/type-aliases/applicationruntimeoptions/) = `{}`
+[`ApplicationRuntimeOptions`](/api/framework-module/src/type-aliases/applicationruntimeoptions/) \| [`CrocoApplicationDefinition`](/api/framework-module/src/type-aliases/crocoapplicationdefinition/)
 
 #### Returns
 
@@ -96,6 +96,32 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 #### Returns
 
 `T`
+
+---
+
+### getContributions()
+
+> **getContributions**\<`T`, `TKind`\>(`kind`): readonly [`ResolvedModuleContribution`](/api/framework-module/src/type-aliases/resolvedmodulecontribution/)\<`T`, `TKind`\>[]
+
+#### Type Parameters
+
+##### T
+
+`T`
+
+##### TKind
+
+`TKind` _extends_ `string` = `string`
+
+#### Parameters
+
+##### kind
+
+`TKind`
+
+#### Returns
+
+readonly [`ResolvedModuleContribution`](/api/framework-module/src/type-aliases/resolvedmodulecontribution/)\<`T`, `TKind`\>[]
 
 ---
 

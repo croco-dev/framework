@@ -9,6 +9,15 @@ title: "ModuleOptions"
 
 ## Properties
 
+### contributions?
+
+> `readonly` `optional` **contributions?**: readonly [`ModuleContribution`](/api/framework-module/src/type-aliases/modulecontribution/)[]
+
+Deterministically ordered extension values. Duplicate `kind` + `id` pairs
+are rejected across the complete application graph.
+
+---
+
 ### controllers?
 
 > `readonly` `optional` **controllers?**: readonly [`ModuleToken`](/api/framework-module/src/type-aliases/moduletoken/)\<`unknown`\>[]

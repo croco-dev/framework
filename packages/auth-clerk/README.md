@@ -10,6 +10,34 @@ pnpm add @croco/auth-clerk @croco/idempotency-core @clerk/backend
 
 ## 사용법
 
+### Canonical module plugin
+
+새 애플리케이션은 `clerkAuth()`를 `defineCrocoApplication()`의 import로 전달합니다. 이 factory는
+`AUTH_PROVIDER_TOKEN`의 단일 소유권과 `diagnostics.provider` contribution을 같은 module graph에
+등록합니다. 다른 auth plugin으로 교체할 때는 application-level provider replacement를 명시해야 합니다.
+
+```typescript
+import { clerkAuth } from "@croco/auth-clerk";
+import { createApplicationRuntime, defineCrocoApplication } from "@croco/framework-module";
+
+const application = defineCrocoApplication({
+  imports: [
+    clerkAuth({
+      secretKey: process.env.CLERK_SECRET_KEY!,
+      publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+      webhookSecret: process.env.CLERK_WEBHOOK_SECRET,
+    }),
+  ],
+});
+
+const runtime = createApplicationRuntime(application);
+await runtime.initialize();
+```
+
+기존 `new ClerkAuthProvider(...)` 직접 생성 경로는 호환성을 위해 유지됩니다. canonical application
+graph를 사용하는 애플리케이션에서는 plugin factory를 사용해야 provider ownership, diagnostics metadata,
+중복 검증이 startup 전에 일관되게 적용됩니다.
+
 ### 1. 토큰 인증
 
 ```typescript

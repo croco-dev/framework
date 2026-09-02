@@ -603,6 +603,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/framework-module':
+        specifier: workspace:*
+        version: link:../framework-module
       '@croco/idempotency-core':
         specifier: workspace:*
         version: link:../idempotency-core
@@ -3440,6 +3443,9 @@ importers:
       '@croco/diagnostics-core':
         specifier: workspace:*
         version: link:../diagnostics-core
+      '@croco/framework-module':
+        specifier: workspace:*
+        version: link:../framework-module
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
@@ -3596,12 +3602,27 @@ importers:
         specifier: 12.0.4
         version: 12.0.4
     devDependencies:
+      '@croco/auth-clerk':
+        specifier: workspace:*
+        version: link:../auth-clerk
+      '@croco/auth-core':
+        specifier: workspace:*
+        version: link:../auth-core
+      '@croco/diagnostics-core':
+        specifier: workspace:*
+        version: link:../diagnostics-core
       '@croco/events-core':
         specifier: workspace:*
         version: link:../events-core
       '@croco/events-tx':
         specifier: workspace:*
         version: link:../events-tx
+      '@croco/framework-module':
+        specifier: workspace:*
+        version: link:../framework-module
+      '@croco/telemetry-sdk-node':
+        specifier: workspace:*
+        version: link:../telemetry-sdk-node
       '@croco/transports-http':
         specifier: workspace:*
         version: link:../transports-http
@@ -3696,6 +3717,9 @@ importers:
       '@croco/framework-logger':
         specifier: workspace:*
         version: link:../framework-logger
+      '@croco/framework-module':
+        specifier: workspace:*
+        version: link:../framework-module
       '@croco/health-core':
         specifier: workspace:*
         version: link:../health-core
@@ -3798,12 +3822,18 @@ importers:
 
   packages/tx-drizzle:
     dependencies:
+      '@croco/diagnostics-core':
+        specifier: workspace:*
+        version: link:../diagnostics-core
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
       '@croco/framework-logger':
         specifier: workspace:*
         version: link:../framework-logger
+      '@croco/framework-module':
+        specifier: workspace:*
+        version: link:../framework-module
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core

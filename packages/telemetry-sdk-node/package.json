@@ -34,6 +34,7 @@
   },
   "dependencies": {
     "@croco/diagnostics-core": "workspace:*",
+    "@croco/framework-module": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@opentelemetry/api": "^1.9.0",
     "@opentelemetry/api-logs": "^0.220.0",

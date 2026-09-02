@@ -10,6 +10,7 @@ export default defineConfig({
       "@croco/auth-core": resolve(currentDir, "../auth-core/src/index.ts"),
       "@croco/diagnostics-core": resolve(currentDir, "../diagnostics-core/src/index.ts"),
       "@croco/framework-context": resolve(currentDir, "../framework-context/src/index.ts"),
+      "@croco/framework-module": resolve(currentDir, "../framework-module/src/index.ts"),
       "@croco/problems-core": resolve(currentDir, "../problems-core/src/index.ts"),
       "@croco/tenant-core": resolve(currentDir, "../tenant-core/src/index.ts"),
       "@croco/testing": resolve(currentDir, "../testing/src/index.ts"),

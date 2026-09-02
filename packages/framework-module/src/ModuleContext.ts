@@ -1,6 +1,7 @@
 import type { ContainerInstance } from "typedi";
 import { Container as FrameworkContainer } from "@croco/framework-context";
 import { ModuleProviderVisibilityProblem } from "./problems";
+import type { ResolvedModuleContribution } from "./types/ModuleContribution";
 import type { Constructor } from "./types/ModuleToken";
 import type { ModuleToken } from "./types/ModuleToken";
 
@@ -20,6 +21,9 @@ export type ModuleContextOptions = {
     providerClass: Constructor<unknown>,
   ) => void;
   readonly validateProviderAccess?: (moduleName: string, token: ModuleToken<unknown>) => void;
+  readonly getContributions?: <T, TKind extends string>(
+    kind: TKind,
+  ) => readonly ResolvedModuleContribution<T, TKind>[];
 };
 
 export class ModuleContext {
@@ -42,6 +46,9 @@ export class ModuleContext {
     moduleName: string,
     token: ModuleToken<unknown>,
   ) => void;
+  private readonly resolveContributions?: <T, TKind extends string>(
+    kind: TKind,
+  ) => readonly ResolvedModuleContribution<T, TKind>[];
 
   constructor(container: ContainerInstance, options: ModuleContextOptions = {}) {
     this.container = container;
@@ -54,6 +61,7 @@ export class ModuleContext {
     this.validateProviderWrite = options.validateProviderWrite;
     this.validateClassProvider = options.validateClassProvider;
     this.validateProviderAccess = options.validateProviderAccess;
+    this.resolveContributions = options.getContributions;
   }
 
   get<T>(token: ModuleToken<T>): T {
@@ -71,6 +79,13 @@ export class ModuleContext {
     this.validateRuntime?.();
     this.validateProviderWrite?.(this.moduleName, token);
     this.container.set(FrameworkContainer.toTypeDIServiceIdentifier(token), value);
+  }
+
+  getContributions<T, TKind extends string = string>(
+    kind: TKind,
+  ): readonly ResolvedModuleContribution<T, TKind>[] {
+    this.validateRuntime?.();
+    return this.resolveContributions?.(kind) ?? [];
   }
 
   private assertTokenVisible<T>(token: ModuleToken<T>): void {

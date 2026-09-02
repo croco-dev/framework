@@ -1,7 +1,14 @@
 {
   "schemaVersion": 1,
   "audit": {
-    "ignoreGhsas": []
+    "ignoreGhsas": [
+      {
+        "id": "GHSA-f88m-g3jw-g9cj",
+        "owner": "kang-heewon",
+        "reason": "Astro 6.4.8 constrains its optional sharp dependency to the vulnerable 0.34 line; retain the explicit exception while Astro compatibility with the fixed sharp 0.35 line is evaluated.",
+        "reviewBy": "2026-09-30"
+      }
+    ]
   },
   "secretScan": {
     "gitleaks": {
