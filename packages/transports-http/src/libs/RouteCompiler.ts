@@ -217,6 +217,7 @@ export class RouteCompiler {
     const route: CompiledRoute = {
       method: routeIR.httpMethod,
       path: fullPath,
+      ...(routeIR.successStatus === undefined ? {} : { successStatus: routeIR.successStatus }),
       handler,
       controllerInstance: undefined,
       methodName: routeIR.methodName,

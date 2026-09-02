@@ -27,6 +27,8 @@ import {
   Post,
   Raw,
   REST_PARAMS_KEY,
+  REST_ROUTES_KEY,
+  type RouteMetadata,
 } from "@croco/protocols-rest";
 import {
   createSlidingWindowPolicy,
@@ -487,6 +489,50 @@ describe("CrocoApp", () => {
     expect(response.status).toBe(200);
     const json = await response.json();
     expect(json).toEqual({ message: "Hello, World!" });
+  });
+
+  it("should apply declared route success statuses to JSON responses", async () => {
+    @Controller("/success-status")
+    class SuccessStatusController {
+      @Post("/created")
+      create() {
+        return { created: true };
+      }
+
+      @Get("/default")
+      defaultStatus() {
+        return { ok: true };
+      }
+
+      @Post("/empty")
+      empty() {
+        return null;
+      }
+    }
+
+    const routeMetadata = Reflect.getMetadata(
+      REST_ROUTES_KEY,
+      SuccessStatusController,
+    ) as RouteMetadata[];
+    const createdRoute = routeMetadata.find((route) => route.methodName === "create");
+    if (!createdRoute) {
+      throw new TypeError("Expected metadata for SuccessStatusController.create.");
+    }
+    createdRoute.statusCode = 201;
+
+    const app = createApp({ controllers: [SuccessStatusController] });
+    const createdResponse = await app.fetch(
+      new Request("http://localhost/success-status/created", { method: "POST" }),
+    );
+    const defaultResponse = await app.fetch(new Request("http://localhost/success-status/default"));
+    const emptyResponse = await app.fetch(
+      new Request("http://localhost/success-status/empty", { method: "POST" }),
+    );
+
+    expect(createdResponse.status).toBe(201);
+    await expect(createdResponse.json()).resolves.toEqual({ created: true });
+    expect(defaultResponse.status).toBe(200);
+    expect(emptyResponse.status).toBe(204);
   });
 
   it("should run HTTP middlewares around the controller handler", async () => {
