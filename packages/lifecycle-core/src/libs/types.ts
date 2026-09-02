@@ -141,6 +141,7 @@ export type LifecycleSkipReason =
   | "rule_not_active"
   | "rule_paused"
   | "rule_unavailable"
+  | "all_actions_skipped"
   | "no_actions";
 
 export type LifecycleRun = {
