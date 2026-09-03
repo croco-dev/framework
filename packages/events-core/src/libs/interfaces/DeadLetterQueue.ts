@@ -7,7 +7,7 @@ export type DeadLetterItem<TEvent extends DomainEvent = DomainEvent> = {
   /** 원본 이벤트 */
   event: TEvent;
 
-  /** 실패 원인 */
+  /** Payload를 포함하지 않는 안정적인 실패 원인 코드 */
   reason: string;
 
   /** 실패 시간 */
@@ -16,13 +16,13 @@ export type DeadLetterItem<TEvent extends DomainEvent = DomainEvent> = {
   /** 재시도 횟수 */
   retryCount: number;
 
-  /** 마지막 에러 메시지 */
+  /** Payload를 포함하지 않는 마지막 오류 분류 */
   lastError?: string;
 
-  /** 핸들러 식별자 (어떤 핸들러에서 실패했는지) */
+  /** 재생 시 같은 핸들러를 식별할 수 있는 안정적인 핸들러 식별자 */
   handlerId?: string;
 
-  /** 추가 메타데이터 */
+  /** 이벤트 payload를 포함하지 않는 진단·보관 메타데이터 */
   metadata?: Record<string, unknown>;
 };
 
@@ -64,12 +64,15 @@ export const DEFAULT_DEAD_LETTER_POLICY: DeadLetterPolicy = {
 export interface DeadLetterQueue {
   /**
    * 이벤트를 DLQ에 저장합니다.
+   * 같은 eventId와 handlerId 조합의 활성 항목은 중복 저장하지 않아야 합니다.
    * @param item 저장할 DLQ 항목
    */
   enqueue<TEvent extends DomainEvent>(item: DeadLetterItem<TEvent>): Promise<void>;
 
   /**
    * DLQ에서 이벤트를 꺼내 재처리합니다.
+   * 반환한 항목은 다른 동시 소비자가 다시 받지 않도록 원자적으로 claim하거나 제거해야 합니다.
+   * 재처리에 실패한 소비자는 같은 eventId와 handlerId로 항목을 다시 저장해야 합니다.
    * @param limit 최대 조회 개수
    * @returns DLQ 항목 목록
    */

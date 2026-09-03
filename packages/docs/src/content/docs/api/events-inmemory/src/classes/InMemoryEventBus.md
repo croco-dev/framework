@@ -89,6 +89,25 @@ readonly `RunningHandler`[]
 
 ---
 
+### replayDeadLetters()
+
+> **replayDeadLetters**(`limit?`): `Promise`\<[`DeadLetterReplayResult`](/api/events-inmemory/src/type-aliases/deadletterreplayresult/)\>
+
+Claims dead-letter entries and re-executes only their failed handlers.
+Successful entries are consumed; failed entries are placed back on the queue.
+
+#### Parameters
+
+##### limit?
+
+`number`
+
+#### Returns
+
+`Promise`\<[`DeadLetterReplayResult`](/api/events-inmemory/src/type-aliases/deadletterreplayresult/)\>
+
+---
+
 ### subscribe()
 
 > **subscribe**(`subscription`): `void`

@@ -155,3 +155,47 @@ async function publishUserEvents(): Promise<void> {
 
 void publishUserEvents();
 ```
+
+### Opt-in dead-letter retries and replay
+
+Configure a dead-letter queue to retry failed handlers and retain exhausted work. Without this option,
+`InMemoryEventBus` keeps its one-attempt publish behavior.
+
+```typescript typecheck
+import {
+  DomainEvent,
+  type DeadLetterPolicy,
+  type EventHandler,
+  type RetryableEventHandler,
+} from "@croco/events-core";
+import { InMemoryDeadLetterQueue, InMemoryEventBus } from "@croco/events-inmemory";
+
+class UserCreatedEvent extends DomainEvent {
+  static readonly eventName = "user.created";
+}
+
+class UserCreatedHandler implements EventHandler<UserCreatedEvent>, RetryableEventHandler {
+  handle(_event: UserCreatedEvent): void {
+    // Handle the event. Use eventId as the idempotency identity for side effects.
+  }
+
+  getRetryPolicy(): Partial<DeadLetterPolicy> {
+    return { maxRetries: 2, retryDelayMs: 100 };
+  }
+}
+
+const deadLetterQueue = new InMemoryDeadLetterQueue();
+const eventBus = new InMemoryEventBus({ deadLetterQueue });
+
+async function replayExhaustedHandlers(): Promise<void> {
+  const result = await eventBus.replayDeadLetters(10);
+  console.log(result.succeeded, result.failed);
+}
+
+void replayExhaustedHandlers();
+```
+
+Replay preserves the original `eventId` and invokes only the handler recorded by the dead-letter entry. The
+in-memory queue atomically claims entries within one process and deduplicates active entries by event and handler
+identity. Use a durable `DeadLetterQueue` adapter when work must survive process restarts or coordinate across
+multiple workers.

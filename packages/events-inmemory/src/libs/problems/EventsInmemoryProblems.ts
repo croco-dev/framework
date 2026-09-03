@@ -7,6 +7,13 @@ export const MAX_EVENT_BUS_TIMEOUT_MS = 2_147_483_647;
 
 export type EventBusNumericOption = "maxConcurrency" | "backpressureTimeoutMs";
 
+export type DeadLetterPolicyOption =
+  | "maxRetries"
+  | "retryDelayMs"
+  | "backoffMultiplier"
+  | "maxRetryDelayMs"
+  | "retentionDays";
+
 /** Event bus numeric configuration cannot be represented with unambiguous runtime semantics. */
 export class InvalidEventBusConfigurationProblem extends Problem {
   readonly code = "events-inmemory/invalid-configuration";
@@ -24,6 +31,70 @@ export class InvalidEventBusConfigurationProblem extends Problem {
       undefined,
       undefined,
       `Invalid EventBus configuration: ${option} must be ${constraint}; received ${value}`,
+    );
+  }
+}
+
+/** A dead-letter retry policy cannot be executed with deterministic bounded semantics. */
+export class InvalidDeadLetterPolicyProblem extends Problem {
+  readonly code = "events-inmemory/invalid-dead-letter-policy";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(
+    readonly option: DeadLetterPolicyOption,
+    readonly value: unknown,
+  ) {
+    super(
+      undefined,
+      undefined,
+      `Invalid dead-letter policy: ${option} has unsupported value ${String(value)}`,
+    );
+  }
+}
+
+/** A dead-letter dequeue limit must identify a positive bounded batch. */
+export class InvalidDeadLetterQueueLimitProblem extends Problem {
+  readonly code = "events-inmemory/invalid-dead-letter-limit";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(readonly value: unknown) {
+    super(
+      undefined,
+      undefined,
+      `Invalid dead-letter dequeue limit: expected a positive safe integer; received ${String(value)}`,
+    );
+  }
+}
+
+/** Dead-letter replay was requested without configuring storage. */
+export class DeadLetterQueueNotConfiguredProblem extends Problem {
+  readonly code = "events-inmemory/dead-letter-queue-not-configured";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor() {
+    super(
+      undefined,
+      undefined,
+      "Dead-letter execution requires InMemoryEventBusOptions.deadLetterQueue",
+    );
+  }
+}
+
+/** The handler recorded by a dead-letter entry is not uniquely available for replay. */
+export class DeadLetterReplayHandlerUnavailableProblem extends Problem {
+  readonly code = "events-inmemory/dead-letter-handler-unavailable";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(
+    readonly eventName: string,
+    readonly handlerId: string | undefined,
+  ) {
+    super(
+      undefined,
+      undefined,
+      handlerId
+        ? `Dead-letter handler '${handlerId}' is not uniquely subscribed to '${eventName}'`
+        : `Dead-letter entry for '${eventName}' does not identify a handler`,
     );
   }
 }

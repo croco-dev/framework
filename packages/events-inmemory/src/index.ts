@@ -33,6 +33,10 @@ export type {
   EventPublishFailure,
   InMemoryEventBusOptions,
 } from "./libs/InmemoryEventBus";
+/** 인메모리 dead-letter 재생 결과와 실패 타입입니다. */
+export type { DeadLetterReplayFailure, DeadLetterReplayResult } from "./libs/InmemoryEventBus";
+/** 인메모리 dead-letter 항목 타입입니다. */
+export type { InMemoryDeadLetterItem } from "./libs/InMemoryDeadLetterQueue";
 /**
  * 하나 이상의 이벤트 핸들러 실행이 실패했을 때 발생하는 집계 에러입니다.
  */
@@ -44,10 +48,15 @@ export {
   EventPublishFailedError,
   InMemoryEventBus,
 } from "./libs/InmemoryEventBus";
+export { InMemoryDeadLetterQueue } from "./libs/InMemoryDeadLetterQueue";
 
 export {
   BackpressureExceededProblem,
   BackpressureTimeoutProblem,
+  DeadLetterQueueNotConfiguredProblem,
+  DeadLetterReplayHandlerUnavailableProblem,
+  InvalidDeadLetterPolicyProblem,
+  InvalidDeadLetterQueueLimitProblem,
   InvalidEventBusConfigurationProblem,
 } from "./libs/problems/EventsInmemoryProblems";
 export {
@@ -55,3 +64,4 @@ export {
   MAX_EVENT_BUS_TIMEOUT_MS,
 } from "./libs/problems/EventsInmemoryProblems";
 export type { EventBusNumericOption } from "./libs/problems/EventsInmemoryProblems";
+export type { DeadLetterPolicyOption } from "./libs/problems/EventsInmemoryProblems";

@@ -37,7 +37,7 @@ title: "DeadLetterItem"
 
 > `optional` **handlerId?**: `string`
 
-핸들러 식별자 (어떤 핸들러에서 실패했는지)
+재생 시 같은 핸들러를 식별할 수 있는 안정적인 핸들러 식별자
 
 ---
 
@@ -45,7 +45,7 @@ title: "DeadLetterItem"
 
 > `optional` **lastError?**: `string`
 
-마지막 에러 메시지
+Payload를 포함하지 않는 마지막 오류 분류
 
 ---
 
@@ -53,7 +53,7 @@ title: "DeadLetterItem"
 
 > `optional` **metadata?**: `Record`\<`string`, `unknown`\>
 
-추가 메타데이터
+이벤트 payload를 포함하지 않는 진단·보관 메타데이터
 
 ---
 
@@ -61,7 +61,7 @@ title: "DeadLetterItem"
 
 > **reason**: `string`
 
-실패 원인
+Payload를 포함하지 않는 안정적인 실패 원인 코드
 
 ---
 

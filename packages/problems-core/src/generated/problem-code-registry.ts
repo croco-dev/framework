@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 747,
+  problemCount: 751,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -7802,7 +7802,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 34,
+          line: 105,
           column: 1,
           kind: "problem-class",
         },
@@ -7832,7 +7832,73 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 50,
+          line: 121,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "events-inmemory/dead-letter-handler-unavailable",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#events-inmemory-dead-letter-handler-unavailable",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
+          line: 84,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "events-inmemory/dead-letter-queue-not-configured",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#events-inmemory-dead-letter-queue-not-configured",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
+          line: 70,
           column: 1,
           kind: "problem-class",
         },
@@ -7864,7 +7930,73 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 11,
+          line: 18,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "events-inmemory/invalid-dead-letter-limit",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#events-inmemory-invalid-dead-letter-limit",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
+          line: 56,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "events-inmemory/invalid-dead-letter-policy",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#events-inmemory-invalid-dead-letter-policy",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
+          line: 39,
           column: 1,
           kind: "problem-class",
         },
@@ -7896,7 +8028,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          line: 53,
+          line: 90,
           column: 1,
           kind: "problem-class",
         },
@@ -7928,7 +8060,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          line: 36,
+          line: 73,
           column: 1,
           kind: "problem-class",
         },

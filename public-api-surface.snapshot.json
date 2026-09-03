@@ -10648,6 +10648,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "DeadLetterQueueNotConfiguredProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsInmemoryProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "DeadLetterReplayHandlerUnavailableProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsInmemoryProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "EventPublishDroppedProblem",
               "exportKind": "named",
               "source": "./libs/InmemoryEventBus",
@@ -10660,9 +10672,27 @@
               "declarationKind": "class"
             },
             {
+              "name": "InMemoryDeadLetterQueue",
+              "exportKind": "named",
+              "source": "./libs/InMemoryDeadLetterQueue",
+              "declarationKind": "class"
+            },
+            {
               "name": "InMemoryEventBus",
               "exportKind": "named",
               "source": "./libs/InmemoryEventBus",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidDeadLetterPolicyProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsInmemoryProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidDeadLetterQueueLimitProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsInmemoryProblems",
               "declarationKind": "class"
             },
             {
@@ -10691,6 +10721,21 @@
               "source": "./libs/InmemoryEventBus"
             },
             {
+              "name": "DeadLetterPolicyOption",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsInmemoryProblems"
+            },
+            {
+              "name": "DeadLetterReplayFailure",
+              "exportKind": "named",
+              "source": "./libs/InmemoryEventBus"
+            },
+            {
+              "name": "DeadLetterReplayResult",
+              "exportKind": "named",
+              "source": "./libs/InmemoryEventBus"
+            },
+            {
               "name": "EventBusNumericOption",
               "exportKind": "named",
               "source": "./libs/problems/EventsInmemoryProblems"
@@ -10699,6 +10744,11 @@
               "name": "EventPublishFailure",
               "exportKind": "named",
               "source": "./libs/InmemoryEventBus"
+            },
+            {
+              "name": "InMemoryDeadLetterItem",
+              "exportKind": "named",
+              "source": "./libs/InMemoryDeadLetterQueue"
             },
             {
               "name": "InMemoryEventBusOptions",

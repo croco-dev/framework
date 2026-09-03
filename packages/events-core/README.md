@@ -54,6 +54,13 @@ const registry = EventRegistry.fromMetadata();
 const serializer = new DefaultEventSerializer(registry);
 ```
 
+### DLQ 구현
+
+`DeadLetterQueue`와 `RetryableEventHandler`는 저장소·핸들러 정책 계약입니다. 첫 번째 공식 구현은
+`@croco/events-inmemory`의 `InMemoryDeadLetterQueue`이며, 단일 프로세스 실행과 테스트에서 사용할 수 있습니다.
+영속 저장소 어댑터는 같은 `eventId`와 `handlerId` 조합을 중복 저장하지 않고 `dequeue` 시 원자적으로 항목을
+claim해야 합니다.
+
 ### 기존 ordering/replay 타입에서 마이그레이션
 
 런타임에서 소비되지 않던 `EventOrdering`, `EventReplay`, `EventStore` 인터페이스와 관련 설정·결과 타입은
@@ -66,6 +73,6 @@ const serializer = new DefaultEventSerializer(registry);
 - 버스와 발행: `EventBus`, `EventBusConfig`, `EventPublisher`, `EventSubscriptionIndex`
 - 등록과 탐색: `RegisterEventHandler`, `EventRegistry`, `RegisterEvent`, `DefaultHandlerResolver`
 - 직렬화: `DefaultEventSerializer`, `SerializedEvent`, `EventSerializer`
-- 확장 인터페이스: `DeadLetterQueue`, `RetryableEventHandler`
+- DLQ 계약: `DeadLetterQueue`, `DeadLetterItem`, `DeadLetterPolicy`, `RetryableEventHandler`
 - 기본 정책: `DEFAULT_DEAD_LETTER_POLICY`
 - Problem 타입: `EventBusNotSetProblem`, `UnknownEventTypeProblem`, `EventDefinitionProblem`, `DuplicateEventNameProblem`

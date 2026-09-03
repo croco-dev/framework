@@ -27,6 +27,8 @@ DLQ를 비웁니다.
 > **dequeue**\<`TEvent`\>(`limit?`): `Promise`\<[`DeadLetterItem`](/api/events-core/src/type-aliases/deadletteritem/)\<`TEvent`\>[]\>
 
 DLQ에서 이벤트를 꺼내 재처리합니다.
+반환한 항목은 다른 동시 소비자가 다시 받지 않도록 원자적으로 claim하거나 제거해야 합니다.
+재처리에 실패한 소비자는 같은 eventId와 handlerId로 항목을 다시 저장해야 합니다.
 
 #### Type Parameters
 
@@ -55,6 +57,7 @@ DLQ 항목 목록
 > **enqueue**\<`TEvent`\>(`item`): `Promise`\<`void`\>
 
 이벤트를 DLQ에 저장합니다.
+같은 eventId와 handlerId 조합의 활성 항목은 중복 저장하지 않아야 합니다.
 
 #### Type Parameters
 
