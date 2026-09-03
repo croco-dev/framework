@@ -13,13 +13,19 @@ title: "InMemoryImpersonationStore"
 
 ### Constructor
 
-> **new InMemoryImpersonationStore**(): `InMemoryImpersonationStore`
+> **new InMemoryImpersonationStore**(`options?`): `InMemoryImpersonationStore`
+
+#### Parameters
+
+##### options?
+
+[`InMemoryImpersonationStoreOptions`](/api/impersonation-core/src/type-aliases/inmemoryimpersonationstoreoptions/) = `{}`
 
 #### Returns
 
 `InMemoryImpersonationStore`
 
-#### Inherited from
+#### Overrides
 
 [`ImpersonationStore`](/api/impersonation-core/src/classes/impersonationstore/).[`constructor`](/api/impersonation-core/src/classes/impersonationstore/#constructor)
 

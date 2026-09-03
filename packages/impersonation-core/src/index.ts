@@ -16,7 +16,10 @@ export {
   type ImpersonationLifecycleDiagnostics,
   ImpersonationService,
 } from "./libs/ImpersonationService";
-export { InMemoryImpersonationStore } from "./libs/InMemoryImpersonationStore";
+export {
+  InMemoryImpersonationStore,
+  type InMemoryImpersonationStoreOptions,
+} from "./libs/InMemoryImpersonationStore";
 // Interfaces
 export * from "./libs/interfaces";
 

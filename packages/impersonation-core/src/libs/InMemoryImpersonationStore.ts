@@ -12,12 +12,24 @@ import {
 } from "./problems/ImpersonationProblems";
 import type { ImpersonationState } from "./types";
 
+type Clock = () => Date;
+
+export type InMemoryImpersonationStoreOptions = {
+  readonly now?: Clock;
+};
+
 @Component()
 export class InMemoryImpersonationStore extends ImpersonationStore {
   private readonly sessions = new Map<string, ImpersonationState>();
   private readonly activeSessionsByImpersonator = new Map<string, ImpersonationState>();
   private readonly eventIntents = new Map<string, ImpersonationLifecycleEventIntent>();
   private readonly seenSessionIds = new Set<string>();
+  private readonly now: Clock;
+
+  constructor(options: InMemoryImpersonationStoreOptions = {}) {
+    super();
+    this.now = options.now ?? (() => new Date());
+  }
 
   async commitStart(
     intent: ImpersonationStartedEventIntent,
@@ -107,7 +119,7 @@ export class InMemoryImpersonationStore extends ImpersonationStore {
   }
 
   private isExpired(session: ImpersonationState): boolean {
-    return session.expiresAt.getTime() <= Date.now();
+    return session.expiresAt.getTime() <= this.now().getTime();
   }
 
   private deleteSession(session: ImpersonationState): void {
