@@ -9,7 +9,11 @@ export {
   type PostgresTestConnection,
   postgresResource,
 } from "./libs/PostgresResource";
-export { TestResourceConfigurationProblem, TestResourceLifecycleProblem } from "./libs/problems";
+export {
+  TestResourceConfigurationProblem,
+  TestResourceLifecycleProblem,
+  TestResourceMissingDependencyProblem,
+} from "./libs/problems";
 export { type TestResourceProvider, testResourceProvider } from "./libs/providers";
 export {
   type RedisResourceOptions,

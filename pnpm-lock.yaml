@@ -3595,15 +3595,12 @@ importers:
       '@croco/testing':
         specifier: workspace:*
         version: link:../testing
-      ioredis:
-        specifier: 5.11.1
-        version: 5.11.1
-      pg:
-        specifier: 8.22.0
-        version: 8.22.0
-      testcontainers:
-        specifier: 12.0.4
-        version: 12.0.4
+      '@types/ioredis':
+        specifier: 4.28.10
+        version: 4.28.10
+      '@types/pg':
+        specifier: 8.20.0
+        version: 8.20.0
     devDependencies:
       '@croco/auth-clerk':
         specifier: workspace:*
@@ -3635,12 +3632,18 @@ importers:
       '@croco/tx-drizzle':
         specifier: workspace:*
         version: link:../tx-drizzle
-      '@types/pg':
-        specifier: 8.20.0
-        version: 8.20.0
       drizzle-orm:
         specifier: 'catalog:'
         version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.20.0)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.17)(pg@8.22.0)
+      ioredis:
+        specifier: 5.11.1
+        version: 5.11.1
+      pg:
+        specifier: 8.22.0
+        version: 8.22.0
+      testcontainers:
+        specifier: 12.0.4
+        version: 12.0.4
       tsup:
         specifier: 8.5.1
         version: 8.5.1(patch_hash=ce9dbc714c187cea78868f1e68c1a0e5097ddbceb7e976a564d94f2291b5bcb9)(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.18)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.9.0)
@@ -7231,6 +7234,9 @@ packages:
 
   '@types/hast@3.0.4':
     resolution: {integrity: sha512-WPs+bbQw5aCj+x6laNGWLH3wviHtoCv/P3+otBhbOhJgG8qtpdAMlTCxLtsTWA7LH1Oh/bFCHsBn0TPS5m30EQ==}
+
+  '@types/ioredis@4.28.10':
+    resolution: {integrity: sha512-69LyhUgrXdgcNDv7ogs1qXZomnfOEnSmrmMFqKgt1XMJxmoOSG/u3wYy13yACIfKuMJ8IhKgHafDO3sx19zVQQ==}
 
   '@types/js-yaml@4.0.9':
     resolution: {integrity: sha512-k4MGaQl5TGo/iipqb2UDG2UwjXziSWkh0uysQelTlJpX1qGlpUZYm8PnO4DxG1qBomtJUdYJ6qR6xdIah10JLg==}
@@ -14771,6 +14777,10 @@ snapshots:
   '@types/hast@3.0.4':
     dependencies:
       '@types/unist': 3.0.3
+
+  '@types/ioredis@4.28.10':
+    dependencies:
+      '@types/node': 22.19.3
 
   '@types/js-yaml@4.0.9': {}
 

@@ -11,7 +11,7 @@ title: "RedisTestConnection"
 
 ### client
 
-> `readonly` **client**: `Redis`
+> `readonly` **client**: `RedisClient`
 
 ---
 

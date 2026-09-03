@@ -1,7 +1,8 @@
 import type { TokenIdentifier } from "@croco/framework-context";
 import type { StartedTestResource, TestResource, TestResourceDiagnostic } from "@croco/testing";
-import Redis from "ioredis";
-import { GenericContainer, type StartedTestContainer, Wait } from "testcontainers";
+import type * as RedisModuleNamespace from "ioredis";
+import type { StartedTestContainer } from "testcontainers";
+import { loadTestResourceLiveDependency } from "./liveDependencies";
 import { TestResourceLifecycleProblem } from "./problems";
 import type { TestResourceProvider } from "./providers";
 import {
@@ -17,8 +18,18 @@ import {
   throwCleanupFailures,
 } from "./shared";
 
+type RedisModule = typeof RedisModuleNamespace;
+type RedisClientConstructor = RedisModule extends { readonly default: infer TDefault }
+  ? TDefault
+  : RedisModule;
+type RedisClient = RedisClientConstructor extends abstract new (
+  ...arguments_: never[]
+) => infer TClient
+  ? TClient
+  : never;
+
 export type RedisTestConnection = {
-  readonly client: Redis;
+  readonly client: RedisClient;
   readonly host: string;
   readonly keyPrefix: string;
   readonly port: number;
@@ -49,10 +60,20 @@ export function redisResource(
     fidelityHint: fidelity,
     id,
     async start(context): Promise<StartedTestResource<RedisTestConnection>> {
+      const { GenericContainer, Wait } = await loadTestResourceLiveDependency(
+        id,
+        { dependency: "testcontainers", resourceKind: "redis" },
+        () => import("testcontainers"),
+      );
+      const { default: Redis } = await loadTestResourceLiveDependency(
+        id,
+        { dependency: "ioredis", resourceKind: "redis" },
+        () => import("ioredis"),
+      );
       const logs: string[] = [];
       const diagnostics: TestResourceDiagnostic[] = [];
       let container: StartedTestContainer | undefined;
-      let client: Redis | undefined;
+      let client: RedisClient | undefined;
 
       try {
         container = await new GenericContainer(image)
@@ -72,7 +93,7 @@ export function redisResource(
       const url = `redis://${host}:${port}`;
       const keyPrefix = `croco:${isolationSuffix(context.workerId, context.testId)}:`;
 
-      const connectionResult = await connectRedis(url, keyPrefix, logs);
+      const connectionResult = await connectRedis(Redis, url, keyPrefix, logs);
       if (!connectionResult.ok) {
         diagnostics.push(failedDiagnostic("health-check", connectionResult.error, logs));
         await cleanupFailedStart(client, container, logs);
@@ -133,10 +154,11 @@ export function redisResource(
 }
 
 type RedisConnectionResult =
-  | { readonly client: Redis; readonly ok: true }
+  | { readonly client: RedisClient; readonly ok: true }
   | { readonly error: Error; readonly ok: false };
 
 async function connectRedis(
+  RedisConstructor: RedisModule["default"],
   url: string,
   keyPrefix: string,
   logs: string[],
@@ -144,7 +166,7 @@ async function connectRedis(
   let lastError = new Error("Redis health-check failed without a reported cause.");
 
   for (let attempt = 1; attempt <= 5; attempt += 1) {
-    const candidate = new Redis(url, {
+    const candidate = new RedisConstructor(url, {
       family: 4,
       keyPrefix,
       lazyConnect: true,
@@ -178,7 +200,7 @@ function delay(milliseconds: number): Promise<void> {
 }
 
 async function cleanupFailedStart(
-  client: Redis | undefined,
+  client: RedisClient | undefined,
   container: StartedTestContainer,
   logs: string[],
 ): Promise<void> {
