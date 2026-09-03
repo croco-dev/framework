@@ -141,6 +141,8 @@ const store = new InMemoryImpersonationStore({ now: () => now });
 now = new Date("2026-01-01T00:01:00.000Z");
 ```
 
+Clock이 유효하지 않은 `Date`를 반환하면 `IMPERSONATION_CONFIGURATION_INVALID` Problem으로 실패합니다.
+
 ## API
 
 ### ImpersonationService

@@ -262,4 +262,31 @@ describe("InMemoryImpersonationStore clock", () => {
     await expect(firstStore.find(firstSession.sessionId)).resolves.toBeNull();
     await expect(secondStore.find(secondSession.sessionId)).resolves.toEqual(secondSession);
   });
+
+  it("rejects an invalid clock value across expiry-dependent operations", async () => {
+    const clock = mutableClock(startedAt);
+    const store = new InMemoryImpersonationStore({ now: clock.now });
+    const activeSession = session("imp-invalid-clock", "admin-invalid-clock", expiresAt);
+    await store.commitStart(createImpersonationStartedEventIntent(activeSession));
+    clock.set(new Date(Number.NaN));
+
+    const expectedProblem = {
+      code: "IMPERSONATION_CONFIGURATION_INVALID",
+      field: "clock",
+      constraint: "valid-date",
+      receivedValue: "Invalid Date",
+    };
+
+    await expect(store.find(activeSession.sessionId)).rejects.toMatchObject(expectedProblem);
+    await expect(store.findByImpersonator(activeSession.impersonatorId)).rejects.toMatchObject(
+      expectedProblem,
+    );
+    await expect(
+      store.commitStart(
+        createImpersonationStartedEventIntent(
+          session("imp-invalid-clock-replacement", activeSession.impersonatorId),
+        ),
+      ),
+    ).rejects.toMatchObject(expectedProblem);
+  });
 });

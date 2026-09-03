@@ -2,6 +2,7 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export type ImpersonationConfigurationField =
   | "blockedActions"
+  | "clock"
   | "configuration"
   | "maxDurationMs"
   | "requireReason";
@@ -13,6 +14,7 @@ export type ImpersonationConfigurationConstraint =
   | "object"
   | "positive-safe-integer-with-representable-expiration"
   | "registered"
+  | "valid-date"
   | "unique-action-identifiers";
 
 export type InvalidImpersonationConfigurationProblemOptions = {

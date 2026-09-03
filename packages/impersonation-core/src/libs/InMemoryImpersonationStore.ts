@@ -8,6 +8,7 @@ import type {
 import { ImpersonationStore } from "./interfaces";
 import {
   ImpersonationEventIntentConflictProblem,
+  InvalidImpersonationConfigurationProblem,
   InvalidImpersonationEventIntentLimitProblem,
 } from "./problems/ImpersonationProblems";
 import type { ImpersonationState } from "./types";
@@ -119,7 +120,15 @@ export class InMemoryImpersonationStore extends ImpersonationStore {
   }
 
   private isExpired(session: ImpersonationState): boolean {
-    return session.expiresAt.getTime() <= this.now().getTime();
+    const now = this.now().getTime();
+    if (!Number.isFinite(now)) {
+      throw new InvalidImpersonationConfigurationProblem({
+        field: "clock",
+        constraint: "valid-date",
+        receivedValue: "Invalid Date",
+      });
+    }
+    return session.expiresAt.getTime() <= now;
   }
 
   private deleteSession(session: ImpersonationState): void {
