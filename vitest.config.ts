@@ -1,28 +1,7 @@
 import { resolve } from "node:path";
 
 import { defineConfig } from "vitest/config";
-
-export const CORE_COVERAGE_PACKAGES = [
-  "@croco/framework-context",
-  "@croco/problems-core",
-  "@croco/protocols-core",
-  "@croco/protocols-rest",
-  "@croco/openapi-spec",
-  "@croco/rpc-codegen",
-  "@croco/transports-http",
-  "@croco/telemetry-api",
-  "@croco/telemetry-sdk-node",
-  "@croco/tx-core",
-  "@croco/tx-drizzle",
-  "@croco/events-core",
-  "@croco/events-tx",
-  "@croco/retry-core",
-  "@croco/idempotency-core",
-  "@croco/testing",
-  "create-croco-app",
-  "@croco/cli",
-  "@croco/auth-core",
-];
+import { isCoreCoveragePackageDirectory } from "./scripts/core-coverage-config.mts";
 
 export const CORE_COVERAGE_BASELINE_PATH = "ci-reports/coverage/core-baseline.txt";
 
@@ -35,9 +14,6 @@ export const CORE_COVERAGE_THRESHOLDS = {
 
 const REPOSITORY_ROOT = __dirname;
 const isCoreCoverageRun = process.env.CORE_COVERAGE === "true";
-const coreCoveragePackagePaths = CORE_COVERAGE_PACKAGES.map(
-  (packageName) => `packages/${packageName.replace("@croco/", "")}`,
-);
 const currentWorkingDirectory = process.cwd().replace(/\\/g, "/");
 const isFrameworkContextPackageRun = currentWorkingDirectory.endsWith("packages/framework-context");
 const isTestingPackageRun = currentWorkingDirectory.endsWith("packages/testing");
@@ -45,8 +21,7 @@ const isTxDrizzlePackageRun = currentWorkingDirectory.endsWith("packages/tx-driz
 const shouldExcludeCliIntegrationTestsFromCoreCoverage =
   isCoreCoverageRun && currentWorkingDirectory.endsWith("packages/cli");
 const shouldApplyCoreCoverageThresholds =
-  isCoreCoverageRun &&
-  coreCoveragePackagePaths.some((packagePath) => currentWorkingDirectory.endsWith(packagePath));
+  isCoreCoverageRun && isCoreCoveragePackageDirectory(currentWorkingDirectory);
 
 const coverageThresholds = shouldApplyCoreCoverageThresholds ? CORE_COVERAGE_THRESHOLDS : undefined;
 const frameworkContextPackageAliases = isFrameworkContextPackageRun

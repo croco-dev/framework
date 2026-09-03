@@ -2,6 +2,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { parseCoreCoveragePackageFilters } from "../packages/cli/src/libs/coreCoverageFilters.ts";
+import { CORE_COVERAGE_PACKAGES as CORE_COVERAGE_THRESHOLD_PACKAGES } from "./core-coverage-config.mts";
 import { getVerificationCommand } from "./verification-manifest.mts";
 import { matchVerificationDispatcherCommand } from "./verification-dispatcher.mts";
 import { VerificationProblem } from "./verification-problem.mts";
@@ -121,7 +122,6 @@ const packagesDirectory = join(projectRoot, "packages");
 const vitestConfigPath = join(projectRoot, "vitest.config.ts");
 
 const CORE_COVERAGE_PACKAGES = readCoreCoveragePackages();
-const CORE_COVERAGE_THRESHOLD_PACKAGES = readVitestCoreCoveragePackages();
 const CORE_COVERAGE_THRESHOLDS = readCoreCoverageThresholds();
 const WORKSPACE_PACKAGE_NAMES = readWorkspacePackageNames();
 const PACKAGE_CATALOG = readPackageCatalog();
@@ -160,27 +160,6 @@ export function resolveCoreCoveragePackageFilters(coreCoverageCommand: string): 
     "contract",
     `failed to read core coverage package filters from ${packageJsonPath}`,
   );
-}
-
-function readVitestCoreCoveragePackages(): string[] {
-  return parseStringArrayExport(readFileSync(vitestConfigPath, "utf-8"), "CORE_COVERAGE_PACKAGES");
-}
-
-export function parseStringArrayExport(source: string, exportName: string): string[] {
-  const arrayDeclaration = source.match(
-    new RegExp(`export\\s+const\\s+${escapeRegExp(exportName)}\\s*=\\s*\\[([\\s\\S]*?)\\];`),
-  );
-  const arrayItems = arrayDeclaration?.[1];
-
-  if (!arrayItems) {
-    throw new Error(`failed to read ${exportName} from ${vitestConfigPath}`);
-  }
-
-  return [...arrayItems.matchAll(/["']([^"']+)["']/g)].map(([, value]) => value);
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function readCoreCoverageThresholds(): Record<CoverageMetric, number> {
@@ -471,7 +450,7 @@ function getSelectionRecoveryAction(
     return `임시 제외 사유 확인 후 제거하거나 core set에 추가: ${exclusionReason}`;
   }
 
-  return `\`package.json\`의 \`test:coverage:core\`에 \`--filter ${packageName}\`를 추가하고 \`pnpm test:coverage:core\`로 baseline row를 만든다. 아직 준비되지 않았다면 \`TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS\`에 사유를 기록한다.`;
+  return `\`scripts/core-coverage-config.mts\`의 \`CORE_COVERAGE_PACKAGES\`에 \`${packageName}\`를 추가하고 \`pnpm test:coverage:core\`로 baseline row를 만든다. 아직 준비되지 않았다면 \`TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS\`에 사유를 기록한다.`;
 }
 
 export function getCoreCoverageSelectionCandidates({
@@ -579,7 +558,7 @@ export function getCoreCoverageConfigurationErrors({
   for (const packageName of coreCoveragePackages) {
     if (!thresholdSet.has(packageName)) {
       errors.push(
-        `${packageName}: test:coverage:core package is missing from vitest CORE_COVERAGE_PACKAGES, so core coverage thresholds would not apply.`,
+        `${packageName}: test:coverage:core package is missing from the shared core coverage config, so core coverage thresholds would not apply.`,
       );
     }
   }
@@ -587,7 +566,7 @@ export function getCoreCoverageConfigurationErrors({
   for (const packageName of thresholdPackages) {
     if (!coreCoverageSet.has(packageName)) {
       errors.push(
-        `${packageName}: vitest CORE_COVERAGE_PACKAGES entry is missing from test:coverage:core filters.`,
+        `${packageName}: shared core coverage config entry is missing from test:coverage:core filters.`,
       );
     }
   }
@@ -672,7 +651,7 @@ function writeReport(
     "- 적용 조건: `CORE_COVERAGE=true`이고 현재 cwd가 핵심 패키지 경로일 때만 강제 threshold 적용",
     "",
     "## 예외/범위 제한",
-    "- threshold 강제 범위는 `vitest.config.ts`의 `CORE_COVERAGE_PACKAGES`에 포함된 패키지로 고정한다.",
+    "- threshold 강제 범위는 `scripts/core-coverage-config.mts`의 `CORE_COVERAGE_PACKAGES`에 포함된 패키지로 고정한다.",
     "- selection report는 core coverage 후보를 별도로 표시하지만, 자동으로 `test:coverage:core` filter를 확장하지 않는다.",
     "- 전 저장소 일괄 threshold 강제는 이번 단계에서 도입하지 않는다.",
     "- baseline 부재는 실패 대신 warning으로 기록한다.",

@@ -781,9 +781,9 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
     severity: "warning",
     title: "Core coverage candidate is missing",
     cause:
-      "croco doctor found a release-critical workspace package that is not selected by test:coverage:core.",
+      "croco doctor found a release-critical workspace package that is not selected by the shared core coverage config.",
     action:
-      "Add the package to test:coverage:core, run pnpm test:coverage:core, and refresh the committed core coverage baseline.",
+      "Add the package to scripts/core-coverage-config.mts, run pnpm test:coverage:core, and refresh the committed core coverage baseline.",
     legacyCodes: [],
     searchKeywords: ["croco doctor", "core coverage", "release-hardening"],
     fixExample: {

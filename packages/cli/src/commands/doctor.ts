@@ -184,6 +184,7 @@ const defaultTenantModelManifestPath = "croco-tenant-model.manifest.json";
 const tenantModelManifestSchemaVersion = "croco.tenant-model/v1";
 const defaultPackageCatalogPath = "docs/package-catalog.json";
 const defaultCoreCoverageWarningCheckPath = "scripts/core-coverage-warning-check.mts";
+const defaultCoreCoverageConfigPath = "scripts/core-coverage-config.mts";
 const defaultVitestConfigPath = "vitest.config.ts";
 const defaultCoreCoverageBaselinePath = "ci-reports/coverage/core-baseline.txt";
 const defaultBundleSizeBaselinePath = "ci-reports/bundle-size/baseline.json";
@@ -978,7 +979,10 @@ function coreCoverageCandidateReadiness(
     };
   }
 
-  const selectedPackages = new Set(parseCoreCoveragePackageFilters(coreCoverageScript));
+  const directCoveragePackages = parseCoreCoveragePackageFilters(coreCoverageScript);
+  const usesCoverageDispatcher = coreCoverageScript.includes(
+    "verification-command.mts --id core-coverage",
+  );
   const warningScriptPath = join(rootDir, defaultCoreCoverageWarningCheckPath);
   const warningScriptDiagnostics = existsSync(warningScriptPath)
     ? []
@@ -993,28 +997,44 @@ function coreCoverageCandidateReadiness(
         }),
       ];
   const thresholdPackagesResult = readCoreCoverageThresholdPackages(rootDir);
+  const configuredPackages = thresholdPackagesResult.packages;
+  const selectedPackages = new Set(configuredPackages ?? []);
   const temporarilyExcludedPackages = readTemporaryCoreCoverageSelectionExclusions(rootDir);
   const intentionalZeroBaselinePackages = readIntentionalCoreCoverageZeroBaselineReasons(rootDir);
   const candidates = collectCoreCoverageCandidates(catalog.value, packages);
-  const selectionDiagnostics = candidates
-    .filter(
-      (candidate) =>
-        !selectedPackages.has(candidate.packageName) &&
-        (!temporarilyExcludedPackages.has(candidate.packageName) ||
-          candidate.signals.includes("1.0 spine package")),
-    )
-    .map((candidate) =>
-      advisoryDiagnostic({
-        code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
-        checkId,
-        cause: `${candidate.packageName} has advisory core coverage signals [${candidate.signals.join(", ")}] but is not selected by test:coverage:core.`,
-        location: { file: "package.json", packageName: candidate.packageName },
-        action:
-          `Add --filter ${candidate.packageName} to test:coverage:core, run pnpm test:coverage:core, ` +
-          "update ci-reports/coverage/core-baseline.txt, then rerun pnpm test:coverage:core:warning. " +
-          "If it is intentionally deferred, record a reason in TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS.",
-      }),
-    );
+  const selectionDiagnostics = configuredPackages
+    ? candidates
+        .filter(
+          (candidate) =>
+            !selectedPackages.has(candidate.packageName) &&
+            (usesCoverageDispatcher || !directCoveragePackages.includes(candidate.packageName)) &&
+            (!temporarilyExcludedPackages.has(candidate.packageName) ||
+              candidate.signals.includes("1.0 spine package")),
+        )
+        .map((candidate) =>
+          advisoryDiagnostic({
+            code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+            checkId,
+            cause: `${candidate.packageName} has advisory core coverage signals [${candidate.signals.join(", ")}] but is not selected by the shared core coverage config.`,
+            location: {
+              file: defaultCoreCoverageConfigPath,
+              packageName: candidate.packageName,
+            },
+            action:
+              `Add ${candidate.packageName} to CORE_COVERAGE_PACKAGES in scripts/core-coverage-config.mts, run pnpm test:coverage:core, ` +
+              "update ci-reports/coverage/core-baseline.txt, then rerun pnpm test:coverage:core:warning. " +
+              "If it is intentionally deferred, record a reason in TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS.",
+          }),
+        )
+    : [];
+  const directSelectionDiagnostics =
+    configuredPackages && !usesCoverageDispatcher
+      ? collectCoreCoverageConfigurationDiagnostics(
+          directCoveragePackages,
+          configuredPackages,
+          checkId,
+        )
+      : [];
   const thresholdDiagnostics =
     thresholdPackagesResult.kind === "missing"
       ? [
@@ -1023,14 +1043,10 @@ function coreCoverageCandidateReadiness(
             checkId,
             cause: `${thresholdPackagesResult.path} is missing ${thresholdPackagesResult.exportName}.`,
             location: { file: thresholdPackagesResult.path },
-            action: `Restore ${thresholdPackagesResult.exportName} in vitest.config.ts, then rerun pnpm test:coverage:core:warning.`,
+            action: `Restore ${thresholdPackagesResult.exportName} in ${thresholdPackagesResult.path}, then rerun pnpm test:coverage:core:warning.`,
           }),
         ]
-      : collectCoreCoverageConfigurationDiagnostics(
-          [...selectedPackages],
-          thresholdPackagesResult.packages,
-          checkId,
-        );
+      : [];
   const baselineDiagnostics = collectCoreCoverageBaselineDiagnostics(
     rootDir,
     [...selectedPackages],
@@ -1040,6 +1056,7 @@ function coreCoverageCandidateReadiness(
   const diagnostics = [
     ...warningScriptDiagnostics,
     ...selectionDiagnostics,
+    ...directSelectionDiagnostics,
     ...thresholdDiagnostics,
     ...baselineDiagnostics,
   ];
@@ -1344,33 +1361,46 @@ type CoreCoverageThresholdPackagesResult =
       readonly kind: "missing";
       readonly path: string;
       readonly exportName: "CORE_COVERAGE_PACKAGES" | "CORE_COVERAGE_THRESHOLDS";
+      readonly packages?: string[];
     };
 
 function readCoreCoverageThresholdPackages(rootDir: string): CoreCoverageThresholdPackagesResult {
-  const configPath = join(rootDir, defaultVitestConfigPath);
-  if (!existsSync(configPath)) {
+  const coreCoverageConfigPath = join(rootDir, defaultCoreCoverageConfigPath);
+  if (!existsSync(coreCoverageConfigPath)) {
     return {
       kind: "missing",
-      path: defaultVitestConfigPath,
+      path: defaultCoreCoverageConfigPath,
       exportName: "CORE_COVERAGE_PACKAGES",
     };
   }
 
-  const source = readFileSync(configPath, "utf-8");
-  const packages = parseStringArrayExport(source, "CORE_COVERAGE_PACKAGES");
+  const coreCoverageConfigSource = readFileSync(coreCoverageConfigPath, "utf-8");
+  const packages = parseStringArrayExport(coreCoverageConfigSource, "CORE_COVERAGE_PACKAGES");
   if (packages === null) {
     return {
       kind: "missing",
-      path: defaultVitestConfigPath,
+      path: defaultCoreCoverageConfigPath,
       exportName: "CORE_COVERAGE_PACKAGES",
     };
   }
 
-  if (!hasObjectExport(source, "CORE_COVERAGE_THRESHOLDS")) {
+  const vitestConfigPath = join(rootDir, defaultVitestConfigPath);
+  if (!existsSync(vitestConfigPath)) {
     return {
       kind: "missing",
       path: defaultVitestConfigPath,
       exportName: "CORE_COVERAGE_THRESHOLDS",
+      packages,
+    };
+  }
+
+  const vitestConfigSource = readFileSync(vitestConfigPath, "utf-8");
+  if (!hasObjectExport(vitestConfigSource, "CORE_COVERAGE_THRESHOLDS")) {
+    return {
+      kind: "missing",
+      path: defaultVitestConfigPath,
+      exportName: "CORE_COVERAGE_THRESHOLDS",
+      packages,
     };
   }
 
@@ -1429,7 +1459,9 @@ function isCoreCoverageMetric(value: unknown): value is CoreCoverageMetric {
 
 function parseStringArrayExport(source: string, exportName: string): string[] | null {
   const declaration = source.match(
-    new RegExp(`export\\s+const\\s+${escapeRegExp(exportName)}\\s*=\\s*\\[([\\s\\S]*?)\\];`),
+    new RegExp(
+      `export\\s+const\\s+${escapeRegExp(exportName)}\\s*=\\s*(?:defineCoreCoveragePackages\\s*\\(\\s*)?\\[([\\s\\S]*?)\\](?:\\s+as\\s+const)?\\s*\\)?\\s*;`,
+    ),
   );
   const declarationBody = declaration?.[1];
   if (!declarationBody) {
@@ -1450,15 +1482,15 @@ function hasObjectExport(source: string, exportName: string): boolean {
 
 function collectCoreCoverageConfigurationDiagnostics(
   coreCoveragePackages: readonly string[],
-  thresholdPackages: readonly string[],
+  configuredPackages: readonly string[],
   checkId: string,
 ): DoctorDiagnostic[] {
   const coreCoverageSet = new Set(coreCoveragePackages);
-  const thresholdSet = new Set(thresholdPackages);
+  const configuredSet = new Set(configuredPackages);
   const missingThresholdPackages = coreCoveragePackages.filter(
-    (packageName) => !thresholdSet.has(packageName),
+    (packageName) => !configuredSet.has(packageName),
   );
-  const missingFilterPackages = thresholdPackages.filter(
+  const missingFilterPackages = configuredPackages.filter(
     (packageName) => !coreCoverageSet.has(packageName),
   );
 
@@ -1467,20 +1499,20 @@ function collectCoreCoverageConfigurationDiagnostics(
       advisoryDiagnostic({
         code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
         checkId,
-        cause: `${packageName} is selected by test:coverage:core but is missing from vitest CORE_COVERAGE_PACKAGES.`,
-        location: { file: defaultVitestConfigPath, packageName },
+        cause: `${packageName} is selected by test:coverage:core but is missing from the shared core coverage config.`,
+        location: { file: defaultCoreCoverageConfigPath, packageName },
         action:
-          "Add the package to CORE_COVERAGE_PACKAGES in vitest.config.ts or remove the stale test:coverage:core filter, then rerun pnpm test:coverage:core:warning.",
+          "Add the package to CORE_COVERAGE_PACKAGES in scripts/core-coverage-config.mts or remove the stale test:coverage:core filter, then rerun pnpm test:coverage:core:warning.",
       }),
     ),
     ...missingFilterPackages.map((packageName) =>
       advisoryDiagnostic({
         code: CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
         checkId,
-        cause: `${packageName} is listed in vitest CORE_COVERAGE_PACKAGES but is missing from test:coverage:core filters.`,
+        cause: `${packageName} is listed in the shared core coverage config but is missing from test:coverage:core filters.`,
         location: { file: "package.json", packageName },
         action:
-          "Add the package to the test:coverage:core filters or remove the stale CORE_COVERAGE_PACKAGES entry, then rerun pnpm test:coverage:core:warning.",
+          "Add the package to the direct test:coverage:core filters or remove the stale CORE_COVERAGE_PACKAGES entry from scripts/core-coverage-config.mts, then rerun pnpm test:coverage:core:warning.",
       }),
     ),
   ];

@@ -83,15 +83,15 @@ Selection candidates come from executable repository signals:
 
 - public workspace package manifests under `packages/*/package.json`;
 - `docs/package-catalog.json` spine, maturity, and group membership;
-- the current `package.json` `test:coverage:core` filter list;
+- `CORE_COVERAGE_PACKAGES` in `scripts/core-coverage-config.mts`;
 - release-critical package names around framework contracts, retry/events/auth/telemetry/transport/health/problem surfaces.
 
-Add a package to core coverage by updating the `test:coverage:core` script with a new `--filter @croco/<package>` entry, running `pnpm test:coverage:core`, adding the measured row to `ci-reports/coverage/core-baseline.txt`, then rerunning `pnpm test:coverage:core:warning`.
+Add a package to core coverage by updating `CORE_COVERAGE_PACKAGES` in `scripts/core-coverage-config.mts`, running `pnpm test:coverage:core`, adding the measured row to `ci-reports/coverage/core-baseline.txt`, then rerunning `pnpm test:coverage:core:warning`.
 If the package is intentionally deferred, record a temporary reason in `TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS` in `scripts/core-coverage-warning-check.mts` so the report preserves the decision instead of silently dropping the candidate.
 
 Promote selection warnings to a blocking trunk gate only after:
 
-1. Every candidate is either included in `test:coverage:core` or has a short-lived temporary exclusion reason.
+1. Every candidate is either included in `CORE_COVERAGE_PACKAGES` or has a short-lived temporary exclusion reason.
 2. Each included package has a coverage summary and committed baseline row from a reproducible protected-branch run.
 3. New production-ready or release-critical packages trigger a deterministic local recovery action in the report.
 4. Several PRs show no unexplained selection warnings and no invalid baseline rows.

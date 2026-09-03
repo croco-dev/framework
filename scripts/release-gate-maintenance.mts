@@ -104,6 +104,7 @@ export const RELEASE_GATE_SUPPORT_PATHS = [
   "scripts/certification-policy.mts",
   "scripts/ci-cacheable-failure-injection.mts",
   "scripts/ci-verification-identity.mts",
+  "scripts/core-coverage-config.mts",
   "scripts/create-croco-app-generated-smoke-dependencies.mts",
   "scripts/create-croco-app-generated-smoke-journey-report.mts",
   "scripts/create-croco-app-generated-smoke-matrix.mts",
