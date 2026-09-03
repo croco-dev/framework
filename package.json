@@ -42,6 +42,7 @@
     "test:coverage:core": "pnpm --filter @croco/problems-core --filter @croco/telemetry-api --filter @croco/tenant-core --filter @croco/dataloader-core --filter @croco/ratelimit-core --filter @croco/llm-core --filter @croco/storage-core --filter @croco/architecture-policy build && node --experimental-strip-types scripts/verification-command.mts --id core-coverage",
     "test:coverage:core:warning": "node --experimental-strip-types scripts/verification-command.mts --id core-coverage-warning",
     "typecheck": "turbo typecheck",
+    "bench:prepare": "turbo run build --filter=@croco/events-core... --filter=@croco/framework-context... --filter=@croco/protocols-desktop... --filter=@croco/telemetry-sdk-node... --filter=@croco/transports-http...",
     "version-packages": "node --experimental-strip-types scripts/version-packages.mts",
     "bench:check": "node --experimental-strip-types scripts/bench-threshold-check.mts",
     "bench:readiness": "node --experimental-strip-types scripts/benchmark-readiness-report.mts",
