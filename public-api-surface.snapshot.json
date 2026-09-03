@@ -15951,6 +15951,11 @@
               "name": "ImpersonationStartedEventIntent",
               "exportKind": "named",
               "source": "./libs/eventIntent"
+            },
+            {
+              "name": "InMemoryImpersonationStoreOptions",
+              "exportKind": "named",
+              "source": "./libs/InMemoryImpersonationStore"
             }
           ]
         }

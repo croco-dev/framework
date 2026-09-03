@@ -132,6 +132,17 @@ import { InMemoryImpersonationStore } from "@croco/impersonation-core";
 const store = new InMemoryImpersonationStore();
 ```
 
+테스트와 결정적 실행 환경에서는 인스턴스별 clock을 주입할 수 있습니다. 옵션을 생략하면 시스템 시간을 사용합니다.
+
+```typescript
+let now = new Date("2026-01-01T00:00:00.000Z");
+const store = new InMemoryImpersonationStore({ now: () => now });
+
+now = new Date("2026-01-01T00:01:00.000Z");
+```
+
+Clock이 유효하지 않은 `Date`를 반환하면 `IMPERSONATION_CONFIGURATION_INVALID` Problem으로 실패합니다.
+
 ## API
 
 ### ImpersonationService

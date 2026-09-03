@@ -2,6 +2,7 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 
 export type ImpersonationConfigurationField =
   | "blockedActions"
+  | "clock"
   | "configuration"
   | "maxDurationMs"
   | "requireReason";
@@ -13,6 +14,7 @@ export type ImpersonationConfigurationConstraint =
   | "object"
   | "positive-safe-integer-with-representable-expiration"
   | "registered"
+  | "valid-date"
   | "unique-action-identifiers";
 
 export type InvalidImpersonationConfigurationProblemOptions = {
@@ -22,7 +24,7 @@ export type InvalidImpersonationConfigurationProblemOptions = {
 };
 
 /**
- * 유효하지 않은 impersonation 설정으로 런타임 초기화를 진행할 수 없을 때 발생합니다.
+ * 런타임 초기화 또는 저장소 작업 중 유효하지 않은 impersonation 설정이 발견될 때 발생합니다.
  */
 export class InvalidImpersonationConfigurationProblem extends Problem {
   readonly code = "IMPERSONATION_CONFIGURATION_INVALID";

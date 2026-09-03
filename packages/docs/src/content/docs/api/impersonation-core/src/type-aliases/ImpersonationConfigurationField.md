@@ -5,4 +5,4 @@ prev: false
 title: "ImpersonationConfigurationField"
 ---
 
-> **ImpersonationConfigurationField** = `"blockedActions"` \| `"configuration"` \| `"maxDurationMs"` \| `"requireReason"`
+> **ImpersonationConfigurationField** = `"blockedActions"` \| `"clock"` \| `"configuration"` \| `"maxDurationMs"` \| `"requireReason"`

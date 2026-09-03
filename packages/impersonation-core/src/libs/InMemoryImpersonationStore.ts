@@ -8,9 +8,16 @@ import type {
 import { ImpersonationStore } from "./interfaces";
 import {
   ImpersonationEventIntentConflictProblem,
+  InvalidImpersonationConfigurationProblem,
   InvalidImpersonationEventIntentLimitProblem,
 } from "./problems/ImpersonationProblems";
 import type { ImpersonationState } from "./types";
+
+type Clock = () => Date;
+
+export type InMemoryImpersonationStoreOptions = {
+  readonly now?: Clock;
+};
 
 @Component()
 export class InMemoryImpersonationStore extends ImpersonationStore {
@@ -18,6 +25,12 @@ export class InMemoryImpersonationStore extends ImpersonationStore {
   private readonly activeSessionsByImpersonator = new Map<string, ImpersonationState>();
   private readonly eventIntents = new Map<string, ImpersonationLifecycleEventIntent>();
   private readonly seenSessionIds = new Set<string>();
+  private readonly now: Clock;
+
+  constructor(options: InMemoryImpersonationStoreOptions = {}) {
+    super();
+    this.now = options.now ?? (() => new Date());
+  }
 
   async commitStart(
     intent: ImpersonationStartedEventIntent,
@@ -107,7 +120,15 @@ export class InMemoryImpersonationStore extends ImpersonationStore {
   }
 
   private isExpired(session: ImpersonationState): boolean {
-    return session.expiresAt.getTime() <= Date.now();
+    const now = this.now().getTime();
+    if (!Number.isFinite(now)) {
+      throw new InvalidImpersonationConfigurationProblem({
+        field: "clock",
+        constraint: "valid-date",
+        receivedValue: "Invalid Date",
+      });
+    }
+    return session.expiresAt.getTime() <= now;
   }
 
   private deleteSession(session: ImpersonationState): void {

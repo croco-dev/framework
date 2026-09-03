@@ -22,6 +22,16 @@ function session(
   });
 }
 
+function mutableClock(initialTime: Date): { now: () => Date; set: (time: Date) => void } {
+  let currentTime = initialTime;
+  return {
+    now: () => new Date(currentTime),
+    set: (time) => {
+      currentTime = time;
+    },
+  };
+}
+
 function impersonationStoreConformance(createStore: () => ImpersonationStore): void {
   describe("ImpersonationStore conformance", () => {
     beforeEach(() => {
@@ -174,4 +184,109 @@ function impersonationStoreConformance(createStore: () => ImpersonationStore): v
 
 impersonationStoreConformance(() => {
   return new InMemoryImpersonationStore();
+});
+
+describe("InMemoryImpersonationStore clock", () => {
+  const startedAt = new Date("2026-01-01T00:00:00.000Z");
+  const expiresAt = new Date("2026-01-01T00:01:00.000Z");
+
+  beforeEach(() => {
+    Container.reset();
+  });
+
+  it.each([
+    ["before", new Date(expiresAt.getTime() - 1), true],
+    ["at", expiresAt, false],
+    ["after", new Date(expiresAt.getTime() + 1), false],
+  ])(
+    "evaluates find %s the expiry boundary with the injected clock",
+    async (_position, now, active) => {
+      const store = new InMemoryImpersonationStore({ now: () => now });
+      const storedSession = session(`imp-${_position}`, `admin-${_position}`, expiresAt);
+      await store.commitStart(createImpersonationStartedEventIntent(storedSession));
+
+      await expect(store.find(storedSession.sessionId)).resolves.toEqual(
+        active ? storedSession : null,
+      );
+    },
+  );
+
+  it("uses the same exact-expiry boundary for actor lookup and revocation", async () => {
+    const clock = mutableClock(startedAt);
+    const store = new InMemoryImpersonationStore({ now: clock.now });
+    const lookupSession = session("imp-lookup", "admin-lookup", expiresAt);
+    const revokedSession = session("imp-revoke", "admin-revoke", expiresAt);
+    await store.commitStart(createImpersonationStartedEventIntent(lookupSession));
+    await store.commitStart(createImpersonationStartedEventIntent(revokedSession));
+
+    clock.set(expiresAt);
+
+    await expect(store.findByImpersonator(lookupSession.impersonatorId)).resolves.toBeNull();
+    await expect(
+      store.commitEnd(
+        createImpersonationEndedEventIntent(revokedSession, expiresAt),
+        revokedSession.impersonatorId,
+      ),
+    ).resolves.toBe("session-not-found");
+  });
+
+  it("replaces a session when the injected clock reaches its expiry", async () => {
+    const clock = mutableClock(startedAt);
+    const store = new InMemoryImpersonationStore({ now: clock.now });
+    const expiredSession = session("imp-expired-clock", "admin-clock", expiresAt);
+    const replacement = session("imp-replacement-clock", "admin-clock");
+    await store.commitStart(createImpersonationStartedEventIntent(expiredSession));
+
+    clock.set(expiresAt);
+
+    await expect(
+      store.commitStart(createImpersonationStartedEventIntent(replacement)),
+    ).resolves.toBe("committed");
+    await expect(store.findByImpersonator(replacement.impersonatorId)).resolves.toEqual(
+      replacement,
+    );
+  });
+
+  it("keeps mutable clock state isolated between store instances", async () => {
+    const firstClock = mutableClock(startedAt);
+    const secondClock = mutableClock(startedAt);
+    const firstStore = new InMemoryImpersonationStore({ now: firstClock.now });
+    const secondStore = new InMemoryImpersonationStore({ now: secondClock.now });
+    const firstSession = session("imp-first-clock", "admin-first-clock", expiresAt);
+    const secondSession = session("imp-second-clock", "admin-second-clock", expiresAt);
+    await firstStore.commitStart(createImpersonationStartedEventIntent(firstSession));
+    await secondStore.commitStart(createImpersonationStartedEventIntent(secondSession));
+
+    firstClock.set(expiresAt);
+
+    await expect(firstStore.find(firstSession.sessionId)).resolves.toBeNull();
+    await expect(secondStore.find(secondSession.sessionId)).resolves.toEqual(secondSession);
+  });
+
+  it("rejects an invalid clock value across expiry-dependent operations", async () => {
+    const clock = mutableClock(startedAt);
+    const store = new InMemoryImpersonationStore({ now: clock.now });
+    const activeSession = session("imp-invalid-clock", "admin-invalid-clock", expiresAt);
+    await store.commitStart(createImpersonationStartedEventIntent(activeSession));
+    clock.set(new Date(Number.NaN));
+
+    const expectedProblem = {
+      code: "IMPERSONATION_CONFIGURATION_INVALID",
+      field: "clock",
+      constraint: "valid-date",
+      receivedValue: "Invalid Date",
+    };
+
+    await expect(store.find(activeSession.sessionId)).rejects.toMatchObject(expectedProblem);
+    await expect(store.findByImpersonator(activeSession.impersonatorId)).rejects.toMatchObject(
+      expectedProblem,
+    );
+    await expect(
+      store.commitStart(
+        createImpersonationStartedEventIntent(
+          session("imp-invalid-clock-replacement", activeSession.impersonatorId),
+        ),
+      ),
+    ).rejects.toMatchObject(expectedProblem);
+  });
 });
