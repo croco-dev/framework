@@ -1,7 +1,6 @@
 import { defineCommand } from "citty";
 import { type ChildProcess, type SpawnOptions, spawn } from "node:child_process";
 import { createRequire } from "node:module";
-import { basename, dirname, join } from "node:path";
 import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import {
   getDelegatedCommandRuntimeOptions,
@@ -9,6 +8,7 @@ import {
   waitForDelegatedCommand,
 } from "../libs/delegatedCommand.js";
 import { GLOBAL_OPTIONS } from "./options.js";
+import { resolveCliBinFromEntry } from "./resolveCliBin.js";
 
 const require = createRequire(import.meta.url);
 
@@ -61,9 +61,5 @@ export function resolveRpcCodegenBin(): string {
 }
 
 export function resolveRpcCodegenBinFromEntry(entry: string): string {
-  const entryDir = dirname(entry);
-
-  return basename(entryDir) === "src"
-    ? join(dirname(entryDir), "dist", "cli.js")
-    : join(entryDir, "cli.js");
+  return resolveCliBinFromEntry(entry);
 }

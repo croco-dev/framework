@@ -1,32 +1,11 @@
 import type { ChildProcess, SpawnOptions } from "node:child_process";
 import { EventEmitter } from "node:events";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-  type OpenapiSpecSpawn,
-  resolveOpenapiSpecBinFromEntry,
-  runOpenapiSpec,
-} from "../commands/codegenOpenapi.js";
+import { type OpenapiSpecSpawn, runOpenapiSpec } from "../commands/codegenOpenapi.js";
 import { createCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import { getDelegatedCommandRuntimeOptions } from "../libs/delegatedCommand.js";
 
 describe("codegenOpenapi", () => {
-  it("should resolve a workspace source package entry to the built OpenAPI CLI", () => {
-    const root = join("workspace", "packages", "openapi-spec");
-
-    expect(resolveOpenapiSpecBinFromEntry(join(root, "src", "index.ts"))).toBe(
-      join(root, "dist", "cli.js"),
-    );
-  });
-
-  it("should resolve an installed package entry to the sibling OpenAPI CLI", () => {
-    const root = join("consumer", "node_modules", "@croco", "openapi-spec");
-
-    expect(resolveOpenapiSpecBinFromEntry(join(root, "dist", "index.js"))).toBe(
-      join(root, "dist", "cli.js"),
-    );
-  });
-
   it("should spawn the OpenAPI CLI with forwarded args and preserve its exit code", () => {
     const child = new EventEmitter() as unknown as ChildProcess;
     const calls: SpawnCall[] = [];
