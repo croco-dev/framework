@@ -10,6 +10,7 @@ import type {
   CheckResult,
   GrantRequest,
   ListRequest,
+  RelationTuple,
   RevokeRequest,
 } from "./types.js";
 
@@ -45,6 +46,7 @@ export class AccessEngine {
   }
 
   async grant(request: GrantRequest): Promise<void> {
+    assertValidRelationTuple(request.tuple);
     return this.provider.grant(request);
   }
 
@@ -112,4 +114,34 @@ function invalidProviderResultProblem(): Problem {
 
 function resourceTypeFromObject(object: CheckRequest["object"]): string {
   return object.split(":", 1)[0];
+}
+
+type RelationTupleField = "tuple" | `tuple.${keyof RelationTuple}`;
+
+function assertValidRelationTuple(tuple: unknown): asserts tuple is RelationTuple {
+  if (tuple === null || typeof tuple !== "object") {
+    throw invalidRelationTupleProblem("tuple");
+  }
+
+  const record = tuple as Record<string, unknown>;
+
+  if (typeof record.object !== "string" || !/^[^:]+:[^:]+$/.test(record.object)) {
+    throw invalidRelationTupleProblem("tuple.object");
+  }
+
+  if (typeof record.relation !== "string" || record.relation.trim().length === 0) {
+    throw invalidRelationTupleProblem("tuple.relation");
+  }
+
+  if (typeof record.subject !== "string" || !/^(user|role|group):[^:]+$/.test(record.subject)) {
+    throw invalidRelationTupleProblem("tuple.subject");
+  }
+}
+
+function invalidRelationTupleProblem(field: RelationTupleField): Problem {
+  return ProblemFactory.badRequest(
+    "access-core/invalid-relation-tuple",
+    `Relation tuple field '${field}' is invalid.`,
+    { extensions: { field } },
+  );
 }

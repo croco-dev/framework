@@ -130,6 +130,8 @@ const permissions = await accessEngine.list({
 #### `grant(request: GrantRequest): Promise<void>`
 
 접근 권한을 부여합니다.
+런타임 입력의 `object`, `relation`, `subject` 형식을 공급자 호출 전에 다시 검증하며, 잘못된
+튜플은 `access-core/invalid-relation-tuple` Problem과 해당 `extensions.field`를 반환합니다.
 
 #### `revoke(request: RevokeRequest): Promise<void>`
 

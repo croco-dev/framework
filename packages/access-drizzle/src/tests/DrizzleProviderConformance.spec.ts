@@ -1,11 +1,15 @@
 import { getTableColumns } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
-import type { GrantRequest } from "@croco/access-core";
-import { ProblemFactory } from "@croco/problems-core";
-import { createDrizzleProviderConformanceSuite } from "@croco/testing/drizzle";
+import { AccessEngine } from "@croco/access-core";
+import { ProblemCategory, ProblemFactory } from "@croco/problems-core";
+import {
+  assertDrizzleProblem,
+  createDrizzleProviderConformanceSuite,
+} from "@croco/testing/drizzle";
 import { DrizzleHealthIndicator } from "@croco/tx-drizzle";
 import { DrizzleAccessProvider } from "../libs/DrizzleAccessProvider";
 import { relationTuples } from "../schema/relationTuples";
+import type { GrantRequest } from "@croco/access-core";
 
 type DrizzleAccessDb = ConstructorParameters<typeof DrizzleAccessProvider>[0];
 
@@ -172,8 +176,35 @@ describe("access-drizzle provider conformance", () => {
           ],
         },
         validation: {
-          supported: false,
-          reason: "Access tuple validation is enforced by access-core before provider writes.",
+          supported: true,
+          checks: [
+            {
+              name: "rejects malformed relation tuples before provider writes",
+              run: async () => {
+                const execute = vi.fn().mockResolvedValue({ rows: [] });
+                const engine = new AccessEngine(
+                  new DrizzleAccessProvider({ execute } as DrizzleAccessDb),
+                );
+                const request = {
+                  tenantId: "tenant-a",
+                  tuple: {
+                    object: "documents",
+                    relation: "viewer",
+                    subject: "user:alice",
+                  },
+                } as unknown as GrantRequest;
+
+                const problem = await assertDrizzleProblem(() => engine.grant(request), {
+                  code: "access-core/invalid-relation-tuple",
+                  category: ProblemCategory.BadRequest,
+                  status: 400,
+                });
+
+                expect(problem.extensions).toMatchObject({ field: "tuple.object" });
+                expect(execute).not.toHaveBeenCalled();
+              },
+            },
+          ],
         },
         duplicate: {
           supported: true,
