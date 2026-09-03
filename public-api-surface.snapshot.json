@@ -10371,9 +10371,21 @@
               "declarationKind": "class"
             },
             {
+              "name": "createEventBusShutdownHook",
+              "exportKind": "named",
+              "source": "./libs/EventBusLifecycle",
+              "declarationKind": "function"
+            },
+            {
               "name": "DEFAULT_DEAD_LETTER_POLICY",
               "exportKind": "named",
               "source": "./libs/interfaces/DeadLetterQueue",
+              "declarationKind": "const"
+            },
+            {
+              "name": "DEFAULT_EVENT_BUS_DRAIN_TIMEOUT_MS",
+              "exportKind": "named",
+              "source": "./libs/EventBusLifecycle",
               "declarationKind": "const"
             },
             {
@@ -10428,6 +10440,18 @@
               "name": "EventBusDiagnosticsProvider",
               "exportKind": "named",
               "source": "./libs/diagnostics/EventBusDiagnosticsProvider",
+              "declarationKind": "class"
+            },
+            {
+              "name": "EventBusDrainIncompleteProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "EventBusIntakeClosedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsProblems",
               "declarationKind": "class"
             },
             {
@@ -10503,6 +10527,18 @@
               "declarationKind": "const"
             },
             {
+              "name": "InvalidEventBusDrainTimeoutProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MAX_EVENT_BUS_DRAIN_TIMEOUT_MS",
+              "exportKind": "named",
+              "source": "./libs/EventBusLifecycle",
+              "declarationKind": "const"
+            },
+            {
               "name": "RegisterEvent",
               "exportKind": "named",
               "source": "./libs/EventRegistry",
@@ -10552,6 +10588,26 @@
               "name": "EventBus",
               "exportKind": "named",
               "source": "./libs/EventBus"
+            },
+            {
+              "name": "EventBusActiveHandler",
+              "exportKind": "named",
+              "source": "./libs/EventBusLifecycle"
+            },
+            {
+              "name": "EventBusLifecycle",
+              "exportKind": "named",
+              "source": "./libs/EventBusLifecycle"
+            },
+            {
+              "name": "EventBusShutdownOptions",
+              "exportKind": "named",
+              "source": "./libs/EventBusLifecycle"
+            },
+            {
+              "name": "EventBusShutdownResult",
+              "exportKind": "named",
+              "source": "./libs/EventBusLifecycle"
             },
             {
               "name": "EventFieldMeta",

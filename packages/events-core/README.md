@@ -45,6 +45,24 @@ await config.start({ handlers: [UserCreatedHandler] });
 await new EventPublisher().publish(new UserCreatedEvent("user-1"));
 ```
 
+### graceful shutdown
+
+`EventBus` 자체는 기존 발행/구독 계약을 유지합니다. drain을 지원하는 구현체는 별도 `EventBusLifecycle`을 구현하며,
+`createEventBusShutdownHook`으로 `ShutdownManager`에 연결할 수 있습니다.
+
+```typescript
+import { createEventBusShutdownHook } from "@croco/events-core";
+import { ShutdownManager } from "@croco/framework-context";
+import { InMemoryEventBus } from "@croco/events-inmemory";
+
+const eventBus = new InMemoryEventBus();
+ShutdownManager.getInstance().register(createEventBusShutdownHook(eventBus, { timeoutMs: 10_000 }));
+```
+
+shutdown이 시작되면 새 publish는 `EventBusIntakeClosedProblem`으로 거부됩니다. drain 결과가 `timed-out` 또는
+`cancelled`이면 adapter는 남은 핸들러 수를 포함한 `EventBusDrainIncompleteProblem`을 발생시켜 framework shutdown이
+성공으로 잘못 보고되지 않게 합니다.
+
 ### 이벤트 직렬화
 
 ```typescript
@@ -74,8 +92,10 @@ DLQ를 사용하는 구독은 `EventSubscription.handlerId` 또는 `RegisterEven
 
 - 도메인 모델: `DomainEvent`, `AggregateRoot`, `EventField`, `getEventFields`
 - 버스와 발행: `EventBus`, `EventBusConfig`, `EventPublisher`, `EventSubscriptionIndex`
+- 종료 수명주기: `EventBusLifecycle`, `createEventBusShutdownHook`, `EventBusShutdownResult`
 - 등록과 탐색: `RegisterEventHandler`, `EventRegistry`, `RegisterEvent`, `DefaultHandlerResolver`
 - 직렬화: `DefaultEventSerializer`, `SerializedEvent`, `EventSerializer`
 - DLQ 계약: `DeadLetterQueue`, `DeadLetterItem`, `DeadLetterPolicy`, `RetryableEventHandler`
 - 기본 정책: `DEFAULT_DEAD_LETTER_POLICY`
-- Problem 타입: `EventBusNotSetProblem`, `UnknownEventTypeProblem`, `EventDefinitionProblem`, `DuplicateEventNameProblem`
+- Problem 타입: `EventBusNotSetProblem`, `EventBusIntakeClosedProblem`, `EventBusDrainIncompleteProblem`,
+  `InvalidEventBusDrainTimeoutProblem`, `UnknownEventTypeProblem`, `EventDefinitionProblem`, `DuplicateEventNameProblem`

@@ -1,4 +1,5 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import type { EventBusActiveHandler, EventBusShutdownResult } from "../EventBusLifecycleTypes";
 
 /**
  * EventBus가 설정되지 않은 상태에서 발행을 시도하면 발생하는 Problem입니다.
@@ -8,6 +9,58 @@ export class EventBusNotSetProblem extends Problem {
   readonly category = ProblemCategory.InternalServerError;
   constructor() {
     super(undefined, undefined, "EventBus has not been set. Call setEventBus() first.");
+  }
+}
+
+/** Event intake has been permanently closed by the bus lifecycle. */
+export class EventBusIntakeClosedProblem extends Problem {
+  readonly code = "events-core/event-bus-intake-closed";
+  readonly category = ProblemCategory.Conflict;
+
+  constructor() {
+    super(undefined, undefined, "EventBus intake is closed because shutdown has started.");
+  }
+}
+
+/** EventBus drain timeout options must map to an exact bounded timer duration. */
+export class InvalidEventBusDrainTimeoutProblem extends Problem {
+  readonly code = "events-core/event-bus-drain-timeout-invalid";
+  readonly category = ProblemCategory.ValidationError;
+
+  constructor(readonly timeoutMs: number) {
+    super(
+      undefined,
+      undefined,
+      `EventBus drain timeout must be an integer between 1 and 2147483647 milliseconds; received ${String(timeoutMs)}`,
+    );
+  }
+}
+
+/** A framework shutdown hook cannot report success while EventBus handlers remain unfinished. */
+export class EventBusDrainIncompleteProblem extends Problem {
+  readonly code = "events-core/event-bus-drain-incomplete";
+  readonly category = ProblemCategory.InternalServerError;
+  readonly drainStatus: Exclude<EventBusShutdownResult["status"], "drained">;
+  readonly unfinishedHandlers: readonly EventBusActiveHandler[];
+
+  constructor(
+    drainStatus: Exclude<EventBusShutdownResult["status"], "drained">,
+    unfinishedHandlers: readonly EventBusActiveHandler[],
+  ) {
+    const unfinishedHandlerSnapshot = unfinishedHandlers.map((handler) => ({ ...handler }));
+    super(
+      undefined,
+      undefined,
+      `EventBus drain ${drainStatus} with ${unfinishedHandlerSnapshot.length} unfinished handler(s).`,
+      {
+        extensions: {
+          drainStatus,
+          unfinishedHandlerCount: unfinishedHandlerSnapshot.length,
+        },
+      },
+    );
+    this.drainStatus = drainStatus;
+    this.unfinishedHandlers = unfinishedHandlerSnapshot;
   }
 }
 

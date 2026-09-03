@@ -16,13 +16,17 @@ import { EventBusConfig } from "@croco/events-core";
 import { InMemoryEventBus } from "@croco/events-inmemory";
 
 const config = EventBusConfig.getInstance();
-config.setEventBus(
-  new InMemoryEventBus({
-    maxConcurrency: 10,
-    backpressureStrategy: "block",
-    backpressureTimeoutMs: 5000,
-  }),
-);
+const eventBus = new InMemoryEventBus({
+  maxConcurrency: 10,
+  backpressureStrategy: "block",
+  backpressureTimeoutMs: 5000,
+});
+config.setEventBus(eventBus);
+
+const result = await eventBus.shutdown({ timeoutMs: 10_000 });
+if (result.status !== "drained") {
+  console.error(result.unfinishedHandlers);
+}
 ```
 
 ### 실패 재시도와 DLQ 재생
@@ -86,7 +90,7 @@ DLQ를 사용하는 버스는 구독에 비어 있지 않은 `handlerId`를 명�
 
 ## API 레퍼런스
 
-- `InMemoryEventBus`: `publish`, `replayDeadLetters`, `subscribe`, `unsubscribe`, `clear` 제공
+- `InMemoryEventBus`: `publish`, `replayDeadLetters`, `subscribe`, `unsubscribe`, `clear`, `shutdown` 제공
 - `InMemoryDeadLetterQueue`: 프로세스 로컬 FIFO·중복 제거·보관 기간 처리
 - `InMemoryEventBusOptions`: 동시성, 백프레셔, `deadLetterQueue`, `deadLetterPolicy` 설정
 - `BackpressureStrategy`: `drop`, `block`, `error`
@@ -108,6 +112,9 @@ DLQ를 사용하는 버스는 구독에 비어 있지 않은 `handlerId`를 명�
 - `maxConcurrency`는 `1`부터 `Number.MAX_SAFE_INTEGER`까지의 정수이며 기본값은 `100`
 - `backpressureTimeoutMs`는 `1`부터 `2_147_483_647`까지의 정수이며 기본값은 `5000`
 - 잘못된 숫자 설정은 이벤트를 발행하기 전에 `InvalidEventBusConfigurationProblem`으로 거부
+- `shutdown`은 즉시 새 publish intake와 슬롯 대기를 닫고, 이미 시작된 핸들러만 제한 시간까지 drain
+- drain timeout 또는 cancellation은 `unfinishedHandlers` snapshot과 함께 구분된 결과로 반환
+- shutdown 이후 publish는 `EventBusIntakeClosedProblem`으로 거부
 - `block` 전략은 슬롯이 생길 때까지 대기하되, `backpressureTimeoutMs`를 초과하면 Problem을 발생
 - `drop` 전략은 일부 또는 전체 구독자를 생략하면 `EventPublishDroppedProblem`으로 발행을 거부
 - `error` 전략은 즉시 Problem을 발생

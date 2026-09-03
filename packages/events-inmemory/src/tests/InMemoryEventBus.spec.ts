@@ -1,7 +1,10 @@
 import {
+  createEventBusShutdownHook,
   DomainEvent,
   EventBusConfig,
+  EventBusIntakeClosedProblem,
   EventBusStats,
+  InvalidEventBusDrainTimeoutProblem,
   type EventHandler,
   type EventSubscription,
 } from "@croco/events-core";
@@ -10,6 +13,7 @@ import {
   Context,
   DEV_INSPECTOR_TOKEN,
   RuntimeInspector,
+  ShutdownManager,
 } from "@croco/framework-context";
 import * as telemetryApi from "@croco/telemetry-api";
 import * as otelApi from "@opentelemetry/api";
@@ -79,6 +83,7 @@ describe("InMemoryEventBus", () => {
 
   beforeEach(() => {
     Container.reset();
+    ShutdownManager.reset();
     EventBusConfig.setStats(new EventBusStats());
     eventBus = new InMemoryEventBus();
     testHandler = new TestHandler();
@@ -1612,6 +1617,229 @@ describe("InMemoryEventBus", () => {
 
       const starts = executionOrder.filter((e) => e.startsWith("start-"));
       expect(starts).toHaveLength(3);
+    });
+  });
+
+  describe("shutdown lifecycle", () => {
+    it("closes intake, releases backpressure waiters, and drains only started handlers", async () => {
+      const firstStarted = createDeferred();
+      const firstRelease = createDeferred();
+      const handledMessages: string[] = [];
+
+      class BlockingHandler implements EventHandler<TestEvent> {
+        async handle(event: TestEvent): Promise<void> {
+          handledMessages.push(event.message);
+          firstStarted.resolve();
+          await firstRelease.promise;
+        }
+      }
+
+      const bus = new InMemoryEventBus<TestEvent>({
+        maxConcurrency: 1,
+        backpressureStrategy: "block",
+      });
+      Container.set(BlockingHandler, new BlockingHandler());
+      bus.subscribe({ eventName: TestEvent.eventName, handlerClass: BlockingHandler });
+
+      const firstPublish = bus.publish(new TestEvent("first"));
+      await firstStarted.promise;
+      const waitingPublishes = [
+        bus.publish(new TestEvent("waiting-1")),
+        bus.publish(new TestEvent("waiting-2")),
+      ];
+      await Promise.resolve();
+
+      const internals = bus as unknown as { slotWaiters: Set<() => void> };
+      expect(internals.slotWaiters.size).toBe(2);
+
+      const shutdownPromise = bus.shutdown({ timeoutMs: 1_000 });
+
+      await Promise.all(
+        waitingPublishes.map((publish) =>
+          expect(publish).rejects.toBeInstanceOf(EventBusIntakeClosedProblem),
+        ),
+      );
+      await expect(bus.publish(new TestEvent("after-shutdown"))).rejects.toBeInstanceOf(
+        EventBusIntakeClosedProblem,
+      );
+      expect(internals.slotWaiters.size).toBe(0);
+
+      let shutdownSettled = false;
+      void shutdownPromise.then(() => {
+        shutdownSettled = true;
+      });
+      await Promise.resolve();
+      expect(shutdownSettled).toBe(false);
+      expect(bus.getRunningHandlerCount()).toBe(1);
+
+      firstRelease.resolve();
+      await firstPublish;
+      await expect(shutdownPromise).resolves.toEqual({
+        status: "drained",
+        unfinishedHandlers: [],
+      });
+      expect(handledMessages).toEqual(["first"]);
+    });
+
+    it("does not start a later subscriber after shutdown begins", async () => {
+      const firstStarted = createDeferred();
+      const firstRelease = createDeferred();
+      const secondHandle = vi.fn();
+
+      class FirstBlockingHandler implements EventHandler<TestEvent> {
+        async handle(): Promise<void> {
+          firstStarted.resolve();
+          await firstRelease.promise;
+        }
+      }
+
+      class SecondHandler implements EventHandler<TestEvent> {
+        handle(): void {
+          secondHandle();
+        }
+      }
+
+      const bus = new InMemoryEventBus<TestEvent>();
+      Container.set(FirstBlockingHandler, new FirstBlockingHandler());
+      Container.set(SecondHandler, new SecondHandler());
+      bus.subscribe({ eventName: TestEvent.eventName, handlerClass: FirstBlockingHandler });
+      bus.subscribe({ eventName: TestEvent.eventName, handlerClass: SecondHandler });
+
+      const publishPromise = bus.publish(new TestEvent("partial"));
+      await firstStarted.promise;
+      const shutdownPromise = bus.shutdown({ timeoutMs: 1_000 });
+      firstRelease.resolve();
+
+      await expect(publishPromise).rejects.toBeInstanceOf(EventBusIntakeClosedProblem);
+      await expect(shutdownPromise).resolves.toEqual({
+        status: "drained",
+        unfinishedHandlers: [],
+      });
+      expect(secondHandle).not.toHaveBeenCalled();
+    });
+
+    it("returns timed-out handler evidence without reporting a successful drain", async () => {
+      vi.useFakeTimers();
+      const started = createDeferred();
+      const release = createDeferred();
+
+      class BlockingHandler implements EventHandler<TestEvent> {
+        async handle(): Promise<void> {
+          started.resolve();
+          await release.promise;
+        }
+      }
+
+      try {
+        const bus = new InMemoryEventBus<TestEvent>();
+        Container.set(BlockingHandler, new BlockingHandler());
+        bus.subscribe({ eventName: TestEvent.eventName, handlerClass: BlockingHandler });
+
+        const publishPromise = bus.publish(new TestEvent("timeout"));
+        await started.promise;
+        const shutdownPromise = bus.shutdown({ timeoutMs: 25 });
+        await vi.advanceTimersByTimeAsync(25);
+
+        await expect(shutdownPromise).resolves.toMatchObject({
+          status: "timed-out",
+          unfinishedHandlers: [
+            expect.objectContaining({
+              eventName: TestEvent.eventName,
+              handlerName: "BlockingHandler",
+            }),
+          ],
+        });
+        expect(bus.getRunningHandlerCount()).toBe(1);
+
+        release.resolve();
+        await publishPromise;
+        await expect(bus.shutdown({ timeoutMs: 25 })).resolves.toEqual({
+          status: "drained",
+          unfinishedHandlers: [],
+        });
+      } finally {
+        release.resolve();
+        vi.useRealTimers();
+      }
+    });
+
+    it("returns cancelled handler evidence when the drain signal aborts", async () => {
+      const started = createDeferred();
+      const release = createDeferred();
+
+      class BlockingHandler implements EventHandler<TestEvent> {
+        async handle(): Promise<void> {
+          started.resolve();
+          await release.promise;
+        }
+      }
+
+      const bus = new InMemoryEventBus<TestEvent>();
+      const controller = new AbortController();
+      Container.set(BlockingHandler, new BlockingHandler());
+      bus.subscribe({ eventName: TestEvent.eventName, handlerClass: BlockingHandler });
+
+      const publishPromise = bus.publish(new TestEvent("cancel"));
+      await started.promise;
+      const shutdownPromise = bus.shutdown({ signal: controller.signal, timeoutMs: 1_000 });
+      controller.abort();
+
+      await expect(shutdownPromise).resolves.toMatchObject({
+        status: "cancelled",
+        unfinishedHandlers: [expect.objectContaining({ handlerName: "BlockingHandler" })],
+      });
+
+      release.resolve();
+      await publishPromise;
+    });
+
+    it.each([Number.NaN, Number.POSITIVE_INFINITY, 0, -1, 1.5, 2_147_483_648])(
+      "rejects invalid drain timeout %s without closing intake",
+      async (timeoutMs) => {
+        const bus = new InMemoryEventBus<TestEvent>();
+
+        await expect(bus.shutdown({ timeoutMs })).rejects.toBeInstanceOf(
+          InvalidEventBusDrainTimeoutProblem,
+        );
+        await expect(bus.publish(new TestEvent("still-open"))).resolves.toBeUndefined();
+      },
+    );
+
+    it("integrates with ShutdownManager through the explicit shutdown hook adapter", async () => {
+      const started = createDeferred();
+      const release = createDeferred();
+
+      class BlockingHandler implements EventHandler<TestEvent> {
+        async handle(): Promise<void> {
+          started.resolve();
+          await release.promise;
+        }
+      }
+
+      const bus = new InMemoryEventBus<TestEvent>();
+      Container.set(BlockingHandler, new BlockingHandler());
+      bus.subscribe({ eventName: TestEvent.eventName, handlerClass: BlockingHandler });
+      ShutdownManager.getInstance(1_000).register(
+        createEventBusShutdownHook(bus, { timeoutMs: 500 }),
+      );
+
+      const publishPromise = bus.publish(new TestEvent("framework-shutdown"));
+      await started.promise;
+      const shutdownPromise = ShutdownManager.getInstance().shutdown({ throwOnHookError: true });
+
+      let shutdownSettled = false;
+      void shutdownPromise.then(() => {
+        shutdownSettled = true;
+      });
+      await Promise.resolve();
+      expect(shutdownSettled).toBe(false);
+
+      release.resolve();
+      await publishPromise;
+      await expect(shutdownPromise).resolves.toBeUndefined();
+      await expect(bus.publish(new TestEvent("closed"))).rejects.toBeInstanceOf(
+        EventBusIntakeClosedProblem,
+      );
     });
   });
 

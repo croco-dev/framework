@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 755,
+  problemCount: 758,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -7514,7 +7514,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 106,
+          line: 159,
           column: 1,
           kind: "problem-class",
         },
@@ -7547,7 +7547,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 95,
+          line: 148,
           column: 1,
           kind: "problem-class",
         },
@@ -7579,7 +7579,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 39,
+          line: 92,
           column: 1,
           kind: "problem-class",
         },
@@ -7611,7 +7611,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 50,
+          line: 103,
           column: 1,
           kind: "problem-class",
         },
@@ -7643,7 +7643,100 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 65,
+          line: 118,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "events-core/event-bus-drain-incomplete",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#events-core-event-bus-drain-incomplete",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/events-core/src/libs/problems/EventsProblems.ts",
+          line: 40,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "events-core/event-bus-drain-timeout-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#events-core-event-bus-drain-timeout-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/events-core/src/libs/problems/EventsProblems.ts",
+          line: 26,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "events-core/event-bus-intake-closed",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#events-core-event-bus-intake-closed",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/events-core/src/libs/problems/EventsProblems.ts",
+          line: 16,
           column: 1,
           kind: "problem-class",
         },
@@ -7675,7 +7768,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 6,
+          line: 7,
           column: 1,
           kind: "problem-class",
         },
@@ -7707,7 +7800,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 17,
+          line: 70,
           column: 1,
           kind: "problem-class",
         },
@@ -7740,7 +7833,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 80,
+          line: 133,
           column: 1,
           kind: "problem-class",
         },
@@ -7772,7 +7865,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 28,
+          line: 81,
           column: 1,
           kind: "problem-class",
         },
@@ -8127,7 +8220,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          line: 100,
+          line: 108,
           column: 1,
           kind: "problem-class",
         },
@@ -8159,7 +8252,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          line: 83,
+          line: 91,
           column: 1,
           kind: "problem-class",
         },

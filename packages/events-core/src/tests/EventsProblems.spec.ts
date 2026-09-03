@@ -2,13 +2,52 @@ import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import {
   EventAfterCommitOutcomeRequiredProblem,
+  EventBusDrainIncompleteProblem,
+  EventBusIntakeClosedProblem,
   EventBusNotSetProblem,
   EventDefinitionProblem,
   EventDeserializationError,
+  InvalidEventBusDrainTimeoutProblem,
   UnknownEventTypeProblem,
 } from "../libs/problems/EventsProblems";
 
 describe("EventsProblems", () => {
+  it("classifies publishes after shutdown as a closed-intake conflict", () => {
+    const problem = new EventBusIntakeClosedProblem();
+
+    expect(problem.code).toBe("events-core/event-bus-intake-closed");
+    expect(problem.category).toBe(ProblemCategory.Conflict);
+  });
+
+  it("describes invalid drain timeout configuration", () => {
+    const problem = new InvalidEventBusDrainTimeoutProblem(Number.NaN);
+
+    expect(problem.code).toBe("events-core/event-bus-drain-timeout-invalid");
+    expect(problem.category).toBe(ProblemCategory.ValidationError);
+    expect(problem.timeoutMs).toBeNaN();
+  });
+
+  it("preserves unfinished handler evidence for an incomplete drain", () => {
+    const unfinishedHandlers = [
+      {
+        eventName: "order.created",
+        handlerName: "ProjectOrder",
+        startTime: 1_000,
+      },
+    ];
+    const problem = new EventBusDrainIncompleteProblem("timed-out", unfinishedHandlers);
+
+    expect(problem.code).toBe("events-core/event-bus-drain-incomplete");
+    expect(problem.category).toBe(ProblemCategory.InternalServerError);
+    expect(problem.drainStatus).toBe("timed-out");
+    expect(problem.unfinishedHandlers).toEqual(unfinishedHandlers);
+    expect(problem.unfinishedHandlers).not.toBe(unfinishedHandlers);
+    expect(problem.extensions).toEqual({
+      drainStatus: "timed-out",
+      unfinishedHandlerCount: 1,
+    });
+  });
+
   it("should describe the missing after-commit outcome capability", () => {
     const problem = new EventAfterCommitOutcomeRequiredProblem();
 

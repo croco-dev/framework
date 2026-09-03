@@ -16,6 +16,7 @@ TypeDI와 OpenTelemetry를 사용하는 인메모리 EventBus 구현체입니다
 ## Implements
 
 - [`EventBus`](/api/events-core/src/interfaces/eventbus/)\<`TEvent`\>
+- [`EventBusLifecycle`](/api/events-core/src/interfaces/eventbuslifecycle/)
 
 ## Constructors
 
@@ -61,11 +62,11 @@ TypeDI와 OpenTelemetry를 사용하는 인메모리 EventBus 구현체입니다
 
 ### getRunningHandlers()
 
-> **getRunningHandlers**(): readonly `RunningHandler`[]
+> **getRunningHandlers**(): readonly [`EventBusActiveHandler`](/api/events-core/src/type-aliases/eventbusactivehandler/)[]
 
 #### Returns
 
-readonly `RunningHandler`[]
+readonly [`EventBusActiveHandler`](/api/events-core/src/type-aliases/eventbusactivehandler/)[]
 
 ---
 
@@ -105,6 +106,26 @@ Failed writes return the unpersisted item and storage error to the caller for re
 #### Returns
 
 `Promise`\<[`DeadLetterReplayResult`](/api/events-inmemory/src/type-aliases/deadletterreplayresult/)\>
+
+---
+
+### shutdown()
+
+> **shutdown**(`options?`): `Promise`\<[`EventBusShutdownResult`](/api/events-core/src/type-aliases/eventbusshutdownresult/)\>
+
+#### Parameters
+
+##### options?
+
+[`EventBusShutdownOptions`](/api/events-core/src/type-aliases/eventbusshutdownoptions/) = `{}`
+
+#### Returns
+
+`Promise`\<[`EventBusShutdownResult`](/api/events-core/src/type-aliases/eventbusshutdownresult/)\>
+
+#### Implementation of
+
+[`EventBusLifecycle`](/api/events-core/src/interfaces/eventbuslifecycle/).[`shutdown`](/api/events-core/src/interfaces/eventbuslifecycle/#shutdown)
 
 ---
 
