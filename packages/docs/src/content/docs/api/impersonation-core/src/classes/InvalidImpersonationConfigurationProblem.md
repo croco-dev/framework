@@ -5,7 +5,7 @@ prev: false
 title: "InvalidImpersonationConfigurationProblem"
 ---
 
-유효하지 않은 impersonation 설정으로 런타임 초기화를 진행할 수 없을 때 발생합니다.
+런타임 초기화 또는 저장소 작업 중 유효하지 않은 impersonation 설정이 발견될 때 발생합니다.
 
 ## Extends
 
