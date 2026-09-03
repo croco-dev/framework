@@ -228,10 +228,17 @@ describe("package-bin-smoke.mts", () => {
       });
       writeBinPackage(root, {
         commandName: "croco",
+        dependencies: {
+          zod: "3.25.76",
+        },
         directoryName: "cli",
         packageName: "@croco/cli",
+        additionalFiles: {
+          "desktop-config-worker.js": "export {};\n",
+        },
         script: [
           "#!/usr/bin/env node",
+          'import { mkdirSync, writeFileSync } from "node:fs";',
           'const args = process.argv.slice(2).join(" ");',
           'if (args === "doctor --json") {',
           '  console.log(JSON.stringify({ version: "croco.doctor.v1" }, null, 2));',
@@ -252,6 +259,28 @@ describe("package-bin-smoke.mts", () => {
           'if (args === "--cwd migrate --bogus up") {',
           '  console.error("Unknown option: --bogus");',
           "  process.exit(1);",
+          "}",
+          'if (args === "desktop generate --config bin smoke/croco desktop.config.ts --out-dir bin smoke/generated desktop --strict --json") {',
+          '  mkdirSync("bin smoke/generated desktop", { recursive: true });',
+          '  writeFileSync("bin smoke/generated desktop/desktop-contract-graph.json", "{}\\n");',
+          '  console.log(JSON.stringify({ semanticHash: "desktop-smoke" }));',
+          "  process.exit(0);",
+          "}",
+          'if (args === "desktop check --config bin smoke/croco desktop.config.ts --out-dir bin smoke/generated desktop --strict --json") {',
+          '  console.log(JSON.stringify({ semanticHash: "desktop-smoke" }));',
+          "  process.exit(0);",
+          "}",
+          'if (args === "desktop check --config bin smoke/rejected desktop.config.ts --out-dir bin smoke/generated desktop --json") {',
+          '  console.log("Code generation from strings disallowed");',
+          "  process.exit(16);",
+          "}",
+          'if (args === "desktop check --config bin smoke/unsupported desktop subpath.config.ts --out-dir bin smoke/generated desktop --json") {',
+          '  console.log("CROCO_DESKTOP_CONFIG_UNSUPPORTED_PACKAGE");',
+          "  process.exit(16);",
+          "}",
+          'if (args === "desktop diff --config bin smoke/croco desktop.config.ts --baseline bin smoke/generated desktop/desktop-contract-graph.json --strict --json") {',
+          '  console.log(JSON.stringify({ semanticHash: "desktop-smoke" }));',
+          "  process.exit(0);",
           "}",
           "process.exit(9);",
           "",
@@ -281,6 +310,21 @@ describe("package-bin-smoke.mts", () => {
       expect(result.stdout).toContain("package-bin-smoke: @croco/cli croco doctor --json");
       expect(result.stdout).toContain(
         "package-bin-smoke: @croco/cli croco --cwd bin-smoke/migration-workspace --dryRun migrate up -d -migrations --target -1 --connection postgres://db --dry-run",
+      );
+      expect(result.stdout).toContain(
+        "package-bin-smoke: @croco/cli croco desktop generate --config bin smoke/croco desktop.config.ts --out-dir bin smoke/generated desktop --strict --json",
+      );
+      expect(result.stdout).toContain(
+        "package-bin-smoke: @croco/cli croco desktop check --config bin smoke/croco desktop.config.ts --out-dir bin smoke/generated desktop --strict --json",
+      );
+      expect(result.stdout).toContain(
+        "package-bin-smoke: @croco/cli croco desktop check --config bin smoke/rejected desktop.config.ts --out-dir bin smoke/generated desktop --json",
+      );
+      expect(result.stdout).toContain(
+        "package-bin-smoke: @croco/cli croco desktop check --config bin smoke/unsupported desktop subpath.config.ts --out-dir bin smoke/generated desktop --json",
+      );
+      expect(result.stdout).toContain(
+        "package-bin-smoke: @croco/cli croco desktop diff --config bin smoke/croco desktop.config.ts --baseline bin smoke/generated desktop/desktop-contract-graph.json --strict --json",
       );
       expect(result.stdout).toContain(
         "package-bin-smoke: @croco/rpc-codegen croco-rpc-codegen --controllers bin-smoke/SmokeController.ts --tsconfig bin-smoke/tsconfig.json --check --compatibility-problems --compatibility-schemas",
@@ -396,6 +440,7 @@ function writeBridgePackage(root: string): void {
 function writeBinPackage(
   root: string,
   options: {
+    readonly additionalFiles?: Readonly<Record<string, string>>;
     readonly commandName?: string;
     readonly dependencies?: Record<string, string>;
     readonly directoryName?: string;
@@ -406,6 +451,11 @@ function writeBinPackage(
   const packageDir = join(root, "packages", options.directoryName ?? "bin-tool");
   mkdirSync(join(packageDir, "dist"), { recursive: true });
   writeFileSync(join(packageDir, "dist", "cli.js"), options.script);
+  for (const [path, contents] of Object.entries(options.additionalFiles ?? {})) {
+    const filePath = join(packageDir, "dist", path);
+    mkdirSync(dirname(filePath), { recursive: true });
+    writeFileSync(filePath, contents);
+  }
   writeFileSync(
     join(packageDir, "package.json"),
     `${JSON.stringify(

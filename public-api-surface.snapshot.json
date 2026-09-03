@@ -6422,6 +6422,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "desktop",
+              "exportKind": "named",
+              "source": "./commands/desktop",
+              "declarationKind": "const"
+            },
+            {
               "name": "detect",
               "exportKind": "named",
               "source": "./libs/workspace",

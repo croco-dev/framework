@@ -120,6 +120,14 @@ const CLI_POLICIES: Readonly<Record<string, VerificationPolicy>> = {
   ),
   "packages/cli/src/commands/contractsCheck.ts:check-subcommand":
     relatedIssuePolicy("contract graph check"),
+  "packages/cli/src/commands/desktop.ts:check-subcommand": {
+    classification: "generator-regression-tested",
+    owner: "desktop check command",
+    nonmutationEvidence:
+      "Desktop command tests and packed CLI smoke assert check and diff preserve tracked generated artifacts",
+    recoveryCommand:
+      "Run croco desktop generate --config <path> and commit the generated desktop artifacts",
+  },
   "packages/cli/src/commands/diCheck.ts:check-subcommand": generatedProjectPolicy("di check"),
   "packages/cli/src/commands/ops.ts:check-subcommand": generatedProjectPolicy("ops check"),
   "packages/cli/src/commands/projectMap.ts:--check": generatedProjectPolicy("project map --check"),

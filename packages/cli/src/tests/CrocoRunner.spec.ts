@@ -43,6 +43,7 @@ describe("Croco root runner", () => {
     expect(result).toEqual({ exitCode: 0 });
     expect(stdout.join("\n")).toContain("Croco framework CLI");
     expect(stdout.join("\n")).toContain("COMMANDS");
+    expect(stdout.join("\n")).toContain("desktop");
     expect(stderr).toEqual([]);
     expect(exit).not.toHaveBeenCalled();
   });
@@ -115,6 +116,48 @@ describe("Croco root runner", () => {
     });
     expect(stdout).toEqual([`Overwritten: ${targetPath}`]);
     expect(stderr).toEqual([]);
+  });
+
+  it("honors separated and equals-form --cwd around the desktop command", async () => {
+    const launchCwd = createTemporaryDirectory();
+    const targetCwd = join(createTemporaryDirectory(), "workspace target");
+    mkdirSync(targetCwd);
+    writeFileSync(
+      join(targetCwd, "croco.desktop.ts"),
+      "export default process.env.DESKTOP_CONFIG;\n",
+    );
+    const invocations = [
+      ["--cwd", targetCwd, "desktop", "check", "--config", "croco.desktop.ts", "--json"],
+      ["desktop", "--cwd", targetCwd, "check", "--config", "croco.desktop.ts", "--json"],
+      ["desktop", "check", "--cwd", targetCwd, "--config", "croco.desktop.ts", "--json"],
+      [`--cwd=${targetCwd}`, "desktop", "check", "--config=croco.desktop.ts", "--json"],
+      ["desktop", `--cwd=${targetCwd}`, "check", "--config=croco.desktop.ts", "--json"],
+      ["desktop", "check", `--cwd=${targetCwd}`, "--config=croco.desktop.ts", "--json"],
+    ];
+
+    for (const argv of invocations) {
+      const stdout: string[] = [];
+      const stderr: string[] = [];
+      const result = await runCroco(argv, {
+        cwd: launchCwd,
+        stdout: (message) => stdout.push(message),
+        stderr: (message) => stderr.push(message),
+      });
+
+      expect(result).toEqual({ exitCode: 16 });
+      expect(JSON.parse(stdout.join("\n"))).toMatchObject({
+        codes: ["CROCO_DESKTOP_CONFIG_FAILURE", "CROCO_DESKTOP_CONFIG_POLICY_REJECTED"],
+        configFailure: {
+          findings: [
+            {
+              code: "CROCO_DESKTOP_CONFIG_PROCESS_ENV_DEPENDENCY",
+              file: join(targetCwd, "croco.desktop.ts"),
+            },
+          ],
+        },
+      });
+      expect(stderr).toEqual([]);
+    }
   });
 
   it("uses injected env without mutating the embedding process exit code", async () => {

@@ -144,6 +144,19 @@ describe("verification policy", () => {
       discoveries.map((discovery) => classifyVerificationPath(discovery)?.classification),
     ).toEqual(["generator-regression-tested", "generator-regression-tested"]);
   });
+
+  it("classifies desktop check as regression-tested read-only verification", () => {
+    const [discovery] = discoverCliVerificationDeclarations({
+      "packages/cli/src/commands/desktop.ts":
+        'const check = defineCommand({ meta: { name: "check" } });',
+    });
+
+    expect(discovery && classifyVerificationPath(discovery)).toMatchObject({
+      classification: "generator-regression-tested",
+      owner: "desktop check command",
+      recoveryCommand: expect.stringContaining("croco desktop generate --config <path>"),
+    });
+  });
 });
 
 describe("workflow read-only contracts", () => {
