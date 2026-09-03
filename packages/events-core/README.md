@@ -5,7 +5,7 @@ Croco의 도메인 이벤트 핵심 계층입니다. 이벤트 정의, 핸들러
 ## 설치
 
 ```bash
-pnpm add @croco/events-core reflect-metadata
+pnpm add @croco/events-core @croco/framework-context reflect-metadata
 ```
 
 ## 사용법
