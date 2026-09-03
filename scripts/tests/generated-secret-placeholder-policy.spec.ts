@@ -53,6 +53,21 @@ describe("generated-secret-placeholder-policy.mts", () => {
     expect(result.stdout).toContain("templates/.env.example:1 contains secret-env-assignment");
   });
 
+  it("scans the root environment template by default", () => {
+    const root = createTempRoot();
+    writeRepo(root, {
+      rootEnvExample: "# POLAR_ACCESS_TOKEN=polar_live_token_1234567890\n",
+      templateFiles: {
+        "packages/create-croco-app/templates/blank/.env.example": "# Safe template\n",
+      },
+    });
+
+    const result = runScript(root, []);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(".env.example:1 contains secret-env-assignment");
+  });
+
   it("fails generated templates with every secret-marked provider env assignment name", () => {
     const root = createTempRoot();
     writeRepo(root, {
@@ -139,6 +154,7 @@ function writeRepo(
   options: {
     readonly metadata?: Record<string, unknown>;
     readonly metadataText?: string;
+    readonly rootEnvExample?: string;
     readonly templateFiles?: Record<string, string>;
   } = {},
 ): void {
@@ -148,6 +164,9 @@ function writeRepo(
     join(root, "scripts/security-allowlist-metadata.json"),
     options.metadataText ?? `${JSON.stringify(options.metadata ?? metadataFixture(), null, 2)}\n`,
   );
+  if (options.rootEnvExample !== undefined) {
+    writeFileSync(join(root, ".env.example"), options.rootEnvExample);
+  }
 
   for (const [relativePath, content] of Object.entries(options.templateFiles ?? {})) {
     const absolutePath = join(root, relativePath);
@@ -180,7 +199,7 @@ function metadataFixture(
   };
 }
 
-function runScript(root: string): ScriptResult {
+function runScript(root: string, scanPaths: readonly string[] = ["templates"]): ScriptResult {
   const result = spawnSync(
     "node",
     [
@@ -188,8 +207,7 @@ function runScript(root: string): ScriptResult {
       scriptPath,
       "--root",
       root,
-      "--path",
-      "templates",
+      ...scanPaths.flatMap((scanPath) => ["--path", scanPath]),
       "--today",
       "2026-07-03",
     ],

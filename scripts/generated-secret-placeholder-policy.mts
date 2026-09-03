@@ -23,7 +23,7 @@ type Violation = {
 
 const defaultRootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 const defaultMetadataPath = "scripts/security-allowlist-metadata.json";
-const defaultScanPaths = ["packages/create-croco-app/templates"] as const;
+const defaultScanPaths = [".env.example", "packages/create-croco-app/templates"] as const;
 const ignoredDirectories = new Set([".git", ".turbo", "coverage", "dist", "node_modules", "out"]);
 const textExtensions = new Set([
   ".cjs",
