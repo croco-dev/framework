@@ -2,7 +2,7 @@ import { defineCommand } from "citty";
 import { join } from "node:path";
 import type { WriteResult } from "../libs/fileWriter.js";
 import { write as fileWriterWrite } from "../libs/fileWriter.js";
-import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
+import { getCrocoCommandRuntime, logWriteResult } from "../libs/cliRuntime.js";
 import { normalize, validate } from "../libs/naming.js";
 import { detect } from "../libs/workspace.js";
 import { GLOBAL_OPTIONS } from "./options.js";
@@ -83,20 +83,3 @@ export const makeEntity = defineCommand({
     logWriteResult(result);
   },
 });
-
-function logWriteResult(result: GenerateEntityResult | null): void {
-  if (!result) return;
-
-  if (result.status === "created") {
-    getCrocoCommandRuntime().stdout(`Created: ${result.path}`);
-  } else if (result.status === "overwritten") {
-    getCrocoCommandRuntime().stdout(`Overwritten: ${result.path}`);
-  } else if (result.status === "skipped-dry-run") {
-    getCrocoCommandRuntime().stdout(`[Dry run] Would create: ${result.path}`);
-    if (result.diff) {
-      getCrocoCommandRuntime().stdout(result.diff);
-    }
-  } else if (result.status === "exists-no-overwrite") {
-    getCrocoCommandRuntime().stdout(`Skipped (exists): ${result.path}`);
-  }
-}

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -74,6 +74,46 @@ describe("Croco root runner", () => {
 
     expect(result).toEqual({ exitCode: 0 });
     expect(stdout).toEqual(["No Croco workspace detected. Run from a Croco project."]);
+    expect(stderr).toEqual([]);
+  });
+
+  it("preserves generated-file output across write states", async () => {
+    const cwd = createCliWorkspace();
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const dependencies = {
+      cwd,
+      stdout: (message: string) => stdout.push(message),
+      stderr: (message: string) => stderr.push(message),
+    };
+    const targetPath = join(
+      cwd,
+      "apps",
+      "api-server",
+      "src",
+      "controllers",
+      "ExampleController.ts",
+    );
+
+    expect(await runCroco(["make", "controller", "Example"], dependencies)).toEqual({
+      exitCode: 0,
+    });
+    expect(stdout.splice(0)).toEqual([`Created: ${targetPath}`]);
+
+    expect(await runCroco(["make", "controller", "Example"], dependencies)).toEqual({
+      exitCode: 0,
+    });
+    expect(stdout.splice(0)).toEqual([`Skipped (exists): ${targetPath}`]);
+
+    expect(await runCroco(["make", "controller", "Example", "--dryRun"], dependencies)).toEqual({
+      exitCode: 0,
+    });
+    expect(stdout.splice(0)).toEqual([`[Dry run] Would create: ${targetPath}`]);
+
+    expect(await runCroco(["make", "controller", "Example", "--overwrite"], dependencies)).toEqual({
+      exitCode: 0,
+    });
+    expect(stdout).toEqual([`Overwritten: ${targetPath}`]);
     expect(stderr).toEqual([]);
   });
 
@@ -199,6 +239,23 @@ describe("Croco root runner", () => {
 function createTemporaryDirectory(): string {
   const directory = mkdtempSync(join(tmpdir(), "croco-runner-"));
   temporaryDirectories.push(directory);
+  return directory;
+}
+
+function createCliWorkspace(): string {
+  const directory = createTemporaryDirectory();
+  const apiServerDirectory = join(directory, "apps", "api-server");
+  mkdirSync(apiServerDirectory, { recursive: true });
+  writeFileSync(join(directory, "pnpm-workspace.yaml"), "packages: []\n");
+  writeFileSync(
+    join(apiServerDirectory, "package.json"),
+    JSON.stringify({
+      dependencies: {
+        "@croco/protocols-rest": "workspace:*",
+        "@croco/transports-http": "workspace:*",
+      },
+    }),
+  );
   return directory;
 }
 

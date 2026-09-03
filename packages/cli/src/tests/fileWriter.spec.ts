@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { writeFile, rm, mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import {
+  createCrocoCommandRuntime,
+  logWriteResult,
+  renderWriteResult,
+  runWithCrocoCommandRuntime,
+} from "../libs/cliRuntime.js";
 import { write } from "../libs/fileWriter.js";
 
 describe("write", () => {
@@ -229,4 +235,53 @@ describe("write", () => {
     await mkdir(join(tmpDir, "nested"), { recursive: true });
     await writeFile(targetPath, content);
   }
+});
+
+describe("generated-file result rendering", () => {
+  it("renders every write status with stable output", () => {
+    expect([
+      renderWriteResult({ status: "created", path: "/workspace/created.ts" }),
+      renderWriteResult({ status: "overwritten", path: "/workspace/overwritten.ts" }),
+      renderWriteResult({
+        status: "skipped-dry-run",
+        path: "/workspace/dry-run.ts",
+        diff: "diff output",
+      }),
+      renderWriteResult({ status: "exists-no-overwrite", path: "/workspace/existing.ts" }),
+    ]).toMatchInlineSnapshot(`
+      [
+        [
+          "Created: /workspace/created.ts",
+        ],
+        [
+          "Overwritten: /workspace/overwritten.ts",
+        ],
+        [
+          "[Dry run] Would create: /workspace/dry-run.ts",
+          "diff output",
+        ],
+        [
+          "Skipped (exists): /workspace/existing.ts",
+        ],
+      ]
+    `);
+  });
+
+  it("omits empty dry-run diffs", () => {
+    expect(
+      renderWriteResult({ status: "skipped-dry-run", path: "/workspace/file.ts", diff: "" }),
+    ).toEqual(["[Dry run] Would create: /workspace/file.ts"]);
+  });
+
+  it("writes rendered output through the active command runtime", () => {
+    const stdout: string[] = [];
+    const runtime = createCrocoCommandRuntime({ stdout: (message) => stdout.push(message) });
+
+    runWithCrocoCommandRuntime(runtime, () => {
+      logWriteResult({ status: "created", path: "/workspace/file.ts" });
+      logWriteResult(null);
+    });
+
+    expect(stdout).toEqual(["Created: /workspace/file.ts"]);
+  });
 });
