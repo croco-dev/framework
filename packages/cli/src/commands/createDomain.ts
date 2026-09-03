@@ -5,7 +5,7 @@ import { registerController } from "../libs/codemods/registerController.js";
 import type { RegisterControllerResult } from "../libs/codemods/registerController.js";
 import type { WriteResult } from "../libs/fileWriter.js";
 import { write as fileWriterWrite } from "../libs/fileWriter.js";
-import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
+import { getCrocoCommandRuntime, logWriteResult } from "../libs/cliRuntime.js";
 import { assertGeneratedImportDependencies } from "../libs/generatedImportContract.js";
 import { normalize, validate } from "../libs/naming.js";
 import { detect } from "../libs/workspace.js";
@@ -248,21 +248,6 @@ function logCreateDomainResult(result: RunCreateDomainResult | null): void {
   }
 
   logRegistrationResult(result.registration);
-}
-
-function logWriteResult(result: WriteResult): void {
-  if (result.status === "created") {
-    getCrocoCommandRuntime().stdout(`Created: ${result.path}`);
-  } else if (result.status === "overwritten") {
-    getCrocoCommandRuntime().stdout(`Overwritten: ${result.path}`);
-  } else if (result.status === "skipped-dry-run") {
-    getCrocoCommandRuntime().stdout(`[Dry run] Would create: ${result.path}`);
-    if (result.diff) {
-      getCrocoCommandRuntime().stdout(result.diff);
-    }
-  } else if (result.status === "exists-no-overwrite") {
-    getCrocoCommandRuntime().stdout(`Skipped (exists): ${result.path}`);
-  }
 }
 
 function logRegistrationResult(result: RegisterControllerResult | null): void {

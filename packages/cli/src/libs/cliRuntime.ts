@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import type { WriteResult } from "./fileWriter.js";
 
 export type CrocoCommandDependencies = {
   readonly stdout?: (message: string) => void;
@@ -85,5 +86,28 @@ function createProcessRuntime(): CrocoCommandRuntime {
 class CrocoCommandExit extends Error {
   constructor(readonly exitCode: number) {
     super(`Croco command requested exit ${exitCode}`);
+  }
+}
+
+export function renderWriteResult(result: WriteResult): readonly string[] {
+  switch (result.status) {
+    case "created":
+      return [`Created: ${result.path}`];
+    case "overwritten":
+      return [`Overwritten: ${result.path}`];
+    case "skipped-dry-run":
+      return result.diff
+        ? [`[Dry run] Would create: ${result.path}`, result.diff]
+        : [`[Dry run] Would create: ${result.path}`];
+    case "exists-no-overwrite":
+      return [`Skipped (exists): ${result.path}`];
+  }
+}
+
+export function logWriteResult(result: WriteResult | null): void {
+  if (!result) return;
+
+  for (const message of renderWriteResult(result)) {
+    getCrocoCommandRuntime().stdout(message);
   }
 }

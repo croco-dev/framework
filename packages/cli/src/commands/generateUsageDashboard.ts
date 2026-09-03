@@ -7,7 +7,7 @@ import type { RegisterControllerResult } from "../libs/codemods/registerControll
 import { CLI_DIAGNOSTIC_CODES, withLegacyCode } from "../libs/diagnosticCodes.js";
 import type { WriteResult } from "../libs/fileWriter.js";
 import { write as fileWriterWrite } from "../libs/fileWriter.js";
-import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
+import { getCrocoCommandRuntime, logWriteResult } from "../libs/cliRuntime.js";
 import {
   assertGeneratedImportDependencies,
   hasManifestDependency,
@@ -1261,21 +1261,6 @@ function logGenerateUsageDashboardResult(result: RunGenerateUsageDashboardResult
 
   for (const file of result.page?.files ?? []) {
     logWriteResult(file);
-  }
-}
-
-function logWriteResult(result: WriteResult): void {
-  if (result.status === "created") {
-    getCrocoCommandRuntime().stdout(`Created: ${result.path}`);
-  } else if (result.status === "overwritten") {
-    getCrocoCommandRuntime().stdout(`Overwritten: ${result.path}`);
-  } else if (result.status === "skipped-dry-run") {
-    getCrocoCommandRuntime().stdout(`[Dry run] Would create: ${result.path}`);
-    if (result.diff) {
-      getCrocoCommandRuntime().stdout(result.diff);
-    }
-  } else if (result.status === "exists-no-overwrite") {
-    getCrocoCommandRuntime().stdout(`Skipped (exists): ${result.path}`);
   }
 }
 
