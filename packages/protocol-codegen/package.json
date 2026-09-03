@@ -11,7 +11,10 @@
     "dist"
   ],
   "type": "commonjs",
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/index.js",
+    "./dist/index.mjs"
+  ],
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "publishConfig": {
@@ -35,6 +38,8 @@
   },
   "dependencies": {
     "@croco/problems-core": "workspace:*",
+    "@croco/protocols-core": "workspace:*",
+    "reflect-metadata": "^0.2.2",
     "ts-morph": "^24.0.0"
   },
   "devDependencies": {

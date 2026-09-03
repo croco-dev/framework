@@ -22,3 +22,39 @@ try {
 ```
 
 Missing, unreadable, or invalid selected configs fail with `CROCO_BUILD_004` and include the resolved absolute path, reason, and recovery action. The loader parses TypeScript configuration only; it does not execute application build scripts or TypeScript language-service plugins.
+
+Protocol generators can use `loadRestControllerSources` to share controller discovery, REST decorator and parameter source locations, TypeScript diagnostics, emission, and module import. Source locations are relative to the common directory of the explicitly matched controller files and use forward slashes, so imports outside the controller glob do not change them. Each consuming generator supplies Problem factories so its public codes and diagnostic prefixes remain stable.
+
+```ts
+import { Problem, ProblemCategory } from "@croco/problems-core";
+import {
+  CONTROLLER_TYPESCRIPT_DIAGNOSTIC_CODE,
+  formatControllerTypeScriptDiagnostics,
+  getNoRestControllersFoundMessage,
+  loadRestControllerSources,
+} from "@croco/protocol-codegen";
+
+const { controllers, modules } = await loadRestControllerSources({
+  controllers: "src/controllers/**/*.ts",
+  problems: {
+    noControllersFound: (patterns) =>
+      new Problem(
+        "example-codegen/no-rest-controllers-found",
+        ProblemCategory.BadRequest,
+        getNoRestControllersFoundMessage(patterns),
+      ),
+    controllerTypeScriptDiagnostics: (patterns, diagnostics) =>
+      new Problem(
+        "example-codegen/controller-typescript-diagnostics",
+        ProblemCategory.ValidationError,
+        formatControllerTypeScriptDiagnostics("example-codegen", patterns, diagnostics),
+        {
+          extensions: {
+            crocoCode: CONTROLLER_TYPESCRIPT_DIAGNOSTIC_CODE,
+            diagnostics,
+          },
+        },
+      ),
+  },
+});
+```

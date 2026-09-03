@@ -2771,9 +2771,6 @@ importers:
       '@croco/protocols-core':
         specifier: workspace:*
         version: link:../protocols-core
-      ts-morph:
-        specifier: ^24.0.0
-        version: 24.0.0
       zod:
         specifier: ^3.23.8
         version: 3.25.76
@@ -2911,6 +2908,12 @@ importers:
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
+      '@croco/protocols-core':
+        specifier: workspace:*
+        version: link:../protocols-core
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
       ts-morph:
         specifier: ^24.0.0
         version: 24.0.0
@@ -3142,9 +3145,6 @@ importers:
       prettier:
         specifier: ^3.0.0
         version: 3.8.1
-      ts-morph:
-        specifier: ^24.0.0
-        version: 24.0.0
     devDependencies:
       '@asteasolutions/zod-to-openapi':
         specifier: ^7.3.4
@@ -3182,6 +3182,9 @@ importers:
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
+      ts-morph:
+        specifier: ^24.0.0
+        version: 24.0.0
       tsup:
         specifier: ^8.5.1
         version: 8.5.1(patch_hash=ce9dbc714c187cea78868f1e68c1a0e5097ddbceb7e976a564d94f2291b5bcb9)(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.18)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.9.0)

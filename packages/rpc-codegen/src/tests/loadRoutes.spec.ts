@@ -3,17 +3,16 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import {
-  getCommonSourceDir,
-  isNodeModulesPath,
-  loadContractGraph,
-  loadRoutes,
-} from "../libs/loadRoutes";
+import { loadContractGraph, loadRoutes } from "../libs/loadRoutes";
 
-let tempRoot!: string;
-let sourceDir!: string;
+let tempRoot: string;
+let sourceDir: string;
 
 const LOAD_ROUTES_TIMEOUT_MS = 120_000;
+const SHARED_FIXTURE_ROOT = new URL(
+  "../../../../scripts/fixtures/protocol-codegen/",
+  import.meta.url,
+);
 
 describe("loadRoutes", () => {
   beforeEach(() => {
@@ -24,31 +23,6 @@ describe("loadRoutes", () => {
 
   afterEach(() => {
     fs.rmSync(tempRoot, { recursive: true, force: true });
-  });
-
-  it("recognizes node_modules paths with either platform separator", () => {
-    expect(isNodeModulesPath("C:\\workspace\\node_modules\\pkg\\index.ts")).toBe(true);
-    expect(isNodeModulesPath("C:/workspace/node_modules/pkg/index.ts")).toBe(true);
-    expect(isNodeModulesPath("C:/workspace/src/index.ts")).toBe(false);
-  });
-
-  it("keeps Windows drive roots when source files use forward slashes", () => {
-    expect(
-      getCommonSourceDir([
-        "C:/workspace/apps/api-server/src/controllers/UsersController.ts",
-        "C:/workspace/apps/api-server/src/controllers/schemas.ts",
-        "C:/workspace/apps/api-server/src/saasDemo.ts",
-      ]),
-    ).toBe("C:/workspace/apps/api-server/src");
-  });
-
-  it("stops common source directory matching at the first divergent segment", () => {
-    expect(
-      getCommonSourceDir([
-        "C:/workspace/apps/api/src/controllers/UserController.ts",
-        "C:/workspace/packages/shared/src/schemas/user.ts",
-      ]),
-    ).toBe("C:/workspace");
   });
 
   it(
@@ -136,23 +110,32 @@ describe("loadRoutes", () => {
   );
 
   it(
-    "maps emitted decorator source locations back to the original controller file",
+    "normalizes shared decorator and parameter source locations",
     async () => {
-      const controllerPath = path.join(sourceDir, "WeakSchemaController.ts");
+      const controllerPath = path.join(sourceDir, "LocatedController.ts");
 
-      fs.writeFileSync(controllerPath, getWeakSchemaControllerSource());
+      fs.writeFileSync(controllerPath, readSharedFixture("LocatedController.ts.fixture"));
 
       const graph = await loadContractGraph(path.join(sourceDir, "*.ts"), {
         strictSchemas: true,
       });
+      const routeDiagnostic = graph.diagnostics.find(
+        (diagnostic) => diagnostic.code === "contract-route-missing-response-schema",
+      );
       const paramDiagnostic = graph.diagnostics.find(
         (diagnostic) => diagnostic.code === "contract-route-missing-named-param-schema",
       );
 
-      expect(paramDiagnostic?.sourceLocation?.path).toBe("WeakSchemaController.ts");
-      expect(paramDiagnostic?.sourceLocation?.path).not.toContain(".croco-rpc-codegen-");
-      expect(paramDiagnostic?.sourceLocation?.line).toEqual(expect.any(Number));
-      expect(paramDiagnostic?.sourceLocation?.column).toEqual(expect.any(Number));
+      expect(routeDiagnostic?.sourceLocation).toEqual({
+        path: "LocatedController.ts",
+        line: 60,
+        column: 3,
+      });
+      expect(paramDiagnostic?.sourceLocation).toEqual({
+        path: "LocatedController.ts",
+        line: 61,
+        column: 11,
+      });
     },
     LOAD_ROUTES_TIMEOUT_MS,
   );
@@ -207,15 +190,27 @@ describe("loadRoutes", () => {
     "preserves local imports outside the controller glob during contract loading",
     async () => {
       const controllersDir = path.join(sourceDir, "controllers");
+      const tsconfigPath = path.join(tempRoot, "tsconfig.json");
 
       fs.mkdirSync(controllersDir, { recursive: true });
+      fs.writeFileSync(
+        tsconfigPath,
+        JSON.stringify({
+          compilerOptions: {
+            experimentalDecorators: true,
+            module: "CommonJS",
+            target: "ES2020",
+          },
+          include: ["src/controllers/**/*.ts", "src/ImportedUserDto.ts"],
+        }),
+      );
       fs.writeFileSync(path.join(sourceDir, "ImportedUserDto.ts"), getLocalSupportSource());
       fs.writeFileSync(
         path.join(controllersDir, "LocalImportController.ts"),
         getControllerImportingLocalSupportSource(),
       );
 
-      const routes = await loadRoutes(path.join(controllersDir, "*.ts"));
+      const routes = await loadRoutes(path.join(controllersDir, "*.ts"), { tsconfigPath });
 
       expect(routes).toHaveLength(1);
       expect(routes[0]).toMatchObject({
@@ -223,6 +218,7 @@ describe("loadRoutes", () => {
         methodName: "list",
         httpMethod: "GET",
         path: "/local-imports",
+        sourceLocation: { path: "LocalImportController.ts" },
       });
     },
     LOAD_ROUTES_TIMEOUT_MS,
@@ -268,12 +264,13 @@ describe("loadRoutes", () => {
     "fails before importing emitted controllers when controller TypeScript has errors",
     async () => {
       const controllerPath = path.join(sourceDir, "BrokenController.ts");
-      fs.writeFileSync(controllerPath, getBrokenControllerSource());
+      fs.writeFileSync(controllerPath, readSharedFixture("BrokenController.ts.fixture"));
 
       await expectControllerTypeScriptDiagnostics(
         loadRoutes(path.join(sourceDir, "*.ts")),
         controllerPath,
         "rpc-codegen/controller-typescript-diagnostics",
+        "rpc-codegen",
       );
     },
     LOAD_ROUTES_TIMEOUT_MS,
@@ -312,6 +309,7 @@ async function expectControllerTypeScriptDiagnostics(
   result: Promise<unknown>,
   controllerPath: string,
   code: string,
+  generatorName: string,
 ): Promise<void> {
   try {
     await result;
@@ -334,6 +332,11 @@ async function expectControllerTypeScriptDiagnostics(
       },
     });
     expect(error).toMatchObject({
+      detail: expect.stringContaining(
+        `${generatorName} refused to load controller contract sources`,
+      ),
+    });
+    expect(error).toMatchObject({
       detail: expect.stringContaining("CROCO_BUILD_003 TS2322"),
     });
     expect(error).toMatchObject({
@@ -343,6 +346,10 @@ async function expectControllerTypeScriptDiagnostics(
   }
 
   throw new Error("Expected controller TypeScript diagnostics to reject contract loading.");
+}
+
+function readSharedFixture(name: string): string {
+  return fs.readFileSync(new URL(name, SHARED_FIXTURE_ROOT), "utf8");
 }
 
 function writeProtocolsRestFixture(projectDir: string): void {
@@ -499,65 +506,6 @@ export class UsersController {
 `;
 }
 
-function getWeakSchemaControllerSource(): string {
-  return `import 'reflect-metadata';
-
-const REST_CONTROLLER_KEY = Symbol.for('croco:rest:controller');
-const REST_ROUTES_KEY = Symbol.for('croco:rest:routes');
-const REST_PARAMS_KEY = Symbol.for('croco:rest:params');
-
-declare namespace Reflect {
-  function defineMetadata(metadataKey: unknown, metadataValue: unknown, target: object): void;
-  function getMetadata(metadataKey: unknown, target: object): unknown;
-}
-
-enum ParamType {
-  PARAM = 'param',
-}
-
-type RouteMetadata = {
-  readonly method: string;
-  readonly path: string;
-  readonly methodName: string | symbol;
-};
-
-function Controller(controllerPath: string): ClassDecorator {
-  return (target) => {
-    Reflect.defineMetadata(REST_CONTROLLER_KEY, { path: controllerPath, target }, target);
-  };
-}
-
-function Get(routePath: string): MethodDecorator {
-  return (target, propertyKey) => {
-    const ctor = target.constructor;
-    const routes = (Reflect.getMetadata(REST_ROUTES_KEY, ctor) as RouteMetadata[] | undefined) ?? [];
-
-    Reflect.defineMetadata(REST_ROUTES_KEY, [...routes, { method: 'GET', path: routePath, methodName: propertyKey }], ctor);
-  };
-}
-
-function Param(name: string): ParameterDecorator {
-  return (target, propertyKey, parameterIndex) => {
-    if (!propertyKey) return;
-
-    const ctor = target.constructor;
-    const paramsMap = (Reflect.getMetadata(REST_PARAMS_KEY, ctor) as Map<string | symbol, unknown[]> | undefined) ?? new Map();
-    const params = paramsMap.get(propertyKey) ?? [];
-
-    params.push({ type: ParamType.PARAM, index: parameterIndex, name });
-    paramsMap.set(propertyKey, params);
-    Reflect.defineMetadata(REST_PARAMS_KEY, paramsMap, ctor);
-  };
-}
-
-@Controller('/users')
-export class WeakSchemaController {
-  @Get('/:id')
-  getUser(@Param('id') _id: string): void {}
-}
-`;
-}
-
 function getDuplicateControllerSource(controllerPath: string): string {
   return `import 'reflect-metadata';
 
@@ -594,52 +542,6 @@ function Get(routePath: string): MethodDecorator {
 export class DuplicateController {
   @Get('/')
   find(): void {}
-}
-`;
-}
-
-function getBrokenControllerSource(): string {
-  return `import 'reflect-metadata';
-
-const REST_CONTROLLER_KEY = Symbol.for('croco:rest:controller');
-const REST_ROUTES_KEY = Symbol.for('croco:rest:routes');
-
-declare namespace Reflect {
-  function defineMetadata(metadataKey: unknown, metadataValue: unknown, target: object): void;
-  function getMetadata(metadataKey: unknown, target: object): unknown;
-}
-
-type RouteMetadata = {
-  readonly method: string;
-  readonly path: string;
-  readonly methodName: string | symbol;
-};
-
-function Controller(controllerPath: string): ClassDecorator {
-  return (target) => {
-    Reflect.defineMetadata(REST_CONTROLLER_KEY, { path: controllerPath, target }, target);
-  };
-}
-
-function Get(routePath: string): MethodDecorator {
-  return (target, propertyKey) => {
-    const ctor = target.constructor;
-    const routes = (Reflect.getMetadata(REST_ROUTES_KEY, ctor) as RouteMetadata[] | undefined) ?? [];
-
-    Reflect.defineMetadata(REST_ROUTES_KEY, [...routes, { method: 'GET', path: routePath, methodName: propertyKey }], ctor);
-  };
-}
-
-class UserDto {
-  readonly id: string = 123;
-}
-
-@Controller('/broken')
-export class BrokenController {
-  @Get('/')
-  listUsers(): UserDto[] {
-    return [new UserDto()];
-  }
 }
 `;
 }

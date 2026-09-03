@@ -2825,6 +2825,12 @@
       "owner": "@croco/protocol-codegen"
     },
     {
+      "path": "packages/protocol-codegen/src/tests/RestControllerSources.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/protocol-codegen"
+    },
+    {
       "path": "packages/protocols-core/src/tests/ContractGraph.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
