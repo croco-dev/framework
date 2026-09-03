@@ -13,3 +13,8 @@ export {
  * QStash 기반 태스크 러너 구현체를 내보냅니다.
  */
 export { QStashTaskRunner } from "./libs/QStashTaskRunner";
+export {
+  QSTASH_TASKS_MODULE_NAME,
+  qstashTasks,
+  type QStashTasksPluginOptions,
+} from "./libs/QStashTasksPlugin";

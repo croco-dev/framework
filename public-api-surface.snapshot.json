@@ -3320,6 +3320,18 @@
               "declarationKind": "const"
             },
             {
+              "name": "BETTER_AUTH_MODULE_NAME",
+              "exportKind": "declaration",
+              "source": "./libs/BetterAuthPlugin",
+              "declarationKind": "const"
+            },
+            {
+              "name": "betterAuth",
+              "exportKind": "declaration",
+              "source": "./libs/BetterAuthPlugin",
+              "declarationKind": "const"
+            },
+            {
               "name": "BetterAuthAuthenticationProblem",
               "exportKind": "declaration",
               "source": "./libs/problems/BetterAuthAuthenticationProblem",
@@ -3436,6 +3448,12 @@
               "declarationKind": "interface"
             },
             {
+              "name": "BetterAuthDatabase",
+              "exportKind": "declaration",
+              "source": "./libs/BetterAuthFactory",
+              "declarationKind": "type"
+            },
+            {
               "name": "BetterAuthDiagnosticsConfig",
               "exportKind": "declaration",
               "source": "./libs/BetterAuthDiagnosticsProvider",
@@ -3445,6 +3463,12 @@
               "name": "BetterAuthDiagnosticsOptions",
               "exportKind": "declaration",
               "source": "./libs/BetterAuthDiagnosticsProvider",
+              "declarationKind": "type"
+            },
+            {
+              "name": "BetterAuthPluginOptions",
+              "exportKind": "declaration",
+              "source": "./libs/BetterAuthPlugin",
               "declarationKind": "type"
             },
             {
@@ -4671,6 +4695,12 @@
           "sourceEntrypoint": "packages/billing-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "BILLING_GATEWAY_TOKEN",
+              "exportKind": "named",
+              "source": "./libs/BillingGatewayToken",
+              "declarationKind": "const"
+            },
+            {
               "name": "BILLING_PROVIDER_CAPABILITIES",
               "exportKind": "named",
               "source": "./libs/BillingProviderCapabilities",
@@ -5719,9 +5749,21 @@
               "declarationKind": "function"
             },
             {
+              "name": "POLAR_BILLING_MODULE_NAME",
+              "exportKind": "named",
+              "source": "./libs/PolarBillingPlugin",
+              "declarationKind": "const"
+            },
+            {
               "name": "POLAR_BILLING_PROVIDER_PROFILE",
               "exportKind": "named",
               "source": "./libs/PolarBillingProviderProfile",
+              "declarationKind": "const"
+            },
+            {
+              "name": "polarBilling",
+              "exportKind": "named",
+              "source": "./libs/PolarBillingPlugin",
               "declarationKind": "const"
             },
             {
@@ -5843,6 +5885,11 @@
               "name": "PolarBillingErrorContext",
               "exportKind": "named",
               "source": "./libs/problems/PolarBillingProblems"
+            },
+            {
+              "name": "PolarBillingPluginOptions",
+              "exportKind": "named",
+              "source": "./libs/PolarBillingPlugin"
             },
             {
               "name": "PolarCheckoutRecoveryPolicy",
@@ -27871,6 +27918,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "CLOUDINARY_STORAGE_MODULE_NAME",
+              "exportKind": "named",
+              "source": "./libs/CloudinaryStoragePlugin",
+              "declarationKind": "const"
+            },
+            {
               "name": "CloudinaryDiagnosticsProvider",
               "exportKind": "named",
               "source": "./libs/CloudinaryDiagnosticsProvider",
@@ -27893,6 +27946,12 @@
               "exportKind": "named",
               "source": "./libs/CloudinaryDiagnosticsProvider",
               "declarationKind": "class"
+            },
+            {
+              "name": "cloudinaryStorage",
+              "exportKind": "named",
+              "source": "./libs/CloudinaryStoragePlugin",
+              "declarationKind": "const"
             },
             {
               "name": "CloudinaryTerminalUpstreamProblem",
@@ -27961,6 +28020,11 @@
               "name": "CloudinaryStorageErrorContext",
               "exportKind": "named",
               "source": "./libs/CloudinaryDiagnosticsProvider"
+            },
+            {
+              "name": "CloudinaryStoragePluginOptions",
+              "exportKind": "named",
+              "source": "./libs/CloudinaryStoragePlugin"
             },
             {
               "name": "CloudinaryTransformOptions",
@@ -28052,6 +28116,12 @@
               "exportKind": "named",
               "source": "./libs/storageBody",
               "declarationKind": "function"
+            },
+            {
+              "name": "STORAGE_PROVIDER_TOKEN",
+              "exportKind": "named",
+              "source": "./libs/tokens",
+              "declarationKind": "const"
             },
             {
               "name": "StorageOperationAbortedProblem",
@@ -28322,6 +28392,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "TASK_DISPATCHER_TOKEN",
+              "exportKind": "named",
+              "source": "./libs/TaskDispatcher",
+              "declarationKind": "const"
+            },
+            {
               "name": "TASK_METADATA_KEY",
               "exportKind": "named",
               "source": "./libs/decorators/Task",
@@ -28375,6 +28451,21 @@
               "name": "RegisteredTask",
               "exportKind": "named",
               "source": "./libs/TaskRegistry"
+            },
+            {
+              "name": "TaskDispatcher",
+              "exportKind": "named",
+              "source": "./libs/TaskDispatcher"
+            },
+            {
+              "name": "TaskDispatchOptions",
+              "exportKind": "named",
+              "source": "./libs/TaskDispatcher"
+            },
+            {
+              "name": "TaskDispatchResult",
+              "exportKind": "named",
+              "source": "./libs/TaskDispatcher"
             },
             {
               "name": "TaskExecutionContext",
@@ -28459,6 +28550,12 @@
           "sourceEntrypoint": "packages/tasks-qstash/src/index.ts",
           "runtimeExports": [
             {
+              "name": "QSTASH_TASKS_MODULE_NAME",
+              "exportKind": "named",
+              "source": "./libs/QStashTasksPlugin",
+              "declarationKind": "const"
+            },
+            {
               "name": "QStashTaskConfigProblem",
               "exportKind": "named",
               "source": "./libs/problems/QStashTaskProblems",
@@ -28477,6 +28574,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "qstashTasks",
+              "exportKind": "named",
+              "source": "./libs/QStashTasksPlugin",
+              "declarationKind": "const"
+            },
+            {
               "name": "QStashTaskValidationProblem",
               "exportKind": "named",
               "source": "./libs/problems/QStashTaskProblems",
@@ -28493,6 +28596,11 @@
               "name": "QStashTaskRunnerOptions",
               "exportKind": "named",
               "source": "./libs/QStashTaskRunner"
+            },
+            {
+              "name": "QStashTasksPluginOptions",
+              "exportKind": "named",
+              "source": "./libs/QStashTasksPlugin"
             }
           ]
         }
@@ -33502,6 +33610,12 @@
               "exportKind": "named",
               "source": "./libs/RlsTxAdapter",
               "declarationKind": "function"
+            },
+            {
+              "name": "DRIZZLE_TRANSACTION_MODULE_NAME",
+              "exportKind": "named",
+              "source": "./libs/DrizzleTransactionPlugin",
+              "declarationKind": "const"
             },
             {
               "name": "DrizzleHealthIndicator",

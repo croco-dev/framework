@@ -10,7 +10,7 @@ pnpm demo:smoke
 ```
 
 `demo:smoke`는 REST contract graph를 검사하고, generated client를 만든 뒤, SaaS demo flow를 실행합니다.
-CLI smoke는 서버를 시작하지 않으며, in-memory provider profile만 사용합니다.
+CLI smoke는 서버를 시작하지 않으며 선택된 provider graph의 명시적 zero-credential replacement를 사용합니다.
 `pnpm profile:check`도 함께 실행되어 생성된 provider profile, tenant model manifest/schema/playbook, 타입 소스가 drift 없이 맞는지 확인합니다.
 
 생성 workspace는 Croco 저장소 전용 Oxlint plugin/config에 의존하지 않고 즉시 lint할 수 있도록 정확히 고정된 Biome toolchain을 사용합니다. `pnpm lint`로 전체 workspace를 검사합니다.
@@ -25,7 +25,7 @@ pnpm failure-drill:smoke
 `ops:smoke`는 diagnostics를 token mode로 켜고 unauthenticated 요청이 `403`으로 거부되는지 확인한 뒤, `croco ops check` contract로 `/health`, `/ready`, `/diagnostics`를 검증합니다.
 `failure-drill:smoke`는 기존 credential-free failure catalog와 함께 provider 환경 누락, telemetry exporter 장애, DI provider/scope 오류, route validation, rate limit, auth verifier 장애, webhook signature 오류를 실제 public boundary에서 실행합니다. 각 drill은 안정적인 Problem/diagnostic code, response shape, provenance, recovery action이 없으면 실패하며 deterministic 결과를 `ci-reports/failure-drills/operational.json`, `ci-reports/failure-drills/operational.md`에 기록합니다.
 
-API bootstrap은 DI validation을 `warn`으로 켭니다. 이 preset은 선택한 provider profile을 수동 조립하지만 domain package barrel이 선택되지 않은 optional `@Component`도 등록하므로 전체-container `enforce`는 해당 optional provider까지 요구합니다. 부팅 경고와 `pnpm di:verify`의 root 기반 manifest를 함께 확인하고, production composition이 모든 등록 component를 제공하는 경우 `apps/api-server/src/app.ts`에서 `enforce`로 올리세요.
+API bootstrap은 DI validation을 `warn`으로 켭니다. `pnpm di:graph`는 selected profile graph의 zero-credential replacement를 실행해 root 기반 manifest를 만들고, `pnpm di:verify`가 bootstrap diagnostic과 artifact drift를 함께 검사합니다. Production composition이 모든 등록 component를 제공하는 경우 `apps/api-server/src/app.ts`에서 `enforce`로 올리세요.
 
 ## Usage Dashboard
 
@@ -104,10 +104,15 @@ SAAS_DEMO_ENDPOINTS_ENABLED=true pnpm --filter {{scope}}/api-server dev
 
 ## Provider Profiles
 
-기본 smoke runtime profile은 `in-memory`입니다. 외부 credential 없이 tenant, membership, invitation, RBAC, access, billing, metering, entitlements, AI usage governance, health, diagnostics smoke 계약을 통과해야 합니다.
+`saas-node-postgres`는 생성된 TypeScript composition graph가 production bootstrap과 metadata 생성의 단일 source of truth인 실행 가능 프로필입니다. 이 그래프는 `@croco/transports-http`, `@croco/auth-better-auth`, `@croco/tx-drizzle`, `@croco/billing-polar`, `@croco/tasks-qstash`, `@croco/storage-cloudinary`, `@croco/telemetry-sdk-node`의 canonical factory를 구성합니다.
+
+외부 credential 없이 검증할 때도 별도 in-memory 애플리케이션으로 우회하지 않습니다. 같은 그래프를 실행하되 auth, transaction, billing, tasks, storage owner slot을 명시적인 local replacement로 바꾸고, graph manifest가 production 구성과 같은 slot shape인지 확인합니다.
 
 ```bash
-SAAS_PROVIDER_PROFILE=in-memory pnpm demo:smoke
+pnpm profile:check
+pnpm demo:smoke
+pnpm di:graph
+pnpm di:verify
 ```
 
 생성 시 선택한 production provider profile은 다음 산출물로 고정됩니다.
@@ -119,22 +124,22 @@ SAAS_PROVIDER_PROFILE=in-memory pnpm demo:smoke
 - `docs/provider-profile.md`: provider package, capability, deployment note
 - `docs/tenant-model-playbook.md`: schema/migration hints, unsafe migration warning, diagnostic code playbook
 - `docs/secrets-checklist.md`: 배포 전 secret/non-secret config checklist
-- `apps/api-server/src/generatedSaasProviderProfile.ts`: CI drift 검사용 타입 소스
+- `apps/api-server/src/generatedSaasProviderProfile.ts`: 실행 가능한 composition과 metadata renderer를 함께 담은 타입 소스
 - `apps/api-server/src/generatedTenantModel.ts`: tenant model manifest/schema/playbook drift 검사용 타입 소스
 
-`croco-saas-profile.manifest.json`의 현재 public contract version은 `croco.saas-provider-profile/v1`입니다. v1 변경은 기존 field에 대해 additive여야 하며, field 제거/rename/semantic break는 새 `schemaVersion`, release note, migration guidance, `croco doctor` unsupported-version diagnostic을 함께 요구합니다. `pnpm profile:check`는 provider manifest, generated provider source, provider docs, tenant manifest, tenant schema, tenant playbook이 같은 metadata를 설명하는지 확인합니다.
+`croco-saas-profile.manifest.json`의 현재 public contract version은 `croco.saas-provider-profile/v1`입니다. v1 변경은 기존 field에 대해 additive여야 하며, field 제거/rename/semantic break는 새 `schemaVersion`, release note, migration guidance, `croco doctor` unsupported-version diagnostic을 함께 요구합니다. 각 capability의 실제 실행 상태는 `productionState`와 `zeroCredentialState`로 구분되며 값은 `configured-production-plugin`, `fake-local`, `unavailable`, `documentation-only` 중 하나입니다. `status`는 v1 consumer 호환용 요약 필드이고 실행 가능 여부 판단에는 사용하지 않습니다.
 
-지원 production profile은 `saas-node-postgres`, `saas-cloudflare`, `saas-lambda`입니다. `pnpm demo:smoke`는 항상 zero-credential in-memory smoke이고, real provider preflight는 명시적으로 분리되어 있습니다.
+`pnpm profile:check`는 manifest, generated source, package dependency, env, provider docs, tenant artifact가 같은 composition metadata에서 파생됐는지 검사합니다. `saas-cloudflare`와 `saas-lambda`는 아직 `documentation-only`/`unavailable` 상태이며 실행 가능한 graph가 추가되기 전에는 runtime bootstrap이 명시적으로 실패합니다.
+
+실제 provider 구성 검증은 opt-in입니다. 필수 env가 빠지면 외부 호출 전에 `CROCO_SAAS_PROFILE_ENV_MISSING`으로 실패하고, 값이 갖춰지면 production plugin constructor와 application graph 초기화를 검증합니다. 이 경로는 별도의 수동 composition 파일을 사용하지 않습니다.
 
 ```bash
-pnpm profile:check
 pnpm failure-drill:smoke
-SAAS_PROVIDER_PROFILE=<generated-profile> pnpm profile:smoke:real
-SAAS_PROVIDER_PROFILE=<generated-profile> pnpm failure-drill:integration
+SAAS_PROVIDER_PROFILE=saas-node-postgres pnpm profile:smoke:real
+SAAS_PROVIDER_PROFILE=saas-node-postgres pnpm failure-drill:integration
 ```
 
-`profile:smoke:real`은 실제 외부 provider를 호출하기 전에 manifest와 required env를 검사합니다. 누락된 값은 `CROCO_SAAS_PROFILE_ENV_MISSING` diagnostic으로 실패합니다.
-`failure-drill:integration`은 같은 real-provider preflight 경계를 사용하므로 credential이 준비된 환경에서만 명시적으로 실행합니다.
+`failure-drill:integration`은 같은 real-provider 경계를 사용하므로 credential이 준비된 환경에서만 명시적으로 실행합니다.
 
 ## Tenant Models
 
@@ -146,28 +151,7 @@ SAAS_PROVIDER_PROFILE=<generated-profile> pnpm failure-drill:integration
 
 `croco-tenant-model.manifest.json`의 현재 public contract version은 `croco.tenant-model/v1`입니다. tenant manifest version 변경은 tenant model migration guidance와 함께 배포되어야 하며, provider profile이 링크한 tenant manifest가 지원되지 않는 version이면 `croco doctor`가 unsupported-version diagnostic으로 실패해야 합니다.
 
-Provider-backed profile seam은 기존 `drizzle-polar-upstash`와 신규 production profiles로 문서화되어 있습니다. 실제 adapter wiring을 추가할 때 다음 package와 env contract를 사용합니다.
-
-```bash
-pnpm add @croco/access-drizzle @croco/auth-drizzle @croco/entitlements-drizzle @croco/invitation-drizzle @croco/membership-drizzle @croco/metering-drizzle @croco/tx-drizzle drizzle-orm
-pnpm add @croco/billing-polar @polar-sh/sdk
-pnpm add @croco/metering-upstash @croco/ratelimit-upstash @croco/tasks-qstash @croco/triggers-qstash @upstash/redis @upstash/ratelimit @upstash/qstash
-```
-
-```bash
-DATABASE_URL=<croco-secret:DATABASE_URL>
-POLAR_ACCESS_TOKEN=<croco-secret:POLAR_ACCESS_TOKEN>
-POLAR_WEBHOOK_SECRET=<croco-secret:POLAR_WEBHOOK_SECRET>
-POLAR_PRODUCT_ID_TEAM=<croco-config:POLAR_PRODUCT_ID_TEAM>
-UPSTASH_REDIS_REST_URL=<croco-secret:UPSTASH_REDIS_REST_URL>
-UPSTASH_REDIS_REST_TOKEN=<croco-secret:UPSTASH_REDIS_REST_TOKEN>
-UPSTASH_QSTASH_TOKEN=<croco-secret:UPSTASH_QSTASH_TOKEN>
-UPSTASH_QSTASH_CURRENT_SIGNING_KEY=<croco-secret:UPSTASH_QSTASH_CURRENT_SIGNING_KEY>
-UPSTASH_QSTASH_NEXT_SIGNING_KEY=<croco-secret:UPSTASH_QSTASH_NEXT_SIGNING_KEY>
-SAAS_PROVIDER_PROFILE=drizzle-polar-upstash
-```
-
-Drizzle-backed domain storage maps to the existing domain adapters where available (`access`, `auth`, `entitlements`, `invitation`, `membership`, `metering`). Polar owns billing gateway/webhook boundaries. Upstash owns metering storage, rate limit state, task queues, and trigger delivery.
+`saas-node-postgres`의 package와 env 목록은 generated profile source에서 파생되므로 수동 설치 목록을 유지하지 않습니다. 플러그인을 바꾸면 `package.json`, `.env.example`, provider docs, manifest가 함께 갱신되며 drift gate가 일부만 바뀐 상태를 거부합니다.
 
 Background job inspection is available through the operations routes:
 
@@ -194,4 +178,4 @@ pnpm failure-drill:smoke
 pnpm di:verify
 ```
 
-이 preset은 실행 가능한 local/in-memory provider만 포함합니다. production auth provider, persistent storage migration, external billing webhook routing, provider-backed LLM adapter wiring, multi-region deployment 자동화는 명시적으로 포함하지 않습니다.
+이 preset은 Node/Postgres production plugin graph와 credential-free replacement graph를 포함합니다. Domain별 persistent repository migration, external webhook route binding, provider-backed LLM adapter, multi-region deployment 자동화는 별도 작업입니다.

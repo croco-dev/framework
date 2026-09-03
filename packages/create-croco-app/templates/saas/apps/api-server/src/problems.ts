@@ -26,6 +26,28 @@ export class InvalidPortProblem extends Problem {
   }
 }
 
+export class SaasProviderProfileMismatchProblem extends Problem {
+  readonly code = "CROCO_SAAS_PROFILE_MISMATCH";
+  readonly category = ProblemCategory.ValidationError;
+
+  constructor(generatedProfile: string, requestedProfile: string) {
+    super(
+      undefined,
+      undefined,
+      `CROCO_SAAS_PROFILE_MISMATCH: generated ${generatedProfile}, requested ${requestedProfile}`,
+    );
+  }
+}
+
+export class SaasProviderProfileRuntimeUnavailableProblem extends Problem {
+  readonly code = "CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE";
+  readonly category = ProblemCategory.NotImplemented;
+
+  constructor(profileName: string) {
+    super(undefined, undefined, `CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE: ${profileName}`);
+  }
+}
+
 export class InvalidJobsQueryProblem extends Problem {
   readonly code = "saas-demo/invalid-jobs-query";
   readonly category = ProblemCategory.ValidationError;

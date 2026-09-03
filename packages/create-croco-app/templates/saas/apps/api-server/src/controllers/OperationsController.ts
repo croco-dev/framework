@@ -1,17 +1,16 @@
 import { Controller, Get } from "@croco/protocols-rest";
+import { getSaasRuntimeState } from "../saasDemo";
 import { diagnosticsRoute, healthRoute } from "./schemas";
 
 @Controller("/ops")
 export class OperationsController {
   @Get(healthRoute)
   async health() {
-    const { defaultSaasRuntime } = await import("../saasDemo");
-    return defaultSaasRuntime.healthService.check();
+    return getSaasRuntimeState().current.healthService.check();
   }
 
   @Get(diagnosticsRoute)
   async diagnostics() {
-    const { defaultSaasRuntime } = await import("../saasDemo");
-    return defaultSaasRuntime.diagnosticsCollector.getReport();
+    return getSaasRuntimeState().current.diagnosticsCollector.getReport();
   }
 }

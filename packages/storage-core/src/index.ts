@@ -9,6 +9,11 @@ export { BaseStorageProvider } from "./libs/BaseStorageProvider";
 export { InMemoryStorageProvider } from "./libs/InMemoryStorageProvider";
 
 /**
+ * Canonical application module token for the configured storage provider.
+ */
+export { STORAGE_PROVIDER_TOKEN } from "./libs/tokens";
+
+/**
  * Runtime-neutral storage body conversion helpers.
  */
 export { readStorageBody, readStorageStream, storageStreamFromBytes } from "./libs/storageBody";

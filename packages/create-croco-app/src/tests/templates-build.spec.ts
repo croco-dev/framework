@@ -15,6 +15,8 @@ const FIXTURE_TEMPLATES_DIR = join(
 const FIXTURE_TEMPLATE_NAMES = new Set(["container-fullstack", "ssr-lambda"]);
 const GENERATED_API_DI_GRAPH_SCRIPT =
   "cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
+const GENERATED_SAAS_API_DI_GRAPH_SCRIPT =
+  "cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoDiGraphApplication --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
 const ROOT_PACKAGE_JSON = join(TEMPLATES_DIR, "..", "..", "..", "package.json");
 const REPOSITORY_ROOT = join(TEMPLATES_DIR, "..", "..", "..");
 
@@ -843,7 +845,7 @@ function checkSaasStructure() {
   const apiPackageJson = readJsonTemplate("saas", "apps", "api-server", "package.json.hbs");
   expect(apiPackageJson).toMatchObject({
     scripts: expect.objectContaining({
-      "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
+      "di:graph": GENERATED_SAAS_API_DI_GRAPH_SCRIPT,
       "demo:seed": "tsx src/demo/seed.ts",
       "demo:smoke": "tsx src/demo/smoke.ts",
       "demo:scenario": "tsx src/demo/scenario.ts",
@@ -903,7 +905,16 @@ function checkSaasStructure() {
       "@croco/problems-core": "workspace:*",
     }),
   });
-  checkFileContains("saas", ["apps", "api-server", "src", "index.ts"], /TelemetryRuntime/);
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "index.ts"],
+    /createCrocoApp\(\{ profileMode: "production" \}\)/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "app.ts"],
+    /createGeneratedSaasApplicationDefinition/,
+  );
   checkFileDoesNotContain(
     "saas",
     ["apps", "api-server", "src", "index.ts"],
@@ -983,12 +994,17 @@ function checkSaasStructure() {
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "providerProfiles.ts"],
-    /drizzle-polar-upstash/,
+    /generatedSaasProviderProfileManifest/,
   );
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "providerProfiles.ts"],
-    /saas-node-postgres/,
+    /composition\.executable[\s\S]*"documentation-only"/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "providerProfiles.ts"],
+    /SaasProviderProfileMismatchProblem/,
   );
   checkFileContains(
     "saas",
@@ -1068,7 +1084,7 @@ function checkSaasStructure() {
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "app.ts"],
-    /applicationSaasRuntime\.diagnosticsCollector\.getProviders/,
+    /runtimeState\.current\.diagnosticsCollector\.getProviders/,
   );
   checkFileContains("saas", ["apps", "api-server", "src", "app.ts"], /rateLimitHttpMiddleware/);
   checkFileContains(
@@ -1138,15 +1154,35 @@ function checkSaasStructure() {
     ["apps", "api-server", "src", "demo", "operational-failure-drills.ts"],
     /flush\.outcome !== "failed"/,
   );
+  checkFileDoesNotContain(
+    "saas",
+    ["apps", "api-server", "src", "demo", "operational-failure-drills.ts"],
+    /process\.env\.TELEMETRY_ENABLED/,
+  );
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "demo", "operational-failure-drills.ts"],
-    /runWithLoopbackTelemetry[\s\S]*TelemetryRuntime\.reset\(\)[\s\S]*TelemetryRuntime\.getInstance\(\)\.init/,
+    /disposeApplicationRuntime/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "app.ts"],
+    /createGracefulShutdownController[\s\S]*onShutdown: \(\) => runtime\.dispose\(\)[\s\S]*gracefulShutdown\.middleware/,
   );
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "demo", "ops-smoke.ts"],
     /@croco\/cli\/ops/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "demo", "ops-smoke.ts"],
+    /finally[\s\S]*disposeApplicationRuntime/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "demo", "jobs-smoke.ts"],
+    /finally[\s\S]*disposeApplicationRuntime/,
   );
   checkFileContains(
     "saas",
@@ -1215,7 +1251,7 @@ function checkAiSaasStructure() {
   const apiPackageJson = readJsonTemplate("ai-saas", "apps", "api-server", "package.json.hbs");
   expect(apiPackageJson).toMatchObject({
     scripts: expect.objectContaining({
-      "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
+      "di:graph": GENERATED_SAAS_API_DI_GRAPH_SCRIPT,
       "ai:smoke": "tsx src/demo/ai-smoke.ts",
       "demo:scenario": "tsx src/demo/scenario.ts",
       "demo:usage-recover": "tsx src/demo/usage-recover.ts",
@@ -1246,6 +1282,16 @@ function checkAiSaasStructure() {
   expect(apiPackageJson.devDependencies).not.toHaveProperty("@croco/protocols-core");
 
   checkFileContains("ai-saas", ["apps", "api-server", "src", "app.ts.hbs"], /AiController/);
+  checkFileContains(
+    "ai-saas",
+    ["apps", "api-server", "src", "app.ts.hbs"],
+    /registerRuntimeScopedProviders\(runtimeState\.current\)[\s\S]*createAiSaasRuntime\(runtime\)/,
+  );
+  checkFileDoesNotContain(
+    "ai-saas",
+    ["apps", "api-server", "src", "controllers", "AiController.ts"],
+    /defaultAiSaasRuntime|defaultSaasRuntime/,
+  );
   checkFileContains("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /PROMPT_TOKENS/);
   checkFileContains("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /COST_USD_NANOS/);
   checkFileContains(

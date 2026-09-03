@@ -12,6 +12,7 @@ import {
   type RouteQueryParam,
   routeProblemResponses,
 } from "@croco/protocols-rest";
+import { getSaasRuntimeState } from "../saasDemo";
 import {
   cancelJobRoute,
   jobLogsRoute,
@@ -76,9 +77,7 @@ export class JobsController {
     @Query(listJobsRoute, "limit") limit?: RouteQueryParam<typeof listJobsRoute, "limit">,
     @Query(listJobsRoute, "offset") offset?: RouteQueryParam<typeof listJobsRoute, "offset">,
   ) {
-    const { defaultSaasRuntime } = await import("../saasDemo");
-
-    return defaultSaasRuntime.jobs.list({
+    return getSaasRuntimeState().current.jobs.list({
       status: await parseOptionalJobStatus(status),
       type: type && type.length > 0 ? type : undefined,
       replayOf: replayOf && replayOf.length > 0 ? replayOf : undefined,
@@ -90,15 +89,13 @@ export class JobsController {
   @Get(showJobRoute)
   @ProblemResponses(...routeProblemResponses(showJobRoute))
   async show(@Param(showJobRoute, "id") id: RouteParam<typeof showJobRoute, "id">) {
-    const { defaultSaasRuntime } = await import("../saasDemo");
-    return defaultSaasRuntime.jobs.show(id);
+    return getSaasRuntimeState().current.jobs.show(id);
   }
 
   @Get(jobLogsRoute)
   @ProblemResponses(...routeProblemResponses(jobLogsRoute))
   async logs(@Param(jobLogsRoute, "id") id: RouteParam<typeof jobLogsRoute, "id">) {
-    const { defaultSaasRuntime } = await import("../saasDemo");
-    return defaultSaasRuntime.jobs.logs(id);
+    return getSaasRuntimeState().current.jobs.logs(id);
   }
 
   @Post(cancelJobRoute)
@@ -107,8 +104,7 @@ export class JobsController {
     @Param(cancelJobRoute, "id") id: RouteParam<typeof cancelJobRoute, "id">,
     @Body(cancelJobRoute) body: RouteBody<typeof cancelJobRoute>,
   ) {
-    const { defaultSaasRuntime } = await import("../saasDemo");
-    return defaultSaasRuntime.jobs.cancel(id, { reason: body.reason });
+    return getSaasRuntimeState().current.jobs.cancel(id, { reason: body.reason });
   }
 
   @Post(replayJobRoute)
@@ -117,7 +113,6 @@ export class JobsController {
     @Param(replayJobRoute, "id") id: RouteParam<typeof replayJobRoute, "id">,
     @Body(replayJobRoute) body: RouteBody<typeof replayJobRoute>,
   ) {
-    const { defaultSaasRuntime } = await import("../saasDemo");
-    return defaultSaasRuntime.jobs.replay(id, { reason: body.reason });
+    return getSaasRuntimeState().current.jobs.replay(id, { reason: body.reason });
   }
 }

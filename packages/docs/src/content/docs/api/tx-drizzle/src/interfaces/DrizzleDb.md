@@ -13,7 +13,7 @@ title: "DrizzleDb"
 
 ### TOptions
 
-`TOptions` = `unknown`
+`TOptions` = `never`
 
 ## Properties
 

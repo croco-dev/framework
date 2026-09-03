@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@croco/execution-core": "workspace:*",
+    "@croco/framework-module": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/tasks-core": "workspace:*",
     "@upstash/qstash": "^2.0.0"

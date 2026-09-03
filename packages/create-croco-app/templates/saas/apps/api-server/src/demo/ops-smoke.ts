@@ -14,41 +14,46 @@ async function main(): Promise<void> {
   process.env.CROCO_DIAGNOSTICS_EXPOSURE = "token";
   process.env.CROCO_DIAGNOSTICS_TOKEN = diagnosticsToken;
 
-  const app = createCrocoApp();
-  const deniedDiagnostics = await app.fetch(new Request("http://localhost/diagnostics"));
+  const app = await createCrocoApp({ profileMode: "zero-credential" });
+  try {
+    const deniedDiagnostics = await app.fetch(new Request("http://localhost/diagnostics"));
 
-  if (deniedDiagnostics.status !== 403) {
-    throw new SaasDemoSmokeProblem([
-      `Expected unauthenticated diagnostics to return 403, got ${deniedDiagnostics.status}`,
-    ]);
+    if (deniedDiagnostics.status !== 403) {
+      throw new SaasDemoSmokeProblem([
+        `Expected unauthenticated diagnostics to return 403, got ${deniedDiagnostics.status}`,
+      ]);
+    }
+
+    const { runOpsCheck } = (await import(CLI_OPS_MODULE)) as CliOpsModule;
+    const report = await runOpsCheck("http://localhost", {
+      fetch: (input, init) => app.fetch(new Request(input, init)),
+      token: diagnosticsToken,
+      timeoutMs: 1000,
+    });
+
+    if (report.summary !== "healthy") {
+      throw new SaasDemoSmokeProblem([
+        `Expected the operations report to be healthy, got ${report.summary}`,
+      ]);
+    }
+
+    console.log(
+      JSON.stringify(
+        {
+          summary: report.summary,
+          endpoints: report.endpoints.map((endpoint) => ({
+            name: endpoint.name,
+            required: endpoint.required,
+            httpStatus: endpoint.httpStatus,
+          })),
+        },
+        null,
+        2,
+      ),
+    );
+  } finally {
+    await app.disposeApplicationRuntime();
   }
-
-  const { runOpsCheck } = (await import(CLI_OPS_MODULE)) as CliOpsModule;
-  const report = await runOpsCheck("http://localhost", {
-    fetch: (input, init) => app.fetch(new Request(input, init)),
-    token: diagnosticsToken,
-    timeoutMs: 1000,
-  });
-
-  if (report.summary !== "healthy") {
-    console.error(JSON.stringify(report, null, 2));
-    process.exit(1);
-  }
-
-  console.log(
-    JSON.stringify(
-      {
-        summary: report.summary,
-        endpoints: report.endpoints.map((endpoint) => ({
-          name: endpoint.name,
-          required: endpoint.required,
-          httpStatus: endpoint.httpStatus,
-        })),
-      },
-      null,
-      2,
-    ),
-  );
 }
 
 void main().catch((error: unknown) => {

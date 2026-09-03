@@ -14,6 +14,7 @@ import {
   generatedTenantModelManifestSchema,
   generatedTenantModelPlaybook,
 } from "./generatedTenantModel";
+import { SaasProviderProfileRuntimeUnavailableProblem } from "./problems";
 
 type ProfileManifest = typeof generatedSaasProviderProfileManifest;
 type TenantModelManifest = typeof generatedTenantModelManifest;
@@ -29,7 +30,7 @@ const TENANT_MODEL_PLAYBOOK_FILE = "docs/tenant-model-playbook.md";
 const PROFILE_MANIFEST_SCHEMA_VERSION = "croco.saas-provider-profile/v1";
 const TENANT_MODEL_MANIFEST_SCHEMA_VERSION = "croco.tenant-model/v1";
 
-function main(): void {
+async function main(): Promise<void> {
   const mode = readMode(process.argv.slice(2));
   const manifest = readProfileManifest();
   const providerProfileDocs = readProviderProfileDocs();
@@ -55,8 +56,20 @@ function main(): void {
   assertTenantModelCompatibility(manifest, tenantModelManifest);
   assertManifestPackagesDeclared(manifest);
 
+  if (mode === "real-provider" && !manifest.composition.executable) {
+    throw new SaasProviderProfileRuntimeUnavailableProblem(manifest.profile.name);
+  }
+
   if (mode === "real-provider") {
     assertRealProviderEnv(manifest);
+  }
+
+  if (manifest.composition.executable) {
+    const { createCrocoApp } = await import("./app");
+    const app = await createCrocoApp({
+      profileMode: mode === "real-provider" ? "production" : "zero-credential",
+    });
+    await app.disposeApplicationRuntime();
   }
 
   console.log(`SaaS provider profile ${mode} check passed for ${manifest.profile.name}`);
@@ -355,6 +368,9 @@ function isProfileManifest(value: unknown): value is ProfileManifest {
   if (!Array.isArray(value.env.required)) return false;
   if (!Array.isArray(value.env.optional)) return false;
   if (!Array.isArray(value.capabilities)) return false;
+  if (!isRecord(value.composition)) return false;
+  if (typeof value.composition.executable !== "boolean") return false;
+  if (!Array.isArray(value.composition.plugins)) return false;
   if (!isRecord(value.smoke)) return false;
   if (!isRecord(value.compatibility)) return false;
   if (!Array.isArray(value.compatibility.rules)) return false;
@@ -464,4 +480,7 @@ function isOptionalDependencyMap(value: unknown): value is Record<string, string
   return Object.values(value).every((range) => typeof range === "string");
 }
 
-main();
+void main().catch((error: unknown) => {
+  console.error(error instanceof Error ? error.message : String(error));
+  process.exitCode = 1;
+});

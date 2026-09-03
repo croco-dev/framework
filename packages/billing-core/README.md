@@ -265,6 +265,9 @@ worker와 retry가 같은 event ID를 전달해도 한 번만 적용하는 `publ
 
 ## Licensed subscription quantity reconciliation
 
+`BILLING_GATEWAY_TOKEN`은 application plugin이 선택한 `BillingGateway` 구현을 등록하고 교체할 때 사용하는
+안정적인 typed composition slot입니다.
+
 플랜 버전은 `quantityPolicy`로 최소 provider quantity, 포함 좌석, entitlement 좌석 한도,
 billable membership role을 함께 고정합니다. 애플리케이션 composition root는 membership 상태를 읽는
 `SubscriptionQuantitySource`를 구현하고 provider가 명시적으로 노출한

@@ -35,6 +35,14 @@ export { taskRef } from "./libs/taskRef";
 export { TaskRunner } from "./libs/TaskRunner";
 export type { TrackedTaskExecution } from "./libs/TaskRunner";
 
+/** Provider-neutral external task dispatch contract and application composition token. */
+export { TASK_DISPATCHER_TOKEN } from "./libs/TaskDispatcher";
+export type {
+  TaskDispatcher,
+  TaskDispatchOptions,
+  TaskDispatchResult,
+} from "./libs/TaskDispatcher";
+
 /**
  * 태스크 선언과 식별에 사용하는 공개 타입들입니다.
  */

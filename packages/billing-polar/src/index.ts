@@ -48,6 +48,11 @@
  * ```
  */
 export { PolarBillingGateway } from "./libs/PolarBillingGateway";
+export {
+  POLAR_BILLING_MODULE_NAME,
+  polarBilling,
+  type PolarBillingPluginOptions,
+} from "./libs/PolarBillingPlugin";
 export { PolarUsageBillingGateway } from "./libs/PolarUsageBillingGateway";
 export { PolarUsageDeliveryWorker } from "./libs/PolarUsageDeliveryWorker";
 export { POLAR_BILLING_PROVIDER_PROFILE } from "./libs/PolarBillingProviderProfile";

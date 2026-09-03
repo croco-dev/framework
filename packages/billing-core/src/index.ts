@@ -13,6 +13,7 @@ export type {
   CheckoutResult,
   CreateCheckoutParams,
 } from "./libs/BillingGateway";
+export { BILLING_GATEWAY_TOKEN } from "./libs/BillingGatewayToken";
 
 /** Explicit billing provider capability profiles and runtime composition. */
 export {

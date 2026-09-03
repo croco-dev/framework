@@ -13,13 +13,14 @@ import type { DrizzleHealthIndicatorOptions } from "./DrizzleHealthIndicator";
 import { createDrizzleTxAdapter } from "./DrizzleTxAdapter";
 import type { DrizzleDb, InferTxClient, InferTxOptions } from "./types";
 
-const DRIZZLE_TRANSACTION_MODULE_NAME = "@croco/tx-drizzle/transaction";
+export const DRIZZLE_TRANSACTION_MODULE_NAME = "@croco/tx-drizzle/transaction";
 const DRIZZLE_DIAGNOSTICS_CONTRIBUTION_ID = "@croco/tx-drizzle/database";
 
 export type DrizzleTransactionPluginOptions<TDb extends DrizzleDb = DrizzleDb> = {
   readonly db: TDb;
   readonly transaction?: TxManagerConfig;
   readonly diagnostics?: DrizzleHealthIndicatorOptions;
+  readonly shutdown?: () => void | Promise<void>;
 };
 
 class DrizzleDiagnosticsProvider implements DiagnosticsProvider {
@@ -95,6 +96,11 @@ function createDrizzleTransactionPlugin<TDb extends DrizzleDb>(
           required: false,
           description: "Stable diagnostics component name.",
         },
+        {
+          key: "shutdown",
+          required: false,
+          description: "Application-owned database resource cleanup.",
+        },
       ],
       verification: [
         {
@@ -126,6 +132,7 @@ function createDrizzleTransactionPlugin<TDb extends DrizzleDb>(
             value: diagnosticsProvider,
           },
         ],
+        ...(options.shutdown === undefined ? {} : { shutdown: options.shutdown }),
       }),
     ],
   });

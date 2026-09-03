@@ -1,16 +1,17 @@
 import type { EntitlementCheckResult, EntitlementQuotaStatus } from "@croco/entitlements-core";
+import { generatedSaasProviderProfileManifest } from "../generatedSaasProviderProfile";
 import { SaasDemoSmokeProblem } from "../problems";
 
 export const SAAS_SMOKE_CONTRACT_VERSION = "saas-smoke-contract/v1";
 
 export type SaasSmokeContract = {
   version: typeof SAAS_SMOKE_CONTRACT_VERSION;
-  requiredProfile: "in-memory";
+  requiredProfile: typeof generatedSaasProviderProfileManifest.profile.name;
 };
 
 export const canonicalSaasSmokeContract = {
   version: SAAS_SMOKE_CONTRACT_VERSION,
-  requiredProfile: "in-memory",
+  requiredProfile: generatedSaasProviderProfileManifest.profile.name,
 } satisfies SaasSmokeContract;
 
 export type SaasDemoSnapshot = {
@@ -188,7 +189,7 @@ export function assertSaasSmokeContract(snapshot: SaasDemoSnapshot): void {
       ? "smoke contract version mismatch"
       : undefined,
     snapshot.contract.providerProfile !== canonicalSaasSmokeContract.requiredProfile
-      ? "smoke contract did not run against the in-memory profile"
+      ? "smoke contract did not run against the generated provider profile"
       : undefined,
     snapshot.tenant.status !== "trial" ? "tenant was not created in trial state" : undefined,
     snapshot.invitation.status !== "accepted" ? "invitation was not accepted" : undefined,

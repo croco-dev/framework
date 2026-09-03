@@ -109,6 +109,11 @@ export const ENVIRONMENT_VARIABLE_CATALOG = {
     description: "QStash token for task delivery.",
     secret: true,
   },
+  UPSTASH_QSTASH_DESTINATION_URL: {
+    description: "Public HTTPS task endpoint that receives QStash deliveries.",
+    secret: false,
+    example: "https://example.test/tasks",
+  },
   UPSTASH_REDIS_REST_TOKEN: {
     description: "Upstash Redis REST token.",
     secret: true,

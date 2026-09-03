@@ -280,6 +280,19 @@ function readSaasProviderProfileReferences(
   const nextProfileStart = source.indexOf('\n  "saas-', profileStart + 1);
   const profileEnd =
     nextProfileStart === -1 ? source.indexOf("\n} as const", profileStart) : nextProfileStart;
+  const profileSource = source.slice(profileStart, profileEnd);
+  const pluginCatalogName = /plugins: ([A-Z][A-Z0-9_]+),/.exec(profileSource)?.[1];
+  if (pluginCatalogName) {
+    const catalogStart = source.indexOf(`const ${pluginCatalogName} = [`);
+    const catalogEnd = source.indexOf(
+      "] as const satisfies readonly SaasProviderPluginDefinition[];",
+      catalogStart,
+    );
+    if (catalogStart === -1 || catalogEnd === -1) return [];
+    return [
+      ...new Set(source.slice(catalogStart, catalogEnd).match(CROCO_PACKAGE_REFERENCE) ?? []),
+    ];
+  }
   const packagesStart = source.indexOf("packages: [", profileStart);
   const packagesEnd = source.indexOf("],", packagesStart);
   if (
