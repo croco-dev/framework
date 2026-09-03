@@ -13,7 +13,7 @@ title: "DrizzleTx"
 
 ### TOptions
 
-`TOptions` = `unknown`
+`TOptions` = `never`
 
 ## Properties
 

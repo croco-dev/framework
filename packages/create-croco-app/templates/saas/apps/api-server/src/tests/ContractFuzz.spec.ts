@@ -6,6 +6,7 @@ import {
 } from "@croco/framework-context";
 import type { RuntimeCapabilityManifest, RuntimeContext } from "@croco/framework-context";
 import { buildContractGraph } from "@croco/protocols-core";
+import type { Constructor as ContractControllerConstructor } from "@croco/protocols-core";
 import {
   CONTRACT_RUNTIME_LIFECYCLE_CAPABILITIES,
   CONTRACT_TEST_PROFILES,
@@ -25,6 +26,7 @@ import type { MiddlewareFunction } from "@croco/transports-http";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createCrocoApp } from "../app";
 import { JobsController } from "../controllers/JobsController";
+import { generatedSaasProviderProfileManifest } from "../generatedSaasProviderProfile";
 import { SaasDemoSmokeProblem } from "../problems";
 
 const route = getJobsListRoute();
@@ -50,13 +52,26 @@ type TypeDIContainerRegistry = {
 const runtimeEvidence = new Map<string, RuntimeEvidence>();
 
 describe("generated contract verification", () => {
+  if (!generatedSaasProviderProfileManifest.composition.executable) {
+    it("reports that contract execution is unavailable for documentation-only profiles", () => {
+      expect(generatedSaasProviderProfileManifest.composition.plugins).toEqual([]);
+    });
+    return;
+  }
+
   beforeEach(() => {
     runtimeEvidence.clear();
   });
 
   it("runs bounded route fuzzing and Node/Lambda parity through the production bootstrap", async () => {
-    const nodeApp = createCrocoApp({ additionalMiddlewares: [runtimeEvidenceMiddleware] });
-    const lambdaApp = createCrocoApp({ additionalMiddlewares: [runtimeEvidenceMiddleware] });
+    const nodeApp = await createCrocoApp({
+      profileMode: "zero-credential",
+      additionalMiddlewares: [runtimeEvidenceMiddleware],
+    });
+    const lambdaApp = await createCrocoApp({
+      profileMode: "zero-credential",
+      additionalMiddlewares: [runtimeEvidenceMiddleware],
+    });
     const nodeScopeId = nodeApp.applicationRuntime.scopeId;
     const lambdaScopeId = lambdaApp.applicationRuntime.scopeId;
     const nodeScope = TypeDIContainer.of(nodeScopeId);
@@ -450,9 +465,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function getJobsListRoute() {
-  const candidate = buildContractGraph([JobsController]).routes.find(
-    (graphRoute) => graphRoute.routeId === "JobsController.list",
-  );
+  const candidate = buildContractGraph([
+    JobsController as unknown as ContractControllerConstructor,
+  ]).routes.find((graphRoute) => graphRoute.routeId === "JobsController.list");
   if (!candidate) {
     throw new Error("Generated SaaS app is missing the jobs list contract.");
   }

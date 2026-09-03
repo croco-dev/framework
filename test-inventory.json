@@ -254,6 +254,12 @@
       "owner": "@croco/auth-better-auth"
     },
     {
+      "path": "packages/auth-better-auth/src/tests/BetterAuthPlugin.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/auth-better-auth"
+    },
+    {
       "path": "packages/auth-better-auth/src/tests/BetterAuthProvider.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -537,6 +543,12 @@
     },
     {
       "path": "packages/billing-polar/src/tests/PolarBillingGateway.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/billing-polar"
+    },
+    {
+      "path": "packages/billing-polar/src/tests/PolarBillingPlugin.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/billing-polar"
@@ -3527,6 +3539,12 @@
       "owner": "@croco/storage-cloudinary"
     },
     {
+      "path": "packages/storage-cloudinary/src/tests/CloudinaryStoragePlugin.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/storage-cloudinary"
+    },
+    {
       "path": "packages/storage-core/src/tests/BaseStorageProvider.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -3552,6 +3570,12 @@
     },
     {
       "path": "packages/storage-core/src/tests/SignedUrlExpiry.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/storage-core"
+    },
+    {
+      "path": "packages/storage-core/src/tests/StorageProviderToken.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/storage-core"
@@ -3666,6 +3690,12 @@
     },
     {
       "path": "packages/tasks-qstash/src/tests/QStashTaskRunner.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/tasks-qstash"
+    },
+    {
+      "path": "packages/tasks-qstash/src/tests/QStashTasksPlugin.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/tasks-qstash"

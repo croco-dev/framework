@@ -14,6 +14,7 @@ import {
 
 import { createCrocoApp } from "../app";
 import { saasDemoSnapshotSchema } from "../controllers/schemas";
+import { generatedSaasProviderProfileManifest } from "../generatedSaasProviderProfile";
 import { SAAS_DEMO_ENDPOINTS_ENABLED_ENV, SAAS_PROVIDER_PROFILE_ENV } from "../providerProfiles";
 
 const usageStateDirectory = vi.hoisted(() => {
@@ -35,6 +36,13 @@ afterAll(async () => {
 });
 
 describe("generated SaaS executable assurance", () => {
+  if (!generatedSaasProviderProfileManifest.composition.executable) {
+    it("reports that executable assurance is unavailable for documentation-only profiles", () => {
+      expect(generatedSaasProviderProfileManifest.composition.plugins).toEqual([]);
+    });
+    return;
+  }
+
   it("keeps a passing production bootstrap test below production assurance when validation is overridden", async () => {
     const contractGraph = readJson<NonNullable<ExecutableAssuranceGraphInput["contractGraph"]>>(
       "contract-graph.snapshot.json",
@@ -51,14 +59,16 @@ describe("generated SaaS executable assurance", () => {
     const previousDemo = process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV];
     const previousProfile = process.env[SAAS_PROVIDER_PROFILE_ENV];
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    let app: Awaited<ReturnType<typeof createCrocoApp>> | undefined;
     process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV] = "true";
-    process.env[SAAS_PROVIDER_PROFILE_ENV] = "in-memory";
+    process.env[SAAS_PROVIDER_PROFILE_ENV] = "saas-node-postgres";
 
     try {
-      const app = createCrocoApp();
+      app = await createCrocoApp({ profileMode: "zero-credential" });
       const response = await app.fetch(new Request("http://localhost/saas/demo/smoke"));
       const responseContract = saasDemoSnapshotSchema.safeParse(await response.clone().json());
       const policy = app.describeBootstrapValidationPolicy();
+      await app.disposeApplicationRuntime();
       const evidence = createTestEvidenceRecord({
         id: "generated-saas/saas-demo-smoke",
         runner: "generated-app",
@@ -107,6 +117,7 @@ describe("generated SaaS executable assurance", () => {
         ]),
       });
     } finally {
+      await app?.disposeApplicationRuntime();
       restoreEnvironment(SAAS_DEMO_ENDPOINTS_ENABLED_ENV, previousDemo);
       restoreEnvironment(SAAS_PROVIDER_PROFILE_ENV, previousProfile);
       warn.mockRestore();
@@ -126,14 +137,15 @@ describe("generated SaaS executable assurance", () => {
     const previousDemo = process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV];
     const previousProfile = process.env[SAAS_PROVIDER_PROFILE_ENV];
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    let app: Awaited<ReturnType<typeof createCrocoApp>> | undefined;
     delete process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV];
-    process.env[SAAS_PROVIDER_PROFILE_ENV] = "in-memory";
+    process.env[SAAS_PROVIDER_PROFILE_ENV] = "saas-node-postgres";
 
     try {
-      const response = await createCrocoApp().fetch(
-        new Request("http://localhost/saas/demo/smoke"),
-      );
+      app = await createCrocoApp({ profileMode: "zero-credential" });
+      const response = await app.fetch(new Request("http://localhost/saas/demo/smoke"));
       const body = (await response.json()) as { readonly code?: unknown };
+      await app.disposeApplicationRuntime();
       const disabledCode = "saas-demo/demo-endpoint-disabled";
       const evidenceRecords = [
         createTestEvidenceRecord({
@@ -173,7 +185,10 @@ describe("generated SaaS executable assurance", () => {
         createTestEvidenceRecord({
           id: "generated-saas/observation-only",
           runner: "generated-app",
-          intent: { contractIds: [], description: "An undeclared route observation is not proof." },
+          intent: {
+            contractIds: [],
+            description: "An undeclared route observation is not proof.",
+          },
           observed: { contractIds: [], routeIds: [route.routeId] },
           fidelity: generatedApplicationFidelity(),
           replay: { command: "pnpm --filter @smoke/api-server test" },
@@ -227,6 +242,7 @@ describe("generated SaaS executable assurance", () => {
         ]),
       );
     } finally {
+      await app?.disposeApplicationRuntime();
       restoreEnvironment(SAAS_DEMO_ENDPOINTS_ENABLED_ENV, previousDemo);
       restoreEnvironment(SAAS_PROVIDER_PROFILE_ENV, previousProfile);
       warn.mockRestore();

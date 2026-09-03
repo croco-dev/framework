@@ -34,6 +34,8 @@ const IMPORT_SPECIFIER_PATTERN =
 const DYNAMIC_IMPORT_SPECIFIER_PATTERN = /\bimport\(\s*["']([^"']+)["']\s*\)/g;
 const GENERATED_API_DI_GRAPH_SCRIPT =
   "cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
+const GENERATED_SAAS_API_DI_GRAPH_SCRIPT =
+  "cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoDiGraphApplication --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
 const WORKSPACE_ROOT = join(process.cwd(), "..", "..");
 const TSX_CLI_PATH = join(
   WORKSPACE_ROOT,
@@ -1434,7 +1436,7 @@ describe("E2E: generate()", () => {
       "@croco/problems-core": externalCrocoRange("@croco/problems-core"),
     });
     expect(apiPackageJson.scripts).toMatchObject({
-      "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
+      "di:graph": GENERATED_SAAS_API_DI_GRAPH_SCRIPT,
       "profile:check": "tsx src/provider-profile-check.ts --mode=manifest",
       "profile:smoke:real": "tsx src/provider-profile-check.ts --mode=real-provider",
     });
@@ -1562,8 +1564,10 @@ describe("E2E: generate()", () => {
             ],
             "notes": "Cloudflare Workers covers runtime.",
             "packageName": "@croco/transports-cloudflare-workers",
+            "productionState": "documentation-only",
             "provider": "Cloudflare Workers",
             "status": "documented",
+            "zeroCredentialState": "documentation-only",
           },
           {
             "capability": "auth",
@@ -1572,8 +1576,19 @@ describe("E2E: generate()", () => {
             ],
             "notes": "Clerk covers auth.",
             "packageName": "@croco/auth-clerk",
+            "productionState": "documentation-only",
             "provider": "Clerk",
             "status": "documented",
+            "zeroCredentialState": "documentation-only",
+          },
+          {
+            "capability": "persistence",
+            "env": [],
+            "notes": "Application-defined Worker persistence covers persistence.",
+            "productionState": "documentation-only",
+            "provider": "Application-defined Worker persistence",
+            "status": "documented",
+            "zeroCredentialState": "documentation-only",
           },
           {
             "capability": "billing",
@@ -1584,8 +1599,10 @@ describe("E2E: generate()", () => {
             ],
             "notes": "Polar covers billing.",
             "packageName": "@croco/billing-polar",
+            "productionState": "documentation-only",
             "provider": "Polar",
             "status": "documented",
+            "zeroCredentialState": "documentation-only",
           },
           {
             "capability": "metering",
@@ -1595,8 +1612,10 @@ describe("E2E: generate()", () => {
             ],
             "notes": "Upstash Redis covers metering.",
             "packageName": "@croco/metering-upstash",
+            "productionState": "documentation-only",
             "provider": "Upstash Redis",
             "status": "documented",
+            "zeroCredentialState": "documentation-only",
           },
           {
             "capability": "storage",
@@ -1605,8 +1624,10 @@ describe("E2E: generate()", () => {
             ],
             "notes": "Cloudflare R2 covers storage.",
             "packageName": "@croco/storage-r2",
+            "productionState": "documentation-only",
             "provider": "Cloudflare R2",
             "status": "documented",
+            "zeroCredentialState": "documentation-only",
           },
           {
             "capability": "tasks",
@@ -1617,8 +1638,10 @@ describe("E2E: generate()", () => {
             ],
             "notes": "QStash covers tasks.",
             "packageName": "@croco/tasks-qstash",
+            "productionState": "documentation-only",
             "provider": "QStash",
             "status": "documented",
+            "zeroCredentialState": "documentation-only",
           },
           {
             "capability": "telemetry",
@@ -1628,8 +1651,10 @@ describe("E2E: generate()", () => {
             ],
             "notes": "OpenTelemetry fetch export covers telemetry.",
             "packageName": "@croco/telemetry-api",
+            "productionState": "documentation-only",
             "provider": "OpenTelemetry fetch export",
             "status": "documented",
+            "zeroCredentialState": "documentation-only",
           },
           {
             "capability": "webhookVerification",
@@ -1639,8 +1664,10 @@ describe("E2E: generate()", () => {
               "UPSTASH_QSTASH_NEXT_SIGNING_KEY",
             ],
             "notes": "Polar + QStash signatures covers webhookVerification.",
+            "productionState": "documentation-only",
             "provider": "Polar + QStash signatures",
             "status": "documented",
+            "zeroCredentialState": "documentation-only",
           },
         ],
         "compatibility": {
@@ -1670,6 +1697,7 @@ describe("E2E: generate()", () => {
           "requiredCapabilities": [
             "runtime",
             "auth",
+            "persistence",
             "billing",
             "metering",
             "storage",
@@ -1682,6 +1710,10 @@ describe("E2E: generate()", () => {
             "Removing or renaming provider profile fields requires a new schemaVersion and migration notes.",
             "Generated provider manifest, tenant manifest, provider docs, .env.example, and generated TS source must be committed together.",
           ],
+        },
+        "composition": {
+          "executable": false,
+          "plugins": [],
         },
         "deployNotes": [
           "Keep generated smoke local; use pnpm profile:smoke:real only after Worker secrets are bound.",
@@ -2379,6 +2411,7 @@ describe("E2E: generate()", () => {
     expect(profileManifest.compatibility.requiredCapabilities).toEqual([
       "runtime",
       "auth",
+      "persistence",
       "billing",
       "metering",
       "storage",
@@ -2562,6 +2595,34 @@ describe("E2E: generate()", () => {
         capabilities?: Record<string, unknown>;
         diagnostics?: unknown;
       };
+      const providerProfileManifest = JSON.parse(
+        readFileSync(join(testDir, "croco-saas-profile.manifest.json"), "utf8"),
+      ) as {
+        packages: string[];
+        env: { required: { name: string }[]; optional: { name: string }[] };
+        capabilities: {
+          capability: string;
+          productionState: string;
+          zeroCredentialState: string;
+        }[];
+        composition: {
+          executable: boolean;
+          plugins: {
+            factoryExport: string;
+            packageName: string;
+            contractPackages?: string[];
+            runtimePackages?: string[];
+            developmentPackages?: string[];
+            env: string[];
+          }[];
+        };
+      };
+      const generatedProfileSource = readFileSync(
+        join(testDir, "apps", "api-server", "src", "generatedSaasProviderProfile.ts"),
+        "utf8",
+      );
+      const envExample = readFileSync(join(testDir, ".env.example"), "utf8");
+      const apiPackageJson = readPackageJson(join(testDir, "apps", "api-server", "package.json"));
 
       expect(rootPackageJson.scripts).toMatchObject({
         typecheck: "turbo typecheck",
@@ -2596,14 +2657,18 @@ describe("E2E: generate()", () => {
         protocol: "rest",
         providers: [
           "in-memory-tenant",
-          "in-memory-auth",
-          "in-memory-billing",
           "in-memory-metering",
           "in-memory-events",
+          "better-auth",
+          "drizzle-transaction",
+          "polar-billing",
+          "qstash-tasks",
+          "cloudinary-storage",
+          "node-telemetry",
         ],
-        storage: ["in-memory-demo"],
-        auth: "tenant-demo",
-        billing: "demo",
+        storage: ["cloudinary"],
+        auth: "better-auth",
+        billing: "polar",
         tenantModel: "org",
         telemetry: "opentelemetry-otlp",
         deploymentPreset: "node-api",
@@ -2640,6 +2705,93 @@ describe("E2E: generate()", () => {
         },
         diagnostics: [],
       });
+      expect(providerProfileManifest.composition).toMatchObject({
+        executable: true,
+        plugins: expect.arrayContaining([
+          expect.objectContaining({ factoryExport: "betterAuth" }),
+          expect.objectContaining({ factoryExport: "drizzleTransaction" }),
+          expect.objectContaining({ factoryExport: "polarBilling" }),
+          expect.objectContaining({ factoryExport: "qstashTasks" }),
+          expect.objectContaining({ factoryExport: "cloudinaryStorage" }),
+          expect.objectContaining({ factoryExport: "nodeTelemetry" }),
+          expect.objectContaining({ factoryExport: "httpTransport" }),
+        ]),
+      });
+      const declaredEnv = new Set(
+        [...providerProfileManifest.env.required, ...providerProfileManifest.env.optional].map(
+          (entry) => entry.name,
+        ),
+      );
+      for (const pluginDefinition of providerProfileManifest.composition.plugins) {
+        for (const packageName of [
+          pluginDefinition.packageName,
+          ...(pluginDefinition.contractPackages ?? []),
+          ...(pluginDefinition.runtimePackages ?? []),
+        ]) {
+          expect(providerProfileManifest.packages).toContain(packageName);
+          expect(apiPackageJson.dependencies?.[packageName]).toEqual(expect.any(String));
+        }
+        for (const packageName of pluginDefinition.developmentPackages ?? []) {
+          expect(providerProfileManifest.packages).toContain(packageName);
+          expect(apiPackageJson.dependencies?.[packageName]).toBeUndefined();
+          expect(apiPackageJson.devDependencies?.[packageName]).toEqual(expect.any(String));
+        }
+        for (const envName of pluginDefinition.env) {
+          expect(declaredEnv).toContain(envName);
+        }
+      }
+      expect(providerProfileManifest.capabilities).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            capability: "auth",
+            productionState: "configured-production-plugin",
+            zeroCredentialState: "fake-local",
+          }),
+          expect.objectContaining({
+            capability: "metering",
+            productionState: "unavailable",
+            zeroCredentialState: "unavailable",
+          }),
+          expect.objectContaining({
+            capability: "telemetry",
+            productionState: "configured-production-plugin",
+            zeroCredentialState: "unavailable",
+          }),
+          expect.objectContaining({
+            capability: "webhookVerification",
+            productionState: "documentation-only",
+            zeroCredentialState: "documentation-only",
+          }),
+        ]),
+      );
+      expect(generatedProfileSource).toContain(
+        "generatedSaasProviderProfileManifest.composition.plugins.map",
+      );
+      expect(generatedProfileSource).toContain(
+        "new Pool({ connectionString: config.databaseUrl })",
+      );
+      expect(generatedProfileSource).toContain("drizzle(databasePool)");
+      expect(generatedProfileSource).toContain("shutdown: () => databasePool.end()");
+      expect(generatedProfileSource).toContain("databasePool === undefined ? drizzle.mock()");
+      expect(generatedProfileSource).toContain(
+        'qstashDestinationUrl: "https://example.test/tasks"',
+      );
+      expect(generatedProfileSource).not.toContain(
+        'qstashDestinationUrl: "http://localhost:3000/tasks"',
+      );
+      expect(envExample).toContain("# UPSTASH_QSTASH_DESTINATION_URL=https://example.test/tasks");
+      expect(envExample).not.toContain(
+        "# UPSTASH_QSTASH_DESTINATION_URL=http://localhost:3000/tasks",
+      );
+      expect(generatedProfileSource).toContain(
+        'enabled: options.mode === "production" && env.TELEMETRY_ENABLED !== "false"',
+      );
+      expect(generatedProfileSource).toContain(
+        'trace: { enabled: options.mode === "production" && env.TELEMETRY_ENABLED !== "false"',
+      );
+      expect(generatedProfileSource).toContain("providerReplacements:");
+      expect(generatedProfileSource).toContain("CROCO_SAAS_PROFILE_GRAPH_DRIFT");
+      expect(generatedProfileSource).toContain("replacementOwners.has(contribution.moduleName)");
       assertNoHandlebarsPlaceholders(testDir);
       assertNoExternalCrocoWorkspaceRanges(testDir);
       assertAllSourceBareImportsDeclared(testDir);
@@ -2669,6 +2821,10 @@ describe("E2E: generate()", () => {
       const rootPackageJson = readPackageJson(join(testDir, "package.json"));
       const apiPackageJson = readPackageJson(join(testDir, "apps", "api-server", "package.json"));
       const appSource = readFileSync(join(testDir, "apps", "api-server", "src", "app.ts"), "utf8");
+      const aiControllerSource = readFileSync(
+        join(testDir, "apps", "api-server", "src", "controllers", "AiController.ts"),
+        "utf8",
+      );
       const failureDrillSource = readFileSync(
         join(testDir, "apps", "api-server", "src", "demo", "failure-drill-smoke.ts"),
         "utf8",
@@ -2715,8 +2871,13 @@ describe("E2E: generate()", () => {
       expect(apiPackageJson.scripts?.["jobs:smoke"]).toBe("tsx src/demo/jobs-smoke.ts");
       expect(appSource).toContain("createApplicationRuntime");
       expect(appSource).toContain("applicationRuntime");
+      expect(appSource).toContain("AI_SAAS_RUNTIME_TOKEN");
+      expect(appSource).toContain("registerRuntimeScopedProviders(runtimeState.current)");
+      expect(appSource).toContain("createAiSaasRuntime(runtime)");
       expect(appSource).not.toContain("Container.has(LOGGER_TOKEN)");
-      expect(apiPackageJson.scripts?.["di:graph"]).toBe(GENERATED_API_DI_GRAPH_SCRIPT);
+      expect(aiControllerSource).toContain("getAiSaasRuntime()");
+      expect(aiControllerSource).not.toMatch(/defaultAiSaasRuntime|defaultSaasRuntime/);
+      expect(apiPackageJson.scripts?.["di:graph"]).toBe(GENERATED_SAAS_API_DI_GRAPH_SCRIPT);
       expect(apiPackageJson.scripts?.["failure-drill:smoke"]).toBe(
         "tsx src/demo/failure-drill-smoke.ts",
       );
@@ -2724,7 +2885,7 @@ describe("E2E: generate()", () => {
       expect(appSource).toMatch(/AiController/);
       expect(appSource).toContain("createCrocoDiGraphRoots");
       expect(appSource).toMatch(
-        /\[OperationsController, JobsController, SaasController, AiController\]/,
+        /\[\s*OperationsController,\s*JobsController,\s*SaasController,\s*AiController,?\s*\]/,
       );
       expect(existsSync(join(testDir, "README.md"))).toBe(true);
       expect(existsSync(join(testDir, "apps", "api-server", "src", "aiSaas.ts"))).toBe(true);

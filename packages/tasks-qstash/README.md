@@ -39,6 +39,20 @@ await runner.execute(
 | `QStashTaskValidationProblem` | invalid task id, URL, delay, idempotency key를 나타내는 terminal Problem입니다.             |
 | `QStashTaskPublishProblem`    | QStash publish 오류를 redaction과 retryable evidence로 정규화합니다.                        |
 
+## Canonical module plugin
+
+`qstashTasks()`는 `TASK_DISPATCHER_TOKEN`을 소유하는 실행 가능한 application plugin을 반환합니다.
+metadata에는 QStash 구성 요구사항, runtime 호환성, maturity와 검증 명령이 포함됩니다.
+
+```typescript
+import { qstashTasks } from "@croco/tasks-qstash";
+
+const tasks = qstashTasks({
+  token: process.env.UPSTASH_QSTASH_TOKEN!,
+  destinationUrl: process.env.UPSTASH_QSTASH_DESTINATION_URL!,
+});
+```
+
 ## 동작 메모
 
 - 요청 본문은 `{ taskId, payload }` 형태로 발행됩니다.

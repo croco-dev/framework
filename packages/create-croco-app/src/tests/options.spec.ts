@@ -13,7 +13,10 @@ import {
   validateCliOptions,
   validateResolvedOptions,
 } from "../options.js";
-import { assertSaasProviderProfileCapabilities } from "../saas-provider-profiles.js";
+import {
+  assertSaasProviderProfileCapabilities,
+  SAAS_PROVIDER_PROFILES,
+} from "../saas-provider-profiles.js";
 import { CREATE_CROCO_APP_COMPATIBILITY_CHOICES } from "../supported-options.js";
 import type { GenerationRuntimePlatform, GeneratorOptions } from "../generator.js";
 
@@ -914,6 +917,21 @@ describe("noninteractive CLI option validation", () => {
         capabilities: {},
       }),
     ).toThrow("CROCO_SAAS_PROFILE_CAPABILITY_MISSING: custom lacks runtime");
+  });
+
+  it("keeps every documentation-only profile capability out of configured production state", () => {
+    const documentationOnlyProfiles = Object.values(SAAS_PROVIDER_PROFILES).filter(
+      (profile) => profile.plugins.length === 0,
+    );
+
+    expect(documentationOnlyProfiles.length).toBeGreaterThan(0);
+    for (const profile of documentationOnlyProfiles) {
+      expect(
+        Object.values(profile.capabilities).every(
+          ({ productionState }) => productionState !== "configured-production-plugin",
+        ),
+      ).toBe(true);
+    }
   });
 
   it("normalizes safe noninteractive defaults for production app projects", () => {

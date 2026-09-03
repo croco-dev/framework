@@ -17,6 +17,12 @@ describe("ApplicationIntentEvidence", () => {
     expect(getApplicationIntentProviderPackage("in-memory-events", "@test", "saas-api")).toBe(
       "@croco/events-core",
     );
+    expect(getApplicationIntentProviderPackage("better-auth", "@test", "saas-api")).toBe(
+      "@croco/auth-better-auth",
+    );
+    expect(getApplicationIntentProviderPackage("cloudinary-storage", "@test", "saas-api")).toBe(
+      "@croco/storage-cloudinary",
+    );
     expect(
       getApplicationIntentProviderPackage("in-memory-events", "@test", "spa-backend-split"),
     ).toBe("@croco/events-inmemory");

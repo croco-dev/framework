@@ -1,16 +1,38 @@
+import { rm } from "node:fs/promises";
+
 import { Container } from "typedi";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { AiRateLimitExceededProblem, AiTenantRequiredProblem } from "../aiProblems";
+import { createCrocoApp } from "../app";
 import {
   AI_PLAN_CATALOG,
   buildAiIdempotencyKey,
   createAiSaasRuntime,
   DEFAULT_AI_MODEL_ID,
+  getAiSaasRuntime,
   getAiProviderProfile,
   runAiSaasDemoFlow,
   seedAiSaasTenant,
 } from "../aiSaas";
 import { assertAiSaasSmokeContract } from "../demo/aiSmokeContract";
+import { SAAS_DEMO_ENDPOINTS_ENABLED_ENV } from "../providerProfiles";
+
+const usageStateDirectory = vi.hoisted(() => {
+  const environmentName = "CROCO_DEMO_USAGE_STATE_DIR";
+  const previous = process.env[environmentName];
+  const temporaryRoot = process.env.TEMP ?? process.env.TMP ?? process.env.TMPDIR ?? "/tmp";
+  const directory = `${temporaryRoot}/croco-ai-saas-${process.pid}-${Date.now()}`;
+  process.env[environmentName] = directory;
+  return { directory, previous };
+});
+
+afterAll(async () => {
+  try {
+    await rm(usageStateDirectory.directory, { force: true, recursive: true });
+  } finally {
+    restoreEnvironment("CROCO_DEMO_USAGE_STATE_DIR", usageStateDirectory.previous);
+  }
+});
 
 describe("AI SaaS generated baseline", () => {
   beforeEach(() => {
@@ -107,4 +129,49 @@ describe("AI SaaS generated baseline", () => {
       env: expect.arrayContaining(["ANTHROPIC_API_KEY"]),
     });
   });
+
+  it("serves AI routes from the application-scoped SaaS provider graph", async () => {
+    const previousDemo = process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV];
+    process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV] = "true";
+    let app: Awaited<ReturnType<typeof createCrocoApp>> | undefined;
+
+    try {
+      app = await createCrocoApp({ profileMode: "zero-credential" });
+      const seedResponse = await app.fetch(
+        new Request("http://localhost/saas/demo/seed", { method: "POST" }),
+      );
+      expect(seedResponse.status).toBe(200);
+      const seed = (await seedResponse.json()) as { readonly tenant: { readonly id: string } };
+      const generateResponse = await app.fetch(
+        new Request("http://localhost/ai/generate", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-tenant-id": seed.tenant.id,
+          },
+          body: JSON.stringify({
+            requestId: "application-scoped-ai-route",
+            prompt: "Draft a short tenant onboarding email.",
+          }),
+        }),
+      );
+      const applicationAiRuntime = app.applicationRuntime.run(() => getAiSaasRuntime());
+
+      expect(generateResponse.status).toBe(200);
+      await expect(
+        applicationAiRuntime.service.listInvocationLogs(seed.tenant.id),
+      ).resolves.toHaveLength(1);
+    } finally {
+      await app?.disposeApplicationRuntime();
+      restoreEnvironment(SAAS_DEMO_ENDPOINTS_ENABLED_ENV, previousDemo);
+    }
+  });
 });
+
+function restoreEnvironment(name: string, value: string | undefined): void {
+  if (value === undefined) {
+    delete process.env[name];
+  } else {
+    process.env[name] = value;
+  }
+}

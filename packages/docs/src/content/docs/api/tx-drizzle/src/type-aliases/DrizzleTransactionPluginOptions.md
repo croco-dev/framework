@@ -27,6 +27,16 @@ title: "DrizzleTransactionPluginOptions"
 
 ---
 
+### shutdown?
+
+> `readonly` `optional` **shutdown?**: () => `void` \| `Promise`\<`void`\>
+
+#### Returns
+
+`void` \| `Promise`\<`void`\>
+
+---
+
 ### transaction?
 
 > `readonly` `optional` **transaction?**: [`TxManagerConfig`](/api/tx-core/src/interfaces/txmanagerconfig/)

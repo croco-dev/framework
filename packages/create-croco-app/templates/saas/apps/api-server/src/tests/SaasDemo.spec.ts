@@ -15,13 +15,19 @@ import type {
   MiddlewareFunction,
   NodeServerHandle,
 } from "@croco/transports-http";
+import { TelemetryRuntime } from "@croco/telemetry-sdk-node";
 import { createCrocoApp } from "../app";
 import { JobsController } from "../controllers/JobsController";
 import { assertDemoEndpointsEnabled, SaasController } from "../controllers/SaasController";
 import { saasDemoSnapshotSchema } from "../controllers/schemas";
 import { renderDemoMemberHtml } from "../html";
+import { generatedSaasProviderProfileManifest } from "../generatedSaasProviderProfile";
 import { InMemoryRedisClient } from "../inMemoryAdapters";
-import { DemoEndpointDisabledProblem } from "../problems";
+import {
+  DemoEndpointDisabledProblem,
+  SaasProviderProfileMismatchProblem,
+  SaasProviderProfileRuntimeUnavailableProblem,
+} from "../problems";
 import {
   getSaasProviderProfile,
   isSaasDemoEndpointEnabled,
@@ -32,15 +38,48 @@ import {
   createSaasRuntime,
   createSaasDemoRuntime,
   DemoBillingGateway,
+  defaultSaasRuntime,
   runSaasCampaignSmoke,
   runSaasDemoFlow,
+  SAAS_RUNTIME_STATE_TOKEN,
+  SaasRuntimeState,
   seedDefaultSaasRuntime,
 } from "../saasDemo";
+
+const executableProfileTest = generatedSaasProviderProfileManifest.composition.executable
+  ? it
+  : (_name: string, _test: () => void | Promise<void>): void => {};
 
 describe("SaaS golden path demo", () => {
   beforeEach(() => {
     Container.reset();
     CrocoContainer.reset();
+  });
+
+  it("reports generated execution status and rejects documentation-only bootstraps", async () => {
+    const executable = generatedSaasProviderProfileManifest.composition.executable;
+
+    expect(getSaasProviderProfile()).toMatchObject({
+      status: executable ? "executable" : "documentation-only",
+    });
+
+    if (!executable) {
+      await expect(createCrocoApp({ profileMode: "zero-credential" })).rejects.toThrow(
+        "CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE",
+      );
+    }
+  });
+
+  it("models provider profile selection failures as Problems", () => {
+    const requestedProfile = `${getSaasProviderProfile().name}-mismatch`;
+
+    expect(() => getSaasProviderProfile(requestedProfile)).toThrow(
+      SaasProviderProfileMismatchProblem,
+    );
+    expect(new SaasProviderProfileRuntimeUnavailableProblem("saas-cloudflare")).toMatchObject({
+      code: "CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE",
+      message: "CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE: saas-cloudflare",
+    });
   });
 
   it("deduplicates concurrent membership event relay calls", async () => {
@@ -157,34 +196,80 @@ describe("SaaS golden path demo", () => {
     expect(distinct.checkoutUrl).not.toBe(first.checkoutUrl);
   });
 
-  it("boots through the exported production bootstrap without unrelated global DI diagnostics", async () => {
-    const previousNodeEnv = process.env.NODE_ENV;
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    let app: ReturnType<typeof createCrocoApp> | undefined;
-    process.env.NODE_ENV = "production";
+  executableProfileTest(
+    "boots the explicit zero-credential profile without unrelated global DI diagnostics",
+    async () => {
+      const previousNodeEnv = process.env.NODE_ENV;
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+      let app: Awaited<ReturnType<typeof createCrocoApp>> | undefined;
+      process.env.NODE_ENV = "production";
 
-    try {
-      app = createCrocoApp();
-      const response = await app.fetch(new Request("http://localhost/health"));
+      try {
+        app = await createCrocoApp({ profileMode: "zero-credential" });
+        const response = await app.fetch(new Request("http://localhost/health"));
 
-      expect(response.status).toBe(200);
-      expect(app.describeBootstrapValidationPolicy()).toEqual({
-        di: "warn",
-        security: "enforce",
-      });
-      expect(warn).not.toHaveBeenCalled();
-    } finally {
-      await app?.disposeApplicationRuntime();
-      if (previousNodeEnv === undefined) {
-        delete process.env.NODE_ENV;
-      } else {
-        process.env.NODE_ENV = previousNodeEnv;
+        expect(response.status).toBe(200);
+        expect(app.describeBootstrapValidationPolicy()).toEqual({
+          di: "warn",
+          security: "enforce",
+        });
+        expect(warn).not.toHaveBeenCalled();
+      } finally {
+        await app?.disposeApplicationRuntime();
+        if (previousNodeEnv === undefined) {
+          delete process.env.NODE_ENV;
+        } else {
+          process.env.NODE_ENV = previousNodeEnv;
+        }
+        warn.mockRestore();
       }
-      warn.mockRestore();
-    }
-  });
+    },
+  );
 
-  it("preserves a caller-provided bootstrap logger", () => {
+  executableProfileTest(
+    "keeps telemetry unavailable in zero-credential mode when the environment enables it",
+    async () => {
+      const previousTelemetryEnabled = process.env.TELEMETRY_ENABLED;
+      let app: Awaited<ReturnType<typeof createCrocoApp>> | undefined;
+
+      try {
+        await TelemetryRuntime.reset();
+        process.env.TELEMETRY_ENABLED = "true";
+        app = await createCrocoApp({ profileMode: "zero-credential" });
+
+        expect(TelemetryRuntime.getInstance().getConfig()).toMatchObject({
+          enabled: false,
+          trace: { enabled: false },
+        });
+        expect(TelemetryRuntime.getInstance().isInitialized()).toBe(false);
+      } finally {
+        await app?.disposeApplicationRuntime();
+        await TelemetryRuntime.reset();
+        if (previousTelemetryEnabled === undefined) {
+          delete process.env.TELEMETRY_ENABLED;
+        } else {
+          process.env.TELEMETRY_ENABLED = previousTelemetryEnabled;
+        }
+      }
+    },
+  );
+
+  executableProfileTest(
+    "closes the Node listener before disposing the application runtime",
+    async () => {
+      const app = await createCrocoApp({ profileMode: "zero-credential" });
+      const server = await app.listen(0);
+
+      expect(server.listening).toBe(true);
+
+      await app.disposeApplicationRuntime();
+
+      expect(server.listening).toBe(false);
+      expect(() => app.applicationRuntime.run(() => undefined)).toThrow(/already been disposed/);
+    },
+  );
+
+  executableProfileTest("does not overwrite a caller-provided global logger", async () => {
     const logger: ILogger = {
       child: () => logger,
       debug: vi.fn(),
@@ -195,14 +280,15 @@ describe("SaaS golden path demo", () => {
     };
     CrocoContainer.set(LOGGER_TOKEN, logger);
 
-    createCrocoApp();
+    const app = await createCrocoApp({ profileMode: "zero-credential" });
 
     expect(CrocoContainer.get(LOGGER_TOKEN)).toBe(logger);
+    await app.disposeApplicationRuntime();
   });
 
-  it("owns bootstrap providers in distinct application runtimes", async () => {
-    const first = createCrocoApp();
-    const second = createCrocoApp();
+  executableProfileTest("owns bootstrap providers in distinct application runtimes", async () => {
+    const first = await createCrocoApp({ profileMode: "zero-credential" });
+    const second = await createCrocoApp({ profileMode: "zero-credential" });
 
     expect(first.applicationRuntime.scopeId).not.toBe(second.applicationRuntime.scopeId);
     expect(first.applicationRuntime.get(LOGGER_TOKEN)).not.toBe(
@@ -216,54 +302,63 @@ describe("SaaS golden path demo", () => {
     await Promise.all([first.disposeApplicationRuntime(), second.disposeApplicationRuntime()]);
   });
 
-  it("runs exported host callbacks inside their owning application runtime", async () => {
-    const firstScopes: string[] = [];
-    const secondScopes: string[] = [];
-    const first = createCrocoApp({ additionalMiddlewares: [captureActiveScope(firstScopes)] });
-    const second = createCrocoApp({ additionalMiddlewares: [captureActiveScope(secondScopes)] });
-    let firstServer: NodeServerHandle | undefined;
-    let secondServer: NodeServerHandle | undefined;
+  executableProfileTest(
+    "runs exported host callbacks inside their owning application runtime",
+    async () => {
+      const firstScopes: string[] = [];
+      const secondScopes: string[] = [];
+      const first = await createCrocoApp({
+        profileMode: "zero-credential",
+        additionalMiddlewares: [captureActiveScope(firstScopes)],
+      });
+      const second = await createCrocoApp({
+        profileMode: "zero-credential",
+        additionalMiddlewares: [captureActiveScope(secondScopes)],
+      });
+      let firstServer: NodeServerHandle | undefined;
+      let secondServer: NodeServerHandle | undefined;
 
-    try {
-      const firstNodeHandler = first.nodeHandler();
-      const secondNodeHandler = second.nodeHandler();
-      await Promise.all([
-        firstNodeHandler(new Request("http://localhost/ops/health")),
-        secondNodeHandler(new Request("http://localhost/ops/health")),
-      ]);
+      try {
+        const firstNodeHandler = first.nodeHandler();
+        const secondNodeHandler = second.nodeHandler();
+        await Promise.all([
+          firstNodeHandler(new Request("http://localhost/ops/health")),
+          secondNodeHandler(new Request("http://localhost/ops/health")),
+        ]);
 
-      const firstLambdaHandler = first.lambdaHandler();
-      const secondLambdaHandler = second.lambdaHandler();
-      await Promise.all([
-        firstLambdaHandler(createLambdaEvent(), createLambdaContext("first")),
-        secondLambdaHandler(createLambdaEvent(), createLambdaContext("second")),
-      ]);
+        const firstLambdaHandler = first.lambdaHandler();
+        const secondLambdaHandler = second.lambdaHandler();
+        await Promise.all([
+          firstLambdaHandler(createLambdaEvent(), createLambdaContext("first")),
+          secondLambdaHandler(createLambdaEvent(), createLambdaContext("second")),
+        ]);
 
-      const firstHono = first.getHono();
-      const secondHono = second.getHono();
-      await Promise.all([
-        firstHono.fetch(new Request("http://localhost/ops/health")),
-        secondHono.fetch(new Request("http://localhost/ops/health")),
-      ]);
+        const firstHono = first.getHono();
+        const secondHono = second.getHono();
+        await Promise.all([
+          firstHono.fetch(new Request("http://localhost/ops/health")),
+          secondHono.fetch(new Request("http://localhost/ops/health")),
+        ]);
 
-      [firstServer, secondServer] = await Promise.all([first.listen(0), second.listen(0)]);
-      await Promise.all([waitForListening(firstServer), waitForListening(secondServer)]);
-      await Promise.all([
-        fetch(`${getServerUrl(firstServer)}/ops/health`),
-        fetch(`${getServerUrl(secondServer)}/ops/health`),
-      ]);
+        [firstServer, secondServer] = await Promise.all([first.listen(0), second.listen(0)]);
+        await Promise.all([waitForListening(firstServer), waitForListening(secondServer)]);
+        await Promise.all([
+          fetch(`${getServerUrl(firstServer)}/ops/health`),
+          fetch(`${getServerUrl(secondServer)}/ops/health`),
+        ]);
 
-      expect(firstScopes).toEqual(Array(4).fill(first.applicationRuntime.scopeId));
-      expect(secondScopes).toEqual(Array(4).fill(second.applicationRuntime.scopeId));
-      expect(first.applicationRuntime.scopeId).not.toBe(second.applicationRuntime.scopeId);
-    } finally {
-      await Promise.all([
-        firstServer ? closeServer(firstServer) : Promise.resolve(),
-        secondServer ? closeServer(secondServer) : Promise.resolve(),
-      ]);
-      await Promise.all([first.disposeApplicationRuntime(), second.disposeApplicationRuntime()]);
-    }
-  });
+        expect(firstScopes).toEqual(Array(4).fill(first.applicationRuntime.scopeId));
+        expect(secondScopes).toEqual(Array(4).fill(second.applicationRuntime.scopeId));
+        expect(first.applicationRuntime.scopeId).not.toBe(second.applicationRuntime.scopeId);
+      } finally {
+        await Promise.all([
+          firstServer ? closeServer(firstServer) : Promise.resolve(),
+          secondServer ? closeServer(secondServer) : Promise.resolve(),
+        ]);
+        await Promise.all([first.disposeApplicationRuntime(), second.disposeApplicationRuntime()]);
+      }
+    },
+  );
 
   it("creates tenant and owner membership", async () => {
     const snapshot = await runSaasDemoFlow(createSaasDemoRuntime());
@@ -273,7 +368,7 @@ describe("SaaS golden path demo", () => {
     expect(snapshot.membership.ownerRole).toBe("owner");
     expect(snapshot.contract).toEqual({
       version: "saas-smoke-contract/v1",
-      providerProfile: "in-memory",
+      providerProfile: generatedSaasProviderProfileManifest.profile.name,
     });
   });
 
@@ -526,46 +621,27 @@ describe("SaaS golden path demo", () => {
     });
   });
 
-  it("documents supported and provider-backed profile seams", () => {
-    expect(getSaasProviderProfile("in-memory")).toMatchObject({
-      status: "supported",
-      env: expect.arrayContaining([SAAS_DEMO_ENDPOINTS_ENABLED_ENV]),
-      commands: expect.arrayContaining(["pnpm demo:smoke"]),
-    });
-    expect(getSaasProviderProfile("drizzle-polar-upstash")).toMatchObject({
-      status: "documented-seam",
-      packages: expect.arrayContaining([
-        "@croco/billing-polar",
-        "@croco/metering-upstash",
-        "@croco/ratelimit-upstash",
-        "@croco/tasks-qstash",
-        "@croco/tx-drizzle",
-      ]),
-      env: expect.arrayContaining(["DATABASE_URL", "POLAR_ACCESS_TOKEN", "UPSTASH_REDIS_REST_URL"]),
-    });
+  executableProfileTest("derives the executable runtime profile from generated metadata", () => {
     expect(getSaasProviderProfile("saas-node-postgres")).toMatchObject({
-      status: "documented-seam",
+      status: "executable",
+      commands: expect.arrayContaining(["pnpm demo:smoke"]),
       packages: expect.arrayContaining([
         "@croco/auth-better-auth",
         "@croco/billing-polar",
         "@croco/tasks-qstash",
-        "@croco/telemetry-sdk-node",
+        "@croco/tx-drizzle",
       ]),
-      env: expect.arrayContaining(["DATABASE_URL", "POLAR_WEBHOOK_SECRET", "CLOUDINARY_URL"]),
-    });
-    expect(getSaasProviderProfile("saas-cloudflare")).toMatchObject({
-      status: "documented-seam",
-      packages: expect.arrayContaining([
-        "@croco/transports-cloudflare-workers",
-        "@croco/storage-r2",
+      env: expect.arrayContaining([
+        SAAS_DEMO_ENDPOINTS_ENABLED_ENV,
+        "DATABASE_URL",
+        "POLAR_WEBHOOK_SECRET",
+        "CLOUDINARY_URL",
       ]),
-      env: expect.arrayContaining(["CLOUDFLARE_ACCOUNT_ID", "R2_BUCKET", "CLERK_SECRET_KEY"]),
     });
-    expect(getSaasProviderProfile("saas-lambda")).toMatchObject({
-      status: "documented-seam",
-      packages: expect.arrayContaining(["@croco/preset-lambda", "@croco/storage-cloudinary"]),
-      env: expect.arrayContaining(["AWS_REGION", "CLERK_SECRET_KEY", "CLOUDINARY_URL"]),
-    });
+    const mismatchedProfile = `${getSaasProviderProfile().name}-mismatch`;
+    expect(() => getSaasProviderProfile(mismatchedProfile)).toThrow(
+      SaasProviderProfileMismatchProblem,
+    );
   });
 
   it("keeps demo endpoints closed unless explicitly enabled outside production", async () => {
@@ -612,6 +688,10 @@ describe("SaaS golden path demo", () => {
       process.env.NODE_ENV = "development";
       process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV] = "true";
 
+      CrocoContainer.set(
+        SAAS_RUNTIME_STATE_TOKEN,
+        new SaasRuntimeState({ create: createSaasDemoRuntime }),
+      );
       const controller = new SaasController();
       const first = await controller.seedDemo();
       const second = await controller.seedDemo();
@@ -649,6 +729,13 @@ describe("SaaS golden path demo", () => {
 
   it("exposes the billing sync job through operations controller", async () => {
     const seeded = await seedDefaultSaasRuntime();
+    CrocoContainer.set(
+      SAAS_RUNTIME_STATE_TOKEN,
+      new SaasRuntimeState({
+        create: createSaasDemoRuntime,
+        initial: defaultSaasRuntime,
+      }),
+    );
     const controller = new JobsController();
 
     const listReport = (await controller.list(undefined, "billing-sync")) as {
