@@ -5,6 +5,10 @@ import {
   selectGeneratedSmokeCasesForChangedFiles,
   selectGeneratedTestPathsForSmokeCases,
 } from "./create-croco-app-generated-smoke-dependencies.mts";
+import {
+  CORE_COVERAGE_PACKAGE_DIRECTORIES,
+  CORE_COVERAGE_PACKAGES,
+} from "./core-coverage-config.mts";
 import { GENERATED_SMOKE_MATRIX_CASES } from "./create-croco-app-generated-smoke-matrix.mts";
 import {
   isReleaseGateMaintenancePath,
@@ -164,32 +168,6 @@ const guardedNodeScript = (
   script: string,
   ...args: string[]
 ): readonly string[] => guarded(recovery, nodeScript(script, ...args));
-
-const CORE_COVERAGE_PACKAGES = [
-  "@croco/framework-context",
-  "@croco/problems-core",
-  "@croco/protocols-core",
-  "@croco/protocols-rest",
-  "@croco/openapi-spec",
-  "@croco/rpc-codegen",
-  "@croco/transports-http",
-  "@croco/telemetry-api",
-  "@croco/telemetry-sdk-node",
-  "@croco/tx-core",
-  "@croco/tx-drizzle",
-  "@croco/events-core",
-  "@croco/events-tx",
-  "@croco/retry-core",
-  "@croco/idempotency-core",
-  "@croco/testing",
-  "create-croco-app",
-  "@croco/cli",
-  "@croco/auth-core",
-] as const;
-
-const CORE_COVERAGE_PACKAGE_DIRECTORIES = CORE_COVERAGE_PACKAGES.map((packageName) =>
-  packageName.startsWith("@croco/") ? packageName.slice("@croco/".length) : packageName,
-);
 
 const PACKAGE_BIN_BUILD_FILTERS = [
   "@croco/cli",

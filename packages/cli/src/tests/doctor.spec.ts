@@ -1414,8 +1414,8 @@ describe("doctor", () => {
       scripts: { build: "tsup" },
     });
     writePackageCatalog(repo, ["framework-context"]);
-    writeCoreCoverageVitestConfig(repo, ["@croco/problems-core"]);
-    writePassingCoreCoverageEvidence(repo);
+    writeCoreCoverageConfig(repo, ["@croco/problems-core"]);
+    writePassingCoreCoverageEvidence(repo, "@croco/problems-core");
     writeBundleSizeBaseline(repo);
     writeBenchmarkVarianceEvidence(repo);
     writeValidStaticMisuseAllowlist(repo);
@@ -1430,9 +1430,38 @@ describe("doctor", () => {
     expect(report.summary).toBe("healthy");
     expect(getDoctorExitCode(report)).toBe(0);
     expect(causes).toEqual([
-      expect.stringContaining("missing from vitest CORE_COVERAGE_PACKAGES"),
+      expect.stringContaining("missing from the shared core coverage config"),
       expect.stringContaining("missing from test:coverage:core filters"),
     ]);
+  });
+
+  it("uses shared coverage ownership instead of dispatcher prerequisite filters", () => {
+    const repo = createCrocoWorkspace();
+    writeRootPackage(repo, {
+      scripts: {
+        "test:coverage:core":
+          "pnpm --filter @croco/problems-core build && node --experimental-strip-types scripts/verification-command.mts --id core-coverage",
+        "bench:readiness": "node scripts/benchmark-readiness-report.mts",
+      },
+    });
+    writeWorkspacePackage(repo, "packages/framework-context", "@croco/framework-context", {
+      scripts: { build: "tsup" },
+    });
+    writePackageCatalog(repo, ["framework-context"]);
+    writeCoreCoverageConfig(repo, ["@croco/framework-context"]);
+    writePassingCoreCoverageEvidence(repo);
+    writeBundleSizeBaseline(repo);
+    writeBenchmarkVarianceEvidence(repo);
+    writeValidStaticMisuseAllowlist(repo);
+
+    const report = runDoctor({ cwd: repo });
+    const coverageDiagnostics = report.diagnostics.filter(
+      (diagnostic) => diagnostic.code === CLI_DIAGNOSTIC_CODES.doctorCoreCoverageCandidateMissing,
+    );
+
+    expect(report.summary).toBe("healthy");
+    expect(getDoctorExitCode(report)).toBe(0);
+    expect(coverageDiagnostics).toEqual([]);
   });
 
   it("reports a missing core coverage warning script when core coverage is configured", () => {
@@ -1509,7 +1538,7 @@ describe("doctor", () => {
       scripts: { build: "tsup" },
     });
     writePackageCatalog(repo, ["framework-context"]);
-    writeFile(repo, "vitest.config.ts", "export const OTHER_COVERAGE_PACKAGES = [];\n");
+    rmSync(join(repo, "scripts/core-coverage-config.mts"));
     writePassingCoreCoverageEvidence(repo);
     writeBundleSizeBaseline(repo);
     writeBenchmarkVarianceEvidence(repo);
@@ -1523,7 +1552,9 @@ describe("doctor", () => {
     expect(report.summary).toBe("healthy");
     expect(getDoctorExitCode(report)).toBe(0);
     expect(diagnostics).toHaveLength(1);
-    expect(diagnostics[0].cause).toContain("vitest.config.ts is missing CORE_COVERAGE_PACKAGES");
+    expect(diagnostics[0].cause).toContain(
+      "scripts/core-coverage-config.mts is missing CORE_COVERAGE_PACKAGES",
+    );
   });
 
   it("reports missing core coverage threshold constants when package selection exists", () => {
@@ -1539,13 +1570,7 @@ describe("doctor", () => {
       scripts: { build: "tsup" },
     });
     writePackageCatalog(repo, ["framework-context"]);
-    writeFile(
-      repo,
-      "vitest.config.ts",
-      ["export const CORE_COVERAGE_PACKAGES = [", '  "@croco/framework-context",', "];", ""].join(
-        "\n",
-      ),
-    );
+    writeFile(repo, "vitest.config.ts", "export const OTHER_COVERAGE_THRESHOLDS = {};\n");
     writePassingCoreCoverageEvidence(repo);
     writeBundleSizeBaseline(repo);
     writeBenchmarkVarianceEvidence(repo);
@@ -1579,10 +1604,6 @@ describe("doctor", () => {
       repo,
       "vitest.config.ts",
       [
-        "export const CORE_COVERAGE_PACKAGES = [",
-        '  "@croco/framework-context",',
-        "];",
-        "",
         "export const CORE_COVERAGE_THRESHOLDS = {",
         "  lines: 80,",
         "  branches: 80,",
@@ -3332,7 +3353,7 @@ function writeRootPackage(repo: string, manifest: Record<string, unknown> = {}):
     scripts && typeof scripts === "object" ? (scripts as Record<string, unknown>) : null;
   const coreCoverageScript = scriptsRecord?.["test:coverage:core"];
   if (typeof coreCoverageScript === "string") {
-    writeCoreCoverageVitestConfig(repo, parseCoreCoverageScriptFilters(coreCoverageScript));
+    writeCoreCoverageConfig(repo, parseCoreCoverageScriptFilters(coreCoverageScript));
     writeCoreCoverageWarningCheckScript(repo);
   }
 }
@@ -3416,15 +3437,21 @@ function writePackageCatalog(
   });
 }
 
-function writeCoreCoverageVitestConfig(repo: string, packages: readonly string[]): void {
+function writeCoreCoverageConfig(repo: string, packages: readonly string[]): void {
   writeFile(
     repo,
-    "vitest.config.ts",
+    "scripts/core-coverage-config.mts",
     [
       "export const CORE_COVERAGE_PACKAGES = [",
       ...packages.map((packageName) => `  "${packageName}",`),
       "];",
       "",
+    ].join("\n"),
+  );
+  writeFile(
+    repo,
+    "vitest.config.ts",
+    [
       "export const CORE_COVERAGE_THRESHOLDS = {",
       "  lines: 80,",
       "  branches: 80,",

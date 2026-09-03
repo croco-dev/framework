@@ -88,7 +88,7 @@ enforce-ready when spread <= 0.15 across the latest five green runs
 
 ## Core Coverage Expansion Policy
 
-The current core coverage set is read from the `test:coverage:core` script in `package.json`.
+The current core coverage set is read from `CORE_COVERAGE_PACKAGES` in `scripts/core-coverage-config.mts`.
 
 Add a package to the core coverage set when at least one of these is true:
 

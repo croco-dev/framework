@@ -5,6 +5,10 @@ import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  CORE_COVERAGE_PACKAGES,
+  toCoreCoveragePackageDirectory,
+} from "../core-coverage-config.mts";
+import {
   TEST_LANES,
   ancestorDirectoriesWithinRoot,
   classifyDiscoveredTest,
@@ -637,6 +641,26 @@ describe("classification, CLI, and repository migration", () => {
     expect(
       classifyDiscoveredTest(root, "packages/problems-core/src/tests/Problem.spec.ts").qualifiers,
     ).toEqual(["coverage"]);
+  });
+
+  it("derives every core coverage test qualifier from the shared package ownership", () => {
+    for (const packageName of CORE_COVERAGE_PACKAGES) {
+      const packageDirectory = toCoreCoveragePackageDirectory(packageName);
+      expect(
+        classifyDiscoveredTest(
+          REPOSITORY_ROOT,
+          `packages/${packageDirectory}/src/tests/CoreCoverageContract.spec.ts`,
+        ).qualifiers,
+        packageName,
+      ).toEqual(["coverage"]);
+    }
+
+    expect(
+      classifyDiscoveredTest(
+        REPOSITORY_ROOT,
+        "packages/tenant-core/src/tests/CoreCoverageContract.spec.ts",
+      ).qualifiers,
+    ).toEqual([]);
   });
 
   it("writes and checks a deterministic JSON report artifact", () => {

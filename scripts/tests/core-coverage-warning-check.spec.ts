@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
 
+import {
+  CORE_COVERAGE_PACKAGE_DIRECTORIES,
+  CORE_COVERAGE_PACKAGES,
+  defineCoreCoveragePackages,
+  isCoreCoveragePackageDirectory,
+} from "../core-coverage-config.mts";
 import type { CoverageTotals } from "../core-coverage-warning-check.mts";
 import {
   getCoreCoverageSelectionCandidates,
@@ -10,11 +16,36 @@ import {
   parseCoreCoverageThresholds,
   parseCoreCoveragePackageFilters,
   resolveCoreCoveragePackageFilters,
-  parseStringArrayExport,
   validateBaselineEntries,
 } from "../core-coverage-warning-check.mts";
+import { getVerificationCommand } from "../verification-manifest.mts";
 
 describe("core-coverage-warning-check.mts", () => {
+  it("keeps core coverage ownership valid and aligned across local and CI selection", () => {
+    expect(CORE_COVERAGE_PACKAGE_DIRECTORIES).toHaveLength(CORE_COVERAGE_PACKAGES.length);
+    expect(
+      parseCoreCoveragePackageFilters(getVerificationCommand("core-coverage").command.join(" ")),
+    ).toEqual(CORE_COVERAGE_PACKAGES);
+  });
+
+  it("rejects duplicate or nonexistent core coverage package ownership", () => {
+    expect(() =>
+      defineCoreCoveragePackages([...CORE_COVERAGE_PACKAGES, CORE_COVERAGE_PACKAGES[0]]),
+    ).toThrow("duplicate core coverage package");
+    expect(() => defineCoreCoveragePackages(["@croco/nonexistent-core-package"])).toThrow(
+      "does not map to an existing workspace directory",
+    );
+  });
+
+  it("applies core coverage threshold ownership to every selected workspace only", () => {
+    for (const directory of CORE_COVERAGE_PACKAGE_DIRECTORIES) {
+      expect(isCoreCoveragePackageDirectory(`/workspace/packages/${directory}`), directory).toBe(
+        true,
+      );
+    }
+    expect(isCoreCoveragePackageDirectory("/workspace/packages/tenant-core")).toBe(false);
+  });
+
   it("reports package coverage drops below the committed baseline", () => {
     const baseline = parseBaselineContent(`
 | Package | Statements | Branches | Functions | Lines |
@@ -83,20 +114,6 @@ describe("core-coverage-warning-check.mts", () => {
         "pnpm --filter @croco/problems-core build && node --experimental-strip-types scripts/verification-command.mts --id first-success",
       ),
     ).toThrow("failed to read core coverage package filters");
-  });
-
-  it("parses the vitest core coverage threshold package export", () => {
-    expect(
-      parseStringArrayExport(
-        `
-export const CORE_COVERAGE_PACKAGES = [
-  "@croco/framework-context",
-  "create-croco-app",
-];
-`,
-        "CORE_COVERAGE_PACKAGES",
-      ),
-    ).toEqual(["@croco/framework-context", "create-croco-app"]);
   });
 
   it("parses semicolonless core coverage threshold exports", () => {
@@ -270,7 +287,7 @@ export const CORE_COVERAGE_THRESHOLDS = {
     ).toEqual([
       expect.stringContaining("create-croco-app: 1.0 spine package must be included"),
       expect.stringContaining("@croco/auth-core: test:coverage:core package is missing"),
-      expect.stringContaining("create-croco-app: vitest CORE_COVERAGE_PACKAGES entry is missing"),
+      expect.stringContaining("create-croco-app: shared core coverage config entry is missing"),
     ]);
   });
 

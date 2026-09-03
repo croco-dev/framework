@@ -11,6 +11,8 @@ import {
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { CORE_COVERAGE_PACKAGES } from "./core-coverage-config.mts";
+
 export const TEST_INVENTORY_VERSION = 1 as const;
 export const TEST_LANES = ["fast", "integration", "published", "generated-app", "live"] as const;
 export const TEST_QUALIFIERS = ["coverage", "release-only"] as const;
@@ -163,27 +165,7 @@ const EXCLUDED_DIRECTORIES = new Set([
 const TEST_FILE_PATTERN = /\.(?:spec|test)\.(?:ts|tsx|mts|cts|js|jsx|mjs|cjs)$/;
 const TYPESCRIPT_FAMILY_PATTERN = /\.(?:ts|tsx|mts|cts)$/;
 const DECLARATION_PATTERN = /\.d\.(?:ts|mts|cts)$/;
-const CORE_COVERAGE_OWNERS = new Set([
-  "@croco/framework-context",
-  "@croco/problems-core",
-  "@croco/protocols-core",
-  "@croco/protocols-rest",
-  "@croco/openapi-spec",
-  "@croco/rpc-codegen",
-  "@croco/transports-http",
-  "@croco/telemetry-api",
-  "@croco/telemetry-sdk-node",
-  "@croco/tx-core",
-  "@croco/tx-drizzle",
-  "@croco/events-core",
-  "@croco/events-tx",
-  "@croco/retry-core",
-  "@croco/idempotency-core",
-  "@croco/testing",
-  "create-croco-app",
-  "@croco/cli",
-  "@croco/auth-core",
-]);
+const CORE_COVERAGE_OWNERS = new Set(CORE_COVERAGE_PACKAGES);
 
 function compareText(left: string, right: string): number {
   return left < right ? -1 : left > right ? 1 : 0;
