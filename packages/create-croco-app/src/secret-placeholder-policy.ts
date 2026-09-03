@@ -75,6 +75,7 @@ const sensitiveEnvAssignmentNames = [
   "CLOUDFLARE_API_TOKEN",
   "CLOUDINARY_URL",
   "DATABASE_URL",
+  "GRAPHQL_AUTH_TOKEN",
   "POLAR_ACCESS_TOKEN",
   "POLAR_WEBHOOK_SECRET",
   "UPSTASH_QSTASH_CURRENT_SIGNING_KEY",
@@ -116,7 +117,7 @@ export function renderSafeEnvExampleValue(
     return profileName;
   }
 
-  if (entry.example === "true" || entry.example === "false") {
+  if (!entry.secret && entry.example !== undefined) {
     return entry.example;
   }
 
@@ -374,12 +375,17 @@ function parseEnvAssignments(
 
   lines.forEach((line, index) => {
     const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) return;
-    const separatorIndex = trimmed.indexOf("=");
-    if (separatorIndex <= 0) return;
-    assignments.set(trimmed.slice(0, separatorIndex), {
+    const assignment = /^(?:#\s*)?([A-Z][A-Z0-9_]*)=(.*)$/.exec(trimmed);
+
+    if (assignment === null) return;
+
+    const name = assignment[1];
+    const value = assignment[2];
+    if (name === undefined || value === undefined) return;
+
+    assignments.set(name, {
       line: index + 1,
-      value: trimmed.slice(separatorIndex + 1),
+      value,
     });
   });
 

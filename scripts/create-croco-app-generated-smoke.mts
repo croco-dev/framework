@@ -626,13 +626,6 @@ const securityValidationScanFileExtensions = new Set([
   ".yaml",
   ".yml",
 ]);
-const securityValidationScanFileNames = new Set([
-  ".env",
-  ".env.example",
-  ".env.local",
-  ".env.development",
-  ".env.production",
-]);
 const securityValidationScanIgnoredDirectories = new Set([
   ".git",
   ".output",
@@ -2171,6 +2164,7 @@ if (isMainModule()) {
         );
         assertGeneratedReadme(projectDir, smokeCase);
         assertGeneratedNodeRuntimeContract(projectDir, smokeCase);
+        assertGeneratedEnvironmentTemplate(projectDir, smokeCase);
         assertNoGeneratedSecurityValidationOptOut(projectDir, smokeCase);
         assertNoGeneratedCredentialLookingValues(projectDir, smokeCase);
         writePnpmWorkspaceOverrides(projectDir, generatedSmokeRangeOverrides);
@@ -3070,6 +3064,52 @@ function assertNoGeneratedSecurityValidationOptOut(projectDir: string, smokeCase
   );
 }
 
+function assertGeneratedEnvironmentTemplate(projectDir: string, smokeCase: SmokeCase): void {
+  const envExamplePath = join(projectDir, ".env.example");
+
+  assertExists(envExamplePath, `${smokeCase.name} did not generate .env.example`);
+
+  const generatedEnvironmentFiles = collectDisallowedGeneratedDotenvFiles(projectDir);
+
+  if (generatedEnvironmentFiles.length > 0) {
+    throw new Error(
+      `${smokeCase.name} generated dotenv files other than .env.example: ${generatedEnvironmentFiles.join(", ")}`,
+    );
+  }
+
+  const activeAssignments = readFileSync(envExamplePath, "utf8")
+    .split(/\r?\n/)
+    .filter(isActiveDotenvAssignment);
+
+  if (activeAssignments.length > 0) {
+    throw new Error(
+      `${smokeCase.name} generated active .env.example assignments: ${activeAssignments.join(", ")}`,
+    );
+  }
+
+  console.log(
+    `create-croco-app-generated-smoke: ${smokeCase.name} generated a commented .env.example only`,
+  );
+}
+
+export function isDotenvFileName(fileName: string): boolean {
+  return fileName === ".env" || fileName.startsWith(".env.");
+}
+
+export function isActiveDotenvAssignment(line: string): boolean {
+  return /^\s*(?:export\s+)?[A-Za-z_][A-Za-z0-9_]*\s*=/.test(line);
+}
+
+export function collectDisallowedGeneratedDotenvFiles(projectDir: string): string[] {
+  return collectGeneratedSecurityValidationScanFiles(projectDir)
+    .filter((filePath) => {
+      const fileName = basename(filePath);
+      return fileName !== ".env.example" && isDotenvFileName(fileName);
+    })
+    .map((filePath) => toPosixPath(relative(projectDir, filePath)))
+    .sort();
+}
+
 function assertNoGeneratedCredentialLookingValues(projectDir: string, smokeCase: SmokeCase): void {
   const metadata = readGeneratedSmokeAllowlistMetadata(
     join(rootDir, "scripts", "security-allowlist-metadata.json"),
@@ -3142,7 +3182,7 @@ function collectGeneratedSecurityValidationScanFiles(directory: string): string[
     }
 
     return securityValidationScanFileExtensions.has(extname(entry.name)) ||
-      securityValidationScanFileNames.has(entry.name)
+      isDotenvFileName(entry.name)
       ? [entryPath]
       : [];
   });
