@@ -51,11 +51,13 @@ await new EventPublisher().publish(new UserCreatedEvent("user-1"));
 `createEventBusShutdownHook`으로 `ShutdownManager`에 연결할 수 있습니다.
 
 ```typescript
-import { createEventBusShutdownHook } from "@croco/events-core";
+import { createEventBusShutdownHook, EventBusConfig } from "@croco/events-core";
 import { ShutdownManager } from "@croco/framework-context";
 import { InMemoryEventBus } from "@croco/events-inmemory";
 
+const config = EventBusConfig.getInstance();
 const eventBus = new InMemoryEventBus();
+config.setEventBus(eventBus);
 ShutdownManager.getInstance().register(createEventBusShutdownHook(eventBus, { timeoutMs: 10_000 }));
 ```
 

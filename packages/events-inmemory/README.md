@@ -23,11 +23,16 @@ const eventBus = new InMemoryEventBus({
 });
 config.setEventBus(eventBus);
 
-const result = await eventBus.shutdown({ timeoutMs: 10_000 });
-if (result.status !== "drained") {
-  console.error(result.unfinishedHandlers);
+export async function shutdownEventBus(): Promise<void> {
+  const result = await eventBus.shutdown({ timeoutMs: 10_000 });
+  if (result.status !== "drained") {
+    console.error(result.unfinishedHandlers);
+  }
 }
 ```
+
+`shutdownEventBus`는 애플리케이션 종료 hook 또는 명시적인 종료 경로에서 호출합니다. 종료 전까지는 같은 `eventBus`로
+이벤트를 계속 발행할 수 있습니다.
 
 ### 실패 재시도와 DLQ 재생
 

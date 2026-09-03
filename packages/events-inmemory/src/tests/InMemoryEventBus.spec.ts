@@ -1793,17 +1793,22 @@ describe("InMemoryEventBus", () => {
       await publishPromise;
     });
 
-    it.each([Number.NaN, Number.POSITIVE_INFINITY, 0, -1, 1.5, 2_147_483_648])(
-      "rejects invalid drain timeout %s without closing intake",
-      async (timeoutMs) => {
-        const bus = new InMemoryEventBus<TestEvent>();
+    it.each([
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      null as unknown as number,
+      0,
+      -1,
+      1.5,
+      2_147_483_648,
+    ])("rejects invalid drain timeout %s without closing intake", async (timeoutMs) => {
+      const bus = new InMemoryEventBus<TestEvent>();
 
-        await expect(bus.shutdown({ timeoutMs })).rejects.toBeInstanceOf(
-          InvalidEventBusDrainTimeoutProblem,
-        );
-        await expect(bus.publish(new TestEvent("still-open"))).resolves.toBeUndefined();
-      },
-    );
+      await expect(bus.shutdown({ timeoutMs })).rejects.toBeInstanceOf(
+        InvalidEventBusDrainTimeoutProblem,
+      );
+      await expect(bus.publish(new TestEvent("still-open"))).resolves.toBeUndefined();
+    });
 
     it("integrates with ShutdownManager through the explicit shutdown hook adapter", async () => {
       const started = createDeferred();

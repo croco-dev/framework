@@ -1046,7 +1046,8 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
   }
 
   async shutdown(options: EventBusShutdownOptions = {}): Promise<EventBusShutdownResult> {
-    const timeoutMs = options.timeoutMs ?? DEFAULT_EVENT_BUS_DRAIN_TIMEOUT_MS;
+    const timeoutMs =
+      options.timeoutMs === undefined ? DEFAULT_EVENT_BUS_DRAIN_TIMEOUT_MS : options.timeoutMs;
     if (
       !Number.isSafeInteger(timeoutMs) ||
       timeoutMs <= 0 ||
