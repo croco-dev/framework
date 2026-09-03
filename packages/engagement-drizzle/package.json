@@ -36,9 +36,9 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
-    "test": "vitest run --exclude src/tests/DrizzleEngagementStore.postgres.spec.ts",
-    "test:live": "vitest run src/tests/DrizzleEngagementStore.postgres.spec.ts",
-    "test:postgres": "vitest run src/tests/DrizzleEngagementStore.postgres.spec.ts",
+    "test": "vitest run src/tests/DrizzleCampaignStore.spec.ts src/tests/DrizzleEngagementStore.spec.ts",
+    "test:live": "vitest run src/tests/*.postgres.spec.ts --no-file-parallelism",
+    "test:postgres": "vitest run src/tests/*.postgres.spec.ts --no-file-parallelism",
     "typecheck": "tsc --noEmit",
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },

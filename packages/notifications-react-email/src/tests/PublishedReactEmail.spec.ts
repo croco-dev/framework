@@ -28,6 +28,7 @@ describe("published React Email adapter", () => {
 
       try {
         const packageNames = [
+          "@croco/batch-core",
           "@croco/diagnostics-core",
           "@croco/events-core",
           "@croco/execution-core",

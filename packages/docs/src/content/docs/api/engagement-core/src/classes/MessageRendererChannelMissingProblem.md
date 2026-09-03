@@ -5,7 +5,7 @@ prev: false
 title: "MessageRendererChannelMissingProblem"
 ---
 
-Typed message contracts and explicit, decorator-bound renderer registration for Croco engagement.
+RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
 
 ## Extends
 

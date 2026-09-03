@@ -19,6 +19,7 @@ import { createCrocoApp } from "../app";
 import { JobsController } from "../controllers/JobsController";
 import { assertDemoEndpointsEnabled, SaasController } from "../controllers/SaasController";
 import { saasDemoSnapshotSchema } from "../controllers/schemas";
+import { renderDemoMemberHtml } from "../html";
 import { InMemoryRedisClient } from "../inMemoryAdapters";
 import { DemoEndpointDisabledProblem } from "../problems";
 import {
@@ -31,6 +32,7 @@ import {
   createSaasRuntime,
   createSaasDemoRuntime,
   DemoBillingGateway,
+  runSaasCampaignSmoke,
   runSaasDemoFlow,
   seedDefaultSaasRuntime,
 } from "../saasDemo";
@@ -282,6 +284,36 @@ describe("SaaS golden path demo", () => {
     expect(snapshot.invitation.invitedUserId).toBe("user_member");
     expect(snapshot.membership.memberRole).toBe("member");
     expect(snapshot.membership.memberCount).toBe(2);
+  });
+
+  it("freezes and broadcasts the generated SaaS member campaign without credentials", async () => {
+    const runtime = createSaasDemoRuntime();
+    const demo = await runSaasDemoFlow(runtime);
+    const campaign = await runSaasCampaignSmoke(runtime, demo.tenant.id);
+
+    expect(campaign.snapshot).toMatchObject({
+      id: "saas-campaign-snapshot-1",
+      state: "complete",
+      memberCount: 2,
+      campaignId: "saas.member-welcome",
+      messageId: "saas.member-welcome",
+    });
+    expect(campaign.execution.status).toBe("completed");
+    expect(campaign.progress).toEqual({
+      total: 2,
+      completed: 2,
+      queued: 2,
+      suppressed: 0,
+      failed: 0,
+      skipped: 0,
+      pending: 0,
+    });
+  });
+
+  it("escapes untrusted member values before rendering campaign HTML", () => {
+    expect(renderDemoMemberHtml(`<img src=x onerror="alert('member')">`, "owner & admin")).toBe(
+      "<p>&lt;img src=x onerror=&quot;alert(&#39;member&#39;)&quot;&gt; joined as owner &amp; admin.</p>",
+    );
   });
 
   it("enforces membership seats from entitlement quota", async () => {

@@ -7,8 +7,6 @@ title: "defineMessage"
 
 > **defineMessage**\<`TId`, `TTopic`, `TData`, `TChannels`\>(`input`): [`DefinedMessage`](/api/engagement-core/src/type-aliases/definedmessage/)\<`TId`, `TTopic`, `TData`, `TChannels`\>
 
-Typed message contracts and explicit, decorator-bound renderer registration for Croco engagement.
-
 ## Type Parameters
 
 ### TId

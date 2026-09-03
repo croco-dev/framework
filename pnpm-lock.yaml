@@ -1500,6 +1500,12 @@ importers:
 
   packages/engagement-core:
     dependencies:
+      '@croco/batch-core':
+        specifier: workspace:*
+        version: link:../batch-core
+      '@croco/execution-core':
+        specifier: workspace:*
+        version: link:../execution-core
       '@croco/notifications-core':
         specifier: workspace:*
         version: link:../notifications-core
