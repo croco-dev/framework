@@ -81,7 +81,8 @@ jobs:
         with:
           node-version-file: ".nvmrc"
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build
+      - name: Prepare benchmark dependencies
+        run: pnpm bench:prepare
       - name: Check desktop type fixtures
         run: pnpm desktop-contracts:type-fixtures
       - name: Check desktop contract compiler baseline

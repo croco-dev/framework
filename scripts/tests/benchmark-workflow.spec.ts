@@ -1,15 +1,44 @@
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const benchmarkWorkflowPath = resolve(__dirname, "../../.github/workflows/benchmark.yml");
-const benchmarkCommentWorkflowPath = resolve(
+const BENCHMARK_WORKFLOW_PATH = resolve(__dirname, "../../.github/workflows/benchmark.yml");
+const BENCHMARK_COMMENT_WORKFLOW_PATH = resolve(
   __dirname,
   "../../.github/workflows/benchmark-comment.yml",
 );
+const ROOT_PACKAGE_PATH = resolve(__dirname, "../../package.json");
+const PACKAGES_PATH = resolve(__dirname, "../../packages");
+const SCOPED_TURBO_BUILD_PATTERN = /^turbo run build(?: --filter=[^\s]+)+$/;
+const UNSCOPED_PNPM_BUILD_PATTERN =
+  /^\s*(?:(?:-\s+)?run:\s*)?pnpm(?:\s+run)?\s+build(?:\s*#.*)?\s*$/m;
 
-const readBenchmarkWorkflow = () => readFileSync(benchmarkWorkflowPath, "utf-8");
-const readBenchmarkCommentWorkflow = () => readFileSync(benchmarkCommentWorkflowPath, "utf-8");
+const readBenchmarkWorkflow = () => readFileSync(BENCHMARK_WORKFLOW_PATH, "utf-8");
+const readBenchmarkCommentWorkflow = () => readFileSync(BENCHMARK_COMMENT_WORKFLOW_PATH, "utf-8");
+const readRootScripts = (): Readonly<Record<string, string>> => {
+  const rootPackage = JSON.parse(readFileSync(ROOT_PACKAGE_PATH, "utf-8")) as {
+    readonly scripts: Readonly<Record<string, string>>;
+  };
+  return rootPackage.scripts;
+};
+
+const benchmarkOwnerPackages = (): readonly string[] =>
+  readdirSync(PACKAGES_PATH, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .flatMap((entry) => {
+      const sourcePath = join(PACKAGES_PATH, entry.name, "src");
+      if (!existsSync(sourcePath)) return [];
+      const ownsBenchmark = readdirSync(sourcePath, { recursive: true, encoding: "utf8" }).some(
+        (path) => path.endsWith(".bench.ts"),
+      );
+      if (!ownsBenchmark) return [];
+
+      const packageJson = JSON.parse(
+        readFileSync(join(PACKAGES_PATH, entry.name, "package.json"), "utf-8"),
+      ) as { readonly name: string };
+      return [packageJson.name];
+    })
+    .sort();
 
 describe("benchmark workflow", () => {
   it("publishes the enforce-readiness report after benchmark execution and before artifact upload", () => {
@@ -64,6 +93,77 @@ describe("benchmark workflow", () => {
       "run: pnpm desktop-contracts:bench --output=ci-reports/benchmark/protocols-desktop-types.json",
     );
     expect(workflow).toContain("ci-reports/benchmark/protocols-desktop-types.json");
+  });
+
+  it("prepares benchmark inputs through an explicit Turbo dependency boundary", () => {
+    const workflow = readBenchmarkWorkflow();
+    const benchmark = workflow.slice(
+      workflow.indexOf("  benchmark:\n"),
+      workflow.indexOf("  benchmark-gate:\n"),
+    );
+    const preparationCommand = readRootScripts()["bench:prepare"];
+
+    expect(
+      typeof preparationCommand,
+      "bench:prepare must define the benchmark build boundary",
+    ).toBe("string");
+    if (typeof preparationCommand !== "string") return;
+
+    const expectedFilters = [...benchmarkOwnerPackages(), "@croco/protocols-desktop"]
+      .sort()
+      .map((packageName) => `${packageName}...`);
+    const actualFilters = [...preparationCommand.matchAll(/--filter=([^\s]+)/g)]
+      .map((match) => match[1])
+      .sort();
+
+    expect(preparationCommand).toMatch(SCOPED_TURBO_BUILD_PATTERN);
+    expect(
+      actualFilters,
+      "bench:prepare filters must match every Vitest benchmark owner plus desktop contracts",
+    ).toEqual(expectedFilters);
+    expect(benchmark).not.toMatch(UNSCOPED_PNPM_BUILD_PATTERN);
+
+    const preparationIndex = benchmark.indexOf("- name: Prepare benchmark dependencies");
+    const fixtureIndex = benchmark.indexOf("- name: Check desktop type fixtures");
+    const compilerBaselineIndex = benchmark.indexOf(
+      "- name: Check desktop contract compiler baseline",
+    );
+    const benchmarkIndex = benchmark.indexOf("- name: Run benchmarks with threshold check");
+    expect(preparationIndex).toBeGreaterThan(-1);
+    expect(benchmark).toContain("run: pnpm bench:prepare");
+    expect(fixtureIndex).toBeGreaterThan(preparationIndex);
+    expect(compilerBaselineIndex).toBeGreaterThan(fixtureIndex);
+    expect(benchmarkIndex).toBeGreaterThan(compilerBaselineIndex);
+  });
+
+  it("accepts only a single filtered Turbo build for benchmark preparation", () => {
+    expect(
+      "turbo run build --filter=@croco/events-core... --filter=@croco/transports-http...",
+    ).toMatch(SCOPED_TURBO_BUILD_PATTERN);
+
+    const invalidCommands = [
+      "turbo run build",
+      "turbo run build --filter=@croco/events-core... && pnpm build",
+      "turbo run build --filter=@croco/events-core... --cache-dir=.turbo",
+      "turbo run build --filter=@croco/events-core... # rebuild the workspace",
+    ];
+    for (const command of invalidCommands) expect(command).not.toMatch(SCOPED_TURBO_BUILD_PATTERN);
+  });
+
+  it("rejects unscoped pnpm build command aliases", () => {
+    const unscopedCommands = [
+      "pnpm build",
+      "pnpm run build",
+      "run: pnpm build",
+      "- run: pnpm run build # rebuild the workspace",
+    ];
+    const scopedCommands = [
+      "run: pnpm build --filter=@croco/events-core...",
+      "run: pnpm run build --filter=@croco/events-core...",
+    ];
+
+    for (const command of unscopedCommands) expect(command).toMatch(UNSCOPED_PNPM_BUILD_PATTERN);
+    for (const command of scopedCommands) expect(command).not.toMatch(UNSCOPED_PNPM_BUILD_PATTERN);
   });
 
   it("uses the repository Node version source for benchmark setup", () => {
