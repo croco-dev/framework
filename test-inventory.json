@@ -626,6 +626,12 @@
       "owner": "@croco/cli"
     },
     {
+      "path": "packages/cli/src/tests/codegenBinResolution.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/cli"
+    },
+    {
       "path": "packages/cli/src/tests/codegenOpenapi.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

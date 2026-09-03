@@ -7,7 +7,6 @@ import {
   type MigrateCommand,
   type MigrationRunnerSpawn,
   migrate,
-  resolveMigrationRunnerBinFromEntry,
   runMigrateCommand,
 } from "../commands/migrate.js";
 import { createCrocoCommand, normalizeMigrateRootArgs } from "../commands/root.js";
@@ -109,17 +108,6 @@ describe("migrate command", () => {
       expect(usage.includes("--count=<number>")).toBe(command === "down");
     },
   );
-
-  it("should resolve workspace and installed migration runner entries to the built CLI", () => {
-    expect(
-      resolveMigrationRunnerBinFromEntry("/workspace/packages/migration-runner/src/index.ts"),
-    ).toBe("/workspace/packages/migration-runner/dist/cli.js");
-    expect(
-      resolveMigrationRunnerBinFromEntry(
-        "/consumer/node_modules/@croco/migration-runner/dist/index.js",
-      ),
-    ).toBe("/consumer/node_modules/@croco/migration-runner/dist/cli.js");
-  });
 
   it.each<MigrateCommand>(["up", "down", "status"])(
     "should delegate %s to the migration runner CLI",
