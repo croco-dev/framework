@@ -1896,6 +1896,56 @@ function runTestingResourcesOptionalPeerSmoke(smokeRoot: string, packageName: st
     label: `${packageName}: optional live-resource peers`,
   });
 
+  run("pnpm", ["add", "--prod", "testcontainers@12.0.4", "--ignore-scripts"], smokeRoot, {
+    label: `${packageName}: install container runtime without resource drivers`,
+  });
+  const missingDriverPath = join(smokeRoot, "testing-resources-missing-drivers.mjs");
+  writeFileSync(
+    missingDriverPath,
+    [
+      'import { createRequire } from "node:module";',
+      "const require = createRequire(import.meta.url);",
+      'for (const dependency of ["ioredis", "pg"]) {',
+      "  try {",
+      "    require.resolve(dependency);",
+      "  } catch (error) {",
+      '    if (error instanceof Error && error.code === "MODULE_NOT_FOUND") {',
+      "      continue;",
+      "    }",
+      "    throw error;",
+      "  }",
+      "  throw new Error(`${dependency} must remain absent after installing only testcontainers`);",
+      "}",
+      `const { postgresResource, redisResource, TestResourceMissingDependencyProblem } = await import(${JSON.stringify(packageName)});`,
+      'const context = { register() {}, testId: "packed", workerId: "packed" };',
+      "const cases = [",
+      '  [postgresResource({ mode: "commit" }), "pg", "pnpm add -D pg@8.22.0 testcontainers@12.0.4"],',
+      '  [redisResource(), "ioredis", "pnpm add -D ioredis@5.11.1 testcontainers@12.0.4"],',
+      "];",
+      "for (const [resource, dependency, installCommand] of cases) {",
+      "  try {",
+      "    await resource.start(context);",
+      "  } catch (error) {",
+      "    if (",
+      "      error instanceof TestResourceMissingDependencyProblem &&",
+      '      error.code === "testing-resources/missing-live-dependency" &&',
+      "      error.extensions?.dependency === dependency &&",
+      "      error.extensions?.installCommand === installCommand",
+      "    ) {",
+      "      continue;",
+      "    }",
+      "    throw error;",
+      "  }",
+      "  throw new Error(`${dependency} resource unexpectedly started without its driver`);",
+      "}",
+      'console.log("testing-resources reports each missing resource driver before Docker startup");',
+      "",
+    ].join("\n"),
+  );
+  run("node", [missingDriverPath], smokeRoot, {
+    label: `${packageName}: missing resource drivers with testcontainers installed`,
+  });
+
   run(
     "pnpm",
     ["add", "--prod", "@types/pg@8.20.0", "ioredis@5.11.1", "pg@8.22.0", "--ignore-scripts"],

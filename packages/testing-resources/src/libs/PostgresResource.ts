@@ -74,16 +74,18 @@ export function postgresResource(
     fidelityHint: fidelity,
     id,
     async start(context): Promise<StartedTestResource<PostgresTestConnection>> {
-      const { GenericContainer, Wait } = await loadTestResourceLiveDependency(
-        id,
-        { dependency: "testcontainers", resourceKind: "postgresql" },
-        () => import("testcontainers"),
-      );
-      const { Pool } = await loadTestResourceLiveDependency(
-        id,
-        { dependency: "pg", resourceKind: "postgresql" },
-        () => import("pg"),
-      );
+      const [{ GenericContainer, Wait }, { Pool }] = await Promise.all([
+        loadTestResourceLiveDependency(
+          id,
+          { dependency: "testcontainers", resourceKind: "postgresql" },
+          () => import("testcontainers"),
+        ),
+        loadTestResourceLiveDependency(
+          id,
+          { dependency: "pg", resourceKind: "postgresql" },
+          () => import("pg"),
+        ),
+      ]);
       const logs: string[] = [];
       const diagnostics: TestResourceDiagnostic[] = [];
       const username = options.username ?? "postgres";
