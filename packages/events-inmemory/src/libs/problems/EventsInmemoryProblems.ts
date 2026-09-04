@@ -99,6 +99,37 @@ export class DeadLetterReplayHandlerUnavailableProblem extends Problem {
   }
 }
 
+/** DLQ handler class names must be nonempty and unique for the lifetime of a bus. */
+export class InvalidDeadLetterHandlerIdentityProblem extends Problem {
+  readonly code = "events-inmemory/invalid-dead-letter-handler-identity";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(readonly handlerId: string) {
+    super(
+      undefined,
+      undefined,
+      `Dead-letter handler identity '${handlerId}' must be nonempty and unique`,
+    );
+  }
+}
+
+/** A replay's cumulative retry count must remain a nonnegative safe integer. */
+export class InvalidDeadLetterRetryCountProblem extends Problem {
+  readonly code = "events-inmemory/invalid-dead-letter-retry-count";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(
+    readonly retryCount: number,
+    readonly maxRetries: number,
+  ) {
+    super(
+      undefined,
+      undefined,
+      "Dead-letter retry count and replay budget must fit a nonnegative safe integer",
+    );
+  }
+}
+
 /**
  * 인메모리 이벤트 버스의 동시 처리 한도를 초과했을 때 발생하는 Problem입니다.
  */

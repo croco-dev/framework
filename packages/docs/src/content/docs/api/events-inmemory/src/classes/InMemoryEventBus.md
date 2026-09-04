@@ -93,8 +93,8 @@ readonly `RunningHandler`[]
 
 > **replayDeadLetters**(`limit?`): `Promise`\<[`DeadLetterReplayResult`](/api/events-inmemory/src/type-aliases/deadletterreplayresult/)\>
 
-Claims dead-letter entries and re-executes only their failed handlers.
-Successful entries are consumed; failed entries are placed back on the queue.
+Removes a batch and re-executes only its failed handlers.
+Failed writes return the unpersisted item and storage error to the caller for recovery.
 
 #### Parameters
 

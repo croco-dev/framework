@@ -15,7 +15,7 @@ Summary returned after a bounded dead-letter replay batch.
 
 > **attempted**: `number`
 
-Number of entries atomically claimed from the queue.
+Number of entries atomically removed from the queue for this batch.
 
 ---
 
@@ -23,7 +23,7 @@ Number of entries atomically claimed from the queue.
 
 > **failed**: `number`
 
-Number of entries returned to the queue after replay failure.
+Number of unsuccessful entries; inspect each failure's requeued flag for storage state.
 
 ---
 
@@ -31,7 +31,7 @@ Number of entries returned to the queue after replay failure.
 
 > **failures**: [`DeadLetterReplayFailure`](/api/events-inmemory/src/type-aliases/deadletterreplayfailure/)[]
 
-Per-entry failures for entries returned to the queue.
+Per-entry failures, including recoverable items when storage rejected a write.
 
 ---
 

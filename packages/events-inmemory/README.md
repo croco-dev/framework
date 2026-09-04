@@ -58,6 +58,16 @@ DLQ 설정은 명시적으로 opt-in합니다. 설정하지 않으면 기존처�
 `dequeue`한 항목을 원자적으로 제거하며, 실패한 재생은 누적 재시도 횟수와 함께 다시 저장됩니다. 영속성이나 다중
 프로세스 조정이 필요하면 `DeadLetterQueue` 계약을 구현한 외부 저장소 어댑터를 주입해야 합니다.
 
+DLQ를 사용하는 버스는 비어 있지 않은 핸들러 클래스 이름을 고유 ID로 사용합니다. 같은 이름의 서로 다른 클래스는
+등록할 수 없으며, `unsubscribe`나 `clear` 후에도 기존 DLQ 항목의 식별을 위해 이 이름은 같은 클래스에 예약됩니다.
+같은 클래스의 재등록이나 여러 이벤트 패턴 구독은 가능합니다.
+
+재생에도 `maxConcurrency`와 대기 timeout이 적용됩니다. `error`·`drop` 전략에서 슬롯이 없으면 항목을 실행하지 않고
+실패로 반환해 다시 저장합니다. 이미 꺼낸 배치의 한 항목이 실패해도 나머지 항목은 계속 처리합니다.
+`failures`의 `error`는 실행 실패, `storageError`는 재저장 실패를 나타냅니다. `requeued: false`이면 호출자가 반환된
+`item`을 보관하고 저장소 복구 후 다시 저장해야 합니다. `item`에는 이벤트 payload가 있으므로 진단 로그에 출력하지
+마세요. 어댑터의 `dequeue`는 반환 전에 항목을 원자적으로 제거해야 하며, 별도 성공 확인이 필요한 lease 방식은 지원하지 않습니다.
+
 ## API 레퍼런스
 
 - `InMemoryEventBus`: `publish`, `replayDeadLetters`, `subscribe`, `unsubscribe`, `clear` 제공
@@ -72,6 +82,8 @@ DLQ 설정은 명시적으로 opt-in합니다. 설정하지 않으면 기존처�
 - `InvalidDeadLetterPolicyProblem`: 실행할 수 없는 재시도·보관 정책을 거부하는 Problem
 - `DeadLetterQueueNotConfiguredProblem`: DLQ 없이 정책 또는 재생을 요청하면 발생하는 Problem
 - `DeadLetterReplayHandlerUnavailableProblem`: 기록된 핸들러를 고유하게 찾을 수 없을 때 재생 항목을 보존하는 Problem
+- `InvalidDeadLetterHandlerIdentityProblem`: DLQ 핸들러 이름이 비어 있거나 다른 클래스가 이미 사용 중이면 등록을 거부
+- `InvalidDeadLetterRetryCountProblem`: 누적 재시도 횟수와 재생 예산이 안전한 정수 범위를 벗어나면 실행을 거부
 
 ## 동작 특징
 

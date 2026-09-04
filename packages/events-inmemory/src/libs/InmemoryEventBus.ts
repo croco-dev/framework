@@ -31,8 +31,10 @@ import {
   BackpressureTimeoutProblem,
   DeadLetterQueueNotConfiguredProblem,
   DeadLetterReplayHandlerUnavailableProblem,
+  InvalidDeadLetterHandlerIdentityProblem,
   InvalidDeadLetterPolicyProblem,
   InvalidDeadLetterQueueLimitProblem,
+  InvalidDeadLetterRetryCountProblem,
   InvalidEventBusConfigurationProblem,
   MAX_EVENT_BUS_CONCURRENCY,
   MAX_EVENT_BUS_TIMEOUT_MS,
@@ -53,17 +55,23 @@ export type DeadLetterReplayFailure = {
   handlerId?: string;
   /** Replay or handler failure returned to the caller. */
   error: Error;
+  /** Exact failed work, including updated retry metadata, for recovery. Contains event payload. */
+  item: DeadLetterItem;
+  /** Whether the failed item was successfully returned to storage. */
+  requeued: boolean;
+  /** Storage failure, separate from the original execution failure. */
+  storageError?: Error;
 };
 
 /** Summary returned after a bounded dead-letter replay batch. */
 export type DeadLetterReplayResult = {
-  /** Number of entries atomically claimed from the queue. */
+  /** Number of entries atomically removed from the queue for this batch. */
   attempted: number;
   /** Number of entries consumed after successful handler execution. */
   succeeded: number;
-  /** Number of entries returned to the queue after replay failure. */
+  /** Number of unsuccessful entries; inspect each failure's requeued flag for storage state. */
   failed: number;
-  /** Per-entry failures for entries returned to the queue. */
+  /** Per-entry failures, including recoverable items when storage rejected a write. */
   failures: DeadLetterReplayFailure[];
 };
 
@@ -135,9 +143,10 @@ type SubscriberExecution = {
   priorRetryCount: number;
 };
 
-type SubscriberExecutionResult = {
+type SubscriberExecutionResult<TEvent extends DomainEvent> = {
   failure: EventPublishFailure | null;
-  deadLettered: boolean;
+  deadLetterItem?: DeadLetterItem<TEvent>;
+  storageError?: Error;
 };
 
 /**
@@ -153,6 +162,7 @@ export class InMemoryEventBus<
   private readonly backpressureTimeoutMs: number;
   private readonly deadLetterQueue?: DeadLetterQueue;
   private readonly deadLetterPolicy?: DeadLetterPolicy;
+  private readonly deadLetterHandlers = new Map<string, EventHandlerClass<TEvent>>();
   private runningHandlers = new Map<string, RunningHandler>();
   private handlerCounter = 0;
   private readonly slotWaiters = new Set<() => void>();
@@ -253,8 +263,8 @@ export class InMemoryEventBus<
   }
 
   /**
-   * Claims dead-letter entries and re-executes only their failed handlers.
-   * Successful entries are consumed; failed entries are placed back on the queue.
+   * Removes a batch and re-executes only its failed handlers.
+   * Failed writes return the unpersisted item and storage error to the caller for recovery.
    */
   async replayDeadLetters(limit?: number): Promise<DeadLetterReplayResult> {
     if (!this.deadLetterQueue) {
@@ -272,42 +282,55 @@ export class InMemoryEventBus<
 
     for (const item of items) {
       this.recordReplayInspection("started", item);
-      const handlerClass = this.resolveReplayHandler(item);
-      if (!handlerClass) {
-        const error = new DeadLetterReplayHandlerUnavailableProblem(
+      let execution: SubscriberExecutionResult<TEvent>;
+      try {
+        const handlerClass = this.resolveReplayHandler(item);
+        if (!handlerClass) {
+          throw new DeadLetterReplayHandlerUnavailableProblem(item.event.eventName, item.handlerId);
+        }
+        while (!this.hasAvailableSlot()) {
+          if (this.backpressureStrategy !== "block") {
+            throw new BackpressureExceededProblem(this.runningHandlers.size);
+          }
+          await this.waitForSlot();
+        }
+        execution = await this.executeSubscriberWithTracking(
+          handlerClass,
+          this.cloneEvent(item.event),
           item.event.eventName,
-          item.handlerId,
+          { source: "replay", priorRetryCount: item.retryCount },
         );
-        await this.deadLetterQueue.enqueue(item);
-        result.failed++;
-        result.failures.push(this.createReplayFailure(item, error));
-        this.recordReplayInspection("failed", item, error);
-        continue;
+      } catch (error) {
+        execution = {
+          failure: { handlerName: item.handlerId ?? "", error: this.normalizeError(error) },
+        };
       }
-
-      const execution = await this.executeSubscriberWithTracking(
-        handlerClass,
-        this.cloneEvent(item.event),
-        item.event.eventName,
-        { source: "replay", priorRetryCount: item.retryCount },
-      );
       if (!execution.failure) {
         result.succeeded++;
         this.recordReplayInspection("succeeded", item);
         continue;
       }
 
-      let replayError = execution.failure.error;
-      if (!execution.deadLettered) {
+      const failedItem = execution.deadLetterItem ?? item;
+      let storageError = execution.storageError;
+      if (!execution.deadLetterItem) {
         try {
-          await this.deadLetterQueue.enqueue(item);
+          await this.deadLetterQueue.enqueue(failedItem);
         } catch (error) {
-          replayError = this.normalizeError(error);
+          storageError = this.normalizeError(error);
         }
       }
       result.failed++;
-      result.failures.push(this.createReplayFailure(item, replayError));
-      this.recordReplayInspection("failed", item, replayError);
+      result.failures.push({
+        eventId: failedItem.event.eventId,
+        eventName: failedItem.event.eventName,
+        handlerId: failedItem.handlerId,
+        error: execution.failure.error,
+        item: failedItem,
+        requeued: !storageError,
+        storageError,
+      });
+      this.recordReplayInspection("failed", failedItem, storageError ?? execution.failure.error);
     }
 
     return result;
@@ -354,7 +377,7 @@ export class InMemoryEventBus<
     let deliveredCount = 0;
 
     for (const [index, handlerClass] of handlerClasses.entries()) {
-      if (!this.hasAvailableSlot()) {
+      while (!this.hasAvailableSlot()) {
         switch (this.backpressureStrategy) {
           case "drop": {
             throw new EventPublishDroppedProblem(
@@ -374,7 +397,7 @@ export class InMemoryEventBus<
         }
       }
 
-      const { failure } = await this.executeSubscriberWithTracking(
+      const { failure, storageError } = await this.executeSubscriberWithTracking(
         handlerClass,
         baseEvent,
         eventName,
@@ -382,7 +405,9 @@ export class InMemoryEventBus<
       );
       deliveredCount++;
       if (failure) {
-        failures.push(failure);
+        failures.push(
+          storageError ? { handlerName: failure.handlerName, error: storageError } : failure,
+        );
       }
     }
 
@@ -458,7 +483,7 @@ export class InMemoryEventBus<
     baseEvent: TEvent,
     eventName: string,
     execution: SubscriberExecution,
-  ): Promise<SubscriberExecutionResult> {
+  ): Promise<SubscriberExecutionResult<TEvent>> {
     const handlerName = handlerClass.name;
     const handlerId = `${handlerName}-${++this.handlerCounter}`;
     const startTime = Date.now();
@@ -535,12 +560,11 @@ export class InMemoryEventBus<
     baseEvent: TEvent,
     eventName: string,
     execution: SubscriberExecution,
-  ): Promise<SubscriberExecutionResult> {
+  ): Promise<SubscriberExecutionResult<TEvent>> {
     const handlerName = handlerClass.name;
     if (!this.deadLetterQueue || !this.deadLetterPolicy) {
       return {
         failure: await this.executeHandlerAttempt(handlerClass, handlerName, baseEvent, eventName),
-        deadLettered: false,
       };
     }
 
@@ -550,17 +574,26 @@ export class InMemoryEventBus<
     } catch (error) {
       return {
         failure: { handlerName, error: this.normalizeError(error) },
-        deadLettered: false,
       };
     }
 
     let retryPolicy: DeadLetterPolicy;
     try {
       retryPolicy = this.resolveDeadLetterPolicy(handlerInstance.getRetryPolicy?.());
+      if (
+        execution.source === "replay" &&
+        (!Number.isSafeInteger(execution.priorRetryCount) ||
+          execution.priorRetryCount < 0 ||
+          retryPolicy.maxRetries >= Number.MAX_SAFE_INTEGER - execution.priorRetryCount)
+      ) {
+        throw new InvalidDeadLetterRetryCountProblem(
+          execution.priorRetryCount,
+          retryPolicy.maxRetries,
+        );
+      }
     } catch (error) {
       return {
         failure: { handlerName, error: this.normalizeError(error) },
-        deadLettered: false,
       };
     }
 
@@ -578,7 +611,7 @@ export class InMemoryEventBus<
             retryCount: this.calculateRetryCount(execution, attempt),
           });
         }
-        return { failure: null, deadLettered: false };
+        return { failure: null };
       }
 
       lastFailure = failure;
@@ -601,7 +634,7 @@ export class InMemoryEventBus<
     }
 
     if (!lastFailure) {
-      return { failure: null, deadLettered: false };
+      return { failure: null };
     }
 
     const retryCount =
@@ -638,13 +671,14 @@ export class InMemoryEventBus<
     try {
       await this.deadLetterQueue.enqueue(deadLetterItem);
       this.recordDeadLetterInspection("succeeded", deadLetterItem);
-      return { failure: surfacedFailure, deadLettered: true };
+      return { failure: surfacedFailure, deadLetterItem };
     } catch (error) {
       const enqueueError = this.normalizeError(error);
       this.recordDeadLetterInspection("failed", deadLetterItem, enqueueError);
       return {
-        failure: { handlerName, error: enqueueError },
-        deadLettered: false,
+        failure: surfacedFailure,
+        deadLetterItem,
+        storageError: enqueueError,
       };
     }
   }
@@ -797,15 +831,6 @@ export class InMemoryEventBus<
     }
   }
 
-  private createReplayFailure(item: DeadLetterItem<TEvent>, error: Error): DeadLetterReplayFailure {
-    return {
-      eventId: item.event.eventId,
-      eventName: item.event.eventName,
-      handlerId: item.handlerId,
-      error,
-    };
-  }
-
   private recordRetryInspection(
     kind: "retry.error" | "retry.wait" | "retry.success" | "retry.exhausted",
     outcome: "started" | "succeeded" | "failed",
@@ -921,6 +946,14 @@ export class InMemoryEventBus<
   }
 
   subscribe(subscription: EventSubscription<TEvent>): void {
+    if (this.deadLetterQueue) {
+      const { handlerClass } = subscription;
+      const existing = this.deadLetterHandlers.get(handlerClass.name);
+      if (!handlerClass.name || (existing && existing !== handlerClass)) {
+        throw new InvalidDeadLetterHandlerIdentityProblem(handlerClass.name);
+      }
+      this.deadLetterHandlers.set(handlerClass.name, handlerClass);
+    }
     this.index.add(subscription.eventName, subscription.handlerClass);
   }
 

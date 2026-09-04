@@ -55,8 +55,10 @@ export {
   BackpressureTimeoutProblem,
   DeadLetterQueueNotConfiguredProblem,
   DeadLetterReplayHandlerUnavailableProblem,
+  InvalidDeadLetterHandlerIdentityProblem,
   InvalidDeadLetterPolicyProblem,
   InvalidDeadLetterQueueLimitProblem,
+  InvalidDeadLetterRetryCountProblem,
   InvalidEventBusConfigurationProblem,
 } from "./libs/problems/EventsInmemoryProblems";
 export {

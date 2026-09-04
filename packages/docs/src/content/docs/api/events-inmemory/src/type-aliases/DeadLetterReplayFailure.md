@@ -40,3 +40,27 @@ Registered event name used to resolve the failed handler.
 > `optional` **handlerId?**: `string`
 
 Stable handler identity recorded when the entry was dead-lettered.
+
+---
+
+### item
+
+> **item**: [`DeadLetterItem`](/api/events-core/src/type-aliases/deadletteritem/)
+
+Exact failed work, including updated retry metadata, for recovery. Contains event payload.
+
+---
+
+### requeued
+
+> **requeued**: `boolean`
+
+Whether the failed item was successfully returned to storage.
+
+---
+
+### storageError?
+
+> `optional` **storageError?**: `Error`
+
+Storage failure, separate from the original execution failure.

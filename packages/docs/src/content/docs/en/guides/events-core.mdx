@@ -196,6 +196,17 @@ void replayExhaustedHandlers();
 ```
 
 Replay preserves the original `eventId` and invokes only the handler recorded by the dead-letter entry. The
-in-memory queue atomically claims entries within one process and deduplicates active entries by event and handler
-identity. Use a durable `DeadLetterQueue` adapter when work must survive process restarts or coordinate across
-multiple workers.
+in-memory queue atomically removes entries within one process and deduplicates active entries by event and handler
+identity. DLQ-enabled buses require nonempty, unique handler class names and reserve each name for that class for
+the lifetime of the bus, including after unsubscribe or clear. Registering the same class for multiple patterns is allowed.
+
+Replay honors the bus concurrency limit and blocking timeout. With `error` or `drop`, unavailable capacity returns
+the item to the queue without executing it. Each unsuccessful result includes `item`, `error`, and `requeued`.
+If storage rejects the write, `requeued` is false and `storageError` preserves that failure separately: the caller
+must retain the returned item and enqueue it after storage recovery. Do not log the item; it contains the event payload.
+The rest of the removed batch is still processed.
+
+A custom `DeadLetterQueue` adapter must atomically remove returned items before `dequeue` resolves; lease-based
+claims requiring a separate acknowledgement are not supported by this contract. Durable storage alone does not
+protect work already removed during a process crash. Use the transactional outbox/inbox path in `events-tx` when
+durable execution ownership is required.
