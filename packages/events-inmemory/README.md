@@ -65,6 +65,12 @@ DLQ 설정은 명시적으로 opt-in합니다. 설정하지 않으면 기존처�
 `dequeue`한 항목을 원자적으로 제거하며, 실패한 재생은 누적 재시도 횟수와 함께 다시 저장됩니다. 영속성이나 다중
 프로세스 조정이 필요하면 `DeadLetterQueue` 계약을 구현한 외부 저장소 어댑터를 주입해야 합니다.
 
+DLQ 경로는 이벤트 클래스의 prototype과 원본 identity를 유지하며, payload와 메타데이터를 참조 공유 없이 복사합니다.
+지원 값은 primitive 데이터(symbol 제외), 일반 객체·null-prototype 객체, 배열, `Date`, `RegExp`, `Map`, `Set`입니다.
+순환 참조와 열거 가능한 symbol key도 보존합니다. 사용자 정의 중첩 인스턴스, 함수, binary buffer/view 등 지원하지 않는
+값은 `UnsupportedDeadLetterValueProblem`으로 거부합니다. 지원 데이터로 변환한 뒤 다시 발행하거나 저장하세요.
+이 복사 경계는 DLQ 미설정 발행에는 적용하지 않습니다.
+
 DLQ를 사용하는 버스는 구독에 비어 있지 않은 `handlerId`를 명시해야 합니다. 클래스 이름은 ID로 사용하지 않으므로
 클래스 이름이 바뀌거나 코드가 minify되어도 같은 `handlerId`를 유지하면 저장된 항목을 재생할 수 있습니다.
 `RegisterEventHandler(EventClass, { handlerId: "users.created.v1" })`로 선언한 ID도 `EventBusConfig.start()`가 전달합니다.
@@ -89,6 +95,8 @@ DLQ를 사용하는 버스는 구독에 비어 있지 않은 `handlerId`를 명�
 - `BackpressureExceededProblem`: 동시성 한도 초과 시 발생하는 Problem
 - `BackpressureTimeoutProblem`: `block` 전략의 슬롯 대기가 제한 시간을 초과하면 발생하는 Problem
 - `InvalidEventBusConfigurationProblem`: 잘못된 동시성 또는 timeout 설정을 생성 시점에 거부하는 Problem
+- `InvalidBackpressureStrategyProblem`: `block`, `drop`, `error` 외의 전략 값을 생성 시점에 거부
+- `UnsupportedDeadLetterValueProblem`: 안전하게 복사할 수 없는 DLQ payload·메타데이터 값을 거부
 - `InvalidDeadLetterPolicyProblem`: 실행할 수 없는 재시도·보관 정책을 거부하는 Problem
 - `DeadLetterQueueNotConfiguredProblem`: DLQ 없이 정책 또는 재생을 요청하면 발생하는 Problem
 - `DeadLetterReplayHandlerUnavailableProblem`: 기록된 핸들러를 고유하게 찾을 수 없을 때 재생 항목을 보존하는 Problem

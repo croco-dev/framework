@@ -13,7 +13,7 @@ import {
   RuntimeInspector,
   type TokenIdentifier,
 } from "@croco/framework-context";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { assert, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DeadLetterQueueNotConfiguredProblem,
   InMemoryDeadLetterQueue,
@@ -87,6 +87,151 @@ function controlledReplay(strategy: "block" | "drop" | "error" = "block") {
 }
 
 describe("InMemoryDeadLetterQueue", () => {
+  it("isolates nested Map and Set values in stored events and metadata", async () => {
+    const queue = new InMemoryDeadLetterQueue();
+    const shared = { count: 1 };
+    const map = new Map([["value", shared]]);
+    const set = new Set([shared]);
+    class CollectionEvent extends DomainEvent {
+      static readonly eventName = "collections";
+      readonly payload = { map, set };
+    }
+    const event = new CollectionEvent();
+    event.metadata.collection = map;
+    await queue.enqueue({
+      event,
+      reason: "failure",
+      failedAt: new Date(),
+      retryCount: 0,
+      metadata: { collection: map },
+    });
+    shared.count = 2;
+    map.set("later", { count: 3 });
+    set.clear();
+
+    const [snapshot] = await queue.peek<CollectionEvent>();
+    assert.isDefined(snapshot);
+    expect(snapshot.event).toBeInstanceOf(CollectionEvent);
+    expect(snapshot.event.payload.map).toEqual(new Map([["value", { count: 1 }]]));
+    expect(snapshot.event.payload.set).toEqual(new Set([{ count: 1 }]));
+    expect(snapshot.event.metadata.collection).toEqual(new Map([["value", { count: 1 }]]));
+    expect(snapshot.metadata?.collection).toEqual(new Map([["value", { count: 1 }]]));
+    const copiedValue = snapshot.event.payload.map.get("value");
+    assert.isDefined(copiedValue);
+    expect(snapshot.event.payload.set.has(copiedValue)).toBe(true);
+    copiedValue.count = 4;
+    snapshot.event.payload.set.clear();
+
+    const [dequeued] = await queue.dequeue<CollectionEvent>();
+    assert.isDefined(dequeued);
+    expect(dequeued.event.payload.map).toEqual(new Map([["value", { count: 1 }]]));
+    expect(dequeued.event.payload.set).toEqual(new Set([{ count: 1 }]));
+  });
+
+  it("preserves cyclic collection snapshots without sharing original event references", async () => {
+    const queue = new InMemoryDeadLetterQueue();
+    const event = new DeadLetterTestEvent("cyclic");
+    const map = new Map<string, unknown>();
+    map.set("self", map);
+    map.set("event", event);
+    event.metadata.collection = map;
+    await queue.enqueue({ event, reason: "failure", failedAt: new Date(), retryCount: 0 });
+    map.set("later", true);
+
+    const [snapshot] = await queue.peek();
+    assert.isDefined(snapshot);
+    const copy = snapshot.event.metadata.collection as Map<string, unknown>;
+    expect(copy).not.toBe(map);
+    expect(copy.get("self")).toBe(copy);
+    expect(copy.get("event")).toBe(snapshot.event);
+    expect(copy.has("later")).toBe(false);
+  });
+
+  it.each(["event", "metadata"] as const)(
+    "rejects unsupported custom values in %s before replacing stored work",
+    async (location) => {
+      class MutableValue {
+        count = 1;
+      }
+      const queue = new InMemoryDeadLetterQueue();
+      const event = new DeadLetterTestEvent("original");
+      const item = { event, reason: "failure", failedAt: new Date(), retryCount: 0 };
+      await queue.enqueue(item);
+      const unsupported = new MutableValue();
+      if (location === "event") event.metadata.unsupported = unsupported;
+      await expect(
+        queue.enqueue({
+          ...item,
+          metadata: location === "metadata" ? { unsupported } : undefined,
+        }),
+      ).rejects.toMatchObject({ code: "events-inmemory/unsupported-dead-letter-value" });
+      const [snapshot] = await queue.peek();
+      expect(snapshot?.event.metadata).toEqual({});
+      expect(snapshot?.metadata).toBeUndefined();
+      await expect(queue.size()).resolves.toBe(1);
+    },
+  );
+
+  it("preserves sparse arrays while isolating their nested values", async () => {
+    const queue = new InMemoryDeadLetterQueue();
+    const values: { count: number }[] = [];
+    values.length = 3;
+    values[1] = { count: 1 };
+    const event = new DeadLetterTestEvent("sparse");
+    event.metadata.values = values;
+    await queue.enqueue({ event, reason: "failure", failedAt: new Date(), retryCount: 0 });
+    values[1].count = 2;
+    const [snapshot] = await queue.peek();
+    assert.isDefined(snapshot);
+    const copy = snapshot.event.metadata.values as { count: number }[];
+    expect(copy).toHaveLength(3);
+    expect(0 in copy).toBe(false);
+    expect(2 in copy).toBe(false);
+    expect(copy[1]).toEqual({ count: 1 });
+  });
+
+  it("copies dates, expressions, null-prototype records and enumerable symbol keys", async () => {
+    const queue = new InMemoryDeadLetterQueue();
+    const key = Symbol("snapshot");
+    const record = Object.create(null) as Record<string | symbol, unknown>;
+    record[key] = { count: 1 };
+    record.date = new Date("2026-01-01T00:00:00Z");
+    const expression = /retry/gi;
+    expression.lastIndex = 2;
+    record.expression = expression;
+    const event = new DeadLetterTestEvent("built-ins");
+    event.metadata.record = record;
+    await queue.enqueue({ event, reason: "failure", failedAt: new Date(), retryCount: 0 });
+    (record[key] as { count: number }).count = 2;
+    (record.date as Date).setUTCFullYear(2027);
+    expression.lastIndex = 4;
+
+    const [item] = await queue.peek();
+    assert.isDefined(item);
+    const copy = item.event.metadata.record as Record<string | symbol, unknown>;
+    expect(Object.getPrototypeOf(copy)).toBeNull();
+    expect(copy[key]).toEqual({ count: 1 });
+    expect(copy.date).toEqual(new Date("2026-01-01T00:00:00Z"));
+    expect(copy.expression).toEqual(/retry/gi);
+    expect((copy.expression as RegExp).lastIndex).toBe(2);
+  });
+
+  it.each([
+    ["function", () => undefined],
+    ["symbol value", Symbol("unsupported")],
+    ["weak map", new WeakMap()],
+    ["array buffer", new ArrayBuffer(8)],
+    ["typed array", new Uint8Array(8)],
+  ])("rejects unsupported %s without retaining work", async (_name, value) => {
+    const queue = new InMemoryDeadLetterQueue();
+    const event = new DeadLetterTestEvent("unsupported");
+    event.metadata.value = value;
+    await expect(
+      queue.enqueue({ event, reason: "failure", failedAt: new Date(), retryCount: 0 }),
+    ).rejects.toMatchObject({ code: "events-inmemory/unsupported-dead-letter-value" });
+    await expect(queue.size()).resolves.toBe(0);
+  });
+
   it("deduplicates the same event and handler while preserving stable item identity", async () => {
     const queue = new InMemoryDeadLetterQueue();
     const event = new DeadLetterTestEvent("original");
@@ -152,9 +297,7 @@ describe("InMemoryDeadLetterQueue", () => {
 
     const firstSnapshot = await queue.peek<DeadLetterTestEvent>();
     const firstItem = firstSnapshot[0];
-    if (!firstItem) {
-      throw new Error("Expected a dead-letter item");
-    }
+    assert.isDefined(firstItem);
     firstItem.event.metadata.changed = true;
     await queue.remove(firstItem.itemId);
 
@@ -209,6 +352,79 @@ describe("InMemoryEventBus dead-letter execution", () => {
     EventBusConfig.setStats(new EventBusStats());
   });
 
+  it("keeps collection payloads unchanged across failed attempts and dead-letter storage", async () => {
+    class CollectionEvent extends DomainEvent {
+      static readonly eventName = "collection-retry";
+      readonly values = new Map([["count", { value: 1 }]]);
+    }
+    const observed: number[] = [];
+    class MutatingHandler implements EventHandler<CollectionEvent> {
+      handle(event: CollectionEvent): void {
+        const value = event.values.get("count");
+        assert.isDefined(value);
+        observed.push(value.value);
+        value.value++;
+        throw new Error("handler failure");
+      }
+    }
+    const queue = new InMemoryDeadLetterQueue();
+    const bus = new InMemoryEventBus<CollectionEvent>({
+      deadLetterQueue: queue,
+      deadLetterPolicy: { maxRetries: 1, retryDelayMs: 0 },
+    });
+    Container.set(MutatingHandler, new MutatingHandler());
+    bus.subscribe({
+      eventName: CollectionEvent.eventName,
+      handlerClass: MutatingHandler,
+      handlerId: "collection-retry.v1",
+    });
+    const event = new CollectionEvent();
+    await expect(bus.publish(event)).rejects.toBeDefined();
+    expect(observed).toEqual([1, 1]);
+    expect(event.values.get("count")).toEqual({ value: 1 });
+    const [item] = await queue.peek<CollectionEvent>();
+    expect(item?.event.values.get("count")).toEqual({ value: 1 });
+    await bus.replayDeadLetters();
+    expect(observed).toEqual([1, 1, 1, 1]);
+  });
+
+  it("rejects custom payloads before DLQ delivery without changing legacy delivery", async () => {
+    class CustomPayload {
+      #value = 1;
+      read(): number {
+        return this.#value;
+      }
+    }
+    class CustomEvent extends DomainEvent {
+      static readonly eventName = "custom-payload";
+      readonly payload = new CustomPayload();
+    }
+    const received: number[] = [];
+    class CustomHandler implements EventHandler<CustomEvent> {
+      handle(event: CustomEvent): void {
+        received.push(event.payload.read());
+      }
+    }
+    Container.set(CustomHandler, new CustomHandler());
+    const legacy = new InMemoryEventBus<CustomEvent>();
+    const queue = new InMemoryDeadLetterQueue();
+    const withDlq = new InMemoryEventBus<CustomEvent>({ deadLetterQueue: queue });
+    const subscription = {
+      eventName: CustomEvent.eventName,
+      handlerClass: CustomHandler,
+      handlerId: "custom-payload.v1",
+    };
+    legacy.subscribe(subscription);
+    withDlq.subscribe(subscription);
+    await expect(legacy.publish(new CustomEvent())).resolves.toBeUndefined();
+    await expect(withDlq.publish(new CustomEvent())).rejects.toMatchObject({
+      code: "events-inmemory/unsupported-dead-letter-value",
+    });
+    expect(received).toEqual([1]);
+    expect(withDlq.getRunningHandlerCount()).toBe(0);
+    await expect(queue.size()).resolves.toBe(0);
+  });
+
   it("stores initial provider resolution failure with original identity and safe dead-letter metadata", async () => {
     class UnavailableProviderHandler implements EventHandler<DeadLetterTestEvent> {
       handle = vi.fn();
@@ -250,9 +466,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
         metadata: { errorName: "ProviderResolutionError", retentionDays: 2 },
       });
       const item = items[0];
-      if (!item) {
-        throw new Error("Expected provider resolution dead letter");
-      }
+      assert.isDefined(item);
       const { event: _event, ...evidence } = item;
       expect(JSON.stringify(evidence)).not.toContain("provider-secret");
       expect(JSON.stringify(evidence)).not.toContain("original-payload");
@@ -303,7 +517,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
       await Promise.race([
         started.promise,
         replay.then(() => {
-          throw new Error("Expected recovered provider handler to start before replay completes");
+          assert.fail("Expected recovered provider handler to start before replay completes");
         }),
       ]);
       expect(bus.getRunningHandlerCount()).toBe(1);

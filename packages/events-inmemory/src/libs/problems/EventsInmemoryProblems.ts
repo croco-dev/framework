@@ -14,6 +14,30 @@ export type DeadLetterPolicyOption =
   | "maxRetryDelayMs"
   | "retentionDays";
 
+/** Backpressure strategies must be validated before any handler can occupy a slot. */
+export class InvalidBackpressureStrategyProblem extends Problem {
+  readonly code = "events-inmemory/invalid-backpressure-strategy";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(readonly value: unknown) {
+    super(undefined, undefined, "backpressureStrategy must be block, drop, or error");
+  }
+}
+
+/** A dead-letter snapshot cannot retain mutable values it cannot safely copy. */
+export class UnsupportedDeadLetterValueProblem extends Problem {
+  readonly code = "events-inmemory/unsupported-dead-letter-value";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor() {
+    super(
+      undefined,
+      undefined,
+      "Dead-letter snapshots require supported data values, not custom instances or executable values",
+    );
+  }
+}
+
 /** Event bus numeric configuration cannot be represented with unambiguous runtime semantics. */
 export class InvalidEventBusConfigurationProblem extends Problem {
   readonly code = "events-inmemory/invalid-configuration";

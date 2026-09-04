@@ -1,5 +1,6 @@
 import type { DeadLetterItem, DeadLetterQueue, DomainEvent } from "@croco/events-core";
 import { DEFAULT_DEAD_LETTER_POLICY } from "@croco/events-core";
+import { cloneDeadLetterEvent, cloneDeadLetterValue } from "./cloneDeadLetterValue";
 import { InvalidDeadLetterQueueLimitProblem } from "./problems/EventsInmemoryProblems";
 
 /**
@@ -16,40 +17,17 @@ function buildDeadLetterItemId(eventId: string, handlerId: string | undefined): 
   return `${eventId.length}:${eventId}:${normalizedHandlerId.length}:${normalizedHandlerId}`;
 }
 
-function cloneValue<T>(value: T): T {
-  if (value instanceof Date) {
-    return new Date(value.getTime()) as T;
-  }
-
-  if (Array.isArray(value)) {
-    return value.map((item) => cloneValue(item)) as T;
-  }
-
-  if (!value || typeof value !== "object") {
-    return value;
-  }
-
-  const prototype = Object.getPrototypeOf(value);
-  if (prototype !== Object.prototype && prototype !== null) {
-    return value;
-  }
-
-  return Object.fromEntries(
-    Object.entries(value).map(([key, entryValue]) => [key, cloneValue(entryValue)]),
-  ) as T;
-}
-
 function cloneItem<TEvent extends DomainEvent>(
   item: InMemoryDeadLetterItem<TEvent>,
 ): InMemoryDeadLetterItem<TEvent> {
-  const event = Object.create(Object.getPrototypeOf(item.event)) as TEvent;
-  Object.assign(event, cloneValue({ ...item.event }));
+  const copies = new WeakMap<object, unknown>();
+  const event = cloneDeadLetterEvent(item.event, copies);
 
   return {
     ...item,
     event,
-    failedAt: new Date(item.failedAt.getTime()),
-    metadata: item.metadata ? cloneValue(item.metadata) : undefined,
+    failedAt: cloneDeadLetterValue(item.failedAt, copies),
+    metadata: cloneDeadLetterValue(item.metadata, copies),
   };
 }
 
@@ -81,8 +59,11 @@ export class InMemoryDeadLetterQueue implements DeadLetterQueue {
         continue;
       }
 
-      this.items.delete(itemId);
       dequeued.push(cloneItem(item) as InMemoryDeadLetterItem<TEvent>);
+    }
+
+    for (const itemId of itemIds) {
+      this.items.delete(itemId);
     }
 
     return dequeued;

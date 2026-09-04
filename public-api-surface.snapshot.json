@@ -10684,6 +10684,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidBackpressureStrategyProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsInmemoryProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvalidDeadLetterHandlerIdentityProblem",
               "exportKind": "named",
               "source": "./libs/problems/EventsInmemoryProblems",
@@ -10724,6 +10730,12 @@
               "exportKind": "named",
               "source": "./libs/problems/EventsInmemoryProblems",
               "declarationKind": "const"
+            },
+            {
+              "name": "UnsupportedDeadLetterValueProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsInmemoryProblems",
+              "declarationKind": "class"
             }
           ],
           "typeExports": [

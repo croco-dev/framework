@@ -26,11 +26,13 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { TraceInfo } from "@croco/telemetry-api";
 import { getActiveTraceInfo, getTracer } from "@croco/telemetry-api";
 import { type Context, context, type Span, SpanStatusCode, trace } from "@opentelemetry/api";
+import { cloneDeadLetterEvent } from "./cloneDeadLetterValue";
 import {
   BackpressureExceededProblem,
   BackpressureTimeoutProblem,
   DeadLetterQueueNotConfiguredProblem,
   DeadLetterReplayHandlerUnavailableProblem,
+  InvalidBackpressureStrategyProblem,
   InvalidDeadLetterHandlerIdentityProblem,
   InvalidDeadLetterPolicyProblem,
   InvalidDeadLetterQueueLimitProblem,
@@ -188,7 +190,16 @@ export class InMemoryEventBus<
       throw new InvalidEventBusConfigurationProblem("backpressureTimeoutMs", backpressureTimeoutMs);
     }
     this.maxConcurrency = maxConcurrency;
-    this.backpressureStrategy = options.backpressureStrategy ?? "block";
+    const backpressureStrategy =
+      options.backpressureStrategy === undefined ? "block" : options.backpressureStrategy;
+    if (
+      backpressureStrategy !== "block" &&
+      backpressureStrategy !== "drop" &&
+      backpressureStrategy !== "error"
+    ) {
+      throw new InvalidBackpressureStrategyProblem(backpressureStrategy);
+    }
+    this.backpressureStrategy = backpressureStrategy;
     this.backpressureTimeoutMs = backpressureTimeoutMs;
     if (options.deadLetterPolicy && !options.deadLetterQueue) {
       throw new DeadLetterQueueNotConfiguredProblem();
@@ -394,6 +405,8 @@ export class InMemoryEventBus<
             await this.waitForSlot();
             break;
           }
+          default:
+            throw new InvalidBackpressureStrategyProblem(this.backpressureStrategy);
         }
       }
 
@@ -920,6 +933,9 @@ export class InMemoryEventBus<
   }
 
   private cloneEvent(event: TEvent): TEvent {
+    if (this.deadLetterQueue) {
+      return cloneDeadLetterEvent(event);
+    }
     const clonedEvent = Object.create(Object.getPrototypeOf(event)) as TEvent;
     Object.assign(clonedEvent, this.cloneValue({ ...event }));
 

@@ -212,6 +212,12 @@ If DI cannot create a handler, the event is retained with reason `handler-resolu
 and the bus retention policy. No handler policy is invoked before initialization succeeds; repair the provider
 registration and replay the retained item.
 
+DLQ snapshots preserve the event prototype and identity while copying payload and metadata without mutable aliases.
+Supported values are primitive data except symbols, plain or null-prototype objects, arrays, `Date`, `RegExp`, `Map`,
+and `Set`. Cycles and enumerable symbol keys are preserved. Nested custom instances, functions, binary buffers/views,
+and other unsupported values fail with `UnsupportedDeadLetterValueProblem`; convert them to supported data before
+publishing or enqueueing. This snapshot boundary does not apply to publishing without a DLQ.
+
 Replay honors the bus concurrency limit and blocking timeout. With `error` or `drop`, unavailable capacity returns
 the item to the queue without executing it. Each unsuccessful result includes `item`, `error`, and `requeued`.
 If storage rejects the write, `requeued` is false and `storageError` preserves that failure separately: the caller

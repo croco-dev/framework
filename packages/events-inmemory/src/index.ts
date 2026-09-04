@@ -55,11 +55,13 @@ export {
   BackpressureTimeoutProblem,
   DeadLetterQueueNotConfiguredProblem,
   DeadLetterReplayHandlerUnavailableProblem,
+  InvalidBackpressureStrategyProblem,
   InvalidDeadLetterHandlerIdentityProblem,
   InvalidDeadLetterPolicyProblem,
   InvalidDeadLetterQueueLimitProblem,
   InvalidDeadLetterRetryCountProblem,
   InvalidEventBusConfigurationProblem,
+  UnsupportedDeadLetterValueProblem,
 } from "./libs/problems/EventsInmemoryProblems";
 export {
   MAX_EVENT_BUS_CONCURRENCY,

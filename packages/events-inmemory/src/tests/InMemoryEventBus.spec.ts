@@ -896,6 +896,22 @@ describe("InMemoryEventBus", () => {
   });
 
   describe("backpressure", () => {
+    it.each(["invalid", "", null, 0, false, {}])(
+      "rejects invalid backpressureStrategy %j at construction",
+      (value) => {
+        expect(() => new InMemoryEventBus({ backpressureStrategy: value as "block" })).toThrow(
+          /backpressureStrategy must be block, drop, or error/,
+        );
+      },
+    );
+
+    it.each([undefined, "block", "drop", "error"] as const)(
+      "accepts supported backpressureStrategy %s",
+      (backpressureStrategy) => {
+        expect(() => new InMemoryEventBus({ backpressureStrategy })).not.toThrow();
+      },
+    );
+
     const invalidConcurrencyValues = [
       Number.NaN,
       Number.POSITIVE_INFINITY,
