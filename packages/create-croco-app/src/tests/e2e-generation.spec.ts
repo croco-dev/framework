@@ -2872,6 +2872,11 @@ describe("E2E: generate()", () => {
       expect(appSource).toContain("createApplicationRuntime");
       expect(appSource).toContain("applicationRuntime");
       expect(appSource).toContain("AI_SAAS_RUNTIME_TOKEN");
+      const aiRuntimeSource = readFileSync(
+        join(testDir, "apps", "api-server", "src", "aiSaas.ts"),
+        "utf8",
+      );
+      expect(aiRuntimeSource).toContain('new Token<AiSaasRuntime>("AiSaasRuntime")');
       expect(appSource).toContain("registerRuntimeScopedProviders(runtimeState.current)");
       expect(appSource).toContain("createAiSaasRuntime(runtime)");
       expect(appSource).not.toContain("Container.has(LOGGER_TOKEN)");

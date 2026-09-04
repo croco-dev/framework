@@ -1,5 +1,5 @@
 import { planVersionRef } from "@croco/billing-core";
-import { Container } from "@croco/framework-context";
+import { Container, Token } from "@croco/framework-context";
 import { InMemoryLlmModel, InMemoryLlmRegistry, LlmService, type LlmUsage } from "@croco/llm-core";
 import {
   COMPLETION_TOKENS,
@@ -154,10 +154,10 @@ export type AiSaasRuntime = {
   service: AiSaasService;
 };
 
-export const AI_SAAS_RUNTIME_TOKEN = "AiSaasRuntime";
+export const AI_SAAS_RUNTIME_TOKEN = new Token<AiSaasRuntime>("AiSaasRuntime");
 
 export function getAiSaasRuntime(): AiSaasRuntime {
-  return Container.get<AiSaasRuntime>(AI_SAAS_RUNTIME_TOKEN);
+  return Container.get(AI_SAAS_RUNTIME_TOKEN);
 }
 
 export type AiSaasDemoSnapshot = {

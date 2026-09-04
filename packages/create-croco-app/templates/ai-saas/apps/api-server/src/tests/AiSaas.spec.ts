@@ -1,11 +1,12 @@
 import { rm } from "node:fs/promises";
 
-import { Container } from "typedi";
+import { Container, Token } from "typedi";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { AiRateLimitExceededProblem, AiTenantRequiredProblem } from "../aiProblems";
 import { createCrocoApp } from "../app";
 import {
   AI_PLAN_CATALOG,
+  AI_SAAS_RUNTIME_TOKEN,
   buildAiIdempotencyKey,
   createAiSaasRuntime,
   DEFAULT_AI_MODEL_ID,
@@ -157,6 +158,8 @@ describe("AI SaaS generated baseline", () => {
       );
       const applicationAiRuntime = app.applicationRuntime.run(() => getAiSaasRuntime());
 
+      expect(AI_SAAS_RUNTIME_TOKEN).toBeInstanceOf(Token);
+      expect(app.applicationRuntime.get(AI_SAAS_RUNTIME_TOKEN)).toBe(applicationAiRuntime);
       expect(generateResponse.status).toBe(200);
       await expect(
         applicationAiRuntime.service.listInvocationLogs(seed.tenant.id),
