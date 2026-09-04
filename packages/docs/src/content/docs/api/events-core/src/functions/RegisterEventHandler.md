@@ -31,6 +31,10 @@ title: "RegisterEventHandler"
 
 `string`
 
+#### handlerId?
+
+`string`
+
 ## Returns
 
 \<`T`\>(`f`) => `void`

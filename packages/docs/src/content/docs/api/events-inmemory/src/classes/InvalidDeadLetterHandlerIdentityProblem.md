@@ -5,7 +5,7 @@ prev: false
 title: "InvalidDeadLetterHandlerIdentityProblem"
 ---
 
-DLQ handler class names must be nonempty and unique for the lifetime of a bus.
+DLQ subscriptions must bind an explicit, nonempty identity to one handler class per bus.
 
 ## Extends
 
@@ -21,7 +21,7 @@ DLQ handler class names must be nonempty and unique for the lifetime of a bus.
 
 ##### handlerId
 
-`string`
+`string` \| `undefined`
 
 #### Returns
 
@@ -85,7 +85,7 @@ DLQ handler class names must be nonempty and unique for the lifetime of a bus.
 
 ### handlerId
 
-> `readonly` **handlerId**: `string`
+> `readonly` **handlerId**: `string` \| `undefined`
 
 ---
 

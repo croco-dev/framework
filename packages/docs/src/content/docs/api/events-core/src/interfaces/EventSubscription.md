@@ -28,3 +28,11 @@ title: "EventSubscription"
 ### handlerClass
 
 > **handlerClass**: `EventHandlerClass`\<`TEvent`\>
+
+---
+
+### handlerId?
+
+> `optional` **handlerId?**: `string`
+
+Explicit identity that remains stable across builds. Required by DLQ-enabled buses.
