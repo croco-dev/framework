@@ -118,7 +118,74 @@ describe("Croco root runner", () => {
     expect(stderr).toEqual([]);
   });
 
-  it("honors separated and equals-form --cwd around the desktop command", async () => {
+  it.each([
+    [
+      "before the desktop command with a separated value",
+      (targetCwd: string) => [
+        "--cwd",
+        targetCwd,
+        "desktop",
+        "check",
+        "--config",
+        "croco.desktop.ts",
+        "--json",
+      ],
+    ],
+    [
+      "after the desktop command with a separated value",
+      (targetCwd: string) => [
+        "desktop",
+        "--cwd",
+        targetCwd,
+        "check",
+        "--config",
+        "croco.desktop.ts",
+        "--json",
+      ],
+    ],
+    [
+      "after the check command with a separated value",
+      (targetCwd: string) => [
+        "desktop",
+        "check",
+        "--cwd",
+        targetCwd,
+        "--config",
+        "croco.desktop.ts",
+        "--json",
+      ],
+    ],
+    [
+      "before the desktop command with an equals-form value",
+      (targetCwd: string) => [
+        `--cwd=${targetCwd}`,
+        "desktop",
+        "check",
+        "--config=croco.desktop.ts",
+        "--json",
+      ],
+    ],
+    [
+      "after the desktop command with an equals-form value",
+      (targetCwd: string) => [
+        "desktop",
+        `--cwd=${targetCwd}`,
+        "check",
+        "--config=croco.desktop.ts",
+        "--json",
+      ],
+    ],
+    [
+      "after the check command with an equals-form value",
+      (targetCwd: string) => [
+        "desktop",
+        "check",
+        `--cwd=${targetCwd}`,
+        "--config=croco.desktop.ts",
+        "--json",
+      ],
+    ],
+  ] as const)("honors --cwd %s", async (_placement, createArgv) => {
     const launchCwd = createTemporaryDirectory();
     const targetCwd = join(createTemporaryDirectory(), "workspace target");
     mkdirSync(targetCwd);
@@ -126,38 +193,28 @@ describe("Croco root runner", () => {
       join(targetCwd, "croco.desktop.ts"),
       "export default process.env.DESKTOP_CONFIG;\n",
     );
-    const invocations = [
-      ["--cwd", targetCwd, "desktop", "check", "--config", "croco.desktop.ts", "--json"],
-      ["desktop", "--cwd", targetCwd, "check", "--config", "croco.desktop.ts", "--json"],
-      ["desktop", "check", "--cwd", targetCwd, "--config", "croco.desktop.ts", "--json"],
-      [`--cwd=${targetCwd}`, "desktop", "check", "--config=croco.desktop.ts", "--json"],
-      ["desktop", `--cwd=${targetCwd}`, "check", "--config=croco.desktop.ts", "--json"],
-      ["desktop", "check", `--cwd=${targetCwd}`, "--config=croco.desktop.ts", "--json"],
-    ];
+    const stdout: string[] = [];
+    const stderr: string[] = [];
 
-    for (const argv of invocations) {
-      const stdout: string[] = [];
-      const stderr: string[] = [];
-      const result = await runCroco(argv, {
-        cwd: launchCwd,
-        stdout: (message) => stdout.push(message),
-        stderr: (message) => stderr.push(message),
-      });
+    const result = await runCroco(createArgv(targetCwd), {
+      cwd: launchCwd,
+      stdout: (message) => stdout.push(message),
+      stderr: (message) => stderr.push(message),
+    });
 
-      expect(result).toEqual({ exitCode: 16 });
-      expect(JSON.parse(stdout.join("\n"))).toMatchObject({
-        codes: ["CROCO_DESKTOP_CONFIG_FAILURE", "CROCO_DESKTOP_CONFIG_POLICY_REJECTED"],
-        configFailure: {
-          findings: [
-            {
-              code: "CROCO_DESKTOP_CONFIG_PROCESS_ENV_DEPENDENCY",
-              file: join(targetCwd, "croco.desktop.ts"),
-            },
-          ],
-        },
-      });
-      expect(stderr).toEqual([]);
-    }
+    expect(result).toEqual({ exitCode: 16 });
+    expect(JSON.parse(stdout.join("\n"))).toMatchObject({
+      codes: ["CROCO_DESKTOP_CONFIG_FAILURE", "CROCO_DESKTOP_CONFIG_POLICY_REJECTED"],
+      configFailure: {
+        findings: [
+          {
+            code: "CROCO_DESKTOP_CONFIG_PROCESS_ENV_DEPENDENCY",
+            file: join(targetCwd, "croco.desktop.ts"),
+          },
+        ],
+      },
+    });
+    expect(stderr).toEqual([]);
   });
 
   it("uses injected env without mutating the embedding process exit code", async () => {
