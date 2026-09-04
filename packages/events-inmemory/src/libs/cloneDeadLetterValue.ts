@@ -36,8 +36,9 @@ export function cloneDeadLetterValue<T>(value: T, copies = new WeakMap<object, u
     clone = new Date(value.getTime());
   } else if (prototype === RegExp.prototype && value instanceof RegExp) {
     const expression = new RegExp(value.source, value.flags);
-    expression.lastIndex = value.lastIndex;
     clone = expression;
+    copies.set(value, clone);
+    expression.lastIndex = cloneDeadLetterValue(value.lastIndex, copies);
   } else if (prototype === Map.prototype && value instanceof Map) {
     const entries = new Map<unknown, unknown>();
     clone = entries;

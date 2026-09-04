@@ -216,6 +216,44 @@ describe("InMemoryDeadLetterQueue", () => {
     expect((copy.expression as RegExp).lastIndex).toBe(2);
   });
 
+  it("isolates mutable and cyclic expression state", async () => {
+    const queue = new InMemoryDeadLetterQueue();
+    const state = { index: 1 };
+    const expression = /retry/g;
+    const cyclic = /cycle/g;
+    Reflect.set(expression, "lastIndex", state);
+    Reflect.set(cyclic, "lastIndex", cyclic);
+    const event = new DeadLetterTestEvent("expression-state");
+    event.metadata.expression = expression;
+    event.metadata.cyclic = cyclic;
+    await queue.enqueue({ event, reason: "failure", failedAt: new Date(), retryCount: 0 });
+    state.index = 2;
+
+    const [item] = await queue.peek();
+    assert.isDefined(item);
+    const copy = item.event.metadata.expression as RegExp;
+    const cycleCopy = item.event.metadata.cyclic as RegExp;
+    expect(copy.lastIndex).toEqual({ index: 1 });
+    expect(copy.lastIndex).not.toBe(state);
+    expect(cycleCopy.lastIndex).toBe(cycleCopy);
+    expect(cycleCopy).not.toBe(cyclic);
+    Reflect.set(copy, "lastIndex", { index: 3 });
+    const [stored] = await queue.dequeue();
+    expect((stored?.event.metadata.expression as RegExp).lastIndex).toEqual({ index: 1 });
+  });
+
+  it("rejects executable expression state without retaining work", async () => {
+    const queue = new InMemoryDeadLetterQueue();
+    const expression = /retry/g;
+    Reflect.set(expression, "lastIndex", () => 1);
+    const event = new DeadLetterTestEvent("unsupported-expression-state");
+    event.metadata.expression = expression;
+    await expect(
+      queue.enqueue({ event, reason: "failure", failedAt: new Date(), retryCount: 0 }),
+    ).rejects.toMatchObject({ code: "events-inmemory/unsupported-dead-letter-value" });
+    await expect(queue.size()).resolves.toBe(0);
+  });
+
   it.each([
     ["function", () => undefined],
     ["symbol value", Symbol("unsupported")],
@@ -386,6 +424,53 @@ describe("InMemoryEventBus dead-letter execution", () => {
     expect(item?.event.values.get("count")).toEqual({ value: 1 });
     await bus.replayDeadLetters();
     expect(observed).toEqual([1, 1, 1, 1]);
+  });
+
+  it("preserves metadata cycles and payload aliases through retries, storage and replay", async () => {
+    class CyclicEvent extends DomainEvent {
+      static readonly eventName = "cyclic-metadata";
+      readonly payload = this.metadata;
+    }
+    const observed: boolean[][] = [];
+    class CyclicHandler implements EventHandler<CyclicEvent> {
+      handle(event: CyclicEvent): void {
+        observed.push([
+          event.metadata.self === event.metadata,
+          event.payload === event.metadata,
+          event.metadata.changed === undefined,
+        ]);
+        event.metadata.changed = true;
+        throw new Error("handler failure");
+      }
+    }
+    const queue = new InMemoryDeadLetterQueue();
+    const bus = new InMemoryEventBus<CyclicEvent>({
+      deadLetterQueue: queue,
+      deadLetterPolicy: { maxRetries: 1, retryDelayMs: 0 },
+    });
+    Container.set(CyclicHandler, new CyclicHandler());
+    bus.subscribe({
+      eventName: CyclicEvent.eventName,
+      handlerClass: CyclicHandler,
+      handlerId: "cyclic-metadata.v1",
+    });
+    const event = new CyclicEvent();
+    event.metadata.self = event.metadata;
+    await expect(bus.publish(event)).rejects.toBeDefined();
+    expect(observed).toEqual(Array.from({ length: 2 }, () => [true, true, true]));
+    for (let replay = 0; replay < 2; replay++) {
+      const [item] = await queue.peek<CyclicEvent>();
+      assert.isDefined(item);
+      expect(item.event.metadata.self).toBe(item.event.metadata);
+      expect(item.event.payload).toBe(item.event.metadata);
+      expect(item.event.metadata.changed).toBeUndefined();
+      if (replay === 0) await bus.replayDeadLetters();
+    }
+    expect(observed).toEqual(Array.from({ length: 4 }, () => [true, true, true]));
+    expect(event.metadata.self).toBe(event.metadata);
+    expect(event.payload).toBe(event.metadata);
+    expect(event.metadata.changed).toBeUndefined();
+    expect(event.metadata.traceContext).toBeUndefined();
   });
 
   it("rejects custom payloads before DLQ delivery without changing legacy delivery", async () => {

@@ -786,10 +786,14 @@ export class InMemoryEventBus<
   private createEventWithTraceContext(event: TEvent, traceContext: TraceInfo): TEvent {
     const eventCopy = this.cloneEvent(event);
     const traceContextCopy = { ...traceContext };
-    eventCopy.metadata = {
-      ...eventCopy.metadata,
-      traceContext: traceContextCopy,
-    };
+    if (this.deadLetterQueue) {
+      eventCopy.metadata.traceContext = traceContextCopy;
+    } else {
+      eventCopy.metadata = {
+        ...eventCopy.metadata,
+        traceContext: traceContextCopy,
+      };
+    }
 
     return eventCopy;
   }
