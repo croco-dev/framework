@@ -104,12 +104,13 @@ export function getEventHandlerSubscriptions<TEvent extends DomainEvent>(
  */
 export function RegisterEventHandler<TEvent extends DomainEvent, TArgs extends unknown[]>(
   eventClass: DomainEventClass<TEvent, TArgs>,
-  options?: { eventName?: string },
+  options?: { eventName?: string; handlerId?: string },
 ) {
   return <T extends AnyEventHandlerClass>(f: CompatibleEventHandlerClass<T, TEvent>): void => {
     MetadataStorage.define(EVENT_HANDLER_SUBSCRIPTION_METADATA, f, {
       eventName: options?.eventName ?? eventClass.eventName ?? eventClass.name,
       handlerClass: f,
+      ...(options?.handlerId === undefined ? {} : { handlerId: options.handlerId }),
     });
   };
 }

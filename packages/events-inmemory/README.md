@@ -43,6 +43,11 @@ class UserCreatedHandler implements RetryableEventHandler {
 
 const deadLetterQueue = new InMemoryDeadLetterQueue();
 const eventBus = new InMemoryEventBus({ deadLetterQueue });
+eventBus.subscribe({
+  eventName: "user.created",
+  handlerClass: UserCreatedHandler,
+  handlerId: "users.created.v1",
+});
 
 // 운영자가 실패 원인을 해소한 뒤 호출합니다.
 const replay = await eventBus.replayDeadLetters(10);
@@ -53,14 +58,19 @@ DLQ 설정은 명시적으로 opt-in합니다. 설정하지 않으면 기존처�
 `EventPublishFailedError`로 반환합니다. 설정하면 기본 정책을 적용하며, `RetryableEventHandler`가 반환한 값이 버스
 정책보다 우선합니다. 소진된 항목은 원래 `eventId`와 실패한 핸들러 ID를 보존합니다. 재생은 그 핸들러만 다시 실행해
 이미 성공한 핸들러의 부작용을 반복하지 않습니다.
+핸들러를 DI에서 생성하지 못한 경우에는 `handler-resolution-failed` 원인과 재시도 횟수 0으로 항목을 저장합니다.
+이때 핸들러 정책은 호출하지 않으며, 버스의 보관 기간을 적용합니다. 의존성 등록 문제를 해결한 뒤 재생할 수 있습니다.
 
 `InMemoryDeadLetterQueue`는 프로세스 로컬 FIFO 구현입니다. 같은 이벤트·핸들러 항목을 중복 저장하지 않고,
 `dequeue`한 항목을 원자적으로 제거하며, 실패한 재생은 누적 재시도 횟수와 함께 다시 저장됩니다. 영속성이나 다중
 프로세스 조정이 필요하면 `DeadLetterQueue` 계약을 구현한 외부 저장소 어댑터를 주입해야 합니다.
 
-DLQ를 사용하는 버스는 비어 있지 않은 핸들러 클래스 이름을 고유 ID로 사용합니다. 같은 이름의 서로 다른 클래스는
-등록할 수 없으며, `unsubscribe`나 `clear` 후에도 기존 DLQ 항목의 식별을 위해 이 이름은 같은 클래스에 예약됩니다.
-같은 클래스의 재등록이나 여러 이벤트 패턴 구독은 가능합니다.
+DLQ를 사용하는 버스는 구독에 비어 있지 않은 `handlerId`를 명시해야 합니다. 클래스 이름은 ID로 사용하지 않으므로
+클래스 이름이 바뀌거나 코드가 minify되어도 같은 `handlerId`를 유지하면 저장된 항목을 재생할 수 있습니다.
+`RegisterEventHandler(EventClass, { handlerId: "users.created.v1" })`로 선언한 ID도 `EventBusConfig.start()`가 전달합니다.
+한 버스에서 같은 ID를 서로 다른 클래스에 부여하거나 한 클래스에 여러 ID를 부여할 수 없습니다. 이 연결은
+`unsubscribe`나 `clear` 후에도 유지됩니다. 같은 클래스·ID의 재등록과 여러 이벤트 패턴 구독은 가능합니다.
+기존 저장 항목이 남아 있는 동안에는 ID를 다른 처리 용도로 재사용하지 마세요.
 
 재생에도 `maxConcurrency`와 대기 timeout이 적용됩니다. `error`·`drop` 전략에서 슬롯이 없으면 항목을 실행하지 않고
 실패로 반환해 다시 저장합니다. 이미 꺼낸 배치의 한 항목이 실패해도 나머지 항목은 계속 처리합니다.
@@ -82,7 +92,7 @@ DLQ를 사용하는 버스는 비어 있지 않은 핸들러 클래스 이름을
 - `InvalidDeadLetterPolicyProblem`: 실행할 수 없는 재시도·보관 정책을 거부하는 Problem
 - `DeadLetterQueueNotConfiguredProblem`: DLQ 없이 정책 또는 재생을 요청하면 발생하는 Problem
 - `DeadLetterReplayHandlerUnavailableProblem`: 기록된 핸들러를 고유하게 찾을 수 없을 때 재생 항목을 보존하는 Problem
-- `InvalidDeadLetterHandlerIdentityProblem`: DLQ 핸들러 이름이 비어 있거나 다른 클래스가 이미 사용 중이면 등록을 거부
+- `InvalidDeadLetterHandlerIdentityProblem`: DLQ 핸들러 ID가 없거나 비어 있거나 클래스와 일관되게 연결되지 않으면 등록을 거부
 - `InvalidDeadLetterRetryCountProblem`: 누적 재시도 횟수와 재생 예산이 안전한 정수 범위를 벗어나면 실행을 거부
 
 ## 동작 특징

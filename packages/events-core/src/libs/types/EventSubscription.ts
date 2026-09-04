@@ -10,6 +10,8 @@ type EventHandlerClass<T extends DomainEvent = DomainEvent> = Constructor<EventH
 export interface EventSubscription<TEvent extends DomainEvent = DomainEvent> {
   eventName: EventNamePattern;
   handlerClass: EventHandlerClass<TEvent>;
+  /** Explicit identity that remains stable across builds. Required by DLQ-enabled buses. */
+  handlerId?: string;
   handler?: EventHandler<TEvent>;
 }
 

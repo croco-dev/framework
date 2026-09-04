@@ -60,6 +60,8 @@ const serializer = new DefaultEventSerializer(registry);
 `@croco/events-inmemory`의 `InMemoryDeadLetterQueue`이며, 단일 프로세스 실행과 테스트에서 사용할 수 있습니다.
 저장소 어댑터는 같은 `eventId`와 `handlerId` 조합을 중복 저장하지 않고, `dequeue`가 반환되기 전에 항목을
 원자적으로 제거해야 합니다. 별도 성공 확인이 필요한 lease/claim 방식은 이 계약에서 지원하지 않습니다.
+DLQ를 사용하는 구독은 `EventSubscription.handlerId` 또는 `RegisterEventHandler`의 `handlerId` 옵션에
+배포 후에도 유지할 ID를 명시해야 합니다. 런타임 클래스 이름은 저장된 항목의 식별자로 사용하지 않습니다.
 
 ### 기존 ordering/replay 타입에서 마이그레이션
 

@@ -99,16 +99,16 @@ export class DeadLetterReplayHandlerUnavailableProblem extends Problem {
   }
 }
 
-/** DLQ handler class names must be nonempty and unique for the lifetime of a bus. */
+/** DLQ subscriptions must bind an explicit, nonempty identity to one handler class per bus. */
 export class InvalidDeadLetterHandlerIdentityProblem extends Problem {
   readonly code = "events-inmemory/invalid-dead-letter-handler-identity";
   readonly category = ProblemCategory.InternalServerError;
 
-  constructor(readonly handlerId: string) {
+  constructor(readonly handlerId: string | undefined) {
     super(
       undefined,
       undefined,
-      `Dead-letter handler identity '${handlerId}' must be nonempty and unique`,
+      `Dead-letter handler identity '${handlerId}' must be explicit, nonempty, unique, and consistent for its class`,
     );
   }
 }

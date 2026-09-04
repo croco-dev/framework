@@ -186,6 +186,11 @@ class UserCreatedHandler implements EventHandler<UserCreatedEvent>, RetryableEve
 
 const deadLetterQueue = new InMemoryDeadLetterQueue();
 const eventBus = new InMemoryEventBus({ deadLetterQueue });
+eventBus.subscribe({
+  eventName: UserCreatedEvent.eventName,
+  handlerClass: UserCreatedHandler,
+  handlerId: "users.created.v1",
+});
 
 async function replayExhaustedHandlers(): Promise<void> {
   const result = await eventBus.replayDeadLetters(10);
@@ -197,8 +202,15 @@ void replayExhaustedHandlers();
 
 Replay preserves the original `eventId` and invokes only the handler recorded by the dead-letter entry. The
 in-memory queue atomically removes entries within one process and deduplicates active entries by event and handler
-identity. DLQ-enabled buses require nonempty, unique handler class names and reserve each name for that class for
-the lifetime of the bus, including after unsubscribe or clear. Registering the same class for multiple patterns is allowed.
+identity. DLQ-enabled buses require an explicit, nonempty `handlerId`; constructor names are display labels, not
+stored identities. Keep the same ID across class renames and minified builds. The `handlerId` option on
+`RegisterEventHandler` is also forwarded by `EventBusConfig.start()`. Within one bus, each ID belongs to one class
+and each class uses one ID, including after unsubscribe or clear. Registering the same class and ID for multiple
+patterns is allowed. Do not repurpose an ID while entries for its previous handler remain in storage.
+
+If DI cannot create a handler, the event is retained with reason `handler-resolution-failed`, retry count zero,
+and the bus retention policy. No handler policy is invoked before initialization succeeds; repair the provider
+registration and replay the retained item.
 
 Replay honors the bus concurrency limit and blocking timeout. With `error` or `drop`, unavailable capacity returns
 the item to the queue without executing it. Each unsuccessful result includes `item`, `error`, and `requeued`.

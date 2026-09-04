@@ -4,4 +4,4 @@
 "@croco/problems-core": patch
 ---
 
-Retry exhausted in-memory event handlers through an opt-in dead-letter queue and replay only the failed handler with the original event identity.
+Retain exhausted event handling and handler initialization failures in an opt-in dead-letter queue. Replay only the failed handler with the original event identity and an explicit handler ID that survives rebuilds.

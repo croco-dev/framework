@@ -162,7 +162,7 @@ export class InMemoryEventBus<
   private readonly backpressureTimeoutMs: number;
   private readonly deadLetterQueue?: DeadLetterQueue;
   private readonly deadLetterPolicy?: DeadLetterPolicy;
-  private readonly deadLetterHandlers = new Map<string, EventHandlerClass<TEvent>>();
+  private readonly deadLetterHandlerIds = new Map<EventHandlerClass<TEvent>, string>();
   private runningHandlers = new Map<string, RunningHandler>();
   private handlerCounter = 0;
   private readonly slotWaiters = new Set<() => void>();
@@ -550,7 +550,7 @@ export class InMemoryEventBus<
     }
 
     const matchingHandlers = this.resolveSubscribers(item.event.eventName).filter(
-      (handlerClass) => handlerClass.name === item.handlerId,
+      (handlerClass) => this.deadLetterHandlerIds.get(handlerClass) === item.handlerId,
     );
     return matchingHandlers.length === 1 ? matchingHandlers[0] : undefined;
   }
@@ -568,13 +568,35 @@ export class InMemoryEventBus<
       };
     }
 
+    const deadLetterHandlerId = this.deadLetterHandlerIds.get(handlerClass);
+    if (deadLetterHandlerId === undefined) {
+      throw new InvalidDeadLetterHandlerIdentityProblem(deadLetterHandlerId);
+    }
+
     let handlerInstance: DeadLetterCapableHandler<TEvent>;
     try {
       handlerInstance = Container.get(handlerClass) as DeadLetterCapableHandler<TEvent>;
     } catch (error) {
-      return {
-        failure: { handlerName, error: this.normalizeError(error) },
-      };
+      const failure = { handlerName, error: this.normalizeError(error) };
+      if (execution.source === "replay") {
+        return { failure };
+      }
+      return this.enqueueDeadLetter(
+        this.deadLetterQueue,
+        {
+          event: this.cloneEvent(baseEvent),
+          reason: "handler-resolution-failed",
+          failedAt: new Date(),
+          retryCount: 0,
+          lastError: failure.error.name,
+          handlerId: deadLetterHandlerId,
+          metadata: {
+            errorName: failure.error.name,
+            retentionDays: this.deadLetterPolicy.retentionDays,
+          },
+        },
+        failure,
+      );
     }
 
     let retryPolicy: DeadLetterPolicy;
@@ -607,7 +629,7 @@ export class InMemoryEventBus<
       );
       if (!failure) {
         if (attempt > 0 || execution.source === "replay") {
-          this.recordRetryInspection("retry.success", "succeeded", baseEvent, handlerName, {
+          this.recordRetryInspection("retry.success", "succeeded", baseEvent, deadLetterHandlerId, {
             retryCount: this.calculateRetryCount(execution, attempt),
           });
         }
@@ -616,14 +638,14 @@ export class InMemoryEventBus<
 
       lastFailure = failure;
       const retryCount = this.calculateRetryCount(execution, attempt);
-      this.recordRetryInspection("retry.error", "failed", baseEvent, handlerName, {
+      this.recordRetryInspection("retry.error", "failed", baseEvent, deadLetterHandlerId, {
         retryCount,
         errorName: failure.error.name,
       });
 
       if (attempt < retryPolicy.maxRetries) {
         const delayMs = this.calculateRetryDelayMs(attempt + 1, retryPolicy);
-        this.recordRetryInspection("retry.wait", "started", baseEvent, handlerName, {
+        this.recordRetryInspection("retry.wait", "started", baseEvent, deadLetterHandlerId, {
           retryCount: retryCount + 1,
           delayMs,
         });
@@ -641,7 +663,7 @@ export class InMemoryEventBus<
       execution.source === "replay"
         ? execution.priorRetryCount + retryPolicy.maxRetries + 1
         : retryPolicy.maxRetries;
-    this.recordRetryInspection("retry.exhausted", "failed", baseEvent, handlerName, {
+    this.recordRetryInspection("retry.exhausted", "failed", baseEvent, deadLetterHandlerId, {
       retryCount,
       errorName: lastFailure.error.name,
     });
@@ -661,22 +683,30 @@ export class InMemoryEventBus<
       failedAt: new Date(),
       retryCount,
       lastError: lastFailure.error.name,
-      handlerId: handlerName,
+      handlerId: deadLetterHandlerId,
       metadata: {
         errorName: lastFailure.error.name,
         retentionDays: retryPolicy.retentionDays,
       },
     };
 
+    return this.enqueueDeadLetter(this.deadLetterQueue, deadLetterItem, surfacedFailure);
+  }
+
+  private async enqueueDeadLetter(
+    queue: DeadLetterQueue,
+    deadLetterItem: DeadLetterItem<TEvent>,
+    failure: EventPublishFailure,
+  ): Promise<SubscriberExecutionResult<TEvent>> {
     try {
-      await this.deadLetterQueue.enqueue(deadLetterItem);
+      await queue.enqueue(deadLetterItem);
       this.recordDeadLetterInspection("succeeded", deadLetterItem);
-      return { failure: surfacedFailure, deadLetterItem };
+      return { failure, deadLetterItem };
     } catch (error) {
       const enqueueError = this.normalizeError(error);
       this.recordDeadLetterInspection("failed", deadLetterItem, enqueueError);
       return {
-        failure: surfacedFailure,
+        failure,
         deadLetterItem,
         storageError: enqueueError,
       };
@@ -947,12 +977,21 @@ export class InMemoryEventBus<
 
   subscribe(subscription: EventSubscription<TEvent>): void {
     if (this.deadLetterQueue) {
-      const { handlerClass } = subscription;
-      const existing = this.deadLetterHandlers.get(handlerClass.name);
-      if (!handlerClass.name || (existing && existing !== handlerClass)) {
-        throw new InvalidDeadLetterHandlerIdentityProblem(handlerClass.name);
+      const { handlerClass, handlerId } = subscription;
+      const existingId = this.deadLetterHandlerIds.get(handlerClass);
+      if (
+        typeof handlerId !== "string" ||
+        handlerId.trim().length === 0 ||
+        (existingId !== undefined && existingId !== handlerId)
+      ) {
+        throw new InvalidDeadLetterHandlerIdentityProblem(handlerId);
       }
-      this.deadLetterHandlers.set(handlerClass.name, handlerClass);
+      for (const [existingClass, registeredId] of this.deadLetterHandlerIds) {
+        if (registeredId === handlerId && existingClass !== handlerClass) {
+          throw new InvalidDeadLetterHandlerIdentityProblem(handlerId);
+        }
+      }
+      this.deadLetterHandlerIds.set(handlerClass, handlerId);
     }
     this.index.add(subscription.eventName, subscription.handlerClass);
   }
