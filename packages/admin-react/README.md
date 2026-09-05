@@ -207,6 +207,34 @@ export function WebhookOperations() {
 }
 ```
 
+## Customer 360 and engagement operations
+
+`EngagementOperationsConsole` renders `EngagementOperationsState` from `@croco/admin-core`. It provides
+an operational console for Customer 360, message previews, audiences and campaigns, and delivery dispatches:
+
+- **Customer 360 (`Customer360CommunicationPanel`)**: renders recipient endpoints, topic preferences, active suppressions, recent dispatches, delivery events, and audience memberships. Email addresses are masked unless `engagement:pii:read` is granted; push notification tokens are strictly masked via `maskPushToken` and never displayed in full under any permission.
+- **Message operations (`MessageOperationsPanel`)**: lists registered message descriptors, renders email previews in an isolated sandboxed preview container and push previews in a device-neutral container, and supports audited test sends.
+- **Audiences and campaigns (`AudienceCampaignOperationsPanel`)**: requests bounded audience estimates and samples (preventing accidental materialization of the entire audience in the browser). A campaign cannot start before a complete immutable snapshot exists. Campaign progress reports queued, suppressed, failed, skipped, and completed counts; cancellation clearly explains that accepted notifications with downstream providers are not recalled.
+- **Delivery operations (`DeliveryOperationsPanel`)**: filters dispatches by tenant, recipient, message, campaign, channel, and status. Provider acceptance is distinguished from downstream delivery event outcomes, and retry controls appear only for explicitly safe outcomes (`status === 'failed' && retryable === true`).
+
+```tsx
+import { EngagementOperationsConsole } from "@croco/admin-react";
+
+export function EngagementOperations() {
+  return (
+    <EngagementOperationsConsole
+      state={state}
+      onSelectRecipient={(recipientId) => loadRecipient360(recipientId)}
+      onPreviewMessage={(req) => generatePreview(req)}
+      onTestSend={(req) => sendTestMessage(req)}
+      onRunCampaign={(req) => startBroadcast(req)}
+      onCancelCampaign={(req) => cancelCampaign(req)}
+      onRetryDispatch={(req) => retryFailedDispatch(req)}
+    />
+  );
+}
+```
+
 ## Install
 
 ```bash

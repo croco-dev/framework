@@ -74,6 +74,12 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/EngagementOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/TenantWorkspace.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -90,6 +96,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-generated"
+    },
+    {
+      "path": "packages/admin-ops/src/tests/EngagementAdapters.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-ops"
     },
     {
       "path": "packages/admin-ops/src/tests/OperationsTimeline.spec.ts",
@@ -141,6 +153,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/DataTable.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/EngagementOperationsConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"

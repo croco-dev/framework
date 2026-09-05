@@ -87,6 +87,19 @@ if (replay.allowed) {
 the idempotency claim, mutation, and audit append atomically after the helper has bound tenant,
 target, action eligibility, and permission evidence.
 
+## Engagement operations
+
+Engagement operations contracts provide Customer 360 communication state, message descriptors and previews,
+audience estimates, campaign lifecycle controls, delivery logs, suppressions, and endpoint reactivation.
+All operations contracts remain React-independent and enforce permission and audit evidence:
+
+- `Customer360CommunicationState`: tenant-scoped recipient communication state including masked email addresses (unmasked only with `engagement:pii:read`), push tokens (strictly masked via `maskPushToken` and never displayed in full under any permission), active/invalidated endpoints, preferences, suppressions, recent dispatches, delivery events, and audience memberships.
+- `assertCampaignRunValid`: enforces that a campaign cannot start before a complete immutable snapshot exists with positive member count, plus actor, reason, and idempotency key.
+- `assertRetryDispatchValid`: enforces that retry/replay controls appear only for explicitly safe, retryable outcomes (`status === 'failed' && retryable === true`).
+- `assertCreateSuppressionValid`, `assertRemoveSuppressionValid`, `assertEndpointReactivateValid`: enforce required actor, reason, and idempotency audit evidence.
+- `assertTestSendValid`: enforces audit evidence and destination validation for test sends.
+- `createEngagementTenantExtension`: generates a `TenantWorkspaceExtension` mounting Customer 360 into `TenantBusinessWorkspace`.
+
 ## Resource contracts
 
 ```ts

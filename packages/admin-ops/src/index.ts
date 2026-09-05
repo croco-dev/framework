@@ -27,6 +27,10 @@ export {
   retryConsoleItemFromWebhookDelivery,
 } from "./libs/webhookAdapters";
 export {
+  operationsTimelineEventFromEngagementDispatch,
+  retryConsoleItemFromEngagementDispatch,
+} from "./libs/engagementAdapters";
+export {
   RetryConsoleAuditConfirmation,
   RetryConsoleDetailPanel,
   RetryConsoleFailedWorkList,
@@ -77,3 +81,4 @@ export type {
   RetryConsoleTimestamps,
 } from "./libs/types";
 export type { WebhookOperationsFailureEvidence } from "./libs/webhookAdapters";
+export type { EngagementOperationsFailureEvidence } from "./libs/engagementAdapters";
