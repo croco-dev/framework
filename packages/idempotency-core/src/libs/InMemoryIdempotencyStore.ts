@@ -23,6 +23,7 @@ import type {
 
 type Clock = () => Date;
 
+const DEFAULT_IN_FLIGHT_LEASE_MS = 30_000;
 const FLOAT16_ARRAY_PROTOTYPE = getFloat16ArrayPrototype();
 
 export type InMemoryIdempotencyStoreOptions = {
@@ -43,7 +44,7 @@ export class InMemoryIdempotencyStore<TResult = unknown> implements IdempotencyS
     options: IdempotencyReserveOptions = {},
   ): Promise<IdempotencyReserveResult<TResult>> {
     const reservedAt = this.now();
-    const recordExpiresAt = expiresAt(reservedAt, options.ttlMs);
+    const recordExpiresAt = expiresAt(reservedAt, options.ttlMs ?? DEFAULT_IN_FLIGHT_LEASE_MS);
     const existing = this.records.get(key.storageKey);
     if (existing !== undefined && !isExpired(existing, reservedAt)) {
       this.assertSameFingerprint(existing, key);
