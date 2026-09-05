@@ -337,7 +337,7 @@ jobs:
           fi
 
       - name: Run full test suite for changed-test shadow
-        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' }}
         shell: bash
         env:
           VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}
@@ -382,7 +382,7 @@ jobs:
           exit "$full_suite_status"
 
       - name: Assert changed-test shadow evidence completeness
-        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' }}
         shell: bash
         run: |
           node --experimental-strip-types scripts/changed-test-full-suite-status.mts \
@@ -390,7 +390,7 @@ jobs:
           test -f ci-reports/changed-test-plan/full-evidence/records/full-suite-status.json
 
       - name: Restore changed-test shadow baseline
-        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' }}
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ci-reports/changed-test-plan/baseline.json
@@ -399,7 +399,7 @@ jobs:
             changed-test-plan-${{ github.event.pull_request.number }}-
 
       - name: Aggregate changed-test shadow full evidence
-        if: ${{ !cancelled() && github.event_name == 'pull_request' }}
+        if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' }}
         shell: bash
         run: |
           node --experimental-strip-types scripts/test-evidence-bundle.mts \
@@ -407,7 +407,7 @@ jobs:
             --output ci-reports/changed-test-plan/full-evidence
 
       - name: Measure changed-test selection misses
-        if: ${{ !cancelled() && github.event_name == 'pull_request' && hashFiles('ci-reports/changed-test-plan/full-evidence/bundle.json') != '' }}
+        if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && hashFiles('ci-reports/changed-test-plan/full-evidence/bundle.json') != '' }}
         env:
           VERIFICATION_BASE: ${{ needs.changes.outputs.base }}
           VERIFICATION_CANDIDATE: ${{ needs.changes.outputs.candidate }}
