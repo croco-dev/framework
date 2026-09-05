@@ -170,7 +170,10 @@ await runtime.publish({
 ```
 
 `commitEvent()` is the transaction boundary: the immutable event, endpoint deliveries, and dispatch
-intents are stored together before a task is published. If publication fails after commit,
+intents are stored together before a task is published. `publish()` publishes only the unpublished
+intents returned for that event, so older failed intents cannot block a new event. Publishing the same
+event again retries its unpublished intents and skips those already acknowledged.
+If publication fails after commit,
 `publishUnpublishedIntents()` continues with independent intents and returns published intent IDs
 plus retryable or terminal failures without payload data. Retryable intents remain unpublished so a
 later invocation can resume them without creating another logical event. Shared configuration
