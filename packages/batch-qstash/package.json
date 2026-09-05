@@ -1,6 +1,7 @@
 {
   "name": "@croco/batch-qstash",
   "version": "0.0.4",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/croco-dev/framework.git",

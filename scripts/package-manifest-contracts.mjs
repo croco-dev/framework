@@ -7,6 +7,8 @@ export const FILES_EXEMPTIONS = new Map();
 
 export const EXPORT_CONDITION_ORDER = ["types", "import", "require"];
 
+export const EXPECTED_PACKAGE_LICENSE = "Apache-2.0";
+
 const DOCS_API_MODEL_SCRIPT_NAME = "docs:api:model";
 const DOCS_API_MODEL_SCRIPT_COMMAND =
   "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts";
@@ -183,6 +185,18 @@ export function exportConditionSequenceParityDiagnostics(
   }
 
   return diagnostics;
+}
+
+export function packageLicenseDiagnostics(pkg) {
+  if (pkg.private === true) {
+    return [];
+  }
+
+  if (pkg.license !== EXPECTED_PACKAGE_LICENSE) {
+    return [`license must be ${JSON.stringify(EXPECTED_PACKAGE_LICENSE)}`];
+  }
+
+  return [];
 }
 
 export function effectivePublishManifest(sourceManifest) {

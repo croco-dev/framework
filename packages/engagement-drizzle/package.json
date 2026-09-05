@@ -1,6 +1,7 @@
 {
   "name": "@croco/engagement-drizzle",
   "version": "0.0.1",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/croco-dev/framework.git",

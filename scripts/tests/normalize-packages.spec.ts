@@ -89,6 +89,7 @@ describe("normalize-packages.mjs", () => {
 
     expect(result.status).toBe(0);
     expect(pkg.version).toBe("0.0.3");
+    expect(pkg.license).toBe("Apache-2.0");
     expect(pkg.repository).toEqual(repositoryFor("example"));
     expect(pkg.files).toEqual(["dist"]);
     expect(pkg.types).toBe("./dist/index.d.ts");
@@ -1822,6 +1823,119 @@ describe("normalize-packages.mjs", () => {
 
     expect(result.status).toBe(0);
   });
+
+  it("requires a repository root LICENSE file", () => {
+    const root = createTempRoot();
+    rmSync(join(root, "LICENSE"));
+    writePackage(root, "valid", publishablePackage("@croco/valid"));
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("LICENSE: repository root LICENSE file is required");
+  });
+
+  it("requires publishable packages to declare Apache-2.0 license", () => {
+    const root = createTempRoot();
+    writePackage(root, "invalid-license", {
+      ...publishablePackage("@croco/invalid-license"),
+      license: "MIT",
+    });
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain('license must be "Apache-2.0"');
+  });
+
+  it("requires publishable packages to have a matching LICENSE file", () => {
+    const root = createTempRoot();
+    writePackage(root, "missing-license-file", publishablePackage("@croco/missing-license-file"), {
+      licenseFile: false,
+    });
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "missing package LICENSE file; run pnpm package-manifests:write",
+    );
+  });
+
+  it("detects divergent package LICENSE file content", () => {
+    const root = createTempRoot();
+    const packagePath = writePackage(
+      root,
+      "divergent-license",
+      publishablePackage("@croco/divergent-license"),
+    );
+    writeFileSync(join(dirname(packagePath), "LICENSE"), "Different License Content\n");
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      "package LICENSE file does not match root LICENSE; run pnpm package-manifests:write",
+    );
+  });
+
+  it("synchronizes package LICENSE and normalizes license in write mode", () => {
+    const root = createTempRoot();
+    const packagePath = writePackage(
+      root,
+      "sync-target",
+      {
+        ...publishablePackage("@croco/sync-target"),
+        license: undefined,
+      },
+      { license: false, licenseFile: false },
+    );
+
+    const result = runScript(root, "--write");
+    const pkg = JSON.parse(readFileSync(packagePath, "utf-8"));
+    const packageLicenseContent = readFileSync(join(dirname(packagePath), "LICENSE"), "utf-8");
+    const rootLicenseContent = readFileSync(join(root, "LICENSE"), "utf-8");
+
+    expect(result.status).toBe(0);
+    expect(pkg.license).toBe("Apache-2.0");
+    expect(packageLicenseContent).toBe(rootLicenseContent);
+  });
+
+  it("detects divergent license in package README in check mode", () => {
+    const root = createTempRoot();
+    const packagePath = writePackage(
+      root,
+      "divergent-readme",
+      publishablePackage("@croco/divergent-readme"),
+    );
+    writeFileSync(
+      join(dirname(packagePath), "README.md"),
+      "# Divergent Package\n\n## 라이선스\n\nMIT\n",
+    );
+
+    const result = runScript(root, "--check");
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain(
+      'README.md license section declares "MIT", expected "Apache-2.0"; run pnpm package-manifests:write',
+    );
+  });
+
+  it("synchronizes package README license in write mode", () => {
+    const root = createTempRoot();
+    const packagePath = writePackage(root, "sync-readme", publishablePackage("@croco/sync-readme"));
+    const readmePath = join(dirname(packagePath), "README.md");
+    writeFileSync(
+      readmePath,
+      "# Sync Package\n\n## License\n\nMIT\n\n---\n\n## More Info\n\nSome details\n",
+    );
+
+    const result = runScript(root, "--write");
+    const updatedReadme = readFileSync(readmePath, "utf-8");
+
+    expect(result.status).toBe(0);
+    expect(updatedReadme).toContain("## License\n\nApache-2.0\n\n---\n\n## More Info");
+  });
 });
 
 function createTempRoot(): string {
@@ -1829,6 +1943,7 @@ function createTempRoot(): string {
   tempRoots.push(root);
   mkdirSync(join(root, "packages"));
   writePackageCatalog(root, []);
+  writeFileSync(join(root, "LICENSE"), "Apache License 2.0\n");
 
   return root;
 }
@@ -1838,6 +1953,8 @@ function writePackage(
   packageDirName: string,
   pkg: Record<string, unknown>,
   options: {
+    readonly license?: boolean;
+    readonly licenseFile?: boolean;
     readonly repository?: boolean;
     readonly sideEffects?: boolean;
     readonly sourceContent?: string;
@@ -1855,15 +1972,25 @@ function writePackage(
     writeFileSync(sourcePath, sourceContent);
   }
 
+  if (options.licenseFile !== false && pkg.private !== true) {
+    writeFileSync(join(packageDir, "LICENSE"), "Apache License 2.0\n");
+  }
+
   const packagePath = join(packageDir, "package.json");
   const packageWithSideEffects =
     pkg.private !== true && options.sideEffects !== false && !Object.hasOwn(pkg, "sideEffects")
       ? withSideEffectsMetadata(pkg, expectedFixtureSideEffects(pkg, sourceContent))
       : pkg;
-  const manifest =
+  const packageWithRepository =
     options.repository !== false && pkg.private !== true
       ? withRepositoryMetadata(packageWithSideEffects, repositoryFor(packageDirName))
       : packageWithSideEffects;
+  const manifest =
+    options.license !== false &&
+    pkg.private !== true &&
+    !Object.hasOwn(packageWithRepository, "license")
+      ? withLicenseMetadata(packageWithRepository, "Apache-2.0")
+      : packageWithRepository;
 
   writeFileSync(packagePath, `${JSON.stringify(manifest, null, 2)}\n`);
 
@@ -2012,6 +2139,38 @@ function withRepositoryMetadata(
 
   if (!inserted) {
     manifest.repository = repository;
+  }
+
+  return manifest;
+}
+
+function withLicenseMetadata(
+  pkg: Record<string, unknown>,
+  license: string,
+): Record<string, unknown> {
+  const withoutLicense = { ...pkg };
+  delete withoutLicense.license;
+  const manifest: Record<string, unknown> = {};
+  const insertAfterKey = Object.hasOwn(withoutLicense, "description")
+    ? "description"
+    : Object.hasOwn(withoutLicense, "version")
+      ? "version"
+      : Object.hasOwn(withoutLicense, "private")
+        ? "private"
+        : "name";
+  let inserted = false;
+
+  for (const [key, value] of Object.entries(withoutLicense)) {
+    manifest[key] = value;
+
+    if (key === insertAfterKey) {
+      manifest.license = license;
+      inserted = true;
+    }
+  }
+
+  if (!inserted) {
+    manifest.license = license;
   }
 
   return manifest;

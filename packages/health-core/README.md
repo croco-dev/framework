@@ -288,4 +288,4 @@ app.get("/ready", async (c) => {
 
 ## License
 
-MIT
+Apache-2.0
