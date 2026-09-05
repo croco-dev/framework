@@ -240,6 +240,199 @@ describe("BatchLoader", () => {
     });
   });
 
+  it("should deduplicate duplicate keys in the same batch when cache is disabled", async () => {
+    await Context.run({ requestId: "test-dedup" }, async () => {
+      const fn = vi.fn(
+        async (keys: ReadonlyArray<number>): Promise<ReadonlyArray<string | Error | null>> =>
+          keys.map((k) => `Value: ${k}`),
+      );
+      const loader = createBatchLoader<number, string>({
+        name: "dedup-test-loader",
+        batchFn: fn,
+        cache: false,
+      });
+
+      const [r1, r2] = await Promise.all([loader.load(1), loader.load(1)]);
+
+      expect(r1).toBe("Value: 1");
+      expect(r2).toBe("Value: 1");
+      expect(fn).toHaveBeenCalledTimes(1);
+      expect(fn).toHaveBeenCalledWith([1]);
+    });
+  });
+
+  it("should not crash with BatchResultLengthMismatchProblem when DB returns unique results for duplicate keys with cache:false", async () => {
+    await Context.run({ requestId: "test-db-dedup" }, async () => {
+      const dbBatchFn = vi.fn(
+        async (keys: ReadonlyArray<number>): Promise<ReadonlyArray<string | Error | null>> => {
+          const uniqueSet = new Set(keys);
+          return Array.from(uniqueSet).map((k) => `Value: ${k}`);
+        },
+      );
+
+      const loader = createBatchLoader<number, string>({
+        name: "db-dedup-loader",
+        batchFn: dbBatchFn,
+        cache: false,
+      });
+
+      const [r1, r2] = await Promise.all([loader.load(1), loader.load(1)]);
+
+      expect(r1).toBe("Value: 1");
+      expect(r2).toBe("Value: 1");
+      expect(dbBatchFn).toHaveBeenCalledTimes(1);
+      expect(dbBatchFn).toHaveBeenCalledWith([1]);
+    });
+  });
+
+  it("should deduplicate duplicate keys in loadMany when cache is disabled", async () => {
+    await Context.run({ requestId: "test-loadmany-dedup" }, async () => {
+      const fn = vi.fn(
+        async (keys: ReadonlyArray<number>): Promise<ReadonlyArray<string | Error | null>> =>
+          keys.map((k) => `Value: ${k}`),
+      );
+      const loader = createBatchLoader<number, string>({
+        name: "dedup-loadmany-loader",
+        batchFn: fn,
+        cache: false,
+      });
+
+      const results = await loader.loadMany([1, 2, 1]);
+
+      expect(results).toEqual(["Value: 1", "Value: 2", "Value: 1"]);
+      expect(fn).toHaveBeenCalledTimes(1);
+      expect(fn).toHaveBeenCalledWith([1, 2]);
+    });
+  });
+
+  it("should reject all duplicate promises when a deduplicated key fails in batchFn with cache:false", async () => {
+    await Context.run({ requestId: "test-dedup-error" }, async () => {
+      const fn = vi.fn(
+        async (keys: ReadonlyArray<number>): Promise<ReadonlyArray<string | Error | null>> =>
+          keys.map((k) => (k === -1 ? new Error("fail -1") : `Value: ${k}`)),
+      );
+      const loader = createBatchLoader<number, string>({
+        name: "dedup-error-loader",
+        batchFn: fn,
+        cache: false,
+      });
+
+      const p1 = loader.load(-1);
+      const p2 = loader.load(-1);
+      const p3 = loader.load(2);
+
+      const [r1, r2, r3] = await Promise.allSettled([p1, p2, p3]);
+
+      expect(r1.status).toBe("rejected");
+      expect((r1 as PromiseRejectedResult).reason).toEqual(new Error("fail -1"));
+      expect(r2.status).toBe("rejected");
+      expect((r2 as PromiseRejectedResult).reason).toEqual(new Error("fail -1"));
+      expect(r3.status).toBe("fulfilled");
+      expect((r3 as PromiseFulfilledResult<string>).value).toBe("Value: 2");
+
+      expect(fn).toHaveBeenCalledTimes(1);
+      expect(fn).toHaveBeenCalledWith([-1, 2]);
+    });
+  });
+
+  it("should respect maxBatchSize with deduplicated keys when cache is disabled", async () => {
+    await Context.run({ requestId: "test-dedup-max-batch-size" }, async () => {
+      const fn = vi.fn(
+        async (keys: ReadonlyArray<number>): Promise<ReadonlyArray<string | Error | null>> =>
+          keys.map((k) => `Value: ${k}`),
+      );
+      const loader = createBatchLoader<number, string>({
+        name: "dedup-max-batch-loader",
+        batchFn: fn,
+        cache: false,
+        maxBatchSize: 2,
+      });
+
+      // 1, 1 (deduped to 1) and 2 fit in first batch of size 2. 3 goes to second batch.
+      const [r1, r2, r3, r4] = await Promise.all([
+        loader.load(1),
+        loader.load(1),
+        loader.load(2),
+        loader.load(3),
+      ]);
+
+      expect(r1).toBe("Value: 1");
+      expect(r2).toBe("Value: 1");
+      expect(r3).toBe("Value: 2");
+      expect(r4).toBe("Value: 3");
+
+      expect(fn).toHaveBeenCalledTimes(2);
+      expect(fn).toHaveBeenNthCalledWith(1, [1, 2]);
+      expect(fn).toHaveBeenNthCalledWith(2, [3]);
+    });
+  });
+
+  it("should execute separate batches for duplicate keys across consecutive ticks with cache:false", async () => {
+    await Context.run({ requestId: "test-dedup-consecutive-ticks" }, async () => {
+      const fn = vi.fn(
+        async (keys: ReadonlyArray<number>): Promise<ReadonlyArray<string | Error | null>> =>
+          keys.map((k) => `Value: ${k}`),
+      );
+      const loader = createBatchLoader<number, string>({
+        name: "dedup-ticks-loader",
+        batchFn: fn,
+        cache: false,
+      });
+
+      const batch1 = await Promise.all([loader.load(1), loader.load(1)]);
+      expect(batch1).toEqual(["Value: 1", "Value: 1"]);
+      expect(fn).toHaveBeenCalledTimes(1);
+      expect(fn).toHaveBeenNthCalledWith(1, [1]);
+
+      const batch2 = await Promise.all([loader.load(1), loader.load(1)]);
+      expect(batch2).toEqual(["Value: 1", "Value: 1"]);
+      expect(fn).toHaveBeenCalledTimes(2);
+      expect(fn).toHaveBeenNthCalledWith(2, [1]);
+    });
+  });
+
+  it("should deduplicate in batch even if clear() is called in the same tick with cache:true", async () => {
+    await Context.run({ requestId: "test-clear-in-flight" }, async () => {
+      const fn = vi.fn(
+        async (keys: ReadonlyArray<number>): Promise<ReadonlyArray<string | Error | null>> =>
+          keys.map((k) => `Value: ${k}`),
+      );
+      const loader = createBatchLoader<number, string>({
+        name: "clear-in-flight-loader",
+        batchFn: fn,
+        cache: true,
+      });
+
+      const p1 = loader.load(1);
+      loader.clear(1);
+      const p2 = loader.load(1);
+
+      const [r1, r2] = await Promise.all([p1, p2]);
+      expect(r1).toBe("Value: 1");
+      expect(r2).toBe("Value: 1");
+      expect(fn).toHaveBeenCalledTimes(1);
+      expect(fn).toHaveBeenCalledWith([1]);
+    });
+  });
+
+  it("should deduplicate duplicate keys with direct BatchLoaderImpl instance when cache:false", async () => {
+    const fn = vi.fn(
+      async (keys: ReadonlyArray<number>): Promise<ReadonlyArray<string | Error | null>> =>
+        keys.map((k) => `Value: ${k}`),
+    );
+    const loader = new BatchLoaderImpl<number, string>({
+      name: "direct-impl-loader",
+      batchFn: fn,
+      cache: false,
+    });
+
+    const [r1, r2] = await Promise.all([loader.load(1), loader.load(1)]);
+    expect(r1).toBe("Value: 1");
+    expect(r2).toBe("Value: 1");
+    expect(fn).toHaveBeenCalledTimes(1);
+    expect(fn).toHaveBeenCalledWith([1]);
+  });
+
   it("should not cache errors", async () => {
     await Context.run({ requestId: "test-error-cache" }, async () => {
       const fn = vi.fn(

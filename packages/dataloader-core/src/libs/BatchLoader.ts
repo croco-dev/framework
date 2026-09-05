@@ -7,6 +7,16 @@ import {
 } from "./problems/BatchLoaderProblems";
 import type { BatchLoader, BatchLoaderOptions } from "./types";
 
+type BatchCallback<V> = {
+  resolve: (value: V | null) => void;
+  reject: (error: Error) => void;
+};
+
+type BatchItem<K, V> = {
+  key: K;
+  callbacks: Array<BatchCallback<V>>;
+};
+
 const noopLogger: ILogger = {
   debug: () => {},
   info: () => {},
@@ -17,11 +27,8 @@ const noopLogger: ILogger = {
 };
 
 export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
-  private queue: K[] = [];
-  private callbacks: Array<{
-    resolve: (value: V | null) => void;
-    reject: (error: Error) => void;
-  }> = [];
+  private queue: Array<BatchItem<K, V>> = [];
+  private queuedKeyMap = new Map<K, BatchItem<K, V>>();
   private cache = new Map<K, Promise<V | null>>();
   private readonly options: BatchLoaderOptions<K, V>;
   private readonly logger: ILogger;
@@ -51,11 +58,20 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
     }
 
     const promise = new Promise<V | null>((resolve, reject) => {
-      this.queue.push(key);
-      this.callbacks.push({ resolve, reject });
+      const existingBatchItem = this.queuedKeyMap.get(key);
+      if (existingBatchItem) {
+        existingBatchItem.callbacks.push({ resolve, reject });
+      } else {
+        const item: BatchItem<K, V> = {
+          key,
+          callbacks: [{ resolve, reject }],
+        };
+        this.queuedKeyMap.set(key, item);
+        this.queue.push(item);
 
-      if (this.queue.length === 1) {
-        this.scheduleDispatch();
+        if (this.queue.length === 1) {
+          this.scheduleDispatch();
+        }
       }
     });
 
@@ -111,17 +127,17 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
 
     // Process queue in chunks if maxBatchSize is set
     while (this.queue.length > 0) {
-      const keys = this.queue.splice(0, batchSize);
-      const callbacks = this.callbacks.splice(0, batchSize);
+      const batchItems = this.queue.splice(0, batchSize);
+      for (const item of batchItems) {
+        this.queuedKeyMap.delete(item.key);
+      }
 
-      await this.executeBatch(keys, callbacks);
+      await this.executeBatch(batchItems);
     }
   }
 
-  private async executeBatch(
-    keys: K[],
-    callbacks: Array<{ resolve: (value: V | null) => void; reject: (error: Error) => void }>,
-  ): Promise<void> {
+  private async executeBatch(batchItems: Array<BatchItem<K, V>>): Promise<void> {
+    const keys = batchItems.map((item) => item.key);
     const tracer = trace.getTracer("dataloader-core");
 
     // Create a span for the batch execution
@@ -148,17 +164,21 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
 
         for (let index = 0; index < results.length; index += 1) {
           const result = results[index];
-          const callback = callbacks[index];
+          const item = batchItems[index];
           if (result instanceof Error) {
             span.recordException(result);
             span.setStatus({
               code: SpanStatusCode.ERROR,
               message: result.message,
             });
-            this.clear(keys[index]);
-            callback.reject(result);
+            this.clear(item.key);
+            for (const callback of item.callbacks) {
+              callback.reject(result);
+            }
           } else {
-            callback.resolve(result);
+            for (const callback of item.callbacks) {
+              callback.resolve(result);
+            }
           }
         }
       } catch (error) {
@@ -169,12 +189,11 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
           message: err.message,
         });
 
-        keys.forEach((key) => {
-          this.clear(key);
-        });
-
-        callbacks.forEach((callback) => {
-          callback.reject(err);
+        batchItems.forEach((item) => {
+          this.clear(item.key);
+          item.callbacks.forEach((callback) => {
+            callback.reject(err);
+          });
         });
       } finally {
         span.end();
