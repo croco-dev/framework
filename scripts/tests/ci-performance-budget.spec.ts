@@ -108,27 +108,27 @@ describe("pull-request CI performance budget", () => {
   it.each([
     [
       "core-verification",
-      "  core-verification:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch'",
+      "  core-verification:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
       "  core-verification:\n    needs: changes",
     ],
     [
       "generated-apps",
-      "  generated-apps:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch'",
+      "  generated-apps:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
       "  generated-apps:\n    needs: changes",
     ],
     [
       "package-artifacts",
-      "  package-artifacts:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch'",
+      "  package-artifacts:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
       "  package-artifacts:\n    needs: changes",
     ],
     [
       "coverage-security",
-      "  coverage-security:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch'",
+      "  coverage-security:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
       "  coverage-security:\n    needs: changes",
     ],
     [
       "split-validation-shadow",
-      "if: always() && github.event_name == 'workflow_dispatch' && needs.changes.result == 'success'",
+      "if: always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') && needs.changes.result == 'success'",
       "if: always() && needs.changes.result == 'success'",
     ],
   ] as const)("rejects automatic %s cacheable experiments", (job, marker, replacement) => {
@@ -145,12 +145,12 @@ describe("pull-request CI performance budget", () => {
   });
 
   it.each([
-    "github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
+    "github.event_name == 'workflow_dispatch'",
     "github.event_name == 'workflow_dispatch' || github.event_name == 'push'",
     "github.event_name == 'workflow_dispatch' || true",
   ])("rejects an expanded cacheable experiment condition: %s", (condition) => {
     const mutant = WORKFLOW.replace(
-      "if: github.event_name == 'workflow_dispatch'",
+      "if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
       `if: ${condition}`,
     );
 
@@ -167,16 +167,19 @@ describe("pull-request CI performance budget", () => {
   it.each([
     [
       "comment",
-      "if: github.event_name == 'pull_request' # github.event_name == 'workflow_dispatch'",
+      "if: github.event_name == 'push' # github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
       undefined,
     ],
     [
       "step",
-      "if: github.event_name == 'pull_request'",
-      "      - name: Resolve cacheable experiment identity\n        if: github.event_name == 'workflow_dispatch'\n        id: split_identity",
+      "if: github.event_name == 'push'",
+      "      - name: Resolve cacheable experiment identity\n        if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'\n        id: split_identity",
     ],
   ] as const)("rejects a manual-only marker confined to a %s", (_location, jobIf, step) => {
-    let mutant = WORKFLOW.replace("if: github.event_name == 'workflow_dispatch'", jobIf);
+    let mutant = WORKFLOW.replace(
+      "if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
+      jobIf,
+    );
     if (step) {
       mutant = mutant.replace(
         "      - name: Resolve cacheable experiment identity\n        id: split_identity",

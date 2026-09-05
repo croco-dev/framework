@@ -15,7 +15,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
+import { homedir, tmpdir } from "node:os";
 import { basename, dirname, extname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parse as parseYaml } from "yaml";
@@ -303,6 +303,14 @@ const generatedAppTemplatesDir = join(rootDir, "packages", "create-croco-app", "
 const generatedSmokeReportDir = resolve(
   process.env.CROCO_GENERATED_SMOKE_REPORT_DIR ?? join(rootDir, "ci-reports", "generated-apps"),
 );
+export const RESOLVED_PLAYWRIGHT_BROWSERS_PATH =
+  process.env.PLAYWRIGHT_BROWSERS_PATH ??
+  (process.platform === "win32"
+    ? join(process.env.USERPROFILE ?? tmpdir(), "AppData", "Local", "ms-playwright")
+    : process.platform === "darwin"
+      ? join(process.env.HOME ?? homedir(), "Library", "Caches", "ms-playwright")
+      : join(process.env.HOME ?? homedir(), ".cache", "ms-playwright"));
+process.env.PLAYWRIGHT_BROWSERS_PATH = RESOLVED_PLAYWRIGHT_BROWSERS_PATH;
 const testInventory = readTestInventory().inventory;
 const testInventoryDigest = inventoryDigest(testInventory);
 const generatedMaterializationEvidence = new Map<string, MaterializationEvidence>();
@@ -1574,7 +1582,8 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       { label: "build", args: ["build"] },
       {
         label: "browser journeys",
-        args: ["test:journey"],
+        args: ["test:journey", "tests/journeys/plan-release.spec.ts"],
+        paths: ["tests/journeys/plan-release.spec.ts"],
       },
       {
         label: "Contract snapshot",
@@ -2001,15 +2010,19 @@ const smokeCases = selectableSmokeCases.filter(
 export function getGeneratedSmokeDependencyCaseInputs(): readonly {
   readonly name: string;
   readonly args: readonly string[];
-  readonly validations: readonly Pick<SmokeValidation, "args" | "label" | "packagePath">[];
+  readonly validations: readonly Pick<
+    SmokeValidation,
+    "args" | "label" | "packagePath" | "paths"
+  >[];
 }[] {
   return smokeCases.map(({ name, args, validations }) => ({
     name,
     args,
-    validations: validations.map(({ args: validationArgs, label, packagePath }) => ({
+    validations: validations.map(({ args: validationArgs, label, packagePath, paths }) => ({
       args: validationArgs,
       label,
       packagePath,
+      paths,
     })),
   }));
 }
@@ -2673,7 +2686,11 @@ function runSmokeCaseCommand(
   writeGeneratedSmokeReport(report);
 
   try {
-    appendSmokeCaseOutput(caseResult, label, run(command, args, cwd, env));
+    const commandEnv: Record<string, string> = {
+      PLAYWRIGHT_BROWSERS_PATH: RESOLVED_PLAYWRIGHT_BROWSERS_PATH,
+      ...env,
+    };
+    appendSmokeCaseOutput(caseResult, label, run(command, args, cwd, commandEnv));
     step.status = "passed";
     writeGeneratedSmokeReport(report);
   } catch (error) {
@@ -3245,9 +3262,11 @@ function runValidation(
           ...validation.args,
           ...(journeyReportPath ? ["--reporter=json"] : []),
         ];
-        const commandEnv = journeyReportPath
-          ? { ...validation.env, PLAYWRIGHT_JSON_OUTPUT_FILE: journeyReportPath }
-          : validation.env;
+        const commandEnv: Record<string, string> = {
+          PLAYWRIGHT_BROWSERS_PATH: RESOLVED_PLAYWRIGHT_BROWSERS_PATH,
+          ...validation.env,
+          ...(journeyReportPath ? { PLAYWRIGHT_JSON_OUTPUT_FILE: journeyReportPath } : {}),
+        };
         appendSmokeCaseOutput(
           caseResult,
           validation.label,
@@ -3281,15 +3300,18 @@ function runValidation(
           step.executedTestPaths = executed;
         }
         if (journeyReportPath) {
-          const expected = testInventory.tests
-            .filter(
-              (entry) =>
-                entry.lane === "generated-app" &&
-                entry.generated?.generatedPath.startsWith("tests/journeys/") &&
-                existsSync(join(projectDir, entry.generated.generatedPath)),
-            )
-            .flatMap((entry) => (entry.generated ? [entry.generated.generatedPath] : []))
-            .sort();
+          const expected = (
+            validation.paths
+              ? [...validation.paths]
+              : testInventory.tests
+                  .filter(
+                    (entry) =>
+                      entry.lane === "generated-app" &&
+                      entry.generated?.generatedPath.startsWith("tests/journeys/") &&
+                      existsSync(join(projectDir, entry.generated.generatedPath)),
+                  )
+                  .flatMap((entry) => (entry.generated ? [entry.generated.generatedPath] : []))
+          ).sort();
           const executed = existsSync(journeyReportPath)
             ? reconcileGeneratedTestPaths(
                 readCompletedPlaywrightPaths(journeyReportPath, projectDir),

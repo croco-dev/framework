@@ -30,6 +30,7 @@ import {
   readGeneratedSmokeAllowlistMetadata,
   reconcileGeneratedTestPaths,
   requiresCommandShell,
+  RESOLVED_PLAYWRIGHT_BROWSERS_PATH,
   resolveTapSelectedGeneratedPaths,
   selectCompletedGeneratedTestEntries,
   turboBuildArguments,
@@ -1276,6 +1277,22 @@ describe("create-croco-app generated smoke matrix", () => {
       expect(chromiumInstallIndex, caseName).toBeGreaterThanOrEqual(0);
       expect(testIndex, caseName).toBeGreaterThan(chromiumInstallIndex);
     }
+  });
+
+  it("shares Playwright browsers cache path and optimizes redundant admin-console journeys", () => {
+    expect(RESOLVED_PLAYWRIGHT_BROWSERS_PATH).toBeTruthy();
+    const cases = new Map(
+      getGeneratedSmokeDependencyCaseInputs().map((smokeCase) => [smokeCase.name, smokeCase]),
+    );
+    const adminCase = cases.get("admin-console-starter");
+    const journeyValidation = adminCase?.validations.find(
+      ({ label }) => label === "browser journeys",
+    );
+    expect(journeyValidation?.args).toEqual([
+      "test:journey",
+      "tests/journeys/plan-release.spec.ts",
+    ]);
+    expect(journeyValidation?.paths).toEqual(["tests/journeys/plan-release.spec.ts"]);
   });
 
   it("executes generated tests for Meta Vite smoke cases", () => {
