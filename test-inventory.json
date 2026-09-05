@@ -1415,6 +1415,12 @@
       "owner": "@croco/events-core"
     },
     {
+      "path": "packages/events-core/src/tests/EventBusLifecycle.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/events-core"
+    },
+    {
       "path": "packages/events-core/src/tests/EventBusStats.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -1467,6 +1473,12 @@
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/events-core"
+    },
+    {
+      "path": "packages/events-inmemory/src/tests/EventBusReplayLifecycle.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/events-inmemory"
     },
     {
       "path": "packages/events-inmemory/src/tests/InMemoryDeadLetterQueue.spec.ts",

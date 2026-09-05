@@ -36,6 +36,20 @@ export type { EventBus } from "./libs/EventBus";
  */
 export { EventSubscriptionIndex } from "./libs/EventBus";
 /**
+ * EventBus의 선택적 종료 수명주기 계약과 framework-context shutdown adapter입니다.
+ */
+export {
+  createEventBusShutdownHook,
+  DEFAULT_EVENT_BUS_DRAIN_TIMEOUT_MS,
+  MAX_EVENT_BUS_DRAIN_TIMEOUT_MS,
+} from "./libs/EventBusLifecycle";
+export type {
+  EventBusActiveHandler,
+  EventBusLifecycle,
+  EventBusShutdownOptions,
+  EventBusShutdownResult,
+} from "./libs/EventBusLifecycle";
+/**
  * 전역 EventBus 설정과 핸들러 등록 초기화를 관리합니다.
  */
 export { EventBusConfig } from "./libs/EventBusConfig";
@@ -99,10 +113,13 @@ export {
   DuplicateEventNameProblem,
   EventAfterCommitOutcomeRequiredProblem,
   EventAfterCommitRequiresActiveTransactionProblem,
+  EventBusDrainIncompleteProblem,
+  EventBusIntakeClosedProblem,
   EventBusNotSetProblem,
   EventDefinitionProblem,
   EventDeserializationError,
   EventTransactionContextUnavailableProblem,
+  InvalidEventBusDrainTimeoutProblem,
   UnknownEventTypeProblem,
 } from "./libs/problems/EventsProblems";
 export type { EventSubscription } from "./libs/types/EventSubscription";

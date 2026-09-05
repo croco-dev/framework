@@ -4,6 +4,10 @@ import type {
   DeadLetterQueue,
   DomainEvent,
   EventBus,
+  EventBusActiveHandler,
+  EventBusLifecycle,
+  EventBusShutdownOptions,
+  EventBusShutdownResult,
   EventHandler,
   EventHandlerClass,
   EventSubscription,
@@ -11,8 +15,12 @@ import type {
 } from "@croco/events-core";
 import {
   DEFAULT_DEAD_LETTER_POLICY,
+  DEFAULT_EVENT_BUS_DRAIN_TIMEOUT_MS,
   EventBusConfig,
+  EventBusIntakeClosedProblem,
   EventSubscriptionIndex,
+  InvalidEventBusDrainTimeoutProblem,
+  MAX_EVENT_BUS_DRAIN_TIMEOUT_MS,
 } from "@croco/events-core";
 import type { ILogger, RuntimeInspector, RuntimeInspectorRecorder } from "@croco/framework-context";
 import {
@@ -131,12 +139,6 @@ export type InMemoryEventBusOptions = {
 
 const DEFAULT_BACKPRESSURE_TIMEOUT_MS = 5000;
 
-type RunningHandler = {
-  eventName: string;
-  handlerName: string;
-  startTime: number;
-};
-
 type DeadLetterCapableHandler<TEvent extends DomainEvent> = EventHandler<TEvent> &
   Partial<RetryableEventHandler>;
 
@@ -154,9 +156,9 @@ type SubscriberExecutionResult<TEvent extends DomainEvent> = {
 /**
  * TypeDI와 OpenTelemetry를 사용하는 인메모리 EventBus 구현체입니다.
  */
-export class InMemoryEventBus<
-  TEvent extends DomainEvent = DomainEvent,
-> implements EventBus<TEvent> {
+export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
+  implements EventBus<TEvent>, EventBusLifecycle
+{
   private readonly index = new EventSubscriptionIndex<EventHandlerClass<TEvent>>();
   private readonly tracer = getTracer();
   private readonly maxConcurrency: number;
@@ -165,9 +167,11 @@ export class InMemoryEventBus<
   private readonly deadLetterQueue?: DeadLetterQueue;
   private readonly deadLetterPolicy?: DeadLetterPolicy;
   private readonly deadLetterHandlerIds = new Map<EventHandlerClass<TEvent>, string>();
-  private runningHandlers = new Map<string, RunningHandler>();
+  private runningHandlers = new Map<string, EventBusActiveHandler>();
   private handlerCounter = 0;
   private readonly slotWaiters = new Set<() => void>();
+  private readonly drainWaiters = new Set<() => void>();
+  private intakeClosed = false;
 
   constructor(options: InMemoryEventBusOptions = {}) {
     const maxConcurrency = options.maxConcurrency === undefined ? 100 : options.maxConcurrency;
@@ -211,6 +215,7 @@ export class InMemoryEventBus<
   }
 
   async publish(event: TEvent): Promise<void> {
+    this.assertIntakeOpen();
     const eventName = event.eventName;
     const traceInfo = getActiveTraceInfo();
     const baseEvent = this.createEventWithTraceContext(event, traceInfo);
@@ -282,6 +287,7 @@ export class InMemoryEventBus<
       throw new DeadLetterQueueNotConfiguredProblem();
     }
     this.validateReplayLimit(limit);
+    this.assertIntakeOpen();
 
     const items = await this.deadLetterQueue.dequeue<TEvent>(limit);
     const result: DeadLetterReplayResult = {
@@ -295,6 +301,7 @@ export class InMemoryEventBus<
       this.recordReplayInspection("started", item);
       let execution: SubscriberExecutionResult<TEvent>;
       try {
+        this.assertIntakeOpen();
         const handlerClass = this.resolveReplayHandler(item);
         if (!handlerClass) {
           throw new DeadLetterReplayHandlerUnavailableProblem(item.event.eventName, item.handlerId);
@@ -305,6 +312,7 @@ export class InMemoryEventBus<
           }
           await this.waitForSlot();
         }
+        this.assertIntakeOpen();
         execution = await this.executeSubscriberWithTracking(
           handlerClass,
           this.cloneEvent(item.event),
@@ -388,6 +396,7 @@ export class InMemoryEventBus<
     let deliveredCount = 0;
 
     for (const [index, handlerClass] of handlerClasses.entries()) {
+      this.assertIntakeOpen();
       while (!this.hasAvailableSlot()) {
         switch (this.backpressureStrategy) {
           case "drop": {
@@ -410,6 +419,7 @@ export class InMemoryEventBus<
         }
       }
 
+      this.assertIntakeOpen();
       const { failure, storageError } = await this.executeSubscriberWithTracking(
         handlerClass,
         baseEvent,
@@ -434,6 +444,7 @@ export class InMemoryEventBus<
   }
 
   private async waitForSlot(signal?: AbortSignal): Promise<void> {
+    this.assertIntakeOpen();
     if (this.hasAvailableSlot()) {
       return;
     }
@@ -460,6 +471,12 @@ export class InMemoryEventBus<
       };
 
       const onSlotAvailable = () => {
+        if (this.intakeClosed) {
+          cleanup();
+          reject(new EventBusIntakeClosedProblem());
+          return;
+        }
+
         if (!this.hasAvailableSlot()) {
           return;
         }
@@ -488,6 +505,12 @@ export class InMemoryEventBus<
     const nextWaiter = this.slotWaiters.values().next().value as (() => void) | undefined;
     if (nextWaiter) {
       nextWaiter();
+    }
+  }
+
+  private rejectSlotWaiters(): void {
+    for (const waiter of this.slotWaiters) {
+      waiter();
     }
   }
 
@@ -533,6 +556,7 @@ export class InMemoryEventBus<
     } finally {
       this.runningHandlers.delete(handlerId);
       this.notifySlotAvailable();
+      this.notifyDrainCompleted();
     }
   }
 
@@ -1024,11 +1048,93 @@ export class InMemoryEventBus<
     this.index.clear();
   }
 
+  async shutdown(options: EventBusShutdownOptions = {}): Promise<EventBusShutdownResult> {
+    const timeoutMs =
+      options.timeoutMs === undefined ? DEFAULT_EVENT_BUS_DRAIN_TIMEOUT_MS : options.timeoutMs;
+    if (
+      !Number.isSafeInteger(timeoutMs) ||
+      timeoutMs <= 0 ||
+      timeoutMs > MAX_EVENT_BUS_DRAIN_TIMEOUT_MS
+    ) {
+      throw new InvalidEventBusDrainTimeoutProblem(timeoutMs);
+    }
+
+    this.intakeClosed = true;
+    this.rejectSlotWaiters();
+
+    if (this.runningHandlers.size === 0) {
+      return { status: "drained", unfinishedHandlers: [] };
+    }
+    if (options.signal?.aborted) {
+      return {
+        status: "cancelled",
+        unfinishedHandlers: this.getRunningHandlers(),
+      };
+    }
+
+    return new Promise((resolve) => {
+      let settled = false;
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+      const finish = (result: EventBusShutdownResult): void => {
+        if (settled) {
+          return;
+        }
+
+        settled = true;
+        this.drainWaiters.delete(onDrained);
+        if (timeoutId !== undefined) {
+          clearTimeout(timeoutId);
+        }
+        options.signal?.removeEventListener("abort", onAbort);
+        resolve(result);
+      };
+
+      const onDrained = (): void => {
+        if (this.runningHandlers.size === 0) {
+          finish({ status: "drained", unfinishedHandlers: [] });
+        }
+      };
+      const onAbort = (): void => {
+        finish({
+          status: "cancelled",
+          unfinishedHandlers: this.getRunningHandlers(),
+        });
+      };
+
+      this.drainWaiters.add(onDrained);
+      timeoutId = setTimeout(() => {
+        finish({
+          status: "timed-out",
+          unfinishedHandlers: this.getRunningHandlers(),
+        });
+      }, timeoutMs);
+      options.signal?.addEventListener("abort", onAbort, { once: true });
+      onDrained();
+    });
+  }
+
+  private assertIntakeOpen(): void {
+    if (this.intakeClosed) {
+      throw new EventBusIntakeClosedProblem();
+    }
+  }
+
+  private notifyDrainCompleted(): void {
+    if (this.runningHandlers.size !== 0) {
+      return;
+    }
+
+    for (const waiter of this.drainWaiters) {
+      waiter();
+    }
+  }
+
   getRunningHandlerCount(): number {
     return this.runningHandlers.size;
   }
 
-  getRunningHandlers(): ReadonlyArray<RunningHandler> {
-    return Array.from(this.runningHandlers.values());
+  getRunningHandlers(): ReadonlyArray<EventBusActiveHandler> {
+    return Array.from(this.runningHandlers.values(), (handler) => ({ ...handler }));
   }
 }
