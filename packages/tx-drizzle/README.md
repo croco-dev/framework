@@ -19,6 +19,11 @@ pnpm add @croco/framework-module @croco/tx-drizzle @croco/tx-core drizzle-orm ty
 import { createApplicationRuntime, defineCrocoApplication } from "@croco/framework-module";
 import { TxManager } from "@croco/tx-core";
 import { drizzleTransaction } from "@croco/tx-drizzle";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { Pool } from "pg";
+
+const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+const db = drizzle(pool);
 
 const application = defineCrocoApplication({
   imports: [
@@ -26,6 +31,7 @@ const application = defineCrocoApplication({
       db,
       transaction: { defaultNesting: "join" },
       diagnostics: { name: "primary-database" },
+      shutdown: () => pool.end(),
     }),
   ],
 });
@@ -34,11 +40,13 @@ const runtime = createApplicationRuntime(application);
 await runtime.initialize();
 const txManager = runtime.get(TxManager);
 const diagnostics = runtime.getContributions("diagnostics.provider");
+await runtime.dispose();
 ```
 
 기존 `TxManagerRegistry`와 `Container.set` 경로는 호환성을 위해 유지되지만 새 애플리케이션 구성에는 plugin
 factory를 사용하세요. plugin factory의 `db`, transaction 설정, diagnostics 이름은 명시적 입력이며 ambient
-package discovery를 사용하지 않습니다.
+package discovery를 사용하지 않습니다. 애플리케이션이 데이터베이스 리소스를 소유하면 `shutdown`으로 정리
+함수를 등록하고 `ApplicationRuntime.dispose()`가 완료될 때까지 기다리세요.
 
 ### 1. Drizzle DB 생성 및 어댑터 연결
 

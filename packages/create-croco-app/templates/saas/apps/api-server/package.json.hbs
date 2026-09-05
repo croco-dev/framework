@@ -16,7 +16,7 @@
     "jobs:smoke": "tsx src/demo/jobs-smoke.ts",
     "failure-drill:smoke": "tsx src/demo/failure-drill-smoke.ts",
     "failure-drill:integration": "tsx src/provider-profile-check.ts --mode=real-provider",
-    "di:graph": "cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json",
+    "di:graph": "cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoDiGraphApplication --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json",
     "build": "tsup src/index.ts --format esm,cjs --clean --dts",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
@@ -46,6 +46,8 @@
     "@croco/protocols-core": "workspace:*",
     "@croco/protocols-rest": "workspace:*",
     "@croco/ratelimit-core": "workspace:*",
+    "@croco/storage-core": "workspace:*",
+    "@croco/tasks-core": "workspace:*",
     "@croco/telemetry-api": "workspace:*",
     "@croco/telemetry-sdk-node": "workspace:*",
     "@croco/tenant-core": "workspace:*",

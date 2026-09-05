@@ -95,6 +95,7 @@ import {
 } from "@croco/membership-core";
 import { IdempotencyManager, MeteringService, MeterRegistry } from "@croco/metering-core";
 import { NotificationService } from "@croco/notifications-core";
+import { Container, Token } from "@croco/framework-context";
 import { TenantManager } from "@croco/tenant-core";
 import { TxManager } from "@croco/tx-core";
 import { z } from "zod";
@@ -494,6 +495,37 @@ export type SaasRuntime = {
   campaignRecipients: InMemoryRecipientDirectory;
 };
 
+export const SAAS_RUNTIME_STATE_TOKEN = new Token<SaasRuntimeState>("SaasRuntimeState");
+
+export function getSaasRuntimeState(): SaasRuntimeState {
+  return Container.get(SAAS_RUNTIME_STATE_TOKEN);
+}
+
+export type SaasRuntimeStateOptions = {
+  readonly create: () => SaasRuntime;
+  readonly initial?: SaasRuntime;
+  readonly onReset?: (runtime: SaasRuntime) => void;
+};
+
+export class SaasRuntimeState {
+  private currentRuntime: SaasRuntime;
+
+  constructor(private readonly options: SaasRuntimeStateOptions) {
+    this.currentRuntime = options.initial ?? options.create();
+  }
+
+  get current(): SaasRuntime {
+    return this.currentRuntime;
+  }
+
+  reset(): SaasRuntime {
+    const runtime = this.options.create();
+    this.currentRuntime = runtime;
+    this.options.onReset?.(runtime);
+    return runtime;
+  }
+}
+
 export type SaasRuntimeOptions = {
   checkoutIdempotencyStore: IdempotencyStore<CheckoutResult>;
   billingGateway?: BillingGateway;
@@ -706,7 +738,7 @@ export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
       return {
         name: "saas-runtime",
         status: "up" as const,
-        details: { preset: "saas", provider: "in-memory" },
+        details: { preset: "saas", provider: providerProfile.name },
       };
     },
   });
@@ -719,7 +751,7 @@ export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
         status: "healthy",
         component: "saas-runtime",
         message: "SaaS golden path runtime is ready",
-        details: { provider: "in-memory" },
+        details: { provider: providerProfile.name },
         lastChecked: new Date().toISOString(),
       };
     },
@@ -823,9 +855,12 @@ export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
   };
 }
 
-export function createSaasDemoRuntime(): SaasRuntime {
+export function createSaasDemoRuntime(
+  options: Partial<Omit<SaasRuntimeOptions, "checkoutIdempotencyStore">> = {},
+): SaasRuntime {
   return createSaasRuntime({
     checkoutIdempotencyStore: new InMemoryIdempotencyStore(),
+    ...options,
   });
 }
 

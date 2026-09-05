@@ -1,4 +1,5 @@
 import { planVersionRef } from "@croco/billing-core";
+import { Container, Token } from "@croco/framework-context";
 import { InMemoryLlmModel, InMemoryLlmRegistry, LlmService, type LlmUsage } from "@croco/llm-core";
 import {
   COMPLETION_TOKENS,
@@ -19,7 +20,7 @@ import {
   AiTenantRequiredProblem,
 } from "./aiProblems";
 import { InMemoryEventBus } from "./inMemoryAdapters";
-import { createSaasDemoRuntime, defaultSaasRuntime } from "./saasDemo";
+import { createSaasDemoRuntime } from "./saasDemo";
 import type { SaasRuntime } from "./saasDemo";
 
 export const AI_SAAS_SMOKE_CONTRACT_VERSION = "ai-saas-smoke-contract/v1";
@@ -152,6 +153,12 @@ export type AiSaasRuntime = {
   invocationLog: InMemoryAiInvocationLogStore;
   service: AiSaasService;
 };
+
+export const AI_SAAS_RUNTIME_TOKEN = new Token<AiSaasRuntime>("AiSaasRuntime");
+
+export function getAiSaasRuntime(): AiSaasRuntime {
+  return Container.get(AI_SAAS_RUNTIME_TOKEN);
+}
 
 export type AiSaasDemoSnapshot = {
   contract: {
@@ -528,8 +535,6 @@ export function createAiSaasRuntime(
     service,
   };
 }
-
-export const defaultAiSaasRuntime = createAiSaasRuntime(defaultSaasRuntime);
 
 export async function seedAiSaasTenant(runtime: AiSaasRuntime, planId: AiPlanId, slug: string) {
   const tenant = await runtime.saasRuntime.tenantStore.create({

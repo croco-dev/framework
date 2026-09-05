@@ -30,6 +30,12 @@ const APPLICATION_INTENT_PROVIDER_PACKAGES = {
   "cloudflare-workers": "@croco/transports-cloudflare-workers",
   "meta-vite": "@croco/meta-vite",
   "in-memory-admin-data": "@croco/admin-core",
+  "better-auth": "@croco/auth-better-auth",
+  "drizzle-transaction": "@croco/tx-drizzle",
+  "polar-billing": "@croco/billing-polar",
+  "qstash-tasks": "@croco/tasks-qstash",
+  "cloudinary-storage": "@croco/storage-cloudinary",
+  "node-telemetry": "@croco/telemetry-sdk-node",
 } as const satisfies Record<ApplicationIntentProvider, string | null>;
 
 const APPLICATION_INTENT_GOAL_PROVIDER_PACKAGES: Readonly<

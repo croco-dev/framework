@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 758,
+  problemCount: 760,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -5360,6 +5360,67 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 154,
           column: 11,
           kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CROCO_SAAS_PROFILE_MISMATCH",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-saas-profile-mismatch",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
+          line: 29,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE",
+      category: "NotImplemented",
+      status: 501,
+      title: "Not Implemented",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-saas-profile-runtime-unavailable",
+      recovery: {
+        cause: "The requested capability is not supported by this runtime or adapter.",
+        userAction: "Use a supported capability or choose an adapter/runtime that provides it.",
+        operatorAction:
+          "Check runtime capability declarations and provider maturity documentation.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
+          line: 42,
+          column: 1,
+          kind: "problem-class",
         },
       ],
     },
@@ -17828,7 +17889,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 74,
+          line: 96,
           column: 1,
           kind: "problem-class",
         },
@@ -17888,7 +17949,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 29,
+          line: 51,
           column: 1,
           kind: "problem-class",
         },
@@ -17949,7 +18010,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 38,
+          line: 60,
           column: 1,
           kind: "problem-class",
         },
@@ -17981,7 +18042,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 65,
+          line: 87,
           column: 1,
           kind: "problem-class",
         },
@@ -18013,7 +18074,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 83,
+          line: 105,
           column: 1,
           kind: "problem-class",
         },
@@ -18043,7 +18104,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 47,
+          line: 69,
           column: 1,
           kind: "problem-class",
         },
@@ -18074,7 +18135,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 56,
+          line: 78,
           column: 1,
           kind: "problem-class",
         },

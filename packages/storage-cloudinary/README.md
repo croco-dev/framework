@@ -10,6 +10,30 @@ pnpm add @croco/storage-cloudinary cloudinary
 
 ## 사용법
 
+### Application plugin
+
+```typescript
+import { cloudinaryStorage } from "@croco/storage-cloudinary";
+import { createApplicationRuntime, defineCrocoApplication } from "@croco/framework-module";
+
+const runtime = createApplicationRuntime(
+  defineCrocoApplication({
+    imports: [
+      cloudinaryStorage({
+        cloudName: process.env.CLOUDINARY_CLOUD_NAME!,
+        apiKey: process.env.CLOUDINARY_API_KEY!,
+        apiSecret: process.env.CLOUDINARY_API_SECRET!,
+      }),
+    ],
+  }),
+);
+
+await runtime.initialize();
+```
+
+`cloudinaryStorage()`는 `STORAGE_PROVIDER_TOKEN`과 readiness diagnostics를 같은 inspectable
+application graph에 등록합니다. 초기화만으로 Cloudinary API를 호출하지 않습니다.
+
 ```typescript
 import { CloudinaryProvider } from "@croco/storage-cloudinary";
 

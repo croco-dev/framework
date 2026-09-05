@@ -25,10 +25,21 @@ export const APPLICATION_INTENT_PROVIDERS = [
   "cloudflare-workers",
   "meta-vite",
   "in-memory-admin-data",
+  "better-auth",
+  "drizzle-transaction",
+  "polar-billing",
+  "qstash-tasks",
+  "cloudinary-storage",
+  "node-telemetry",
 ] as const;
-export const APPLICATION_INTENT_STORAGE_OPTIONS = ["in-memory-demo"] as const;
-export const APPLICATION_INTENT_AUTH_OPTIONS = ["none", "tenant-demo", "admin-demo"] as const;
-export const APPLICATION_INTENT_BILLING_OPTIONS = ["none", "demo"] as const;
+export const APPLICATION_INTENT_STORAGE_OPTIONS = ["in-memory-demo", "cloudinary"] as const;
+export const APPLICATION_INTENT_AUTH_OPTIONS = [
+  "none",
+  "tenant-demo",
+  "admin-demo",
+  "better-auth",
+] as const;
+export const APPLICATION_INTENT_BILLING_OPTIONS = ["none", "demo", "polar"] as const;
 export const APPLICATION_INTENT_TELEMETRY_OPTIONS = ["opentelemetry-otlp", "none"] as const;
 export const APPLICATION_INTENT_DEPLOYMENT_PRESETS = [
   "node-api",
@@ -94,14 +105,18 @@ export const APPLICATION_INTENT_GOAL_CONTRACTS = {
     protocol: "rest",
     providers: [
       "in-memory-tenant",
-      "in-memory-auth",
-      "in-memory-billing",
       "in-memory-metering",
       "in-memory-events",
+      "better-auth",
+      "drizzle-transaction",
+      "polar-billing",
+      "qstash-tasks",
+      "cloudinary-storage",
+      "node-telemetry",
     ],
-    storage: ["in-memory-demo"],
-    auth: "tenant-demo",
-    billing: "demo",
+    storage: ["cloudinary"],
+    auth: "better-auth",
+    billing: "polar",
     tenantModel: "org",
     telemetry: "opentelemetry-otlp",
     deploymentPreset: "node-api",

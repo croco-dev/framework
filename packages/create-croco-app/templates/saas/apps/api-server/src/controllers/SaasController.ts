@@ -5,6 +5,7 @@ import {
   ProblemResponses,
   routeProblemResponses,
 } from "@croco/protocols-rest";
+import { getSaasRuntimeState, runSaasDemoFlow } from "../saasDemo";
 import { seedSaasDemoRoute, smokeSaasDemoRoute } from "./schemas";
 
 export async function assertDemoEndpointsEnabled(): Promise<void> {
@@ -21,15 +22,13 @@ export class SaasController {
   @ProblemResponses(...routeProblemResponses(seedSaasDemoRoute))
   async seedDemo() {
     await assertDemoEndpointsEnabled();
-    const { seedDefaultSaasRuntime } = await import("../saasDemo");
-    return seedDefaultSaasRuntime();
+    return runSaasDemoFlow(getSaasRuntimeState().reset());
   }
 
   @Get(smokeSaasDemoRoute)
   @ProblemResponses(...routeProblemResponses(smokeSaasDemoRoute))
   async smokeDemo() {
     await assertDemoEndpointsEnabled();
-    const { seedDefaultSaasRuntime } = await import("../saasDemo");
-    return seedDefaultSaasRuntime();
+    return runSaasDemoFlow(getSaasRuntimeState().reset());
   }
 }

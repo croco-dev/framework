@@ -141,6 +141,26 @@ describe("QStashTaskRunner", () => {
     expect(result.messageId).toBe("msg-test-123");
   });
 
+  it("accepts HTTPS destination URLs", () => {
+    expect(
+      () =>
+        new QStashTaskRunner({
+          token: "test-token",
+          destinationUrl: "https://example.com/api/tasks/webhook",
+        }),
+    ).not.toThrow();
+  });
+
+  it("rejects HTTP destination URLs", () => {
+    expect(
+      () =>
+        new QStashTaskRunner({
+          token: "test-token",
+          destinationUrl: "http://example.com/api/tasks/webhook",
+        }),
+    ).toThrow("QStash destinationUrl must use https.");
+  });
+
   it("should use default delay when provided", async () => {
     const runner = new QStashTaskRunner({
       token: "test-token",

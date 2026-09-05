@@ -1,5 +1,6 @@
 import { Client } from "@upstash/qstash";
 import { Problem } from "@croco/problems-core";
+import type { TaskDispatcher, TaskDispatchOptions, TaskDispatchResult } from "@croco/tasks-core";
 import {
   QStashTaskConfigProblem,
   QStashTaskPublishProblem,
@@ -25,25 +26,12 @@ export type QStashTaskRunnerOptions = {
   defaultHeaders?: Record<string, string>;
 };
 
-export type QStashTaskExecuteOptions = {
-  /**
-   * 이번 요청에만 적용할 지연 시간입니다.
-   */
-  delay?: number;
-  /**
-   * 이번 요청에만 추가할 헤더입니다.
-   */
-  headers?: Record<string, string>;
-  /**
-   * QStash publish deduplication id로 전달할 키입니다.
-   */
-  idempotencyKey?: string;
-};
+export type QStashTaskExecuteOptions = TaskDispatchOptions;
 
 /**
  * QStash에 태스크 메시지를 발행하는 태스크 러너입니다.
  */
-export class QStashTaskRunner {
+export class QStashTaskRunner implements TaskDispatcher {
   private readonly client: Client;
   private readonly destinationUrl: string;
   private readonly defaultDelay?: number;
@@ -67,7 +55,7 @@ export class QStashTaskRunner {
     taskId: string,
     payload: unknown,
     options?: QStashTaskExecuteOptions,
-  ): Promise<{ messageId: string }> {
+  ): Promise<TaskDispatchResult> {
     validateRequiredString(taskId, "taskId");
     const delay = options?.delay ?? this.defaultDelay;
     validateDelay(delay, "delay");
@@ -105,8 +93,8 @@ function validateDestinationUrl(value: string): void {
 
   try {
     const url = new URL(value);
-    if (url.protocol !== "https:" && url.protocol !== "http:") {
-      throw new QStashTaskValidationProblem("QStash destinationUrl must use http or https.");
+    if (url.protocol !== "https:") {
+      throw new QStashTaskValidationProblem("QStash destinationUrl must use https.");
     }
   } catch (error) {
     if (error instanceof QStashTaskValidationProblem) {

@@ -21,9 +21,13 @@ describe("published storage types", () => {
       try {
         ensureBuilt();
         pack("@croco/problems-core", packRoot);
+        pack("@croco/diagnostics-core", packRoot);
+        pack("@croco/framework-context", packRoot);
         pack("@croco/storage-core", packRoot);
 
         const problemsCore = findTarball(packRoot, "croco-problems-core-");
+        const diagnosticsCore = findTarball(packRoot, "croco-diagnostics-core-");
+        const frameworkContext = findTarball(packRoot, "croco-framework-context-");
         const storageCore = findTarball(packRoot, "croco-storage-core-");
         const declarations = run(
           "tar",
@@ -32,7 +36,11 @@ describe("published storage types", () => {
         ).stdout;
 
         expect(declarations).not.toMatch(/node:stream|\bBuffer\b|\bNodeJS\b/);
-        writeConsumer(consumerRoot, problemsCore);
+        writeConsumer(consumerRoot, {
+          "@croco/problems-core": `file:${problemsCore}`,
+          "@croco/diagnostics-core": `file:${diagnosticsCore}`,
+          "@croco/framework-context": `file:${frameworkContext}`,
+        });
         run("pnpm", ["add", "--prod", storageCore, "--ignore-scripts"], consumerRoot);
         run("node", [typescriptPath(), "-p", "tsconfig.json"], consumerRoot);
       } finally {
@@ -45,7 +53,8 @@ describe("published storage types", () => {
 });
 
 function ensureBuilt(): void {
-  if (!shouldBuild(resolve(rootDir, "packages/problems-core")) && !shouldBuild(packageDir)) {
+  const packages = ["problems-core", "diagnostics-core", "framework-context", "storage-core"];
+  if (packages.every((name) => !shouldBuild(resolve(rootDir, "packages", name)))) {
     return;
   }
 
@@ -100,7 +109,7 @@ function findTarball(directory: string, prefix: string): string {
   return join(directory, filename);
 }
 
-function writeConsumer(consumerRoot: string, problemsCore: string): void {
+function writeConsumer(consumerRoot: string, overrides: Readonly<Record<string, string>>): void {
   writeFileSync(
     join(consumerRoot, "package.json"),
     `${JSON.stringify({ name: "storage-core-consumer", private: true, type: "module" }, null, 2)}\n`,
@@ -111,15 +120,19 @@ function writeConsumer(consumerRoot: string, problemsCore: string): void {
       "packages:",
       "  - .",
       "overrides:",
-      `  '@croco/problems-core': 'file:${problemsCore}'`,
+      ...Object.entries(overrides).map(
+        ([packageName, range]) => `  ${JSON.stringify(packageName)}: ${JSON.stringify(range)}`,
+      ),
       "",
     ].join("\n"),
   );
   writeFileSync(
     join(consumerRoot, "types.ts"),
     [
-      'import { storageStreamFromBytes, type StorageBody, type StorageProvider, type StorageStream } from "@croco/storage-core";',
+      'import { STORAGE_PROVIDER_TOKEN, storageStreamFromBytes, type StorageBody, type StorageProvider, type StorageStream } from "@croco/storage-core";',
       "",
+      "const tokenName: string | undefined = STORAGE_PROVIDER_TOKEN.name;",
+      "void tokenName;",
       "const bytes = new Uint8Array([1, 2, 3]);",
       "const stream: StorageStream = storageStreamFromBytes(bytes);",
       "const bodies: StorageBody[] = [bytes, stream];",
@@ -135,7 +148,7 @@ function writeConsumer(consumerRoot: string, problemsCore: string): void {
     `${JSON.stringify(
       {
         compilerOptions: {
-          lib: ["ES2022", "DOM", "DOM.Iterable"],
+          lib: ["ES2022", "DOM", "DOM.Iterable", "ESNext.Disposable"],
           module: "NodeNext",
           moduleResolution: "NodeNext",
           noEmit: true,

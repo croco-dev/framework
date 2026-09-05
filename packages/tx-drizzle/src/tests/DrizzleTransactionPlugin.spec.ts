@@ -26,7 +26,11 @@ describe("drizzleTransaction", () => {
     vi.restoreAllMocks();
   });
 
-  function createRuntime(db: DrizzleDb, diagnosticsName = "primary-db") {
+  function createRuntime(
+    db: DrizzleDb,
+    diagnosticsName = "primary-db",
+    shutdown?: () => void | Promise<void>,
+  ) {
     const runtime = createApplicationRuntime(
       defineCrocoApplication({
         name: "drizzle-application",
@@ -35,6 +39,7 @@ describe("drizzleTransaction", () => {
             db,
             transaction: { defaultNesting: "savepoint" },
             diagnostics: { name: diagnosticsName },
+            ...(shutdown === undefined ? {} : { shutdown }),
           }),
         ],
       }),
@@ -69,6 +74,7 @@ describe("drizzleTransaction", () => {
             { key: "db", required: true },
             { key: "transaction", required: false },
             { key: "diagnostics.name", required: false },
+            { key: "shutdown", required: false },
           ],
         },
       ],
@@ -159,5 +165,31 @@ describe("drizzleTransaction", () => {
 
     expect(register).not.toHaveBeenCalled();
     expect(get).not.toHaveBeenCalled();
+  });
+
+  it("awaits application-owned database cleanup exactly once during disposal", async () => {
+    const { db } = createDb();
+    let releaseCleanup: (() => void) | undefined;
+    const cleanupBarrier = new Promise<void>((resolve) => {
+      releaseCleanup = resolve;
+    });
+    const shutdown = vi.fn(() => cleanupBarrier);
+    const runtime = createRuntime(db, "primary-db", shutdown);
+
+    await runtime.initialize();
+    const firstDispose = runtime.dispose();
+    const secondDispose = runtime.dispose();
+
+    await vi.waitFor(() => expect(shutdown).toHaveBeenCalledOnce());
+    let disposed = false;
+    void firstDispose.then(() => {
+      disposed = true;
+    });
+    await Promise.resolve();
+    expect(disposed).toBe(false);
+
+    releaseCleanup?.();
+    await Promise.all([firstDispose, secondDispose]);
+    expect(shutdown).toHaveBeenCalledOnce();
   });
 });

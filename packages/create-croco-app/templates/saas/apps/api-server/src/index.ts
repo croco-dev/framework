@@ -1,18 +1,5 @@
-import { TelemetryRuntime } from "@croco/telemetry-sdk-node";
 import { createCrocoApp } from "./app";
 import { InvalidPortProblem } from "./problems";
-
-const otlpEndpoint =
-  process.env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT ?? process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
-const telemetryReady = TelemetryRuntime.getInstance().init({
-  serviceName: "saas-api-server",
-  environment: process.env.NODE_ENV ?? "development",
-  enabled: process.env.TELEMETRY_ENABLED !== "false",
-  trace: {
-    enabled: process.env.TELEMETRY_ENABLED === "true" || otlpEndpoint !== undefined,
-    exporterUrl: otlpEndpoint,
-  },
-});
 
 function parsePort(value: string | undefined): number {
   const port = Number(value ?? 3000);
@@ -24,9 +11,8 @@ function parsePort(value: string | undefined): number {
 }
 
 async function main(): Promise<void> {
-  await telemetryReady;
   const port = parsePort(process.env.PORT);
-  const app = createCrocoApp();
+  const app = await createCrocoApp({ profileMode: "production" });
 
   await app.listen(port);
 }

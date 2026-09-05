@@ -525,7 +525,8 @@ export function prepareGeneratedUnitEvidenceCapture(
       const reportPath = join(packageDir, reportFile);
       rmSync(reportPath, { force: true });
       if (script?.includes("vitest")) {
-        scripts[scriptName] = `${script} --reporter=json --outputFile=${reportFile}`;
+        scripts[scriptName] =
+          `${script} --reporter=default --reporter=json --outputFile=${reportFile}`;
         reports.push({ kind: "vitest", path: reportPath, packageDir, generatedPaths });
       } else if (script?.includes("tsx --test")) {
         if (generatedPaths.length !== 1) {
@@ -861,14 +862,18 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
             protocol: "rest",
             providers: [
               "in-memory-tenant",
-              "in-memory-auth",
-              "in-memory-billing",
               "in-memory-metering",
               "in-memory-events",
+              "better-auth",
+              "drizzle-transaction",
+              "polar-billing",
+              "qstash-tasks",
+              "cloudinary-storage",
+              "node-telemetry",
             ],
-            storage: ["in-memory-demo"],
-            auth: "tenant-demo",
-            billing: "demo",
+            storage: ["cloudinary"],
+            auth: "better-auth",
+            billing: "polar",
             tenantModel: "org",
             telemetry: "opentelemetry-otlp",
             deploymentPreset: "node-api",
@@ -1666,6 +1671,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
           POLAR_WEBHOOK_SECRET: "",
           POLAR_PRODUCT_ID_TEAM: "",
           UPSTASH_QSTASH_TOKEN: "",
+          UPSTASH_QSTASH_DESTINATION_URL: "",
           UPSTASH_QSTASH_CURRENT_SIGNING_KEY: "",
           UPSTASH_QSTASH_NEXT_SIGNING_KEY: "",
           CLOUDINARY_URL: "",
@@ -1677,6 +1683,25 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
             "POLAR_ACCESS_TOKEN",
             "CLOUDINARY_URL",
           ],
+        },
+      },
+      {
+        label: "real-provider constructor bootstrap",
+        args: ["profile:smoke:real"],
+        env: {
+          SAAS_PROVIDER_PROFILE: "saas-node-postgres",
+          DATABASE_URL: "postgres://postgres:postgres@127.0.0.1:5432/croco_profile_smoke",
+          BETTER_AUTH_SECRET: "generated-smoke-better-auth-secret-32",
+          BETTER_AUTH_URL: "http://localhost:3000",
+          POLAR_ACCESS_TOKEN: "polar_generated_smoke_token",
+          POLAR_WEBHOOK_SECRET: "polar_generated_smoke_webhook_secret",
+          POLAR_PRODUCT_ID_TEAM: "polar_generated_smoke_team_product",
+          UPSTASH_QSTASH_TOKEN: "qstash_generated_smoke_token",
+          UPSTASH_QSTASH_DESTINATION_URL: "https://example.test/tasks",
+          UPSTASH_QSTASH_CURRENT_SIGNING_KEY: "qstash_generated_smoke_current_key",
+          UPSTASH_QSTASH_NEXT_SIGNING_KEY: "qstash_generated_smoke_next_key",
+          CLOUDINARY_URL: "cloudinary://generated-key:generated-secret@generated-cloud",
+          TELEMETRY_ENABLED: "false",
         },
       },
       {
@@ -1853,7 +1878,13 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
         paths: ["croco.project-map.json", "openapi.json", "libs/shared/provider-rpc/src/saas.ts"],
       },
       { label: "test", args: ["test"] },
-      { label: "demo flow", args: ["demo:smoke"] },
+      {
+        label: "documentation-only runtime diagnostic",
+        args: ["profile:smoke:real"],
+        expectFailure: {
+          outputIncludes: ["CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE", "saas-cloudflare"],
+        },
+      },
     ],
   },
   {
@@ -1904,7 +1935,13 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
         paths: ["croco.project-map.json", "openapi.json", "libs/shared/provider-rpc/src/saas.ts"],
       },
       { label: "test", args: ["test"] },
-      { label: "demo flow", args: ["demo:smoke"] },
+      {
+        label: "documentation-only runtime diagnostic",
+        args: ["profile:smoke:real"],
+        expectFailure: {
+          outputIncludes: ["CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE", "saas-lambda"],
+        },
+      },
     ],
   },
   {

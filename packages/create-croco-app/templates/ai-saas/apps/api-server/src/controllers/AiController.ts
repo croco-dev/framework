@@ -14,6 +14,7 @@ import {
   generateAiRoute,
   OPTIONAL_TENANT_ID_HEADER_SCHEMA,
 } from "./aiSchemas";
+import { getAiSaasRuntime } from "../aiSaas";
 
 @Controller("/ai")
 export class AiController {
@@ -23,8 +24,7 @@ export class AiController {
     @Header("x-tenant-id", OPTIONAL_TENANT_ID_HEADER_SCHEMA) tenantId: string | undefined,
     @Body(generateAiRoute) body: RouteBody<typeof generateAiRoute>,
   ) {
-    const { defaultAiSaasRuntime } = await import("../aiSaas");
-    return defaultAiSaasRuntime.service.generateText({
+    return getAiSaasRuntime().service.generateText({
       tenantId,
       requestId: body.requestId,
       prompt: body.prompt,
@@ -37,8 +37,7 @@ export class AiController {
   async usage(
     @Header("x-tenant-id", OPTIONAL_TENANT_ID_HEADER_SCHEMA) tenantId: string | undefined,
   ) {
-    const { defaultAiSaasRuntime } = await import("../aiSaas");
-    return defaultAiSaasRuntime.service.getUsageState(tenantId);
+    return getAiSaasRuntime().service.getUsageState(tenantId);
   }
 
   @Get(aiInvocationsRoute)
@@ -46,7 +45,6 @@ export class AiController {
   async invocations(
     @Header("x-tenant-id", OPTIONAL_TENANT_ID_HEADER_SCHEMA) tenantId: string | undefined,
   ) {
-    const { defaultAiSaasRuntime } = await import("../aiSaas");
-    return defaultAiSaasRuntime.service.listInvocationLogs(tenantId);
+    return getAiSaasRuntime().service.listInvocationLogs(tenantId);
   }
 }
