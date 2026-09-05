@@ -2,6 +2,7 @@
   "name": "@croco/governance-core",
   "version": "0.1.0",
   "description": "Data governance contracts, retention validation, and deterministic Data Map artifacts for Croco resources",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/croco-dev/framework.git",

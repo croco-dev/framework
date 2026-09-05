@@ -181,4 +181,4 @@ namespace, method name, 인자 encoder로 단일 cache entry를 제거합니다.
 
 ## 라이선스
 
-MIT
+Apache-2.0

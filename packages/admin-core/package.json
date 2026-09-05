@@ -2,6 +2,7 @@
   "name": "@croco/admin-core",
   "version": "0.0.1",
   "description": "UI-agnostic admin resource and action contracts for Croco admin surfaces",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/croco-dev/framework.git",

@@ -721,4 +721,4 @@ pnpm run deploy -- --otp <otp>
 
 ## 📄 라이선스
 
-MIT License. Copyright (c) 2026 Croco Team.
+Apache License 2.0. Copyright (c) 2026 Croco Team.

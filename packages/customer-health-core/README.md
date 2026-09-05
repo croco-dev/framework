@@ -344,4 +344,4 @@ pnpm test --filter=@croco/customer-health-core
 
 ## 라이선스
 
-MIT
+Apache-2.0

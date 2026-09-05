@@ -217,4 +217,4 @@ await loader.load(1);
 
 ## License
 
-MIT
+Apache-2.0
