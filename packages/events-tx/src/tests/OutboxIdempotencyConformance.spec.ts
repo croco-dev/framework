@@ -183,6 +183,29 @@ describe.each(implementations)("%s outbox idempotency conformance", (_name, crea
     await expect(harness.count()).resolves.toBe(1);
   });
 
+  describe.each(["direct", "transaction context"] as const)("%s timestamp replay", (appendPath) => {
+    it.each([0, 1, -789, 60_000])(
+      "preserves the stored row when occurredAt differs by %i ms",
+      async (offset) => {
+        const harness = createHarness();
+        const occurredAt = new Date(NOW.getTime() + 789);
+        const inserted = await harness.store.appendOutbox(createInput({ occurredAt }));
+        const retry = createInput({
+          id: "message-retry",
+          occurredAt: new Date(occurredAt.getTime() + offset),
+        });
+        const replay =
+          appendPath === "direct"
+            ? harness.store.appendOutbox(retry)
+            : harness.appendWithContext(retry);
+
+        await expect(replay).resolves.toEqual(inserted);
+        await expect(harness.store.findOutboxById(inserted.id)).resolves.toEqual(inserted);
+        await expect(harness.count()).resolves.toBe(1);
+      },
+    );
+  });
+
   it.each([
     ["event id", { eventId: "event-2" }, ["eventId"]],
     ["event type", { eventType: "payment.captured" }, ["eventType"]],
@@ -191,9 +214,16 @@ describe.each(implementations)("%s outbox idempotency conformance", (_name, crea
     ["metadata", { metadata: { producer: "billing" } }, ["metadata"]],
   ] as const)("rejects a different %s for the same key", async (_label, overrides, fields) => {
     const harness = createHarness();
-    await harness.store.appendOutbox(createInput());
+    const inserted = await harness.store.appendOutbox(createInput());
 
-    await expect(harness.store.appendOutbox(createInput(overrides))).rejects.toMatchObject({
+    await expect(
+      harness.store.appendOutbox(
+        createInput({
+          ...overrides,
+          occurredAt: new Date(NOW.getTime() + 1),
+        }),
+      ),
+    ).rejects.toMatchObject({
       code: "events-tx/outbox-idempotency-conflict",
       category: "Conflict",
       extensions: {
@@ -201,6 +231,7 @@ describe.each(implementations)("%s outbox idempotency conformance", (_name, crea
         conflictingFields: fields,
       },
     });
+    await expect(harness.store.findOutboxById(inserted.id)).resolves.toEqual(inserted);
     await expect(harness.count()).resolves.toBe(1);
   });
 
@@ -274,6 +305,23 @@ describe.each(implementations)("%s outbox idempotency conformance", (_name, crea
         },
       },
     ]);
+    await expect(harness.count()).resolves.toBe(1);
+  });
+
+  it("replays the winning row when concurrent appends have different timestamps", async () => {
+    const harness = createHarness();
+    const [first, second] = await Promise.all([
+      harness.store.appendOutbox(createInput()),
+      harness.store.appendOutbox(
+        createInput({
+          id: "message-retry",
+          occurredAt: new Date(NOW.getTime() + 1),
+        }),
+      ),
+    ]);
+
+    expect(second).toEqual(first);
+    await expect(harness.store.findOutboxById(first.id)).resolves.toEqual(first);
     await expect(harness.count()).resolves.toBe(1);
   });
 
