@@ -1,5 +1,26 @@
 # @croco/frontend-cloudflare
 
+## 0.1.1
+
+### Patch Changes
+
+- b278729: - fix: block critical test tooling advisories
+- 7cdfcae: Declare audited package side effects so bundlers remove pure imports while preserving required initialization and CSS.
+- 67e0cbe: fix: resolve published package types before runtime conditions
+- 80cf10b: Return redacted Problem responses with stable diagnostic codes and correlation evidence when Cloudflare API or SSR boundaries fail, and expose a failure reporter for asset, API, and render failures.
+- Updated dependencies [ffebb2d]
+- Updated dependencies [b278729]
+- Updated dependencies [696c76b]
+- Updated dependencies [7cdfcae]
+- Updated dependencies [d99ede2]
+- Updated dependencies [8522b0c]
+- Updated dependencies [67e0cbe]
+- Updated dependencies [47a4fd9]
+- Updated dependencies [7c006af]
+- Updated dependencies [e90e7bc]
+- Updated dependencies [e07a323]
+  - @croco/meta-vite@0.0.5
+
 ## 0.1.0
 
 ### Minor Changes

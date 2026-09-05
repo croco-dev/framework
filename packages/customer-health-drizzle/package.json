@@ -1,6 +1,6 @@
 {
   "name": "@croco/customer-health-drizzle",
-  "version": "0.0.4",
+  "version": "1.0.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/croco-dev/framework.git",
