@@ -38,6 +38,13 @@ export {
 } from "./libs/TenantBusinessWorkspace";
 export { WebhookReliabilityConsole } from "./libs/WebhookReliabilityConsole";
 export {
+  AudienceCampaignOperationsPanel,
+  Customer360CommunicationPanel,
+  DeliveryOperationsPanel,
+  EngagementOperationsConsole,
+  MessageOperationsPanel,
+} from "./libs/EngagementOperationsConsole";
+export {
   LifecycleAutomationConsole,
   LifecycleDryRunPanel,
   LifecycleRuleOperations,
@@ -240,6 +247,14 @@ export type {
   TenantWorkspaceActionResult,
 } from "./libs/TenantBusinessWorkspace";
 export type { WebhookReliabilityConsoleProps } from "./libs/WebhookReliabilityConsole";
+export type {
+  AudienceCampaignOperationsPanelProps,
+  Customer360CommunicationPanelProps,
+  DeliveryOperationsPanelProps,
+  EngagementConsoleSection,
+  EngagementOperationsConsoleProps,
+  MessageOperationsPanelProps,
+} from "./libs/EngagementOperationsConsole";
 export type { LifecycleAutomationConsoleProps } from "./libs/LifecycleAutomationConsole";
 export type {
   LifecycleAutomationConsoleState,

@@ -10,6 +10,7 @@ import { PlanReleaseDemo } from './PlanReleaseDemo';
 import { CreditOperationsDemo } from './CreditOperationsDemo';
 import { TenantWorkspaceDemo } from './TenantWorkspaceDemo';
 import { WebhookReliabilityDemo } from './WebhookReliabilityDemo';
+import { EngagementOperationsDemo } from './EngagementOperationsDemo';
 
 type AdminUser = adminRpc.ListUsersOutput[number];
 type AdminOperation = adminRpc.ListOperationsOutput[number];
@@ -347,6 +348,7 @@ export default function App() {
           tenantId={selectedTenantId}
         />
         <WebhookReliabilityDemo key={`webhooks:${selectedTenantId}`} tenantId={selectedTenantId} />
+        <EngagementOperationsDemo key={`engagement:${selectedTenantId}`} tenantId={selectedTenantId} />
         <LifecycleAutomationDemo key={selectedTenantId} tenantId={selectedTenantId} />
 
         {problem ? (
