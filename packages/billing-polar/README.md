@@ -61,6 +61,12 @@ metadata를 다시 조회한 후 일반 생성 흐름을 재개합니다.
 
 `accessToken`과 `webhookSecret`은 diagnostics, 로그, 테스트 출력에 원문으로 남기지 않습니다.
 
+`webhookSecret`은 발급된 값을 그대로 전달합니다. 기존 Polar HMAC은 UTF-8 원문을 키로 사용합니다.
+이 검증이 실패하고 `whsec_` 접두사가 있으면 Standard Webhooks의 Base64 키로도 검증합니다.
+기존 시크릿도 같은 접두사를 사용할 수 있으므로 두 방식을 지원합니다.
+[Polar 공식 호환성 안내](https://polar.sh/docs/guides/laravel)를 따르며, 두 검증 모두 실패하면
+웹훅을 거부합니다. 접두사 없는 값은 Base64처럼 보여도 디코딩하지 않습니다.
+
 ## 사용법
 
 ### Checkout 생성

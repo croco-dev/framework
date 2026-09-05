@@ -11,6 +11,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PolarWebhookHandler } from "../libs/PolarWebhookHandler";
 import type { WebhookDependencies } from "../libs/PolarWebhookHandler";
 import { WebhookValidationProblem } from "../libs/problems/WebhookValidationProblem";
+import { verifyPolarWebhook } from "../libs/verifyPolarWebhook";
 import type { PolarConfig } from "../types";
 
 function createMockStore(): BillingStore {
@@ -143,7 +144,7 @@ function createSdkSubscriptionPayload(eventId: string) {
 function signPolarWebhook(params: {
   readonly body: string;
   readonly eventId: string;
-  readonly secret: string;
+  readonly secret: string | Buffer;
   readonly timestamp: number;
 }) {
   return `v1,${createHmac("sha256", params.secret)
@@ -154,7 +155,7 @@ function signPolarWebhook(params: {
 function createSignedHeaders(params: {
   readonly body: string;
   readonly eventId: string;
-  readonly secret: string;
+  readonly secret: string | Buffer;
   readonly timestamp: number;
 }) {
   return {
@@ -176,8 +177,27 @@ function expectWebhookValidationProblem(
   });
 }
 
-describe("PolarWebhookHandler Standard Webhooks signature verification", () => {
-  const webhookSecret = "test-secret";
+const standardWebhookKey = Buffer.from(Array.from({ length: 32 }, (_, index) => index * 8));
+const prefixedWebhookSecret = `whsec_${standardWebhookKey.toString("base64")}`;
+
+describe.each([
+  { format: "raw UTF-8", webhookSecret: "test-secret", signingKey: "test-secret" },
+  {
+    format: "Base64-looking raw UTF-8",
+    webhookSecret: "dGVzdC1zZWNyZXQ=",
+    signingKey: "dGVzdC1zZWNyZXQ=",
+  },
+  {
+    format: "whsec_ Base64",
+    webhookSecret: prefixedWebhookSecret,
+    signingKey: standardWebhookKey,
+  },
+  {
+    format: "legacy whsec_ UTF-8",
+    webhookSecret: prefixedWebhookSecret,
+    signingKey: prefixedWebhookSecret,
+  },
+])("PolarWebhookHandler $format signature verification", ({ webhookSecret, signingKey }) => {
   const now = new Date("2026-01-31T00:00:00Z");
   let handler!: PolarWebhookHandler;
   let mockStore!: BillingStore;
@@ -206,28 +226,32 @@ describe("PolarWebhookHandler Standard Webhooks signature verification", () => {
     vi.useRealTimers();
   });
 
-  it("should verify a real SDK signed replay and preserve idempotent side effects", async () => {
-    const eventId = "evt-sdk-replay";
-    const body = JSON.stringify(createSdkSubscriptionPayload(eventId));
-    const timestamp = Math.floor(now.getTime() / 1000);
-    const headers = createSignedHeaders({ body, eventId, secret: webhookSecret, timestamp });
+  it.each(["string", "Buffer"])(
+    "should verify a signed %s replay and preserve idempotent side effects",
+    async (bodyType) => {
+      const eventId = "evt-sdk-replay";
+      const body = JSON.stringify(createSdkSubscriptionPayload(eventId));
+      const timestamp = Math.floor(now.getTime() / 1000);
+      const headers = createSignedHeaders({ body, eventId, secret: signingKey, timestamp });
+      const requestBody = bodyType === "Buffer" ? Buffer.from(body) : body;
 
-    vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
-    vi.mocked(mockStore.reserveWebhook)
-      .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new WebhookAlreadyProcessedProblem(eventId));
+      vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
+      vi.mocked(mockStore.reserveWebhook)
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new WebhookAlreadyProcessedProblem(eventId));
 
-    const firstResult = await handler.handle(body, headers);
-    const replayResult = await handler.handle(body, headers);
+      const firstResult = await handler.handle(requestBody, headers);
+      const replayResult = await handler.handle(requestBody, headers);
 
-    expect(firstResult).toEqual({ success: true, eventId });
-    expect(replayResult).toEqual({ success: true, eventId });
-    expect(mockStore.reserveWebhook).not.toHaveBeenCalled();
-    expect(mockStore.saveSubscription).toHaveBeenCalledTimes(1);
-    expect(mockEventPublisher.publishNow).toHaveBeenCalledTimes(1);
-    expect(mockStore.completeWebhook).toHaveBeenCalledTimes(1);
-    expect(mockStore.failWebhook).not.toHaveBeenCalled();
-  });
+      expect(firstResult).toEqual({ success: true, eventId });
+      expect(replayResult).toEqual({ success: true, eventId });
+      expect(mockStore.reserveWebhook).not.toHaveBeenCalled();
+      expect(mockStore.saveSubscription).toHaveBeenCalledTimes(1);
+      expect(mockEventPublisher.publishNow).toHaveBeenCalledTimes(1);
+      expect(mockStore.completeWebhook).toHaveBeenCalledTimes(1);
+      expect(mockStore.failWebhook).not.toHaveBeenCalled();
+    },
+  );
 
   it("should verify and publish a directly signed subscription.past_due event", async () => {
     const eventId = "evt-sdk-past-due";
@@ -242,7 +266,7 @@ describe("PolarWebhookHandler Standard Webhooks signature verification", () => {
     };
     const body = JSON.stringify(payload);
     const timestamp = Math.floor(now.getTime() / 1000);
-    const headers = createSignedHeaders({ body, eventId, secret: webhookSecret, timestamp });
+    const headers = createSignedHeaders({ body, eventId, secret: signingKey, timestamp });
 
     vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
     vi.mocked(mockStore.reserveWebhook).mockResolvedValue(undefined);
@@ -265,7 +289,7 @@ describe("PolarWebhookHandler Standard Webhooks signature verification", () => {
     const eventId = "evt-sdk-stale";
     const body = JSON.stringify(createSdkSubscriptionPayload(eventId));
     const timestamp = Math.floor(now.getTime() / 1000) - 301;
-    const headers = createSignedHeaders({ body, eventId, secret: webhookSecret, timestamp });
+    const headers = createSignedHeaders({ body, eventId, secret: signingKey, timestamp });
 
     await expect(handler.handle(body, headers)).rejects.toSatisfy((problem: unknown) => {
       expectWebhookValidationProblem(
@@ -304,4 +328,66 @@ describe("PolarWebhookHandler Standard Webhooks signature verification", () => {
     expect(mockStore.failWebhook).not.toHaveBeenCalled();
     expect(mockEventPublisher.publishNow).not.toHaveBeenCalled();
   });
+
+  it.each(["tampered payload", "wrong signing key"])(
+    "should reject a %s before billing side effects",
+    async (failure) => {
+      const eventId = "evt-sdk-tampered";
+      const payload = createSdkSubscriptionPayload(eventId);
+      const body = JSON.stringify(payload);
+      const timestamp = Math.floor(now.getTime() / 1000);
+      const headers = createSignedHeaders({
+        body,
+        eventId,
+        secret: failure === "wrong signing key" ? "wrong-secret" : signingKey,
+        timestamp,
+      });
+      const requestBody =
+        failure === "tampered payload"
+          ? JSON.stringify({ ...payload, data: { ...payload.data, amount: 1 } })
+          : body;
+
+      await expect(handler.handle(requestBody, headers)).rejects.toSatisfy((problem: unknown) => {
+        expectWebhookValidationProblem(
+          problem,
+          "Webhook validation failed: No matching signature found",
+        );
+        return true;
+      });
+      expect(mockPlanRegistry.resolveProviderPlanVersion).not.toHaveBeenCalled();
+      expect(mockStore.commitSubscriptionWebhook).not.toHaveBeenCalled();
+      expect(mockStore.reserveWebhook).not.toHaveBeenCalled();
+      expect(mockStore.saveSubscription).not.toHaveBeenCalled();
+      expect(mockStore.completeWebhook).not.toHaveBeenCalled();
+      expect(mockStore.failWebhook).not.toHaveBeenCalled();
+      expect(mockEventPublisher.publishNow).not.toHaveBeenCalled();
+    },
+  );
+
+  it("should preserve a JSON parsing error after authenticating the payload", () => {
+    const eventId = "evt-invalid-json";
+    const body = "{";
+    const timestamp = Math.floor(now.getTime() / 1000);
+    const headers = createSignedHeaders({ body, eventId, secret: signingKey, timestamp });
+
+    expect(() => verifyPolarWebhook(body, headers, webhookSecret)).toThrow(SyntaxError);
+  });
+});
+
+it("should not interpret a legacy prefix-only secret as an empty signing key", () => {
+  const eventId = "evt-empty-key";
+  const body = JSON.stringify({ id: eventId });
+  const timestamp = Math.floor(Date.now() / 1000);
+  const legacyHeaders = createSignedHeaders({ body, eventId, secret: "whsec_", timestamp });
+  const emptyKeyHeaders = createSignedHeaders({
+    body,
+    eventId,
+    secret: Buffer.alloc(0),
+    timestamp,
+  });
+
+  expect(verifyPolarWebhook(body, legacyHeaders, "whsec_")).toEqual({ id: eventId });
+  expect(() => verifyPolarWebhook(body, emptyKeyHeaders, "whsec_")).toThrow(
+    "No matching signature found",
+  );
 });
