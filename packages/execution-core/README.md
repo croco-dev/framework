@@ -525,4 +525,4 @@ export class RedisExecutionStore extends ExecutionStore {
 
 ## 라이선스
 
-MIT
+Apache-2.0

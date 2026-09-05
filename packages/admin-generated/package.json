@@ -2,6 +2,7 @@
   "name": "@croco/admin-generated",
   "version": "0.1.0",
   "description": "Contract Graph driven admin resource configuration generator for Croco",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/croco-dev/framework.git",
