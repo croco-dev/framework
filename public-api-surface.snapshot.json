@@ -27668,6 +27668,12 @@
           ],
           "typeExports": [
             {
+              "name": "MeilisearchDeleteIndexOptions",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
               "name": "MeilisearchDiagnosticsOptions",
               "exportKind": "declaration",
               "source": "./libs/MeilisearchDiagnosticsProvider",
