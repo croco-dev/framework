@@ -1469,6 +1469,12 @@
       "owner": "@croco/events-core"
     },
     {
+      "path": "packages/events-inmemory/src/tests/InMemoryDeadLetterQueue.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/events-inmemory"
+    },
+    {
       "path": "packages/events-inmemory/src/tests/InMemoryEventBus.spec.ts",
       "lane": "fast",
       "qualifiers": [],

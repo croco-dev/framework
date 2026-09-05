@@ -89,6 +89,25 @@ readonly `RunningHandler`[]
 
 ---
 
+### replayDeadLetters()
+
+> **replayDeadLetters**(`limit?`): `Promise`\<[`DeadLetterReplayResult`](/api/events-inmemory/src/type-aliases/deadletterreplayresult/)\>
+
+Removes a batch and re-executes only its failed handlers.
+Failed writes return the unpersisted item and storage error to the caller for recovery.
+
+#### Parameters
+
+##### limit?
+
+`number`
+
+#### Returns
+
+`Promise`\<[`DeadLetterReplayResult`](/api/events-inmemory/src/type-aliases/deadletterreplayresult/)\>
+
+---
+
 ### subscribe()
 
 > **subscribe**(`subscription`): `void`

@@ -2,11 +2,25 @@
 editUrl: false
 next: false
 prev: false
-title: "DeadLetterQueue"
+title: "InMemoryDeadLetterQueue"
 ---
 
-죽은 편지 큐(DLQ) 인터페이스입니다.
-처리 실패한 이벤트를 저장하고 관리하는 계약을 정의합니다.
+Process-local dead-letter storage for tests, development, and single-process runtimes.
+Entries are deduplicated by stable event and handler identity.
+
+## Implements
+
+- [`DeadLetterQueue`](/api/events-core/src/interfaces/deadletterqueue/)
+
+## Constructors
+
+### Constructor
+
+> **new InMemoryDeadLetterQueue**(): `InMemoryDeadLetterQueue`
+
+#### Returns
+
+`InMemoryDeadLetterQueue`
 
 ## Methods
 
@@ -20,11 +34,15 @@ DLQ를 비웁니다.
 
 `Promise`\<`void`\>
 
+#### Implementation of
+
+[`DeadLetterQueue`](/api/events-core/src/interfaces/deadletterqueue/).[`clear`](/api/events-core/src/interfaces/deadletterqueue/#clear)
+
 ---
 
 ### dequeue()
 
-> **dequeue**\<`TEvent`\>(`limit?`): `Promise`\<[`DeadLetterItem`](/api/events-core/src/type-aliases/deadletteritem/)\<`TEvent`\>[]\>
+> **dequeue**\<`TEvent`\>(`limit?`): `Promise`\<[`InMemoryDeadLetterItem`](/api/events-inmemory/src/type-aliases/inmemorydeadletteritem/)\<`TEvent`\>[]\>
 
 DLQ에서 이벤트를 꺼내 재처리합니다.
 반환한 항목은 다른 동시 소비자가 다시 받지 않도록 원자적으로 제거해야 합니다.
@@ -47,9 +65,13 @@ DLQ에서 이벤트를 꺼내 재처리합니다.
 
 #### Returns
 
-`Promise`\<[`DeadLetterItem`](/api/events-core/src/type-aliases/deadletteritem/)\<`TEvent`\>[]\>
+`Promise`\<[`InMemoryDeadLetterItem`](/api/events-inmemory/src/type-aliases/inmemorydeadletteritem/)\<`TEvent`\>[]\>
 
 DLQ 항목 목록
+
+#### Implementation of
+
+[`DeadLetterQueue`](/api/events-core/src/interfaces/deadletterqueue/).[`dequeue`](/api/events-core/src/interfaces/deadletterqueue/#dequeue)
 
 ---
 
@@ -78,11 +100,15 @@ DLQ 항목 목록
 
 `Promise`\<`void`\>
 
+#### Implementation of
+
+[`DeadLetterQueue`](/api/events-core/src/interfaces/deadletterqueue/).[`enqueue`](/api/events-core/src/interfaces/deadletterqueue/#enqueue)
+
 ---
 
 ### peek()
 
-> **peek**\<`TEvent`\>(): `Promise`\<[`DeadLetterItem`](/api/events-core/src/type-aliases/deadletteritem/)\<`TEvent`\>[]\>
+> **peek**\<`TEvent`\>(): `Promise`\<[`InMemoryDeadLetterItem`](/api/events-inmemory/src/type-aliases/inmemorydeadletteritem/)\<`TEvent`\>[]\>
 
 DLQ의 모든 항목을 조회합니다.
 
@@ -94,9 +120,13 @@ DLQ의 모든 항목을 조회합니다.
 
 #### Returns
 
-`Promise`\<[`DeadLetterItem`](/api/events-core/src/type-aliases/deadletteritem/)\<`TEvent`\>[]\>
+`Promise`\<[`InMemoryDeadLetterItem`](/api/events-inmemory/src/type-aliases/inmemorydeadletteritem/)\<`TEvent`\>[]\>
 
 DLQ 항목 목록
+
+#### Implementation of
+
+[`DeadLetterQueue`](/api/events-core/src/interfaces/deadletterqueue/).[`peek`](/api/events-core/src/interfaces/deadletterqueue/#peek)
 
 ---
 
@@ -118,6 +148,10 @@ DLQ 항목 목록
 
 `Promise`\<`void`\>
 
+#### Implementation of
+
+[`DeadLetterQueue`](/api/events-core/src/interfaces/deadletterqueue/).[`remove`](/api/events-core/src/interfaces/deadletterqueue/#remove)
+
 ---
 
 ### size()
@@ -129,3 +163,7 @@ DLQ의 항목 개수를 반환합니다.
 #### Returns
 
 `Promise`\<`number`\>
+
+#### Implementation of
+
+[`DeadLetterQueue`](/api/events-core/src/interfaces/deadletterqueue/).[`size`](/api/events-core/src/interfaces/deadletterqueue/#size)

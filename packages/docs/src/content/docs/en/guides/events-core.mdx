@@ -155,3 +155,76 @@ async function publishUserEvents(): Promise<void> {
 
 void publishUserEvents();
 ```
+
+### Opt-in dead-letter retries and replay
+
+Configure a dead-letter queue to retry failed handlers and retain exhausted work. Without this option,
+`InMemoryEventBus` keeps its one-attempt publish behavior.
+
+```typescript typecheck
+import {
+  DomainEvent,
+  type DeadLetterPolicy,
+  type EventHandler,
+  type RetryableEventHandler,
+} from "@croco/events-core";
+import { InMemoryDeadLetterQueue, InMemoryEventBus } from "@croco/events-inmemory";
+
+class UserCreatedEvent extends DomainEvent {
+  static readonly eventName = "user.created";
+}
+
+class UserCreatedHandler implements EventHandler<UserCreatedEvent>, RetryableEventHandler {
+  handle(_event: UserCreatedEvent): void {
+    // Handle the event. Use eventId as the idempotency identity for side effects.
+  }
+
+  getRetryPolicy(): Partial<DeadLetterPolicy> {
+    return { maxRetries: 2, retryDelayMs: 100 };
+  }
+}
+
+const deadLetterQueue = new InMemoryDeadLetterQueue();
+const eventBus = new InMemoryEventBus({ deadLetterQueue });
+eventBus.subscribe({
+  eventName: UserCreatedEvent.eventName,
+  handlerClass: UserCreatedHandler,
+  handlerId: "users.created.v1",
+});
+
+async function replayExhaustedHandlers(): Promise<void> {
+  const result = await eventBus.replayDeadLetters(10);
+  console.log(result.succeeded, result.failed);
+}
+
+void replayExhaustedHandlers();
+```
+
+Replay preserves the original `eventId` and invokes only the handler recorded by the dead-letter entry. The
+in-memory queue atomically removes entries within one process and deduplicates active entries by event and handler
+identity. DLQ-enabled buses require an explicit, nonempty `handlerId`; constructor names are display labels, not
+stored identities. Keep the same ID across class renames and minified builds. The `handlerId` option on
+`RegisterEventHandler` is also forwarded by `EventBusConfig.start()`. Within one bus, each ID belongs to one class
+and each class uses one ID, including after unsubscribe or clear. Registering the same class and ID for multiple
+patterns is allowed. Do not repurpose an ID while entries for its previous handler remain in storage.
+
+If DI cannot create a handler, the event is retained with reason `handler-resolution-failed`, retry count zero,
+and the bus retention policy. No handler policy is invoked before initialization succeeds; repair the provider
+registration and replay the retained item.
+
+DLQ snapshots preserve the event prototype and identity while copying payload and metadata without mutable aliases.
+Supported values are primitive data except symbols, plain or null-prototype objects, arrays, `Date`, `RegExp`, `Map`,
+and `Set`. Cycles and enumerable symbol keys are preserved. Nested custom instances, functions, binary buffers/views,
+and other unsupported values fail with `UnsupportedDeadLetterValueProblem`; convert them to supported data before
+publishing or enqueueing. This snapshot boundary does not apply to publishing without a DLQ.
+
+Replay honors the bus concurrency limit and blocking timeout. With `error` or `drop`, unavailable capacity returns
+the item to the queue without executing it. Each unsuccessful result includes `item`, `error`, and `requeued`.
+If storage rejects the write, `requeued` is false and `storageError` preserves that failure separately: the caller
+must retain the returned item and enqueue it after storage recovery. Do not log the item; it contains the event payload.
+The rest of the removed batch is still processed.
+
+A custom `DeadLetterQueue` adapter must atomically remove returned items before `dequeue` resolves; lease-based
+claims requiring a separate acknowledgement are not supported by this contract. Durable storage alone does not
+protect work already removed during a process crash. Use the transactional outbox/inbox path in `events-tx` when
+durable execution ownership is required.

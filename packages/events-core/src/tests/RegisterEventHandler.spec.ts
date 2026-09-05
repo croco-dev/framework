@@ -172,6 +172,22 @@ class GenericThenZeroPriorityOrderCreatedHandler implements EventHandler<Priorit
 }
 
 describe("RegisterEventHandler", () => {
+  it("preserves an explicit handler identity independently of the constructor name", () => {
+    class RenamedHandler implements EventHandler<OrderCreated> {
+      handle(_event: OrderCreated): void {}
+    }
+
+    RegisterEventHandler(OrderCreated, { handlerId: "orders.fulfillment.v1" })(RenamedHandler);
+
+    expect(getEventHandlerSubscriptions(RenamedHandler)).toEqual([
+      {
+        eventName: "order.created",
+        handlerClass: RenamedHandler,
+        handlerId: "orders.fulfillment.v1",
+      },
+    ]);
+  });
+
   it("preserves the event-specific subscription metadata without a handler cast", () => {
     const subscriptions = getEventHandlerSubscriptions(OrderCreatedHandler);
     const handler = new DefaultHandlerResolver().resolve(OrderCreatedHandler);

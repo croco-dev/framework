@@ -367,13 +367,13 @@ describe("EventBusConfig", () => {
       );
     });
 
-    it("should register subscriptions from handlers array metadata", async () => {
+    it("should preserve stable handler IDs from handlers array metadata", async () => {
       const config = EventBusConfig.getInstance();
       const mockBus = new MockEventBus();
 
       config.setEventBus(mockBus as EventBus);
 
-      @RegisterEventHandler(TestEvent)
+      @RegisterEventHandler(TestEvent, { handlerId: "test.decorated.v1" })
       class DecoratedHandler implements EventHandler<TestEvent> {
         async handle(_event: TestEvent): Promise<void> {}
       }
@@ -384,6 +384,7 @@ describe("EventBusConfig", () => {
       const lastSub = mockBus.subscriptions[mockBus.subscriptions.length - 1];
       expect(lastSub.eventName).toBe("TestEvent");
       expect(lastSub.handlerClass).toBe(DecoratedHandler);
+      expect(lastSub.handlerId).toBe("test.decorated.v1");
     });
 
     it("should use DefaultHandlerResolver when no resolver provided", async () => {
