@@ -479,6 +479,67 @@ describe.skipIf(!realResourcesEnabled)("real TestKernel resources", () => {
     ]);
   });
 
+  it("rejects corrupt PostgreSQL outbox claims without changing any batch row", async () => {
+    const postgres = postgresResource({
+      migrations: await createMigrationDirectory(),
+      mode: "migration",
+    });
+    await using kernel = await createTestKernel({
+      bootstrap: bootstrapEmptyApplication,
+      fidelity: "application",
+      resources: [postgres],
+      validation: { di: "off", security: "off" },
+      workerId: "outbox-corrupt-worker",
+    });
+    const { pool } = kernel.resource(postgres);
+    const store = new DrizzleTransactionalEventStore({
+      db: drizzle(pool) as unknown as DrizzleTransactionalEventStoreDb,
+    });
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    const diagnostic = { code: "seed", message: "Seeded.", at: now };
+    for (const corruptField of ["attempts", "diagnostics"]) {
+      await pool.query("delete from croco_outbox_messages");
+      for (const id of ["a-valid", "z-corrupt"]) {
+        await store.appendOutbox({
+          id,
+          eventId: id,
+          eventType: "resource.claim",
+          aggregateId: id,
+          idempotencyKey: id,
+          payload: {},
+          maxAttempts: 3,
+          visibleAt: now,
+          occurredAt: now,
+          diagnostics: [diagnostic],
+        });
+      }
+      if (corruptField === "attempts") {
+        await pool.query("update croco_outbox_messages set attempts = -1 where id = 'z-corrupt'");
+      } else {
+        await pool.query(
+          "update croco_outbox_messages set diagnostics = $1::jsonb where id = 'z-corrupt'",
+          [JSON.stringify(diagnostic)],
+        );
+      }
+      const before = await pool.query(
+        "select id, attempts, status, locked_until, updated_at, diagnostics from croco_outbox_messages order by id",
+      );
+      await expect(
+        store.claimOutboxBatch({ limit: 2, now, visibilityTimeoutMs: 1000 }),
+      ).rejects.toMatchObject({
+        cause: { code: "23502", column: corruptField },
+      });
+      const after = await pool.query(
+        "select id, attempts, status, locked_until, updated_at, diagnostics from croco_outbox_messages order by id",
+      );
+      expect(after.rows).toEqual(before.rows);
+      expect(after.rows).toMatchObject([
+        { id: "a-valid", attempts: 0, status: "pending", locked_until: null },
+        { id: "z-corrupt", status: "pending", locked_until: null },
+      ]);
+    }
+  });
+
   it("isolates concurrent PostgreSQL workers in separate databases", async () => {
     const firstResource = postgresResource({
       id: "postgres-first",
