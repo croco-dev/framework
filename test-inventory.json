@@ -3131,6 +3131,12 @@
       "owner": "@croco/protocols-rest"
     },
     {
+      "path": "packages/protocols-trpc/src/tests/TrpcExecutionContext.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/protocols-trpc"
+    },
+    {
       "path": "packages/protocols-trpc/src/tests/TrpcExecutionPipeline.spec.ts",
       "lane": "fast",
       "qualifiers": [],

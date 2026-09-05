@@ -95,6 +95,10 @@ function normalizeNodeRequest(
     const headers = new Headers();
     if (isRecord(value.headers)) {
       for (const [name, headerValue] of Object.entries(value.headers)) {
+        if (name.startsWith(":")) {
+          continue;
+        }
+
         if (typeof headerValue === "string") {
           headers.set(name, headerValue);
         } else if (Array.isArray(headerValue)) {
@@ -107,7 +111,8 @@ function normalizeNodeRequest(
       }
     }
 
-    const host = headers.get("host") ?? "localhost";
+    const authority = isRecord(value.headers) ? value.headers[":authority"] : undefined;
+    const host = headers.get("host") ?? (typeof authority === "string" ? authority : "localhost");
     const encrypted = isRecord(value.socket) && value.socket.encrypted === true;
     const url = new URL(value.url, `${encrypted ? "https" : "http"}://${host}`);
 
