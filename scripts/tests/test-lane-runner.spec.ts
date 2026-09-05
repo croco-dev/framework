@@ -13,6 +13,8 @@ import { join, resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  DEFAULT_MAX_ROOT_VITEST_WORKERS,
+  MAX_ROOT_VITEST_WORKERS,
   createFastPackageTurboArguments,
   createTestLanePlan,
   hasFailedBuildTask,
@@ -23,6 +25,7 @@ import {
   readTurboRunSummary,
   readTurboTestTaskEvidence,
   redactLiveResourceValues,
+  resolveMaxRootVitestWorkers,
   resolveTurboPackageFilters,
   runTestLane,
 } from "../test-lane-runner.mts";
@@ -76,6 +79,20 @@ describe("test lane runner", () => {
     expect(args.find((argument) => argument.startsWith("--concurrency="))).toMatch(
       /^--concurrency=[1-4]$/,
     );
+  });
+
+  it("resolves root vitest worker allocation dynamically up to runner parallelism", () => {
+    expect(MAX_ROOT_VITEST_WORKERS).toBe(2);
+    expect(DEFAULT_MAX_ROOT_VITEST_WORKERS).toBe(2);
+    expect(resolveMaxRootVitestWorkers({}, 1)).toBe(1);
+    expect(resolveMaxRootVitestWorkers({}, 2)).toBe(2);
+    expect(resolveMaxRootVitestWorkers({}, 4)).toBe(2);
+    expect(resolveMaxRootVitestWorkers({}, 8)).toBe(2);
+    expect(resolveMaxRootVitestWorkers({ MAX_ROOT_VITEST_WORKERS: "6" }, 2)).toBe(6);
+    expect(resolveMaxRootVitestWorkers({ CROCO_TEST_WORKERS: "8" }, 2)).toBe(8);
+    expect(resolveMaxRootVitestWorkers({ MAX_ROOT_VITEST_WORKERS: "invalid" }, 2)).toBe(2);
+    expect(resolveMaxRootVitestWorkers({ MAX_ROOT_VITEST_WORKERS: "0" }, 4)).toBe(2);
+    expect(resolveMaxRootVitestWorkers({ CROCO_TEST_WORKERS: "-2" }, 4)).toBe(2);
   });
 
   it(
