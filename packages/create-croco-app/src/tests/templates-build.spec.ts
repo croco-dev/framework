@@ -1290,6 +1290,11 @@ function checkAiSaasStructure() {
   checkFileContains("ai-saas", ["apps", "api-server", "src", "app.ts.hbs"], /AiController/);
   checkFileContains(
     "ai-saas",
+    ["apps", "api-server", "src", "tests", "AiSaas.spec.ts"],
+    /try\s*\{\s*await app\?\.disposeApplicationRuntime\(\);\s*\}\s*finally\s*\{\s*restoreEnvironment\(SAAS_DEMO_ENDPOINTS_ENABLED_ENV, previousDemo\);/,
+  );
+  checkFileContains(
+    "ai-saas",
     ["apps", "api-server", "src", "app.ts.hbs"],
     /registerRuntimeScopedProviders\(runtimeState\.current\)[\s\S]*createAiSaasRuntime\(runtime\)/,
   );

@@ -165,8 +165,11 @@ describe("AI SaaS generated baseline", () => {
         applicationAiRuntime.service.listInvocationLogs(seed.tenant.id),
       ).resolves.toHaveLength(1);
     } finally {
-      await app?.disposeApplicationRuntime();
-      restoreEnvironment(SAAS_DEMO_ENDPOINTS_ENABLED_ENV, previousDemo);
+      try {
+        await app?.disposeApplicationRuntime();
+      } finally {
+        restoreEnvironment(SAAS_DEMO_ENDPOINTS_ENABLED_ENV, previousDemo);
+      }
     }
   });
 });
