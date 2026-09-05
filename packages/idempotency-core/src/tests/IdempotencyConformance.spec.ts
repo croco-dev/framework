@@ -18,7 +18,7 @@ describe("idempotency store conformance", () => {
       "rejects invalid ttl before reserve state changes",
       "rejects invalid ttl before commit state changes",
       "rejects invalid ttl before fail state changes",
-      "keeps expiration absent when ttl is omitted",
+      "grants a finite default lease when ttl is omitted",
     ]);
   });
 

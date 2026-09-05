@@ -176,22 +176,57 @@ describe("InMemoryIdempotencyStore", () => {
     );
   });
 
-  it("keeps an omitted ttl explicitly non-expiring", async () => {
+  it("expires an omitted-ttl reservation after the default in-flight lease", async () => {
     let now = new Date("2026-01-01T00:00:00.000Z");
     const store = new InMemoryIdempotencyStore({ now: () => now });
-    const key = createKey({ key: "non-expiring" });
+    const key = createKey({ key: "default-lease" });
 
     const reserved = await store.reserve(key);
     expect(reserved.outcome).toBe("reserved");
     if (reserved.outcome !== "reserved") {
       throw new Error("expected a reservation");
     }
-    expect(reserved.record.expiresAt).toBeNull();
+    expect(reserved.record.expiresAt).toEqual(new Date("2026-01-01T00:00:30.000Z"));
 
-    now = new Date("2126-01-01T00:00:00.000Z");
+    now = new Date("2026-01-01T00:00:29.999Z");
     const stillActive = await store.reserve(key);
     expect(stillActive.outcome).toBe("in-flight");
+
+    now = new Date("2026-01-01T00:00:30.000Z");
+    const reReserved = await store.reserve(key);
+    expect(reReserved.outcome).toBe("reserved");
     expect(store.size).toBe(1);
+  });
+
+  it("recovers a crashed in-flight reservation by re-reserving after the default lease", async () => {
+    let now = new Date("2026-01-01T00:00:00.000Z");
+    const store = new InMemoryIdempotencyStore({ now: () => now });
+    const key = createKey({ key: "crashed-worker" });
+
+    const crashed = await store.reserve(key);
+    expect(crashed.outcome).toBe("reserved");
+
+    now = new Date("2026-01-01T00:00:30.001Z");
+    const recovered = await store.reserve(key);
+    expect(recovered.outcome).toBe("reserved");
+    expect(store.size).toBe(1);
+  });
+
+  it("preserves an explicit ttl over the default in-flight lease", async () => {
+    let now = new Date("2026-01-01T00:00:00.000Z");
+    const store = new InMemoryIdempotencyStore({ now: () => now });
+    const key = createKey({ key: "explicit-ttl" });
+
+    const reserved = await store.reserve(key, { ttlMs: 5_000 });
+    expect(reserved.outcome).toBe("reserved");
+    if (reserved.outcome !== "reserved") {
+      throw new Error("expected a reservation");
+    }
+    expect(reserved.record.expiresAt).toEqual(new Date("2026-01-01T00:00:05.000Z"));
+
+    now = new Date("2026-01-01T00:00:05.000Z");
+    const reReserved = await store.reserve(key);
+    expect(reReserved.outcome).toBe("reserved");
   });
 
   it("replays a committed response for the same key and fingerprint", async () => {

@@ -287,7 +287,7 @@ export function createIdempotencyStoreConformanceSuite<TResult = string>(
         },
       },
       {
-        name: "keeps expiration absent when ttl is omitted",
+        name: "grants a finite default lease when ttl is omitted",
         run: async () => {
           const store = await options.createStore();
           const commitKey = createConformanceKey("omitted-commit-ttl");
@@ -296,7 +296,16 @@ export function createIdempotencyStoreConformanceSuite<TResult = string>(
           if (commitReservation.outcome !== "reserved") {
             return;
           }
-          assertEqual(commitReservation.record.expiresAt, null, "reserve TTL must remain absent");
+
+          const leaseExpiresAt = commitReservation.record.expiresAt;
+          if (leaseExpiresAt === null) {
+            throw new Error("omitted-ttl reservation must grant a finite in-flight lease");
+          }
+          assertEqual(
+            leaseExpiresAt.getTime() > commitReservation.record.createdAt.getTime(),
+            true,
+            "in-flight lease must expire after the reservation is created",
+          );
 
           const completed = await store.commit({
             key: commitKey,
