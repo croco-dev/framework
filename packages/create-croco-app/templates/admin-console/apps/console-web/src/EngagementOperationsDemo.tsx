@@ -1,8 +1,18 @@
 import {
   ENGAGEMENT_PERMISSIONS,
+  type EngagementAudienceEstimateRequest,
   type EngagementAudienceEstimateResult,
+  type EngagementCampaignCancelRequest,
+  type EngagementCampaignRunRequest,
+  type EngagementCampaignSnapshotRequest,
+  type EngagementCreateSuppressionRequest,
+  type EngagementMessagePreviewRequest,
   type EngagementMessagePreviewResult,
   type EngagementOperationsReadyState,
+  type EngagementReactivateEndpointRequest,
+  type EngagementRemoveSuppressionRequest,
+  type EngagementRetryDispatchRequest,
+  type EngagementTestSendRequest,
   type EngagementTestSendResult,
 } from "@croco/admin-core";
 import { EngagementOperationsConsole } from "@croco/admin-react";
@@ -18,6 +28,78 @@ export function EngagementOperationsDemo({ tenantId }: { readonly tenantId: stri
   const [estimateResult, setEstimateResult] = useState<
     EngagementAudienceEstimateResult | undefined
   >();
+
+  function handleCancelCampaign(req: EngagementCampaignCancelRequest) {
+    setLastAction(
+      `Campaign ${req.campaignId} canceled: accepted notifications not recalled; audit ${req.reason}`,
+    );
+  }
+
+  function handleCreateSnapshot(req: EngagementCampaignSnapshotRequest) {
+    setLastAction(`Snapshot for campaign ${req.campaignId} created: immutable membership frozen.`);
+  }
+
+  function handleCreateSuppression(req: EngagementCreateSuppressionRequest) {
+    setLastAction(`Suppression added for recipient ${req.recipientId}: reason ${req.reason}`);
+  }
+
+  function handleEstimateAudience(req: EngagementAudienceEstimateRequest) {
+    setEstimateResult({
+      audienceId: req.audienceId,
+      isSampleBounded: true,
+      sampleRecipients: [
+        { maskedEmail: "u***1@example.test", recipientId: "rec_sample_1" },
+        { maskedEmail: "u***2@example.test", recipientId: "rec_sample_2" },
+      ],
+      totalCount: 2450,
+    });
+    setLastAction(`Estimated audience ${req.audienceId}: total 2450 (bounded sample returned).`);
+  }
+
+  function handlePreviewMessage(req: EngagementMessagePreviewRequest) {
+    setPreviewResult({
+      channel: req.channel,
+      htmlContent: "<h1>Welcome to Croco SaaS</h1><p>Your subscription is active.</p>",
+      messageId: req.messageId,
+      pushContent: {
+        body: "Your workspace is ready to explore.",
+        title: "Welcome aboard!",
+      },
+      renderedAt: new Date(),
+      subject: "Welcome to your new workspace",
+    });
+    setLastAction(`Preview generated for message ${req.messageId} on channel ${req.channel}`);
+  }
+
+  function handleReactivateEndpoint(req: EngagementReactivateEndpointRequest) {
+    setLastAction(`Endpoint ${req.endpointId} reactivated: audit reason ${req.reason}`);
+  }
+
+  function handleRemoveSuppression(req: EngagementRemoveSuppressionRequest) {
+    setLastAction(`Suppression ${req.suppressionId} removed: audit reason ${req.reason}`);
+  }
+
+  function handleRetryDispatch(req: EngagementRetryDispatchRequest) {
+    setLastAction(
+      `Safe retry triggered for dispatch ${req.dispatchId}: idempotency ${req.idempotencyKey}`,
+    );
+  }
+
+  function handleRunCampaign(req: EngagementCampaignRunRequest) {
+    setLastAction(
+      `Campaign ${req.campaignId} started broadcast from immutable snapshot ${req.snapshotId}`,
+    );
+  }
+
+  function handleTestSend(req: EngagementTestSendRequest) {
+    setTestSendResult({
+      auditEvidence: `actor=${req.actorId};reason=${req.reason}`,
+      dispatchedAt: new Date(),
+      dispatchId: `disp_test_${Date.now()}`,
+      status: "accepted",
+    });
+    setLastAction(`Audited test send dispatched for message ${req.messageId}`);
+  }
 
   const state: EngagementOperationsReadyState = {
     grantedPermissions: [
@@ -227,73 +309,17 @@ export function EngagementOperationsDemo({ tenantId }: { readonly tenantId: stri
       <EngagementOperationsConsole
         audienceEstimateResult={estimateResult}
         filter={deliveryFilter}
-        onCancelCampaign={(req) =>
-          setLastAction(
-            `Campaign ${req.campaignId} canceled: accepted notifications not recalled; audit ${req.reason}`,
-          )
-        }
-        onCreateSnapshot={(req) =>
-          setLastAction(
-            `Snapshot for campaign ${req.campaignId} created: immutable membership frozen.`,
-          )
-        }
-        onCreateSuppression={(req) =>
-          setLastAction(`Suppression added for recipient ${req.recipientId}: reason ${req.reason}`)
-        }
-        onEstimateAudience={(req) => {
-          setEstimateResult({
-            audienceId: req.audienceId,
-            isSampleBounded: true,
-            sampleRecipients: [
-              { maskedEmail: "u***1@example.test", recipientId: "rec_sample_1" },
-              { maskedEmail: "u***2@example.test", recipientId: "rec_sample_2" },
-            ],
-            totalCount: 2450,
-          });
-          setLastAction(
-            `Estimated audience ${req.audienceId}: total 2450 (bounded sample returned).`,
-          );
-        }}
-        onPreviewMessage={(req) => {
-          setPreviewResult({
-            channel: req.channel,
-            htmlContent: "<h1>Welcome to Croco SaaS</h1><p>Your subscription is active.</p>",
-            messageId: req.messageId,
-            pushContent: {
-              body: "Your workspace is ready to explore.",
-              title: "Welcome aboard!",
-            },
-            renderedAt: new Date(),
-            subject: "Welcome to your new workspace",
-          });
-          setLastAction(`Preview generated for message ${req.messageId} on channel ${req.channel}`);
-        }}
-        onReactivateEndpoint={(req) =>
-          setLastAction(`Endpoint ${req.endpointId} reactivated: audit reason ${req.reason}`)
-        }
-        onRemoveSuppression={(req) =>
-          setLastAction(`Suppression ${req.suppressionId} removed: audit reason ${req.reason}`)
-        }
-        onRetryDispatch={(req) =>
-          setLastAction(
-            `Safe retry triggered for dispatch ${req.dispatchId}: idempotency ${req.idempotencyKey}`,
-          )
-        }
-        onRunCampaign={(req) =>
-          setLastAction(
-            `Campaign ${req.campaignId} started broadcast from immutable snapshot ${req.snapshotId}`,
-          )
-        }
+        onCancelCampaign={handleCancelCampaign}
+        onCreateSnapshot={handleCreateSnapshot}
+        onCreateSuppression={handleCreateSuppression}
+        onEstimateAudience={handleEstimateAudience}
+        onPreviewMessage={handlePreviewMessage}
+        onReactivateEndpoint={handleReactivateEndpoint}
+        onRemoveSuppression={handleRemoveSuppression}
+        onRetryDispatch={handleRetryDispatch}
+        onRunCampaign={handleRunCampaign}
         onSelectRecipient={setSelectedRecipientId}
-        onTestSend={(req) => {
-          setTestSendResult({
-            auditEvidence: `actor=${req.actorId};reason=${req.reason}`,
-            dispatchedAt: new Date(),
-            dispatchId: `disp_test_${Date.now()}`,
-            status: "accepted",
-          });
-          setLastAction(`Audited test send dispatched for message ${req.messageId}`);
-        }}
+        onTestSend={handleTestSend}
         previewResult={previewResult}
         selectedRecipientId={selectedRecipientId}
         state={state}
