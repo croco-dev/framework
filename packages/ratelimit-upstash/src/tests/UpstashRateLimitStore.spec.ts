@@ -43,6 +43,94 @@ function createMockRedis(): {
   };
 }
 
+function redisClusterSlot(key: string): number {
+  const open = key.indexOf("{");
+  const close = key.indexOf("}", open + 1);
+  const hashKey = open >= 0 && close > open + 1 ? key.slice(open + 1, close) : key;
+  let crc = 0;
+  for (const byte of new TextEncoder().encode(hashKey)) {
+    crc ^= byte << 8;
+    for (let bit = 0; bit < 8; bit++) {
+      crc = ((crc << 1) ^ (crc & 0x8000 ? 0x1021 : 0)) & 0xffff;
+    }
+  }
+  return crc % 16384;
+}
+
+describe("Redis Cluster key routing", () => {
+  it("should match Redis CRC16 and first-brace-pair semantics", () => {
+    expect(redisClusterSlot("123456789")).toBe(12739);
+    expect(redisClusterSlot("foo{bar}{zap}")).toBe(redisClusterSlot("bar"));
+    expect(redisClusterSlot("foo{{bar}}zap")).toBe(redisClusterSlot("{bar"));
+    expect(redisClusterSlot("foo{}{bar}")).toBe(8363);
+  });
+
+  describe.each([
+    {
+      algorithm: "fixed",
+      Store: UpstashFixedWindowStore,
+      defaultPrefix: "ratelimit:fixed",
+      policy: createFixedWindowPolicy("cluster", 10, 60_000),
+    },
+    {
+      algorithm: "token-bucket",
+      Store: UpstashTokenBucketStore,
+      defaultPrefix: "ratelimit:bucket",
+      policy: createTokenBucketPolicy("cluster", 10, 1, 1_000),
+    },
+  ])("$algorithm", ({ Store, defaultPrefix, policy }) => {
+    it.each([
+      { prefix: undefined, key: "client-1" },
+      { prefix: "custom", key: "client-1" },
+      { prefix: "", key: "" },
+      { prefix: "}", key: "client-1" },
+      { prefix: "{}", key: "client-1" },
+      { prefix: "tenant:{region}", key: "client:{one}" },
+      { prefix: "{", key: "}" },
+      { prefix: "한글", key: "사용자:🚀" },
+    ])(
+      "should colocate check/refund keys and reset them for $prefix/$key",
+      async ({ prefix, key }) => {
+        const redis = createMockRedis();
+        redis.eval.mockImplementation((_script: string, keys: string[]) => {
+          expect(keys).toHaveLength(2);
+          expect(new Set(keys.map(redisClusterSlot)).size).toBe(1);
+          expect(keys[0]).toMatch(/^\{[^{}]+\}$/);
+          expect(keys[1]).toBe(`${keys[0]}:receipts`);
+          return [1, 1, 9, String(Date.now())];
+        });
+        const store = new Store({ redis: redis as never, prefix });
+
+        const check = await store.check(key, policy);
+        const refund = await store.refund(key, policy, check.refundReceipt);
+        await store.reset(key);
+
+        expect(check.success).toBe(true);
+        expect(refund.refunded).toBe(true);
+        const checkKeys = redis.eval.mock.calls[0]?.[1] as string[];
+        expect(redis.eval.mock.calls[1]?.[1]).toEqual(checkKeys);
+        expect(redis.del.mock.calls).toEqual([
+          [checkKeys[0]],
+          [checkKeys[1]],
+          [`${prefix ?? defaultPrefix}:${key}:increment`],
+        ]);
+      },
+    );
+
+    it("should keep brace, percent-escaped, and receipt-suffixed identities distinct", async () => {
+      const redis = createMockRedis();
+      redis.eval.mockResolvedValue([1, 1, 9, String(Date.now())]);
+      const identities = ["user", "user:receipts", "{user}", "%7Buser%7D", "{}", "%", "%25"];
+      for (const key of identities) {
+        await new Store({ redis: redis as never }).check(key, policy);
+        await new Store({ redis: redis as never, prefix: key }).check("client", policy);
+      }
+      const keys = redis.eval.mock.calls.flatMap((call) => call[1] as string[]);
+      expect(new Set(keys).size).toBe(identities.length * 4);
+    });
+  });
+});
+
 function createUpstreamError(message: string, status: number): Error & { readonly status: number } {
   const error = new Error(message) as Error & { status: number };
   error.status = status;
@@ -244,7 +332,7 @@ describe("UpstashFixedWindowStore", () => {
     expect(duplicateRefund.refunded).toBe(false);
     expect(mockRedis.eval).toHaveBeenLastCalledWith(
       expect.any(String),
-      ["ratelimit:fixed:test-key", "ratelimit:fixed:test-key:receipts"],
+      ["{ratelimit:fixed:test-key}", "{ratelimit:fixed:test-key}:receipts"],
       [10, 60, receipt.windowStart, receipt.id],
     );
     expect(await store.getStats()).toEqual({ allowed: 0, denied: 0, total: 0 });
@@ -263,7 +351,7 @@ describe("UpstashFixedWindowStore", () => {
 
     expect(mockRedis.eval).toHaveBeenCalledWith(
       expect.any(String),
-      ["custom:test-key", "custom:test-key:receipts"],
+      ["{custom:test-key}", "{custom:test-key}:receipts"],
       [10, 60, expect.any(Number), expect.any(String)],
     );
   });
@@ -282,8 +370,8 @@ describe("UpstashFixedWindowStore", () => {
     await store.reset("test-key");
 
     expect(mockRedis.keys).not.toHaveBeenCalled();
-    expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:fixed:test-key");
-    expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:fixed:test-key:receipts");
+    expect(mockRedis.del).toHaveBeenCalledWith("{ratelimit:fixed:test-key}");
+    expect(mockRedis.del).toHaveBeenCalledWith("{ratelimit:fixed:test-key}:receipts");
     expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:fixed:test-key:increment");
   });
 
@@ -623,12 +711,12 @@ describe("UpstashTokenBucketStore", () => {
     expect(mockRedis.eval).toHaveBeenNthCalledWith(
       1,
       expect.any(String),
-      ["ratelimit:bucket:test-key", "ratelimit:bucket:test-key:receipts"],
+      ["{ratelimit:bucket:test-key}", "{ratelimit:bucket:test-key}:receipts"],
       [expect.any(Number), 10, 1000, 1, 11, receipt.id, receipt.expiresAtMs],
     );
     expect(mockRedis.eval).toHaveBeenLastCalledWith(
       expect.any(String),
-      ["ratelimit:bucket:test-key", "ratelimit:bucket:test-key:receipts"],
+      ["{ratelimit:bucket:test-key}", "{ratelimit:bucket:test-key}:receipts"],
       [expect.any(Number), 10, 1000, 1, 11, receipt.id],
     );
     expect(await store.getStats()).toEqual({ allowed: 0, denied: 0, total: 0 });
@@ -658,7 +746,7 @@ describe("UpstashTokenBucketStore", () => {
     expect(mockRedis.eval).toHaveBeenNthCalledWith(
       3,
       expect.any(String),
-      ["ratelimit:bucket:test-key", "ratelimit:bucket:test-key:receipts"],
+      ["{ratelimit:bucket:test-key}", "{ratelimit:bucket:test-key}:receipts"],
       [expect.any(Number), 10, 1000, 1, 11, staleReceipt.id],
     );
     expect(await store.getStats()).toEqual({ allowed: 2, denied: 0, total: 2 });
@@ -690,8 +778,8 @@ describe("UpstashTokenBucketStore", () => {
   it("should reset keys", async () => {
     await store.reset("test-key");
 
-    expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:bucket:test-key");
-    expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:bucket:test-key:receipts");
+    expect(mockRedis.del).toHaveBeenCalledWith("{ratelimit:bucket:test-key}");
+    expect(mockRedis.del).toHaveBeenCalledWith("{ratelimit:bucket:test-key}:receipts");
     expect(mockRedis.del).toHaveBeenCalledWith("ratelimit:bucket:test-key:increment");
   });
 

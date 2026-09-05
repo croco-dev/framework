@@ -46,6 +46,14 @@ const result = await limiter.check({ ip: "127.0.0.1" }, policy);
   손실 없이 합산됩니다. 유한한 음수와 소수 증분을 지원하며, 기존 카운터 TTL은 증분 후에도
   유지됩니다. `expire()`와 `reset()`은 같은 `:increment` 카운터 키에 적용됩니다.
 - 기본 prefix는 저장소별로 `ratelimit:sliding`, `ratelimit:bucket`, `ratelimit:fixed`를 사용합니다.
+- 고정 윈도우와 토큰 버킷의 상태 키는 `{prefix:key}`, 환불 영수증 키는
+  `{prefix:key}:receipts`를 사용해 Redis Cluster의 같은 슬롯에 배치합니다. prefix와 key 안의
+  `%`, `{`, `}`는 각각 `%25`, `%7B`, `%7D`로 인코딩합니다. `check()`, `refund()`, `reset()`이
+  같은 키 형식을 사용하며, 슬라이딩 윈도우와 별도 `:increment` 카운터의 키는 유지됩니다.
+- 이 키 형식을 처음 사용하는 배포에서는 기존 고정 윈도우·토큰 버킷의 사용량과 환불 영수증을
+  이어받지 않고 새 제한 상태로 시작합니다. 기존 키는 설정된 TTL에 따라 만료됩니다.
+  구버전과 신버전 인스턴스가 함께 실행되면 서로 다른 제한 상태를 사용하므로, 전환 시 인스턴스를
+  함께 교체하고 이전 버전에서 발급한 환불 영수증 처리를 마쳐야 합니다.
 - 통계는 메모리 기준으로 allowed, denied, total을 누적합니다.
 - Redis upstream 오류는 `UpstashRateLimitUpstreamProblem`으로 변환되며 `retryable` 확장 필드로
   일시 장애와 terminal 오류를 구분합니다. 토큰, secret, credential 형태의 값은 Problem detail에서
