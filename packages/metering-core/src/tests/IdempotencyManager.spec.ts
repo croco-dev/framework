@@ -253,41 +253,41 @@ describe("IdempotencyManager", () => {
   });
 
   describe("checkAndMark", () => {
-    it("should return true for new key", async () => {
+    it("should return an ownership claim for a new in-progress key", async () => {
       vi.mocked(mockRedis.set).mockResolvedValue("OK");
 
       const result = await manager.checkAndMark("tenant-1", "api_calls", "key-123");
 
-      expect(result).toBe(true);
+      expect(result).toMatch(/^[0-9A-Z]{26}$/);
       expect(mockRedis.set).toHaveBeenCalledWith(
         "idem2:lifecycle:tenant-1:api_calls:key-123",
-        "COMPLETED",
+        expect.stringMatching(/^IN_PROGRESS:[0-9A-Z]{26}$/),
         "NX",
         "EX",
-        86400,
+        30,
       );
     });
 
-    it("should return false for duplicate key", async () => {
+    it("should return null for duplicate key", async () => {
       vi.mocked(mockRedis.set).mockResolvedValue(null);
 
       const result = await manager.checkAndMark("tenant-1", "api_calls", "existing-key");
 
-      expect(result).toBe(false);
+      expect(result).toBeNull();
     });
 
-    it("should use custom TTL", async () => {
-      const customManager = new IdempotencyManager(mockRedis, 3600);
+    it("should round a custom processing lease up to whole seconds", async () => {
+      const customManager = new IdempotencyManager(mockRedis, 3600, 1500);
       vi.mocked(mockRedis.set).mockResolvedValue("OK");
 
       await customManager.checkAndMark("tenant-1", "api_calls", "key-123");
 
       expect(mockRedis.set).toHaveBeenCalledWith(
         "idem2:lifecycle:tenant-1:api_calls:key-123",
-        "COMPLETED",
+        expect.stringMatching(/^IN_PROGRESS:[0-9A-Z]{26}$/),
         "NX",
         "EX",
-        3600,
+        2,
       );
     });
 
@@ -300,18 +300,18 @@ describe("IdempotencyManager", () => {
       expect(mockRedis.set).toHaveBeenNthCalledWith(
         1,
         "idem2:lifecycle:tenant-A:meter-X:same-key",
-        "COMPLETED",
+        expect.stringMatching(/^IN_PROGRESS:[0-9A-Z]{26}$/),
         "NX",
         "EX",
-        86400,
+        30,
       );
       expect(mockRedis.set).toHaveBeenNthCalledWith(
         2,
         "idem2:lifecycle:tenant-B:meter-X:same-key",
-        "COMPLETED",
+        expect.stringMatching(/^IN_PROGRESS:[0-9A-Z]{26}$/),
         "NX",
         "EX",
-        86400,
+        30,
       );
     });
 
@@ -344,7 +344,7 @@ describe("IdempotencyManager", () => {
         `IN_PROGRESS:${result}`,
         "NX",
         "EX",
-        86400,
+        30,
       );
     });
 
@@ -399,7 +399,7 @@ describe("IdempotencyManager", () => {
 
   it("should fence stale completion and abort after expiry and reacquisition", async () => {
     const leaseRedis = createLeaseRedis();
-    const expiringManager = new IdempotencyManager(leaseRedis.redis, 1);
+    const expiringManager = new IdempotencyManager(leaseRedis.redis, 86400, 1000);
     const key = "idem2:lifecycle:tenant-1:api_calls:key-123";
 
     const staleClaim = await expiringManager.beginProcessingOrThrow(
@@ -425,6 +425,88 @@ describe("IdempotencyManager", () => {
 
     await expiringManager.completeProcessing("tenant-1", "api_calls", "key-123", currentClaim);
     expect(leaseRedis.read(key)).toBe("COMPLETED");
+  });
+
+  describe("processing lease recovery", () => {
+    const key = "idem2:lifecycle:tenant-1:api_calls:key-123";
+
+    it.each(["checkAndMark", "beginProcessing"] as const)(
+      "should recover abandoned %s work after the default 30-second lease",
+      async (acquire) => {
+        const leaseRedis = createLeaseRedis();
+        const firstWorker = new IdempotencyManager(leaseRedis.redis);
+        const claim = await firstWorker[acquire]("tenant-1", "api_calls", "key-123");
+        expect(claim).toMatch(/^[0-9A-Z]{26}$/);
+        expect(leaseRedis.read(key)).toBe(`IN_PROGRESS:${claim}`);
+
+        const retryWorker = new IdempotencyManager(leaseRedis.redis);
+        leaseRedis.advanceSeconds(29);
+        await expect(retryWorker[acquire]("tenant-1", "api_calls", "key-123")).resolves.toBeNull();
+
+        leaseRedis.advanceSeconds(1);
+        const retryClaim = await retryWorker[acquire]("tenant-1", "api_calls", "key-123");
+        expect(retryClaim).toMatch(/^[0-9A-Z]{26}$/);
+        expect(retryClaim).not.toBe(claim);
+        expect(leaseRedis.read(key)).toBe(`IN_PROGRESS:${retryClaim}`);
+      },
+    );
+
+    it.each([86400, 60])(
+      "should retain completion for %s seconds starting at commit",
+      async (ttl) => {
+        const leaseRedis = createLeaseRedis();
+        const worker = new IdempotencyManager(leaseRedis.redis, ttl);
+        const claim = await worker.checkAndMarkOrThrow("tenant-1", "api_calls", "key-123");
+        expect(claim).toMatch(/^[0-9A-Z]{26}$/);
+        leaseRedis.advanceSeconds(29);
+        expect(leaseRedis.read(key)).toBe(`IN_PROGRESS:${claim}`);
+        await worker.completeProcessing("tenant-1", "api_calls", "key-123", claim);
+        expect(leaseRedis.read(key)).toBe("COMPLETED");
+
+        leaseRedis.advanceSeconds(ttl - 1);
+        await expect(worker.checkAndMark("tenant-1", "api_calls", "key-123")).resolves.toBeNull();
+        leaseRedis.advanceSeconds(1);
+        await expect(worker.checkAndMark("tenant-1", "api_calls", "key-123")).resolves.toMatch(
+          /^[0-9A-Z]{26}$/,
+        );
+      },
+    );
+
+    it("should release failed work immediately using the acquired claim", async () => {
+      const leaseRedis = createLeaseRedis();
+      const worker = new IdempotencyManager(leaseRedis.redis);
+      const claim = await worker.checkAndMarkOrThrow("tenant-1", "api_calls", "key-123");
+      await worker.abortProcessing("tenant-1", "api_calls", "key-123", claim);
+      expect(leaseRedis.read(key)).toBeNull();
+      await expect(worker.checkAndMark("tenant-1", "api_calls", "key-123")).resolves.toMatch(
+        /^[0-9A-Z]{26}$/,
+      );
+    });
+
+    it("should not resurrect an expired lease as completed", async () => {
+      const leaseRedis = createLeaseRedis();
+      const worker = new IdempotencyManager(leaseRedis.redis);
+      const claim = await worker.beginProcessingOrThrow("tenant-1", "api_calls", "key-123");
+      leaseRedis.advanceSeconds(30);
+      await worker.completeProcessing("tenant-1", "api_calls", "key-123", claim);
+      expect(leaseRedis.read(key)).toBeNull();
+      await expect(worker.beginProcessing("tenant-1", "api_calls", "key-123")).resolves.toMatch(
+        /^[0-9A-Z]{26}$/,
+      );
+    });
+
+    it("should admit only one competing worker for the same key", async () => {
+      const leaseRedis = createLeaseRedis();
+      const workers = [
+        new IdempotencyManager(leaseRedis.redis),
+        new IdempotencyManager(leaseRedis.redis),
+      ];
+      const claims = await Promise.all(
+        workers.map((worker) => worker.checkAndMark("tenant-1", "api_calls", "key-123")),
+      );
+      expect(claims.filter((claim) => claim === null)).toHaveLength(1);
+      expect(claims.filter((claim) => typeof claim === "string")).toHaveLength(1);
+    });
   });
 
   describe("metering delivery state", () => {
@@ -698,12 +780,12 @@ describe("IdempotencyManager", () => {
   });
 
   describe("checkAndMarkOrThrow", () => {
-    it("should not throw for new key", async () => {
+    it("should return an ownership claim for a new key", async () => {
       vi.mocked(mockRedis.set).mockResolvedValue("OK");
 
       await expect(
         manager.checkAndMarkOrThrow("tenant-1", "api_calls", "key-123"),
-      ).resolves.not.toThrow();
+      ).resolves.toMatch(/^[0-9A-Z]{26}$/);
     });
 
     it("should throw DuplicateRecordProblem for duplicate key", async () => {
