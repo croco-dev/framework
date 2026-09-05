@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { parse } from "yaml";
 
 import { runDependencyAuditPolicy, runPnpmAudit } from "../dependency-audit-policy.mts";
@@ -16,6 +16,8 @@ const repositoryRoot = resolve(dirname(import.meta.filename), "..", "..");
 
 describe("dependency-audit-policy.mts", () => {
   afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllEnvs();
     for (const repo of tempRepos.splice(0)) {
       rmSync(repo, { force: true, recursive: true });
     }
@@ -111,7 +113,13 @@ describe("dependency-audit-policy.mts", () => {
     ],
     ["pnpm", "Unexpected token '\\u001f', gzip bytes are not valid JSON"],
   ])("recovers when the npm audit endpoint omits gzip content encoding (%s)", (code, message) => {
-    const calls: Array<{ readonly env?: NodeJS.ProcessEnv }> = [];
+    vi.stubEnv("NODE_OPTIONS", "--trace-warnings");
+    const stdoutWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const calls: Array<{
+      readonly args: readonly string[];
+      readonly env?: NodeJS.ProcessEnv;
+      readonly timeout: number;
+    }> = [];
     const outputs = [
       JSON.stringify({
         error: {
@@ -126,26 +134,91 @@ describe("dependency-audit-policy.mts", () => {
       process.cwd(),
       [],
       "pnpm audit --json",
-      (_command, _args, options) => {
-        calls.push({ env: options.env });
+      (_command, args, options) => {
+        calls.push({ args, env: options.env, timeout: options.timeout });
         return { stderr: "", stdout: outputs.shift() ?? "" };
       },
     );
 
     expect(result).toEqual({ advisories: {} });
     expect(calls).toHaveLength(2);
-    expect(calls[0]?.env).toBeUndefined();
+    expect(calls.map((call) => call.args)).toEqual([
+      ["audit", "--audit-level", "high", "--json"],
+      ["audit", "--audit-level", "high", "--json"],
+    ]);
+    expect(calls.map((call) => call.timeout)).toEqual([120_000, 120_000]);
+    expect(calls[0]?.env?.NODE_OPTIONS).toContain("--trace-warnings");
+    expect(calls[0]?.env?.NODE_OPTIONS).toContain("pnpm-audit-diagnostics.cjs");
+    expect(calls[0]?.env?.NODE_OPTIONS).not.toContain("pnpm-audit-gzip-recovery.cjs");
+    expect(calls[1]?.env?.NODE_OPTIONS).toContain("--trace-warnings");
+    expect(calls[1]?.env?.NODE_OPTIONS).toContain("pnpm-audit-diagnostics.cjs");
     expect(calls[1]?.env?.NODE_OPTIONS).toContain("--require=");
     expect(calls[1]?.env?.NODE_OPTIONS).toContain("pnpm-audit-gzip-recovery.cjs");
+    const stdout = stdoutWrite.mock.calls.flatMap((call) => call.map(String)).join("");
+    expect(stdout).toMatch(/pnpm audit --json started timeoutMs=120000/);
+    expect(stdout).toMatch(/pnpm audit --json completed elapsedMs=\d+ status=null signal=null/);
+    expect(stdout).toMatch(/pnpm audit --json gzip recovery started timeoutMs=120000/);
+    expect(stdout).toMatch(
+      /pnpm audit --json gzip recovery completed elapsedMs=\d+ status=null signal=null/,
+    );
+  });
+
+  it("reports each pnpm audit attempt and forwards only transport diagnostic stderr lines", () => {
+    const stdoutWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+
+    const result = runPnpmAudit(process.cwd(), ["--prod"], "pnpm audit --prod --json", () => ({
+      signal: null,
+      status: 0,
+      stderr:
+        'pnpm warning that must remain suppressed\ndependency-audit-transport {"event":"start","elapsedMs":0}\n',
+      stdout: JSON.stringify({ advisories: {} }),
+    }));
+
+    expect(result).toEqual({ advisories: {} });
+    const stdout = stdoutWrite.mock.calls.flatMap((call) => call.map(String)).join("");
+    expect(stdout).toContain(
+      "dependency-audit-policy: pnpm audit --prod --json started timeoutMs=120000",
+    );
+    expect(stdout).toMatch(
+      /dependency-audit-policy: pnpm audit --prod --json completed elapsedMs=\d+ status=0 signal=null/,
+    );
+    expect(stdout).toContain('dependency-audit-transport {"event":"start","elapsedMs":0}\n');
+    expect(stdout).not.toContain("pnpm warning");
+  });
+
+  it("forwards diagnostics from a timed-out audit without starting gzip recovery", () => {
+    const timeoutError = Object.assign(new Error("spawnSync pnpm ETIMEDOUT"), {
+      code: "ETIMEDOUT",
+    });
+    const stdoutWrite = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    const runner = vi.fn(() => ({
+      error: timeoutError,
+      signal: "SIGTERM" as NodeJS.Signals,
+      status: null,
+      stderr: 'dependency-audit-transport {"event":"exit","elapsedMs":120000}\n',
+      stdout: "",
+    }));
+
+    expect(() => runPnpmAudit(process.cwd(), [], "pnpm audit --json", runner)).toThrow("ETIMEDOUT");
+
+    expect(runner).toHaveBeenCalledTimes(1);
+    const stdout = stdoutWrite.mock.calls.flatMap((call) => call.map(String)).join("");
+    expect(stdout).toContain('dependency-audit-transport {"event":"exit","elapsedMs":120000}\n');
+    expect(stdout).toMatch(/completed elapsedMs=\d+ status=null signal=SIGTERM/);
   });
 
   it("decompresses an audit response whose gzip content encoding header is missing", async () => {
     const shimDir = mkdtempSync(join(tmpdir(), "croco audit gzip recovery "));
     tempRepos.push(shimDir);
     const shimPath = join(shimDir, "pnpm-audit-gzip-recovery.cjs");
+    const diagnosticsPath = join(shimDir, "pnpm-audit-diagnostics.cjs");
     copyFileSync(
       join(dirname(import.meta.filename), "..", "pnpm-audit-gzip-recovery.cjs"),
       shimPath,
+    );
+    copyFileSync(
+      join(dirname(import.meta.filename), "..", "pnpm-audit-diagnostics.cjs"),
+      diagnosticsPath,
     );
     const responseBody = JSON.stringify({ advisories: {} });
     const server = createServer((_request, response) => {
@@ -164,15 +237,209 @@ describe("dependency-audit-policy.mts", () => {
     try {
       const result = await runNode(
         `http://127.0.0.1:${address.port}/-/npm/v1/security/advisories/bulk`,
-        `--require=${JSON.stringify(shimPath)}`,
+        `--require=${JSON.stringify(diagnosticsPath)} --require=${JSON.stringify(shimPath)}`,
       );
 
-      expect(result).toEqual({ exitCode: 0, stderr: "", stdout: `${responseBody}\n` });
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toBe(`${responseBody}\n`);
+      expect(parseTransportDiagnostics(result.stderr).map((entry) => entry.event)).toEqual(
+        expect.arrayContaining([
+          "start",
+          "request",
+          "body-sent",
+          "headers",
+          "body-complete",
+          "exit",
+        ]),
+      );
     } finally {
-      await new Promise<void>((resolve, reject) => {
-        server.close((error) => (error ? reject(error) : resolve()));
-      });
+      await closeServer(server);
     }
+  });
+
+  it("diagnoses delayed audit headers and bodies without changing the response JSON", async () => {
+    const diagnosticsPath = join(repositoryRoot, "scripts", "pnpm-audit-diagnostics.cjs");
+    const responseBody = JSON.stringify({ advisories: {}, marker: "response-secret" });
+    const server = createServer(async (request, response) => {
+      let requestBody = "";
+      request.setEncoding("utf-8");
+      for await (const chunk of request) {
+        requestBody += chunk;
+      }
+      expect(requestBody).toBe("request-secret");
+      await delay(80);
+      response.writeHead(200, { "Content-Type": "application/json" });
+      response.write(responseBody.slice(0, 12));
+      await delay(80);
+      response.end(responseBody.slice(12));
+    });
+    const url = await listen(server);
+
+    try {
+      const result = await runNodeScript(
+        'fetch(process.argv[1], { body: "request-secret", headers: { authorization: "Bearer header-secret" }, method: "POST" }).then(async (response) => { const text = await response.text(); const until = Date.now() + 80; while (Date.now() < until) {} process.stdout.write(text + "\\n"); })',
+        [`${url}/-/npm/v1/security/advisories/bulk`],
+        `--require=${JSON.stringify(diagnosticsPath)}`,
+      );
+      const diagnostics = parseTransportDiagnostics(result.stderr);
+
+      expect(result.exitCode).toBe(0);
+      expect(result.stdout).toBe(`${responseBody}\n`);
+      expect(diagnostics.map((entry) => entry.event)).toEqual(
+        expect.arrayContaining([
+          "start",
+          "request",
+          "body-sent",
+          "headers",
+          "body-complete",
+          "exit",
+        ]),
+      );
+      expect(diagnostics.find((entry) => entry.event === "request")).toEqual(
+        expect.objectContaining({ requestId: expect.any(Number), stage: "waiting-send" }),
+      );
+      expect(diagnostics.find((entry) => entry.event === "body-sent")).toEqual(
+        expect.objectContaining({ requestId: expect.any(Number), stage: "waiting-headers" }),
+      );
+      expect(diagnostics.find((entry) => entry.event === "headers")).toEqual(
+        expect.objectContaining({
+          requestId: expect.any(Number),
+          stage: "reading-body",
+          statusCode: 200,
+        }),
+      );
+      expect(diagnostics.find((entry) => entry.event === "body-complete")).toEqual(
+        expect.objectContaining({ requestId: expect.any(Number), stage: "processing-response" }),
+      );
+      const requestEvent = diagnostics.find((entry) => entry.event === "request");
+      const bodySentEvent = diagnostics.find((entry) => entry.event === "body-sent");
+      const headersEvent = diagnostics.find((entry) => entry.event === "headers");
+      const bodyCompleteEvent = diagnostics.find((entry) => entry.event === "body-complete");
+      const exitEvent = diagnostics.find((entry) => entry.event === "exit");
+      const requestId = requestEvent?.requestId;
+      expect([
+        bodySentEvent?.requestId,
+        headersEvent?.requestId,
+        bodyCompleteEvent?.requestId,
+      ]).toEqual([requestId, requestId, requestId]);
+      expect(
+        Number(headersEvent?.elapsedMs) - Number(bodySentEvent?.elapsedMs),
+      ).toBeGreaterThanOrEqual(50);
+      expect(
+        Number(bodyCompleteEvent?.elapsedMs) - Number(headersEvent?.elapsedMs),
+      ).toBeGreaterThanOrEqual(50);
+      expect(
+        Number(exitEvent?.elapsedMs) - Number(bodyCompleteEvent?.elapsedMs),
+      ).toBeGreaterThanOrEqual(50);
+      expect(exitEvent?.stage).toBe("processing-response");
+      expect(result.stderr).not.toMatch(
+        /request-secret|response-secret|header-secret|authorization/i,
+      );
+    } finally {
+      await closeServer(server);
+    }
+  });
+
+  it("reports CPU time while the audit process is busy before making a request", async () => {
+    const diagnosticsPath = join(repositoryRoot, "scripts", "pnpm-audit-diagnostics.cjs");
+    const result = await runNodeScript(
+      "const until = Date.now() + 80; while (Date.now() < until) {}",
+      [],
+      `--require=${JSON.stringify(diagnosticsPath)}`,
+    );
+    const diagnostics = parseTransportDiagnostics(result.stderr);
+
+    expect(result.exitCode).toBe(0);
+    expect(diagnostics[0]).toEqual(
+      expect.objectContaining({
+        event: "start",
+        nodeVersion: process.version,
+        stage: "before-request",
+      }),
+    );
+    expect(diagnostics.at(-1)).toEqual(
+      expect.objectContaining({
+        cpuSystemMs: expect.any(Number),
+        cpuUserMs: expect.any(Number),
+        event: "exit",
+        stage: "before-request",
+      }),
+    );
+    const startCpuMs = Number(diagnostics[0]?.cpuUserMs) + Number(diagnostics[0]?.cpuSystemMs);
+    const exitCpuMs =
+      Number(diagnostics.at(-1)?.cpuUserMs) + Number(diagnostics.at(-1)?.cpuSystemMs);
+    expect(exitCpuMs - startCpuMs).toBeGreaterThan(0);
+  });
+
+  it("bounds transport event records while always reporting the limit and exit", async () => {
+    const diagnosticsPath = join(repositoryRoot, "scripts", "pnpm-audit-diagnostics.cjs");
+    const script = `
+      const diagnostics = require("node:diagnostics_channel");
+      const request = {
+        origin: "https://user:credential@example.invalid",
+        path: "/-/npm/v1/security/advisories/bulk?token=query-secret",
+      };
+      for (let index = 0; index < 40; index += 1) {
+        diagnostics.channel("undici:request:create").publish({ request });
+      }
+    `;
+    const result = await runNodeScript(script, [], `--require=${JSON.stringify(diagnosticsPath)}`);
+    const diagnostics = parseTransportDiagnostics(result.stderr);
+
+    expect(result.exitCode).toBe(0);
+    expect(diagnostics.filter((entry) => entry.event === "request")).toHaveLength(31);
+    expect(diagnostics.filter((entry) => entry.event === "limit")).toHaveLength(1);
+    expect(
+      diagnostics.filter((entry) => entry.event !== "limit" && entry.event !== "exit"),
+    ).toHaveLength(32);
+    expect(diagnostics.at(-1)?.event).toBe("exit");
+    expect(result.stderr).not.toMatch(/credential|query-secret|example\.invalid/);
+  });
+
+  it("reports only a safe code when an audit request fails", async () => {
+    const diagnosticsPath = join(repositoryRoot, "scripts", "pnpm-audit-diagnostics.cjs");
+    const script = `
+      const diagnostics = require("node:diagnostics_channel");
+      const request = {
+        origin: "https://user:credential@example.invalid",
+        path: "/-/npm/v1/security/advisories/bulk?token=query-secret",
+      };
+      diagnostics.channel("undici:request:error").publish({
+        error: Object.assign(new Error("message-secret"), { code: "ECONNRESET" }),
+        request,
+      });
+    `;
+    const result = await runNodeScript(script, [], `--require=${JSON.stringify(diagnosticsPath)}`);
+    const diagnostics = parseTransportDiagnostics(result.stderr);
+
+    expect(diagnostics.find((entry) => entry.event === "request-error")).toEqual(
+      expect.objectContaining({ errorCode: "ECONNRESET", stage: "request-failed" }),
+    );
+    expect(result.stderr).not.toMatch(/credential|query-secret|message-secret|example\.invalid/);
+  });
+
+  it("reports progress every ten seconds with an unreferenced timer", async () => {
+    const diagnosticsPath = join(repositoryRoot, "scripts", "pnpm-audit-diagnostics.cjs");
+    const script = `
+      let progress;
+      let interval;
+      global.setInterval = (callback, milliseconds) => {
+        progress = callback;
+        interval = milliseconds;
+        return { unref() { process.stdout.write("unref\\n"); } };
+      };
+      require(process.argv[1]);
+      process.stdout.write(String(interval) + "\\n");
+      progress();
+    `;
+    const result = await runNodeScript(script, [diagnosticsPath], "");
+    const diagnostics = parseTransportDiagnostics(result.stderr);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe("unref\n10000\n");
+    expect(diagnostics.find((entry) => entry.event === "progress")).toEqual(
+      expect.objectContaining({ stage: "before-request" }),
+    );
   });
 
   it("fails closed when gzip recovery still returns an audit error", () => {
@@ -1397,22 +1664,30 @@ function runNode(
   url: string,
   nodeOptions: string,
 ): Promise<{ readonly exitCode: number | null; readonly stderr: string; readonly stdout: string }> {
+  return runNodeScript(
+    "fetch(process.argv[1]).then(async (response) => process.stdout.write(`${await response.text()}\\n`)).catch((error) => { process.stderr.write(`${error instanceof Error ? error.message : String(error)}\\n`); process.exitCode = 1; });",
+    [url],
+    nodeOptions,
+  );
+}
+
+function runNodeScript(
+  script: string,
+  args: readonly string[],
+  nodeOptions: string,
+): Promise<{ readonly exitCode: number | null; readonly stderr: string; readonly stdout: string }> {
   return new Promise((resolve, reject) => {
-    const child = spawn(
-      process.execPath,
-      [
-        "--eval",
-        "fetch(process.argv[1]).then(async (response) => process.stdout.write(`${await response.text()}\\n`)).catch((error) => { process.stderr.write(`${error instanceof Error ? error.message : String(error)}\\n`); process.exitCode = 1; });",
-        url,
-      ],
-      {
-        env: {
-          ...process.env,
-          NODE_OPTIONS: nodeOptions,
-        },
-        stdio: ["ignore", "pipe", "pipe"],
+    const child = spawn(process.execPath, ["--eval", script, ...args], {
+      env: {
+        ...process.env,
+        NODE_OPTIONS: nodeOptions,
       },
-    );
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    const timeout = setTimeout(() => {
+      child.kill("SIGKILL");
+      reject(new Error("Node diagnostics fixture exceeded 5000ms"));
+    }, 5_000);
     let stderr = "";
     let stdout = "";
     child.stderr.setEncoding("utf-8");
@@ -1423,9 +1698,48 @@ function runNode(
     child.stdout.on("data", (chunk: string) => {
       stdout += chunk;
     });
-    child.once("error", reject);
+    child.once("error", (error) => {
+      clearTimeout(timeout);
+      reject(error);
+    });
     child.once("close", (exitCode) => {
+      clearTimeout(timeout);
       resolve({ exitCode, stderr, stdout });
     });
+  });
+}
+
+function parseTransportDiagnostics(stderr: string): ReadonlyArray<Record<string, unknown>> {
+  return stderr
+    .split("\n")
+    .filter((line) => line.startsWith("dependency-audit-transport "))
+    .map(
+      (line) =>
+        JSON.parse(line.slice("dependency-audit-transport ".length)) as Record<string, unknown>,
+    );
+}
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
+}
+
+function listen(server: ReturnType<typeof createServer>): Promise<string> {
+  return new Promise((resolve, reject) => {
+    server.once("error", reject);
+    server.listen(0, "127.0.0.1", () => {
+      const address = server.address();
+      if (!address || typeof address === "string") {
+        reject(new Error("Expected the audit fixture server to listen on a TCP port"));
+        return;
+      }
+      resolve(`http://127.0.0.1:${address.port}`);
+    });
+  });
+}
+
+function closeServer(server: ReturnType<typeof createServer>): Promise<void> {
+  return new Promise((resolve, reject) => {
+    server.closeAllConnections();
+    server.close((error) => (error ? reject(error) : resolve()));
   });
 }
