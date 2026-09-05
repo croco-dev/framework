@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 758,
+  problemCount: 762,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -17803,6 +17803,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "saas-demo/application-cleanup-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#saas-demo-application-cleanup-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
+          line: 13,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "saas-demo/billable-usage-failed",
       category: "InternalServerError",
       status: 500,
@@ -17828,7 +17860,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 74,
+          line: 125,
           column: 1,
           kind: "problem-class",
         },
@@ -17858,7 +17890,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 3,
+          line: 54,
           column: 1,
           kind: "problem-class",
         },
@@ -17888,7 +17920,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 29,
+          line: 80,
           column: 1,
           kind: "problem-class",
         },
@@ -17918,7 +17950,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 16,
+          line: 67,
           column: 1,
           kind: "problem-class",
         },
@@ -17949,7 +17981,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 38,
+          line: 89,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "saas-demo/node-host-lifecycle-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#saas-demo-node-host-lifecycle-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
+          line: 33,
           column: 1,
           kind: "problem-class",
         },
@@ -17981,7 +18045,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 65,
+          line: 116,
           column: 1,
           kind: "problem-class",
         },
@@ -18013,7 +18077,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 83,
+          line: 134,
           column: 1,
           kind: "problem-class",
         },
@@ -18043,7 +18107,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 47,
+          line: 98,
           column: 1,
           kind: "problem-class",
         },
@@ -18074,7 +18138,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 56,
+          line: 107,
           column: 1,
           kind: "problem-class",
         },
@@ -18681,6 +18745,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "starter/application-cleanup-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#starter-application-cleanup-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/spa-be-split/apps/api-server/src/lifecycle-problems.ts",
+          line: 13,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "starter/invalid-environment",
       category: "ValidationError",
       status: 422,
@@ -18705,6 +18801,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/create-croco-app/templates/spa-be-split/apps/api-server/src/problems.ts",
           line: 3,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "starter/node-host-lifecycle-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#starter-node-host-lifecycle-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/spa-be-split/apps/api-server/src/lifecycle-problems.ts",
+          line: 33,
           column: 1,
           kind: "problem-class",
         },

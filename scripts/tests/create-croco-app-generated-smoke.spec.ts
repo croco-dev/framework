@@ -18,6 +18,7 @@ import {
   assertGeneratedVerificationValidationsAreReadOnly,
   collectDisallowedGeneratedDotenvFiles,
   markWorkspacePackageClosureBuilt,
+  materializeGeneratedTestEvidence,
   assertGeneratedPresentationProfileMatchesCatalog,
   createSaasMonetizationCanarySource,
   getGeneratedGoalSmokeCaseInputs,
@@ -35,7 +36,13 @@ import {
   turboBuildArguments,
   turboConcurrencyArguments,
 } from "../create-croco-app-generated-smoke.mts";
-import type { TestInventoryEntry } from "../test-inventory.mts";
+import {
+  fileDigest,
+  inventoryDigest,
+  parseMaterializationEvidence,
+  validateGeneratedMaterialization,
+} from "../test-inventory.mts";
+import type { TestInventory, TestInventoryEntry } from "../test-inventory.mts";
 import { readCompletedPlaywrightPaths, readCompletedVitestPaths } from "../test-lane-runner.mts";
 import {
   classifySmokeCommandFailure,
@@ -333,6 +340,87 @@ describe("generated test execution evidence", () => {
     expect(readFileSync(manifestPath, "utf8")).toBe(original);
     expect(readFileSync(turboConfigPath, "utf8")).toBe(originalTurboConfig);
     expect(existsSync(join(packageDir, ".croco-generated-test-evidence.json"))).toBe(false);
+  });
+
+  it("executes an overridden generated test destination exactly once", () => {
+    const projectDir = createTempRoot();
+    const generatedPath = "apps/api-server/src/tests/node-lifecycle.spec.ts";
+    writeFile(join(projectDir, generatedPath), "overridden test source");
+    writeGeneratedPackage(projectDir, "apps/api-server/package.json", {
+      name: "@smoke/api-server",
+      scripts: { test: "vitest run" },
+    });
+    const entries = ["spa-be-split", "saas"].map(
+      (template): TestInventoryEntry => ({
+        path: `packages/create-croco-app/templates/${template}/${generatedPath}`,
+        lane: "generated-app",
+        qualifiers: [],
+        owner: "create-croco-app",
+        generated: {
+          sourcePath: `packages/create-croco-app/templates/${template}/${generatedPath}`,
+          generatedPath,
+          commandId: "create-croco-app",
+        },
+      }),
+    );
+
+    const capture = prepareGeneratedUnitEvidenceCapture(projectDir, entries);
+
+    expect(capture.reports).toHaveLength(1);
+    expect(capture.reports[0]?.generatedPaths).toEqual([generatedPath]);
+    capture.restore();
+  });
+
+  it("reconciles distinct template sources that override the same generated destination", () => {
+    const sourceRoot = createTempRoot();
+    const materializedRoot = join(createTempRoot(), "materialized-tests");
+    const generatedPath = "apps/api-server/src/tests/node-lifecycle.spec.ts";
+    const templates = [
+      { name: "spa-be-split", contents: "spa lifecycle\n" },
+      { name: "saas", contents: "saas lifecycle\n" },
+    ] as const;
+    const entries = templates.map(({ name }): TestInventoryEntry => {
+      const sourcePath = `packages/create-croco-app/templates/${name}/${generatedPath}`;
+      return {
+        path: sourcePath,
+        lane: "generated-app",
+        qualifiers: [],
+        owner: "create-croco-app",
+        generated: { sourcePath, generatedPath, commandId: "create-croco-app" },
+      };
+    });
+    const testInventory: TestInventory = { version: 1, tests: entries, exceptions: [] };
+    for (const [index, entry] of entries.entries()) {
+      writeFile(join(sourceRoot, entry.path), templates[index]?.contents ?? "");
+    }
+
+    const evidence = entries.flatMap((entry, index) => {
+      const projectDir = createTempRoot();
+      writeFile(join(projectDir, generatedPath), templates[index]?.contents ?? "");
+      return materializeGeneratedTestEvidence(
+        sourceRoot,
+        projectDir,
+        materializedRoot,
+        [entry],
+        new Set([generatedPath]),
+        inventoryDigest(testInventory),
+      );
+    });
+
+    expect(evidence.map(({ generatedPath: path }) => path)).toEqual([generatedPath, generatedPath]);
+    expect(evidence.map(({ materializedPath }) => materializedPath)).toEqual(
+      entries.map(({ path }) => path),
+    );
+    const parsedEvidence = parseMaterializationEvidence(
+      JSON.parse(JSON.stringify(evidence)) as unknown,
+      inventoryDigest(testInventory),
+    );
+    expect(
+      validateGeneratedMaterialization(sourceRoot, testInventory, materializedRoot, parsedEvidence),
+    ).toEqual([]);
+    for (const item of evidence) {
+      expect(fileDigest(join(materializedRoot, item.materializedPath))).toBe(item.generatedDigest);
+    }
   });
 
   it("does not credit aggregate TAP output when the script selects a different file", () => {
@@ -1119,7 +1207,17 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
     });
     writeFileSync(
       join(projectDir, "pnpm-workspace.yaml"),
-      ["packages:", '  - "apps/**/*"', "", "onlyBuiltDependencies:", "  - esbuild", ""].join("\n"),
+      [
+        "packages:",
+        '  - "apps/**/*"',
+        "",
+        "overrides:",
+        "  sharp: 0.35.4",
+        "",
+        "onlyBuiltDependencies:",
+        "  - esbuild",
+        "",
+      ].join("\n"),
     );
 
     writePnpmWorkspaceOverrides(projectDir, {
@@ -1133,6 +1231,7 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
 
     expect(workspaceConfig).toContain('packages:\n  - "apps/**/*"');
     expect(workspaceConfig).toContain("onlyBuiltDependencies:\n  - esbuild");
+    expect(workspaceConfig).toContain('"sharp": "0.35.4"');
     expect(workspaceConfig).toContain(
       'overrides:\n  "@croco/template-only": "file:/tmp/template-only.tgz"',
     );
@@ -1291,6 +1390,37 @@ describe("create-croco-app generated smoke matrix", () => {
     expect(cases.get("meta-vite-web")?.validations).toContainEqual(generatedTestValidation);
     expect(cases.get("meta-vite-fullstack-workers")?.validations).toContainEqual(
       generatedTestValidation,
+    );
+  });
+
+  it("invokes representative Node, Lambda, and Workers host artifacts", () => {
+    const cases = new Map(
+      getGeneratedSmokeDependencyCaseInputs().map((smokeCase) => [smokeCase.name, smokeCase]),
+    );
+
+    expect(cases.get("graphql-lambda-api")?.validations).toContainEqual(
+      expect.objectContaining({
+        label: "protected GraphQL route smoke",
+        packagePath: ["apps", "graphql-api"],
+      }),
+    );
+    expect(cases.get("production-app-starter")?.validations).toContainEqual(
+      expect.objectContaining({
+        label: "built Node host smoke",
+        packagePath: ["apps", "api-server"],
+      }),
+    );
+    expect(cases.get("admin-console-starter")?.validations).toContainEqual(
+      expect.objectContaining({
+        label: "built Node host smoke",
+        packagePath: ["apps", "api-server"],
+      }),
+    );
+    expect(cases.get("meta-vite-fullstack-workers")?.validations).toContainEqual(
+      expect.objectContaining({
+        label: "api-worker secure fetch smoke",
+        packagePath: ["ssr-worker"],
+      }),
     );
   });
 

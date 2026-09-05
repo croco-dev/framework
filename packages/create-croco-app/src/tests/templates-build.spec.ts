@@ -109,6 +109,17 @@ function checkSpaBeSplitStructure() {
   );
   checkFileContains("spa-be-split", ["apps", "api-server", "src", "index.ts"], /createCrocoApp/);
   checkFileContains("spa-be-split", ["apps", "api-server", "src", "index.ts"], /TelemetryRuntime/);
+  checkFileContains("spa-be-split", ["apps", "api-server", "src", "index.ts"], /createNodeHost/);
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "index.ts"],
+    /forceFlush\(\)[\s\S]*shutdown\(\)[\s\S]*disposeApplicationRuntime\(\)/,
+  );
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "tests", "node-lifecycle.spec.ts"],
+    /preserves a host start failure[\s\S]*preserves a host close failure/,
+  );
   checkFileContains(
     "spa-be-split",
     ["apps", "api-server", "src", "lambda.ts"],
@@ -117,7 +128,12 @@ function checkSpaBeSplitStructure() {
   checkFileContains(
     "spa-be-split",
     ["apps", "api-server", "src", "lambda.ts"],
-    /lambdaHandler\(\{[\s\S]*flush:[\s\S]*flush\.outcome === "failed"[\s\S]*flush\.outcome === "unsupported"/,
+    /createLambdaHost\([\s\S]*flush:[\s\S]*flush\.outcome === "failed"[\s\S]*flush\.outcome === "unsupported"/,
+  );
+  checkFileContains(
+    "spa-be-split",
+    ["apps", "api-server", "src", "app.ts"],
+    /createApplicationRuntime/,
   );
   checkFileContains(
     "spa-be-split",
@@ -266,6 +282,9 @@ function checkSpaBeSplitStructure() {
     dependencies: expect.objectContaining({
       "@croco/events-core": "workspace:*",
       "@croco/events-inmemory": "workspace:*",
+      "@croco/framework-module": "workspace:*",
+      "@croco/preset-lambda": "workspace:*",
+      "@croco/preset-node": "workspace:*",
       "@croco/problems-core": "workspace:*",
       "@croco/repository-core": "workspace:*",
       "@croco/retry-core": "workspace:*",
@@ -675,6 +694,16 @@ function checkWebMetaViteFullstackAddonStructure() {
   checkFileContains(
     "addons/web-meta-vite-fullstack",
     ["api-worker", "src", "index.ts"],
+    /createApplicationRuntime/,
+  );
+  checkFileContains(
+    "addons/web-meta-vite-fullstack",
+    ["api-worker", "src", "index.ts"],
+    /applicationRuntime\.bindHostCallback\(createCloudflareWorkersHost\(app\)\)/,
+  );
+  checkFileContains(
+    "addons/web-meta-vite-fullstack",
+    ["api-worker", "src", "index.ts"],
     /corsMiddleware\(\{ origins: \[webOrigin\] \}\)/,
   );
   checkFileContains(
@@ -746,7 +775,10 @@ function checkContainerFullstackStructure() {
 function checkSaasStructure() {
   checkFileExists("saas", "package.json.hbs");
   checkFileExists("saas", "README.md.hbs");
+  checkFileContains("saas", ["pnpm-workspace.yaml.hbs"], /saasCloudflare/);
+  checkFileContains("saas", ["pnpm-workspace.yaml.hbs"], /- workerd/);
   checkFileExists("saas", "apps", "api-server", "package.json.hbs");
+  checkFileExists("saas", "apps", "api-server", "wrangler.toml.hbs");
   checkFileExists("saas", "apps", "api-server", "vitest.config.ts");
   checkFileExists("saas", "apps", "api-server", "src", "saasDemo.ts");
   checkFileExists("saas", "apps", "api-server", "src", "providerProfiles.ts");
@@ -823,6 +855,7 @@ function checkSaasStructure() {
       "jobs:smoke": "pnpm --filter {{scope}}/api-server jobs:smoke",
       "failure-drill:smoke": "pnpm --filter {{scope}}/api-server failure-drill:smoke",
       "failure-drill:integration": "pnpm --filter {{scope}}/api-server failure-drill:integration",
+      "build:api": "pnpm --filter {{scope}}/api-server build",
       typecheck: "turbo typecheck",
       build: "turbo build",
       test: "turbo test",
@@ -903,7 +936,19 @@ function checkSaasStructure() {
       "@croco/problems-core": "workspace:*",
     }),
   });
-  checkFileContains("saas", ["apps", "api-server", "src", "index.ts"], /TelemetryRuntime/);
+  checkFileContains("saas", ["apps", "api-server", "src", "index.ts"], /createNodeHost/);
+  checkFileContains("saas", ["apps", "api-server", "src", "lambda.ts"], /createLambdaHost/);
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "worker.ts"],
+    /hostPlatform: "cloudflare-workers"/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "worker.ts"],
+    /createCloudflareWorkersHost/,
+  );
+  checkFileContains("saas", ["apps", "api-server", "src", "telemetry.ts"], /TelemetryRuntime/);
   checkFileDoesNotContain(
     "saas",
     ["apps", "api-server", "src", "index.ts"],
@@ -929,6 +974,12 @@ function checkSaasStructure() {
     "saas",
     ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
     /applicationRuntime: nodeApp\.applicationRuntime/,
+  );
+  checkFileContains("saas", ["apps", "api-server", "src", "app.ts"], /runtime\.bindHostCallback/);
+  checkFileDoesNotContain(
+    "saas",
+    ["apps", "api-server", "src", "app.ts"],
+    /function bindRuntimeCallback/,
   );
   checkFileContains(
     "saas",
@@ -1246,6 +1297,12 @@ function checkAiSaasStructure() {
   expect(apiPackageJson.devDependencies).not.toHaveProperty("@croco/protocols-core");
 
   checkFileContains("ai-saas", ["apps", "api-server", "src", "app.ts.hbs"], /AiController/);
+  checkFileContains(
+    "ai-saas",
+    ["apps", "api-server", "src", "app.ts.hbs"],
+    /hostPlatform\?: "node" \| "lambda" \| "cloudflare-workers"/,
+  );
+  checkFileContains("ai-saas", ["apps", "api-server", "src", "app.ts.hbs"], /pruneIntervalMs: 0/);
   checkFileContains("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /PROMPT_TOKENS/);
   checkFileContains("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /COST_USD_NANOS/);
   checkFileContains(
