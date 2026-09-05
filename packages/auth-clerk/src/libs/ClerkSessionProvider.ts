@@ -118,6 +118,7 @@ export class ClerkSessionProvider implements SessionProvider {
     while (hasRemainingSessions) {
       const { sessions, totalCount } = await this.listSessions({
         userId,
+        status: "active",
         limit: REVOKE_ALL_SESSIONS_PAGE_SIZE,
         offset,
       });
@@ -143,7 +144,32 @@ export class ClerkSessionProvider implements SessionProvider {
     }
 
     for (const sessionId of sessionIds) {
-      await this.revokeSession(sessionId);
+      try {
+        await this.revokeSession(sessionId);
+      } catch (error: unknown) {
+        if (!(error instanceof ClerkExternalServiceProblem)) {
+          throw error;
+        }
+        if (error.extensions?.upstreamStatus === 404) {
+          continue;
+        }
+        if (error.extensions?.upstreamStatus !== 400) {
+          throw error;
+        }
+
+        const session = await executeClerkLookup("sessions.getSession", () =>
+          this.clerkClient.sessions.getSession(sessionId),
+        );
+        if (
+          session === null ||
+          ["ended", "expired", "revoked", "abandoned", "removed", "replaced"].includes(
+            session.status,
+          )
+        ) {
+          continue;
+        }
+        throw error;
+      }
     }
   }
 }
