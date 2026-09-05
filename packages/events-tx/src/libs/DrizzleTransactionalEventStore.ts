@@ -482,15 +482,17 @@ export class DrizzleTransactionalEventStore<
     const rows = await this.client(context)
       .update(this.outbox)
       .set({
-        attempts: sql`${this.outbox.attempts} + 1`,
+        // Invalid stored values trip NOT NULL constraints and roll back the whole claim.
+        attempts: sql`case when ${this.outbox.attempts} >= 0 then ${this.outbox.attempts} + 1 else null end`,
         status: "publishing",
         lockedUntil,
         updatedAt: options.now,
-        diagnostics: sql`${this.outbox.diagnostics} || jsonb_build_array(
+        diagnostics: sql`case when jsonb_typeof(${this.outbox.diagnostics}) = 'array'
+          then ${this.outbox.diagnostics} || jsonb_build_array(
           ${JSON.stringify(diagnostic)}::jsonb || jsonb_build_object(
             'details', jsonb_build_object('attempts', ${this.outbox.attempts} + 1)
           )
-        )`,
+          ) else null end`,
       })
       .where(inArray(this.outbox.id, candidates))
       .returning();
