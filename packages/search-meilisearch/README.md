@@ -44,20 +44,20 @@ await Context.run({ requestId: "req-1", tenantId: "tenant-1" }, async () => {
 
 ## API 레퍼런스
 
-| API                                   | 설명                                                             |
-| ------------------------------------- | ---------------------------------------------------------------- |
-| `MeilisearchEngine`                   | 검색, 인덱싱, 삭제, 인덱스 생성, tenant token 발급을 담당합니다. |
-| `MeilisearchDiagnosticsProvider`      | 설정과 optional live readiness를 secret 없이 진단합니다.         |
-| `MeilisearchEngineOptions`            | host, apiKey, tenant token, task 대기 옵션을 지정합니다.         |
+| API                                   | 설명                                                               |
+| ------------------------------------- | ------------------------------------------------------------------ |
+| `MeilisearchEngine`                   | 검색, 인덱싱, 삭제, 인덱스 생성, tenant token 발급을 담당합니다.   |
+| `MeilisearchDiagnosticsProvider`      | 설정과 optional live readiness를 secret 없이 진단합니다.           |
+| `MeilisearchEngineOptions`            | host, apiKey, tenant token, task 대기 옵션을 지정합니다.           |
 | `MeilisearchDeleteIndexOptions`       | 시스템 호출의 물리 인덱스 삭제 허용 여부와 취소 신호를 지정합니다. |
-| `TenantTokenOptions`                  | tenant token용 API key UID와 만료 시간을 지정합니다.             |
-| `MissingMeilisearchConfigProblem`     | host/API key 설정 누락을 나타냅니다.                             |
-| `MeilisearchInvalidRequestProblem`    | 안전하지 않은 필터/정렬 필드, 빈 index/document id를 나타냅니다. |
-| `MeilisearchIndexNotFoundProblem`     | upstream index-not-found를 안정적인 Problem으로 정규화합니다.    |
-| `MeilisearchRetryableUpstreamProblem` | timeout/429/5xx 등 재시도 가능한 upstream 장애를 나타냅니다.     |
-| `MeilisearchTaskCanceledProblem`      | 취소된 비동기 task를 non-retryable Problem으로 보고합니다.       |
-| `MeilisearchTerminalUpstreamProblem`  | 인증 실패 등 terminal upstream 장애를 나타냅니다.                |
-| `TenantTokenNotConfiguredProblem`     | tenant token 옵션 없이 토큰 발급을 시도할 때 발생합니다.         |
+| `TenantTokenOptions`                  | tenant token용 API key UID와 만료 시간을 지정합니다.               |
+| `MissingMeilisearchConfigProblem`     | host/API key 설정 누락을 나타냅니다.                               |
+| `MeilisearchInvalidRequestProblem`    | 안전하지 않은 필터/정렬 필드, 빈 index/document id를 나타냅니다.   |
+| `MeilisearchIndexNotFoundProblem`     | upstream index-not-found를 안정적인 Problem으로 정규화합니다.      |
+| `MeilisearchRetryableUpstreamProblem` | timeout/429/5xx 등 재시도 가능한 upstream 장애를 나타냅니다.       |
+| `MeilisearchTaskCanceledProblem`      | 취소된 비동기 task를 non-retryable Problem으로 보고합니다.         |
+| `MeilisearchTerminalUpstreamProblem`  | 인증 실패 등 terminal upstream 장애를 나타냅니다.                  |
+| `TenantTokenNotConfiguredProblem`     | tenant token 옵션 없이 토큰 발급을 시도할 때 발생합니다.           |
 
 ## 동작 메모
 
