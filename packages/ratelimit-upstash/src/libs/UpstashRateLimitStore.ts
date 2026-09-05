@@ -238,7 +238,7 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
 
   async checkTokenBucket(key: string, policy: TokenBucketPolicy): Promise<RateLimitResult> {
     const now = Date.now();
-    const redisKey = `${this.prefix}:${key}`;
+    const redisKey = clusteredRateLimitKey(this.prefix, key);
     const receiptKey = `${redisKey}:receipts`;
     const ttlMs = (policy.capacity * policy.refillIntervalMs) / policy.refillRate;
     const ttlSeconds = Math.ceil(ttlMs / 1000) + 1;
@@ -292,7 +292,7 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
     }
 
     const now = Date.now();
-    const redisKey = `${this.prefix}:${key}`;
+    const redisKey = clusteredRateLimitKey(this.prefix, key);
     const receiptKey = `${redisKey}:receipts`;
     const ttlSeconds =
       Math.ceil((policy.capacity * policy.refillIntervalMs) / policy.refillRate / 1000) + 1;
@@ -328,7 +328,7 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
   }
 
   async reset(key: string): Promise<void> {
-    const redisKey = `${this.prefix}:${key}`;
+    const redisKey = clusteredRateLimitKey(this.prefix, key);
     await runUpstashRateLimitOperation("token-bucket.reset", () => this.redis.del(redisKey));
     await runUpstashRateLimitOperation("token-bucket.reset-receipts", () =>
       this.redis.del(`${redisKey}:receipts`),
@@ -374,7 +374,7 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
 
     const now = Date.now();
     const windowStart = Math.floor(now / policy.windowMs) * policy.windowMs;
-    const redisKey = `${this.prefix}:${key}`;
+    const redisKey = clusteredRateLimitKey(this.prefix, key);
     const receiptKey = `${redisKey}:receipts`;
     const ttlSeconds = Math.ceil(policy.windowMs / 1000);
     const refundReceipt = {
@@ -422,7 +422,7 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
       throw new InvalidRateLimitPolicyProblem("fixed window refund receipt");
     }
 
-    const redisKey = `${this.prefix}:${key}`;
+    const redisKey = clusteredRateLimitKey(this.prefix, key);
     const receiptKey = `${redisKey}:receipts`;
     const ttlSeconds = Math.ceil(policy.windowMs / 1000);
 
@@ -469,7 +469,7 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
   }
 
   async reset(key: string): Promise<void> {
-    const redisKey = `${this.prefix}:${key}`;
+    const redisKey = clusteredRateLimitKey(this.prefix, key);
     await runUpstashRateLimitOperation("fixed.reset", () => this.redis.del(redisKey));
     await runUpstashRateLimitOperation("fixed.reset-receipts", () =>
       this.redis.del(`${redisKey}:receipts`),
@@ -505,6 +505,11 @@ function requireRedisClient(redis: Redis): Redis {
   }
 
   return redis;
+}
+
+function clusteredRateLimitKey(prefix: string, key: string): string {
+  const hashTag = `${prefix}:${key}`.replace(/[%{}]/g, encodeURIComponent);
+  return `{${hashTag}}`;
 }
 
 function counterKey(prefix: string, key: string): string {
