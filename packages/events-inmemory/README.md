@@ -93,6 +93,11 @@ DLQ를 사용하는 버스는 구독에 비어 있지 않은 `handlerId`를 명�
 `item`을 보관하고 저장소 복구 후 다시 저장해야 합니다. `item`에는 이벤트 payload가 있으므로 진단 로그에 출력하지
 마세요. 어댑터의 `dequeue`는 반환 전에 항목을 원자적으로 제거해야 하며, 별도 성공 확인이 필요한 lease 방식은 지원하지 않습니다.
 
+`shutdown` 후의 재생 요청은 큐에서 항목을 꺼내기 전에 `EventBusIntakeClosedProblem`으로 거부됩니다.
+재생 도중 종료가 시작되면 이미 실행 중인 핸들러만 drain 대상이 됩니다. 꺼낸 배치 중 아직 실행하지 않은 항목은
+실행하지 않고 다시 저장하며, `failures`에 intake 종료 오류와 재저장 결과를 반환합니다. 종료 호출은 저장소 작업의
+완료까지 기다리지 않으므로, 재생 호출의 결과도 확인해야 합니다.
+
 ## API 레퍼런스
 
 - `InMemoryEventBus`: `publish`, `replayDeadLetters`, `subscribe`, `unsubscribe`, `clear`, `shutdown` 제공

@@ -287,6 +287,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
       throw new DeadLetterQueueNotConfiguredProblem();
     }
     this.validateReplayLimit(limit);
+    this.assertIntakeOpen();
 
     const items = await this.deadLetterQueue.dequeue<TEvent>(limit);
     const result: DeadLetterReplayResult = {
@@ -300,6 +301,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
       this.recordReplayInspection("started", item);
       let execution: SubscriberExecutionResult<TEvent>;
       try {
+        this.assertIntakeOpen();
         const handlerClass = this.resolveReplayHandler(item);
         if (!handlerClass) {
           throw new DeadLetterReplayHandlerUnavailableProblem(item.event.eventName, item.handlerId);
@@ -310,6 +312,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
           }
           await this.waitForSlot();
         }
+        this.assertIntakeOpen();
         execution = await this.executeSubscriberWithTracking(
           handlerClass,
           this.cloneEvent(item.event),
