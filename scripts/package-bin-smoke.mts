@@ -21,7 +21,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const defaultRootDir = resolve(__dirname, "..");
 const spawnTimeoutMs = 180_000;
-const cliZodRuntimeVersion = "3.25.76";
 
 type PackageJson = {
   readonly bin?: unknown;
@@ -501,7 +500,7 @@ function functionalSmokePackagesFor(
   return graphPackages.filter((graphPackage) => requiredPackageNames.has(graphPackage.packageName));
 }
 
-function trackSmokeFixture(packageSmokeRoot: string): void {
+export function trackSmokeFixture(packageSmokeRoot: string): void {
   run("git", ["init", "--quiet"], packageSmokeRoot, {
     label: "initialize smoke fixture Git repository",
   });
@@ -514,9 +513,25 @@ function trackSmokeFixture(packageSmokeRoot: string): void {
   run("git", ["add", "--", "bin smoke"], packageSmokeRoot, {
     label: "track generated desktop smoke fixture",
   });
-  run("git", ["commit", "--quiet", "-m", "desktop smoke baseline"], packageSmokeRoot, {
-    label: "commit generated desktop smoke fixture",
-  });
+  const emptyHooksPath = join(packageSmokeRoot, ".git", "smoke-empty-hooks");
+  mkdirSync(emptyHooksPath);
+  run(
+    "git",
+    [
+      "-c",
+      "commit.gpgsign=false",
+      "-c",
+      `core.hooksPath=${emptyHooksPath}`,
+      "commit",
+      "--quiet",
+      "-m",
+      "desktop smoke baseline",
+    ],
+    packageSmokeRoot,
+    {
+      label: "commit generated desktop smoke fixture",
+    },
+  );
 }
 
 function assertFixtureUnchanged(packageSmokeRoot: string, label: string): void {
@@ -578,6 +593,12 @@ function assertCliZodRuntimeDependency(
     throw new Error(`${packageInfo.packageName}: installed package manifest was not found`);
   }
   const installedCliManifest = readPackageJson(installedCliPackageJsonPath);
+  const cliZodRuntimeVersion = packageInfo.packedManifest.dependencies?.["zod"];
+  if (!cliZodRuntimeVersion) {
+    throw new Error(
+      `${packageInfo.packageName}: packed manifest must declare an exact zod dependency`,
+    );
+  }
   if (installedCliManifest.dependencies?.["zod"] !== cliZodRuntimeVersion) {
     throw new Error(
       `${packageInfo.packageName}: expected zod dependency ${cliZodRuntimeVersion}, found ${installedCliManifest.dependencies?.["zod"] ?? "missing"}`,

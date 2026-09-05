@@ -10,8 +10,12 @@ import {
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
-import { replaceInstalledPackageFile, restoreInstalledPackageFile } from "../package-bin-smoke.mts";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  replaceInstalledPackageFile,
+  restoreInstalledPackageFile,
+  trackSmokeFixture,
+} from "../package-bin-smoke.mts";
 
 const scriptPath = resolve(__dirname, "../package-bin-smoke.mts");
 const tempRoots: string[] = [];
@@ -25,10 +29,36 @@ type ScriptResult = {
 
 describe("package-bin-smoke.mts", () => {
   afterEach(() => {
+    vi.unstubAllEnvs();
     for (const root of tempRoots.splice(0)) {
       rmSync(root, { force: true, recursive: true });
     }
   });
+
+  it.each(["commit.gpgsign", "core.hooksPath"])(
+    "isolates fixture commits from inherited %s",
+    (key) => {
+      const root = createTempRoot();
+      const hooksPath = join(root, "host hooks");
+      mkdirSync(hooksPath);
+      writeFileSync(join(hooksPath, "pre-commit"), "#!/bin/sh\nexit 99\n", { mode: 0o755 });
+      mkdirSync(join(root, "bin smoke"));
+      writeFileSync(join(root, "bin smoke", "graph.json"), "{}\n");
+      vi.stubEnv("GIT_CONFIG_COUNT", "2");
+      vi.stubEnv("GIT_CONFIG_KEY_0", key);
+      vi.stubEnv("GIT_CONFIG_VALUE_0", key === "commit.gpgsign" ? "true" : hooksPath);
+      vi.stubEnv("GIT_CONFIG_KEY_1", "gpg.program");
+      vi.stubEnv("GIT_CONFIG_VALUE_1", join(root, "missing-signing-program"));
+
+      expect(() => trackSmokeFixture(root)).not.toThrow();
+      const tracked = spawnSync("git", ["show", "HEAD:bin smoke/graph.json"], {
+        cwd: root,
+        encoding: "utf8",
+      });
+      expect(tracked.status, tracked.stderr).toBe(0);
+      expect(tracked.stdout).toBe("{}\n");
+    },
+  );
 
   it("replaces an installed fixture without mutating a hardlinked source file", () => {
     const root = createTempRoot();
@@ -229,7 +259,7 @@ describe("package-bin-smoke.mts", () => {
       writeBinPackage(root, {
         commandName: "croco",
         dependencies: {
-          zod: "3.25.76",
+          zod: "3.25.75",
         },
         directoryName: "cli",
         packageName: "@croco/cli",
@@ -260,25 +290,25 @@ describe("package-bin-smoke.mts", () => {
           '  console.error("Unknown option: --bogus");',
           "  process.exit(1);",
           "}",
-          'if (args === "desktop generate --config bin smoke/croco desktop.config.ts --out-dir bin smoke/generated desktop --strict --json") {',
+          'if (JSON.stringify(process.argv.slice(2)) === JSON.stringify(["desktop", "generate", "--config", "bin smoke/croco desktop.config.ts", "--out-dir", "bin smoke/generated desktop", "--strict", "--json"])) {',
           '  mkdirSync("bin smoke/generated desktop", { recursive: true });',
           '  writeFileSync("bin smoke/generated desktop/desktop-contract-graph.json", "{}\\n");',
           '  console.log(JSON.stringify({ semanticHash: "desktop-smoke" }));',
           "  process.exit(0);",
           "}",
-          'if (args === "desktop check --config bin smoke/croco desktop.config.ts --out-dir bin smoke/generated desktop --strict --json") {',
+          'if (JSON.stringify(process.argv.slice(2)) === JSON.stringify(["desktop", "check", "--config", "bin smoke/croco desktop.config.ts", "--out-dir", "bin smoke/generated desktop", "--strict", "--json"])) {',
           '  console.log(JSON.stringify({ semanticHash: "desktop-smoke" }));',
           "  process.exit(0);",
           "}",
-          'if (args === "desktop check --config bin smoke/rejected desktop.config.ts --out-dir bin smoke/generated desktop --json") {',
+          'if (JSON.stringify(process.argv.slice(2)) === JSON.stringify(["desktop", "check", "--config", "bin smoke/rejected desktop.config.ts", "--out-dir", "bin smoke/generated desktop", "--json"])) {',
           '  console.log("Code generation from strings disallowed");',
           "  process.exit(16);",
           "}",
-          'if (args === "desktop check --config bin smoke/unsupported desktop subpath.config.ts --out-dir bin smoke/generated desktop --json") {',
+          'if (JSON.stringify(process.argv.slice(2)) === JSON.stringify(["desktop", "check", "--config", "bin smoke/unsupported desktop subpath.config.ts", "--out-dir", "bin smoke/generated desktop", "--json"])) {',
           '  console.log("CROCO_DESKTOP_CONFIG_UNSUPPORTED_PACKAGE");',
           "  process.exit(16);",
           "}",
-          'if (args === "desktop diff --config bin smoke/croco desktop.config.ts --baseline bin smoke/generated desktop/desktop-contract-graph.json --strict --json") {',
+          'if (JSON.stringify(process.argv.slice(2)) === JSON.stringify(["desktop", "diff", "--config", "bin smoke/croco desktop.config.ts", "--baseline", "bin smoke/generated desktop/desktop-contract-graph.json", "--strict", "--json"])) {',
           '  console.log(JSON.stringify({ semanticHash: "desktop-smoke" }));',
           "  process.exit(0);",
           "}",
@@ -286,6 +316,25 @@ describe("package-bin-smoke.mts", () => {
           "",
         ].join("\n"),
       });
+      const splitPathResult = spawnSync(
+        process.execPath,
+        [
+          join(root, "packages", "cli", "dist", "cli.js"),
+          "desktop",
+          "check",
+          "--config",
+          "bin",
+          "smoke/croco",
+          "desktop.config.ts",
+          "--out-dir",
+          "bin smoke/generated desktop",
+          "--strict",
+          "--json",
+        ],
+        { cwd: root, encoding: "utf8" },
+      );
+      expect(splitPathResult.status, splitPathResult.stderr).toBe(9);
+
       writeBinPackage(root, {
         commandName: "croco-rpc-codegen",
         directoryName: "rpc-codegen",
@@ -348,6 +397,27 @@ describe("package-bin-smoke.mts", () => {
       expect(`${result.stdout}\n${result.stderr}`).toContain(
         "@croco/bin-tool: bin smoke-bin is missing a functional smoke command contract",
       );
+    },
+    spawnTimeoutMs,
+  );
+
+  it.each([
+    { dependencies: undefined, diagnostic: "packed manifest must declare an exact zod dependency" },
+    { dependencies: { zod: "^3.25.75" }, diagnostic: "expected installed zod ^3.25.75" },
+  ])(
+    "rejects a CLI without an exact owned Zod dependency: $diagnostic",
+    ({ dependencies, diagnostic }) => {
+      const root = createTempRoot();
+      writeBinPackage(root, {
+        commandName: "croco",
+        directoryName: "cli",
+        packageName: "@croco/cli",
+        dependencies,
+        script: "#!/usr/bin/env node\nprocess.exit(0);\n",
+      });
+      const result = runScript(root);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(diagnostic);
     },
     spawnTimeoutMs,
   );

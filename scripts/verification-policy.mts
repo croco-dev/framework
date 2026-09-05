@@ -128,6 +128,14 @@ const CLI_POLICIES: Readonly<Record<string, VerificationPolicy>> = {
     recoveryCommand:
       "Run croco desktop generate --config <path> and commit the generated desktop artifacts",
   },
+  "packages/cli/src/commands/desktop.ts:diff-subcommand": {
+    classification: "generator-regression-tested",
+    owner: "desktop diff command",
+    nonmutationEvidence:
+      "Desktop command tests and packed CLI smoke assert diff preserves tracked generated artifacts",
+    recoveryCommand:
+      "Resolve reported compatibility changes, then run croco desktop generate --config <path> and commit the generated desktop artifacts",
+  },
   "packages/cli/src/commands/diCheck.ts:check-subcommand": generatedProjectPolicy("di check"),
   "packages/cli/src/commands/ops.ts:check-subcommand": generatedProjectPolicy("ops check"),
   "packages/cli/src/commands/projectMap.ts:--check": generatedProjectPolicy("project map --check"),
@@ -230,6 +238,9 @@ export function discoverCliVerificationDeclarations(
       declarations.add("--output-check");
     }
     if (/name:\s*["']check["']/.test(source)) declarations.add("check-subcommand");
+    if (path === "packages/cli/src/commands/desktop.ts" && /name:\s*["']diff["']/.test(source)) {
+      declarations.add("diff-subcommand");
+    }
 
     for (const declaration of declarations) {
       discoveries.push({

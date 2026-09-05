@@ -4,29 +4,67 @@ import {
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type * as FileSystem from "node:fs";
 import { compileDesktopContractGraph, desktop } from "@croco/protocols-desktop";
+import { Problem } from "@croco/problems-core";
 import {
+  DesktopArtifactError,
   createDesktopGeneratedArtifacts,
   inspectDesktopArtifactDrift,
   writeDesktopGeneratedArtifacts,
 } from "../libs/desktopArtifacts.js";
 
 const temporaryDirectories: string[] = [];
+const publicationHook = vi.hoisted(() => ({
+  beforePublish: undefined as ((path: unknown) => void) | undefined,
+}));
+
+vi.mock("node:fs", async (importOriginal) => {
+  const fs = await importOriginal<typeof FileSystem>();
+  return {
+    ...fs,
+    writeFileSync(...args: Parameters<typeof fs.writeFileSync>) {
+      publicationHook.beforePublish?.(args[0]);
+      return fs.writeFileSync(...args);
+    },
+    renameSync(...args: Parameters<typeof fs.renameSync>) {
+      publicationHook.beforePublish?.(args[1]);
+      return fs.renameSync(...args);
+    },
+  };
+});
 
 afterEach(() => {
+  publicationHook.beforePublish = undefined;
   for (const directory of temporaryDirectories.splice(0)) {
     rmSync(directory, { recursive: true, force: true });
   }
 });
 
 describe("desktop generated artifacts", () => {
+  it("preserves artifact diagnostics as Problems", () => {
+    const error = new DesktopArtifactError(
+      "CROCO_DESKTOP_ARTIFACT_IO_FAILED",
+      "Unable to write the desktop graph.",
+      "Make the output directory writable.",
+    );
+
+    expect(error).toBeInstanceOf(Problem);
+    expect(error).toMatchObject({
+      code: "CROCO_DESKTOP_ARTIFACT_IO_FAILED",
+      message: "Unable to write the desktop graph.",
+      recovery: "Make the output directory writable.",
+    });
+  });
+
   it("writes the canonical graph, main metadata, preload bridge, and renderer client", () => {
     const outputDirectory = createTemporaryDirectory();
     const artifacts = createArtifacts();
@@ -126,6 +164,61 @@ describe("desktop generated artifacts", () => {
     expect(() => writeDesktopGeneratedArtifacts(outputDirectory, createArtifacts())).toThrow(
       expect.objectContaining({ code: "CROCO_DESKTOP_ARTIFACT_PATH_KIND_INVALID" }),
     );
+  });
+
+  it.skipIf(process.platform === "win32")(
+    "does not follow a managed-file symlink introduced at publication",
+    () => {
+      const outputDirectory = createTemporaryDirectory();
+      const externalPath = join(createTemporaryDirectory(), "external graph.json");
+      const graphPath = join(outputDirectory, "desktop-contract-graph.json");
+      writeFileSync(externalPath, "outside\n");
+      publicationHook.beforePublish = (path) => {
+        if (path !== graphPath) return;
+        publicationHook.beforePublish = undefined;
+        symlinkSync(externalPath, graphPath);
+      };
+
+      writeDesktopGeneratedArtifacts(outputDirectory, createArtifacts());
+
+      expect(readFileSync(externalPath, "utf8")).toBe("outside\n");
+      expect(inspectDesktopArtifactDrift(outputDirectory, createArtifacts())).toEqual([]);
+    },
+  );
+
+  it("does not overwrite an external hardlink introduced at publication", () => {
+    const outputDirectory = createTemporaryDirectory();
+    const externalPath = join(createTemporaryDirectory(), "external graph.json");
+    const graphPath = join(outputDirectory, "desktop-contract-graph.json");
+    writeFileSync(externalPath, "outside\n");
+    publicationHook.beforePublish = (path) => {
+      if (path !== graphPath) return;
+      publicationHook.beforePublish = undefined;
+      linkSync(externalPath, graphPath);
+    };
+
+    writeDesktopGeneratedArtifacts(outputDirectory, createArtifacts());
+
+    expect(readFileSync(externalPath, "utf8")).toBe("outside\n");
+    expect(inspectDesktopArtifactDrift(outputDirectory, createArtifacts())).toEqual([]);
+  });
+
+  it("preserves the previous artifact and removes temporary files when publication fails", () => {
+    const outputDirectory = createTemporaryDirectory();
+    const graphPath = join(outputDirectory, "desktop-contract-graph.json");
+    writeFileSync(graphPath, "previous graph\n");
+    publicationHook.beforePublish = (path) => {
+      if (path === graphPath) throw new Error("publication denied");
+    };
+
+    expect(() => writeDesktopGeneratedArtifacts(outputDirectory, createArtifacts())).toThrow(
+      expect.objectContaining({
+        code: "CROCO_DESKTOP_ARTIFACT_IO_FAILED",
+        message: "publication denied",
+      }),
+    );
+    expect(readFileSync(graphPath, "utf8")).toBe("previous graph\n");
+    expect(readdirSync(outputDirectory)).toEqual(["desktop-contract-graph.json"]);
   });
 
   it("rejects hardlinked managed artifacts during reads and writes", () => {

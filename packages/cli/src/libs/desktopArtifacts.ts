@@ -1,5 +1,14 @@
 import { createHash } from "node:crypto";
-import { lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import {
   generateDesktopMainRegistrationMetadata,
@@ -8,13 +17,14 @@ import {
   stringifyDesktopMainRegistrationMetadata,
 } from "@croco/desktop-codegen";
 import { stringifyDesktopContractGraph } from "@croco/protocols-desktop";
+import { Problem } from "@croco/problems-core";
 import type { DesktopContractGraphV1 } from "@croco/protocols-desktop";
 
 const CONTRACT_GRAPH_PATH = "desktop-contract-graph.json";
 const MAIN_REGISTRATION_PATH = "desktop-main-registration.json";
 const MANAGED_SOURCE_PATH = /^(?:preload|renderer)\/window-[a-f0-9]{64}\.generated\.ts$/;
 
-export class DesktopArtifactError extends Error {
+export class DesktopArtifactError extends Problem {
   readonly code:
     | "CROCO_DESKTOP_ARTIFACT_IO_FAILED"
     | "CROCO_DESKTOP_ARTIFACT_PATH_ESCAPE"
@@ -25,7 +35,7 @@ export class DesktopArtifactError extends Error {
   readonly recovery: string;
 
   constructor(code: DesktopArtifactError["code"], message: string, recovery: string) {
-    super(message);
+    super(code, undefined, message);
     this.name = "DesktopArtifactError";
     this.code = code;
     this.recovery = recovery;
@@ -205,7 +215,14 @@ export function resolveDesktopArtifactPath(outputDirectory: string, relativePath
 function writeArtifact(outputDirectory: string, artifact: DesktopGeneratedArtifact): void {
   const path = resolveDesktopArtifactPath(outputDirectory, artifact.relativePath);
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, artifact.content);
+  const temporaryDirectory = mkdtempSync(resolve(dirname(path), ".croco-desktop-"));
+  const temporaryPath = resolve(temporaryDirectory, "artifact");
+  try {
+    writeFileSync(temporaryPath, artifact.content, { flag: "wx" });
+    renameSync(temporaryPath, path);
+  } finally {
+    rmSync(temporaryDirectory, { recursive: true, force: true });
+  }
 }
 
 function listManagedDesktopArtifactPaths(outputDirectory: string): string[] {

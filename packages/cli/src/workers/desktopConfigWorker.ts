@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from "node:fs";
-import { compileFunction } from "node:vm";
+import { compileFunction, createContext } from "node:vm";
 
 import * as zod from "zod";
 import * as zodV4Core from "zod/v4/core";
@@ -42,6 +42,10 @@ try {
   const bundle = readFileSync(0, "utf8");
   const evaluateBundle = compileFunction(bundle, ["__desktopExternalModules"], {
     filename: `${configPath}.compiled.cjs`,
+    parsingContext: createContext(
+      Object.assign(Object.create(null), { TextDecoder, TextEncoder, URL, URLSearchParams }),
+      { codeGeneration: { strings: false, wasm: false } },
+    ),
   });
   const config = assertDesktopConfig(
     evaluateBundle({
@@ -63,13 +67,15 @@ try {
     semanticHash: graph.semanticHash,
   });
 } catch (error) {
+  const invalidConfig = error instanceof DesktopConfigValidationError;
   writeProtocol({
     version: PROTOCOL_VERSION,
     ok: false,
-    code: "CROCO_DESKTOP_CONFIG_INVALID",
+    code: invalidConfig ? "CROCO_DESKTOP_CONFIG_INVALID" : "CROCO_DESKTOP_CONFIG_WORKER_FAILED",
     message: error instanceof Error ? error.message : String(error),
-    recovery:
-      "Export default { version: 'croco.desktop-config.v1', app, problemRegistries? } from the desktop config.",
+    recovery: invalidConfig
+      ? "Export default { version: 'croco.desktop-config.v1', app, problemRegistries? } from the desktop config."
+      : "Fix the desktop config evaluation failure, then run the command again.",
   });
   process.exitCode = 1;
 }

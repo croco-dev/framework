@@ -145,18 +145,20 @@ describe("verification policy", () => {
     ).toEqual(["generator-regression-tested", "generator-regression-tested"]);
   });
 
-  it("classifies desktop check as regression-tested read-only verification", () => {
-    const [discovery] = discoverCliVerificationDeclarations({
-      "packages/cli/src/commands/desktop.ts":
-        'const check = defineCommand({ meta: { name: "check" } });',
-    });
+  it.each(["check", "diff"])(
+    "classifies desktop %s as regression-tested read-only verification",
+    (command) => {
+      const [discovery] = discoverCliVerificationDeclarations({
+        "packages/cli/src/commands/desktop.ts": `const command = defineCommand({ meta: { name: "${command}" } });`,
+      });
 
-    expect(discovery && classifyVerificationPath(discovery)).toMatchObject({
-      classification: "generator-regression-tested",
-      owner: "desktop check command",
-      recoveryCommand: expect.stringContaining("croco desktop generate --config <path>"),
-    });
-  });
+      expect(discovery && classifyVerificationPath(discovery)).toMatchObject({
+        classification: "generator-regression-tested",
+        owner: `desktop ${command} command`,
+        recoveryCommand: expect.stringContaining("croco desktop generate --config <path>"),
+      });
+    },
+  );
 });
 
 describe("workflow read-only contracts", () => {

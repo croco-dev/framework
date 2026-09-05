@@ -175,7 +175,7 @@ type WorkerSuccess = {
 type WorkerFailure = {
   readonly version: typeof WORKER_PROTOCOL_VERSION;
   readonly ok: false;
-  readonly code: "CROCO_DESKTOP_CONFIG_INVALID";
+  readonly code: "CROCO_DESKTOP_CONFIG_INVALID" | "CROCO_DESKTOP_CONFIG_WORKER_FAILED";
   readonly message: string;
   readonly recovery: string;
 };
@@ -409,6 +409,8 @@ export const spawnDesktopConfigWorker: DesktopConfigSpawn = (request) =>
     const child = nodeSpawn(request.executable, [...request.args], {
       cwd: request.cwd,
       stdio: ["pipe", "pipe", "pipe", "pipe"],
+      timeout: 5000,
+      killSignal: "SIGKILL",
     });
     let stdout = "";
     let stderr = "";
@@ -464,7 +466,8 @@ async function evaluateConfig(
   if (
     protocol?.version === WORKER_PROTOCOL_VERSION &&
     protocol.ok === false &&
-    protocol.code === "CROCO_DESKTOP_CONFIG_INVALID"
+    (protocol.code === "CROCO_DESKTOP_CONFIG_INVALID" ||
+      protocol.code === "CROCO_DESKTOP_CONFIG_WORKER_FAILED")
   ) {
     return {
       ok: false,
@@ -888,10 +891,15 @@ function createFinding(
     line: position.line,
     column: position.column,
     dependency,
-    message: `Desktop config depends on prohibited ambient input '${dependency}'.`,
+    message:
+      code === DESKTOP_CONFIG_POLICY_CODES.unresolvedRelativeImport
+        ? `Could not resolve relative module '${dependency}' from '${file}'.`
+        : `Desktop config depends on prohibited ambient input '${dependency}'.`,
     recovery:
       recovery ??
-      `Remove '${dependency}' from '${file}' and derive the value in application runtime code instead.`,
+      (code === DESKTOP_CONFIG_POLICY_CODES.unresolvedRelativeImport
+        ? `Create the missing module or correct the relative import '${dependency}' in '${file}', then run the command again.`
+        : `Remove '${dependency}' from '${file}' and derive the value in application runtime code instead.`),
   };
 }
 

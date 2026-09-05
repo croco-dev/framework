@@ -1,6 +1,14 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { join, resolve } from "node:path";
 import { tmpdir } from "node:os";
+import { compileFunction, createContext } from "node:vm";
+import { spawn as nodeSpawn } from "node:child_process";
+
+import { ts } from "ts-morph";
+import * as protocolsDesktop from "@croco/protocols-desktop";
+import * as problemsCore from "@croco/problems-core";
+import * as zod from "zod";
+import * as zodV4Core from "zod/v4/core";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -10,6 +18,7 @@ import {
   resolveDesktopConfigPath,
   resolveDesktopConfigPermissionFlag,
   scanDesktopConfigImportPolicy,
+  spawnDesktopConfigWorker,
 } from "../libs/desktopConfig.js";
 
 import type {
@@ -17,8 +26,14 @@ import type {
   DesktopConfigWorkerExecution,
   DesktopConfigWorkerRequest,
 } from "../libs/desktopConfig.js";
+import type * as ChildProcess from "node:child_process";
 
 const workspaces: string[] = [];
+
+vi.mock("node:child_process", async (importOriginal) => {
+  const original = await importOriginal<typeof ChildProcess>();
+  return { ...original, spawn: vi.fn(original.spawn) };
+});
 
 afterEach(() => {
   for (const workspace of workspaces.splice(0)) rmSync(workspace, { recursive: true, force: true });
@@ -27,10 +42,10 @@ afterEach(() => {
 describe("desktop config paths", () => {
   it("resolves relative, POSIX, Windows-drive, and spaced paths without shell parsing", () => {
     expect(resolveDesktopConfigPath("config/croco desktop.ts", "/workspace/my app")).toBe(
-      "/workspace/my app/config/croco desktop.ts",
+      resolve("/workspace/my app", "config/croco desktop.ts"),
     );
     expect(resolveDesktopConfigPath("/workspace/my app/croco.desktop.ts", "/ignored")).toBe(
-      "/workspace/my app/croco.desktop.ts",
+      resolve("/workspace/my app/croco.desktop.ts"),
     );
     expect(resolveDesktopConfigPath("C:\\work space\\croco.desktop.ts", "/ignored")).toBe(
       "C:\\work space\\croco.desktop.ts",
@@ -58,6 +73,21 @@ describe("desktop config paths", () => {
 });
 
 describe("desktop config import policy", () => {
+  it("reports a missing relative module with source-resolution recovery", async () => {
+    const workspace = createWorkspace({
+      "croco.desktop.ts": "import value from './missing.js'; export default value;",
+    });
+    const findings = await scanDesktopConfigImportPolicy(join(workspace, "croco.desktop.ts"));
+    expect(findings).toMatchObject([
+      {
+        code: DESKTOP_CONFIG_POLICY_CODES.unresolvedRelativeImport,
+        message: expect.stringContaining("Could not resolve relative module './missing.js'"),
+        recovery: expect.stringContaining(
+          "Create the missing module or correct the relative import",
+        ),
+      },
+    ]);
+  });
   it("reports direct and transitive ambient dependencies with stable codes and recovery", async () => {
     const workspace = createWorkspace({
       "croco.desktop.ts":
@@ -324,7 +354,7 @@ describe("desktop config isolated evaluation", () => {
           join(workspace, "croco desktop.ts"),
         ],
         cwd: workspace,
-        input: expect.stringContaining(join(workspace, "croco desktop.ts")),
+        input: expect.stringContaining(JSON.stringify(join(workspace, "croco desktop.ts"))),
       }),
     );
     expect(spawn.mock.calls[0]?.[0].args).not.toContain("--allow-worker");
@@ -385,36 +415,39 @@ describe("desktop config isolated evaluation", () => {
     });
   });
 
-  it("preserves a worker-declared invalid config failure on nonzero exit", async () => {
-    const workspace = createWorkspace({ "croco.desktop.ts": "export default {};\n" });
-    const result = await loadDesktopConfig({
-      configPath: "croco.desktop.ts",
-      cwd: workspace,
-      workerPath: "/worker.js",
-      spawn: createSpawn([
-        {
-          exitCode: 1,
-          signal: null,
-          stdout: "",
-          stderr: "",
-          protocol: JSON.stringify({
-            version: "croco.desktop-config-worker.v1",
-            ok: false,
-            code: "CROCO_DESKTOP_CONFIG_INVALID",
-            message: "invalid config",
-            recovery: "correct the export",
-          }),
-        },
-      ]),
-    });
+  it.each(["CROCO_DESKTOP_CONFIG_INVALID", "CROCO_DESKTOP_CONFIG_WORKER_FAILED"] as const)(
+    "preserves worker-declared %s on nonzero exit",
+    async (code) => {
+      const workspace = createWorkspace({ "croco.desktop.ts": "export default {};\n" });
+      const result = await loadDesktopConfig({
+        configPath: "croco.desktop.ts",
+        cwd: workspace,
+        workerPath: "/worker.js",
+        spawn: createSpawn([
+          {
+            exitCode: 1,
+            signal: null,
+            stdout: "",
+            stderr: "",
+            protocol: JSON.stringify({
+              version: "croco.desktop-config-worker.v1",
+              ok: false,
+              code,
+              message: "invalid config",
+              recovery: "correct the export",
+            }),
+          },
+        ]),
+      });
 
-    expect(result).toEqual({
-      ok: false,
-      code: "CROCO_DESKTOP_CONFIG_INVALID",
-      message: "invalid config",
-      recovery: "correct the export",
-    });
-  });
+      expect(result).toEqual({
+        ok: false,
+        code,
+        message: "invalid config",
+        recovery: "correct the export",
+      });
+    },
+  );
 
   it("returns a stable failure for a missing config file", async () => {
     const result = await loadDesktopConfig({ configPath: "/missing/croco.desktop.ts" });
@@ -435,6 +468,104 @@ describe("desktop config isolated evaluation", () => {
     expect(result).toMatchObject({ ok: true, semanticHash: "sha256:stable" });
   });
 });
+
+describe("desktop config worker evaluation", () => {
+  it("force-terminates a non-returning worker and settles its execution", async () => {
+    const request = {
+      executable: process.execPath,
+      args: ["-e", "process.stdin.resume()"],
+      cwd: process.cwd(),
+      input: "",
+    };
+    expect(await spawnDesktopConfigWorker(request)).toMatchObject({ exitCode: 0, signal: null });
+    expect(vi.mocked(nodeSpawn).mock.calls.at(-1)?.[2]).toMatchObject({
+      timeout: 5000,
+      killSignal: "SIGKILL",
+    });
+    expect(
+      await spawnDesktopConfigWorker({ ...request, args: ["-e", "while (true) {}"] }),
+    ).toMatchObject({ exitCode: null, signal: "SIGKILL" });
+  });
+  it("does not inherit Node process or Buffer globals", () => {
+    expect(
+      runWorker(
+        "return { version: 'croco.desktop-config.v1', app: __desktopExternalModules['@croco/protocols-desktop'].desktop.app({ contracts: {}, windows: {} }), problemRegistries: typeof process === 'undefined' && typeof Buffer === 'undefined' ? [] : false };",
+      ),
+    ).toMatchObject({ ok: true });
+  });
+
+  it("retains explicit invalid-export diagnostics", () => {
+    expect(runWorker("return {};")).toMatchObject({
+      ok: false,
+      code: "CROCO_DESKTOP_CONFIG_INVALID",
+    });
+  });
+
+  it("retains supported Zod and protocol imports with deterministic web utilities", () => {
+    expect(
+      runWorker(`
+      const { desktop } = __desktopExternalModules['@croco/protocols-desktop'];
+      const { z } = __desktopExternalModules.zod;
+      const schema = z.object({ name: z.string() });
+      schema.parse({ name: new TextDecoder().decode(new TextEncoder().encode(new URL('/desktop', 'https://croco.dev').pathname)) });
+      if (typeof __desktopExternalModules['zod/v4/core'].$ZodType !== 'function') throw new Error('missing Zod subpath');
+      return { version: 'croco.desktop-config.v1', app: desktop.app({ contracts: {}, windows: {} }) };
+    `),
+    ).toMatchObject({ ok: true });
+  });
+
+  it.each(["throw new Error('evaluation broke');", "return (;", "throw 'plain failure';"])(
+    "classifies evaluation or compilation faults as worker failures: %s",
+    (bundle) => {
+      expect(runWorker(bundle)).toMatchObject({
+        ok: false,
+        code: "CROCO_DESKTOP_CONFIG_WORKER_FAILED",
+      });
+    },
+  );
+
+  it("disables computed constructor string compilation in the config context", () => {
+    expect(
+      runWorker(
+        "const key = ['con', 'structor'].join(''); return (() => {})[key]('return process')();",
+      ),
+    ).toMatchObject({
+      ok: false,
+      code: "CROCO_DESKTOP_CONFIG_WORKER_FAILED",
+      message: expect.stringContaining("Code generation from strings disallowed"),
+    });
+  });
+});
+
+function runWorker(bundle: string): unknown {
+  const source = readFileSync(
+    new URL("../workers/desktopConfigWorker.ts", import.meta.url),
+    "utf8",
+  );
+  const compiled = ts.transpileModule(source, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  let payload: unknown;
+  const modules: Record<string, unknown> = {
+    "node:fs": {
+      readFileSync: () => bundle,
+      writeFileSync: (_fd: number, text: string) => {
+        payload = JSON.parse(text);
+      },
+    },
+    "node:vm": { compileFunction, createContext },
+    "@croco/protocols-desktop": protocolsDesktop,
+    "@croco/problems-core": problemsCore,
+    zod,
+    "zod/v4/core": zodV4Core,
+  };
+  compileFunction(compiled, ["require", "exports", "process"])(
+    (specifier: string) => modules[specifier],
+    {},
+    { argv: ["node", "worker", "config.ts"], cwd: () => process.cwd() },
+  );
+  return payload;
+}
 
 function createWorkspace(files: Readonly<Record<string, string>>): string {
   const workspace = mkdtempSync(join(tmpdir(), "croco-desktop-config-"));

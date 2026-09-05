@@ -142,6 +142,9 @@ TypeScript configs and their local TypeScript imports are compiled into one in-m
 isolated evaluation. NodeNext-style relative imports such as `./definitions.js` resolve to a matching
 `./definitions.ts` when the JavaScript file is absent. The worker disables string code generation and denies
 filesystem writes, child processes, and nested workers.
+Each worker has a five-second execution deadline. Non-returning evaluation is terminated and reported as
+`CROCO_DESKTOP_CONFIG_WORKER_FAILED`; invalid default exports use `CROCO_DESKTOP_CONFIG_INVALID`.
+The separate VM context reduces ambient globals but is not a security boundary for hostile code.
 
 Desktop command exit statuses are stable bit flags and may be combined:
 
@@ -159,7 +162,10 @@ and non-definition package dependencies. Runtime imports are limited to `@croco/
 `@croco/problems-core`, `zod`, and `zod/v4/core`; undeclared package subpaths are rejected. Correct the
 reported config source for config, policy, evaluation, or graph diagnostic failures. Generated output
 directories, subdirectories, and managed files must be ordinary filesystem entries rather than symbolic or
-hard links. For generated drift, run the exact
+hard links. Generation replaces each file atomically, preserving the target of a file-level link introduced
+during publication. The output directory and its ancestors must be trusted and must not be concurrently
+renamed or replaced by another process; generation is not a sandbox against hostile directory mutation.
+For generated drift, run the exact
 `croco desktop generate --config <path> --out-dir <path>` recovery command reported by the CLI.
 
 ### migrate — Database Migrations
