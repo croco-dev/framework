@@ -179,6 +179,7 @@ describe("ClerkSessionProvider", () => {
       async (sessionCount) => {
         const sessions = Array.from({ length: sessionCount }, (_, index) => ({
           id: `sess_${index + 1}`,
+          status: "active",
         }));
 
         vi.mocked(mockClerkClient.sessions.getSessionList).mockResolvedValue({
@@ -194,7 +195,6 @@ describe("ClerkSessionProvider", () => {
         expect(mockClerkClient.sessions.getSessionList).toHaveBeenCalledOnce();
         expect(mockClerkClient.sessions.getSessionList).toHaveBeenCalledWith({
           userId: "user_123",
-          status: "active",
           limit: 100,
           offset: 0,
         });
@@ -210,6 +210,10 @@ describe("ClerkSessionProvider", () => {
         { id: "sess_expired", status: "expired" },
         { id: "sess_ended", status: "ended" },
         { id: "sess_revoked", status: "revoked" },
+        { id: "sess_abandoned", status: "abandoned" },
+        { id: "sess_removed", status: "removed" },
+        { id: "sess_replaced", status: "replaced" },
+        { id: "sess_pending", status: "pending" },
         { id: "sess_active", status: "active" },
       ];
       vi.mocked(mockClerkClient.sessions.getSessionList).mockImplementation(async (params) => {
@@ -223,7 +227,7 @@ describe("ClerkSessionProvider", () => {
       });
       vi.mocked(mockClerkClient.sessions.revokeSession).mockImplementation(async (sessionId) => {
         if (sessionId !== "sess_active") {
-          throw { status: 400, errors: [{ code: "session_not_active" }] };
+          throw { status: 400 };
         }
         return {} as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.revokeSession>>;
       });
@@ -237,7 +241,10 @@ describe("ClerkSessionProvider", () => {
       "should continue when a listed session becomes %s before revocation",
       async (status) => {
         vi.mocked(mockClerkClient.sessions.getSessionList).mockResolvedValue({
-          data: [{ id: "sess_raced" }, { id: "sess_active" }],
+          data: [
+            { id: "sess_raced", status: "active" },
+            { id: "sess_active", status: "active" },
+          ],
           totalCount: 2,
         } as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.getSessionList>>);
         vi.mocked(mockClerkClient.sessions.revokeSession)
@@ -261,7 +268,10 @@ describe("ClerkSessionProvider", () => {
       "should preserve a rejected revocation when the session remains %s",
       async (status) => {
         vi.mocked(mockClerkClient.sessions.getSessionList).mockResolvedValue({
-          data: [{ id: "sess_1" }, { id: "sess_2" }],
+          data: [
+            { id: "sess_1", status: "active" },
+            { id: "sess_2", status: "active" },
+          ],
           totalCount: 2,
         } as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.getSessionList>>);
         vi.mocked(mockClerkClient.sessions.revokeSession).mockRejectedValue({ status: 400 });
@@ -283,7 +293,10 @@ describe("ClerkSessionProvider", () => {
       "should propagate HTTP %i revocation failures without state recovery",
       async (status) => {
         vi.mocked(mockClerkClient.sessions.getSessionList).mockResolvedValue({
-          data: [{ id: "sess_1" }, { id: "sess_2" }],
+          data: [
+            { id: "sess_1", status: "active" },
+            { id: "sess_2", status: "active" },
+          ],
           totalCount: 2,
         } as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.getSessionList>>);
         vi.mocked(mockClerkClient.sessions.revokeSession).mockRejectedValue({ status });
@@ -300,7 +313,10 @@ describe("ClerkSessionProvider", () => {
 
     it("should continue when a rejected session lookup confirms it no longer exists", async () => {
       vi.mocked(mockClerkClient.sessions.getSessionList).mockResolvedValue({
-        data: [{ id: "sess_raced" }, { id: "sess_active" }],
+        data: [
+          { id: "sess_raced", status: "active" },
+          { id: "sess_active", status: "active" },
+        ],
         totalCount: 2,
       } as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.getSessionList>>);
       vi.mocked(mockClerkClient.sessions.revokeSession)
@@ -317,7 +333,10 @@ describe("ClerkSessionProvider", () => {
 
     it("should continue when a listed session is no longer found during revocation", async () => {
       vi.mocked(mockClerkClient.sessions.getSessionList).mockResolvedValue({
-        data: [{ id: "sess_raced" }, { id: "sess_active" }],
+        data: [
+          { id: "sess_raced", status: "active" },
+          { id: "sess_active", status: "active" },
+        ],
         totalCount: 2,
       } as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.getSessionList>>);
       vi.mocked(mockClerkClient.sessions.revokeSession)
@@ -334,7 +353,10 @@ describe("ClerkSessionProvider", () => {
 
     it("should preserve a failed state lookup after a rejected revocation", async () => {
       vi.mocked(mockClerkClient.sessions.getSessionList).mockResolvedValue({
-        data: [{ id: "sess_1" }, { id: "sess_2" }],
+        data: [
+          { id: "sess_1", status: "active" },
+          { id: "sess_2", status: "active" },
+        ],
         totalCount: 2,
       } as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.getSessionList>>);
       vi.mocked(mockClerkClient.sessions.revokeSession).mockRejectedValue({ status: 400 });
@@ -350,7 +372,10 @@ describe("ClerkSessionProvider", () => {
 
     it("should preserve session revocation failures", async () => {
       vi.mocked(mockClerkClient.sessions.getSessionList).mockResolvedValue({
-        data: [{ id: "sess_1" }, { id: "sess_2" }],
+        data: [
+          { id: "sess_1", status: "active" },
+          { id: "sess_2", status: "active" },
+        ],
         totalCount: 2,
       } as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.getSessionList>>);
       const revokeFailure = new Error("Clerk unavailable");
@@ -371,6 +396,7 @@ describe("ClerkSessionProvider", () => {
     it("should revoke every session when the user has multiple pages", async () => {
       let activeSessions = Array.from({ length: 101 }, (_, index) => ({
         id: `sess_${index + 1}`,
+        status: "active",
       }));
 
       vi.mocked(mockClerkClient.sessions.getSessionList).mockImplementation(async (params) => {
@@ -391,13 +417,11 @@ describe("ClerkSessionProvider", () => {
       expect(mockClerkClient.sessions.getSessionList).toHaveBeenCalledTimes(2);
       expect(mockClerkClient.sessions.getSessionList).toHaveBeenNthCalledWith(1, {
         userId: "user_123",
-        status: "active",
         limit: 100,
         offset: 0,
       });
       expect(mockClerkClient.sessions.getSessionList).toHaveBeenNthCalledWith(2, {
         userId: "user_123",
-        status: "active",
         limit: 100,
         offset: 100,
       });
@@ -409,10 +433,54 @@ describe("ClerkSessionProvider", () => {
       expect(activeSessions).toHaveLength(0);
     });
 
+    it("should not skip later pages when an earlier session expires during collection", async () => {
+      const sessions = Array.from({ length: 101 }, (_, index) => ({
+        id: `sess_${index + 1}`,
+        status: "active",
+      }));
+      vi.mocked(mockClerkClient.sessions.getSessionList).mockImplementation(async (params) => {
+        const filtered = sessions.filter(
+          (session) => !params?.status || session.status === params.status,
+        );
+        const offset = params?.offset ?? 0;
+        const response = {
+          data: filtered
+            .slice(offset, offset + (params?.limit ?? 10))
+            .map((session) => ({ ...session })),
+          totalCount: filtered.length,
+        };
+        if (offset === 0) {
+          sessions[0].status = "expired";
+        }
+        return response as unknown as Awaited<
+          ReturnType<typeof mockClerkClient.sessions.getSessionList>
+        >;
+      });
+      vi.mocked(mockClerkClient.sessions.revokeSession).mockImplementation(async (sessionId) => {
+        const session = sessions.find((candidate) => candidate.id === sessionId);
+        if (session?.status === "expired") {
+          throw { status: 400 };
+        }
+        if (session) {
+          session.status = "revoked";
+        }
+        return {} as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.revokeSession>>;
+      });
+      vi.mocked(mockClerkClient.sessions.getSession).mockResolvedValue({
+        id: "sess_1",
+        status: "expired",
+      } as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.getSession>>);
+
+      await expect(provider.revokeAllSessions("user_123")).resolves.toBeUndefined();
+
+      expect(sessions.filter((session) => session.status === "active")).toEqual([]);
+      expect(mockClerkClient.sessions.revokeSession).toHaveBeenCalledWith("sess_101");
+    });
+
     it("should fail when Clerk returns an empty page before totalCount", async () => {
       vi.mocked(mockClerkClient.sessions.getSessionList)
         .mockResolvedValueOnce({
-          data: [{ id: "sess_1" }],
+          data: [{ id: "sess_1", status: "active" }],
           totalCount: 2,
         } as unknown as Awaited<ReturnType<typeof mockClerkClient.sessions.getSessionList>>)
         .mockResolvedValueOnce({

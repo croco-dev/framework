@@ -116,9 +116,9 @@ export class ClerkSessionProvider implements SessionProvider {
     let hasRemainingSessions = true;
 
     while (hasRemainingSessions) {
+      // Keep status changes from shifting pagination offsets.
       const { sessions, totalCount } = await this.listSessions({
         userId,
-        status: "active",
         limit: REVOKE_ALL_SESSIONS_PAGE_SIZE,
         offset,
       });
@@ -137,7 +137,9 @@ export class ClerkSessionProvider implements SessionProvider {
       }
 
       for (const session of sessions) {
-        sessionIds.add(session.id);
+        if (session.status === "active") {
+          sessionIds.add(session.id);
+        }
       }
       offset += sessions.length;
       hasRemainingSessions = offset < totalCount;
