@@ -627,8 +627,14 @@ describe("EngagementOperationsConsole", () => {
 
   describe("MessageOperationsPanel channel restrictions", () => {
     it("renders only configured channels for the selected message", () => {
+      const baseMessage = sampleSnapshot.messages[0];
+      expect(baseMessage).toBeDefined();
+      if (!baseMessage) {
+        throw new Error("expected base sample message");
+      }
+
       const pushOnlyMessage = {
-        ...sampleSnapshot.messages[0]!,
+        ...baseMessage,
         id: "msg-push-only",
         channels: ["push" as const],
         hasEmailRenderer: false,
