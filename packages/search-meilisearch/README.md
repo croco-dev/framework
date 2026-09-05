@@ -49,6 +49,7 @@ await Context.run({ requestId: "req-1", tenantId: "tenant-1" }, async () => {
 | `MeilisearchEngine`                   | 검색, 인덱싱, 삭제, 인덱스 생성, tenant token 발급을 담당합니다. |
 | `MeilisearchDiagnosticsProvider`      | 설정과 optional live readiness를 secret 없이 진단합니다.         |
 | `MeilisearchEngineOptions`            | host, apiKey, tenant token, task 대기 옵션을 지정합니다.         |
+| `MeilisearchDeleteIndexOptions`       | 시스템 호출의 물리 인덱스 삭제 허용 여부와 취소 신호를 지정합니다. |
 | `TenantTokenOptions`                  | tenant token용 API key UID와 만료 시간을 지정합니다.             |
 | `MissingMeilisearchConfigProblem`     | host/API key 설정 누락을 나타냅니다.                             |
 | `MeilisearchInvalidRequestProblem`    | 안전하지 않은 필터/정렬 필드, 빈 index/document id를 나타냅니다. |
@@ -62,7 +63,11 @@ await Context.run({ requestId: "req-1", tenantId: "tenant-1" }, async () => {
 
 - 모든 검색과 인덱싱은 현재 `Context.getTenantId()` 값을 `_tenantId` 필드에 반영합니다.
 - tenant token은 요청한 tenant가 현재 `Context.getTenantId()`와 일치할 때만 `_tenantId` 필터 규칙을 포함해 생성됩니다.
-- tenant 정보가 없으면 `MissingTenantProblem`이 발생합니다.
+- 검색·문서 작업·tenant token 발급에는 tenant 정보가 필요하며, 없으면 `MissingTenantProblem`이 발생합니다.
+- `deleteIndex`는 테넌트 컨텍스트에서 `MeilisearchInvalidRequestProblem`으로 실패하며 어떤 문서도 삭제하지 않습니다.
+  물리 인덱스 삭제는 테넌트가 없는 시스템 관리 코드에서 `engine.deleteIndex(name, { allowGlobalDrop: true })`로
+  명시적으로 요청해야 합니다. 이 옵션은 테넌트 컨텍스트의 삭제 제한을 해제하지 않습니다. 기존 시스템 호출도
+  이 옵션을 지정해야 하며, 애플리케이션은 해당 호출에 대한 관리자 권한을 검증해야 합니다.
 - 모든 engine I/O 메서드는 `options.signal`을 Meilisearch 요청과 task polling에 전달합니다. 취소되면 SDK polling 간격을
   기다리지 않고 `search-core/operation-aborted` Problem으로 실패합니다.
 - 검색, 결정적 문서 upsert·삭제, settings 갱신, task polling의 일시적 네트워크·429·5xx 실패는 최대 3회

@@ -25,7 +25,7 @@ import {
   normalizeMeilisearchError,
   TenantTokenNotConfiguredProblem,
 } from "./problems/MeilisearchProblems";
-import type { MeilisearchEngineOptions } from "./types";
+import type { MeilisearchDeleteIndexOptions, MeilisearchEngineOptions } from "./types";
 
 const MEILISEARCH_RETRY_POLICY: RetryPolicy = {
   shouldRetry(error: unknown, attempt: number, maxAttempts: number): boolean {
@@ -245,9 +245,31 @@ export class MeilisearchEngine extends SearchEngine {
     );
   }
 
-  async deleteIndex(name: string, options: SearchOperationOptions = {}): Promise<void> {
+  /**
+   * 테넌트 컨텍스트에서는 거부하며, 시스템 호출은 allowGlobalDrop: true가 필요합니다.
+   */
+  async deleteIndex(name: string, options: MeilisearchDeleteIndexOptions = {}): Promise<void> {
     const client = this.getOperationClient("deleteIndex", options);
     this.validateIndexName(name, "deleteIndex");
+
+    if (Context.getTenantId() !== null) {
+      throw new MeilisearchInvalidRequestProblem(
+        { operation: "deleteIndex", indexName: name, upstreamCode: "tenant-index-drop-forbidden" },
+        "Physical index deletion is forbidden in a tenant context",
+      );
+    }
+
+    if (options.allowGlobalDrop !== true) {
+      throw new MeilisearchInvalidRequestProblem(
+        {
+          operation: "deleteIndex",
+          indexName: name,
+          upstreamCode: "global-index-drop-not-authorized",
+        },
+        "Physical index deletion requires allowGlobalDrop: true in a system context",
+      );
+    }
+
     const task = await this.runOperation(
       "deleteIndex",
       () => client.deleteIndex(name),
