@@ -11,6 +11,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -56,11 +57,13 @@ type BinTarget = {
 type SmokeCommand = {
   readonly allowedChildPackageFile?: SmokePackageFile;
   readonly args: readonly string[];
+  readonly assertFixtureUnchanged?: boolean;
   readonly expectedExitCode?: number;
   readonly fixtureFiles?: readonly SmokeFixtureFile[];
   readonly packageFixtureFiles?: readonly SmokePackageFixtureFile[];
   readonly expectedPaths?: readonly string[];
   readonly expectedOutput: string;
+  readonly trackFixtureBeforeRun?: boolean;
   readonly unexpectedOutputs?: readonly string[];
 };
 
@@ -391,6 +394,9 @@ function runPackageBinSmoke(
   const internalPeerTarballs = internalPeerPackagesFor(graphPackages).map(
     (packageInfo) => packageInfo.tarballPath,
   );
+  const functionalSmokeTarballs = functionalSmokePackagesFor(packageInfo, graphPackages).map(
+    (packageInfo) => packageInfo.tarballPath,
+  );
 
   run(
     "pnpm",
@@ -400,7 +406,7 @@ function runPackageBinSmoke(
       "--virtual-store-dir",
       "node_modules/.pnpm",
       packageInfo.tarballPath,
-      ...internalPeerTarballs,
+      ...new Set([...internalPeerTarballs, ...functionalSmokeTarballs]),
       "--ignore-scripts",
       "--prefer-offline",
     ],
@@ -410,11 +416,14 @@ function runPackageBinSmoke(
     },
   );
 
+  assertCliZodRuntimeDependency(packageSmokeRoot, packageInfo);
+
   const networkGuardPath = writeNetworkGuard(packageSmokeRoot);
 
   for (const binTarget of binTargets) {
     for (const smokeCommand of smokeCommandsFor(binTarget, packageInfo)) {
       writeSmokeFixtureFiles(packageSmokeRoot, smokeCommand.fixtureFiles ?? []);
+      if (smokeCommand.trackFixtureBeforeRun) trackSmokeFixture(packageSmokeRoot);
       const replacements = writeSmokePackageFixtureFiles(
         packageSmokeRoot,
         smokeCommand.packageFixtureFiles ?? [],
@@ -463,6 +472,13 @@ function runPackageBinSmoke(
           }
         }
 
+        if (smokeCommand.assertFixtureUnchanged) {
+          assertFixtureUnchanged(
+            packageSmokeRoot,
+            `${packageInfo.packageName}: ${binTarget.commandName}`,
+          );
+        }
+
         console.log(
           `package-bin-smoke: ${packageInfo.packageName} ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
         );
@@ -472,6 +488,69 @@ function runPackageBinSmoke(
         }
       }
     }
+  }
+}
+
+function functionalSmokePackagesFor(
+  packageInfo: PackedPackageInfo,
+  graphPackages: readonly PackedPackageInfo[],
+): PackedPackageInfo[] {
+  const requiredPackageNames: ReadonlySet<string> =
+    packageInfo.packageName === "@croco/cli" ? new Set(["@croco/protocols-desktop"]) : new Set();
+  return graphPackages.filter((graphPackage) => requiredPackageNames.has(graphPackage.packageName));
+}
+
+export function trackSmokeFixture(packageSmokeRoot: string): void {
+  run("git", ["init", "--quiet"], packageSmokeRoot, {
+    label: "initialize smoke fixture Git repository",
+  });
+  run("git", ["config", "user.email", "package-bin-smoke@croco.dev"], packageSmokeRoot, {
+    label: "configure smoke fixture Git email",
+  });
+  run("git", ["config", "user.name", "Croco package bin smoke"], packageSmokeRoot, {
+    label: "configure smoke fixture Git user",
+  });
+  run("git", ["add", "--", "bin smoke"], packageSmokeRoot, {
+    label: "track generated desktop smoke fixture",
+  });
+  const emptyHooksPath = join(packageSmokeRoot, ".git", "smoke-empty-hooks");
+  mkdirSync(emptyHooksPath);
+  run(
+    "git",
+    [
+      "-c",
+      "commit.gpgsign=false",
+      "-c",
+      `core.hooksPath=${emptyHooksPath}`,
+      "commit",
+      "--quiet",
+      "-m",
+      "desktop smoke baseline",
+    ],
+    packageSmokeRoot,
+    {
+      label: "commit generated desktop smoke fixture",
+    },
+  );
+}
+
+function assertFixtureUnchanged(packageSmokeRoot: string, label: string): void {
+  run("git", ["diff", "--exit-code", "--"], packageSmokeRoot, {
+    expectedExitCode: 0,
+    label: `${label} tracked worktree mutation check`,
+  });
+  run("git", ["diff", "--cached", "--exit-code", "--"], packageSmokeRoot, {
+    expectedExitCode: 0,
+    label: `${label} tracked index mutation check`,
+  });
+  const status = run(
+    "git",
+    ["status", "--porcelain=v1", "--untracked-files=all", "--", "bin smoke"],
+    packageSmokeRoot,
+    { label: `${label} fixture mutation check` },
+  );
+  if (status.stdout.trim()) {
+    throw new Error(`${label} changed the fixture:\n${status.stdout.trim()}`);
   }
 }
 
@@ -489,6 +568,50 @@ function installedBinPath(packageSmokeRoot: string, commandName: string): string
     ".bin",
     process.platform === "win32" ? `${commandName}.CMD` : commandName,
   );
+}
+
+function assertCliZodRuntimeDependency(
+  packageSmokeRoot: string,
+  packageInfo: PackedPackageInfo,
+): void {
+  if (packageInfo.packageName !== "@croco/cli") {
+    return;
+  }
+
+  const installedCliPackageJsonPaths = installedPackageFilePaths(packageSmokeRoot, {
+    packageName: packageInfo.packageName,
+    path: "package.json",
+  });
+  if (installedCliPackageJsonPaths.length !== 1) {
+    throw new Error(
+      `${packageInfo.packageName}: expected one installed package manifest, found ${installedCliPackageJsonPaths.length}`,
+    );
+  }
+
+  const installedCliPackageJsonPath = installedCliPackageJsonPaths[0];
+  if (!installedCliPackageJsonPath) {
+    throw new Error(`${packageInfo.packageName}: installed package manifest was not found`);
+  }
+  const installedCliManifest = readPackageJson(installedCliPackageJsonPath);
+  const cliZodRuntimeVersion = packageInfo.packedManifest.dependencies?.["zod"];
+  if (!cliZodRuntimeVersion) {
+    throw new Error(
+      `${packageInfo.packageName}: packed manifest must declare an exact zod dependency`,
+    );
+  }
+  if (installedCliManifest.dependencies?.["zod"] !== cliZodRuntimeVersion) {
+    throw new Error(
+      `${packageInfo.packageName}: expected zod dependency ${cliZodRuntimeVersion}, found ${installedCliManifest.dependencies?.["zod"] ?? "missing"}`,
+    );
+  }
+
+  const requireFromCli = createRequire(installedCliPackageJsonPath);
+  const installedZodManifest = readPackageJson(requireFromCli.resolve("zod/package.json"));
+  if (installedZodManifest.version !== cliZodRuntimeVersion) {
+    throw new Error(
+      `${packageInfo.packageName}: expected installed zod ${cliZodRuntimeVersion}, found ${String(installedZodManifest.version)}`,
+    );
+  }
 }
 
 function writeSmokeFixtureFiles(
@@ -673,9 +796,12 @@ Object.defineProperty(childProcess, "spawn", {
   configurable: true,
   value(command, args, options) {
     const allowedChildren = new Set(JSON.parse(process.env.CROCO_BIN_SMOKE_ALLOWED_CHILDREN ?? "[]"));
-    if (command === process.execPath && Array.isArray(args) && typeof args[0] === "string") {
+    const entrypoint = Array.isArray(args)
+      ? args.find((argument) => typeof argument === "string" && !argument.startsWith("-"))
+      : undefined;
+    if (command === process.execPath && typeof entrypoint === "string") {
       try {
-        if (allowedChildren.has(realpathSync(args[0]))) {
+        if (allowedChildren.has(realpathSync(entrypoint))) {
           return originalSpawn(command, args, options);
         }
       } catch {
@@ -826,6 +952,10 @@ function smokeCommandsFor(
     case "croco": {
       const migrationRunnerInstalled =
         typeof packageInfo.sourceManifest.dependencies?.["@croco/migration-runner"] === "string";
+      const desktopWorker = {
+        packageName: "@croco/cli",
+        path: "dist/desktop-config-worker.js",
+      } as const;
       return [
         {
           args: ["doctor", "--json"],
@@ -886,6 +1016,83 @@ function smokeCommandsFor(
           expectedExitCode: 1,
           expectedOutput: "Unknown option: --bogus",
         },
+        {
+          allowedChildPackageFile: desktopWorker,
+          args: [
+            "desktop",
+            "generate",
+            "--config",
+            "bin smoke/croco desktop.config.ts",
+            "--out-dir",
+            "bin smoke/generated desktop",
+            "--strict",
+            "--json",
+          ],
+          fixtureFiles: desktopConfigFixtureFiles(),
+          expectedPaths: ["bin smoke/generated desktop/desktop-contract-graph.json"],
+          expectedOutput: "semanticHash",
+        },
+        {
+          allowedChildPackageFile: desktopWorker,
+          args: [
+            "desktop",
+            "check",
+            "--config",
+            "bin smoke/croco desktop.config.ts",
+            "--out-dir",
+            "bin smoke/generated desktop",
+            "--strict",
+            "--json",
+          ],
+          assertFixtureUnchanged: true,
+          expectedOutput: "semanticHash",
+          trackFixtureBeforeRun: true,
+        },
+        {
+          allowedChildPackageFile: desktopWorker,
+          args: [
+            "desktop",
+            "check",
+            "--config",
+            "bin smoke/rejected desktop.config.ts",
+            "--out-dir",
+            "bin smoke/generated desktop",
+            "--json",
+          ],
+          assertFixtureUnchanged: true,
+          expectedExitCode: 16,
+          expectedOutput: "Code generation from strings disallowed",
+        },
+        {
+          allowedChildPackageFile: desktopWorker,
+          args: [
+            "desktop",
+            "check",
+            "--config",
+            "bin smoke/unsupported desktop subpath.config.ts",
+            "--out-dir",
+            "bin smoke/generated desktop",
+            "--json",
+          ],
+          assertFixtureUnchanged: true,
+          expectedExitCode: 16,
+          expectedOutput: "CROCO_DESKTOP_CONFIG_UNSUPPORTED_PACKAGE",
+        },
+        {
+          allowedChildPackageFile: desktopWorker,
+          args: [
+            "desktop",
+            "diff",
+            "--config",
+            "bin smoke/croco desktop.config.ts",
+            "--baseline",
+            "bin smoke/generated desktop/desktop-contract-graph.json",
+            "--strict",
+            "--json",
+          ],
+          assertFixtureUnchanged: true,
+          expectedOutput: "semanticHash",
+        },
       ];
     }
     case "croco-openapi-spec":
@@ -945,6 +1152,71 @@ function migrationWrapperFixtureFiles(): readonly SmokeFixtureFile[] {
     {
       path: "bin-smoke/migration-workspace/.keep",
       contents: "",
+    },
+  ];
+}
+
+function desktopConfigFixtureFiles(): readonly SmokeFixtureFile[] {
+  return [
+    {
+      path: "bin smoke/croco desktop.config.ts",
+      contents: `import { desktop } from "@croco/protocols-desktop";
+import { $ZodType } from "zod/v4/core";
+import { smokeWindows } from "./desktop definitions.js";
+
+void $ZodType;
+
+export default {
+  version: "croco.desktop-config.v1",
+  app: desktop.app({
+    contracts: {},
+    windows: smokeWindows,
+  }),
+  problemRegistries: [],
+};
+`,
+    },
+    {
+      path: "bin smoke/desktop definitions.ts",
+      contents: `import { desktop } from "@croco/protocols-desktop";
+
+enum SmokeWindow {
+  Main = "main",
+}
+
+export const smokeWindows = {
+  [SmokeWindow.Main]: desktop.window.local(),
+};
+`,
+    },
+    {
+      path: "bin smoke/rejected desktop.config.ts",
+      contents: `import { desktop } from "@croco/protocols-desktop";
+
+const constructorKey = ["con", "structor"].join("");
+const DynamicFunction = (() => {})[constructorKey] as FunctionConstructor;
+const attackSource = [
+  "const process = globalThis.process;",
+  "const { Worker } = process.getBuiltinModule('node:worker_threads');",
+  "new Worker(\\"require('node:fs').writeFileSync('bin smoke/ambient escape.txt', 'escape')\\", { eval: true, execArgv: [] });",
+  "void fetch('http://127.0.0.1:9/croco-desktop-config');",
+  "process.getBuiltinModule('node:fs').writeFileSync('bin smoke/ambient direct escape.txt', 'escape');",
+].join("\\n");
+
+DynamicFunction(attackSource)();
+
+export default {
+  version: "croco.desktop-config.v1",
+  app: desktop.app({ contracts: {}, windows: {} }),
+};
+`,
+    },
+    {
+      path: "bin smoke/unsupported desktop subpath.config.ts",
+      contents: `import { missing } from "@croco/problems-core/typo";
+
+export default missing;
+`,
     },
   ];
 }

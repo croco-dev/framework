@@ -35,7 +35,7 @@ export async function runCroco(
 ): Promise<CrocoRunResult> {
   const runtime = createCrocoCommandRuntime(dependencies);
   const command = createBoundCrocoCommand(runtime);
-  const rawArgs = normalizeMigrateRootArgs(argv);
+  const rawArgs = normalizeMigrateRootArgs(normalizeDesktopRootArgs(argv));
 
   try {
     if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
@@ -113,6 +113,11 @@ function createBoundCrocoCommand(runtime: CrocoCommandRuntime): CommandDef<typeo
         "contracts",
         "Validate Croco contract graph artifacts",
         async () => (await import("./contracts.js")).contracts as LoadedCommand,
+      ),
+      desktop: lazyCommand(
+        "desktop",
+        "Generate and validate Croco desktop contract artifacts",
+        async () => (await import("./desktop.js")).desktop as LoadedCommand,
       ),
       "architecture-policy": lazyCommand(
         "architecture-policy",
@@ -208,6 +213,34 @@ export function normalizeMigrateRootArgs(rawArgs: readonly string[]): string[] {
   }
 
   return [...rawArgs];
+}
+
+function normalizeDesktopRootArgs(rawArgs: readonly string[]): string[] {
+  const desktopIndex = rawArgs.indexOf("desktop");
+  const commandIndex = rawArgs.findIndex(
+    (argument, index) => index > desktopIndex && ["generate", "check", "diff"].includes(argument),
+  );
+  if (desktopIndex === -1 || commandIndex === -1) return [...rawArgs];
+
+  const normalized: string[] = [];
+  const cwdArguments: string[] = [];
+  for (let index = 0; index < rawArgs.length; index++) {
+    const argument = rawArgs[index];
+    if (argument?.startsWith("--cwd=")) {
+      if (argument.length === "--cwd=".length) return [...rawArgs];
+      cwdArguments.push(argument);
+      continue;
+    }
+    if (argument !== "--cwd") {
+      if (argument !== undefined) normalized.push(argument);
+      continue;
+    }
+    const value = rawArgs[index + 1];
+    if (!value || value.startsWith("--")) return [...rawArgs];
+    cwdArguments.push(argument, value);
+    index++;
+  }
+  return [...normalized, ...cwdArguments];
 }
 
 function findRootMigrateIndex(rawArgs: readonly string[]): number | undefined {

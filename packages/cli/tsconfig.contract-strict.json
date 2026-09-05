@@ -4,6 +4,8 @@
     "noPropertyAccessFromIndexSignature": true,
     "noUncheckedIndexedAccess": true,
     "paths": {
+      "@croco/desktop-codegen": ["./node_modules/@croco/desktop-codegen/src/index.ts"],
+      "@croco/protocols-desktop": ["./node_modules/@croco/protocols-desktop/src/index.ts"],
       "@croco/*": ["../../packages/*/src/index.ts"]
     }
   },

@@ -71,6 +71,7 @@ not thrown to the embedding caller.
 | `generate scaffold <Model>`             | Page + domain bundle                             |
 | `codegen rpc [args]`                    | Generate RPC client code                         |
 | `codegen openapi [args]`                | Generate OpenAPI spec                            |
+| `desktop generate\|check\|diff [args]`  | Generate or validate desktop contract artifacts  |
 | `doctor [path]`                         | Diagnose workspace boundaries and setup          |
 | `di graph [args]`                       | Generate a deterministic DI graph manifest       |
 | `di check <manifest>`                   | Validate a DI graph manifest for CI              |
@@ -103,6 +104,69 @@ Creates a single source file under `apps/api-server/src/`:
 
 - `croco codegen rpc [args]` delegates to `@croco/rpc-codegen`
 - `croco codegen openapi [args]` delegates to `@croco/openapi-spec`
+
+### desktop — Desktop Contract Artifacts
+
+Export a deterministic desktop application definition from a config file:
+
+```typescript
+import { desktop } from "@croco/protocols-desktop";
+
+export default {
+  version: "croco.desktop-config.v1",
+  app: desktop.app({
+    contracts: {},
+    windows: { main: desktop.window.local() },
+  }),
+  problemRegistries: [],
+};
+```
+
+Use `generate` as the single writer, then run `check` and `diff` as read-only validation commands:
+
+```bash
+croco desktop generate --config ./croco.desktop.ts --out-dir .croco/build/desktop
+croco desktop check --config ./croco.desktop.ts --out-dir .croco/build/desktop --strict
+croco desktop diff --config ./croco.desktop.ts --baseline .croco/build/desktop/desktop-contract-graph.json --strict
+```
+
+`--out-dir` defaults to `.croco/build/desktop`. `generate` and `check` also accept `--json`;
+`diff` accepts `--json` and repeatable `--reviewed-authority <fingerprint>` values. `--strict` evaluates
+the config twice in separate processes and rejects different canonical graph hashes. Config paths may be
+absolute or relative, including Windows drive paths and paths containing spaces. Both `--option <path>` and
+`--option=<path>` forms are supported. `--cwd <path>` makes
+relative config, output, and baseline paths resolve from the selected workspace regardless of where the
+option appears in the command.
+
+TypeScript configs and their local TypeScript imports are compiled into one in-memory module bundle before
+isolated evaluation. NodeNext-style relative imports such as `./definitions.js` resolve to a matching
+`./definitions.ts` when the JavaScript file is absent. The worker disables string code generation and denies
+filesystem writes, child processes, and nested workers.
+Each worker has a five-second execution deadline. Non-returning evaluation is terminated and reported as
+`CROCO_DESKTOP_CONFIG_WORKER_FAILED`; invalid default exports use `CROCO_DESKTOP_CONFIG_INVALID`.
+The separate VM context reduces ambient globals but is not a security boundary for hostile code.
+
+Desktop command exit statuses are stable bit flags and may be combined:
+
+| Bit  | Meaning                                          |
+| ---- | ------------------------------------------------ |
+| `1`  | Compatibility break                              |
+| `2`  | Authority escalation                             |
+| `4`  | Contract graph diagnostics                       |
+| `8`  | Generated artifact drift or unsafe artifact path |
+| `16` | Config loading, policy, or evaluation failure    |
+
+Desktop configs must be pure and deterministic. The import policy rejects ambient filesystem, network,
+time, randomness, Electron, application-bootstrap, environment, side-effect import, runtime implementation,
+and non-definition package dependencies. Runtime imports are limited to `@croco/protocols-desktop`,
+`@croco/problems-core`, `zod`, and `zod/v4/core`; undeclared package subpaths are rejected. Correct the
+reported config source for config, policy, evaluation, or graph diagnostic failures. Generated output
+directories, subdirectories, and managed files must be ordinary filesystem entries rather than symbolic or
+hard links. Generation replaces each file atomically, preserving the target of a file-level link introduced
+during publication. The output directory and its ancestors must be trusted and must not be concurrently
+renamed or replaced by another process; generation is not a sandbox against hostile directory mutation.
+For generated drift, run the exact
+`croco desktop generate --config <path> --out-dir <path>` recovery command reported by the CLI.
 
 ### migrate — Database Migrations
 

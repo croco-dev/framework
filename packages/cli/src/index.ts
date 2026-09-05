@@ -22,6 +22,7 @@ export {
 } from "./commands/architecturePolicy";
 export { contracts } from "./commands/contracts";
 export { contractsCheck, runContractsCheck } from "./commands/contractsCheck";
+export { desktop } from "./commands/desktop";
 export { create } from "./commands/create";
 export { createDomain } from "./commands/createDomain";
 export { createPage } from "./commands/createPage";

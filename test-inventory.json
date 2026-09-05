@@ -674,6 +674,24 @@
       "owner": "@croco/cli"
     },
     {
+      "path": "packages/cli/src/tests/desktop.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/cli"
+    },
+    {
+      "path": "packages/cli/src/tests/desktopArtifacts.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/cli"
+    },
+    {
+      "path": "packages/cli/src/tests/desktopConfig.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/cli"
+    },
+    {
       "path": "packages/cli/src/tests/diCheck.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

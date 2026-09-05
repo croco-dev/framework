@@ -43,6 +43,7 @@ describe("Croco root runner", () => {
     expect(result).toEqual({ exitCode: 0 });
     expect(stdout.join("\n")).toContain("Croco framework CLI");
     expect(stdout.join("\n")).toContain("COMMANDS");
+    expect(stdout.join("\n")).toContain("desktop");
     expect(stderr).toEqual([]);
     expect(exit).not.toHaveBeenCalled();
   });
@@ -114,6 +115,105 @@ describe("Croco root runner", () => {
       exitCode: 0,
     });
     expect(stdout).toEqual([`Overwritten: ${targetPath}`]);
+    expect(stderr).toEqual([]);
+  });
+
+  it.each([
+    [
+      "before the desktop command with a separated value",
+      (targetCwd: string) => [
+        "--cwd",
+        targetCwd,
+        "desktop",
+        "check",
+        "--config",
+        "croco.desktop.ts",
+        "--json",
+      ],
+    ],
+    [
+      "after the desktop command with a separated value",
+      (targetCwd: string) => [
+        "desktop",
+        "--cwd",
+        targetCwd,
+        "check",
+        "--config",
+        "croco.desktop.ts",
+        "--json",
+      ],
+    ],
+    [
+      "after the check command with a separated value",
+      (targetCwd: string) => [
+        "desktop",
+        "check",
+        "--cwd",
+        targetCwd,
+        "--config",
+        "croco.desktop.ts",
+        "--json",
+      ],
+    ],
+    [
+      "before the desktop command with an equals-form value",
+      (targetCwd: string) => [
+        `--cwd=${targetCwd}`,
+        "desktop",
+        "check",
+        "--config=croco.desktop.ts",
+        "--json",
+      ],
+    ],
+    [
+      "after the desktop command with an equals-form value",
+      (targetCwd: string) => [
+        "desktop",
+        `--cwd=${targetCwd}`,
+        "check",
+        "--config=croco.desktop.ts",
+        "--json",
+      ],
+    ],
+    [
+      "after the check command with an equals-form value",
+      (targetCwd: string) => [
+        "desktop",
+        "check",
+        `--cwd=${targetCwd}`,
+        "--config=croco.desktop.ts",
+        "--json",
+      ],
+    ],
+  ] as const)("honors --cwd %s", async (_placement, createArgv) => {
+    const launchCwd = createTemporaryDirectory();
+    const targetCwd = join(createTemporaryDirectory(), "workspace target");
+    mkdirSync(targetCwd);
+    writeFileSync(
+      join(targetCwd, "croco.desktop.ts"),
+      "export default process.env.DESKTOP_CONFIG;\n",
+    );
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const result = await runCroco(createArgv(targetCwd), {
+      cwd: launchCwd,
+      stdout: (message) => stdout.push(message),
+      stderr: (message) => stderr.push(message),
+    });
+
+    expect(result).toEqual({ exitCode: 16 });
+    expect(JSON.parse(stdout.join("\n"))).toMatchObject({
+      codes: ["CROCO_DESKTOP_CONFIG_FAILURE", "CROCO_DESKTOP_CONFIG_POLICY_REJECTED"],
+      configFailure: {
+        findings: [
+          {
+            code: "CROCO_DESKTOP_CONFIG_PROCESS_ENV_DEPENDENCY",
+            file: join(targetCwd, "croco.desktop.ts"),
+          },
+        ],
+      },
+    });
     expect(stderr).toEqual([]);
   });
 
