@@ -88,7 +88,12 @@ export class OutboundWebhookRuntime {
       committedAt,
     };
     const result = await this.options.store.commitEvent({ event, endpoints: effectiveEndpoints });
-    assertIntentPublicationSucceeded(await this.publishUnpublishedIntents(descriptor.tenantId));
+    assertIntentPublicationSucceeded(
+      await this.publishIntents(
+        descriptor.tenantId,
+        result.intents.filter((intent) => intent.publishedAt === undefined),
+      ),
+    );
     return result;
   }
 
@@ -96,6 +101,13 @@ export class OutboundWebhookRuntime {
     tenantId: string,
   ): Promise<OutboundWebhookIntentPublicationOutcome> {
     const intents = await this.options.store.listUnpublishedIntents(tenantId);
+    return this.publishIntents(tenantId, intents);
+  }
+
+  private async publishIntents(
+    tenantId: string,
+    intents: readonly OutboundWebhookDispatchIntent[],
+  ): Promise<OutboundWebhookIntentPublicationOutcome> {
     const publishedIntentIds: string[] = [];
     const failures: OutboundWebhookIntentPublicationFailure[] = [];
     for (const intent of intents) {
