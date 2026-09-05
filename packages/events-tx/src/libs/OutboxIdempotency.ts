@@ -8,11 +8,10 @@ export const OUTBOX_IDEMPOTENCY_FIELDS = [
   "aggregateId",
   "payload",
   "metadata",
-  "occurredAt",
-] as const;
+] as const satisfies readonly OutboxIdempotencyField[];
 
 type CanonicalOutboxRequest = {
-  [TField in OutboxIdempotencyField]: AppendOutboxMessageInput[TField];
+  [TField in (typeof OUTBOX_IDEMPOTENCY_FIELDS)[number]]: AppendOutboxMessageInput[TField];
 };
 
 function jsonStorageValue(value: unknown): unknown {
@@ -22,6 +21,8 @@ function jsonStorageValue(value: unknown): unknown {
 
 // Delivery configuration, trace context, and diagnostics describe an append attempt rather than
 // the event itself. JSON fields are compared after the same normalization PostgreSQL jsonb applies.
+// occurredAt can change when an event is recreated or stored at a different precision;
+// a replay keeps the first persisted timestamp instead of treating it as business identity.
 function canonicalInput(input: AppendOutboxMessageInput): CanonicalOutboxRequest {
   return {
     eventId: input.eventId,
@@ -29,7 +30,6 @@ function canonicalInput(input: AppendOutboxMessageInput): CanonicalOutboxRequest
     aggregateId: input.aggregateId,
     payload: jsonStorageValue(input.payload) as Record<string, unknown>,
     metadata: jsonStorageValue(input.metadata ?? {}) as Record<string, unknown>,
-    occurredAt: input.occurredAt,
   };
 }
 
@@ -40,7 +40,6 @@ function canonicalMessage(message: TransactionalOutboxMessage): CanonicalOutboxR
     aggregateId: message.aggregateId,
     payload: jsonStorageValue(message.payload) as Record<string, unknown>,
     metadata: jsonStorageValue(message.metadata) as Record<string, unknown>,
-    occurredAt: message.occurredAt,
   };
 }
 
