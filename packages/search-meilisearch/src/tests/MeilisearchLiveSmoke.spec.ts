@@ -42,7 +42,7 @@ describe("Meilisearch live smoke", () => {
 
       const tenantId = `tenant-${Date.now()}`;
       const indexName = `croco_live_smoke_${Date.now()}`;
-      vi.spyOn(Context, "getTenantId").mockReturnValue(tenantId);
+      const tenantContext = vi.spyOn(Context, "getTenantId").mockReturnValue(tenantId);
 
       const engine = new MeilisearchEngine(liveConfig);
 
@@ -70,7 +70,8 @@ describe("Meilisearch live smoke", () => {
           ),
         ).toBe(true);
       } finally {
-        await engine.deleteIndex(indexName).catch(() => undefined);
+        tenantContext.mockRestore();
+        await engine.deleteIndex(indexName, { allowGlobalDrop: true });
       }
     },
   );
