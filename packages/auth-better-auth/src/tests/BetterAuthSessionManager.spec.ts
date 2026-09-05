@@ -335,20 +335,82 @@ describe("BetterAuthSessionManager", () => {
       expect(mockFactory.getAuth().api.listSessions).not.toHaveBeenCalled();
     });
 
-    it("should preserve authorization failures instead of reporting a missing session", async () => {
+    it("should preserve upstream authorization failures after ownership matches", async () => {
       mockFactory = createMockAuthFactory({
-        sessionLookupResults: { "missing-session": null },
         revokeSessionError: { status: "UNAUTHORIZED", statusCode: 401 },
       });
       sessionManager = new BetterAuthSessionManager(mockFactory);
 
       const revocation = sessionManager.revokeSession(
-        "missing-session",
+        "target-session-token",
         "authorization-session-token",
       );
 
       await expect(revocation).rejects.toBeInstanceOf(UnauthorizedProblem);
       await expect(revocation).rejects.not.toBeInstanceOf(BetterAuthSessionNotFoundProblem);
+      expect(mockFactory.getAuth().api.revokeSession).toHaveBeenCalledOnce();
+    });
+
+    it("should reject another user's session without calling upstream revocation", async () => {
+      mockFactory = createMockAuthFactory({
+        sessionLookupResults: {
+          "target-session-token": { session: { userId: "bob" } },
+          "authorization-session-token": { session: { userId: "alice" } },
+        },
+      });
+      sessionManager = new BetterAuthSessionManager(mockFactory);
+
+      await expect(
+        sessionManager.revokeSession("target-session-token", "authorization-session-token"),
+      ).rejects.toBeInstanceOf(BetterAuthSessionNotFoundProblem);
+      expect(mockFactory.getAuth().api.revokeSession).not.toHaveBeenCalled();
+    });
+
+    it("should reject a missing authorization session without calling upstream revocation", async () => {
+      mockFactory = createMockAuthFactory({
+        sessionLookupResults: { "authorization-session-token": null },
+      });
+      sessionManager = new BetterAuthSessionManager(mockFactory);
+
+      await expect(
+        sessionManager.revokeSession("target-session-token", "authorization-session-token"),
+      ).rejects.toBeInstanceOf(BetterAuthSessionNotFoundProblem);
+      expect(mockFactory.getAuth().api.revokeSession).not.toHaveBeenCalled();
+    });
+
+    it.each(["target-session-token", "authorization-session-token"])(
+      "should preserve both sessions when lookup fails for %s",
+      async (failingToken) => {
+        const auth = mockFactory.getAuth();
+        const { internalAdapter } = await auth.$context;
+        internalAdapter.findSession.mockImplementation(async (token) => {
+          if (token === failingToken) {
+            throw { statusCode: 503, message: `lookup failed for ${token}` };
+          }
+          return { session: { userId: "user-123" } };
+        });
+
+        await expect(
+          sessionManager.revokeSession("target-session-token", "authorization-session-token"),
+        ).rejects.toMatchObject({
+          code: "auth-better-auth/authentication-failed",
+          detail: "Better Auth revokeSession failed: upstream revocation failed",
+          extensions: { upstreamStatus: 503, retryable: true },
+        });
+        expect(auth.api.revokeSession).not.toHaveBeenCalled();
+      },
+    );
+
+    it("should reject context failures without calling upstream revocation", async () => {
+      const auth = mockFactory.getAuth();
+      sessionManager = new BetterAuthSessionManager({
+        getAuth: () => ({ ...auth, $context: Promise.reject(new Error("context unavailable")) }),
+      });
+
+      await expect(
+        sessionManager.revokeSession("target-session-token", "authorization-session-token"),
+      ).rejects.toBeInstanceOf(BetterAuthAuthenticationProblem);
+      expect(auth.api.revokeSession).not.toHaveBeenCalled();
     });
 
     it("should map a missing target session to BetterAuthSessionNotFoundProblem", async () => {
@@ -363,7 +425,7 @@ describe("BetterAuthSessionManager", () => {
         code: "auth-better-auth/session-not-found",
         detail: "Session with id '[Redacted]' not found",
       });
-      expect(mockFactory.getAuth().api.revokeSession).toHaveBeenCalledOnce();
+      expect(mockFactory.getAuth().api.revokeSession).not.toHaveBeenCalled();
     });
 
     it("should reject malformed target lookup output as an upstream failure", async () => {
@@ -382,6 +444,7 @@ describe("BetterAuthSessionManager", () => {
       await expect(revocation).rejects.toMatchObject({
         detail: "Better Auth revokeSession failed: upstream revocation failed",
       });
+      expect(mockFactory.getAuth().api.revokeSession).not.toHaveBeenCalled();
     });
 
     it("should reject an empty authorization session token before calling Better Auth", async () => {
@@ -390,7 +453,7 @@ describe("BetterAuthSessionManager", () => {
       );
     });
 
-    it("should let Better Auth reject invalid authorization before reporting an invalid target", async () => {
+    it("should reject an invalid target without calling upstream authorization", async () => {
       mockFactory = createMockAuthFactory({
         sessionLookupResults: { "": null },
         revokeSessionError: { status: "UNAUTHORIZED", statusCode: 401 },
@@ -399,19 +462,18 @@ describe("BetterAuthSessionManager", () => {
 
       const revocation = sessionManager.revokeSession("", "invalid-auth");
 
-      await expect(revocation).rejects.toBeInstanceOf(UnauthorizedProblem);
-      await expect(revocation).rejects.not.toBeInstanceOf(BetterAuthSessionNotFoundProblem);
-      expect(mockFactory.getAuth().api.revokeSession).toHaveBeenCalledOnce();
+      await expect(revocation).rejects.toBeInstanceOf(BetterAuthSessionNotFoundProblem);
+      expect(mockFactory.getAuth().api.revokeSession).not.toHaveBeenCalled();
     });
 
-    it("should report an invalid target after Better Auth accepts authorization", async () => {
+    it("should reject an invalid target before upstream revocation", async () => {
       mockFactory = createMockAuthFactory({ sessionLookupResults: { "": null } });
       sessionManager = new BetterAuthSessionManager(mockFactory);
 
       await expect(
         sessionManager.revokeSession("", "authorization-session-token"),
       ).rejects.toBeInstanceOf(BetterAuthSessionNotFoundProblem);
-      expect(mockFactory.getAuth().api.revokeSession).toHaveBeenCalledOnce();
+      expect(mockFactory.getAuth().api.revokeSession).not.toHaveBeenCalled();
     });
 
     it.each(["bad\ntoken", "bad\0token"])(

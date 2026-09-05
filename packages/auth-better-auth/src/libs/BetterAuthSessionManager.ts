@@ -82,11 +82,6 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
     );
 
     try {
-      await auth.api.revokeSession({
-        headers,
-        body: { token: targetSessionToken },
-      });
-
       if ("error" in ownership) {
         throw ownership.error;
       }
@@ -94,6 +89,11 @@ export class BetterAuthSessionManager implements BetterAuthSessionProvider {
       if (!ownership.matches) {
         throw new BetterAuthSessionNotFoundProblem("[Redacted]");
       }
+
+      await auth.api.revokeSession({
+        headers,
+        body: { token: targetSessionToken },
+      });
     } catch (error) {
       if (
         error instanceof BetterAuthSessionNotFoundProblem ||
