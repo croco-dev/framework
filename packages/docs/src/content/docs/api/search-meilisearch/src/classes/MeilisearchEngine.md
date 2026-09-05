@@ -196,7 +196,7 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 
 > **deleteIndex**(`name`, `options?`): `Promise`\<`void`\>
 
-인덱스 삭제
+테넌트 컨텍스트에서는 거부하며, 시스템 호출은 allowGlobalDrop: true가 필요합니다.
 
 #### Parameters
 
@@ -204,11 +204,9 @@ readonly [`SearchIndexDocument`](/api/search-core/src/type-aliases/searchindexdo
 
 `string`
 
-인덱스 이름
-
 ##### options?
 
-[`SearchOperationOptions`](/api/search-core/src/type-aliases/searchoperationoptions/) = `{}`
+[`MeilisearchDeleteIndexOptions`](/api/search-meilisearch/src/type-aliases/meilisearchdeleteindexoptions/) = `{}`
 
 #### Returns
 
