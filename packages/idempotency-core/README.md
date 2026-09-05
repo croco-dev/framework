@@ -42,7 +42,9 @@ structured clone이 `lastIndex`를 초기화하므로 모든 RegExp는 `lastInde
 실행된 global 또는 sticky RegExp에서 이 제한이 주로 드러납니다.
 공유 메모리, Buffer, 사용자 class instance, accessor와 symbol property는 명시적으로 거부합니다.
 
-TTL이 설정된 in-flight reservation은 `expiresAt` 직전까지만 완료할 수 있습니다. 만료 시각부터 `commit`과 `fail`은
+`ttlMs`를 생략한 in-flight reservation에는 워커 충돌로 인한 영구 교착을 막기 위해 30초 기본 리스가 적용됩니다.
+명시적으로 `ttlMs`를 지정하면 해당 값이 in-flight 리스를 결정하고, 완료·실패 레코드의 보존 기간은 기존처럼 생략 시
+만료되지 않습니다. in-flight reservation은 `expiresAt` 직전까지만 완료할 수 있습니다. 만료 시각부터 `commit`과 `fail`은
 `IdempotencyReservationExpiredProblem`으로 거부되며, 새 `reserve`가 발급한 reservation만 상태를 전이할 수 있습니다.
 
 handler가 성공한 뒤 `commit`이 실패하면 coordinator는 같은 reservation을 retryable failed 상태로 전이하고 원래
