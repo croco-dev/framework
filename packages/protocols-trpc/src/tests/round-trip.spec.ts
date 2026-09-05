@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import type { AddressInfo } from "node:net";
-import { Body, Controller, Get, Param, Post, Raw } from "@croco/protocols-rest";
+import { Body, Controller, Ctx, Get, HttpMethod, Param, Post, Raw } from "@croco/protocols-rest";
 import { createTRPCClient, httpBatchLink, type TRPCClientError } from "@trpc/client";
 import type { AnyRouter } from "@trpc/server";
 import { createHTTPServer } from "@trpc/server/adapters/standalone";
@@ -20,6 +20,12 @@ type UserRouterClient = {
       query: (input: { readonly path: { readonly id: string } }) => Promise<User | undefined>;
     };
     readonly create: { mutate: (input: { readonly name: string }) => Promise<User> };
+    readonly acceptContract: {
+      mutate: (input: {
+        readonly body: { readonly name: string };
+        readonly query: { readonly page: number };
+      }) => Promise<TrpcContext>;
+    };
     readonly inspectRaw: {
       mutate: (input: { readonly name: string }) => Promise<{
         readonly input: { readonly name: string };
@@ -69,6 +75,16 @@ class UserController {
     @Body(createUserSchema) input: z.infer<typeof createUserSchema>,
   ): { readonly input: z.infer<typeof createUserSchema>; readonly raw: TrpcContext } {
     return { input, raw };
+  }
+
+  @Post({
+    method: HttpMethod.POST,
+    path: "/contract",
+    body: createUserSchema,
+    query: z.object({ page: z.number().int().positive() }),
+  })
+  acceptContract(@Ctx() context: TrpcContext): TrpcContext {
+    return context;
   }
 }
 
@@ -126,6 +142,26 @@ describe("tRPC round trip", () => {
       id: "1",
       name: "Alice",
     });
+  });
+
+  it("should accept contract bodies without a body parameter over HTTP", async () => {
+    await expect(
+      client.user.acceptContract.mutate({
+        body: { name: "Alice" },
+        query: { page: 1 },
+      }),
+    ).resolves.toEqual(trpcContext);
+  });
+
+  it("should reject invalid contract bodies without a body parameter over HTTP", async () => {
+    await expect(
+      client.user.acceptContract.mutate({
+        body: { name: "" },
+        query: { page: 1 },
+      }),
+    ).rejects.toMatchObject({
+      data: expect.objectContaining({ code: "BAD_REQUEST" }),
+    } satisfies Partial<TRPCClientError<AnyRouter>>);
   });
 
   it("should reject invalid input with BAD_REQUEST", async () => {
