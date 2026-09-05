@@ -161,6 +161,85 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     );
   }
 
+  it("acquires a short simple lease and retains only explicit completion for 24 hours", async () => {
+    if (!connection) {
+      throw new Error("Redis test resource did not start");
+    }
+
+    const manager = new IdempotencyManager(createRedisClient(connection));
+    const key = "idem2:lifecycle:tenant-1:api_calls:simple-completion";
+    const claim = await manager.checkAndMark("tenant-1", "api_calls", "simple-completion");
+    expect(claim).toEqual(expect.any(String));
+    if (claim === null) {
+      throw new Error("Expected a new simple processing claim");
+    }
+
+    expect(await connection.client.get(key)).toBe(`IN_PROGRESS:${claim}`);
+    const processingTtl = await connection.client.ttl(key);
+    expect(processingTtl).toBeGreaterThan(0);
+    expect(processingTtl).toBeLessThanOrEqual(30);
+    await expect(
+      manager.checkAndMark("tenant-1", "api_calls", "simple-completion"),
+    ).resolves.toBeNull();
+
+    await manager.completeProcessing("tenant-1", "api_calls", "simple-completion", claim);
+    expect(await connection.client.get(key)).toBe("COMPLETED");
+    const completedTtl = await connection.client.ttl(key);
+    expect(completedTtl).toBeGreaterThanOrEqual(86399);
+    expect(completedTtl).toBeLessThanOrEqual(86400);
+    await manager.abortProcessing("tenant-1", "api_calls", "simple-completion", claim);
+    expect(await connection.client.get(key)).toBe("COMPLETED");
+    await expect(
+      manager.checkAndMarkOrThrow("tenant-1", "api_calls", "simple-completion"),
+    ).rejects.toThrow(DuplicateRecordProblem);
+  });
+
+  it("reclaims an expired simple lease across managers and fences the crashed owner", async () => {
+    if (!connection) {
+      throw new Error("Redis test resource did not start");
+    }
+
+    const redis = createRedisClient(connection);
+    const crashedManager = new IdempotencyManager(redis, 86400, 1000);
+    const replacementManager = new IdempotencyManager(redis);
+    const key = "idem2:lifecycle:tenant-1:api_calls:simple-crash";
+    const staleClaim = await crashedManager.checkAndMarkOrThrow(
+      "tenant-1",
+      "api_calls",
+      "simple-crash",
+    );
+    expect(staleClaim).toEqual(expect.any(String));
+    expect(await connection.client.get(key)).toBe(`IN_PROGRESS:${staleClaim}`);
+    const client = connection.client;
+    await expect.poll(() => client.exists(key), { interval: 50, timeout: 3000 }).toBe(0);
+
+    const currentClaim = await replacementManager.checkAndMarkOrThrow(
+      "tenant-1",
+      "api_calls",
+      "simple-crash",
+    );
+    expect(currentClaim).not.toBe(staleClaim);
+    await crashedManager.completeProcessing("tenant-1", "api_calls", "simple-crash", staleClaim);
+    expect(await client.get(key)).toBe(`IN_PROGRESS:${currentClaim}`);
+    await crashedManager.abortProcessing("tenant-1", "api_calls", "simple-crash", staleClaim);
+    expect(await client.get(key)).toBe(`IN_PROGRESS:${currentClaim}`);
+    await expect(
+      crashedManager.checkAndMarkOrThrow("tenant-1", "api_calls", "simple-crash"),
+    ).rejects.toThrow(DuplicateRecordProblem);
+
+    await replacementManager.completeProcessing(
+      "tenant-1",
+      "api_calls",
+      "simple-crash",
+      currentClaim,
+    );
+    expect(await client.get(key)).toBe("COMPLETED");
+    expect(await client.ttl(key)).toBeGreaterThanOrEqual(86399);
+    await expect(
+      crashedManager.checkAndMark("tenant-1", "api_calls", "simple-crash"),
+    ).resolves.toBeNull();
+  });
+
   it("persists non-quota usage once when manager and storage share Redis", async () => {
     const service = createService();
     const input = {

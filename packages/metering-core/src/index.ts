@@ -184,21 +184,8 @@ export type {
 /**
  * 중복 기록 방지를 위한 idempotency 관리자입니다.
  *
- * @description idempotency key를 사용하여 동일한 요청의 중복 기록을 방지합니다. Redis를 사용하여 24시간 TTL로 키를 저장합니다.
- *
- * @example
- * ```typescript
- * const manager = new IdempotencyManager(redisClient);
- *
- * // 중복 확인
- * const isDuplicate = await manager.check('unique-request-key-123');
- * if (isDuplicate) {
- *   throw new DuplicateRecordProblem('이미 기록된 요청입니다.');
- * }
- *
- * // 키 기록
- * await manager.mark('unique-request-key-123');
- * ```
+ * @description 처리 전에는 기본 30초의 lease를 획득하고, 작업 커밋 후 현재 claim으로 완료한 key만 기본 24시간 보관합니다.
+ * checkAndMark 또는 beginProcessing이 반환한 claim을 completeProcessing이나 abortProcessing에 전달합니다.
  */
 export { IdempotencyManager } from "./libs/IdempotencyManager";
 export type {
