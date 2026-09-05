@@ -4,6 +4,7 @@ import { dirname, extname, isAbsolute, resolve, win32 } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { Node, Project, SyntaxKind, ts } from "ts-morph";
+import { Problem } from "@croco/problems-core";
 
 import type { DesktopContractGraphV1, DesktopContractSemanticHash } from "@croco/protocols-desktop";
 import type { Identifier, ImportDeclaration } from "ts-morph";
@@ -188,12 +189,11 @@ type DesktopConfigBundleModule = {
   readonly dependencies: Readonly<Record<string, string>>;
 };
 
-class DesktopConfigBundleError extends Error {
+class DesktopConfigBundleError extends Problem {
   readonly code = "CROCO_DESKTOP_CONFIG_TRANSPILE_FAILED";
 
   constructor(message: string) {
-    super(message);
-    this.name = "DesktopConfigBundleError";
+    super(undefined, undefined, message);
   }
 }
 

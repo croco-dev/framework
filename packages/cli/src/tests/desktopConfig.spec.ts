@@ -469,6 +469,43 @@ describe("desktop config isolated evaluation", () => {
   });
 });
 
+describe("desktop config internal problems", () => {
+  it.each([
+    [
+      "../libs/desktopConfig.ts",
+      "DesktopConfigBundleError",
+      "CROCO_DESKTOP_CONFIG_TRANSPILE_FAILED",
+    ],
+    [
+      "../workers/desktopConfigWorker.ts",
+      "DesktopConfigValidationError",
+      "CROCO_DESKTOP_CONFIG_INVALID",
+    ],
+  ])("preserves the Problem contract for %s", (sourcePath, className, code) => {
+    const source = ts.createSourceFile(
+      sourcePath,
+      readFileSync(new URL(sourcePath, import.meta.url), "utf8"),
+      ts.ScriptTarget.ES2022,
+      true,
+    );
+    const declaration = source.statements.find(
+      (statement) => ts.isClassDeclaration(statement) && statement.name?.text === className,
+    );
+    if (!declaration) throw new Error(`Missing internal class ${className}.`);
+    const compiled = ts.transpileModule(declaration.getText(source), {
+      compilerOptions: { target: ts.ScriptTarget.ES2022 },
+    }).outputText;
+    const problem: unknown = compileFunction(
+      `${compiled}\nreturn new ${className}('invalid definition');`,
+      ["Problem", "problemsCore"],
+    )(problemsCore.Problem, problemsCore);
+
+    expect(problem).toBeInstanceOf(problemsCore.Problem);
+    expect(problem).toBeInstanceOf(Error);
+    expect(problem).toMatchObject({ code, name: className, message: "invalid definition" });
+  });
+});
+
 describe("desktop config worker evaluation", () => {
   it("force-terminates a non-returning worker and settles its execution", async () => {
     const request = {

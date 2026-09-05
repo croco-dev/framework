@@ -16,12 +16,11 @@ import type {
 const CONFIG_VERSION = "croco.desktop-config.v1";
 const PROTOCOL_VERSION = "croco.desktop-config-worker.v1";
 
-class DesktopConfigValidationError extends Error {
+class DesktopConfigValidationError extends problemsCore.Problem {
   readonly code = "CROCO_DESKTOP_CONFIG_INVALID";
 
   constructor(message: string) {
-    super(message);
-    this.name = "DesktopConfigValidationError";
+    super(undefined, undefined, message);
   }
 }
 
