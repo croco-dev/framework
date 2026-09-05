@@ -4,6 +4,7 @@ export {
   DuplicateWorkflowRegistrationProblem,
   SagaDefinitionProblem,
   SagaExecutionFailedProblem,
+  SagaExecutionInFlightProblem,
   SagaExecutionNotFoundProblem,
   SagaFinalizationProblem,
   SagaListPaginationProblem,

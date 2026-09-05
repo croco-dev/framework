@@ -34747,6 +34747,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "SagaExecutionInFlightProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/WorkflowProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "SagaExecutionNotFoundProblem",
               "exportKind": "named",
               "source": "./libs/problems/WorkflowProblems",
