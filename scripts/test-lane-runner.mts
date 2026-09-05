@@ -88,7 +88,22 @@ export type TestLaneScriptResolver = (
 const ROOT_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const VITEST_EVIDENCE_FILE = ".turbo/croco-test-evidence.json";
 const MAX_FAST_PACKAGE_PROCESSES = 4;
-const MAX_ROOT_VITEST_WORKERS = 2;
+export const DEFAULT_MAX_ROOT_VITEST_WORKERS = 2;
+export const MAX_ROOT_VITEST_WORKERS = DEFAULT_MAX_ROOT_VITEST_WORKERS;
+
+export function resolveMaxRootVitestWorkers(
+  env: NodeJS.ProcessEnv = process.env,
+  parallelism: number = typeof availableParallelism === "function" ? availableParallelism() : 2,
+): number {
+  const configured = env.MAX_ROOT_VITEST_WORKERS ?? env.CROCO_TEST_WORKERS;
+  if (configured) {
+    const parsed = Number.parseInt(configured, 10);
+    if (Number.isSafeInteger(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  return Math.max(1, Math.min(DEFAULT_MAX_ROOT_VITEST_WORKERS, parallelism));
+}
 const MAX_FAILURE_DETAILS = 8;
 const MAX_FAILURE_DETAIL_LENGTH = 2_000;
 const MAX_LIVE_TEST_OUTPUT_BYTES = 10 * 1024 * 1024;
@@ -472,7 +487,7 @@ function runVitestCommandWithEvidence(
   rmSync(reportPath, { force: true });
   mkdirSync(dirname(reportPath), { recursive: true });
   const startedAt = Date.now();
-  const maxWorkers = Math.max(1, Math.min(MAX_ROOT_VITEST_WORKERS, availableParallelism()));
+  const maxWorkers = resolveMaxRootVitestWorkers();
   const result = spawnSync(
     command.command[0],
     [

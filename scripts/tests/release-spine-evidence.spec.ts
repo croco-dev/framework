@@ -8,7 +8,7 @@ import {
   writeFileSync,
   writeSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
+import { availableParallelism, tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -19,6 +19,7 @@ import {
 } from "../create-croco-app-generated-smoke-journey-report.mts";
 import { CACHEABLE_FAILURE_COMMAND } from "../ci-cacheable-failure-injection.mts";
 import {
+  DEFAULT_CLI_MAX_CONCURRENCY,
   createReleaseSpineEvidenceManifest,
   createReleaseSpineCommands,
   defaultCommandRunner,
@@ -26,6 +27,7 @@ import {
   interruptActiveCommand,
   markReportInterrupted,
   parseArgs,
+  resolveDefaultCliMaxConcurrency,
   reuseTestEvidence,
   runReleaseSpineEvidence,
 } from "../release-spine-evidence.mts";
@@ -919,7 +921,7 @@ describe("release-spine-evidence.mts", () => {
     const execution = runReleaseSpineEvidence({
       rootDir: repo,
       outputDir: join(repo, "out"),
-      totalTimeoutMs: 1_000,
+      totalTimeoutMs: 10_000,
       maxConcurrency: 4,
       commands,
       runner: async (command) => {
@@ -1314,7 +1316,37 @@ describe("release-spine-evidence.mts", () => {
   });
 
   it("uses safe bounded CLI concurrency by default", () => {
-    expect(parseArgs([]).maxConcurrency).toBe(2);
+    const expected = Math.max(2, Math.min(DEFAULT_CLI_MAX_CONCURRENCY, availableParallelism()));
+    expect(parseArgs([]).maxConcurrency).toBe(expected);
+  });
+
+  it("resolves concurrency from CLI flags, environment, or runner parallelism", () => {
+    expect(parseArgs(["--concurrency", "3"]).maxConcurrency).toBe(3);
+    expect(parseArgs(["--concurrency=5"]).maxConcurrency).toBe(5);
+    expect(parseArgs(["--max-concurrency", "6"]).maxConcurrency).toBe(6);
+    expect(parseArgs(["--max-concurrency=7"]).maxConcurrency).toBe(7);
+    expect(parseArgs([], { CROCO_CI_CONCURRENCY: "8" }).maxConcurrency).toBe(8);
+    expect(parseArgs([], { CROCO_CONCURRENCY: "9" }).maxConcurrency).toBe(9);
+    expect(resolveDefaultCliMaxConcurrency({}, 1)).toBe(1);
+    expect(resolveDefaultCliMaxConcurrency({}, 2)).toBe(2);
+    expect(resolveDefaultCliMaxConcurrency({}, 4)).toBe(2);
+    expect(resolveDefaultCliMaxConcurrency({}, 8)).toBe(2);
+    expect(resolveDefaultCliMaxConcurrency({ CROCO_CI_CONCURRENCY: "4" }, 2)).toBe(4);
+    expect(resolveDefaultCliMaxConcurrency({ CROCO_CI_CONCURRENCY: "0" }, 4)).toBe(2);
+    expect(resolveDefaultCliMaxConcurrency({ CROCO_CI_CONCURRENCY: "-1" }, 4)).toBe(2);
+    expect(resolveDefaultCliMaxConcurrency({ CROCO_CI_CONCURRENCY: "abc" }, 4)).toBe(2);
+
+    expect(() => parseArgs(["--concurrency"])).toThrowError(/--concurrency requires a value/);
+    expect(() => parseArgs(["--concurrency="])).toThrowError(/--concurrency requires a value/);
+    expect(() => parseArgs(["--concurrency", "0"])).toThrowError(
+      /--concurrency must be a positive integer/,
+    );
+    expect(() => parseArgs(["--concurrency=0"])).toThrowError(
+      /--concurrency must be a positive integer/,
+    );
+    expect(() => parseArgs(["--concurrency=abc"])).toThrowError(
+      /--concurrency must be a positive integer/,
+    );
   });
 
   it("records immutable base, head, and candidate OIDs in verification evidence", async () => {

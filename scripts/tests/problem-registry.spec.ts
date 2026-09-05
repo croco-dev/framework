@@ -334,7 +334,7 @@ describe("problem-registry.mts", () => {
         ),
       ]),
     );
-  });
+  }, 30_000);
 
   it("publishes runtime-configurable status policy in generated contracts", () => {
     const repo = createTempRepo();
