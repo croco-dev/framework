@@ -1,10 +1,46 @@
 import "reflect-metadata";
 import { getTestInstance } from "better-auth/test";
 import { admin, createAccessControl } from "better-auth/plugins";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { BetterAuthSessionManager } from "../libs/BetterAuthSessionManager";
 
 describe("BetterAuthSessionManager integration", () => {
+  it("should preserve another user's stored session without sending a revocation request", async () => {
+    const { auth, db, signInWithTestUser } = await getTestInstance({ plugins: [admin()] });
+    const alice = await signInWithTestUser();
+    const bob = await auth.api.signUpEmail({
+      body: {
+        email: "bob@example.com",
+        password: "test-password-123",
+        name: "Bob",
+      },
+    });
+    if (!bob.token) {
+      throw new Error("Better Auth did not persist Bob's session");
+    }
+    const aliceSession = await db.findOne<{ token: string }>({
+      model: "session",
+      where: [{ field: "userId", value: alice.user.id }],
+    });
+    if (!aliceSession) {
+      throw new Error("Better Auth did not persist Alice's session");
+    }
+    const revokeSpy = vi.spyOn(auth.api, "revokeSession");
+    const manager = new BetterAuthSessionManager({ getAuth: () => auth });
+
+    await expect(manager.revokeSession(bob.token, aliceSession.token)).rejects.toMatchObject({
+      code: "auth-better-auth/session-not-found",
+      detail: "Session with id '[Redacted]' not found",
+    });
+    expect(revokeSpy).not.toHaveBeenCalled();
+    await expect(
+      db.findOne({ model: "session", where: [{ field: "token", value: bob.token }] }),
+    ).resolves.toMatchObject({ token: bob.token, userId: bob.user.id });
+    await expect(
+      db.findOne({ model: "session", where: [{ field: "token", value: aliceSession.token }] }),
+    ).resolves.toMatchObject({ token: aliceSession.token, userId: alice.user.id });
+  });
+
   it("should preserve Better Auth revocation authorization while detecting missing targets", async () => {
     const statements = { session: ["revoke"] } as const;
     const accessControl = createAccessControl(statements);
@@ -55,7 +91,7 @@ describe("BetterAuthSessionManager integration", () => {
     const manager = new BetterAuthSessionManager({ getAuth: () => auth });
 
     await expect(manager.revokeSession("", "invalid-auth")).rejects.toMatchObject({
-      code: "UNAUTHORIZED",
+      code: "auth-better-auth/session-not-found",
     });
 
     await expect(manager.revokeSession("", administratorSession.token)).rejects.toMatchObject({
