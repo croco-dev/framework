@@ -260,13 +260,12 @@ describe("dependency-audit-policy.mts", () => {
   it("diagnoses delayed audit headers and bodies without changing the response JSON", async () => {
     const diagnosticsPath = join(repositoryRoot, "scripts", "pnpm-audit-diagnostics.cjs");
     const responseBody = JSON.stringify({ advisories: {}, marker: "response-secret" });
+    let observedRequestBody = "";
     const server = createServer(async (request, response) => {
-      let requestBody = "";
       request.setEncoding("utf-8");
       for await (const chunk of request) {
-        requestBody += chunk;
+        observedRequestBody += chunk;
       }
-      expect(requestBody).toBe("request-secret");
       await delay(80);
       response.writeHead(200, { "Content-Type": "application/json" });
       response.write(responseBody.slice(0, 12));
@@ -283,6 +282,7 @@ describe("dependency-audit-policy.mts", () => {
       );
       const diagnostics = parseTransportDiagnostics(result.stderr);
 
+      expect(observedRequestBody).toBe("request-secret");
       expect(result.exitCode).toBe(0);
       expect(result.stdout).toBe(`${responseBody}\n`);
       expect(diagnostics.map((entry) => entry.event)).toEqual(
