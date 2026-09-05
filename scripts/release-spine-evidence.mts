@@ -15,7 +15,7 @@ import {
   writeFileSync,
   writeSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
+import { availableParallelism, tmpdir } from "node:os";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { argv, exit } from "node:process";
 import { pathToFileURL } from "node:url";
@@ -45,7 +45,21 @@ const DEFAULT_TOTAL_TIMEOUT_MS = 150 * 60 * 1000;
 const DEFAULT_OUTPUT_EXCERPT_LENGTH = 4_000;
 const COMMAND_OUTPUT_MAX_BUFFER = 50 * 1024 * 1024;
 const COMMAND_TIMEOUT_KILL_GRACE_MS = 5_000;
-const DEFAULT_CLI_MAX_CONCURRENCY = 2;
+export const DEFAULT_CLI_MAX_CONCURRENCY = 4;
+
+export function resolveDefaultCliMaxConcurrency(
+  env: NodeJS.ProcessEnv = process.env,
+  parallelism: number = typeof availableParallelism === "function" ? availableParallelism() : 2,
+): number {
+  const envConcurrency = env.CROCO_CI_CONCURRENCY ?? env.CROCO_CONCURRENCY;
+  if (envConcurrency) {
+    const parsed = Number.parseInt(envConcurrency, 10);
+    if (Number.isSafeInteger(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+  return Math.max(2, Math.min(DEFAULT_CLI_MAX_CONCURRENCY, parallelism));
+}
 
 type EvidenceCategory =
   | "build"
@@ -1788,11 +1802,14 @@ function parsePositiveInteger(value: string, flag: string): number {
   return parsed;
 }
 
-export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
+export function parseArgs(
+  args: readonly string[] = argv.slice(2),
+  env: NodeJS.ProcessEnv = process.env,
+): Options {
   let rootDir = process.cwd();
   let outputDir: string | undefined;
   let totalTimeoutMs = DEFAULT_TOTAL_TIMEOUT_MS;
-  let maxConcurrency = DEFAULT_CLI_MAX_CONCURRENCY;
+  let maxConcurrency = resolveDefaultCliMaxConcurrency(env);
   let profile: VerificationProfile = "spine";
   let profileWasExplicit = false;
   let base: string | undefined;
@@ -1887,17 +1904,32 @@ export function parseArgs(args: readonly string[] = argv.slice(2)): Options {
       continue;
     }
 
-    if (arg === "--max-concurrency") {
+    if (arg === "--max-concurrency" || arg === "--concurrency") {
       const value = args[index + 1];
       if (!value) {
         throw new VerificationProblem(
           "MISSING_MAX_CONCURRENCY",
           "input",
-          "--max-concurrency requires a value",
+          `${arg} requires a value`,
         );
       }
-      maxConcurrency = parsePositiveInteger(value, "--max-concurrency");
+      maxConcurrency = parsePositiveInteger(value, arg);
       index++;
+      continue;
+    }
+
+    if (arg.startsWith("--max-concurrency=") || arg.startsWith("--concurrency=")) {
+      const equalsIndex = arg.indexOf("=");
+      const flag = arg.slice(0, equalsIndex);
+      const value = arg.slice(equalsIndex + 1);
+      if (!value) {
+        throw new VerificationProblem(
+          "MISSING_MAX_CONCURRENCY",
+          "input",
+          `${flag} requires a value`,
+        );
+      }
+      maxConcurrency = parsePositiveInteger(value, flag);
       continue;
     }
 
