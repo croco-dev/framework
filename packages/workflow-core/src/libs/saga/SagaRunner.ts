@@ -3,6 +3,7 @@ import { withSpan } from "@croco/telemetry-api";
 import {
   SagaDefinitionProblem,
   SagaExecutionFailedProblem,
+  SagaExecutionInFlightProblem,
   SagaExecutionNotFoundProblem,
   SagaFinalizationProblem,
   SagaReplayProblem,
@@ -275,6 +276,10 @@ export class SagaRunner {
 
     if (recovered.status === "failed" || recovered.status === "compensated") {
       this.throwStoredExecutionFailure(definition.name, recovered);
+    }
+
+    if (recovered.status === "pending" || recovered.status === "running") {
+      throw new SagaExecutionInFlightProblem(definition.name, recovered.id, recovered.status);
     }
 
     span.setAttribute("saga.reused", true);

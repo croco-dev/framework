@@ -71,6 +71,16 @@ function getOrderId(payload: unknown): string {
   return String(payload.orderId);
 }
 
+function createGate(): { promise: Promise<void>; release: () => void } {
+  let release: () => void = () => {
+    throw new ProviderProblem("gate was not initialized");
+  };
+  const promise = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return { promise, release };
+}
+
 function createMockSpan(): Span {
   return {
     spanContext: () => ({
@@ -1017,139 +1027,241 @@ describe("SagaRunner", () => {
     await expect(runner.listExecutions()).resolves.toHaveLength(2);
   });
 
-  it("reserves idempotent saga execution before concurrent side effects run", async () => {
-    let releaseStep: () => void = () => {
-      throw new ProviderProblem("step gate was not initialized");
-    };
-    const stepGate = new Promise<void>((resolve) => {
-      releaseStep = resolve;
-    });
-    let runs = 0;
-    const runner = new SagaRunner();
-    const definition: SagaDefinition = {
-      name: "concurrent-idempotency",
-      idempotencyKey: ({ payload }) => `concurrent:${getOrderId(payload)}`,
-      steps: [
-        {
-          id: "slow-provider-call",
-          run: async (input) => {
-            runs += 1;
-            await stepGate;
-            return { handled: getOrderId(input) };
-          },
+  it.each(["concurrent-key", ""])(
+    "rejects the losing create race for idempotency key %j without duplicate side effects",
+    async (idempotencyKey) => {
+      const gate = createGate();
+      const store = new InMemorySagaStore();
+      const create = vi.spyOn(store, "create");
+      const run = vi.fn(async () => {
+        await gate.promise;
+        return { handled: true };
+      });
+      const runner = new SagaRunner(store);
+      const definition: SagaDefinition = {
+        name: "concurrent-idempotency",
+        idempotencyKey,
+        steps: [{ id: "slow-provider-call", run }],
+      };
+
+      const first = runner.execute(definition, {});
+      const second = expect(runner.execute(definition, {})).rejects.toMatchObject({
+        code: "workflow-core/saga-execution-in-flight",
+        category: ProblemCategory.Conflict,
+        extensions: {
+          sagaName: definition.name,
+          executionId: expect.any(String),
+          sagaStatus: "pending",
+          retryable: true,
         },
-      ],
-    };
+      });
+      try {
+        await second;
+      } finally {
+        gate.release();
+        await first;
+      }
 
-    const first = runner.execute(definition, { orderId: "ord_123" });
-    const second = runner.execute(definition, { orderId: "ord_123" });
+      const result = await first;
+      const executions = await runner.listExecutions({ sagaName: definition.name });
+      expect(result.execution.status).toBe("completed");
+      expect(result.reused).toBe(false);
+      expect(create).toHaveBeenCalledTimes(2);
+      expect(run).toHaveBeenCalledTimes(1);
+      expect(executions).toHaveLength(1);
+      expect(executions[0]?.idempotencyKey).toBe(idempotencyKey);
+    },
+  );
 
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    releaseStep();
-    const results = await Promise.all([first, second]);
-    const executions = await runner.listExecutions({ sagaName: definition.name });
-
-    expect(runs).toBe(1);
-    expect(new Set(results.map((result) => result.executionId))).toEqual(
-      new Set([results[0]?.executionId]),
-    );
-    expect(results.map((result) => result.reused).sort()).toEqual([false, true]);
-    expect(executions).toHaveLength(1);
-  });
-
-  it("does not dispatch a running execution during concurrent idempotent reuse", async () => {
-    let releaseStep: () => void = () => {
-      throw new ProviderProblem("outbox step gate was not initialized");
-    };
-    const stepGate = new Promise<void>((resolve) => {
-      releaseStep = resolve;
+  it("rejects running reuse without dispatching outbox messages", async () => {
+    const gate = createGate();
+    const started = createGate();
+    const publish = vi.fn();
+    const run = vi.fn(async (_input, { enqueueOutbox }) => {
+      enqueueOutbox({ id: "payment-reserved", topic: "billing.reserved", payload: {} });
+      started.release();
+      await gate.promise;
+      return { paymentId: "pay_123" };
     });
-    const deliveryIds: string[] = [];
     const runner = new SagaRunner();
     const definition: SagaDefinition = {
       name: "concurrent-outbox-reuse",
-      idempotencyKey: () => "concurrent-outbox-reuse:ord_123",
-      outbox: {
-        publish: (message) => {
-          deliveryIds.push(message.deliveryId);
-        },
-      },
-      steps: [
-        {
-          id: "reserve-payment",
-          run: async (_input, { enqueueOutbox }) => {
-            enqueueOutbox({
-              id: "payment-reserved",
-              topic: "billing.reserved",
-              payload: { orderId: "ord_123" },
-            });
-            await stepGate;
-            return { paymentId: "pay_123" };
-          },
-        },
-      ],
+      idempotencyKey: "concurrent-outbox-reuse:ord_123",
+      outbox: { publish },
+      steps: [{ id: "reserve-payment", run }],
     };
 
-    const primary = runner.execute(definition, { orderId: "ord_123" });
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    const reused = await runner.execute(definition, { orderId: "ord_123" });
-    const [running] = await runner.listExecutions({ sagaName: definition.name });
-
-    expect(reused.execution.status).toBe("running");
-    expect(deliveryIds).toEqual([]);
-    await expect(runner.dispatchOutbox(definition, running.id)).rejects.toThrow(
-      "cannot dispatch outbox messages while 'running'",
-    );
-
-    releaseStep();
-    await expect(primary).resolves.toEqual(
-      expect.objectContaining({
-        execution: expect.objectContaining({ status: "completed" }),
-      }),
-    );
-    expect(deliveryIds).toHaveLength(1);
+    const primary = runner.execute(definition, {});
+    try {
+      await started.promise;
+      const [running] = await runner.listExecutions({ sagaName: definition.name });
+      await expect(runner.execute(definition, {})).rejects.toMatchObject({
+        code: "workflow-core/saga-execution-in-flight",
+        category: ProblemCategory.Conflict,
+        extensions: {
+          sagaName: definition.name,
+          executionId: running.id,
+          sagaStatus: "running",
+          retryable: true,
+        },
+      });
+      expect(publish).not.toHaveBeenCalled();
+      await expect(runner.dispatchOutbox(definition, running.id)).rejects.toThrow(
+        "cannot dispatch outbox messages while 'running'",
+      );
+    } finally {
+      gate.release();
+      await primary;
+    }
+    expect((await primary).execution.status).toBe("completed");
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(publish).toHaveBeenCalledTimes(1);
   });
 
-  it("reserves empty string saga idempotency keys consistently", async () => {
-    let releaseStep: () => void = () => {
-      throw new ProviderProblem("empty key gate was not initialized");
-    };
-    const stepGate = new Promise<void>((resolve) => {
-      releaseStep = resolve;
+  it.each(["pending", "running"] as const)(
+    "rejects a stored %s execution without mutation or success reuse telemetry",
+    async (status) => {
+      const store = new InMemorySagaStore();
+      const execution = await store.create({
+        sagaName: "stored-in-flight",
+        payload: {},
+        idempotencyKey: "key",
+      });
+      await store.update(execution.id, { status });
+      const before = structuredClone(await store.findById(execution.id));
+      const update = vi.spyOn(store, "update");
+      const create = vi.spyOn(store, "create");
+      const span = createMockSpan();
+      vi.spyOn(trace, "getTracer").mockReturnValue(createMockTracer([], span));
+      const run = vi.fn();
+      const publish = vi.fn();
+      const runner = new SagaRunner(store);
+      const definition: SagaDefinition = {
+        name: execution.sagaName,
+        idempotencyKey: "key",
+        outbox: { publish },
+        steps: [{ id: "step", run }],
+      };
+
+      await expect(runner.execute(definition, {})).rejects.toMatchObject({
+        code: "workflow-core/saga-execution-in-flight",
+        category: ProblemCategory.Conflict,
+        extensions: {
+          sagaName: execution.sagaName,
+          executionId: execution.id,
+          sagaStatus: status,
+          retryable: true,
+        },
+      });
+      expect(await store.findById(execution.id)).toEqual(before);
+      expect(update).not.toHaveBeenCalled();
+      expect(create).not.toHaveBeenCalled();
+      expect(run).not.toHaveBeenCalled();
+      expect(publish).not.toHaveBeenCalled();
+      expect(span.setAttribute).not.toHaveBeenCalledWith("saga.reused", true);
+      expect(span.addEvent).not.toHaveBeenCalledWith("saga.execution.reused", expect.anything());
+    },
+  );
+
+  it("rejects reuse while real compensation is paused without repeating effects", async () => {
+    const gate = createGate();
+    const started = createGate();
+    const reserve = vi.fn(() => "reserved");
+    const compensate = vi.fn(async () => {
+      started.release();
+      await gate.promise;
     });
-    let runs = 0;
+    const fail = vi.fn(() => {
+      throw new ProviderProblem("provider failed");
+    });
     const runner = new SagaRunner();
     const definition: SagaDefinition = {
-      name: "empty-idempotency-key",
-      idempotencyKey: () => "",
+      name: "compensating-reuse",
+      idempotencyKey: "key",
       steps: [
-        {
-          id: "slow-provider-call",
-          run: async () => {
-            runs += 1;
-            await stepGate;
-            return { handled: true };
-          },
-        },
+        { id: "reserve", run: reserve, compensate },
+        { id: "fail", run: fail },
       ],
     };
-
-    const first = runner.execute(definition, {});
-    const second = runner.execute(definition, {});
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    releaseStep();
-    const results = await Promise.all([first, second]);
-    const executions = await runner.listExecutions({ sagaName: definition.name });
-
-    expect(runs).toBe(1);
-    expect(new Set(results.map((result) => result.executionId))).toEqual(
-      new Set([results[0]?.executionId]),
+    const primary = expect(runner.execute(definition, {})).rejects.toThrow(
+      SagaExecutionFailedProblem,
     );
-    expect(results.map((result) => result.reused).sort()).toEqual([false, true]);
-    expect(executions).toHaveLength(1);
-    expect(executions[0]?.idempotencyKey).toBe("");
+    try {
+      await started.promise;
+      const [execution] = await runner.listExecutions({ sagaName: definition.name });
+      expect(execution.status).toBe("running");
+      expect(execution.steps[0]?.status).toBe("compensating");
+      await expect(runner.execute(definition, {})).rejects.toMatchObject({
+        code: "workflow-core/saga-execution-in-flight",
+        category: ProblemCategory.Conflict,
+        extensions: {
+          sagaName: definition.name,
+          executionId: execution.id,
+          sagaStatus: "running",
+          retryable: true,
+        },
+      });
+    } finally {
+      gate.release();
+      await primary;
+    }
+    expect(reserve).toHaveBeenCalledTimes(1);
+    expect(fail).toHaveBeenCalledTimes(1);
+    expect(compensate).toHaveBeenCalledTimes(1);
+    const [execution] = await runner.listExecutions({ sagaName: definition.name });
+    expect(execution.status).toBe("compensated");
   });
+
+  it("reuses completed execution results without rerunning steps", async () => {
+    const run = vi.fn(() => ({ paymentId: "pay_123" }));
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "completed-reuse",
+      idempotencyKey: "key",
+      steps: [{ id: "charge", run }],
+    };
+    const first = await runner.execute(definition, {});
+    await expect(runner.execute(definition, {})).resolves.toMatchObject({
+      executionId: first.executionId,
+      execution: { status: "completed" },
+      steps: first.steps,
+      result: first.result,
+      reused: true,
+    });
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(["failed", "compensated"] as const)(
+    "preserves stored %s execution failure on reuse",
+    async (status) => {
+      const store = new InMemorySagaStore();
+      const execution = await store.create({
+        sagaName: "stored-failure",
+        payload: {},
+        idempotencyKey: "key",
+      });
+      await store.update(execution.id, {
+        status,
+        error: { message: "provider failed", code: "provider/failure", retryable: false },
+      });
+      const run = vi.fn();
+      const runner = new SagaRunner(store);
+      const definition: SagaDefinition = {
+        name: execution.sagaName,
+        idempotencyKey: "key",
+        steps: [{ id: "charge", run }],
+      };
+      await expect(runner.execute(definition, {})).rejects.toMatchObject({
+        code: "workflow-core/saga-execution-failed",
+        extensions: expect.objectContaining({
+          sagaStatus: status,
+          originalFailureCode: "provider/failure",
+          retryable: false,
+        }),
+      });
+      expect(run).not.toHaveBeenCalled();
+    },
+  );
 
   it("replays a failed saga execution without durable adapter dependencies", async () => {
     let providerRecovered = false;

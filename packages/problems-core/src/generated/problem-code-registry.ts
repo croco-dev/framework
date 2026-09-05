@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 758,
+  problemCount: 759,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -23621,6 +23621,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/workflow-core/src/libs/problems/WorkflowProblems.ts",
           line: 145,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "workflow-core/saga-execution-in-flight",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#workflow-core-saga-execution-in-flight",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/workflow-core/src/libs/problems/WorkflowProblems.ts",
+          line: 202,
           column: 5,
           kind: "problem-constructor",
         },
