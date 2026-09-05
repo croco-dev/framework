@@ -6,6 +6,8 @@ import {
   CreditDuplicateConflictProblem,
   CreditLedgerService,
   CreditReservationMismatchProblem,
+  CreditRefundMismatchProblem,
+  InsufficientCreditsProblem,
 } from "@croco/credits-core";
 import { TxManager } from "@croco/tx-core";
 import { createDrizzleTxAdapter } from "@croco/tx-drizzle";
@@ -87,6 +89,188 @@ describePostgres("DrizzleCreditLedgerStore PostgreSQL conformance", () => {
       await testCase.run();
     });
   }
+
+  it.each([
+    { source: "consume", refundAt: "2026-08-02T00:00:00.000Z" },
+    { source: "consume", refundAt: "2026-08-01T00:00:00.000Z" },
+    { source: "commit", refundAt: "2026-08-02T00:00:00.000Z" },
+    { source: "commit", refundAt: "2026-08-01T00:00:00.000Z" },
+  ] as const)(
+    "persists spendable partial refunds from $source at $refundAt",
+    async ({ source, refundAt }) => {
+      await reset();
+      let sequence = 0;
+      let now = new Date("2026-07-30T00:00:00.000Z");
+      const service = new CreditLedgerService({
+        store: new DrizzleCreditLedgerStore(db, txManager),
+        clock: () => now,
+        idGenerator: () => `refund-expiry-${++sequence}`,
+      });
+      const metadata = (id: string) => ({ idempotencyKey: id, reference: { type: "test", id } });
+      const { account } = await service.openAccount({
+        tenantId: "refund-expiry",
+        ...metadata("open"),
+      });
+      const grant = await service.grantCredits({
+        accountId: account.id,
+        amount: creditAmount("10"),
+        expiresAt: new Date("2026-08-01T00:00:00.000Z"),
+        meterKeys: ["api"],
+        ...metadata("grant"),
+      });
+      const spendInput = { accountId: account.id, amount: creditAmount("10"), meterKey: "api" };
+      const reserved =
+        source === "commit"
+          ? await service.reserveCredits({ ...spendInput, ...metadata("reserve") })
+          : undefined;
+      const spent = reserved
+        ? await service.commitCredits({
+            accountId: account.id,
+            reservationId: reserved.reservation!.id,
+            amount: creditAmount("10"),
+            ...metadata("commit"),
+          })
+        : await service.consumeCredits({ ...spendInput, ...metadata("consume") });
+      const original = spent.transactions[0]!;
+      now = new Date(refundAt);
+
+      for (const amount of ["4", "6"]) {
+        const input = {
+          accountId: account.id,
+          consumptionTransactionId: original.id,
+          amount: creditAmount(amount),
+          ...metadata(`refund-${amount}`),
+        };
+        const refunded = await service.refundCredits(input);
+        const transaction = refunded.transactions[0]!;
+        expect(transaction).toMatchObject({
+          relatedTransactionId: original.id,
+          meterKey: "api",
+          allocations: [{ grantTransactionId: grant.transactions[0]!.id, amount }],
+          grant: { source: `refund:${original.id}`, meterKeys: ["api"] },
+        });
+        expect(transaction.grant?.expiresAt).toBeUndefined();
+        const [lot] = await db
+          .select()
+          .from(creditGrantLots)
+          .where(eq(creditGrantLots.grantTransactionId, transaction.id));
+        expect(lot).toMatchObject({ expiresAt: null, available: amount, meterKeys: ["api"] });
+        const [persisted] = await db
+          .select()
+          .from(creditTransactions)
+          .where(eq(creditTransactions.id, transaction.id));
+        expect(persisted).toMatchObject({
+          grantExpiresAt: null,
+          relatedTransactionId: original.id,
+        });
+        const balance = await service.getBalance(account.id);
+        expect(await service.refundCredits(input)).toMatchObject({
+          replayed: true,
+          transactions: refunded.transactions,
+        });
+        expect(await service.getBalance(account.id)).toEqual(balance);
+      }
+      expect(await db.select().from(creditGrantLots)).toHaveLength(3);
+      await expect(
+        service.refundCredits({
+          accountId: account.id,
+          consumptionTransactionId: original.id,
+          amount: creditAmount("1"),
+          ...metadata("over-refund"),
+        }),
+      ).rejects.toBeInstanceOf(CreditRefundMismatchProblem);
+      await expect(
+        service.consumeCredits({
+          ...spendInput,
+          meterKey: "other",
+          ...metadata("wrong-meter"),
+        }),
+      ).rejects.toBeInstanceOf(InsufficientCreditsProblem);
+      expect(await service.getBalance(account.id)).toMatchObject({
+        available: "10",
+        consumed: "0",
+      });
+      const consumed = await service.consumeCredits({ ...spendInput, ...metadata("spend-refund") });
+      expect(consumed.transactions[0]?.allocations.map((allocation) => allocation.amount)).toEqual([
+        "4",
+        "6",
+      ]);
+      expect(await service.getBalance(account.id)).toMatchObject({
+        available: "0",
+        consumed: "10",
+      });
+      const lots = await db.select().from(creditGrantLots);
+      expect(lots.every((lot) => lot.available === "0")).toBe(true);
+    },
+  );
+
+  it.each([
+    { firstExpiry: "2026-08-03T00:00:00.000Z", expectedExpiry: "2026-08-03T00:00:00.000Z" },
+    { firstExpiry: "2026-08-01T00:00:00.000Z", expectedExpiry: "2026-08-04T00:00:00.000Z" },
+  ])(
+    "retains the earliest live refund expiry when original expiry is $firstExpiry",
+    async ({ firstExpiry, expectedExpiry }) => {
+      await reset();
+      let sequence = 0;
+      let now = new Date("2026-07-30T00:00:00.000Z");
+      const service = new CreditLedgerService({
+        store: new DrizzleCreditLedgerStore(db, txManager),
+        clock: () => now,
+        idGenerator: () => `refund-mixed-${++sequence}`,
+      });
+      const metadata = (id: string) => ({ idempotencyKey: id, reference: { type: "test", id } });
+      const { account } = await service.openAccount({
+        tenantId: "refund-mixed",
+        ...metadata("open"),
+      });
+      for (const [index, expiresAt] of [
+        firstExpiry,
+        "2026-08-04T00:00:00.000Z",
+        undefined,
+      ].entries()) {
+        await service.grantCredits({
+          accountId: account.id,
+          amount: creditAmount("2"),
+          expiresAt: expiresAt ? new Date(expiresAt) : undefined,
+          ...metadata(`grant-${index}`),
+        });
+      }
+      const spent = await service.consumeCredits({
+        accountId: account.id,
+        amount: creditAmount("6"),
+        ...metadata("consume"),
+      });
+      now = new Date("2026-08-02T00:00:00.000Z");
+      const refunded = await service.refundCredits({
+        accountId: account.id,
+        consumptionTransactionId: spent.transactions[0]!.id,
+        amount: creditAmount("6"),
+        ...metadata("refund"),
+      });
+      const transaction = refunded.transactions[0]!;
+      expect(transaction.allocations).toEqual(spent.transactions[0]!.allocations);
+      expect(transaction.grant?.expiresAt).toEqual(new Date(expectedExpiry));
+      const [lot] = await db
+        .select()
+        .from(creditGrantLots)
+        .where(eq(creditGrantLots.grantTransactionId, transaction.id));
+      const [persisted] = await db
+        .select()
+        .from(creditTransactions)
+        .where(eq(creditTransactions.id, transaction.id));
+      expect(lot?.expiresAt).toEqual(new Date(expectedExpiry));
+      expect(persisted?.grantExpiresAt).toEqual(new Date(expectedExpiry));
+      const consumed = await service.consumeCredits({
+        accountId: account.id,
+        amount: creditAmount("6"),
+        ...metadata("spend-refund"),
+      });
+      expect(consumed.transactions[0]?.allocations).toEqual([
+        { grantTransactionId: transaction.id, amount: "6" },
+      ]);
+      expect(await service.getBalance(account.id)).toMatchObject({ available: "0", consumed: "6" });
+    },
+  );
 
   it("rolls back allocation changes and ledger appends when settlement validation fails", async () => {
     await reset();

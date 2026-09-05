@@ -938,7 +938,7 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
     }
     const earliestExpiry = lotRows.reduce<number | undefined>(
       (earliest, lot) =>
-        lot.expiresAt
+        lot.expiresAt && lot.expiresAt.getTime() > command.occurredAt.getTime()
           ? earliest === undefined
             ? lot.expiresAt.getTime()
             : Math.min(earliest, lot.expiresAt.getTime())
