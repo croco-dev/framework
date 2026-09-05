@@ -1285,7 +1285,7 @@ function checkAiSaasStructure() {
   checkFileContains(
     "ai-saas",
     ["apps", "api-server", "src", "tests", "AiSaas.spec.ts"],
-    /try\s*\{\s*await app\?\.disposeApplicationRuntime\(\);\s*\}\s*finally\s*\{\s*restoreEnvironment\(SAAS_DEMO_ENDPOINTS_ENABLED_ENV, previousDemo\);/,
+    /try\s*\{\s*app = await createCrocoApp\(\{ profileMode: "zero-credential" \}\);[\s\S]*?\}\s*finally\s*\{\s*try\s*\{\s*await app\?\.disposeApplicationRuntime\(\);\s*\}\s*finally\s*\{\s*restoreEnvironment\(SAAS_DEMO_ENDPOINTS_ENABLED_ENV, previousDemo\);/,
   );
   checkFileContains(
     "ai-saas",
