@@ -105,6 +105,8 @@ const nonEnvironmentCrocoTokenJsonRegistryPath = join("docs", "problem-code-regi
 const nonEnvironmentCrocoTokenSourcePaths = [
   join("packages", "cli", "src", "commands", "upgradeRules.ts"),
   join("packages", "cli", "src", "libs", "diagnosticCodes.ts"),
+  join("packages", "cli", "src", "libs", "desktopConfig.ts"),
+  join("packages", "cli", "src", "workers", "desktopConfigWorker.ts"),
   join("packages", "diagnostics-core", "src", "libs", "DiagnosticCodes.ts"),
   join("packages", "meta-vite", "src", "libs", "isr", "runtimeSupport.ts"),
   join("packages", "testing", "src", "libs", "changed-test-plan.mts"),
