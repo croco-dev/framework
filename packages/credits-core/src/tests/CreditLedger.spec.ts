@@ -36,6 +36,243 @@ describe("InMemoryCreditLedgerStore conformance", () => {
   }
 });
 
+describe("InMemoryCreditLedgerStore reservation expiry", () => {
+  let store: InMemoryCreditLedgerStore;
+  let service: CreditLedgerService;
+  let now: Date;
+  const expiresAt = new Date("2026-07-27T00:00:00.000Z");
+  const metadata = (id: string) => ({
+    idempotencyKey: id,
+    reference: { type: "reservation-expiry", id },
+  });
+
+  beforeEach(() => {
+    let sequence = 0;
+    now = new Date("2026-07-26T00:00:00.000Z");
+    store = new InMemoryCreditLedgerStore();
+    service = new CreditLedgerService({
+      store,
+      eventDelivery: "development",
+      clock: () => now,
+      idGenerator: () => `expiry-id-${++sequence}`,
+    });
+  });
+
+  it.each([
+    {
+      operation: "commit",
+      reservedAmount: "6",
+      initiallyExpired: "4",
+      remainder: "2",
+      consumed: "4",
+    },
+    {
+      operation: "release",
+      reservedAmount: "6",
+      initiallyExpired: "4",
+      remainder: "6",
+      consumed: "0",
+    },
+    {
+      operation: "commit",
+      reservedAmount: "10",
+      initiallyExpired: "0",
+      remainder: "6",
+      consumed: "4",
+    },
+    {
+      operation: "release",
+      reservedAmount: "10",
+      initiallyExpired: "0",
+      remainder: "10",
+      consumed: "0",
+    },
+  ] as const)(
+    "settles $operation after sweeping a lot with $reservedAmount reserved credits",
+    async ({ operation, reservedAmount, initiallyExpired, remainder, consumed }) => {
+      const opened = await service.openAccount({ tenantId: "tenant-expiry", ...metadata("open") });
+      const accountId = opened.account.id;
+      const granted = await service.grantCredits({
+        accountId,
+        amount: creditAmount("10"),
+        expiresAt,
+        ...metadata("grant"),
+      });
+      const reserved = await service.reserveCredits({
+        accountId,
+        amount: creditAmount(reservedAmount),
+        ...metadata("reserve"),
+      });
+      const reservationId = reserved.reservation?.id;
+      expect(reservationId).toBeDefined();
+      if (!reservationId) throw new InvalidCreditCommandProblem("test reservation is missing");
+
+      now = new Date(expiresAt);
+      const firstSweep = await service.expireCredits({ accountId, ...metadata("first-sweep") });
+      expect(firstSweep.transactions.map(({ kind, amount }) => ({ kind, amount }))).toEqual(
+        initiallyExpired === "0" ? [] : [{ kind: "expire", amount: initiallyExpired }],
+      );
+      const beforeSettlement = await service.getBalance(accountId);
+      expect(beforeSettlement).toMatchObject({
+        available: "0",
+        reserved: reservedAmount,
+        consumed: "0",
+        expired: initiallyExpired,
+      });
+
+      const input = { accountId, reservationId, ...metadata("settle") };
+      const settle = () =>
+        operation === "commit"
+          ? service.commitCredits({ ...input, amount: creditAmount("4") })
+          : service.releaseCredits(input);
+      const settled = await settle();
+      expect(settled.reservation).toMatchObject({
+        status: operation === "commit" ? "committed" : "released",
+        settledAt: expiresAt,
+      });
+      expect(settled.transactions.map(({ kind, amount }) => ({ kind, amount }))).toEqual([
+        ...(operation === "commit" ? [{ kind: "commit", amount: "4" }] : []),
+        { kind: "release", amount: remainder },
+      ]);
+      expect(settled.transactions.at(-1)?.allocations).toEqual([
+        { grantTransactionId: granted.transactions[0]?.id, amount: remainder },
+      ]);
+      const afterSettlement = await service.getBalance(accountId);
+      expect(afterSettlement).toMatchObject({
+        available: remainder,
+        reserved: "0",
+        consumed,
+        expired: initiallyExpired,
+      });
+      await expect(service.getBalance(accountId, beforeSettlement.position)).resolves.toEqual(
+        beforeSettlement,
+      );
+      await expect(settle()).resolves.toEqual({ ...settled, replayed: true });
+      await expect(service.getBalance(accountId)).resolves.toEqual(afterSettlement);
+      await expect(store.getPendingEventIntent("tenant-expiry", "settle")).resolves.toMatchObject({
+        data: {
+          position: settled.account.position,
+          transactionIds: settled.transactions.map(({ id }) => id),
+        },
+      });
+
+      for (const allocate of [
+        () =>
+          service.reserveCredits({
+            accountId,
+            amount: creditAmount("1"),
+            ...metadata("reserve-expired"),
+          }),
+        () =>
+          service.consumeCredits({
+            accountId,
+            amount: creditAmount("1"),
+            ...metadata("consume-expired"),
+          }),
+      ]) {
+        await expect(allocate()).rejects.toThrow(ExpiredGrantProblem);
+        await expect(service.getBalance(accountId)).resolves.toEqual(afterSettlement);
+      }
+
+      const finalSweep = await service.expireCredits({ accountId, ...metadata("final-sweep") });
+      expect(finalSweep.transactions).toMatchObject([
+        {
+          kind: "expire",
+          amount: remainder,
+          allocations: [{ grantTransactionId: granted.transactions[0]?.id, amount: remainder }],
+        },
+      ]);
+      const finalBalance = await service.getBalance(accountId);
+      expect(finalBalance).toMatchObject({
+        available: "0",
+        reserved: "0",
+        consumed,
+        expired: operation === "commit" ? "6" : "10",
+        lifetimeGranted: "10",
+      });
+      await expect(service.getBalance(accountId, afterSettlement.position)).resolves.toEqual(
+        afterSettlement,
+      );
+      await expect(
+        service.expireCredits({ accountId, ...metadata("final-sweep") }),
+      ).resolves.toEqual({
+        ...finalSweep,
+        replayed: true,
+      });
+      expect(
+        (await service.expireCredits({ accountId, ...metadata("empty-sweep") })).transactions,
+      ).toEqual([]);
+      await expect(service.getBalance(accountId)).resolves.toEqual(finalBalance);
+    },
+  );
+
+  it.each(["commit", "release"] as const)(
+    "restores active allocations separately from expired allocations during %s",
+    async (operation) => {
+      const opened = await service.openAccount({ tenantId: "tenant-mixed", ...metadata("open") });
+      const accountId = opened.account.id;
+      const expiring = await service.grantCredits({
+        accountId,
+        amount: creditAmount("10"),
+        expiresAt,
+        ...metadata("expiring-grant"),
+      });
+      const active = await service.grantCredits({
+        accountId,
+        amount: creditAmount("10"),
+        expiresAt: new Date("2026-07-29T00:00:00.000Z"),
+        ...metadata("active-grant"),
+      });
+      const reserved = await service.reserveCredits({
+        accountId,
+        amount: creditAmount("15"),
+        ...metadata("reserve"),
+      });
+      const reservationId = reserved.reservation?.id;
+      expect(reservationId).toBeDefined();
+      if (!reservationId) throw new InvalidCreditCommandProblem("test reservation is missing");
+
+      now = new Date("2026-07-28T00:00:00.000Z");
+      expect(
+        (await service.expireCredits({ accountId, ...metadata("first-sweep") })).transactions,
+      ).toEqual([]);
+      const input = { accountId, reservationId, ...metadata("settle") };
+      const settled = await (operation === "commit"
+        ? service.commitCredits({ ...input, amount: creditAmount("4") })
+        : service.releaseCredits(input));
+      const expiredRemainder = operation === "commit" ? "6" : "10";
+      expect(settled.transactions.at(-1)?.allocations).toEqual([
+        { grantTransactionId: expiring.transactions[0]?.id, amount: expiredRemainder },
+        { grantTransactionId: active.transactions[0]?.id, amount: "5" },
+      ]);
+      const swept = await service.expireCredits({ accountId, ...metadata("final-sweep") });
+      expect(swept.transactions).toMatchObject([
+        {
+          kind: "expire",
+          amount: expiredRemainder,
+          allocations: [{ grantTransactionId: expiring.transactions[0]?.id }],
+        },
+      ]);
+      expect(await service.getBalance(accountId)).toMatchObject({
+        available: "10",
+        reserved: "0",
+        consumed: operation === "commit" ? "4" : "0",
+        expired: expiredRemainder,
+        lifetimeGranted: "20",
+      });
+      const consumed = await service.consumeCredits({
+        accountId,
+        amount: creditAmount("10"),
+        ...metadata("consume-active"),
+      });
+      expect(consumed.transactions[0]?.allocations).toEqual([
+        { grantTransactionId: active.transactions[0]?.id, amount: "10" },
+      ]);
+      expect(await service.getBalance(accountId)).toMatchObject({ available: "0", reserved: "0" });
+    },
+  );
+});
+
 describe("CreditAmount", () => {
   it("normalizes exact base-10 values without floating-point conversion", () => {
     expect(creditAmount("1.2300")).toBe("1.23");
