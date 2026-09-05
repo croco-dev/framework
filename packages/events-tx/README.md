@@ -112,6 +112,12 @@ Operators can reconcile interrupted work by listing `processing` records and com
 - `InMemoryTransactionalEventStore` provides test/local storage plus a `createTxAdapter()` helper for `TxManager` rollback and savepoint fixtures.
 - `DrizzleTransactionalEventStore` uses Drizzle query-client methods and exported PostgreSQL table definitions: `transactionalOutboxMessages` and `transactionalInboxRecords`. It uses unique-key conflict handling for outbox idempotency and inbox dedupe.
 
+PostgreSQL outbox claims select and update a batch in one statement with `FOR UPDATE SKIP LOCKED`. Concurrent workers skip locked messages and claim other eligible aggregates. The store uses the supplied transaction client when present; claims in an explicit transaction hold their locks until that transaction ends.
+
+For each non-null `aggregateId`, only the first unfinished message in `(createdAt, id)` order can be claimed. A `pending`, `publishing`, or `retrying` predecessor blocks its successors even during a retry delay or an expired lease; the expired predecessor must be reclaimed first. Published, poisoned, and dead-lettered predecessors no longer block. Messages without an aggregate can be claimed independently, and eligible aggregates retain visibility-time priority.
+
+This orders persisted messages; it cannot infer a causal order for equal creation timestamps beyond the ID tie-breaker or for predecessors that have not committed yet. Producers must preserve their intended creation order and use IDs that preserve that order when timestamps tie. Lease recovery remains at-least-once: a worker that continues publishing after its lease expires can still deliver a duplicate, so consumers need inbox deduplication. MySQL is outside this PostgreSQL adapter's schema and query contract.
+
 For rolling deployments, migrate the inbox table before deploying lease-aware consumers:
 
 1. Add the nullable `croco_inbox_records.locked_until` timestamp column and the exported status/lease index.

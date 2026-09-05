@@ -226,6 +226,259 @@ describe.skipIf(!realResourcesEnabled)("real TestKernel resources", () => {
     );
   });
 
+  it("claims disjoint PostgreSQL outbox batches while another worker holds row locks", async () => {
+    const postgres = postgresResource({
+      migrations: await createMigrationDirectory(),
+      mode: "migration",
+    });
+    await using kernel = await createTestKernel({
+      bootstrap: bootstrapEmptyApplication,
+      fidelity: "application",
+      resources: [postgres],
+      validation: { di: "off", security: "off" },
+      workerId: "outbox-lock-workers",
+    });
+    const { pool } = kernel.resource(postgres);
+    const db = drizzle(pool);
+    const store = new DrizzleTransactionalEventStore({
+      db: db as unknown as DrizzleTransactionalEventStoreDb,
+    });
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    const options = { limit: 2, now, visibilityTimeoutMs: 1000 };
+    for (const id of ["a", "b", "c", "d", "z-follow"]) {
+      await store.appendOutbox({
+        id,
+        eventId: id,
+        eventType: "resource.claim",
+        aggregateId: id === "z-follow" ? "a" : id,
+        idempotencyKey: id,
+        payload: {},
+        maxAttempts: 3,
+        visibleAt: now,
+        occurredAt: now,
+        diagnostics: [{ code: "seed", message: "Seeded.", at: now }],
+      });
+    }
+    const firstClient = await pool.connect();
+    const secondClient = await pool.connect();
+    try {
+      await firstClient.query("begin");
+      await secondClient.query("begin");
+      // Bound a broken implementation's lock wait instead of relying on scheduler timing.
+      await secondClient.query("set local statement_timeout = '2s'");
+      const first = await store.claimOutboxBatch(options, {
+        client: drizzle(firstClient) as unknown as DrizzleTransactionalEventStoreDb,
+      });
+      expect(first.map(({ id }) => id)).toEqual(["a", "b"]);
+      const second = await store.claimOutboxBatch(options, {
+        client: drizzle(secondClient) as unknown as DrizzleTransactionalEventStoreDb,
+      });
+      expect(second.map(({ id }) => id)).toEqual(["c", "d"]);
+      expect(new Set([...first, ...second].map(({ id }) => id)).size).toBe(4);
+      for (const message of [...first, ...second]) {
+        expect(message).toMatchObject({ attempts: 1, status: "publishing" });
+        expect(message.diagnostics).toEqual([
+          { code: "seed", message: "Seeded.", at: now },
+          {
+            code: "events-tx/outbox-claimed",
+            message: "Outbox message claimed.",
+            at: now,
+            details: { attempts: 1 },
+          },
+        ]);
+      }
+      await firstClient.query("rollback");
+      await secondClient.query("commit");
+      expect(await store.findOutboxById("a")).toMatchObject({
+        attempts: 0,
+        status: "pending",
+        diagnostics: [{ code: "seed", message: "Seeded.", at: now }],
+      });
+      expect((await store.claimOutboxBatch(options)).map(({ id }) => id)).toEqual(["a", "b"]);
+      expect(await store.claimOutboxBatch(options)).toEqual([]);
+    } finally {
+      await firstClient.query("rollback");
+      await secondClient.query("rollback");
+      firstClient.release();
+      secondClient.release();
+    }
+  });
+
+  it("preserves PostgreSQL outbox aggregate ordering, visibility, and claim history", async () => {
+    const postgres = postgresResource({
+      migrations: await createMigrationDirectory(),
+      mode: "migration",
+    });
+    await using kernel = await createTestKernel({
+      bootstrap: bootstrapEmptyApplication,
+      fidelity: "application",
+      resources: [postgres],
+      validation: { di: "off", security: "off" },
+      workerId: "outbox-order-worker",
+    });
+    const { pool } = kernel.resource(postgres);
+    const db = drizzle(pool);
+    const txManager = new TxManager<DrizzleTransactionalEventStoreDb>(
+      createDrizzleTxAdapter(db as never) as unknown as TxAdapter<DrizzleTransactionalEventStoreDb>,
+    );
+    const store = new DrizzleTransactionalEventStore({
+      db: db as unknown as DrizzleTransactionalEventStoreDb,
+      txManager,
+    });
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    const future = new Date(now.getTime() + 1000);
+    const options = { limit: 100, now, visibilityTimeoutMs: 1000 };
+    const scenarios = [
+      { name: "pending", status: "pending", visibleAt: now, lockedUntil: null, eligible: "a" },
+      {
+        name: "scheduled",
+        status: "pending",
+        visibleAt: future,
+        lockedUntil: null,
+        eligible: null,
+      },
+      { name: "active", status: "publishing", visibleAt: now, lockedUntil: future, eligible: null },
+      { name: "expired", status: "publishing", visibleAt: now, lockedUntil: now, eligible: "a" },
+      { name: "retry", status: "retrying", visibleAt: future, lockedUntil: null, eligible: null },
+      { name: "published", status: "published", visibleAt: now, lockedUntil: null, eligible: "b" },
+      { name: "poisoned", status: "poisoned", visibleAt: now, lockedUntil: null, eligible: "b" },
+      { name: "dead", status: "dead_lettered", visibleAt: now, lockedUntil: null, eligible: "b" },
+    ];
+    for (const scenario of scenarios) {
+      // Insert the follower first: equal timestamps must use id, not insertion order.
+      for (const suffix of ["b", "a"]) {
+        await store.appendOutbox({
+          id: `${scenario.name}-${suffix}`,
+          eventId: `${scenario.name}-${suffix}`,
+          eventType: "resource.ordered",
+          aggregateId: scenario.name,
+          idempotencyKey: `${scenario.name}-${suffix}`,
+          payload: {},
+          maxAttempts: 5,
+          visibleAt: suffix === "a" ? scenario.visibleAt : now,
+          occurredAt: now,
+          diagnostics: [{ code: "seed", message: "Seeded.", at: now }],
+        });
+      }
+      await pool.query(
+        "update croco_outbox_messages set status = $1, locked_until = $2 where id = $3",
+        [scenario.status, scenario.lockedUntil, `${scenario.name}-a`],
+      );
+    }
+    for (const id of ["null-a", "null-b"]) {
+      await store.appendOutbox({
+        id,
+        eventId: id,
+        eventType: "resource.independent",
+        idempotencyKey: id,
+        payload: {},
+        maxAttempts: 5,
+        visibleAt: now,
+        occurredAt: now,
+        diagnostics: [{ code: "seed", message: "Seeded.", at: now }],
+      });
+    }
+    for (const id of ["chronology-z", "chronology-a"]) {
+      await store.appendOutbox({
+        id,
+        eventId: id,
+        eventType: "resource.ordered",
+        aggregateId: "chronology",
+        idempotencyKey: id,
+        payload: {},
+        maxAttempts: 5,
+        visibleAt: now,
+        occurredAt: now,
+        diagnostics: [
+          {
+            code: "seed",
+            message: "Seeded.",
+            at: id === "chronology-z" ? new Date(now.getTime() - 1) : now,
+          },
+        ],
+      });
+    }
+    const expected = [
+      "chronology-z",
+      ...[
+        ...scenarios
+          .filter(({ eligible }) => eligible !== null)
+          .map(({ name, eligible }) => `${name}-${eligible}`),
+        "null-a",
+        "null-b",
+      ].sort(),
+    ];
+    const rollback = new Error("roll back outbox claims");
+    await expect(
+      txManager.run(async () => {
+        expect((await store.claimOutboxBatch(options)).map(({ id }) => id)).toEqual(expected);
+        throw rollback;
+      }),
+    ).rejects.toBe(rollback);
+    const claimed = await store.claimOutboxBatch(options);
+    expect(claimed.map(({ id }) => id)).toEqual(expected);
+    expect(claimed.every(({ attempts }) => attempts === 1)).toBe(true);
+    expect(await store.claimOutboxBatch(options)).toEqual([]);
+
+    // Keep one aggregate to exercise lease expiry and retry boundaries without unrelated rows.
+    await pool.query(
+      "delete from croco_outbox_messages where aggregate_id is distinct from 'pending'",
+    );
+    expect(
+      await store.claimOutboxBatch({ ...options, now: new Date(future.getTime() - 1) }),
+    ).toEqual([]);
+    expect(await store.claimOutboxBatch({ ...options, now: future })).toMatchObject([
+      { id: "pending-a", attempts: 2, status: "publishing" },
+    ]);
+    expect(
+      await store.markOutboxPublished({ id: "pending-a", expectedAttempts: 1, now: future }),
+    ).toBeNull();
+    const retryAt = new Date(future.getTime() + 1000);
+    await store.markOutboxFailed({
+      id: "pending-a",
+      expectedAttempts: 2,
+      now: future,
+      nextVisibleAt: retryAt,
+      error: { name: "Error", message: "Retry publication." },
+      diagnostic: { code: "retry", message: "Retry scheduled.", at: future },
+    });
+    expect(
+      await store.claimOutboxBatch({ ...options, now: new Date(retryAt.getTime() - 1) }),
+    ).toEqual([]);
+    expect(await store.claimOutboxBatch({ ...options, now: retryAt })).toMatchObject([
+      { id: "pending-a", attempts: 3 },
+    ]);
+    const released = await store.releaseOutboxClaim({
+      id: "pending-a",
+      expectedAttempts: 3,
+      now: retryAt,
+      diagnostic: { code: "release", message: "Claim released.", at: retryAt },
+    });
+    expect(released).toMatchObject({ attempts: 2, status: "retrying" });
+    expect(
+      await store.markOutboxPublished({ id: "pending-a", expectedAttempts: 3, now: retryAt }),
+    ).toBeNull();
+    const [reclaimed] = await store.claimOutboxBatch({ ...options, now: retryAt });
+    expect(reclaimed?.diagnostics.map(({ code }) => code)).toEqual([
+      "seed",
+      "events-tx/outbox-claimed",
+      "events-tx/outbox-claimed",
+      "retry",
+      "events-tx/outbox-claimed",
+      "release",
+      "events-tx/outbox-claimed",
+    ]);
+    expect(
+      reclaimed?.diagnostics
+        .filter(({ code }) => code === "events-tx/outbox-claimed")
+        .map(({ details }) => details?.["attempts"]),
+    ).toEqual([1, 2, 3, 3]);
+    await store.markOutboxPublished({ id: "pending-a", expectedAttempts: 3, now: retryAt });
+    expect(await store.claimOutboxBatch({ ...options, now: retryAt })).toMatchObject([
+      { id: "pending-b", attempts: 1 },
+    ]);
+  });
+
   it("isolates concurrent PostgreSQL workers in separate databases", async () => {
     const firstResource = postgresResource({
       id: "postgres-first",

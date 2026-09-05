@@ -2596,48 +2596,6 @@ describe("DrizzleTransactionalEventStore", () => {
     });
   });
 
-  it("fences a stale Drizzle outbox claimant after a concurrent release", async () => {
-    const now = new Date("2026-01-01T00:00:01.000Z");
-    const selected = createOutboxRow({
-      status: "publishing",
-      attempts: 1,
-      lockedUntil: now,
-    });
-    const queries: CapturedProxyQuery[] = [];
-    const db = createPgProxyDrizzle(async (sql, params, method) => {
-      queries.push({ sql, params, method });
-      if (sql.startsWith("select")) {
-        return { rows: [outboxRowValues(selected)] };
-      }
-
-      const whereSql = sql.slice(sql.indexOf(" where "));
-      if (!whereSql.includes('"croco_outbox_messages"."attempts"')) {
-        return {
-          rows: [
-            outboxRowValues(
-              createOutboxRow({
-                status: "publishing",
-                attempts: 2,
-                lockedUntil: new Date("2026-01-01T00:00:02.000Z"),
-              }),
-            ),
-          ],
-        };
-      }
-      return { rows: [] };
-    });
-    const store = new DrizzleTransactionalEventStore({
-      db: db as unknown as DrizzleTransactionalEventStoreDb,
-    });
-
-    await expect(
-      store.claimOutboxBatch({ limit: 1, now, visibilityTimeoutMs: 1_000 }),
-    ).resolves.toEqual([]);
-
-    const claimSql = queries[1]?.sql.slice(queries[1].sql.indexOf(" where "));
-    expect(claimSql).toContain('"croco_outbox_messages"."attempts"');
-  });
-
   it("emits attempt-fenced Drizzle CAS SQL for inbox success and failure", async () => {
     const processing = inboxRowValues({ attempts: 2, status: "processing" });
     const processed = inboxRowValues({
