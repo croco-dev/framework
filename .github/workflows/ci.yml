@@ -820,10 +820,12 @@ jobs:
 
   core-verification:
     needs: changes
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright
     permissions:
       contents: read
     steps:
@@ -931,10 +933,12 @@ jobs:
 
   generated-apps:
     needs: changes
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright
     permissions:
       contents: read
     steps:
@@ -1031,7 +1035,7 @@ jobs:
 
   package-artifacts:
     needs: changes
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -1131,7 +1135,7 @@ jobs:
 
   coverage-security:
     needs: changes
-    if: github.event_name == 'workflow_dispatch'
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -1254,7 +1258,7 @@ jobs:
 
   split-validation-shadow:
     needs: [changes, core-verification, generated-apps, package-artifacts, coverage-security]
-    if: always() && github.event_name == 'workflow_dispatch' && needs.changes.result == 'success'
+    if: always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') && needs.changes.result == 'success'
     continue-on-error: true
     runs-on: ubuntu-latest
     timeout-minutes: 15

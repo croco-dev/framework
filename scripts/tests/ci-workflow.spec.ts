@@ -322,13 +322,15 @@ describe("Phase B cacheable verification shadow", () => {
     expect(workflowJob("split-validation-shadow")).toContain('node-version-file: ".nvmrc"');
   });
 
-  it("keeps the monolithic validate job authoritative while isolating advisory peers to manual experiments", () => {
+  it("keeps the monolithic validate job authoritative while running cacheable lanes in parallel on pull requests and manual runs", () => {
     expect(VALIDATE_JOB).toContain("needs: changes");
     expect(VALIDATE_JOB).not.toContain("ci-cacheable-lanes:producer");
     for (const jobId of producerJobs) {
       const job = workflowJob(jobId);
       expect(job).toContain("needs: changes");
-      expect(workflowJobCondition(jobId)).toBe("github.event_name == 'workflow_dispatch'");
+      expect(workflowJobCondition(jobId)).toBe(
+        "github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
+      );
       expect(job).toContain("scripts/ci-cacheable-experiment-identity.mts");
       expect(job).toContain("scripts/ci-cacheable-lane-runner.mts");
       expect(job).toContain("if: always()");
@@ -337,12 +339,18 @@ describe("Phase B cacheable verification shadow", () => {
       );
       expect(job).toContain("continue-on-error: true");
     }
+    expect(workflowJob("generated-apps")).toContain(
+      "PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright",
+    );
+    expect(workflowJob("core-verification")).toContain(
+      "PLAYWRIGHT_BROWSERS_PATH: /home/runner/.cache/ms-playwright",
+    );
     const cacheableJobs = [
       ...producerJobs.map((jobId) => workflowJob(jobId)),
       workflowJob("split-validation-shadow"),
     ].join("\n");
     expect(workflowJobCondition("split-validation-shadow")).toBe(
-      "always() && github.event_name == 'workflow_dispatch' && needs.changes.result == 'success'",
+      "always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') && needs.changes.result == 'success'",
     );
     expect(findWorkflowVerificationViolations(cacheableJobs, ROOT_DIR)).toEqual([]);
   });

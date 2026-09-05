@@ -179,13 +179,25 @@ const BUILD_ARTIFACT_MAINTENANCE_CHECKS = [
 ] as const;
 
 const CACHEABLE_CI_EXPERIMENT_JOBS = [
-  ["core-verification", "github.event_name == 'workflow_dispatch'"],
-  ["generated-apps", "github.event_name == 'workflow_dispatch'"],
-  ["package-artifacts", "github.event_name == 'workflow_dispatch'"],
-  ["coverage-security", "github.event_name == 'workflow_dispatch'"],
+  [
+    "core-verification",
+    "github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
+  ],
+  [
+    "generated-apps",
+    "github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
+  ],
+  [
+    "package-artifacts",
+    "github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
+  ],
+  [
+    "coverage-security",
+    "github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request'",
+  ],
   [
     "split-validation-shadow",
-    "always() && github.event_name == 'workflow_dispatch' && needs.changes.result == 'success'",
+    "always() && (github.event_name == 'workflow_dispatch' || github.event_name == 'pull_request') && needs.changes.result == 'success'",
   ],
 ] as const;
 

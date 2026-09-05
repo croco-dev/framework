@@ -145,7 +145,7 @@
     "@croco/ui-astryx": "workspace:*",
     "@croco/webhooks-core": "workspace:*",
     "@croco/workflow-core": "workspace:*",
-    "@playwright/test": "1.58.2",
+    "@playwright/test": "1.62.0",
     "create-croco-app": "workspace:*"
   }
 }
