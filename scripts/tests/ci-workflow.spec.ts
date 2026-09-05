@@ -1039,8 +1039,9 @@ describe("CI verification profile contract", () => {
   it("measures changed-test selection misses against cache-aware authoritative shadow evidence", () => {
     const fullSuiteStep = workflowStep("Run full test suite for changed-test shadow");
     expect(fullSuiteStep).toContain(
-      "if: ${{ !cancelled() && github.event_name == 'pull_request' }}",
+      "if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' }}",
     );
+    expect(fullSuiteStep).not.toContain("github.event_name == 'pull_request'");
     expect(fullSuiteStep).not.toContain("continue-on-error");
     expect(fullSuiteStep).toContain("VERIFICATION_PROFILE: ${{ needs.changes.outputs.profile }}");
     expect(fullSuiteStep).toContain('if [ "$VERIFICATION_PROFILE" = "publish" ]; then');
@@ -1079,6 +1080,9 @@ describe("CI verification profile contract", () => {
     expect(fullSuiteStep).toContain('exit "$full_suite_status"');
     const completenessStep = workflowStep("Assert changed-test shadow evidence completeness");
     expect(completenessStep).not.toContain("continue-on-error");
+    expect(completenessStep).toContain(
+      "if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' }}",
+    );
     expect(completenessStep).toContain("--check ci-reports/changed-test-plan/full-fast-lane.json");
     expect(completenessStep).toContain(
       "test -f ci-reports/changed-test-plan/full-evidence/records/full-suite-status.json",
@@ -1089,7 +1093,7 @@ describe("CI verification profile contract", () => {
       VALIDATE_JOB.indexOf("      - name: Aggregate changed-test shadow full evidence"),
     );
     expect(restoreBaseline).toContain(
-      "if: ${{ !cancelled() && github.event_name == 'pull_request' }}",
+      "if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' }}",
     );
     expect(VALIDATE_JOB).toContain("path: ci-reports/changed-test-plan/baseline.json");
     expect(VALIDATE_JOB).toContain(
@@ -1100,7 +1104,7 @@ describe("CI verification profile contract", () => {
       "continue-on-error",
     );
     expect(workflowStep("Aggregate changed-test shadow full evidence")).toContain(
-      "if: ${{ !cancelled() && github.event_name == 'pull_request' }}",
+      "if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' }}",
     );
     expect(VALIDATE_JOB).toContain("scripts/test-evidence-bundle.mts");
     expect(workflowStep("Aggregate changed-test shadow full evidence")).toContain(
@@ -1111,7 +1115,9 @@ describe("CI verification profile contract", () => {
     expect(workflowStep("Measure changed-test selection misses")).not.toContain(
       "continue-on-error",
     );
-    expect(workflowStep("Measure changed-test selection misses")).toContain("!cancelled()");
+    expect(workflowStep("Measure changed-test selection misses")).toContain(
+      "if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && hashFiles('ci-reports/changed-test-plan/full-evidence/bundle.json') != '' }}",
+    );
     expect(VALIDATE_JOB).toContain("scripts/changed-test-plan-shadow.mts");
     expect(workflowStep("Measure changed-test selection misses")).not.toContain(
       "--execute-selected",
