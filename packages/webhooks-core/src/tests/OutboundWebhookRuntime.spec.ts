@@ -80,6 +80,120 @@ describe("OutboundWebhookRuntime", () => {
     expect(await store.listUnpublishedIntents(EVENT.tenantId)).toHaveLength(1);
   });
 
+  it.each([
+    new OutboundWebhookRetryableProblem("old_delivery", "broker unavailable"),
+    new OutboundWebhookPermanentProblem("old_delivery", "task rejected"),
+    new OutboundWebhookConfigurationProblem("old task is misconfigured"),
+  ])("isolates new event publication from a retained $code intent", async (problem) => {
+    const store = new InMemoryOutboundWebhookStore();
+    const publisher: OutboundWebhookTaskPublisher = {
+      publish: vi.fn(async ({ contracts }) => {
+        if (contracts.outbox.source?.eventId === EVENT.id) {
+          throw problem;
+        }
+      }),
+    };
+    const runtime = createRuntime({ store, publisher });
+    await expect(runtime.publish(EVENT)).rejects.toBeInstanceOf(problem.constructor);
+    const retained = await store.listUnpublishedIntents(EVENT.tenantId);
+    vi.mocked(publisher.publish).mockClear();
+    const listUnpublishedIntents = vi.spyOn(store, "listUnpublishedIntents");
+
+    const published = await runtime.publish({ ...EVENT, id: "event_2" });
+
+    expect(published.event.id).toBe("event_2");
+    expect(publisher.publish).toHaveBeenCalledTimes(1);
+    expect(publisher.publish).toHaveBeenCalledWith(
+      expect.objectContaining({ deliveryId: published.deliveries[0]?.id }),
+    );
+    expect(listUnpublishedIntents).not.toHaveBeenCalled();
+    expect(await store.listUnpublishedIntents(EVENT.tenantId)).toEqual(retained);
+
+    vi.mocked(publisher.publish).mockResolvedValue(undefined);
+    await expect(runtime.publishUnpublishedIntents(EVENT.tenantId)).resolves.toEqual({
+      publishedIntentIds: retained.map((intent) => intent.id),
+      failures: [],
+    });
+    expect(await store.listUnpublishedIntents(EVENT.tenantId)).toHaveLength(0);
+  });
+
+  it("surfaces a current event failure while publishing its other endpoint intents", async () => {
+    const store = new InMemoryOutboundWebhookStore();
+    const publisher: OutboundWebhookTaskPublisher = {
+      publish: vi.fn(async ({ deliveryId }) => {
+        if (deliveryId.endsWith(ACTIVE_ENDPOINT.id)) {
+          throw new OutboundWebhookPermanentProblem(deliveryId, "task rejected");
+        }
+      }),
+    };
+    const runtime = createRuntime({
+      store,
+      publisher,
+      endpoints: [ACTIVE_ENDPOINT, { ...ACTIVE_ENDPOINT, id: "endpoint_2" }],
+    });
+
+    await expect(runtime.publish(EVENT)).rejects.toBeInstanceOf(OutboundWebhookPermanentProblem);
+
+    expect(publisher.publish).toHaveBeenCalledTimes(2);
+    expect(await store.listUnpublishedIntents(EVENT.tenantId)).toEqual([
+      expect.objectContaining({
+        deliveryId: `${EVENT.tenantId}:${EVENT.id}:${ACTIVE_ENDPOINT.id}`,
+      }),
+    ]);
+  });
+
+  it("does not drain retained intents when a new event has no dispatchable endpoints", async () => {
+    const store = new InMemoryOutboundWebhookStore();
+    const publisher: OutboundWebhookTaskPublisher = {
+      publish: vi.fn(async () => {
+        throw new Error("broker unavailable");
+      }),
+    };
+    await expect(createRuntime({ store, publisher }).publish(EVENT)).rejects.toBeInstanceOf(
+      OutboundWebhookRetryableProblem,
+    );
+    vi.mocked(publisher.publish).mockClear();
+    const runtime = createRuntime({ store, publisher, endpoints: [] });
+
+    await expect(runtime.publish({ ...EVENT, id: "event_2" })).resolves.toMatchObject({
+      deliveries: [],
+      intents: [],
+    });
+    expect(publisher.publish).not.toHaveBeenCalled();
+    expect(await store.listUnpublishedIntents(EVENT.tenantId)).toHaveLength(1);
+  });
+
+  it("retries only unpublished intents when publishing a duplicate event", async () => {
+    const store = new InMemoryOutboundWebhookStore();
+    let unavailable = true;
+    const publisher: OutboundWebhookTaskPublisher = {
+      publish: vi.fn(async ({ deliveryId }) => {
+        if (unavailable && deliveryId.endsWith(ACTIVE_ENDPOINT.id)) {
+          throw new Error("broker unavailable");
+        }
+      }),
+    };
+    const runtime = createRuntime({
+      store,
+      publisher,
+      endpoints: [ACTIVE_ENDPOINT, { ...ACTIVE_ENDPOINT, id: "endpoint_2" }],
+    });
+    await expect(runtime.publish(EVENT)).rejects.toBeInstanceOf(OutboundWebhookRetryableProblem);
+    const retained = await store.listUnpublishedIntents(EVENT.tenantId);
+    unavailable = false;
+    vi.mocked(publisher.publish).mockClear();
+
+    await expect(runtime.publish(EVENT)).resolves.toMatchObject({ duplicate: true });
+
+    expect(publisher.publish).toHaveBeenCalledTimes(1);
+    expect(publisher.publish).toHaveBeenCalledWith(
+      expect.objectContaining({ deliveryId: retained[0]?.deliveryId }),
+    );
+    expect(await store.listUnpublishedIntents(EVENT.tenantId)).toHaveLength(0);
+    await runtime.publish(EVENT);
+    expect(publisher.publish).toHaveBeenCalledTimes(1);
+  });
+
   it("continues after retryable intent publication failures and marks each published intent once", async () => {
     const store = new InMemoryOutboundWebhookStore();
     const secondEndpoint = { ...ACTIVE_ENDPOINT, id: "endpoint_2" };
