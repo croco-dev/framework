@@ -61,7 +61,8 @@ export class IdempotencyManager {
   }
 
   /**
-   * 짧은 처리 lease를 획득합니다. 작업 커밋 후 반환된 claim으로 completeProcessing을 호출해야 합니다.
+   * 짧은 처리 lease를 획득합니다. 내구성 있는 커밋 후 반환된 claim으로 completeProcessing을 호출해야 합니다.
+   * 작업이 확인된 실패로 끝나면 반환된 claim으로 abortProcessing을 호출해야 합니다.
    * @returns 새 lease의 ownership claim, 이미 처리 중이거나 완료된 key이면 null
    */
   async checkAndMark(

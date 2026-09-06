@@ -162,7 +162,8 @@ DuplicateRecordProblem 동일한 idempotency key가 이미 처리 중이거나 �
 
 > **checkAndMark**(`tenantId`, `meterId`, `idempotencyKey`): `Promise`\<[`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/) \| `null`\>
 
-짧은 처리 lease를 획득합니다. 작업 커밋 후 반환된 claim으로 completeProcessing을 호출해야 합니다.
+짧은 처리 lease를 획득합니다. 내구성 있는 커밋 후 반환된 claim으로 completeProcessing을 호출해야 합니다.
+작업이 확인된 실패로 끝나면 반환된 claim으로 abortProcessing을 호출해야 합니다.
 
 #### Parameters
 

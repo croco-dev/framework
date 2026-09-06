@@ -1,5 +1,9 @@
-import { redisResource, type RedisTestConnection } from "@croco/testing-resources";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import {
+  redisResource,
+  TestResourceLifecycleProblem,
+  type RedisTestConnection,
+} from "@croco/testing-resources";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, assert } from "vitest";
 import { IdempotencyManager } from "../libs/IdempotencyManager";
 import type { BillableUsageClaim, BillableUsageEvent } from "../libs/BillableUsageJournal";
 import { MeteringService } from "../libs/MeteringService";
@@ -163,16 +167,19 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
 
   it("acquires a short simple lease and retains only explicit completion for 24 hours", async () => {
     if (!connection) {
-      throw new Error("Redis test resource did not start");
+      throw new TestResourceLifecycleProblem(
+        "metering-redis",
+        "startup",
+        "Redis test resource did not start",
+        [],
+      );
     }
 
     const manager = new IdempotencyManager(createRedisClient(connection));
     const key = "idem2:lifecycle:tenant-1:api_calls:simple-completion";
     const claim = await manager.checkAndMark("tenant-1", "api_calls", "simple-completion");
     expect(claim).toEqual(expect.any(String));
-    if (claim === null) {
-      throw new Error("Expected a new simple processing claim");
-    }
+    assert.isNotNull(claim, "Expected a new simple processing claim");
 
     expect(await connection.client.get(key)).toBe(`IN_PROGRESS:${claim}`);
     const processingTtl = await connection.client.ttl(key);
@@ -196,7 +203,12 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
 
   it("reclaims an expired simple lease across managers and fences the crashed owner", async () => {
     if (!connection) {
-      throw new Error("Redis test resource did not start");
+      throw new TestResourceLifecycleProblem(
+        "metering-redis",
+        "startup",
+        "Redis test resource did not start",
+        [],
+      );
     }
 
     const redis = createRedisClient(connection);
