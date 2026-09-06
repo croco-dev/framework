@@ -16031,6 +16031,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "IdempotencyExecutionIndeterminateProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/IdempotencyProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "IdempotencyReservationExpiredProblem",
               "exportKind": "named",
               "source": "./libs/problems/IdempotencyProblems",
