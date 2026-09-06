@@ -110,6 +110,7 @@ describe("Meilisearch provider conformance", () => {
   };
 
   beforeEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
 
     mocks.indexMock.search.mockResolvedValue({
@@ -158,7 +159,10 @@ describe("Meilisearch provider conformance", () => {
         () => engine.deleteDocument("index", "1", options),
         () => engine.bulkIndex("index", [{ id: "1", tenantId: "tenant-1" }], options),
         () => engine.createIndex({ name: "index" }, options),
-        () => engine.deleteIndex("index", options),
+        () => {
+          vi.spyOn(Context, "getTenantId").mockReturnValue(null);
+          return engine.deleteIndex("index", { ...options, allowGlobalDrop: true });
+        },
       ];
 
       for (const operation of operations) {
@@ -386,6 +390,92 @@ describe("Meilisearch provider conformance", () => {
   });
 
   describe("index lifecycle", () => {
+    it("rejects an index drop without options", async () => {
+      await expect(engine.deleteIndex("products")).rejects.toThrow(
+        MeilisearchInvalidRequestProblem,
+      );
+      expect(mocks.clientMock.deleteIndex).not.toHaveBeenCalled();
+    });
+
+    it.each([undefined, false, true])(
+      "rejects tenant index drops even when allowGlobalDrop is %s",
+      async (allowGlobalDrop) => {
+        await Context.run({ requestId: "tenant-drop", tenantId: "tenant-a" }, async () => {
+          await expect(engine.deleteIndex("products", { allowGlobalDrop })).rejects.toMatchObject({
+            code: "search-meilisearch/invalid-request",
+            extensions: {
+              operation: "deleteIndex",
+              indexName: "products",
+              upstreamCode: "tenant-index-drop-forbidden",
+              retryable: false,
+            },
+          });
+        });
+
+        expect(mocks.clientMock.deleteIndex).not.toHaveBeenCalled();
+        expect(mocks.indexMock.deleteDocuments).not.toHaveBeenCalled();
+        expect(mocks.clientMock.waitForTask).not.toHaveBeenCalled();
+      },
+    );
+
+    it("rejects an empty tenant context instead of treating it as system scope", async () => {
+      await Context.run({ requestId: "empty-tenant", tenantId: "" }, async () => {
+        await expect(engine.deleteIndex("products", { allowGlobalDrop: true })).rejects.toThrow(
+          MeilisearchInvalidRequestProblem,
+        );
+      });
+
+      expect(mocks.clientMock.deleteIndex).not.toHaveBeenCalled();
+    });
+
+    it.each([undefined, false])(
+      "requires explicit system opt-in when allowGlobalDrop is %s",
+      async (allowGlobalDrop) => {
+        await expect(engine.deleteIndex("products", { allowGlobalDrop })).rejects.toMatchObject({
+          code: "search-meilisearch/invalid-request",
+          extensions: {
+            operation: "deleteIndex",
+            indexName: "products",
+            upstreamCode: "global-index-drop-not-authorized",
+            retryable: false,
+          },
+        });
+
+        expect(mocks.clientMock.deleteIndex).not.toHaveBeenCalled();
+        expect(mocks.clientMock.waitForTask).not.toHaveBeenCalled();
+      },
+    );
+
+    it("rejects a truthy non-boolean global-drop opt-in", async () => {
+      await expect(
+        engine.deleteIndex("products", { allowGlobalDrop: "true" as unknown as boolean }),
+      ).rejects.toThrow(MeilisearchInvalidRequestProblem);
+
+      expect(mocks.clientMock.deleteIndex).not.toHaveBeenCalled();
+    });
+
+    it("keeps concurrent tenant drops isolated from an explicit system drop", async () => {
+      const tenantDrops = ["tenant-a", "tenant-b"].map((tenantId) =>
+        Context.run({ requestId: tenantId, tenantId }, async () => {
+          await Promise.resolve();
+          await expect(engine.deleteIndex("products", { allowGlobalDrop: true })).rejects.toThrow(
+            MeilisearchInvalidRequestProblem,
+          );
+        }),
+      );
+
+      await Promise.all([
+        ...tenantDrops,
+        Context.run({ requestId: "system-drop" }, async () => {
+          await Promise.resolve();
+          await engine.deleteIndex("retired-index", { allowGlobalDrop: true });
+        }),
+      ]);
+
+      expect(mocks.clientMock.deleteIndex).toHaveBeenCalledExactlyOnceWith("retired-index");
+      expect(mocks.indexMock.deleteDocuments).not.toHaveBeenCalled();
+    });
+
     it("creates indexes with tenant filterability and configured searchable/sortable fields", async () => {
       await engine.createIndex({
         name: "products",
@@ -416,8 +506,10 @@ describe("Meilisearch provider conformance", () => {
       );
     });
 
-    it("deletes indexes and waits for the provider task", async () => {
-      await engine.deleteIndex("products");
+    it("deletes indexes only with system opt-in and waits for the provider task", async () => {
+      await Context.run({ requestId: "system-drop" }, async () => {
+        await engine.deleteIndex("products", { allowGlobalDrop: true });
+      });
 
       expect(mocks.clientMock.deleteIndex).toHaveBeenCalledWith("products");
       expect(mocks.clientMock.waitForTask).toHaveBeenCalledWith(5, {});
@@ -712,10 +804,11 @@ describe("Meilisearch provider conformance", () => {
         () => engine.createIndex({ name: "products" }),
         MeilisearchRetryableUpstreamProblem,
       );
-      await expectProblem(
-        () => engine.deleteIndex("products"),
-        MeilisearchRetryableUpstreamProblem,
-      );
+      await expectProblem(() => {
+        vi.spyOn(Context, "getTenantId").mockReturnValue(null);
+        return engine.deleteIndex("products", { allowGlobalDrop: true });
+      }, MeilisearchRetryableUpstreamProblem);
+      vi.spyOn(Context, "getTenantId").mockReturnValue("tenant-1");
       await expectProblem(
         () => engine.generateTenantToken("tenant-1"),
         MeilisearchRetryableUpstreamProblem,
@@ -819,15 +912,17 @@ describe("Meilisearch provider conformance", () => {
         status: "canceled",
       });
 
-      await expect(engine.deleteIndex("products")).rejects.toMatchObject({
-        code: "search-meilisearch/task-canceled",
-        extensions: {
-          indexName: "products",
-          operation: "deleteIndex",
-          provider: "meilisearch",
-          retryable: false,
+      await expect(engine.deleteIndex("products", { allowGlobalDrop: true })).rejects.toMatchObject(
+        {
+          code: "search-meilisearch/task-canceled",
+          extensions: {
+            indexName: "products",
+            operation: "deleteIndex",
+            provider: "meilisearch",
+            retryable: false,
+          },
         },
-      });
+      );
     });
 
     it("fails malformed async task responses while task waiting is enabled", async () => {
