@@ -59,4 +59,4 @@ title: "OutboxRelayBatchResult"
 
 ### status
 
-> **status**: `"completed"` \| `"cancelled"` \| `"stopped"`
+> **status**: `"completed"` \| `"cancelled"` \| `"stopped"` \| `"degraded"` \| `"failed"`

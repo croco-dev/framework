@@ -737,9 +737,11 @@ describe("TransactionalOutboxRelay", () => {
     ]);
   });
 
-  it("keeps exhausted messages poisoned when no dead-letter hook is configured", async () => {
+  it("keeps exhausted messages poisoned when no dead-letter hook is configured and emits telemetry", async () => {
+    const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {});
+    const recordErrorSpy = vi.spyOn(telemetry, "recordError").mockImplementation(() => {});
     const fixture = createOutboxFixture();
-    await appendMessage(fixture, { maxAttempts: 1 });
+    const poisonMessage = await appendMessage(fixture, { maxAttempts: 1 });
     const relay = new TransactionalOutboxRelay({
       store: fixture.store,
       publish: async () => {
@@ -751,18 +753,126 @@ describe("TransactionalOutboxRelay", () => {
     const result = await relay.publishBatch({ limit: 1, now: fixture.clock.now() });
 
     expect(result).toMatchObject({
+      status: "failed",
       claimed: 1,
       poisoned: 1,
       deadLettered: 0,
     });
     expect(result.results[0].status).toBe("poisoned");
+    expect(recordEventSpy).toHaveBeenCalledWith("events-tx.outbox.poisoned", {
+      "events-tx.message_id": poisonMessage.id,
+      "events-tx.event_type": poisonMessage.eventType,
+      "events-tx.attempts": 1,
+      "events-tx.error": "broker unavailable",
+      "events-tx.problem": "events-tx/outbox-publish-exhausted",
+    });
+    expect(recordErrorSpy).toHaveBeenCalledWith(expect.any(OutboxPublishExhaustedProblem));
     expect((await fixture.store.listOutboxMessages())[0]).toMatchObject({
       status: "poisoned",
       deadLetterReason: "broker unavailable",
     });
   });
 
+  it("isolates dead-letter hook exceptions and continues processing remaining batch messages", async () => {
+    const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {});
+    const recordErrorSpy = vi.spyOn(telemetry, "recordError").mockImplementation(() => {});
+    const fixture = createOutboxFixture();
+    const poisonMsg = await appendMessage(fixture, { idempotencyKey: "poison-1", maxAttempts: 1 });
+    const successMsg = await appendMessage(fixture, {
+      idempotencyKey: "success-2",
+      maxAttempts: 1,
+    });
+    const published: string[] = [];
+
+    const relay = new TransactionalOutboxRelay({
+      store: fixture.store,
+      publish: async (message) => {
+        if (message.id === poisonMsg.id) {
+          throw new Error("broker down for poison");
+        }
+        published.push(message.id);
+      },
+      deadLetter: async () => {
+        throw new Error("dlq sink unreachable");
+      },
+      now: fixture.clock.now,
+    });
+
+    const result = await relay.publishBatch({ limit: 2, now: fixture.clock.now() });
+
+    expect(result).toMatchObject({
+      status: "degraded",
+      claimed: 2,
+      published: 1,
+      poisoned: 1,
+      deadLettered: 0,
+    });
+    expect(published).toEqual([successMsg.id]);
+    expect(result.results[0]).toMatchObject({
+      status: "poisoned",
+      message: expect.objectContaining({ id: poisonMsg.id, status: "poisoned" }),
+      problem: expect.any(OutboxPublishExhaustedProblem),
+      deadLetterError: expect.objectContaining({ message: "dlq sink unreachable" }),
+    });
+    expect(result.results[1]).toMatchObject({
+      status: "published",
+      message: expect.objectContaining({ id: successMsg.id, status: "published" }),
+    });
+    expect(recordEventSpy).toHaveBeenCalledWith("events-tx.outbox.poisoned", {
+      "events-tx.message_id": poisonMsg.id,
+      "events-tx.event_type": poisonMsg.eventType,
+      "events-tx.attempts": 1,
+      "events-tx.error": "broker down for poison",
+      "events-tx.problem": "events-tx/outbox-publish-exhausted",
+      "events-tx.dead_letter_error": "dlq sink unreachable",
+    });
+    expect(recordErrorSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "dlq sink unreachable" }),
+    );
+    expect(recordErrorSpy).toHaveBeenCalledWith(expect.any(OutboxPublishExhaustedProblem));
+  });
+
+  it("returns degraded status when a batch contains both poisoned and dead-lettered messages", async () => {
+    const fixture = createOutboxFixture();
+    const deadLetterMsg = await appendMessage(fixture, { idempotencyKey: "dlq-1", maxAttempts: 1 });
+    const poisonMsg = await appendMessage(fixture, { idempotencyKey: "poison-2", maxAttempts: 1 });
+
+    const relay = new TransactionalOutboxRelay({
+      store: fixture.store,
+      publish: async () => {
+        throw new Error("publish failed");
+      },
+      deadLetter: async (message) => {
+        if (message.id === poisonMsg.id) {
+          throw new Error("dlq write failed");
+        }
+      },
+      now: fixture.clock.now,
+    });
+
+    const result = await relay.publishBatch({ limit: 2, now: fixture.clock.now() });
+
+    expect(result).toMatchObject({
+      status: "degraded",
+      claimed: 2,
+      published: 0,
+      scheduledRetry: 0,
+      poisoned: 1,
+      deadLettered: 1,
+    });
+    expect(result.results[0]).toMatchObject({
+      status: "dead_lettered",
+      message: expect.objectContaining({ id: deadLetterMsg.id, status: "dead_lettered" }),
+    });
+    expect(result.results[1]).toMatchObject({
+      status: "poisoned",
+      message: expect.objectContaining({ id: poisonMsg.id, status: "poisoned" }),
+      deadLetterError: expect.objectContaining({ message: "dlq write failed" }),
+    });
+  });
+
   it("reschedules failed publishes, then moves exhausted messages through the dead-letter hook", async () => {
+    const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {});
     const fixture = createOutboxFixture();
     await appendMessage(fixture, { maxAttempts: 2 });
     const publish = vi.fn(async () => {
@@ -791,6 +901,11 @@ describe("TransactionalOutboxRelay", () => {
     const exhausted = await relay.publishBatch({ limit: 1, now: fixture.clock.now() });
     expect(exhausted.deadLettered).toBe(1);
     expect(deadLetter).toHaveBeenCalledTimes(1);
+    expect(recordEventSpy).toHaveBeenCalledWith("events-tx.outbox.dead_lettered", {
+      "events-tx.message_id": expect.any(String),
+      "events-tx.event_type": expect.any(String),
+      "events-tx.attempts": 2,
+    });
     expect((await fixture.store.listOutboxMessages())[0].status).toBe("dead_lettered");
   });
 

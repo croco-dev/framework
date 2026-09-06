@@ -285,7 +285,14 @@ export type OutboxRelayMessageResult =
       error: TransactionalEventError;
     }
   | {
-      status: "poisoned" | "dead_lettered";
+      status: "poisoned";
+      message: TransactionalOutboxMessage;
+      error: TransactionalEventError;
+      problem: OutboxPublishExhaustedProblem;
+      deadLetterError?: TransactionalEventError;
+    }
+  | {
+      status: "dead_lettered";
       message: TransactionalOutboxMessage;
       error: TransactionalEventError;
       problem: OutboxPublishExhaustedProblem;
@@ -301,7 +308,7 @@ export type OutboxRelayMessageResult =
     };
 
 export type OutboxRelayBatchResult = {
-  status: "completed" | "cancelled" | "stopped";
+  status: "completed" | "cancelled" | "stopped" | "degraded" | "failed";
   claimed: number;
   published: number;
   scheduledRetry: number;
@@ -712,15 +719,35 @@ export class TransactionalOutboxRelay<TClient = unknown> {
     claimed: TransactionalOutboxMessage[],
     results: OutboxRelayMessageResult[],
   ): OutboxRelayBatchResult {
+    const published = results.filter((result) => result.status === "published").length;
+    const scheduledRetry = results.filter((result) => result.status === "scheduled_retry").length;
+    const poisoned = results.filter((result) => result.status === "poisoned").length;
+    const deadLettered = results.filter((result) => result.status === "dead_lettered").length;
+    const staleClaimed = results.filter((result) => result.status === "stale_claim").length;
+    const released = results.filter((result) => result.status === "released").length;
+
+    const resolvedStatus: OutboxRelayBatchResult["status"] =
+      status === "cancelled" || status === "stopped"
+        ? status
+        : poisoned > 0
+          ? published === 0 &&
+            scheduledRetry === 0 &&
+            staleClaimed === 0 &&
+            released === 0 &&
+            deadLettered === 0
+            ? "failed"
+            : "degraded"
+          : "completed";
+
     return {
-      status,
+      status: resolvedStatus,
       claimed: claimed.length,
-      published: results.filter((result) => result.status === "published").length,
-      scheduledRetry: results.filter((result) => result.status === "scheduled_retry").length,
-      poisoned: results.filter((result) => result.status === "poisoned").length,
-      deadLettered: results.filter((result) => result.status === "dead_lettered").length,
-      staleClaimed: results.filter((result) => result.status === "stale_claim").length,
-      released: results.filter((result) => result.status === "released").length,
+      published,
+      scheduledRetry,
+      poisoned,
+      deadLettered,
+      staleClaimed,
+      released,
       results,
     };
   }
@@ -844,6 +871,14 @@ export class TransactionalOutboxRelay<TClient = unknown> {
     );
 
     if (!this.config.deadLetter) {
+      recordError(problem);
+      recordEvent("events-tx.outbox.poisoned", {
+        "events-tx.message_id": failed.id,
+        "events-tx.event_type": failed.eventType,
+        "events-tx.attempts": failed.attempts,
+        "events-tx.error": error.message,
+        "events-tx.problem": problem.code,
+      });
       return {
         status: "poisoned",
         message: failed,
@@ -852,7 +887,29 @@ export class TransactionalOutboxRelay<TClient = unknown> {
       };
     }
 
-    await this.config.deadLetter(failed);
+    try {
+      await this.config.deadLetter(failed);
+    } catch (deadLetterError) {
+      const normalizedDeadLetterError = normalizeTransactionalEventError(deadLetterError);
+      recordError(deadLetterError);
+      recordError(problem);
+      recordEvent("events-tx.outbox.poisoned", {
+        "events-tx.message_id": failed.id,
+        "events-tx.event_type": failed.eventType,
+        "events-tx.attempts": failed.attempts,
+        "events-tx.error": error.message,
+        "events-tx.problem": problem.code,
+        "events-tx.dead_letter_error": normalizedDeadLetterError.message,
+      });
+      return {
+        status: "poisoned",
+        message: failed,
+        error,
+        problem,
+        deadLetterError: normalizedDeadLetterError,
+      };
+    }
+
     const deadLettered = await this.config.store.markOutboxDeadLettered(
       {
         id: failed.id,
@@ -875,6 +932,12 @@ export class TransactionalOutboxRelay<TClient = unknown> {
     if (!deadLettered) {
       return this.createStaleClaimResult(failed, "events-tx/outbox-dead-letter-stale-claim");
     }
+
+    recordEvent("events-tx.outbox.dead_lettered", {
+      "events-tx.message_id": deadLettered.id,
+      "events-tx.event_type": deadLettered.eventType,
+      "events-tx.attempts": deadLettered.attempts,
+    });
 
     return {
       status: "dead_lettered",
