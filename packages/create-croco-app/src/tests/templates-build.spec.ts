@@ -391,6 +391,7 @@ function checkAdminConsoleStructure() {
   checkFileExists("admin-console", "tests", "journeys", "plan-release.spec.ts");
   checkFileExists("admin-console", "apps", "console-web", "src", "TenantWorkspaceDemo.tsx");
   checkFileExists("admin-console", "apps", "console-web", "src", "WebhookReliabilityDemo.tsx");
+  checkFileExists("admin-console", "apps", "console-web", "src", "EngagementOperationsDemo.tsx");
   checkFileExists("admin-console", "apps", "api-server", "src", "webhook-smoke.ts");
 
   const rootPackageJson = readJsonTemplate("admin-console", "package.json.hbs");
@@ -598,6 +599,11 @@ function checkAdminConsoleStructure() {
     "admin-console",
     ["apps", "console-web", "src", "WebhookReliabilityDemo.tsx"],
     /WebhookReliabilityConsole/,
+  );
+  checkFileContains(
+    "admin-console",
+    ["apps", "console-web", "src", "EngagementOperationsDemo.tsx"],
+    /EngagementOperationsConsole/,
   );
   checkFileContains("admin-console", ["README.md.hbs"], /not a marketing landing page/);
 }

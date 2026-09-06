@@ -319,9 +319,57 @@
               "declarationKind": "function"
             },
             {
+              "name": "assertCampaignCancelValid",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertCampaignRunValid",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertCreateSuppressionValid",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations",
+              "declarationKind": "function"
+            },
+            {
               "name": "assertCreditOperationsActionRequest",
               "exportKind": "named",
               "source": "./libs/CreditOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertEndpointReactivateValid",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertReactivateEndpointValid",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations",
+              "declarationKind": "const"
+            },
+            {
+              "name": "assertRemoveSuppressionValid",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertRetryDispatchValid",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertTestSendValid",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations",
               "declarationKind": "function"
             },
             {
@@ -352,6 +400,12 @@
               "name": "createCreditOperationsTenantExtension",
               "exportKind": "named",
               "source": "./libs/CreditOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createEngagementTenantExtension",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations",
               "declarationKind": "function"
             },
             {
@@ -409,6 +463,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "ENGAGEMENT_PERMISSIONS",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations",
+              "declarationKind": "const"
+            },
+            {
+              "name": "EngagementOperationsValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations",
+              "declarationKind": "class"
+            },
+            {
               "name": "evaluateTenantWorkspaceAction",
               "exportKind": "named",
               "source": "./libs/TenantWorkspace",
@@ -433,6 +499,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "filterEngagementDispatches",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations",
+              "declarationKind": "function"
+            },
+            {
               "name": "filterWebhookDeliveries",
               "exportKind": "named",
               "source": "./libs/WebhookOperations",
@@ -445,9 +517,27 @@
               "declarationKind": "function"
             },
             {
+              "name": "loadEngagementOperations",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations",
+              "declarationKind": "function"
+            },
+            {
               "name": "loadTenantWorkspace",
               "exportKind": "named",
               "source": "./libs/TenantWorkspace",
+              "declarationKind": "function"
+            },
+            {
+              "name": "maskEmailAddress",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "maskPushToken",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations",
               "declarationKind": "function"
             },
             {
@@ -709,6 +799,196 @@
               "source": "./libs/CreditOperations"
             },
             {
+              "name": "Customer360CommunicationState",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementAudienceDescriptorRow",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementAudienceEstimateRequest",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementAudienceEstimateResult",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementAudienceMembershipSummary",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementCampaignCancelRequest",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementCampaignCancelResult",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementCampaignDescriptorRow",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementCampaignProgressSummary",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementCampaignRunRequest",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementCampaignRunResult",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementCampaignSnapshotRequest",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementCampaignSnapshotResult",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementCampaignStatus",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementChannel",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementCreateSuppressionRequest",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementDeliveryEventSummary",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementDeliveryEventType",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementDeliveryFilter",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementDispatchStatus",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementDispatchSummary",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementEndpointSummary",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementMessageDescriptorRow",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementMessagePreviewRequest",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementMessagePreviewResult",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementOperationsReadyState",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementOperationsSnapshot",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementOperationsSource",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementOperationsSourceResult",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementOperationsState",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementPermission",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementPreferenceSummary",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementReactivateEndpointRequest",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementRemoveSuppressionRequest",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementRetryDispatchRequest",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementSuppressionSummary",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementTestSendRequest",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EngagementTestSendResult",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
+            },
+            {
               "name": "LoadCreditOperationsInput",
               "exportKind": "named",
               "source": "./libs/CreditOperations"
@@ -722,6 +1002,11 @@
               "name": "NonEmptyArray",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "RecipientRef",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations"
             },
             {
               "name": "TenantBusinessSource",
@@ -1193,6 +1478,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "operationsTimelineEventFromEngagementDispatch",
+              "exportKind": "named",
+              "source": "./libs/engagementAdapters",
+              "declarationKind": "function"
+            },
+            {
               "name": "operationsTimelineEventFromWebhookDelivery",
               "exportKind": "named",
               "source": "./libs/webhookAdapters",
@@ -1214,6 +1505,12 @@
               "name": "RetryConsoleFailedWorkList",
               "exportKind": "named",
               "source": "./libs/react",
+              "declarationKind": "function"
+            },
+            {
+              "name": "retryConsoleItemFromEngagementDispatch",
+              "exportKind": "named",
+              "source": "./libs/engagementAdapters",
               "declarationKind": "function"
             },
             {
@@ -1267,6 +1564,11 @@
               "name": "DomainEventTimelineSource",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "EngagementOperationsFailureEvidence",
+              "exportKind": "named",
+              "source": "./libs/engagementAdapters"
             },
             {
               "name": "LifecycleRunTimelineExtension",
@@ -1522,6 +1824,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "AudienceCampaignOperationsPanel",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperationsConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "BillingEntitlementAdminPanel",
               "exportKind": "named",
               "source": "./libs/components",
@@ -1690,9 +1998,27 @@
               "declarationKind": "function"
             },
             {
+              "name": "Customer360CommunicationPanel",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperationsConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "DeliveryOperationsPanel",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperationsConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "diffLifecycleRuleDescriptors",
               "exportKind": "named",
               "source": "./libs/lifecycleAutomation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "EngagementOperationsConsole",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperationsConsole",
               "declarationKind": "function"
             },
             {
@@ -1753,6 +2079,12 @@
               "name": "loadLifecycleAutomationConsole",
               "exportKind": "named",
               "source": "./libs/lifecycleAutomation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "MessageOperationsPanel",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperationsConsole",
               "declarationKind": "function"
             },
             {
@@ -2333,6 +2665,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "AudienceCampaignOperationsPanelProps",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperationsConsole"
+            },
+            {
               "name": "BillingEntitlementAdminPanelProps",
               "exportKind": "named",
               "source": "./libs/types"
@@ -2366,6 +2703,26 @@
               "name": "CreditOperationsConsoleProps",
               "exportKind": "named",
               "source": "./libs/CreditOperationsConsole"
+            },
+            {
+              "name": "Customer360CommunicationPanelProps",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperationsConsole"
+            },
+            {
+              "name": "DeliveryOperationsPanelProps",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperationsConsole"
+            },
+            {
+              "name": "EngagementConsoleSection",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperationsConsole"
+            },
+            {
+              "name": "EngagementOperationsConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperationsConsole"
             },
             {
               "name": "LifecycleAutomationConsoleProps",
@@ -2491,6 +2848,11 @@
               "name": "LoadLifecycleAutomationOptions",
               "exportKind": "named",
               "source": "./libs/lifecycleAutomation"
+            },
+            {
+              "name": "MessageOperationsPanelProps",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperationsConsole"
             },
             {
               "name": "NonEmptyArray",
