@@ -5,7 +5,9 @@ import {
   RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY,
 } from "../libs/middleware/rateLimitMiddleware";
 import { RateLimitExceededProblem } from "../libs/problems/RateLimitExceededProblem";
-import type { RateLimiter } from "../libs/RateLimiter";
+import { RateLimitKeyBuilder } from "../libs/RateLimitKeyBuilder";
+import { RateLimiter } from "../libs/RateLimiter";
+import type { RateLimitStore } from "../libs/RateLimitStore";
 import type { RateLimitPolicy, RateLimitResult } from "../libs/types";
 
 describe("createRateLimitMiddleware", () => {
@@ -78,6 +80,20 @@ describe("createRateLimitMiddleware", () => {
     const middleware = createRateLimitMiddleware({
       rateLimiter: mockRateLimiter,
       policy,
+    });
+    const ctx = createContext();
+    const next = vi.fn();
+
+    await expect(middleware(ctx, next)).rejects.toThrow(RateLimitExceededProblem);
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("should throw RateLimitExceededProblem when limit exceeded even if failOpen is true", async () => {
+    vi.mocked(mockRateLimiter.checkWithKey).mockResolvedValue(failedResult);
+    const middleware = createRateLimitMiddleware({
+      rateLimiter: mockRateLimiter,
+      policy,
+      failOpen: true,
     });
     const ctx = createContext();
     const next = vi.fn();
@@ -283,5 +299,53 @@ describe("createRateLimitMiddleware", () => {
       policy,
       { failOpen: false },
     );
+  });
+
+  it("should allow request in degraded mode when store fails and failOpen is true", async () => {
+    const failingStore = {
+      check: vi.fn().mockRejectedValue(new Error("Redis connection failed")),
+      refund: vi.fn(),
+      getStats: vi.fn(),
+      pruneExpired: vi.fn(),
+    } as unknown as RateLimitStore;
+    const realRateLimiter = new RateLimiter(failingStore, new RateLimitKeyBuilder(["ip"]));
+    const middleware = createRateLimitMiddleware({
+      rateLimiter: realRateLimiter,
+      policy,
+      failOpen: true,
+    });
+    const ctx = createContext();
+    const next = vi.fn().mockResolvedValue(undefined);
+
+    await middleware(ctx, next);
+
+    expect(next).toHaveBeenCalled();
+    const result = ctx.get<RateLimitResult>("rateLimitResult");
+    expect(result?.success).toBe(true);
+    expect(result?.degraded).toBe(true);
+    expect(ctx.get<Record<string, string>>("rateLimitHeaders")?.["X-RateLimit-Limit"]).toBe("100");
+  });
+
+  it("should throw RateLimitExceededProblem when store fails and failOpen is false", async () => {
+    const failingStore = {
+      check: vi.fn().mockRejectedValue(new Error("Redis connection failed")),
+      refund: vi.fn(),
+      getStats: vi.fn(),
+      pruneExpired: vi.fn(),
+    } as unknown as RateLimitStore;
+    const realRateLimiter = new RateLimiter(failingStore, new RateLimitKeyBuilder(["ip"]));
+    const middleware = createRateLimitMiddleware({
+      rateLimiter: realRateLimiter,
+      policy,
+      failOpen: false,
+    });
+    const ctx = createContext();
+    const next = vi.fn();
+
+    await expect(middleware(ctx, next)).rejects.toThrow(RateLimitExceededProblem);
+    expect(next).not.toHaveBeenCalled();
+    const result = ctx.get<RateLimitResult>("rateLimitResult");
+    expect(result?.success).toBe(false);
+    expect(result?.degraded).toBe(true);
   });
 });
