@@ -3095,6 +3095,12 @@
       "owner": "@croco/protocols-rest"
     },
     {
+      "path": "packages/protocols-rest/src/tests/Lifecycle.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/protocols-rest"
+    },
+    {
       "path": "packages/protocols-rest/src/tests/LoggingInterceptor.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

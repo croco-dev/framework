@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import { GRAPHQL_GUARDS_KEY, GRAPHQL_INTERCEPTORS_KEY } from "../constants";
-import { defineGraphQLMethodMetadata } from "../metadata/GraphQLMetadata";
+import { appendGraphQLMethodOwnMetadata } from "../metadata/GraphQLMetadata";
 import type { ClassType, GraphQLGuard, GraphQLInterceptor } from "../types";
 
 /**
@@ -14,7 +14,7 @@ export function UseGuards(...guards: ClassType<GraphQLGuard>[]): MethodDecorator
     propertyKey: string | symbol,
     descriptor: PropertyDescriptor,
   ): PropertyDescriptor => {
-    defineGraphQLMethodMetadata(GRAPHQL_GUARDS_KEY, target, propertyKey, guards);
+    appendGraphQLMethodOwnMetadata(GRAPHQL_GUARDS_KEY, target, propertyKey, guards);
     return descriptor;
   };
 }
@@ -30,7 +30,7 @@ export function UseInterceptors(...interceptors: ClassType<GraphQLInterceptor>[]
     propertyKey: string | symbol,
     descriptor: PropertyDescriptor,
   ): PropertyDescriptor => {
-    defineGraphQLMethodMetadata(GRAPHQL_INTERCEPTORS_KEY, target, propertyKey, interceptors);
+    appendGraphQLMethodOwnMetadata(GRAPHQL_INTERCEPTORS_KEY, target, propertyKey, interceptors);
     return descriptor;
   };
 }
