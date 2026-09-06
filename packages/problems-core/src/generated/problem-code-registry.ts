@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 766,
+  problemCount: 767,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -5418,7 +5418,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 80,
+          line: 100,
           column: 1,
           kind: "problem-class",
         },
@@ -5449,7 +5449,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 93,
+          line: 113,
           column: 1,
           kind: "problem-class",
         },
@@ -17895,6 +17895,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "saas-demo/application-bootstrap-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#saas-demo-application-bootstrap-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
+          line: 33,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "saas-demo/application-cleanup-failed",
       category: "InternalServerError",
       status: 500,
@@ -17952,7 +17984,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 147,
+          line: 167,
           column: 1,
           kind: "problem-class",
         },
@@ -17982,7 +18014,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 54,
+          line: 74,
           column: 1,
           kind: "problem-class",
         },
@@ -18012,7 +18044,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 102,
+          line: 122,
           column: 1,
           kind: "problem-class",
         },
@@ -18042,7 +18074,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 67,
+          line: 87,
           column: 1,
           kind: "problem-class",
         },
@@ -18073,7 +18105,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 111,
+          line: 131,
           column: 1,
           kind: "problem-class",
         },
@@ -18105,7 +18137,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 33,
+          line: 53,
           column: 1,
           kind: "problem-class",
         },
@@ -18137,7 +18169,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 138,
+          line: 158,
           column: 1,
           kind: "problem-class",
         },
@@ -18169,7 +18201,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 156,
+          line: 176,
           column: 1,
           kind: "problem-class",
         },
@@ -18199,7 +18231,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 120,
+          line: 140,
           column: 1,
           kind: "problem-class",
         },
@@ -18230,7 +18262,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
-          line: 129,
+          line: 149,
           column: 1,
           kind: "problem-class",
         },
