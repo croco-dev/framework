@@ -79,6 +79,34 @@ const CASE_TEMPLATE_ROOTS = {
   "rest-spa-contracts": ["spa-be-split"],
 } as const satisfies Readonly<Record<string, readonly string[]>>;
 
+const CASE_TEST_PATH_PREFIXES = {
+  "blank-basic": [],
+  "goal-saas-api": ["saas/apps/"],
+  "goal-spa-backend-split": ["spa-be-split/apps/"],
+  "goal-worker": [],
+  "goal-internal-tool": ["spa-be-split/apps/", "admin-console/apps/"],
+  "graphql-standalone-api": [],
+  "graphql-lambda-api": ["base-ddd/libs/shared/utils-env/"],
+  "trpc-nextjs-vercel-fullstack": [],
+  "graphql-nextjs-opennext": [],
+  "trpc-nextjs-docker-frontend": [],
+  "graphql-vite-spa-docker": [],
+  "graphql-vite-spa-astryx": [],
+  "meta-vite-web": ["base-ddd/libs/shared/utils-env/"],
+  "meta-vite-fullstack-workers": ["base-ddd/libs/shared/utils-env/"],
+  "production-app-starter": ["spa-be-split/apps/", "spa-be-split/tests/journeys/"],
+  "admin-console-starter": [
+    "spa-be-split/apps/",
+    "admin-console/apps/",
+    "admin-console/tests/journeys/plan-release.spec.ts",
+  ],
+  "saas-golden-path": ["saas/apps/"],
+  "saas-cloudflare-profile": ["saas/apps/"],
+  "saas-lambda-profile": ["saas/apps/"],
+  "ai-saas-golden-path": ["saas/apps/", "ai-saas/apps/"],
+  "rest-spa-contracts": [],
+} as const satisfies Readonly<Record<keyof typeof CASE_TEMPLATE_ROOTS, readonly string[]>>;
+
 const CASE_SAAS_PROVIDER_PROFILES = {
   "goal-saas-api": "saas-node-postgres",
   "saas-golden-path": "saas-node-postgres",
@@ -203,16 +231,14 @@ export function selectGeneratedTestPathsForSmokeCases(
   caseNames: readonly string[],
   generatedTestPaths: readonly string[],
 ): readonly string[] {
-  const templateRoots = new Set(
-    caseNames.flatMap(
-      (caseName) => CASE_TEMPLATE_ROOTS[caseName as keyof typeof CASE_TEMPLATE_ROOTS] ?? [],
-    ),
-  );
+  const prefixes = caseNames.flatMap((caseName) => {
+    const selected = CASE_TEST_PATH_PREFIXES[caseName as keyof typeof CASE_TEST_PATH_PREFIXES];
+    if (!selected) throw new Error(`Unknown generated smoke case: ${caseName}`);
+    return selected.map((prefix) => `packages/create-croco-app/templates/${prefix}`);
+  });
   return generatedTestPaths
     .filter((path) =>
-      [...templateRoots].some((templateRoot) =>
-        path.startsWith(`packages/create-croco-app/templates/${templateRoot}/`),
-      ),
+      prefixes.some((prefix) => (prefix.endsWith("/") ? path.startsWith(prefix) : path === prefix)),
     )
     .sort();
 }

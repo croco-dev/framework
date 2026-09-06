@@ -130,7 +130,10 @@ function invalidPublishedLaneRunner(rootDir: string): CommandRunner {
   };
 }
 
-function generatedArtifactsRunner(rootDir: string): CommandRunner {
+function generatedArtifactsRunner(
+  rootDir: string,
+  includeSourcePath: (path: string) => boolean = () => true,
+): CommandRunner {
   return async (command, context) => {
     if (command.command[0] === "node" && command.command[1] === "-e") {
       return defaultCommandRunner(command, context);
@@ -150,7 +153,10 @@ function generatedArtifactsRunner(rootDir: string): CommandRunner {
       writeFileSync(join(rootDir, "test-inventory.json"), `${JSON.stringify(inventory)}\n`);
       const materializedRoot = join(rootDir, "ci-reports", "generated-apps", "materialized-tests");
       const materializations = inventory.tests
-        .filter((entry) => entry.lane === "generated-app" && entry.generated)
+        .filter(
+          (entry) =>
+            entry.lane === "generated-app" && entry.generated && includeSourcePath(entry.path),
+        )
         .map((entry) => {
           const generated = entry.generated;
           if (!generated) {
@@ -581,6 +587,47 @@ describe("cacheable producer lane evidence", () => {
     });
 
     expect(hit.cacheHit).toBe(true);
+  });
+
+  it("emits seven-case producer facts for 12 executed paths and rejects a missing selected test", async () => {
+    useCurrentRunEnvironment();
+    const rootDir = mkdtempSync(join(tmpdir(), "croco-cacheable-generated-seven-cases-"));
+    const selectedPath = (path: string) =>
+      !path.includes("/base-ddd/") && !path.includes("/spa-be-split/tests/journeys/");
+    const options = {
+      identity: identity("spine"),
+      lane: "generated-apps" as const,
+      profile: "spine" as const,
+      rootDir,
+      base: "a".repeat(40),
+      head: COMMIT_SHA,
+      changedFiles: ["packages/metering-core/src/index.ts"],
+    };
+    const result = await runCacheableLane({
+      ...options,
+      runner: generatedArtifactsRunner(rootDir, selectedPath),
+    });
+    expect(result.failed).toBe(false);
+    const facts = JSON.parse(
+      readFileSync(join(result.outputDir, "producer-facts.json"), "utf8"),
+    ) as { requiredSourcePaths: string[]; executedSourcePaths: string[] };
+    expect(facts.executedSourcePaths).toHaveLength(12);
+    expect(facts.requiredSourcePaths).toEqual(facts.executedSourcePaths);
+    expect(
+      facts.requiredSourcePaths.some((path) => path.includes("/spa-be-split/tests/journeys/")),
+    ).toBe(false);
+
+    const missingRoot = mkdtempSync(join(tmpdir(), "croco-cacheable-generated-missing-selected-"));
+    await expect(
+      runCacheableLane({
+        ...options,
+        rootDir: missingRoot,
+        runner: generatedArtifactsRunner(
+          missingRoot,
+          (path) => selectedPath(path) && !path.endsWith("/AdminConsole.spec.ts"),
+        ),
+      }),
+    ).rejects.toMatchObject({ code: "INVALID_GENERATED_SYNTHESIS_FACTS" });
   });
 
   it("restores a generated-app cache when an optional artifact was not produced", async () => {
