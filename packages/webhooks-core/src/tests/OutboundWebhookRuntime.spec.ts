@@ -1023,6 +1023,9 @@ describe("outbound webhook signing and URL policy", () => {
     "https://[fe80::1]/hook",
     "https://[fc00::1]/hook",
     "https://[2001:db8::1]/hook",
+    "https://[100:0:0:1::1]/hook",
+    "https://[3fff::1]/hook",
+    "https://[5f00::1]/hook",
   ])("rejects SSRF-oriented endpoint URL %s", async (url) => {
     await expect(defaultOutboundWebhookUrlPolicy.validate(url)).rejects.toBeInstanceOf(
       InvalidOutboundWebhookUrlProblem,
@@ -1069,6 +1072,9 @@ describe("outbound webhook signing and URL policy", () => {
     "fc00::1",
     "2001:db8::1",
     "ff02::1",
+    "100:0:0:1::1",
+    "3fff::1",
+    "5f00::1",
   ])(
     "rejects uncompressed and alternative IPv6 representations in isBlockedIpAddress: %s",
     (ip) => {

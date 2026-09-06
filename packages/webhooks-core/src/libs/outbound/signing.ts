@@ -199,8 +199,11 @@ function createBlockedIpRanges(): BlockList {
   ranges.addSubnet("::", 96, "ipv6");
   ranges.addSubnet("64:ff9b:1::", 48, "ipv6");
   ranges.addSubnet("100::", 64, "ipv6");
+  ranges.addSubnet("100:0:0:1::", 64, "ipv6");
   ranges.addSubnet("2001:2::", 48, "ipv6");
   ranges.addSubnet("2001:db8::", 32, "ipv6");
+  ranges.addSubnet("3fff::", 20, "ipv6");
+  ranges.addSubnet("5f00::", 16, "ipv6");
   ranges.addSubnet("fc00::", 7, "ipv6");
   ranges.addSubnet("fe80::", 10, "ipv6");
   ranges.addSubnet("ff00::", 8, "ipv6");
