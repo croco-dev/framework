@@ -848,12 +848,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     record: TransactionalInboxRecord,
     input: InboxCompletionInput,
   ): void {
-    if (
-      record.status === "processing" &&
-      record.attempts === input.expectedAttempts &&
-      record.lockedUntil !== undefined &&
-      record.lockedUntil.getTime() > input.now.getTime()
-    ) {
+    if (record.status === "processing" && record.attempts === input.expectedAttempts) {
       return;
     }
 

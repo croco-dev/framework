@@ -1178,6 +1178,39 @@ describe("TransactionalInboxConsumer", () => {
     expect(failedSpy).not.toHaveBeenCalled();
   });
 
+  it("completes inbox processing when handler execution exceeds visibility timeout without a concurrent reclaim and deduplicates subsequent delivery", async () => {
+    const fixture = createOutboxFixture();
+    const message = await appendMessage(fixture);
+    const consumer = new TransactionalInboxConsumer({
+      store: fixture.store,
+      consumerId: "timeout-projection",
+      visibilityTimeoutMs: 1_000,
+      now: fixture.clock.now,
+    });
+
+    let handlerCalls = 0;
+    const result = await consumer.handle(message, async () => {
+      handlerCalls++;
+      fixture.clock.advance(2_000);
+    });
+
+    expect(result).toMatchObject({
+      status: "processed",
+      record: { attempts: 1, status: "processed" },
+    });
+    expect(handlerCalls).toBe(1);
+
+    const redelivery = await consumer.handle(message, async () => {
+      handlerCalls++;
+    });
+
+    expect(redelivery).toMatchObject({
+      status: "duplicate",
+      record: { status: "processed", attempts: 1 },
+    });
+    expect(handlerCalls).toBe(1);
+  });
+
   it("recovers handler success after inbox completion persistence fails", async () => {
     const fixture = createOutboxFixture();
     const message = await appendMessage(fixture);
@@ -1529,7 +1562,7 @@ describe("TransactionalEventStore conformance", () => {
     expect(processed).not.toHaveProperty("lockedUntil");
   });
 
-  it("rejects completion after an in-memory inbox lease expires before reclaim", async () => {
+  it("completes in-memory inbox processing when lease expires without a concurrent reclaim", async () => {
     const fixture = createOutboxFixture();
     const message = await appendMessage(fixture);
     const started = await fixture.store.startInboxProcessing({
@@ -1541,17 +1574,57 @@ describe("TransactionalEventStore conformance", () => {
       visibilityTimeoutMs: 1_000,
     });
 
-    await expect(
-      fixture.store.markInboxProcessed({
-        consumerId: "ledger-projection",
-        inboxKey: message.idempotencyKey,
-        expectedAttempts: started.record.attempts,
-        now: fixture.clock.advance(1_000),
-      }),
-    ).rejects.toBeInstanceOf(InboxClaimConflictProblem);
+    const processed = await fixture.store.markInboxProcessed({
+      consumerId: "ledger-projection",
+      inboxKey: message.idempotencyKey,
+      expectedAttempts: started.record.attempts,
+      now: fixture.clock.advance(1_000),
+    });
+    expect(processed).toMatchObject({ status: "processed", attempts: 1 });
+    expect(processed).not.toHaveProperty("lockedUntil");
     await expect(
       fixture.store.findInboxRecord("ledger-projection", message.idempotencyKey),
-    ).resolves.toMatchObject({ status: "processing", attempts: 1 });
+    ).resolves.toMatchObject({ status: "processed", attempts: 1 });
+
+    const redelivered = await fixture.store.startInboxProcessing({
+      consumerId: "ledger-projection",
+      messageId: message.id,
+      inboxKey: message.idempotencyKey,
+      eventType: message.eventType,
+      now: fixture.clock.advance(1_000),
+      visibilityTimeoutMs: 1_000,
+    });
+    expect(redelivered).toMatchObject({
+      status: "duplicate",
+      record: { status: "processed", attempts: 1 },
+    });
+  });
+
+  it("completes in-memory inbox failure when lease expires without a concurrent reclaim", async () => {
+    const fixture = createOutboxFixture();
+    const message = await appendMessage(fixture);
+    const started = await fixture.store.startInboxProcessing({
+      consumerId: "ledger-projection",
+      messageId: message.id,
+      inboxKey: message.idempotencyKey,
+      eventType: message.eventType,
+      now: fixture.clock.now(),
+      visibilityTimeoutMs: 1_000,
+    });
+
+    const failed = await fixture.store.markInboxFailed({
+      consumerId: "ledger-projection",
+      inboxKey: message.idempotencyKey,
+      expectedAttempts: started.record.attempts,
+      now: fixture.clock.advance(1_000),
+      error: { name: "Error", message: "timeout error" },
+      reason: "timeout error",
+    });
+    expect(failed).toMatchObject({ status: "failed", attempts: 1 });
+    expect(failed).not.toHaveProperty("lockedUntil");
+    await expect(
+      fixture.store.findInboxRecord("ledger-projection", message.idempotencyKey),
+    ).resolves.toMatchObject({ status: "failed", attempts: 1 });
   });
 
   it("rejects stale inbox success after a newer retry without mutating the active claim", async () => {
@@ -2057,7 +2130,7 @@ describe("DrizzleTransactionalEventStore", () => {
     }
     const updateParameters = proxy.queries
       .filter(({ sql }) => sql.startsWith("update"))
-      .map(({ params }) => params.slice(-5, -3));
+      .map(({ params }) => params.slice(-4, -2));
     expect(updateParameters).toEqual([
       [firstIdentity.consumerId, firstIdentity.inboxKey],
       [secondIdentity.consumerId, secondIdentity.inboxKey],
@@ -2271,7 +2344,75 @@ describe("DrizzleTransactionalEventStore", () => {
       code: "events-tx/inbox-claim-conflict",
       extensions: { expectedAttempts: 1, actualAttempts: 2, actualStatus: "processing" },
     });
-    expect(proxy.queries[1].sql).toContain('"croco_inbox_records"."locked_until" >');
+    expect(proxy.queries[1].sql).toContain('"croco_inbox_records"."attempts" =');
+    expect(proxy.queries[1].sql).not.toContain('"croco_inbox_records"."locked_until"');
+  });
+
+  it("completes Drizzle inbox processing when execution exceeds visibility timeout without reclaim", async () => {
+    const processing = inboxRowValues({
+      attempts: 1,
+      status: "processing",
+      lockedUntil: new Date("2026-01-01T00:00:01.000Z"),
+    });
+    const processed = inboxRowValues({
+      attempts: 1,
+      status: "processed",
+      processedAt: new Date("2026-01-01T00:00:02.000Z"),
+      lockedUntil: null,
+    });
+    const proxy = createInboxProxyDb([[processing], [processed]]);
+    const store = new DrizzleTransactionalEventStore({ db: proxy.db });
+
+    const result = await store.markInboxProcessed({
+      consumerId: "ledger-projection",
+      inboxKey: "credit-acct-1",
+      expectedAttempts: 1,
+      now: new Date("2026-01-01T00:00:02.000Z"),
+    });
+
+    expect(result).toMatchObject({
+      status: "processed",
+      attempts: 1,
+      processedAt: new Date("2026-01-01T00:00:02.000Z"),
+    });
+    const whereSql = proxy.queries[1].sql.slice(proxy.queries[1].sql.indexOf(" where "));
+    expect(whereSql).not.toContain('"croco_inbox_records"."locked_until"');
+  });
+
+  it("completes Drizzle inbox failure when execution exceeds visibility timeout without reclaim", async () => {
+    const processing = inboxRowValues({
+      attempts: 1,
+      status: "processing",
+      lockedUntil: new Date("2026-01-01T00:00:01.000Z"),
+    });
+    const failed = inboxRowValues({
+      attempts: 1,
+      status: "failed",
+      failedAt: new Date("2026-01-01T00:00:02.000Z"),
+      failureReason: "timeout error",
+      lockedUntil: null,
+    });
+    const proxy = createInboxProxyDb([[processing], [failed]]);
+    const store = new DrizzleTransactionalEventStore({ db: proxy.db });
+
+    const result = await store.markInboxFailed({
+      consumerId: "ledger-projection",
+      inboxKey: "credit-acct-1",
+      expectedAttempts: 1,
+      now: new Date("2026-01-01T00:00:02.000Z"),
+      error: { name: "Error", message: "timeout error" },
+      reason: "timeout error",
+    });
+
+    expect(result).toMatchObject({
+      status: "failed",
+      attempts: 1,
+      failedAt: new Date("2026-01-01T00:00:02.000Z"),
+    });
+    expect(result).not.toHaveProperty("lockedUntil");
+    const whereSql = proxy.queries[1].sql.slice(proxy.queries[1].sql.indexOf(" where "));
+    expect(whereSql).not.toContain('"croco_inbox_records"."locked_until"');
+    expect(whereSql.match(/ and /g)).toHaveLength(3);
   });
 
   it("returns null when a guarded outbox completion updates no rows", async () => {
@@ -2382,7 +2523,7 @@ describe("DrizzleTransactionalEventStore", () => {
     expect(claimSql).toContain('"croco_outbox_messages"."attempts"');
   });
 
-  it("emits lease-bound Drizzle CAS SQL for inbox success and failure", async () => {
+  it("emits attempt-fenced Drizzle CAS SQL for inbox success and failure", async () => {
     const processing = inboxRowValues({ attempts: 2, status: "processing" });
     const processed = inboxRowValues({
       attempts: 2,
@@ -2425,15 +2566,14 @@ describe("DrizzleTransactionalEventStore", () => {
       expect(whereSql).toContain('"croco_inbox_records"."inbox_key"');
       expect(whereSql).toContain('"croco_inbox_records"."status"');
       expect(whereSql).toContain('"croco_inbox_records"."attempts"');
-      expect(whereSql).toContain('"croco_inbox_records"."locked_until"');
-      expect(whereSql.match(/ and /g)).toHaveLength(4);
+      expect(whereSql).not.toContain('"croco_inbox_records"."locked_until"');
+      expect(whereSql.match(/ and /g)).toHaveLength(3);
       expect(whereSql).not.toContain(" or ");
-      expect(query.params.slice(-5)).toEqual([
+      expect(query.params.slice(-4)).toEqual([
         "ledger-projection",
         "credit-acct-1",
         "processing",
         2,
-        "2026-01-01T00:00:01.000Z",
       ]);
     }
   });
@@ -2879,13 +3019,12 @@ function createStatefulInboxProxyDb(overrides: Partial<Record<string, unknown>> 
       return { rows: [] };
     }
 
-    const [consumerId, inboxKey, expectedStatus, expectedAttempts, claimNow] = params.slice(-5);
+    const [consumerId, inboxKey, expectedStatus, expectedAttempts] = params.slice(-4);
     const ownsClaim =
       record.consumerId === consumerId &&
       record.inboxKey === inboxKey &&
       record.status === expectedStatus &&
-      record.attempts === expectedAttempts &&
-      new Date(String(record.lockedUntil)).getTime() > new Date(String(claimNow)).getTime();
+      record.attempts === expectedAttempts;
     if (!ownsClaim) {
       return { rows: [] };
     }

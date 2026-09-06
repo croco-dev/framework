@@ -1,6 +1,6 @@
 import type { EventTraceContext } from "@croco/events-core";
 import type { TxManager } from "@croco/tx-core";
-import { and, asc, eq, gt, inArray, lte, or, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, lte, or, type SQL } from "drizzle-orm";
 import {
   type AppendOutboxMessageInput,
   createTransactionalEventDiagnostic,
@@ -870,7 +870,6 @@ export class DrizzleTransactionalEventStore<
       eq(this.inbox.inboxKey, input.inboxKey),
       eq(this.inbox.status, "processing"),
       eq(this.inbox.attempts, input.expectedAttempts),
-      gt(this.inbox.lockedUntil, input.now),
     );
   }
 
