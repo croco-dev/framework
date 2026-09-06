@@ -160,9 +160,10 @@ DuplicateRecordProblem 동일한 idempotency key가 이미 처리 중이거나 �
 
 ### checkAndMark()
 
-> **checkAndMark**(`tenantId`, `meterId`, `idempotencyKey`): `Promise`\<`boolean`\>
+> **checkAndMark**(`tenantId`, `meterId`, `idempotencyKey`): `Promise`\<[`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/) \| `null`\>
 
-중복 체크 및 키 등록
+짧은 처리 lease를 획득합니다. 내구성 있는 커밋 후 반환된 claim으로 completeProcessing을 호출해야 합니다.
+작업이 확인된 실패로 끝나면 반환된 claim으로 abortProcessing을 호출해야 합니다.
 
 #### Parameters
 
@@ -180,17 +181,17 @@ DuplicateRecordProblem 동일한 idempotency key가 이미 처리 중이거나 �
 
 #### Returns
 
-`Promise`\<`boolean`\>
+`Promise`\<[`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/) \| `null`\>
 
-true: 새 요청 (처리 가능), false: 중복 (이미 처리됨)
+새 lease의 ownership claim, 이미 처리 중이거나 완료된 key이면 null
 
 ---
 
 ### checkAndMarkOrThrow()
 
-> **checkAndMarkOrThrow**(`tenantId`, `meterId`, `idempotencyKey`): `Promise`\<`void`\>
+> **checkAndMarkOrThrow**(`tenantId`, `meterId`, `idempotencyKey`): `Promise`\<[`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/)\>
 
-중복 체크 - Problem throw 버전
+처리 lease를 획득하고 완료 또는 중단에 사용할 ownership claim을 반환합니다.
 
 #### Parameters
 
@@ -208,11 +209,11 @@ true: 새 요청 (처리 가능), false: 중복 (이미 처리됨)
 
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<[`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/)\>
 
 #### Throws
 
-DuplicateRecordProblem 중복 시
+DuplicateRecordProblem 동일한 key가 처리 중이거나 완료된 경우
 
 ---
 

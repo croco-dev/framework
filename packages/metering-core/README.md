@@ -184,6 +184,23 @@ class ApiController {
 - `RedisUsageStorage.resetBillingCycle(tenantId)`는 현재 billing cycle의 tenant usage key를 `KEYS` 대신 bounded `SCAN` batch로 삭제합니다.
 - tenant-wide reset은 이미 삭제된 key를 다시 삭제하지 않는 idempotent 작업이며, batch 사이에 새로 기록된 현재 cycle usage는 다음 reset에서 정리될 수 있습니다.
 
+### 직접 사용하는 idempotency lease
+
+`checkAndMark()`는 이제 `boolean` 대신 `IdempotencyClaim | null`을 반환합니다. `null`은 같은 key가
+처리 중이거나 완료되었다는 뜻입니다. `checkAndMarkOrThrow()`도 완료·중단에 사용할 claim을 반환합니다.
+기존 호출자는 반환값을 보관하고 비즈니스 작업이 커밋된 뒤 `completeProcessing()`에 전달해야 합니다.
+`beginProcessing()`과 `beginProcessingOrThrow()`도 같은 2단계 생명주기를 사용합니다.
+
+획득 시에는 `IN_PROGRESS:<claim>`만 기록하며 기본 리스는 30초입니다. 생성자의 세 번째 인자로 리스를
+밀리초 단위로 설정할 수 있고 Redis TTL은 초 단위로 올림합니다. 작업이 확실히 실패한 경우에는 같은 claim으로
+`abortProcessing()`을 호출해 즉시 재시도할 수 있습니다. 프로세스가 중단되면 리스 만료 후 새 워커가 재시도합니다.
+현재 claim으로 완료한 경우에만 완료 시점부터 기본 24시간 동안 `COMPLETED`를 보관하며, 이 기간은 생성자의
+두 번째 인자로 설정합니다. 만료되거나 다른 워커가 재획득한 claim의 완료·중단 호출은 상태를 변경하지 않습니다.
+
+이 리스는 비즈니스 저장소의 커밋과 원자적이지 않습니다. 커밋 직후 완료 마킹 전에 중단되거나 작업이 리스보다
+길어지면 재실행될 수 있으므로, 비즈니스 작업도 같은 key로 중복 커밋을 방지해야 합니다. 예상 작업 시간에 맞춰
+리스 길이를 설정하세요. 이미 저장된 구버전 완료 마커는 성공 여부를 판별할 근거가 없어 기존 TTL까지 유지됩니다.
+
 ### Redis key 마이그레이션
 
 `IdempotencyManager`와 `RedisUsageStorage`는 tenant, meter, idempotency segment의 안전한 ASCII 문자는
