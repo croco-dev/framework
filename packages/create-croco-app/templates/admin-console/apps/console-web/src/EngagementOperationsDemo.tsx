@@ -1,24 +1,24 @@
-import {
-  ENGAGEMENT_PERMISSIONS,
-  type EngagementAudienceEstimateRequest,
-  type EngagementAudienceEstimateResult,
-  type EngagementCampaignCancelRequest,
-  type EngagementCampaignRunRequest,
-  type EngagementCampaignSnapshotRequest,
-  type EngagementCreateSuppressionRequest,
-  type EngagementMessagePreviewRequest,
-  type EngagementMessagePreviewResult,
-  type EngagementOperationsReadyState,
-  type EngagementReactivateEndpointRequest,
-  type EngagementRemoveSuppressionRequest,
-  type EngagementRetryDispatchRequest,
-  type EngagementTestSendRequest,
-  type EngagementTestSendResult,
+import { ENGAGEMENT_PERMISSIONS } from "@croco/admin-core";
+import type {
+  EngagementAudienceEstimateRequest,
+  EngagementAudienceEstimateResult,
+  EngagementCampaignCancelRequest,
+  EngagementCampaignRunRequest,
+  EngagementCampaignSnapshotRequest,
+  EngagementCreateSuppressionRequest,
+  EngagementMessagePreviewRequest,
+  EngagementMessagePreviewResult,
+  EngagementOperationsReadyState,
+  EngagementReactivateEndpointRequest,
+  EngagementRemoveSuppressionRequest,
+  EngagementRetryDispatchRequest,
+  EngagementTestSendRequest,
+  EngagementTestSendResult,
 } from "@croco/admin-core";
 import { EngagementOperationsConsole } from "@croco/admin-react";
 import { useState } from "react";
 
-const generatedAt = new Date("2026-08-01T10:00:00.000Z");
+const GENERATED_AT = new Date("2026-08-01T10:00:00.000Z");
 
 export function EngagementOperationsDemo({ tenantId }: { readonly tenantId: string }) {
   const [selectedRecipientId, setSelectedRecipientId] = useState("rec_operator_demo");
@@ -173,7 +173,7 @@ export function EngagementOperationsDemo({ tenantId }: { readonly tenantId: stri
             dispatchId: "disp_demo_delivered",
             eventType: "delivered",
             id: "evt_deliv_1",
-            occurredAt: generatedAt,
+            occurredAt: GENERATED_AT,
           },
         ],
         endpoints: [
@@ -183,7 +183,7 @@ export function EngagementOperationsDemo({ tenantId }: { readonly tenantId: stri
             id: "ep_email_demo",
             rawAddress: "operator@example.test",
             status: "active",
-            updatedAt: generatedAt,
+            updatedAt: GENERATED_AT,
           },
           {
             channel: "push",
@@ -192,8 +192,8 @@ export function EngagementOperationsDemo({ tenantId }: { readonly tenantId: stri
             rawAddress: "fcm_token_device_demo_super_secret_987654321",
             status: "invalidated",
             invalidationReason: "Device unregistered",
-            invalidatedAt: generatedAt,
-            updatedAt: generatedAt,
+            invalidatedAt: GENERATED_AT,
+            updatedAt: GENERATED_AT,
           },
         ],
         identitySummary: {
@@ -206,7 +206,7 @@ export function EngagementOperationsDemo({ tenantId }: { readonly tenantId: stri
             decision: "allowed",
             source: "explicit",
             topic: "product_updates",
-            updatedAt: generatedAt,
+            updatedAt: GENERATED_AT,
           },
         ],
         recipient: {
@@ -216,7 +216,7 @@ export function EngagementOperationsDemo({ tenantId }: { readonly tenantId: stri
         recentSends: [
           {
             channel: "email",
-            createdAt: generatedAt,
+            createdAt: GENERATED_AT,
             id: "disp_demo_delivered",
             messageId: "msg_welcome",
             providerAccepted: true,
@@ -224,11 +224,11 @@ export function EngagementOperationsDemo({ tenantId }: { readonly tenantId: stri
             retryable: false,
             status: "delivered",
             tenantId,
-            updatedAt: generatedAt,
+            updatedAt: GENERATED_AT,
           },
           {
             channel: "push",
-            createdAt: generatedAt,
+            createdAt: GENERATED_AT,
             failureReason: "503 Service Unavailable upstream provider",
             id: "disp_demo_failed",
             messageId: "msg_flash_alert",
@@ -237,14 +237,14 @@ export function EngagementOperationsDemo({ tenantId }: { readonly tenantId: stri
             retryable: true,
             status: "failed",
             tenantId,
-            updatedAt: generatedAt,
+            updatedAt: GENERATED_AT,
           },
         ],
         suppressions: [
           {
             active: true,
             channel: "push",
-            createdAt: generatedAt,
+            createdAt: GENERATED_AT,
             id: "sup_demo_1",
             reason: "Excessive push bounces",
             topic: "promotions",
@@ -256,13 +256,13 @@ export function EngagementOperationsDemo({ tenantId }: { readonly tenantId: stri
           dispatchId: "disp_demo_delivered",
           eventType: "delivered",
           id: "evt_deliv_1",
-          occurredAt: generatedAt,
+          occurredAt: GENERATED_AT,
         },
       ],
       dispatches: [
         {
           channel: "email",
-          createdAt: generatedAt,
+          createdAt: GENERATED_AT,
           id: "disp_demo_delivered",
           messageId: "msg_welcome",
           providerAccepted: true,
@@ -270,11 +270,11 @@ export function EngagementOperationsDemo({ tenantId }: { readonly tenantId: stri
           retryable: false,
           status: "delivered",
           tenantId,
-          updatedAt: generatedAt,
+          updatedAt: GENERATED_AT,
         },
         {
           channel: "push",
-          createdAt: generatedAt,
+          createdAt: GENERATED_AT,
           failureReason: "503 Service Unavailable upstream provider",
           id: "disp_demo_failed",
           messageId: "msg_flash_alert",
@@ -283,10 +283,10 @@ export function EngagementOperationsDemo({ tenantId }: { readonly tenantId: stri
           retryable: true,
           status: "failed",
           tenantId,
-          updatedAt: generatedAt,
+          updatedAt: GENERATED_AT,
         },
       ],
-      generatedAt,
+      generatedAt: GENERATED_AT,
       messages: [
         {
           channels: ["email", "push"],
