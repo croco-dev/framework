@@ -1027,7 +1027,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/TransactionalEvents.ts",
-      "line": 457,
+      "line": 464,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ eventType: string; eventId: string; occurredAt: string; aggregateId: string | undefined; payload: Record<string, unknown>; }' is not assignable to type 'SerializedEvent' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -1035,7 +1035,7 @@
     {
       "packageName": "@croco/events-tx",
       "file": "packages/events-tx/src/libs/TransactionalEvents.ts",
-      "line": 521,
+      "line": 528,
       "column": 11,
       "code": "TS2379",
       "message": "Argument of type '{ id: string; eventId: string; eventType: string; aggregateId: string | undefined; idempotencyKey: string; payload: Record<string, unknown>; metadata: { [x: string]: unknown; traceContext?: EventTraceContext; }; ... 4 more ...; diagnostics: TransactionalEventDiagnostic[]; }' is not assignable to parameter of type 'AppendOutboxMessageInput' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
