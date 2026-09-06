@@ -1,0 +1,63 @@
+{
+  "schemaVersion": "croco.generated-app-smoke/v2",
+  "tier": "spine-blocking",
+  "generatedAt": "2026-09-06T18:37:50.745Z",
+  "filteredRun": true,
+  "status": "passed",
+  "release": {
+    "blockingTier": "spine-blocking",
+    "status": "passed"
+  },
+  "cases": [
+    {
+      "name": "goal-saas-api",
+      "tier": "spine-blocking",
+      "status": "passed"
+    },
+    {
+      "name": "goal-spa-backend-split",
+      "tier": "spine-blocking",
+      "status": "passed"
+    },
+    {
+      "name": "goal-worker",
+      "tier": "spine-blocking",
+      "status": "passed"
+    },
+    {
+      "name": "goal-internal-tool",
+      "tier": "spine-blocking",
+      "status": "passed"
+    },
+    {
+      "name": "graphql-lambda-api",
+      "tier": "spine-blocking",
+      "status": "passed"
+    },
+    {
+      "name": "graphql-vite-spa-docker",
+      "tier": "spine-blocking",
+      "status": "passed"
+    },
+    {
+      "name": "meta-vite-fullstack-workers",
+      "tier": "spine-blocking",
+      "status": "passed"
+    },
+    {
+      "name": "production-app-starter",
+      "tier": "spine-blocking",
+      "status": "passed"
+    },
+    {
+      "name": "saas-golden-path",
+      "tier": "spine-blocking",
+      "status": "passed"
+    },
+    {
+      "name": "rest-spa-contracts",
+      "tier": "spine-blocking",
+      "status": "passed"
+    }
+  ]
+}

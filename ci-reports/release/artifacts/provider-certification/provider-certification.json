@@ -1,0 +1,3476 @@
+{
+  "generatedAt": "2026-09-06T18:37:34.731Z",
+  "rootDir": "/home/runner/work/framework/framework",
+  "catalogErrors": [],
+  "claimViolations": [],
+  "rows": [
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/access-drizzle",
+      "relativeDir": "packages/access-drizzle",
+      "group": "Provider",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/admin-react",
+      "relativeDir": "packages/admin-react",
+      "group": "Presentation",
+      "maturity": "alpha",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/analytics-posthog",
+      "relativeDir": "packages/analytics-posthog",
+      "group": "Integration",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/audit-drizzle",
+      "relativeDir": "packages/audit-drizzle",
+      "group": "Provider",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/auth-better-auth",
+      "relativeDir": "packages/auth-better-auth",
+      "group": "Provider",
+      "maturity": "alpha",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "candidate-optional",
+      "packageName": "@croco/auth-clerk",
+      "relativeDir": "packages/auth-clerk",
+      "group": "Provider",
+      "maturity": "alpha",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "uncertified",
+      "runtimes": [
+        "node",
+        "lambda"
+      ],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "pass",
+          "evidence": "certification.records.auth-clerk exists",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "pass",
+          "evidence": "uncertified",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "pass",
+          "evidence": "node, lambda",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "complete evidence is required only for certified or production-ready extension packages",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "pass",
+          "evidence": "pnpm --filter @croco/auth-clerk test -> packages/auth-clerk/src/tests/ProviderNoCredentialConformance.spec.ts",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "complete evidence is required only for certified or production-ready extension packages",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "complete evidence is required only for certified or production-ready extension packages",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "liveSmoke evidence is required only for candidate, certified, or certified-required extension packages",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "pass",
+          "evidence": "non-blocking before production/certified: Recorded real Clerk liveSmoke evidence is required before certified state.",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/auth-drizzle",
+      "relativeDir": "packages/auth-drizzle",
+      "group": "Provider",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/batch-qstash",
+      "relativeDir": "packages/batch-qstash",
+      "group": "Provider",
+      "maturity": "alpha",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "candidate-optional",
+      "packageName": "@croco/billing-polar",
+      "relativeDir": "packages/billing-polar",
+      "group": "Provider",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "uncertified",
+      "runtimes": [
+        "node",
+        "lambda"
+      ],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "pass",
+          "evidence": "certification.records.billing-polar exists",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "pass",
+          "evidence": "uncertified",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "pass",
+          "evidence": "node, lambda",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "complete evidence is required only for certified or production-ready extension packages",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "pass",
+          "evidence": "pnpm --filter @croco/billing-polar test -> packages/billing-polar/src/tests/ProviderNoCredentialConformance.spec.ts",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "complete evidence is required only for certified or production-ready extension packages",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "complete evidence is required only for certified or production-ready extension packages",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "liveSmoke evidence is required only for candidate, certified, or certified-required extension packages",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "pass",
+          "evidence": "non-blocking before production/certified: Recorded real Polar liveSmoke evidence is required before certified state., Polar does not expose the @croco/billing-core licensed-quantity capability.",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/credits-drizzle",
+      "relativeDir": "packages/credits-drizzle",
+      "group": "Provider",
+      "maturity": "alpha",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/customer-health-drizzle",
+      "relativeDir": "packages/customer-health-drizzle",
+      "group": "Provider",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/engagement-drizzle",
+      "relativeDir": "packages/engagement-drizzle",
+      "group": "Provider",
+      "maturity": "alpha",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/entitlements-drizzle",
+      "relativeDir": "packages/entitlements-drizzle",
+      "group": "Provider",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/execution-drizzle",
+      "relativeDir": "packages/execution-drizzle",
+      "group": "Provider",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/features-posthog",
+      "relativeDir": "packages/features-posthog",
+      "group": "Integration",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/frontend-cloudflare",
+      "relativeDir": "packages/frontend-cloudflare",
+      "group": "Presentation",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/frontend-problems",
+      "relativeDir": "packages/frontend-problems",
+      "group": "Presentation",
+      "maturity": "alpha",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/frontend-react",
+      "relativeDir": "packages/frontend-react",
+      "group": "Presentation",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/frontend-vite",
+      "relativeDir": "packages/frontend-vite",
+      "group": "Presentation",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/integrations-posthog",
+      "relativeDir": "packages/integrations-posthog",
+      "group": "Integration",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/invitation-drizzle",
+      "relativeDir": "packages/invitation-drizzle",
+      "group": "Provider",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/llm-openai",
+      "relativeDir": "packages/llm-openai",
+      "group": "Provider",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/membership-drizzle",
+      "relativeDir": "packages/membership-drizzle",
+      "group": "Provider",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/meta-vite",
+      "relativeDir": "packages/meta-vite",
+      "group": "Presentation",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/metering-drizzle",
+      "relativeDir": "packages/metering-drizzle",
+      "group": "Provider",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/metering-upstash",
+      "relativeDir": "packages/metering-upstash",
+      "group": "Provider",
+      "maturity": "alpha",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/metrics-billing",
+      "relativeDir": "packages/metrics-billing",
+      "group": "Provider",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/notifications-react-email",
+      "relativeDir": "packages/notifications-react-email",
+      "group": "Presentation",
+      "maturity": "alpha",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/notifications-resend",
+      "relativeDir": "packages/notifications-resend",
+      "group": "Provider",
+      "maturity": "alpha",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/onboarding-drizzle",
+      "relativeDir": "packages/onboarding-drizzle",
+      "group": "Provider",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/presentation-preset",
+      "relativeDir": "packages/presentation-preset",
+      "group": "Presentation",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/ratelimit-upstash",
+      "relativeDir": "packages/ratelimit-upstash",
+      "group": "Provider",
+      "maturity": "alpha",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/search-drizzle",
+      "relativeDir": "packages/search-drizzle",
+      "group": "Provider",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "candidate-optional",
+      "packageName": "@croco/search-meilisearch",
+      "relativeDir": "packages/search-meilisearch",
+      "group": "Provider",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "uncertified",
+      "runtimes": [
+        "node",
+        "lambda"
+      ],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "pass",
+          "evidence": "certification.records.search-meilisearch exists",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "pass",
+          "evidence": "uncertified",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "pass",
+          "evidence": "node, lambda",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "complete evidence is required only for certified or production-ready extension packages",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "pass",
+          "evidence": "pnpm --filter @croco/search-meilisearch test -> packages/search-meilisearch/src/tests/MeilisearchDiagnosticsProvider.spec.ts",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "complete evidence is required only for certified or production-ready extension packages",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "complete evidence is required only for certified or production-ready extension packages",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "liveSmoke evidence is required only for candidate, certified, or certified-required extension packages",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "pass",
+          "evidence": "non-blocking before production/certified: Recorded real Meilisearch liveSmoke evidence is required before certified state.",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/storage-cloudflare",
+      "relativeDir": "packages/storage-cloudflare",
+      "group": "Provider",
+      "maturity": "alpha",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/storage-cloudinary",
+      "relativeDir": "packages/storage-cloudinary",
+      "group": "Provider",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "candidate-optional",
+      "packageName": "@croco/storage-r2",
+      "relativeDir": "packages/storage-r2",
+      "group": "Provider",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "uncertified",
+      "runtimes": [
+        "node",
+        "lambda"
+      ],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "pass",
+          "evidence": "certification.records.storage-r2 exists",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "pass",
+          "evidence": "uncertified",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "pass",
+          "evidence": "node, lambda",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "complete evidence is required only for certified or production-ready extension packages",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "pass",
+          "evidence": "pnpm --filter @croco/storage-r2 test -> packages/storage-r2/src/tests/ProviderNoCredentialConformance.spec.ts",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "complete evidence is required only for certified or production-ready extension packages",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "complete evidence is required only for certified or production-ready extension packages",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "liveSmoke evidence is required only for candidate, certified, or certified-required extension packages",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "pass",
+          "evidence": "non-blocking before production/certified: Recorded real R2 liveSmoke evidence is required before certified state.",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "candidate-optional",
+      "packageName": "@croco/tasks-qstash",
+      "relativeDir": "packages/tasks-qstash",
+      "group": "Provider",
+      "maturity": "alpha",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "uncertified",
+      "runtimes": [
+        "node",
+        "lambda"
+      ],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "pass",
+          "evidence": "certification.records.tasks-qstash exists",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "pass",
+          "evidence": "uncertified",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "pass",
+          "evidence": "node, lambda",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "complete evidence is required only for certified or production-ready extension packages",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "pass",
+          "evidence": "pnpm --filter @croco/tasks-qstash test -> packages/tasks-qstash/src/tests/ProviderNoCredentialConformance.spec.ts",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "complete evidence is required only for certified or production-ready extension packages",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "complete evidence is required only for certified or production-ready extension packages",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "liveSmoke evidence is required only for candidate, certified, or certified-required extension packages",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "pass",
+          "evidence": "non-blocking before production/certified: liveSmoke",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "certified-required",
+      "packageName": "@croco/telemetry-api",
+      "relativeDir": "packages/telemetry-api",
+      "group": "Integration",
+      "maturity": "production",
+      "requiredForProduction": true,
+      "requiredForCertificationClaim": false,
+      "state": "certified",
+      "runtimes": [
+        "node",
+        "lambda",
+        "cloudflare-workers",
+        "browser"
+      ],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "pass",
+          "evidence": "certification.records.telemetry-api exists",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "pass",
+          "evidence": "certified",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "pass",
+          "evidence": "node, lambda, cloudflare-workers, browser",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "pass",
+          "evidence": "pnpm --filter @croco/telemetry-api test -> packages/telemetry-api/src/tests/Trace.spec.ts",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "pass",
+          "evidence": "pnpm --filter @croco/telemetry-api test -> packages/telemetry-api/src/tests/frontendBridge.spec.ts",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "pass",
+          "evidence": "pnpm --filter @croco/telemetry-api test -> packages/telemetry-api/src/tests/Trace.spec.ts",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "pass",
+          "evidence": "pnpm --filter @croco/telemetry-api test -> packages/telemetry-api/src/tests/frontendBridge.spec.ts",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "pass",
+          "evidence": "packages/telemetry-api/README.md: No external live provider credential is required; no-credential local smoke covers the certified trace and browser bridge paths.",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "pass",
+          "evidence": "none",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "certified-required",
+      "packageName": "@croco/telemetry-sdk-node",
+      "relativeDir": "packages/telemetry-sdk-node",
+      "group": "Integration",
+      "maturity": "production",
+      "requiredForProduction": true,
+      "requiredForCertificationClaim": false,
+      "state": "certified",
+      "runtimes": [
+        "node",
+        "lambda"
+      ],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "pass",
+          "evidence": "certification.records.telemetry-sdk-node exists",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "pass",
+          "evidence": "certified",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "pass",
+          "evidence": "node, lambda",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "pass",
+          "evidence": "pnpm --filter @croco/telemetry-sdk-node test -> packages/telemetry-sdk-node/src/tests/TelemetryRuntime.spec.ts",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "pass",
+          "evidence": "pnpm --filter @croco/telemetry-sdk-node test -> packages/telemetry-sdk-node/src/tests/ProviderNoCredentialConformance.spec.ts",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "pass",
+          "evidence": "pnpm --filter @croco/telemetry-sdk-node test -> packages/telemetry-sdk-node/src/tests/TelemetryRuntime.spec.ts",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "pass",
+          "evidence": "pnpm --filter @croco/telemetry-sdk-node test -> packages/telemetry-sdk-node/src/tests/TelemetryProblems.spec.ts",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "pass",
+          "evidence": "packages/telemetry-sdk-node/README.md: Live OTLP export is env-gated by exporter credentials/endpoints; no-credential Lambda preset and forceFlush behavior stay covered in default tests.",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "pass",
+          "evidence": "none",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/transports-cloudflare-workers",
+      "relativeDir": "packages/transports-cloudflare-workers",
+      "group": "Transport",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/transports-graphql",
+      "relativeDir": "packages/transports-graphql",
+      "group": "Transport",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "certified-required",
+      "packageName": "@croco/transports-http",
+      "relativeDir": "packages/transports-http",
+      "group": "Transport",
+      "maturity": "production",
+      "requiredForProduction": true,
+      "requiredForCertificationClaim": false,
+      "state": "certified",
+      "runtimes": [
+        "node",
+        "lambda"
+      ],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "pass",
+          "evidence": "certification.records.transports-http exists",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "pass",
+          "evidence": "certified",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "pass",
+          "evidence": "node, lambda",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "pass",
+          "evidence": "pnpm --filter @croco/transports-http test -> packages/transports-http/src/tests/HttpTransportIntegration.spec.ts",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "pass",
+          "evidence": "pnpm --filter @croco/transports-http test -> packages/transports-http/src/tests/HealthCheck.spec.ts",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "pass",
+          "evidence": "pnpm --filter @croco/transports-http test -> packages/transports-http/src/tests/OperationalEndpoints.spec.ts",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "pass",
+          "evidence": "pnpm --filter @croco/transports-http test -> packages/transports-http/src/tests/OperationalEndpoints.spec.ts",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "pass",
+          "evidence": "packages/transports-http/README.md: Operational live and diagnostics smoke is token/env-gated; local no-credential health endpoints stay covered by default tests.",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "pass",
+          "evidence": "none",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/triggers-qstash",
+      "relativeDir": "packages/triggers-qstash",
+      "group": "Provider",
+      "maturity": "alpha",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    },
+    {
+      "certificationRequirement": "not-applicable",
+      "packageName": "@croco/ui-astryx",
+      "relativeDir": "packages/ui-astryx",
+      "group": "Presentation",
+      "maturity": "beta",
+      "requiredForProduction": false,
+      "requiredForCertificationClaim": false,
+      "state": "missing",
+      "runtimes": [],
+      "checks": [
+        {
+          "id": "record",
+          "label": "Certification record",
+          "status": "not-applicable",
+          "evidence": "not-applicable by catalog policy until the extension package claims certification or enters the required maturity",
+          "recovery": null
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "runtimes",
+          "label": "Runtimes",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "conformance",
+          "label": "conformance",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "noCredentialSmoke",
+          "label": "noCredentialSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "diagnostics",
+          "label": "diagnostics",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "redaction",
+          "label": "redaction",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "liveSmoke",
+          "label": "liveSmoke",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        },
+        {
+          "id": "knownGaps",
+          "label": "Known gaps",
+          "status": "not-applicable",
+          "evidence": "no certification record",
+          "recovery": null
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "extensionPackageCount": 45,
+    "productionExtensionPackageCount": 3,
+    "certificationRecordCount": 8
+  },
+  "policy": {
+    "scope": {
+      "claimRequiresCertified": true,
+      "extensionGroups": [
+        "Provider",
+        "Integration",
+        "Transport",
+        "Presentation"
+      ],
+      "requiredMaturity": "production",
+      "states": {
+        "certified-required": "A certified record is required because the package is production-ready in the extension matrix or public docs make a Croco compatibility claim.",
+        "candidate-optional": "A pre-production certification record exists for an extension package; state candidate requires present liveSmoke evidence.",
+        "not-applicable": "No certification record is required until the extension package reaches production maturity or makes a public Croco compatibility claim."
+      }
+    }
+  }
+}

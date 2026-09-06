@@ -1,0 +1,122 @@
+[
+  {
+    "sourcePath": "packages/create-croco-app/templates/saas/apps/api-server/src/tests/ContractFuzz.spec.ts",
+    "sourceDigest": "ec9b211c4ed17cdbf980dde5a698a8a4573b2cfe0b25ee84a1c8b8c9daf5b79d",
+    "generatedPath": "apps/api-server/src/tests/ContractFuzz.spec.ts",
+    "generatedDigest": "ec9b211c4ed17cdbf980dde5a698a8a4573b2cfe0b25ee84a1c8b8c9daf5b79d",
+    "inventoryDigest": "baf5bd70e137630064c968e440160b1b65df5e1b633ca208c2e75ef8c0ead974",
+    "commandId": "create-croco-app"
+  },
+  {
+    "sourcePath": "packages/create-croco-app/templates/saas/apps/api-server/src/tests/ExecutableAssurance.spec.ts",
+    "sourceDigest": "c6fb7c317f298ba1489765d6be6d74c815532577f81f12ffa7db42b2cc6c6ef6",
+    "generatedPath": "apps/api-server/src/tests/ExecutableAssurance.spec.ts",
+    "generatedDigest": "c6fb7c317f298ba1489765d6be6d74c815532577f81f12ffa7db42b2cc6c6ef6",
+    "inventoryDigest": "baf5bd70e137630064c968e440160b1b65df5e1b633ca208c2e75ef8c0ead974",
+    "commandId": "create-croco-app"
+  },
+  {
+    "sourcePath": "packages/create-croco-app/templates/saas/apps/api-server/src/tests/FileBillableUsageJournal.spec.ts",
+    "sourceDigest": "07df8984f11c6241f5e5bb577a54431fd55fc2569b996aabfcab6f664e9a7d4a",
+    "generatedPath": "apps/api-server/src/tests/FileBillableUsageJournal.spec.ts",
+    "generatedDigest": "07df8984f11c6241f5e5bb577a54431fd55fc2569b996aabfcab6f664e9a7d4a",
+    "inventoryDigest": "baf5bd70e137630064c968e440160b1b65df5e1b633ca208c2e75ef8c0ead974",
+    "commandId": "create-croco-app"
+  },
+  {
+    "sourcePath": "packages/create-croco-app/templates/saas/apps/api-server/src/tests/FileUsageBillingGateway.spec.ts",
+    "sourceDigest": "fc829942e268a949ab46ba0ea64981f58c8822f2c0a64a70a7ecac371e97de1e",
+    "generatedPath": "apps/api-server/src/tests/FileUsageBillingGateway.spec.ts",
+    "generatedDigest": "fc829942e268a949ab46ba0ea64981f58c8822f2c0a64a70a7ecac371e97de1e",
+    "inventoryDigest": "baf5bd70e137630064c968e440160b1b65df5e1b633ca208c2e75ef8c0ead974",
+    "commandId": "create-croco-app"
+  },
+  {
+    "sourcePath": "packages/create-croco-app/templates/saas/apps/api-server/src/tests/ProviderProfileEnv.spec.ts",
+    "sourceDigest": "4ee081eb699c71d98edd12aad7f835233d676796dbeab280573e2c326149d7ef",
+    "generatedPath": "apps/api-server/src/tests/ProviderProfileEnv.spec.ts",
+    "generatedDigest": "4ee081eb699c71d98edd12aad7f835233d676796dbeab280573e2c326149d7ef",
+    "inventoryDigest": "baf5bd70e137630064c968e440160b1b65df5e1b633ca208c2e75ef8c0ead974",
+    "commandId": "create-croco-app"
+  },
+  {
+    "sourcePath": "packages/create-croco-app/templates/saas/apps/api-server/src/tests/SaasDemo.spec.ts",
+    "sourceDigest": "bc04b46a56666c35ec550e1917d6c9ded8d376ed8249d624effe54ceca92bb6c",
+    "generatedPath": "apps/api-server/src/tests/SaasDemo.spec.ts",
+    "generatedDigest": "bc04b46a56666c35ec550e1917d6c9ded8d376ed8249d624effe54ceca92bb6c",
+    "inventoryDigest": "baf5bd70e137630064c968e440160b1b65df5e1b633ca208c2e75ef8c0ead974",
+    "commandId": "create-croco-app"
+  },
+  {
+    "sourcePath": "packages/create-croco-app/templates/spa-be-split/apps/api-server/src/tests/app.spec.ts",
+    "sourceDigest": "bb0c8b92f72276b8c10c52736751d992863e3755a16cf3bb72e7ca772e504505",
+    "generatedPath": "apps/api-server/src/tests/app.spec.ts",
+    "generatedDigest": "bb0c8b92f72276b8c10c52736751d992863e3755a16cf3bb72e7ca772e504505",
+    "inventoryDigest": "baf5bd70e137630064c968e440160b1b65df5e1b633ca208c2e75ef8c0ead974",
+    "commandId": "create-croco-app"
+  },
+  {
+    "sourcePath": "packages/create-croco-app/templates/spa-be-split/apps/console-web/src/tests/ProblemNotice.spec.tsx",
+    "sourceDigest": "ed8ad299e749dc3da9404633206fe5f0e6bda4d7777d31edffecf80db79b825e",
+    "generatedPath": "apps/console-web/src/tests/ProblemNotice.spec.tsx",
+    "generatedDigest": "ed8ad299e749dc3da9404633206fe5f0e6bda4d7777d31edffecf80db79b825e",
+    "inventoryDigest": "baf5bd70e137630064c968e440160b1b65df5e1b633ca208c2e75ef8c0ead974",
+    "commandId": "create-croco-app"
+  },
+  {
+    "sourcePath": "packages/create-croco-app/templates/admin-console/apps/api-server/src/tests/AdminConsole.spec.ts",
+    "sourceDigest": "13321e2f0e1df3e214dcdc4a04c53fed1f46055d029171b5687dfd83776371f1",
+    "generatedPath": "apps/api-server/src/tests/AdminConsole.spec.ts",
+    "generatedDigest": "13321e2f0e1df3e214dcdc4a04c53fed1f46055d029171b5687dfd83776371f1",
+    "inventoryDigest": "baf5bd70e137630064c968e440160b1b65df5e1b633ca208c2e75ef8c0ead974",
+    "commandId": "create-croco-app"
+  },
+  {
+    "sourcePath": "packages/create-croco-app/templates/admin-console/apps/api-server/src/tests/CreditOperations.spec.ts",
+    "sourceDigest": "38ba6fcb9689c123cdbaa2a788db93ec4f260cb7d616ccae38cd69037b8c53ff",
+    "generatedPath": "apps/api-server/src/tests/CreditOperations.spec.ts",
+    "generatedDigest": "38ba6fcb9689c123cdbaa2a788db93ec4f260cb7d616ccae38cd69037b8c53ff",
+    "inventoryDigest": "baf5bd70e137630064c968e440160b1b65df5e1b633ca208c2e75ef8c0ead974",
+    "commandId": "create-croco-app"
+  },
+  {
+    "sourcePath": "packages/create-croco-app/templates/base-ddd/libs/shared/utils-env/src/tests/createEnv.spec.ts",
+    "sourceDigest": "9d3d22f9fb94a4d62588508a524fc7a6e8e4981183477b14a6e0e9ac844a5072",
+    "generatedPath": "libs/shared/utils-env/src/tests/createEnv.spec.ts",
+    "generatedDigest": "9d3d22f9fb94a4d62588508a524fc7a6e8e4981183477b14a6e0e9ac844a5072",
+    "inventoryDigest": "baf5bd70e137630064c968e440160b1b65df5e1b633ca208c2e75ef8c0ead974",
+    "commandId": "create-croco-app"
+  },
+  {
+    "sourcePath": "packages/create-croco-app/templates/spa-be-split/tests/journeys/create-user.spec.ts",
+    "sourceDigest": "e1a4f5fafad7c7f8b95e24d750a13ab7a4a4780b8a43d54cb2368f43c1ad85b0",
+    "generatedPath": "tests/journeys/create-user.spec.ts",
+    "generatedDigest": "e1a4f5fafad7c7f8b95e24d750a13ab7a4a4780b8a43d54cb2368f43c1ad85b0",
+    "inventoryDigest": "baf5bd70e137630064c968e440160b1b65df5e1b633ca208c2e75ef8c0ead974",
+    "commandId": "create-croco-app"
+  },
+  {
+    "sourcePath": "packages/create-croco-app/templates/spa-be-split/tests/journeys/problem-rendering.spec.ts",
+    "sourceDigest": "5f62d47bb765e2dd3ca6a1e022f371722e9f604e4a328dc0ac7e164f900326ad",
+    "generatedPath": "tests/journeys/problem-rendering.spec.ts",
+    "generatedDigest": "5f62d47bb765e2dd3ca6a1e022f371722e9f604e4a328dc0ac7e164f900326ad",
+    "inventoryDigest": "baf5bd70e137630064c968e440160b1b65df5e1b633ca208c2e75ef8c0ead974",
+    "commandId": "create-croco-app"
+  },
+  {
+    "sourcePath": "packages/create-croco-app/templates/admin-console/tests/journeys/plan-release.spec.ts",
+    "sourceDigest": "8902ca5e62b8347b1d6fb4d9b75fcad8bc0c6be56843ffc3981db8b978ae2df5",
+    "generatedPath": "tests/journeys/plan-release.spec.ts",
+    "generatedDigest": "8902ca5e62b8347b1d6fb4d9b75fcad8bc0c6be56843ffc3981db8b978ae2df5",
+    "inventoryDigest": "baf5bd70e137630064c968e440160b1b65df5e1b633ca208c2e75ef8c0ead974",
+    "commandId": "create-croco-app"
+  },
+  {
+    "sourcePath": "packages/create-croco-app/templates/ai-saas/apps/api-server/src/tests/AiSaas.spec.ts",
+    "sourceDigest": "baffeb2b4f16c355cebe51177bfd885a05909eec31a7fe17f32df6f80b7b19f2",
+    "generatedPath": "apps/api-server/src/tests/AiSaas.spec.ts",
+    "generatedDigest": "baffeb2b4f16c355cebe51177bfd885a05909eec31a7fe17f32df6f80b7b19f2",
+    "inventoryDigest": "baf5bd70e137630064c968e440160b1b65df5e1b633ca208c2e75ef8c0ead974",
+    "commandId": "create-croco-app"
+  }
+]
