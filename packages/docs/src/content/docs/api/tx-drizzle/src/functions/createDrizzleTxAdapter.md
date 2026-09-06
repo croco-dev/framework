@@ -5,7 +5,7 @@ prev: false
 title: "createDrizzleTxAdapter"
 ---
 
-> **createDrizzleTxAdapter**\<`TDb`\>(`db`): [`TxAdapter`](/api/tx-core/src/interfaces/txadapter/)\<[`InferTxClient`](/api/tx-drizzle/src/type-aliases/infertxclient/)\<`TDb`\>, [`InferTxOptions`](/api/tx-drizzle/src/type-aliases/infertxoptions/)\<`TDb`\>\>
+> **createDrizzleTxAdapter**\<`TDb`\>(`db`, `adapterOptions?`): [`TxAdapter`](/api/tx-core/src/interfaces/txadapter/)\<[`InferTxClient`](/api/tx-drizzle/src/type-aliases/infertxclient/)\<`TDb`\>, [`InferTxOptions`](/api/tx-drizzle/src/type-aliases/infertxoptions/)\<`TDb`\>\>
 
 ## Type Parameters
 
@@ -20,6 +20,10 @@ title: "createDrizzleTxAdapter"
 `TDb`
 
 Drizzle DB 인스턴스 (PostgreSQL, MySQL, SQLite 지원)
+
+### adapterOptions?
+
+[`DrizzleTxAdapterOptions`](/api/tx-drizzle/src/interfaces/drizzletxadapteroptions/)
 
 ## Returns
 

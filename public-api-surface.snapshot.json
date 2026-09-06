@@ -33956,6 +33956,11 @@
               "source": "./libs/types"
             },
             {
+              "name": "DrizzleTxAdapterOptions",
+              "exportKind": "named",
+              "source": "./libs/DrizzleTxAdapter"
+            },
+            {
               "name": "DrizzleUpdateFn",
               "exportKind": "named",
               "source": "./libs/types"

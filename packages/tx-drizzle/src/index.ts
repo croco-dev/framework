@@ -47,7 +47,7 @@
  * const adapter = createDrizzleTxAdapter(db);
  * ```
  */
-export { createDrizzleTxAdapter } from "./libs/DrizzleTxAdapter";
+export { createDrizzleTxAdapter, type DrizzleTxAdapterOptions } from "./libs/DrizzleTxAdapter";
 /**
  * Row-Level Security(RLS) 사용 시 테넌트 컨텍스트가 누락된 경우 발생하는 에러입니다.
  *

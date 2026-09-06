@@ -251,6 +251,13 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
             return nestedResult;
           } finally {
             nestedContext.afterCommitRegistrationOpen = false;
+            if (
+              nestedContext.activeChildOperationCount > 0 &&
+              !nestedContext.rootGate.detachedOperationProblem
+            ) {
+              nestedContext.rootGate.detachedOperationProblem =
+                new DetachedTransactionOperationProblem(nestedContext.activeChildOperationCount);
+            }
           }
         },
         options,
@@ -296,6 +303,14 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
       return result;
     } finally {
       joinedContext.afterCommitRegistrationOpen = false;
+      if (
+        joinedContext.activeChildOperationCount > 0 &&
+        !joinedContext.rootGate.detachedOperationProblem
+      ) {
+        joinedContext.rootGate.detachedOperationProblem = new DetachedTransactionOperationProblem(
+          joinedContext.activeChildOperationCount,
+        );
+      }
     }
   }
 
