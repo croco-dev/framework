@@ -440,4 +440,73 @@ describe("RouteCompiler", () => {
       /SecondController\.second \(GET \/users\/:id\) at .*RouteCompiler\.spec\.ts:\d+:\d+/,
     );
   });
+
+  it("injects authenticated user, principal, and apiKey into controller handler parameters through route pipeline", async () => {
+    const REST_PARAMS_KEY = Symbol.for("croco:rest:params");
+    function createAuthDecorator(type: "user" | "principal" | "apikey"): ParameterDecorator {
+      return (target: object, propertyKey: string | symbol | undefined, parameterIndex: number) => {
+        if (!propertyKey) return;
+        const targetConstructor = target.constructor;
+        const existingParams: Map<string | symbol, unknown[]> =
+          Reflect.getOwnMetadata(REST_PARAMS_KEY, targetConstructor) ?? new Map();
+        const methodParams = existingParams.get(propertyKey) ?? [];
+        existingParams.set(propertyKey, [
+          ...methodParams,
+          {
+            type,
+            index: parameterIndex,
+            name: undefined,
+          },
+        ]);
+        Reflect.defineMetadata(REST_PARAMS_KEY, existingParams, targetConstructor);
+      };
+    }
+
+    const MockUser = (): ParameterDecorator => createAuthDecorator("user");
+    const MockCurrentPrincipal = (): ParameterDecorator => createAuthDecorator("principal");
+    const MockCurrentApiKey = (): ParameterDecorator => createAuthDecorator("apikey");
+
+    const expectedUser = { id: "user_from_guard", email: "guard@croco.dev" };
+    const expectedPrincipal = { id: "principal_from_guard", type: "user" as const };
+    const expectedApiKey = { key: "croco_guard_key_123" };
+
+    class AuthInjectingGuard implements Guard {
+      canActivate(context: { getRequest: () => Request }) {
+        const request = context.getRequest() as Request & {
+          user?: unknown;
+          principal?: unknown;
+          apiKey?: unknown;
+        };
+        request.user = expectedUser;
+        request.principal = expectedPrincipal;
+        request.apiKey = expectedApiKey;
+        return true;
+      }
+    }
+
+    @Controller("/auth-pipeline")
+    class AuthPipelineController {
+      @Get("/profile")
+      @UseGuards(AuthInjectingGuard as unknown as GuardConstructor)
+      getProfile(
+        @MockUser() user: unknown,
+        @MockCurrentPrincipal() principal: unknown,
+        @MockCurrentApiKey() apiKey: unknown,
+      ) {
+        return { user, principal, apiKey };
+      }
+    }
+
+    const compiler = createCompiler();
+    const [route] = compiler.compile([AuthPipelineController]);
+
+    const ctx = createMockHttpContext();
+    const result = await route.handler(ctx);
+
+    expect(result).toEqual({
+      user: expectedUser,
+      principal: expectedPrincipal,
+      apiKey: expectedApiKey,
+    });
+  });
 });

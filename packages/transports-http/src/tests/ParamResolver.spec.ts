@@ -406,4 +406,223 @@ describe("ParamResolver", () => {
     vi.mocked(ctx.header).mockReturnValue(undefined);
     await expect(resolver.resolveParams(ctx, TestController, "read")).resolves.toEqual([undefined]);
   });
+
+  describe("auth parameter decorators (@User, @CurrentPrincipal, @CurrentApiKey)", () => {
+    function createAuthDecorator(type: "user" | "principal" | "apikey"): ParameterDecorator {
+      return (target: object, propertyKey: string | symbol | undefined, parameterIndex: number) => {
+        if (!propertyKey) return;
+        const targetConstructor = target.constructor;
+        const existingParams: Map<string | symbol, unknown[]> =
+          Reflect.getOwnMetadata(REST_PARAMS_KEY, targetConstructor) ?? new Map();
+        const methodParams = existingParams.get(propertyKey) ?? [];
+        existingParams.set(propertyKey, [
+          ...methodParams,
+          {
+            type,
+            index: parameterIndex,
+            name: undefined,
+          },
+        ]);
+        Reflect.defineMetadata(REST_PARAMS_KEY, existingParams, targetConstructor);
+      };
+    }
+
+    const MockUser = (): ParameterDecorator => createAuthDecorator("user");
+    const MockCurrentPrincipal = (): ParameterDecorator => createAuthDecorator("principal");
+    const MockCurrentApiKey = (): ParameterDecorator => createAuthDecorator("apikey");
+
+    it("resolves @User(), @CurrentPrincipal(), and @CurrentApiKey() from request properties", async () => {
+      class SecureController {
+        profile(
+          @MockUser() _user: unknown,
+          @MockCurrentPrincipal() _principal: unknown,
+          @MockCurrentApiKey() _apiKey: unknown,
+        ) {}
+      }
+
+      const mockUser = { id: "usr_123", email: "user@example.com", roles: ["admin"] };
+      const mockPrincipal = { id: "usr_123", type: "user" as const };
+      const mockApiKey = { key: "croco_live_test_key", tenantId: "tenant_abc" };
+
+      const request = new Request("http://localhost/secured");
+      Object.assign(request, {
+        user: mockUser,
+        principal: mockPrincipal,
+        apiKey: mockApiKey,
+      });
+
+      const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"], request);
+      const resolver = new ParamResolver();
+
+      const args = await resolver.resolveParams(ctx, SecureController, "profile");
+
+      expect(args[0]).toEqual(mockUser);
+      expect(args[1]).toEqual(mockPrincipal);
+      expect(args[2]).toEqual(mockApiKey);
+    });
+
+    it("resolves undefined when auth principal properties are missing or undefined", async () => {
+      class OptionalAuthController {
+        optionalProfile(
+          @MockUser() _user: unknown,
+          @MockCurrentPrincipal() _principal: unknown,
+          @MockCurrentApiKey() _apiKey: unknown,
+        ) {}
+      }
+
+      const request = new Request("http://localhost/public");
+      const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"], request);
+      const resolver = new ParamResolver();
+
+      const args = await resolver.resolveParams(ctx, OptionalAuthController, "optionalProfile");
+
+      expect(args).toEqual([undefined, undefined, undefined]);
+    });
+
+    it("resolves auth params mixed with standard REST parameters in correct argument order", async () => {
+      class MixedController {
+        handle(
+          @MockUser() _user: unknown,
+          @Body() _body: unknown,
+          @MockCurrentPrincipal() _principal: unknown,
+        ) {}
+      }
+
+      const mockUser = { id: "usr_456" };
+      const mockPrincipal = { id: "usr_456", type: "user" as const };
+      const parsedBody = { amount: 100 };
+
+      const request = new Request("http://localhost/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(parsedBody),
+      });
+      Object.assign(request, {
+        user: mockUser,
+        principal: mockPrincipal,
+      });
+
+      const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"], request);
+      const resolver = new ParamResolver();
+
+      const args = await resolver.resolveParams(ctx, MixedController, "handle");
+
+      expect(args[0]).toEqual(mockUser);
+      expect(args[1]).toEqual(parsedBody);
+      expect(args[2]).toEqual(mockPrincipal);
+    });
+
+    it("supports fallback resolution from ctx.raw or ctx.get() when request property is not present", async () => {
+      class FallbackController {
+        me(@MockUser() _user: unknown, @MockCurrentApiKey() _apiKey: unknown) {}
+      }
+
+      const mockUser = { id: "usr_ctx" };
+      const mockApiKey = { key: "croco_fallback_key" };
+
+      const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"]);
+      // ctx.get("user") provides mockUser, ctx.raw.apiKey provides mockApiKey
+      ctx.set("user", mockUser);
+      (ctx.raw as unknown as Record<string, unknown>).apiKey = mockApiKey;
+
+      const resolver = new ParamResolver();
+      const args = await resolver.resolveParams(ctx, FallbackController, "me");
+
+      expect(args[0]).toEqual(mockUser);
+      expect(args[1]).toEqual(mockApiKey);
+    });
+
+    it("runs pipes on auth parameters with custom metadata type", async () => {
+      class TransformedAuthController {
+        profile(_user: unknown) {}
+      }
+
+      const mockUser = { id: "usr_999", role: "member" };
+      const pipeTransform = vi.fn((val: unknown, meta: { type: string }) => ({
+        ...(val as object),
+        transformedBy: meta.type,
+      }));
+
+      Reflect.defineMetadata(
+        REST_PARAMS_KEY,
+        new Map([
+          [
+            "profile",
+            [
+              {
+                type: "user",
+                index: 0,
+                pipes: [{ transform: pipeTransform }],
+              },
+            ],
+          ],
+        ]),
+        TransformedAuthController,
+      );
+
+      const request = new Request("http://localhost/profile");
+      Object.assign(request, { user: mockUser });
+
+      const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"], request);
+      const resolver = new ParamResolver();
+
+      const args = await resolver.resolveParams(ctx, TransformedAuthController, "profile");
+
+      expect(args[0]).toEqual({
+        id: "usr_999",
+        role: "member",
+        transformedBy: "custom",
+      });
+      expect(pipeTransform).toHaveBeenCalledWith(
+        mockUser,
+        expect.objectContaining({ type: "custom" }),
+      );
+    });
+
+    it("resolves lowercase apikey property from request", async () => {
+      class ApiKeyController {
+        check(@MockCurrentApiKey() _apiKey: unknown) {}
+      }
+
+      const mockApiKey = { key: "croco_lowercase_apikey" };
+      const request = new Request("http://localhost/apikey");
+      Object.assign(request, { apikey: mockApiKey });
+
+      const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"], request);
+      const resolver = new ParamResolver();
+
+      const args = await resolver.resolveParams(ctx, ApiKeyController, "check");
+      expect(args[0]).toEqual(mockApiKey);
+    });
+
+    it("preserves explicit null auth user without falling back", async () => {
+      class NullUserController {
+        profile(@MockUser() _user: unknown) {}
+      }
+
+      const request = new Request("http://localhost/null-user");
+      Object.assign(request, { user: null });
+
+      const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"], request);
+      ctx.set("user", { id: "should_not_use_fallback" });
+
+      const resolver = new ParamResolver();
+      const args = await resolver.resolveParams(ctx, NullUserController, "profile");
+      expect(args[0]).toBeNull();
+    });
+
+    it("resolves auth property attached to ctx.req (CrocoRequest)", async () => {
+      class CrocoReqController {
+        profile(@MockUser() _user: unknown) {}
+      }
+
+      const mockUser = { id: "usr_croco_req" };
+      const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"]);
+      Object.assign(ctx.req, { user: mockUser });
+
+      const resolver = new ParamResolver();
+      const args = await resolver.resolveParams(ctx, CrocoReqController, "profile");
+      expect(args[0]).toEqual(mockUser);
+    });
+  });
 });

@@ -123,7 +123,7 @@ class ParamResolverEngine {
     param: ParamMetadata,
     cachedBody: unknown,
   ): Promise<unknown> {
-    switch (param.type) {
+    switch (param.type as string) {
       case ParamType.PARAM:
         return param.name ? ctx.param(param.name) : undefined;
 
@@ -142,9 +142,94 @@ class ParamResolverEngine {
       case ParamType.RAW:
         return ctx.raw;
 
+      case "user":
+        return this.resolveAuthProperty(ctx, "user");
+
+      case "principal":
+        return this.resolveAuthProperty(ctx, "principal");
+
+      case "apikey":
+      case "apiKey":
+        return this.resolveAuthProperty(ctx, "apiKey");
+
       default:
         return undefined;
     }
+  }
+
+  private resolveAuthProperty(
+    ctx: CrocoHttpContext,
+    property: "user" | "principal" | "apiKey",
+  ): unknown {
+    const rawReqRaw = (ctx.raw as { req?: { raw?: unknown } } | undefined)?.req?.raw;
+    if (this.isRecord(rawReqRaw)) {
+      const value = this.readAuthPropertyFromRecord(rawReqRaw, property);
+      if (value !== undefined) {
+        return value;
+      }
+    }
+
+    const rawReq = (ctx.raw as { req?: unknown } | undefined)?.req;
+    if (this.isRecord(rawReq)) {
+      const value = this.readAuthPropertyFromRecord(rawReq, property);
+      if (value !== undefined) {
+        return value;
+      }
+    }
+
+    const crocoReq = (ctx as { req?: unknown } | undefined)?.req;
+    if (this.isRecord(crocoReq)) {
+      const value = this.readAuthPropertyFromRecord(crocoReq, property);
+      if (value !== undefined) {
+        return value;
+      }
+    }
+
+    if (this.isRecord(ctx.raw)) {
+      const value = this.readAuthPropertyFromRecord(ctx.raw, property);
+      if (value !== undefined) {
+        return value;
+      }
+    }
+
+    if (typeof ctx.get === "function") {
+      const contextValue = ctx.get(property);
+      if (contextValue !== undefined) {
+        return contextValue;
+      }
+      if (property === "apiKey") {
+        const lowerCaseApiKey = ctx.get("apikey");
+        if (lowerCaseApiKey !== undefined) {
+          return lowerCaseApiKey;
+        }
+      }
+    }
+
+    if (this.isRecord(ctx)) {
+      const value = this.readAuthPropertyFromRecord(ctx, property);
+      if (value !== undefined) {
+        return value;
+      }
+    }
+
+    return undefined;
+  }
+
+  private readAuthPropertyFromRecord(
+    record: Record<string, unknown>,
+    property: "user" | "principal" | "apiKey",
+  ): unknown {
+    if (Object.prototype.hasOwnProperty.call(record, property)) {
+      return record[property];
+    }
+    if (property === "apiKey" && Object.prototype.hasOwnProperty.call(record, "apikey")) {
+      return record["apikey"];
+    }
+    return undefined;
+  }
+
+  private isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === "object" && value !== null;
   }
 
   private async runPipes(
