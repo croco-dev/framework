@@ -1902,6 +1902,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "public",
     severity: "info",
   }),
+  "idempotency-core/execution-indeterminate": recovery({
+    cause:
+      "The idempotent handler completed its side effects but the coordinator could not persist the result.",
+    userAction:
+      "Do not retry with the same idempotency key; check the external system for the completed outcome.",
+    operatorAction:
+      "Inspect the idempotency store failure and reconcile the completed side effects before clearing the record.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
   "access-core/invalid-provider-result": recovery({
     cause: "AccessProvider.check() returned a result without a supported authoritative decision.",
     userAction:

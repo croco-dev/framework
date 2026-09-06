@@ -4,10 +4,14 @@ import type {
   IdempotencyCompletedRecord,
   IdempotencyExecutionRequest,
   IdempotencyExecutionResult,
+  IdempotencyFailedRecord,
   IdempotencyHandler,
   IdempotencyStore,
 } from "./types";
-import { IdempotencyConflictProblem } from "./problems/IdempotencyProblems";
+import {
+  IdempotencyConflictProblem,
+  IdempotencyExecutionIndeterminateProblem,
+} from "./problems/IdempotencyProblems";
 
 export type IdempotencyCoordinatorOptions<TResult = unknown> = {
   readonly store: IdempotencyStore<TResult>;
@@ -50,11 +54,20 @@ export class IdempotencyCoordinator<TResult = unknown> {
 
     if (reservation.outcome === "failed") {
       await this.record("idempotency.failed", request, reservation.record.metadata);
+      if (isIndeterminateFailure(reservation.record)) {
+        throw new IdempotencyExecutionIndeterminateProblem({
+          key: request.key.key,
+          namespace: request.key.namespace,
+          failedAt: reservation.record.failedAt,
+        });
+      }
       return {
         outcome: "failed",
         record: reservation.record,
       };
     }
+
+    const failureMetadata = reservation.record.metadata;
 
     let response: TResult;
     let failurePhase: IdempotencyExecutionFailurePhase = "reserved-audit";
@@ -68,6 +81,7 @@ export class IdempotencyCoordinator<TResult = unknown> {
         reservation.reservation.reservationId,
         failurePhase,
         error,
+        failureMetadata,
       );
       throw error;
     }
@@ -87,6 +101,7 @@ export class IdempotencyCoordinator<TResult = unknown> {
         reservation.reservation.reservationId,
         "commit",
         error,
+        failureMetadata,
       );
       throw error;
     }
@@ -117,15 +132,16 @@ export class IdempotencyCoordinator<TResult = unknown> {
     reservationId: string,
     phase: IdempotencyExecutionFailurePhase,
     error: unknown,
+    failureMetadata: Record<string, unknown>,
   ): Promise<void> {
     try {
       await this.store.fail({
         key: request.key,
         reservationId,
         problem: toProblemSummary(error),
-        retryable: true,
+        retryable: phase !== "commit",
         ttlMs: request.ttlMs,
-        metadata: createFailureMetadata(request, phase),
+        metadata: createFailureMetadata(failureMetadata, phase),
       });
     } catch (failureRecordError) {
       attachFailureRecordError(error, failureRecordError);
@@ -145,8 +161,20 @@ export class IdempotencyCoordinator<TResult = unknown> {
       tenantId: request.key.tenantId,
       source: request.key.source,
       fingerprint: request.key.fingerprint,
-      metadata,
+      metadata: isolateAuditMetadata(metadata),
     });
+  }
+}
+
+function isIndeterminateFailure(record: IdempotencyFailedRecord): boolean {
+  if (record.retryable) {
+    return false;
+  }
+
+  try {
+    return record.metadata["idempotencyFailurePhase"] === "commit";
+  } catch {
+    return false;
   }
 }
 
@@ -163,6 +191,14 @@ function attachFailureRecordError(error: unknown, failureRecordError: unknown): 
     });
   } catch {
     return;
+  }
+}
+
+function isolateAuditMetadata(metadata: Record<string, unknown>): Record<string, unknown> {
+  try {
+    return structuredClone(metadata);
+  } catch {
+    return {};
   }
 }
 
@@ -216,12 +252,12 @@ function readDiagnosticProperty(
 }
 
 function createFailureMetadata(
-  request: IdempotencyExecutionRequest,
+  failureMetadata: Record<string, unknown>,
   phase: IdempotencyExecutionFailurePhase,
 ): Record<string, unknown> {
   try {
     return {
-      ...request.metadata,
+      ...failureMetadata,
       idempotencyFailurePhase: phase,
     };
   } catch {

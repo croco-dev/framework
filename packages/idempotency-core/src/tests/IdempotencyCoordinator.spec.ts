@@ -7,6 +7,7 @@ import {
   deriveIdempotencyKey,
   deriveWebhookIdempotencyKey,
   IdempotencyConflictProblem,
+  IdempotencyExecutionIndeterminateProblem,
   IdempotencyCoordinator,
   type IdempotencyCommitOptions,
   type IdempotencyCompletedRecord,
@@ -253,6 +254,7 @@ describe("IdempotencyCoordinator", () => {
     expect(fail).toHaveBeenCalledWith(
       expect.objectContaining({
         metadata: { idempotencyFailurePhase: "handler" },
+        retryable: true,
       }),
     );
   });
@@ -469,7 +471,7 @@ describe("IdempotencyCoordinator", () => {
     await expect(coordinator.execute({ key }, () => "must-not-run")).rejects.toBe(auditFailure);
   });
 
-  it("makes the reservation retryable when commit fails before persistence", async () => {
+  it("prevents handler re-execution when commit fails before persistence", async () => {
     const commitFailure = new InvalidIdempotencyKeyProblem("commit failed");
 
     class CommitFailureStore<TResult> extends InMemoryIdempotencyStore<TResult> {
@@ -491,14 +493,9 @@ describe("IdempotencyCoordinator", () => {
       namespace: "commit",
       source: { kind: "explicit", key: "key-1", fingerprint: "payload-a" },
     });
-    let calls = 0;
+    const handler = vi.fn(() => "created");
 
-    await expect(
-      coordinator.execute({ key }, () => {
-        calls += 1;
-        return "created";
-      }),
-    ).rejects.toBe(commitFailure);
+    await expect(coordinator.execute({ key }, handler)).rejects.toBe(commitFailure);
 
     expect(fail).toHaveBeenCalledWith({
       key,
@@ -508,18 +505,117 @@ describe("IdempotencyCoordinator", () => {
         status: 400,
         detail: "Invalid idempotency key: commit failed",
       },
-      retryable: true,
+      retryable: false,
       ttlMs: undefined,
       metadata: { idempotencyFailurePhase: "commit" },
     });
 
-    const retry = await coordinator.execute({ key }, () => {
-      calls += 1;
-      return "recovered";
+    const retry = coordinator.execute({ key }, handler);
+    await expect(retry).rejects.toBeInstanceOf(IdempotencyExecutionIndeterminateProblem);
+    await expect(retry).rejects.toMatchObject({
+      code: "idempotency-core/execution-indeterminate",
+      category: "Conflict",
+      extensions: expect.objectContaining({
+        key: "key-1",
+        namespace: "commit",
+        failedAt: expect.any(String),
+      }),
+    });
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("records a non-retryable commit failure even when the handler mutates request metadata", async () => {
+    const commitFailure = new InvalidIdempotencyKeyProblem("commit failed");
+
+    class CommitFailureStore<TResult> extends InMemoryIdempotencyStore<TResult> {
+      override async commit(): Promise<never> {
+        throw commitFailure;
+      }
+    }
+
+    const store = new CommitFailureStore<string>();
+    const fail = vi.spyOn(store, "fail");
+    const coordinator = createIdempotencyCoordinator({ store });
+    const key = deriveIdempotencyKey({
+      namespace: "commit",
+      source: { kind: "explicit", key: "mutated-metadata", fingerprint: "payload-a" },
+    });
+    const metadata: Record<string, unknown> = { operation: "create" };
+    const handler = vi.fn(() => {
+      metadata.unpersistable = Buffer.from("not snapshot-safe");
+      return "created";
     });
 
-    expect(retry).toMatchObject({ outcome: "executed", response: "recovered" });
-    expect(calls).toBe(2);
+    await expect(coordinator.execute({ key, metadata }, handler)).rejects.toBe(commitFailure);
+
+    expect(fail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        retryable: false,
+        metadata: { operation: "create", idempotencyFailurePhase: "commit" },
+      }),
+    );
+
+    await expect(coordinator.execute({ key }, handler)).rejects.toBeInstanceOf(
+      IdempotencyExecutionIndeterminateProblem,
+    );
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("records a non-retryable commit failure when the audit sink pollutes reserved metadata", async () => {
+    const commitFailure = new InvalidIdempotencyKeyProblem("commit failed");
+
+    class CommitFailureStore<TResult> extends InMemoryIdempotencyStore<TResult> {
+      override async commit(): Promise<never> {
+        throw commitFailure;
+      }
+    }
+
+    const store = new CommitFailureStore<string>();
+    const fail = vi.spyOn(store, "fail");
+    const coordinator = createIdempotencyCoordinator({
+      store,
+      auditSink: {
+        recordIdempotency: (event) => {
+          const metadata = event.metadata as Record<string, unknown> | undefined;
+          if (event.type !== "idempotency.reserved" || metadata === undefined) {
+            return;
+          }
+          const detail = metadata.details as { shared?: string } | undefined;
+          if (detail !== undefined) {
+            detail.shared = "polluted-by-audit";
+          }
+          metadata.unpersistable = Buffer.from("not snapshot-safe");
+        },
+      },
+    });
+    const key = deriveIdempotencyKey({
+      namespace: "commit",
+      source: { kind: "explicit", key: "polluted-metadata", fingerprint: "payload-a" },
+    });
+    const handler = vi.fn(() => "created");
+
+    await expect(
+      coordinator.execute(
+        { key, metadata: { operation: "create", details: { shared: "safe" } } },
+        handler,
+      ),
+    ).rejects.toBe(commitFailure);
+
+    expect(fail).toHaveBeenCalledWith(
+      expect.objectContaining({
+        retryable: false,
+        metadata: {
+          operation: "create",
+          details: { shared: "safe" },
+          idempotencyFailurePhase: "commit",
+        },
+      }),
+    );
+
+    await expect(coordinator.execute({ key }, handler)).rejects.toBeInstanceOf(
+      IdempotencyExecutionIndeterminateProblem,
+    );
+    expect(handler).toHaveBeenCalledTimes(1);
   });
 
   it("replays a durable response when commit persists before rejecting", async () => {
