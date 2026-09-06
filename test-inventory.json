@@ -3161,6 +3161,12 @@
       "owner": "@croco/protocols-trpc"
     },
     {
+      "path": "packages/protocols-trpc/src/tests/TrpcParamResolver.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/protocols-trpc"
+    },
+    {
       "path": "packages/protocols-trpc/src/tests/createTrpcRouter.spec.ts",
       "lane": "fast",
       "qualifiers": [],

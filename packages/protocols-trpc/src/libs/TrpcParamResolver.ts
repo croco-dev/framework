@@ -22,7 +22,7 @@ export function createTrpcInputSchema(route: RouteIR): z.ZodType | null {
 
   const shape: z.ZodRawShape = {};
 
-  if (hasBodyParam(route)) {
+  if (hasBodyParam(route) || route.inputSchemas.body !== null) {
     shape.body = route.inputSchemas.body ?? z.unknown();
   }
 
