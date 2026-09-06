@@ -24,6 +24,7 @@ import {
   signOutboundWebhook,
   verifyOutboundWebhookSignature,
 } from "../index";
+import { isBlockedIpAddress } from "../libs/outbound/signing";
 
 const START = new Date("2026-07-26T00:00:00.000Z");
 
@@ -1014,10 +1015,26 @@ describe("outbound webhook signing and URL policy", () => {
     "https://[::1]/hook",
     "https://user:password@hooks.example.com/hook",
     "https://[::ffff:7f00:1]/hook",
+    "https://[0:0:0:0:0:0:0:1]/hook",
+    "https://[0000:0000:0000:0000:0000:0000:0000:0001]/hook",
+    "https://[0:0:0:0:0:ffff:169.254.169.254]/hook",
+    "https://[0000:0000:0000:0000:0000:ffff:169.254.169.254]/hook",
+    "https://[::ffff:169.254.169.254]/hook",
+    "https://[fe80::1]/hook",
+    "https://[fc00::1]/hook",
+    "https://[2001:db8::1]/hook",
   ])("rejects SSRF-oriented endpoint URL %s", async (url) => {
     await expect(defaultOutboundWebhookUrlPolicy.validate(url)).rejects.toBeInstanceOf(
       InvalidOutboundWebhookUrlProblem,
     );
+  });
+
+  it("allows public IPv6 endpoint URLs", async () => {
+    const validated = await defaultOutboundWebhookUrlPolicy.validate(
+      "https://[2606:4700:4700::1111]/hook",
+    );
+    expect(validated.url).toBe("https://[2606:4700:4700::1111]/hook");
+    expect(validated.resolvedAddresses).toEqual(["2606:4700:4700::1111"]);
   });
 
   it("rejects unsafe endpoint registrations before they can be subscribed", () => {
@@ -1036,6 +1053,52 @@ describe("outbound webhook signing and URL policy", () => {
 
     await expect(
       policy.validate("https://hooks.customer.example/v1/events"),
+    ).rejects.toBeInstanceOf(InvalidOutboundWebhookUrlProblem);
+  });
+
+  it.each([
+    "0:0:0:0:0:0:0:1",
+    "0000:0000:0000:0000:0000:0000:0000:0001",
+    "0:0:0:0:0:ffff:169.254.169.254",
+    "0000:0000:0000:0000:0000:ffff:169.254.169.254",
+    "::ffff:169.254.169.254",
+    "0:0:0:0:0:ffff:a9fe:a9fe",
+    "::1",
+    "::",
+    "fe80::1",
+    "fc00::1",
+    "2001:db8::1",
+    "ff02::1",
+  ])(
+    "rejects uncompressed and alternative IPv6 representations in isBlockedIpAddress: %s",
+    (ip) => {
+      expect(isBlockedIpAddress(ip)).toBe(true);
+    },
+  );
+
+  it.each([
+    "2606:4700:4700::1111",
+    "2607:f8b0:4005:805::200e",
+    "2001:4860:4860::8888",
+    "1.1.1.1",
+    "8.8.8.8",
+  ])("allows public IP addresses in isBlockedIpAddress: %s", (ip) => {
+    expect(isBlockedIpAddress(ip)).toBe(false);
+  });
+
+  it("rejects a public hostname when DNS resolves it to uncompressed IPv6 loopback or IPv4-mapped metadata", async () => {
+    const loopbackPolicy = createOutboundWebhookUrlPolicy({
+      resolveHostname: async () => ["0:0:0:0:0:0:0:1"],
+    });
+    await expect(
+      loopbackPolicy.validate("https://hooks.customer.example/v1/events"),
+    ).rejects.toBeInstanceOf(InvalidOutboundWebhookUrlProblem);
+
+    const metadataPolicy = createOutboundWebhookUrlPolicy({
+      resolveHostname: async () => ["0:0:0:0:0:ffff:169.254.169.254"],
+    });
+    await expect(
+      metadataPolicy.validate("https://hooks.customer.example/v1/events"),
     ).rejects.toBeInstanceOf(InvalidOutboundWebhookUrlProblem);
   });
 
