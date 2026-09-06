@@ -1,0 +1,177 @@
+{
+  "schemaVersion": "croco.test-lane-report/v2",
+  "inventoryVersion": 1,
+  "inventoryDigest": "baf5bd70e137630064c968e440160b1b65df5e1b633ca208c2e75ef8c0ead974",
+  "lane": "integration",
+  "allowLive": false,
+  "selectedOwners": [],
+  "executedPaths": [
+    "packages/analytics-posthog/src/tests/Integration.spec.ts",
+    "packages/cli/src/tests/integration/CliCommandIntegration.spec.ts",
+    "packages/cli/src/tests/integration/e2e.spec.ts",
+    "packages/cli/src/tests/integration/jobs-e2e.spec.ts",
+    "packages/create-croco-app/src/tests/e2e-advanced.spec.ts",
+    "packages/create-croco-app/src/tests/e2e-generation.spec.ts",
+    "packages/create-croco-app/src/tests/e2e-vite-spa.spec.ts",
+    "packages/docs/e2e/verify-starlight.spec.ts",
+    "packages/presentation-preset/src/__tests__/e2e.spec.ts",
+    "packages/rpc-codegen/src/tests/e2e.spec.ts",
+    "packages/rpc-codegen/src/tests/real-app.e2e.spec.ts",
+    "packages/tasks-core/src/tests/TaskRunner.integration.spec.ts"
+  ],
+  "skippedFiles": [],
+  "status": "passed",
+  "diagnostics": [],
+  "commands": [
+    {
+      "owner": "@croco/analytics-posthog",
+      "cwd": "packages/analytics-posthog",
+      "paths": [
+        "src/tests/Integration.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:integration"
+      ],
+      "exitCode": 0,
+      "durationMs": 1486,
+      "executedPaths": [
+        "src/tests/Integration.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/cli",
+      "cwd": "packages/cli",
+      "paths": [
+        "src/tests/integration/CliCommandIntegration.spec.ts",
+        "src/tests/integration/e2e.spec.ts",
+        "src/tests/integration/jobs-e2e.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:integration"
+      ],
+      "exitCode": 0,
+      "durationMs": 124947,
+      "executedPaths": [
+        "src/tests/integration/CliCommandIntegration.spec.ts",
+        "src/tests/integration/e2e.spec.ts",
+        "src/tests/integration/jobs-e2e.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "create-croco-app",
+      "cwd": "packages/create-croco-app",
+      "paths": [
+        "src/tests/e2e-advanced.spec.ts",
+        "src/tests/e2e-generation.spec.ts",
+        "src/tests/e2e-vite-spa.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:integration"
+      ],
+      "exitCode": 0,
+      "durationMs": 4361,
+      "executedPaths": [
+        "src/tests/e2e-advanced.spec.ts",
+        "src/tests/e2e-generation.spec.ts",
+        "src/tests/e2e-vite-spa.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/docs",
+      "cwd": "packages/docs",
+      "paths": [
+        "e2e/verify-starlight.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:integration"
+      ],
+      "exitCode": 0,
+      "durationMs": 241193,
+      "executedPaths": [
+        "e2e/verify-starlight.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/presentation-preset",
+      "cwd": "packages/presentation-preset",
+      "paths": [
+        "src/__tests__/e2e.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:integration"
+      ],
+      "exitCode": 0,
+      "durationMs": 1986,
+      "executedPaths": [
+        "src/__tests__/e2e.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/rpc-codegen",
+      "cwd": "packages/rpc-codegen",
+      "paths": [
+        "src/tests/e2e.spec.ts",
+        "src/tests/real-app.e2e.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:integration"
+      ],
+      "exitCode": 0,
+      "durationMs": 7272,
+      "executedPaths": [
+        "src/tests/e2e.spec.ts",
+        "src/tests/real-app.e2e.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/tasks-core",
+      "cwd": "packages/tasks-core",
+      "paths": [
+        "src/tests/TaskRunner.integration.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:integration"
+      ],
+      "exitCode": 0,
+      "durationMs": 1275,
+      "executedPaths": [
+        "src/tests/TaskRunner.integration.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    }
+  ]
+}

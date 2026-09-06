@@ -1,0 +1,4749 @@
+{
+  "schemaVersion": "croco.test-lane-report/v2",
+  "inventoryVersion": 1,
+  "inventoryDigest": "baf5bd70e137630064c968e440160b1b65df5e1b633ca208c2e75ef8c0ead974",
+  "lane": "fast",
+  "allowLive": false,
+  "selectedOwners": [],
+  "executedPaths": [
+    "examples/saas-billing-golden-path/src/tests/golden-path.spec.ts",
+    "examples/saas-billing-golden-path/src/tests/membership-quantity.spec.ts",
+    "packages/access-core/src/tests/Access.spec.ts",
+    "packages/access-core/src/tests/AccessEngine.spec.ts",
+    "packages/access-core/src/tests/AccessGuard.spec.ts",
+    "packages/access-core/src/tests/CheckResult.spec.ts",
+    "packages/access-core/src/tests/GuardChain.spec.ts",
+    "packages/access-core/src/tests/PolicyDecisionTrace.spec.ts",
+    "packages/access-drizzle/src/tests/DrizzleAccessProvider.spec.ts",
+    "packages/access-drizzle/src/tests/DrizzleProviderConformance.spec.ts",
+    "packages/admin-core/src/tests/AdminResource.spec.ts",
+    "packages/admin-core/src/tests/CreditOperations.spec.ts",
+    "packages/admin-core/src/tests/EngagementOperations.spec.ts",
+    "packages/admin-core/src/tests/TenantWorkspace.spec.ts",
+    "packages/admin-core/src/tests/WebhookOperations.spec.ts",
+    "packages/admin-generated/src/tests/AdminGenerated.spec.ts",
+    "packages/admin-ops/src/tests/EngagementAdapters.spec.ts",
+    "packages/admin-ops/src/tests/OperationsTimeline.spec.ts",
+    "packages/admin-ops/src/tests/RetryConsole.spec.ts",
+    "packages/admin-ops/src/tests/RetryConsoleReact.spec.tsx",
+    "packages/admin-ops/src/tests/WebhookAdapters.spec.ts",
+    "packages/admin-react/src/tests/AdminForm.spec.ts",
+    "packages/admin-react/src/tests/AdminFormHooks.spec.ts",
+    "packages/admin-react/src/tests/AdminPanel.spec.ts",
+    "packages/admin-react/src/tests/CreditOperationsConsole.spec.ts",
+    "packages/admin-react/src/tests/DataTable.spec.ts",
+    "packages/admin-react/src/tests/EngagementOperationsConsole.spec.ts",
+    "packages/admin-react/src/tests/LifecycleAutomationConsole.spec.ts",
+    "packages/admin-react/src/tests/PlanReleaseConsole.spec.ts",
+    "packages/admin-react/src/tests/TenantBusinessWorkspace.spec.ts",
+    "packages/admin-react/src/tests/TenantImpersonationConsole.spec.ts",
+    "packages/admin-react/src/tests/WebhookReliabilityConsole.spec.ts",
+    "packages/analytics-core/src/tests/AnalyticsManager.spec.ts",
+    "packages/architecture-policy/src/tests/ArchitecturePolicy.spec.ts",
+    "packages/audit-core/src/tests/AuditInterceptor.spec.ts",
+    "packages/audit-core/src/tests/AuditLogRepository.spec.ts",
+    "packages/audit-core/src/tests/Auditable.spec.ts",
+    "packages/audit-drizzle/src/tests/DrizzleAuditLogRepository.spec.ts",
+    "packages/auth-better-auth/src/tests/AuthConformance.spec.ts",
+    "packages/auth-better-auth/src/tests/BetterAuthFactory.spec.ts",
+    "packages/auth-better-auth/src/tests/BetterAuthFactoryIntegration.spec.ts",
+    "packages/auth-better-auth/src/tests/BetterAuthPlugin.spec.ts",
+    "packages/auth-better-auth/src/tests/BetterAuthProvider.spec.ts",
+    "packages/auth-better-auth/src/tests/BetterAuthSessionManager.spec.ts",
+    "packages/auth-better-auth/src/tests/BetterAuthSessionManagerIntegration.spec.ts",
+    "packages/auth-better-auth/src/tests/BetterAuthWebhookProcessor.spec.ts",
+    "packages/auth-better-auth/src/tests/Problems.spec.ts",
+    "packages/auth-clerk/src/tests/AuthConformance.spec.ts",
+    "packages/auth-clerk/src/tests/ClerkAuthPlugin.spec.ts",
+    "packages/auth-clerk/src/tests/ClerkAuthProvider.spec.ts",
+    "packages/auth-clerk/src/tests/ClerkOrganizationService.spec.ts",
+    "packages/auth-clerk/src/tests/ClerkProblems.spec.ts",
+    "packages/auth-clerk/src/tests/ClerkSessionProvider.spec.ts",
+    "packages/auth-clerk/src/tests/ClerkTenantMapper.spec.ts",
+    "packages/auth-clerk/src/tests/ClerkUserService.spec.ts",
+    "packages/auth-clerk/src/tests/ClerkWebhookHandler.spec.ts",
+    "packages/auth-clerk/src/tests/ProviderNoCredentialConformance.spec.ts",
+    "packages/auth-core/src/tests/AesGcmApiKeyRotationProtector.spec.ts",
+    "packages/auth-core/src/tests/ApiKeyGenerator.spec.ts",
+    "packages/auth-core/src/tests/ApiKeyGuard.spec.ts",
+    "packages/auth-core/src/tests/ApiKeyHasher.spec.ts",
+    "packages/auth-core/src/tests/ApiKeyManager.spec.ts",
+    "packages/auth-core/src/tests/ApiKeySecurity.spec.ts",
+    "packages/auth-core/src/tests/AuthGuard.spec.ts",
+    "packages/auth-core/src/tests/AuthProblems.spec.ts",
+    "packages/auth-core/src/tests/Permission.spec.ts",
+    "packages/auth-core/src/tests/PermissionGuard.spec.ts",
+    "packages/auth-core/src/tests/RbacEngine.spec.ts",
+    "packages/auth-core/src/tests/Role.spec.ts",
+    "packages/auth-core/src/tests/UnifiedAuthGuard.spec.ts",
+    "packages/auth-drizzle/src/tests/DrizzleApiKeyStore.spec.ts",
+    "packages/auth-drizzle/src/tests/DrizzleProviderConformance.spec.ts",
+    "packages/auth-drizzle/src/tests/DrizzleRoleRegistry.spec.ts",
+    "packages/auth-drizzle/src/tests/DrizzleSessionProvider.spec.ts",
+    "packages/auth-drizzle/src/tests/DrizzleTenantMappingProvider.spec.ts",
+    "packages/batch-core/src/tests/ChunkExecutor.spec.ts",
+    "packages/batch-core/src/tests/JobBuilder.spec.ts",
+    "packages/batch-qstash/src/tests/QStashChunkExecutor.spec.ts",
+    "packages/billing-core/src/tests/BillingProblems.spec.ts",
+    "packages/billing-core/src/tests/BillingProvider.spec.ts",
+    "packages/billing-core/src/tests/BillingService.spec.ts",
+    "packages/billing-core/src/tests/InMemoryBillingStore.spec.ts",
+    "packages/billing-core/src/tests/InMemoryPlanRegistry.spec.ts",
+    "packages/billing-core/src/tests/Money.spec.ts",
+    "packages/billing-core/src/tests/PlanReleaseProblems.spec.ts",
+    "packages/billing-core/src/tests/PlanReleaseService.spec.ts",
+    "packages/billing-core/src/tests/SubscriptionQuantityReconciler.spec.ts",
+    "packages/billing-polar/src/tests/PolarBillingDiagnosticsProvider.spec.ts",
+    "packages/billing-polar/src/tests/PolarBillingGateway.spec.ts",
+    "packages/billing-polar/src/tests/PolarBillingPlugin.spec.ts",
+    "packages/billing-polar/src/tests/PolarBillingProviderProfile.spec.ts",
+    "packages/billing-polar/src/tests/PolarContractMappingPreflight.spec.ts",
+    "packages/billing-polar/src/tests/PolarEventMapper.spec.ts",
+    "packages/billing-polar/src/tests/PolarUsageBillingGateway.spec.ts",
+    "packages/billing-polar/src/tests/PolarWebhookHandler.spec.ts",
+    "packages/billing-polar/src/tests/PolarWebhookHandlerSdk.spec.ts",
+    "packages/billing-polar/src/tests/ProviderNoCredentialConformance.spec.ts",
+    "packages/cache-core/src/tests/CacheExports.spec.ts",
+    "packages/cache-core/src/tests/CacheInvalidationGraph.spec.ts",
+    "packages/cache-core/src/tests/Cacheable.spec.ts",
+    "packages/cache-core/src/tests/InMemoryCacheStore.spec.ts",
+    "packages/cli/src/tests/CliTestContract.spec.ts",
+    "packages/cli/src/tests/CrocoRunner.spec.ts",
+    "packages/cli/src/tests/TestPlan.spec.ts",
+    "packages/cli/src/tests/applicationIntentEvidence.spec.ts",
+    "packages/cli/src/tests/architecturePolicyCheck.spec.ts",
+    "packages/cli/src/tests/codegenBinResolution.spec.ts",
+    "packages/cli/src/tests/codegenOpenapi.spec.ts",
+    "packages/cli/src/tests/codegenRpc.spec.ts",
+    "packages/cli/src/tests/codemods/registerController.spec.ts",
+    "packages/cli/src/tests/contractsCheck.spec.ts",
+    "packages/cli/src/tests/contractsDiff.spec.ts",
+    "packages/cli/src/tests/createDomain.spec.ts",
+    "packages/cli/src/tests/createPage.spec.ts",
+    "packages/cli/src/tests/desktop.spec.ts",
+    "packages/cli/src/tests/desktopArtifacts.spec.ts",
+    "packages/cli/src/tests/desktopConfig.spec.ts",
+    "packages/cli/src/tests/diCheck.spec.ts",
+    "packages/cli/src/tests/diGraph.spec.ts",
+    "packages/cli/src/tests/diagnosticCodes.spec.ts",
+    "packages/cli/src/tests/doctor.spec.ts",
+    "packages/cli/src/tests/fileWriter.spec.ts",
+    "packages/cli/src/tests/generateScaffold.spec.ts",
+    "packages/cli/src/tests/generateUsageDashboard.spec.ts",
+    "packages/cli/src/tests/jobs.spec.ts",
+    "packages/cli/src/tests/makeController.spec.ts",
+    "packages/cli/src/tests/makeEntity.spec.ts",
+    "packages/cli/src/tests/makeEvent.spec.ts",
+    "packages/cli/src/tests/makeListener.spec.ts",
+    "packages/cli/src/tests/makeRepository.spec.ts",
+    "packages/cli/src/tests/migrate.spec.ts",
+    "packages/cli/src/tests/naming.spec.ts",
+    "packages/cli/src/tests/opsStatus.spec.ts",
+    "packages/cli/src/tests/projectMap.spec.ts",
+    "packages/cli/src/tests/prompts.spec.ts",
+    "packages/cli/src/tests/runtimePolicyCheck.spec.ts",
+    "packages/cli/src/tests/upgrade.spec.ts",
+    "packages/cli/src/tests/workspace.spec.ts",
+    "packages/create-croco-app/src/tests/EnvironmentTemplate.spec.ts",
+    "packages/create-croco-app/src/tests/GenerationResult.spec.ts",
+    "packages/create-croco-app/src/tests/GeneratorOptions.spec.ts",
+    "packages/create-croco-app/src/tests/NextTemplateSecurity.spec.ts",
+    "packages/create-croco-app/src/tests/NodeRuntime.spec.ts",
+    "packages/create-croco-app/src/tests/ProgrammaticEntry.spec.ts",
+    "packages/create-croco-app/src/tests/TelemetryFlushTemplate.spec.ts",
+    "packages/create-croco-app/src/tests/TemplatePath.spec.ts",
+    "packages/create-croco-app/src/tests/cli-result.spec.ts",
+    "packages/create-croco-app/src/tests/croco-ranges.spec.ts",
+    "packages/create-croco-app/src/tests/generator-cleanup.spec.ts",
+    "packages/create-croco-app/src/tests/generator-install.spec.ts",
+    "packages/create-croco-app/src/tests/options.spec.ts",
+    "packages/create-croco-app/src/tests/prompts.spec.ts",
+    "packages/create-croco-app/src/tests/secret-placeholder-policy.spec.ts",
+    "packages/create-croco-app/src/tests/templates-build.spec.ts",
+    "packages/credits-core/src/tests/CreditLedger.spec.ts",
+    "packages/credits-drizzle/src/tests/DrizzleCreditLedgerStore.spec.ts",
+    "packages/customer-health-core/src/tests/CustomerHealthService.spec.ts",
+    "packages/customer-health-core/src/tests/HealthScoreCalculator.spec.ts",
+    "packages/customer-health-core/src/tests/InMemoryHealthScoreStore.spec.ts",
+    "packages/customer-health-drizzle/src/tests/BillingSignalProvider.spec.ts",
+    "packages/customer-health-drizzle/src/tests/DrizzleHealthScoreStore.spec.ts",
+    "packages/customer-health-drizzle/src/tests/DrizzleProviderConformance.spec.ts",
+    "packages/customer-health-drizzle/src/tests/HealthEventIntentsMigration.spec.ts",
+    "packages/customer-health-drizzle/src/tests/MeteringSignalProvider.spec.ts",
+    "packages/customer-health-drizzle/src/tests/WidenHealthScorePrecision.spec.ts",
+    "packages/dataloader-core/src/tests/BatchLoader.spec.ts",
+    "packages/dataloader-core/src/tests/TransactionAware.spec.ts",
+    "packages/desktop-codegen/src/tests/DesktopMainRegistrationMetadata.spec.ts",
+    "packages/desktop-codegen/src/tests/DesktopPreloadCodegen.spec.ts",
+    "packages/desktop-codegen/src/tests/DesktopRendererGenerationProblem.spec.ts",
+    "packages/diagnostics-core/src/tests/DiagnosticCodes.spec.ts",
+    "packages/diagnostics-core/src/tests/DiagnosticsHealthIndicator.spec.ts",
+    "packages/diagnostics-core/src/tests/DiagnosticsIntegration.spec.ts",
+    "packages/engagement-core/src/tests/CampaignContracts.spec.ts",
+    "packages/engagement-core/src/tests/CampaignServices.spec.ts",
+    "packages/engagement-core/src/tests/CampaignStore.spec.ts",
+    "packages/engagement-core/src/tests/EngagementService.spec.ts",
+    "packages/engagement-core/src/tests/EngagementStores.spec.ts",
+    "packages/engagement-core/src/tests/MessageContracts.spec.ts",
+    "packages/engagement-drizzle/src/tests/DrizzleCampaignStore.spec.ts",
+    "packages/engagement-drizzle/src/tests/DrizzleEngagementStore.spec.ts",
+    "packages/entitlements-core/src/tests/EntitlementDefinition.spec.ts",
+    "packages/entitlements-core/src/tests/EntitlementDefinitionTypes.spec.ts",
+    "packages/entitlements-core/src/tests/EntitlementGuard.spec.ts",
+    "packages/entitlements-core/src/tests/EntitlementIntegration.spec.ts",
+    "packages/entitlements-core/src/tests/EntitlementManager.spec.ts",
+    "packages/entitlements-core/src/tests/EntitlementRequirement.spec.ts",
+    "packages/entitlements-core/src/tests/PlanEntitlementRegistry.spec.ts",
+    "packages/entitlements-core/src/tests/RequireEntitlement.spec.ts",
+    "packages/entitlements-drizzle/src/tests/BillingStoreSubscriptionProvider.spec.ts",
+    "packages/entitlements-drizzle/src/tests/DrizzlePlanEntitlementRegistry.spec.ts",
+    "packages/entitlements-drizzle/src/tests/DrizzleProviderConformance.spec.ts",
+    "packages/entitlements-drizzle/src/tests/PlanVersionEntitlementsMigration.spec.ts",
+    "packages/esbuild-plugin/src/tests/ComponentScanner.spec.ts",
+    "packages/esbuild-plugin/src/tests/CrocoPlugin.spec.ts",
+    "packages/events-core/src/tests/BehavioralEvidence.spec.ts",
+    "packages/events-core/src/tests/DomainEvents.spec.ts",
+    "packages/events-core/src/tests/EventBus.spec.ts",
+    "packages/events-core/src/tests/EventBusConfig.spec.ts",
+    "packages/events-core/src/tests/EventBusDiagnosticsProvider.spec.ts",
+    "packages/events-core/src/tests/EventBusLifecycle.spec.ts",
+    "packages/events-core/src/tests/EventBusStats.spec.ts",
+    "packages/events-core/src/tests/EventPublisher.spec.ts",
+    "packages/events-core/src/tests/EventRegistry.spec.ts",
+    "packages/events-core/src/tests/EventSerializer.spec.ts",
+    "packages/events-core/src/tests/EventSubscriptionIndex.spec.ts",
+    "packages/events-core/src/tests/EventsProblems.spec.ts",
+    "packages/events-core/src/tests/HandlerResolver.spec.ts",
+    "packages/events-core/src/tests/PublicContracts.spec.ts",
+    "packages/events-core/src/tests/RegisterEventHandler.spec.ts",
+    "packages/events-inmemory/src/tests/EventBusReplayLifecycle.spec.ts",
+    "packages/events-inmemory/src/tests/InMemoryDeadLetterQueue.spec.ts",
+    "packages/events-inmemory/src/tests/InMemoryEventBus.spec.ts",
+    "packages/events-tx/src/tests/DrizzleTransactionalEventStore.spec.ts",
+    "packages/events-tx/src/tests/EventsTxProblems.spec.ts",
+    "packages/events-tx/src/tests/OutboxIdempotencyConformance.spec.ts",
+    "packages/events-tx/src/tests/TransactionalEventsConfiguration.spec.ts",
+    "packages/events-tx/src/tests/TransactionalOutbox.spec.ts",
+    "packages/execution-core/src/tests/BrowserEntry.spec.ts",
+    "packages/execution-core/src/tests/ExecutionContinuation.spec.ts",
+    "packages/execution-core/src/tests/ExecutionManagerImpl.spec.ts",
+    "packages/execution-drizzle/src/tests/DrizzleExecutionStore.spec.ts",
+    "packages/execution-drizzle/src/tests/ExecutionSchema.spec.ts",
+    "packages/features-core/src/tests/FeatureManager.spec.ts",
+    "packages/features-posthog/src/tests/PostHogFeatureManager.spec.ts",
+    "packages/framework-config/src/tests/ConfigProblems.spec.ts",
+    "packages/framework-config/src/tests/ConfigService.spec.ts",
+    "packages/framework-config/src/tests/Core.spec.ts",
+    "packages/framework-config/src/tests/ValidateConfig.spec.ts",
+    "packages/framework-context/src/libs/Container.test.ts",
+    "packages/framework-context/src/libs/Middleware.test.ts",
+    "packages/framework-context/src/tests/ApplicationIntentManifest.spec.ts",
+    "packages/framework-context/src/tests/ApplicationLifecycle.spec.ts",
+    "packages/framework-context/src/tests/CircularDependency.spec.ts",
+    "packages/framework-context/src/tests/ContainerResolutionDiagnostics.spec.ts",
+    "packages/framework-context/src/tests/ContainerScope.spec.ts",
+    "packages/framework-context/src/tests/DependencyGraphManifest.spec.ts",
+    "packages/framework-context/src/tests/FrameworkContext.spec.ts",
+    "packages/framework-context/src/tests/ILogger.spec.ts",
+    "packages/framework-context/src/tests/MiddlewareChain.spec.ts",
+    "packages/framework-context/src/tests/RequestPipelineGraph.spec.ts",
+    "packages/framework-context/src/tests/RequestScoped.spec.ts",
+    "packages/framework-context/src/tests/RuntimeCapabilities.spec.ts",
+    "packages/framework-context/src/tests/RuntimeInspector.spec.ts",
+    "packages/framework-context/src/tests/RuntimePolicy.spec.ts",
+    "packages/framework-context/src/tests/ShutdownManager.spec.ts",
+    "packages/framework-logger/src/tests/Logger.spec.ts",
+    "packages/framework-logger/src/tests/LoggerChild.spec.ts",
+    "packages/framework-logger/src/tests/LoggerRedaction.spec.ts",
+    "packages/framework-module/src/tests/ApplicationRuntime.spec.ts",
+    "packages/framework-module/src/tests/DuplicateModuleName.spec.ts",
+    "packages/framework-module/src/tests/ModuleGraphManifest.spec.ts",
+    "packages/framework-module/src/tests/ModuleLifecycleCancellation.spec.ts",
+    "packages/framework-module/src/tests/ModuleRollback.spec.ts",
+    "packages/framework-module/src/tests/ModuleRuntime.spec.ts",
+    "packages/framework-module/src/tests/PluginComposition.spec.ts",
+    "packages/framework-module/src/tests/ProviderOwnership.spec.ts",
+    "packages/framework-module/src/tests/frameworkModule.spec.ts",
+    "packages/framework-preset/src/tests/defineCrocoPreset.spec.ts",
+    "packages/framework-routes/src/__tests__/compiler.spec.ts",
+    "packages/framework-routes/src/__tests__/equivalence.spec.ts",
+    "packages/framework-routes/src/__tests__/framework-manifest.spec.ts",
+    "packages/framework-routes/src/__tests__/intent-map.spec.ts",
+    "packages/framework-routes/src/__tests__/metadata-reader.spec.ts",
+    "packages/frontend-cloudflare/src/tests/CloudflareSsrHandler.spec.ts",
+    "packages/frontend-problems/src/tests/problemClient.spec.ts",
+    "packages/frontend-react/src/tests/authBridge.spec.ts",
+    "packages/frontend-react/src/tests/createCrocoPages.spec.ts",
+    "packages/frontend-react/src/tests/problemUi.spec.ts",
+    "packages/frontend-react/src/tests/public-types.spec.ts",
+    "packages/frontend-react/src/tests/usePageData.spec.ts",
+    "packages/frontend-vite/src/tests/crocoSpaViteConfig.spec.ts",
+    "packages/frontend-vite/src/tests/crocoVitePlugin.spec.ts",
+    "packages/gid-core/src/tests/GidProblems.spec.ts",
+    "packages/gid-core/src/tests/IdPrefix.spec.ts",
+    "packages/governance-core/src/tests/DataGovernanceResource.spec.ts",
+    "packages/health-core/src/tests/HealthCheckService.spec.ts",
+    "packages/idempotency-core/src/tests/IdempotencyConformance.spec.ts",
+    "packages/idempotency-core/src/tests/IdempotencyCoordinator.spec.ts",
+    "packages/idempotency-core/src/tests/InMemoryIdempotencyStore.spec.ts",
+    "packages/idempotency-core/src/tests/KeyDerivation.spec.ts",
+    "packages/impersonation-core/src/tests/BlockDuringImpersonation.spec.ts",
+    "packages/impersonation-core/src/tests/ImpersonationAuditHelper.spec.ts",
+    "packages/impersonation-core/src/tests/ImpersonationGuard.spec.ts",
+    "packages/impersonation-core/src/tests/ImpersonationService.spec.ts",
+    "packages/impersonation-core/src/tests/InMemoryImpersonationStore.spec.ts",
+    "packages/integrations-posthog/src/tests/PostHogClient.spec.ts",
+    "packages/invitation-core/src/tests/DomainPolicyManager.spec.ts",
+    "packages/invitation-core/src/tests/DomainPolicyStore.spec.ts",
+    "packages/invitation-core/src/tests/InMemoryInvitationStore.spec.ts",
+    "packages/invitation-core/src/tests/InvitationManager.spec.ts",
+    "packages/invitation-core/src/tests/InvitationStore.spec.ts",
+    "packages/invitation-core/src/tests/InvitationToken.spec.ts",
+    "packages/invitation-core/src/tests/RateLimitedInvitationService.spec.ts",
+    "packages/invitation-drizzle/src/tests/DrizzleDomainPolicyStore.spec.ts",
+    "packages/invitation-drizzle/src/tests/DrizzleInvitationStore.spec.ts",
+    "packages/invitation-drizzle/src/tests/DrizzleProviderConformance.spec.ts",
+    "packages/invitation-drizzle/src/tests/InvitationTokenCipher.spec.ts",
+    "packages/lifecycle-core/src/tests/LifecycleCore.spec.ts",
+    "packages/lifecycle-core/src/tests/LifecycleRuleVersioning.spec.ts",
+    "packages/lifecycle-core/src/tests/MonetizationLifecycle.spec.ts",
+    "packages/lifecycle-core/src/tests/WebhookLifecycleActionAdapter.spec.ts",
+    "packages/llm-core/src/tests/AiSdkCompatibility.spec.ts",
+    "packages/llm-core/src/tests/InMemoryLlmModel.spec.ts",
+    "packages/llm-core/src/tests/LlmModel.spec.ts",
+    "packages/llm-core/src/tests/LlmService.spec.ts",
+    "packages/llm-core/src/tests/LlmTypes.spec.ts",
+    "packages/llm-core/src/tests/decorators/Llm.spec.ts",
+    "packages/llm-core/src/tests/events/LlmEvents.spec.ts",
+    "packages/llm-core/src/tests/problems/LlmProblems.spec.ts",
+    "packages/llm-metering/src/tests/LlmMeteringEvents.spec.ts",
+    "packages/llm-metering/src/tests/LlmMeteringProblems.spec.ts",
+    "packages/llm-metering/src/tests/LlmMeteringService.spec.ts",
+    "packages/llm-metering/src/tests/LlmMeteringTypes.spec.ts",
+    "packages/llm-metering/src/tests/LlmTelemetry.spec.ts",
+    "packages/llm-metering/src/tests/PricingTable.spec.ts",
+    "packages/llm-metering/src/tests/decorators/AiMetered.spec.ts",
+    "packages/llm-openai/src/tests/OpenAiLlmModel.spec.ts",
+    "packages/llm-openai/src/tests/OpenAiProblems.spec.ts",
+    "packages/llm-openai/src/tests/OpenAiSdkTransport.spec.ts",
+    "packages/membership-core/src/tests/MembershipManager.spec.ts",
+    "packages/membership-core/src/tests/MembershipService.spec.ts",
+    "packages/membership-core/src/tests/MembershipStore.spec.ts",
+    "packages/membership-core/src/tests/MembershipTypes.spec.ts",
+    "packages/membership-drizzle/src/tests/DrizzleMembershipStore.spec.ts",
+    "packages/membership-drizzle/src/tests/DrizzleProviderConformance.spec.ts",
+    "packages/meta-vite/src/tests/basic.spec.ts",
+    "packages/meta-vite/src/tests/cloudflare-adapter.spec.ts",
+    "packages/meta-vite/src/tests/compose-handler.spec.ts",
+    "packages/meta-vite/src/tests/createIsrHandler.spec.ts",
+    "packages/meta-vite/src/tests/frontend-action-manifest.spec.ts",
+    "packages/meta-vite/src/tests/isr-adapter.spec.ts",
+    "packages/meta-vite/src/tests/isr-middleware.spec.ts",
+    "packages/meta-vite/src/tests/isr-runtime-support.spec.ts",
+    "packages/meta-vite/src/tests/lambda-adapter.spec.ts",
+    "packages/meta-vite/src/tests/node-adapter.spec.ts",
+    "packages/meta-vite/src/tests/output-contract.spec.ts",
+    "packages/meta-vite/src/tests/redis-adapter.spec.ts",
+    "packages/meta-vite/src/tests/render-server.spec.ts",
+    "packages/meta-vite/src/tests/route-manifest.spec.ts",
+    "packages/meta-vite/src/tests/route-registry.spec.ts",
+    "packages/meta-vite/src/tests/rsc-basic.spec.ts",
+    "packages/meta-vite/src/tests/rsc-css-handling.spec.ts",
+    "packages/meta-vite/src/tests/rsc-route.spec.ts",
+    "packages/meta-vite/src/tests/rsc-server-only-leakage.spec.ts",
+    "packages/meta-vite/src/tests/rsc-streaming-smoke.spec.ts",
+    "packages/meta-vite/src/tests/rsc-vertical.spec.ts",
+    "packages/meta-vite/src/tests/server-action.spec.ts",
+    "packages/meta-vite/src/tests/ssg-prerender.spec.ts",
+    "packages/meta-vite/src/tests/vite-environments.spec.ts",
+    "packages/metering-core/src/tests/BillableUsageJournal.spec.ts",
+    "packages/metering-core/src/tests/IdempotencyManager.spec.ts",
+    "packages/metering-core/src/tests/MeterRef.spec.ts",
+    "packages/metering-core/src/tests/MeterRefTypes.spec.ts",
+    "packages/metering-core/src/tests/MeterRegistry.spec.ts",
+    "packages/metering-core/src/tests/MeterRepository.spec.ts",
+    "packages/metering-core/src/tests/MeteringService.spec.ts",
+    "packages/metering-core/src/tests/MeteringTypes.spec.ts",
+    "packages/metering-core/src/tests/QuotaManager.spec.ts",
+    "packages/metering-core/src/tests/RedisBillableUsageJournal.spec.ts",
+    "packages/metering-core/src/tests/RedisUsageStorage.spec.ts",
+    "packages/metering-core/src/tests/UsageAggregator.spec.ts",
+    "packages/metering-core/src/tests/UsageStorage.spec.ts",
+    "packages/metering-core/src/tests/decorators/Meter.spec.ts",
+    "packages/metering-core/src/tests/decorators/Metered.spec.ts",
+    "packages/metering-core/src/tests/events/Events.spec.ts",
+    "packages/metering-core/src/tests/problems/Problems.spec.ts",
+    "packages/metering-drizzle/src/tests/DrizzleMeterRepository.spec.ts",
+    "packages/metering-drizzle/src/tests/WidenMeteringIntegers.spec.ts",
+    "packages/metering-upstash/src/tests/UpstashRedisClient.spec.ts",
+    "packages/metrics-billing/src/tests/BillingEventHandler.spec.ts",
+    "packages/metrics-core/src/tests/CarryingCapacity.spec.ts",
+    "packages/metrics-core/src/tests/GrowthCalculator.spec.ts",
+    "packages/metrics-core/src/tests/Ltv.spec.ts",
+    "packages/metrics-core/src/tests/MetricsEngine.spec.ts",
+    "packages/metrics-core/src/tests/MetricsProblems.spec.ts",
+    "packages/metrics-core/src/tests/MrrCalculator.spec.ts",
+    "packages/metrics-core/src/tests/RetentionCalculator.spec.ts",
+    "packages/metrics-core/src/tests/SnapshotScheduler.spec.ts",
+    "packages/metrics-core/src/tests/TimescaleMetricsStore.spec.ts",
+    "packages/migration-runner/src/tests/MigrationCommandE2E.spec.ts",
+    "packages/migration-runner/src/tests/MigrationRunner.spec.ts",
+    "packages/migration-runner/src/tests/MigrationScanner.spec.ts",
+    "packages/migration-runner/src/tests/MigrationStore.spec.ts",
+    "packages/migration-runner/src/tests/MigrationTransactionHarness.spec.ts",
+    "packages/migration-runner/src/tests/cli.spec.ts",
+    "packages/notifications-core/src/tests/NotificationDispatch.spec.ts",
+    "packages/notifications-core/src/tests/NotificationPreferences.spec.ts",
+    "packages/notifications-core/src/tests/NotificationProviderConformance.spec.ts",
+    "packages/notifications-core/src/tests/NotificationProviderRegistry.spec.ts",
+    "packages/notifications-core/src/tests/NotificationResult.spec.ts",
+    "packages/notifications-core/src/tests/NotificationService.spec.ts",
+    "packages/notifications-core/src/tests/NotificationTemplates.spec.ts",
+    "packages/notifications-core/src/tests/SendNotificationTask.spec.ts",
+    "packages/notifications-react-email/src/tests/ReactEmail.spec.ts",
+    "packages/notifications-resend/src/tests/NotificationProviderConformance.spec.ts",
+    "packages/notifications-resend/src/tests/ResendProvider.spec.ts",
+    "packages/onboarding-core/src/tests/InMemoryOnboardingStore.spec.ts",
+    "packages/onboarding-core/src/tests/OnboardingManager.spec.ts",
+    "packages/onboarding-core/src/tests/OnboardingStoreConformance.spec.ts",
+    "packages/onboarding-drizzle/src/tests/DrizzleOnboardingStore.spec.ts",
+    "packages/onboarding-drizzle/src/tests/DrizzleProviderConformance.spec.ts",
+    "packages/onboarding-drizzle/src/tests/OnboardingLifecycleFieldsMigration.spec.ts",
+    "packages/openapi-spec/src/tests/Cli.spec.ts",
+    "packages/openapi-spec/src/tests/OpenApiCliGeneration.spec.ts",
+    "packages/openapi-spec/src/tests/Output.spec.ts",
+    "packages/openapi-spec/src/tests/emitOpenAPI.spec.ts",
+    "packages/openapi-spec/src/tests/loadControllers.spec.ts",
+    "packages/openapi-spec/src/tests/round-trip.spec.ts",
+    "packages/outbox-core/src/tests/TransactionalOutboxStore.spec.ts",
+    "packages/oxlint-rules/src/tests/index.spec.ts",
+    "packages/oxlint-rules/src/tests/rest-generated-contract-schema.spec.ts",
+    "packages/pagination-core/src/tests/CreateCursorPage.spec.ts",
+    "packages/pagination-core/src/tests/CreateOffsetPage.spec.ts",
+    "packages/pagination-core/src/tests/Cursor.spec.ts",
+    "packages/pagination-core/src/tests/CursorCodec.spec.ts",
+    "packages/pagination-core/src/tests/PackageManifest.spec.ts",
+    "packages/pagination-core/src/tests/ParsePaginationParams.spec.ts",
+    "packages/presentation-preset/src/__tests__/frontend-action-manifest.spec.ts",
+    "packages/presentation-preset/src/__tests__/output-contract-validator.spec.ts",
+    "packages/presentation-preset/src/__tests__/output-contract.spec.ts",
+    "packages/preset-cloudflare/src/tests/presetCloudflare.spec.ts",
+    "packages/preset-lambda/src/tests/presetLambda.spec.ts",
+    "packages/preset-lambda/src/tests/presetLambdaE2E.spec.ts",
+    "packages/preset-lambda/src/tests/publicTypes.spec.ts",
+    "packages/preset-node/src/tests/presetNode.spec.ts",
+    "packages/preset-node/src/tests/presetNodeE2E.spec.ts",
+    "packages/preset-node/src/tests/publicTypes.spec.ts",
+    "packages/problems-core/src/libs/Problem.test.ts",
+    "packages/problems-core/src/tests/Problem.spec.ts",
+    "packages/problems-core/src/tests/ProblemRegistry.spec.ts",
+    "packages/problems-core/src/tests/ProblemResponseRedaction.spec.ts",
+    "packages/problems-core/src/tests/ProblemSerializer.spec.ts",
+    "packages/protocol-codegen/src/tests/ControllerProject.spec.ts",
+    "packages/protocol-codegen/src/tests/RestControllerSources.spec.ts",
+    "packages/protocols-core/src/tests/ContractGraph.spec.ts",
+    "packages/protocols-core/src/tests/ContractGraphMonetization.spec.ts",
+    "packages/protocols-core/src/tests/RoutePath.spec.ts",
+    "packages/protocols-core/src/tests/SchemaDescriptor.spec.ts",
+    "packages/protocols-core/src/tests/controllerDiscovery.spec.ts",
+    "packages/protocols-core/src/tests/extractRouteIR.spec.ts",
+    "packages/protocols-desktop/src/tests/DesktopContract.spec.ts",
+    "packages/protocols-desktop/src/tests/DesktopContractGraph.spec.ts",
+    "packages/protocols-desktop/src/tests/DesktopContractGraphDiagnostics.spec.ts",
+    "packages/protocols-desktop/src/tests/DesktopContractGraphDiff.spec.ts",
+    "packages/protocols-desktop/src/tests/DesktopTypes.spec.ts",
+    "packages/protocols-desktop/src/tests/DesktopWireSchema.spec.ts",
+    "packages/protocols-graphql/src/tests/GraphQLContractSnapshot.spec.ts",
+    "packages/protocols-graphql/src/tests/GraphQLLifecycle.spec.ts",
+    "packages/protocols-graphql/src/tests/GraphQLProblems.spec.ts",
+    "packages/protocols-graphql/src/tests/GraphQLResolver.spec.ts",
+    "packages/protocols-graphql/src/tests/GuardChain.spec.ts",
+    "packages/protocols-graphql/src/tests/InterceptorChain.spec.ts",
+    "packages/protocols-graphql/src/tests/PackageManifest.spec.ts",
+    "packages/protocols-rest/src/tests/AuthGuard.spec.ts",
+    "packages/protocols-rest/src/tests/BehavioralEvidence.spec.ts",
+    "packages/protocols-rest/src/tests/Controller.spec.ts",
+    "packages/protocols-rest/src/tests/HttpExceptionFilter.spec.ts",
+    "packages/protocols-rest/src/tests/HttpMethod.spec.ts",
+    "packages/protocols-rest/src/tests/InputValidation.spec.ts",
+    "packages/protocols-rest/src/tests/Lifecycle.spec.ts",
+    "packages/protocols-rest/src/tests/LoggingInterceptor.spec.ts",
+    "packages/protocols-rest/src/tests/Params.spec.ts",
+    "packages/protocols-rest/src/tests/RolesGuard.spec.ts",
+    "packages/protocols-rest/src/tests/RouteContractGuard.spec.ts",
+    "packages/protocols-rest/src/tests/RouteContractTypes.spec.ts",
+    "packages/protocols-rest/src/tests/RouteSchema.spec.ts",
+    "packages/protocols-rest/src/tests/StrictSchemaSourceLocation.spec.ts",
+    "packages/protocols-rest/src/tests/ValidationPipe.spec.ts",
+    "packages/protocols-rest/src/tests/decorators/Controller.spec.ts",
+    "packages/protocols-rest/src/tests/decorators/Middleware.spec.ts",
+    "packages/protocols-rest/src/tests/decorators/Parameter.spec.ts",
+    "packages/protocols-rest/src/tests/decorators/Route.spec.ts",
+    "packages/protocols-trpc/src/tests/TrpcExecutionContext.spec.ts",
+    "packages/protocols-trpc/src/tests/TrpcExecutionPipeline.spec.ts",
+    "packages/protocols-trpc/src/tests/TrpcParamResolver.spec.ts",
+    "packages/protocols-trpc/src/tests/createTrpcRouter.spec.ts",
+    "packages/protocols-trpc/src/tests/round-trip.spec.ts",
+    "packages/ratelimit-core/src/tests/InMemoryRateLimitStore.spec.ts",
+    "packages/ratelimit-core/src/tests/RateLimit.spec.ts",
+    "packages/ratelimit-core/src/tests/RateLimitExceededProblem.spec.ts",
+    "packages/ratelimit-core/src/tests/RateLimitGuard.spec.ts",
+    "packages/ratelimit-core/src/tests/RateLimitKeyBuilder.spec.ts",
+    "packages/ratelimit-core/src/tests/RateLimitMiddleware.spec.ts",
+    "packages/ratelimit-core/src/tests/RateLimiter.spec.ts",
+    "packages/ratelimit-upstash/src/tests/UpstashRateLimitStore.spec.ts",
+    "packages/repository-core/src/tests/BatchLoadProblems.spec.ts",
+    "packages/repository-core/src/tests/decorators/BatchLoad.spec.ts",
+    "packages/retry-core/src/tests/BackoffPolicy.spec.ts",
+    "packages/retry-core/src/tests/CircuitBreaker.spec.ts",
+    "packages/retry-core/src/tests/CircuitBreakerState.spec.ts",
+    "packages/retry-core/src/tests/ExponentialBackoff.spec.ts",
+    "packages/retry-core/src/tests/FailureSemantics.spec.ts",
+    "packages/retry-core/src/tests/LambdaTimeoutGuard.spec.ts",
+    "packages/retry-core/src/tests/NumericConfiguration.spec.ts",
+    "packages/retry-core/src/tests/RedisCircuitBreaker.spec.ts",
+    "packages/retry-core/src/tests/RetryCoreExports.spec.ts",
+    "packages/retry-core/src/tests/RetryEngine.spec.ts",
+    "packages/retry-core/src/tests/RetryTemplate.spec.ts",
+    "packages/retry-core/src/tests/Retryable.spec.ts",
+    "packages/rpc-codegen/src/tests/Cli.spec.ts",
+    "packages/rpc-codegen/src/tests/ContractArtifactParity.spec.ts",
+    "packages/rpc-codegen/src/tests/ContractCheckCli.spec.ts",
+    "packages/rpc-codegen/src/tests/codegen.spec.ts",
+    "packages/rpc-codegen/src/tests/loadRoutes.spec.ts",
+    "packages/rpc-codegen/src/tests/round-trip.spec.ts",
+    "packages/search-core/src/tests/KoreanHangul.spec.ts",
+    "packages/search-core/src/tests/SearchAutoSync.spec.ts",
+    "packages/search-core/src/tests/SearchEngine.spec.ts",
+    "packages/search-core/src/tests/SearchField.spec.ts",
+    "packages/search-core/src/tests/SearchIndexRef.spec.ts",
+    "packages/search-core/src/tests/SearchProblems.spec.ts",
+    "packages/search-core/src/tests/SearchService.spec.ts",
+    "packages/search-core/src/tests/SearchTransforms.spec.ts",
+    "packages/search-core/src/tests/Searchable.spec.ts",
+    "packages/search-drizzle/src/tests/DrizzleProviderConformance.spec.ts",
+    "packages/search-drizzle/src/tests/DrizzleSearchEngine.spec.ts",
+    "packages/search-drizzle/src/tests/PGroongaStrategy.spec.ts",
+    "packages/search-drizzle/src/tests/PgSearchStrategy.spec.ts",
+    "packages/search-drizzle/src/tests/PgTrgmStrategy.spec.ts",
+    "packages/search-meilisearch/src/tests/MeilisearchDiagnosticsProvider.spec.ts",
+    "packages/search-meilisearch/src/tests/MeilisearchEngine.spec.ts",
+    "packages/search-meilisearch/src/tests/MeilisearchProblems.spec.ts",
+    "packages/storage-cloudflare/src/tests/CloudflareImagesDiagnosticsProvider.spec.ts",
+    "packages/storage-cloudflare/src/tests/CloudflareImagesProvider.spec.ts",
+    "packages/storage-cloudinary/src/tests/CloudinaryDiagnosticsProvider.spec.ts",
+    "packages/storage-cloudinary/src/tests/CloudinaryProvider.spec.ts",
+    "packages/storage-cloudinary/src/tests/CloudinaryStoragePlugin.spec.ts",
+    "packages/storage-core/src/tests/BaseStorageProvider.spec.ts",
+    "packages/storage-core/src/tests/InMemoryStorageProvider.spec.ts",
+    "packages/storage-core/src/tests/NodeInterop.spec.ts",
+    "packages/storage-core/src/tests/SignedUrlExpiry.spec.ts",
+    "packages/storage-core/src/tests/StorageProviderToken.spec.ts",
+    "packages/storage-core/src/tests/problems/FileNotFoundProblem.spec.ts",
+    "packages/storage-core/src/tests/problems/InvalidKeyProblem.spec.ts",
+    "packages/storage-core/src/tests/problems/StorageOperationAbortedProblem.spec.ts",
+    "packages/storage-core/src/tests/problems/StorageProblem.spec.ts",
+    "packages/storage-core/src/tests/problems/UploadFailedProblem.spec.ts",
+    "packages/storage-r2/src/tests/ProviderNoCredentialConformance.spec.ts",
+    "packages/storage-r2/src/tests/R2Config.spec.ts",
+    "packages/storage-r2/src/tests/R2StorageProvider.spec.ts",
+    "packages/tasks-core/src/tests/Task.spec.ts",
+    "packages/tasks-core/src/tests/TaskReference.spec.ts",
+    "packages/tasks-core/src/tests/TaskReferenceTypes.spec.ts",
+    "packages/tasks-core/src/tests/TaskRegistry.spec.ts",
+    "packages/tasks-core/src/tests/TaskRunner.spec.ts",
+    "packages/tasks-core/src/tests/TasksCore.spec.ts",
+    "packages/tasks-core/src/tests/TasksProblems.spec.ts",
+    "packages/tasks-qstash/src/tests/ProviderNoCredentialConformance.spec.ts",
+    "packages/tasks-qstash/src/tests/QStashTaskRunner.spec.ts",
+    "packages/tasks-qstash/src/tests/QStashTasksPlugin.spec.ts",
+    "packages/telemetry-api/src/tests/BehavioralEvidence.spec.ts",
+    "packages/telemetry-api/src/tests/Trace.spec.ts",
+    "packages/telemetry-api/src/tests/frontendBridge.spec.ts",
+    "packages/telemetry-sdk-node/src/tests/AutoInstrumentation.spec.ts",
+    "packages/telemetry-sdk-node/src/tests/BehavioralEvidence.spec.ts",
+    "packages/telemetry-sdk-node/src/tests/DeploymentEnvironment.spec.ts",
+    "packages/telemetry-sdk-node/src/tests/LambdaPreset.spec.ts",
+    "packages/telemetry-sdk-node/src/tests/NodeTelemetryPlugin.spec.ts",
+    "packages/telemetry-sdk-node/src/tests/ProbabilitySampler.spec.ts",
+    "packages/telemetry-sdk-node/src/tests/ProviderNoCredentialConformance.spec.ts",
+    "packages/telemetry-sdk-node/src/tests/TelemetryDiagnosticsProvider.spec.ts",
+    "packages/telemetry-sdk-node/src/tests/TelemetryProblems.spec.ts",
+    "packages/telemetry-sdk-node/src/tests/TelemetryRuntime.spec.ts",
+    "packages/tenant-core/src/tests/ActiveTenantGuard.spec.ts",
+    "packages/tenant-core/src/tests/HeaderTenantResolver.spec.ts",
+    "packages/tenant-core/src/tests/JwtTenantResolver.spec.ts",
+    "packages/tenant-core/src/tests/SubdomainTenantResolver.spec.ts",
+    "packages/tenant-core/src/tests/TenantIsolationEnforcer.spec.ts",
+    "packages/tenant-core/src/tests/TenantManager.spec.ts",
+    "packages/tenant-core/src/tests/TenantManagerNotRegisteredProblem.spec.ts",
+    "packages/tenant-core/src/tests/TenantManagerRegistry.spec.ts",
+    "packages/tenant-core/src/tests/TenantMigrationHelper.spec.ts",
+    "packages/tenant-core/src/tests/TenantModelManifest.spec.ts",
+    "packages/testing-resources/src/tests/PluginApplicationRuntime.spec.ts",
+    "packages/testing-resources/src/tests/ResourceConfiguration.spec.ts",
+    "packages/testing/src/tests/BillingProviderCapabilityConformance.spec.ts",
+    "packages/testing/src/tests/ChangedTestPlan.spec.ts",
+    "packages/testing/src/tests/ConformanceContract.spec.ts",
+    "packages/testing/src/tests/ContractRuntimeDifferentialIntegration.spec.ts",
+    "packages/testing/src/tests/ContractTesting.spec.ts",
+    "packages/testing/src/tests/ExecutableAssuranceGraph.spec.ts",
+    "packages/testing/src/tests/OperationalFailureDrill.spec.ts",
+    "packages/testing/src/tests/ProviderNoCredentialConformance.spec.ts",
+    "packages/testing/src/tests/ScenarioRuntime.spec.ts",
+    "packages/testing/src/tests/TestEvidence.spec.ts",
+    "packages/testing/src/tests/TestKernel.spec.ts",
+    "packages/testing/src/tests/TestRuntime.spec.ts",
+    "packages/testing/src/tests/testing.spec.ts",
+    "packages/transports-cloudflare-workers/src/tests/PackageManifest.spec.ts",
+    "packages/transports-cloudflare-workers/src/tests/WorkersAdapter.spec.ts",
+    "packages/transports-graphql/src/tests/GraphQLServer.lazy-import.spec.ts",
+    "packages/transports-graphql/src/tests/GraphQLServer.spec.ts",
+    "packages/transports-graphql/src/tests/PackageManifest.spec.ts",
+    "packages/transports-http/src/tests/BehavioralEvidence.spec.ts",
+    "packages/transports-http/src/tests/BodyLimitMiddleware.spec.ts",
+    "packages/transports-http/src/tests/CompressionMiddleware.spec.ts",
+    "packages/transports-http/src/tests/ContractRuntimeParity.spec.ts",
+    "packages/transports-http/src/tests/CorsMiddleware.spec.ts",
+    "packages/transports-http/src/tests/CrocoApp.spec.ts",
+    "packages/transports-http/src/tests/CrocoLambdaAdapter.spec.ts",
+    "packages/transports-http/src/tests/ErrorHandler.spec.ts",
+    "packages/transports-http/src/tests/FrameworkIntegration.spec.ts",
+    "packages/transports-http/src/tests/GeneratedRouteModule.spec.ts",
+    "packages/transports-http/src/tests/GracefulShutdownMiddleware.spec.ts",
+    "packages/transports-http/src/tests/HealthCheck.spec.ts",
+    "packages/transports-http/src/tests/HttpContext.spec.ts",
+    "packages/transports-http/src/tests/HttpPipeExecution.spec.ts",
+    "packages/transports-http/src/tests/HttpTransportIntegration.spec.ts",
+    "packages/transports-http/src/tests/HttpTransportPlugin.spec.ts",
+    "packages/transports-http/src/tests/LambdaAdapterConformance.spec.ts",
+    "packages/transports-http/src/tests/MinimalProductionRestAppGoldenPath.spec.ts",
+    "packages/transports-http/src/tests/NodeAbortSignal.spec.ts",
+    "packages/transports-http/src/tests/NodeAdapterSmoke.spec.ts",
+    "packages/transports-http/src/tests/NodeServeStaticSecurity.spec.ts",
+    "packages/transports-http/src/tests/OperationalEndpoints.spec.ts",
+    "packages/transports-http/src/tests/PackageManifest.spec.ts",
+    "packages/transports-http/src/tests/ParamResolver.spec.ts",
+    "packages/transports-http/src/tests/PipelineConformance.spec.ts",
+    "packages/transports-http/src/tests/PipelineRunner.spec.ts",
+    "packages/transports-http/src/tests/RateLimitMiddleware.spec.ts",
+    "packages/transports-http/src/tests/RouteCompiler.spec.ts",
+    "packages/transports-http/src/tests/RuntimeCapabilityConformance.spec.ts",
+    "packages/transports-http/src/tests/RuntimeContext.spec.ts",
+    "packages/transports-http/src/tests/SecurityHeadersMiddleware.spec.ts",
+    "packages/transports-http/src/tests/SecurityMiddlewareMarker.spec.ts",
+    "packages/transports-http/src/tests/StaticAssetConformance.spec.ts",
+    "packages/transports-http/src/tests/TelemetryMiddleware.spec.ts",
+    "packages/triggers-core/src/tests/Cron.spec.ts",
+    "packages/triggers-core/src/tests/OnEvent.spec.ts",
+    "packages/triggers-core/src/tests/OnWebhook.spec.ts",
+    "packages/triggers-core/src/tests/TriggerRefTypes.spec.ts",
+    "packages/triggers-core/src/tests/TriggerRegistry.spec.ts",
+    "packages/triggers-core/src/tests/TriggersCore.spec.ts",
+    "packages/triggers-qstash/src/tests/QStashScheduler.spec.ts",
+    "packages/triggers-qstash/src/tests/QStashTriggerHandler.spec.ts",
+    "packages/triggers-qstash/src/tests/TriggersQstash.spec.ts",
+    "packages/tx-core/src/libs/TxManager.test.ts",
+    "packages/tx-core/src/tests/TransactionProblems.spec.ts",
+    "packages/tx-core/src/tests/Transactional.spec.ts",
+    "packages/tx-core/src/tests/TxManager.characterization.spec.ts",
+    "packages/tx-core/src/tests/TxManager.concurrency.spec.ts",
+    "packages/tx-core/src/tests/TxManager.spec.ts",
+    "packages/tx-drizzle/src/tests/DrizzleHealthIndicator.spec.ts",
+    "packages/tx-drizzle/src/tests/DrizzleTransactionPlugin.spec.ts",
+    "packages/tx-drizzle/src/tests/DrizzleTxAdapter.spec.ts",
+    "packages/tx-drizzle/src/tests/RealDb.spec.ts",
+    "packages/tx-drizzle/src/tests/Repository.spec.ts",
+    "packages/tx-drizzle/src/tests/RepositoryIntegration.spec.ts",
+    "packages/tx-drizzle/src/tests/TxDrizzleProblems.spec.ts",
+    "packages/tx-drizzle/src/tests/createRlsPolicy.spec.ts",
+    "packages/ui-astryx/src/tests/AstryxUi.spec.ts",
+    "packages/webhooks-core/src/tests/OutboundWebhookRuntime.spec.ts",
+    "packages/webhooks-core/src/tests/WebhookEventRouter.spec.ts",
+    "packages/webhooks-core/src/tests/WebhookFixture.spec.ts",
+    "packages/webhooks-core/src/tests/WebhookGateway.spec.ts",
+    "packages/webhooks-core/src/tests/WebhookProviderAdapterConformance.spec.ts",
+    "packages/workflow-core/src/tests/InMemorySagaStore.spec.ts",
+    "packages/workflow-core/src/tests/SagaRunner.spec.ts",
+    "packages/workflow-core/src/tests/WorkflowCore.spec.ts",
+    "packages/workflow-core/src/tests/WorkflowTypes.spec.ts",
+    "scripts/tests/alpha-release-smoke.spec.ts",
+    "scripts/tests/api-docs-drift-check.spec.ts",
+    "scripts/tests/api-docs-pipeline.spec.ts",
+    "scripts/tests/api-docs-trigger-check.spec.ts",
+    "scripts/tests/architecture-policy-check.spec.ts",
+    "scripts/tests/auto-changeset.spec.ts",
+    "scripts/tests/bench-threshold-check.spec.ts",
+    "scripts/tests/benchmark-readiness-report.spec.ts",
+    "scripts/tests/benchmark-workflow.spec.ts",
+    "scripts/tests/branch-protection-policy.spec.ts",
+    "scripts/tests/changed-test-full-suite-status.spec.ts",
+    "scripts/tests/changed-test-plan-shadow.spec.ts",
+    "scripts/tests/changeset-required-check.spec.ts",
+    "scripts/tests/ci-cacheable-experiment-identity.spec.ts",
+    "scripts/tests/ci-cacheable-lane-cache.spec.ts",
+    "scripts/tests/ci-cacheable-lane-runner.spec.ts",
+    "scripts/tests/ci-cacheable-lanes-collector.spec.ts",
+    "scripts/tests/ci-cacheable-lanes-evaluator.spec.ts",
+    "scripts/tests/ci-cacheable-lanes-local-harness.spec.ts",
+    "scripts/tests/ci-cacheable-security-evidence.spec.ts",
+    "scripts/tests/ci-executable-policy.spec.ts",
+    "scripts/tests/ci-lane-evidence.spec.ts",
+    "scripts/tests/ci-performance-budget.spec.ts",
+    "scripts/tests/ci-performance-observer-workflow.spec.ts",
+    "scripts/tests/ci-performance-observer.spec.ts",
+    "scripts/tests/ci-publish-critical-path.spec.ts",
+    "scripts/tests/ci-synthesis-input.spec.ts",
+    "scripts/tests/ci-verification-identity.spec.ts",
+    "scripts/tests/ci-workflow.spec.ts",
+    "scripts/tests/compiler-baseline-check.spec.ts",
+    "scripts/tests/core-coverage-warning-check.spec.ts",
+    "scripts/tests/create-croco-app-generated-smoke.spec.ts",
+    "scripts/tests/dependency-audit-policy.spec.ts",
+    "scripts/tests/doc-examples-check.spec.ts",
+    "scripts/tests/docs-cache-contract.spec.ts",
+    "scripts/tests/executable-assurance-report.spec.ts",
+    "scripts/tests/first-success-verify.spec.ts",
+    "scripts/tests/generated-secret-placeholder-policy.spec.ts",
+    "scripts/tests/live-tests-workflow.spec.ts",
+    "scripts/tests/normalize-packages.spec.ts",
+    "scripts/tests/package-bin-smoke.spec.ts",
+    "scripts/tests/package-docs-check.spec.ts",
+    "scripts/tests/package-entrypoint-smoke.spec.ts",
+    "scripts/tests/package-manifest-contracts.spec.ts",
+    "scripts/tests/package-quality-report.spec.ts",
+    "scripts/tests/post-benchmark-comment.spec.ts",
+    "scripts/tests/pr-review-companion.spec.ts",
+    "scripts/tests/problem-registry.spec.ts",
+    "scripts/tests/production-ready-check.spec.ts",
+    "scripts/tests/protocols-desktop-type-benchmark.spec.ts",
+    "scripts/tests/provenance-config-check.spec.ts",
+    "scripts/tests/provider-certification-check.spec.ts",
+    "scripts/tests/public-api-surface.spec.ts",
+    "scripts/tests/release-docs-check.spec.ts",
+    "scripts/tests/release-metadata-check.spec.ts",
+    "scripts/tests/release-reconciliation-state.spec.ts",
+    "scripts/tests/release-spine-evidence.spec.ts",
+    "scripts/tests/release-version-sync.spec.ts",
+    "scripts/tests/release-workflow.spec.ts",
+    "scripts/tests/repository-policy-audit-workflow.spec.ts",
+    "scripts/tests/security-allowlist-metadata-check.spec.ts",
+    "scripts/tests/spine-promotion-check.spec.ts",
+    "scripts/tests/static-misuse-check.spec.ts",
+    "scripts/tests/strict-contract-typecheck.spec.ts",
+    "scripts/tests/test-evidence-bundle.spec.ts",
+    "scripts/tests/test-evidence-reconcile.spec.ts",
+    "scripts/tests/test-inventory.spec.ts",
+    "scripts/tests/test-lane-evidence-check.spec.ts",
+    "scripts/tests/test-lane-runner.spec.ts",
+    "scripts/tests/tracked-file-mutation-guard.spec.ts",
+    "scripts/tests/turbo-cache-contract.spec.ts",
+    "scripts/tests/turbo-task-contract.spec.ts",
+    "scripts/tests/verification-change-classifier.spec.ts",
+    "scripts/tests/verification-command.spec.ts",
+    "scripts/tests/verification-manifest.spec.ts",
+    "scripts/tests/verification-policy.spec.ts",
+    "scripts/tests/verify-circular-allowlist.spec.ts",
+    "scripts/tests/version-packages.spec.ts"
+  ],
+  "skippedFiles": [],
+  "status": "passed",
+  "diagnostics": [],
+  "commands": [
+    {
+      "owner": "repo:ci",
+      "cwd": ".",
+      "paths": [
+        "scripts/tests/alpha-release-smoke.spec.ts",
+        "scripts/tests/api-docs-drift-check.spec.ts",
+        "scripts/tests/api-docs-pipeline.spec.ts",
+        "scripts/tests/api-docs-trigger-check.spec.ts",
+        "scripts/tests/architecture-policy-check.spec.ts",
+        "scripts/tests/auto-changeset.spec.ts",
+        "scripts/tests/bench-threshold-check.spec.ts",
+        "scripts/tests/benchmark-readiness-report.spec.ts",
+        "scripts/tests/benchmark-workflow.spec.ts",
+        "scripts/tests/branch-protection-policy.spec.ts",
+        "scripts/tests/changed-test-full-suite-status.spec.ts",
+        "scripts/tests/changed-test-plan-shadow.spec.ts",
+        "scripts/tests/changeset-required-check.spec.ts",
+        "scripts/tests/ci-cacheable-experiment-identity.spec.ts",
+        "scripts/tests/ci-cacheable-lane-cache.spec.ts",
+        "scripts/tests/ci-cacheable-lane-runner.spec.ts",
+        "scripts/tests/ci-cacheable-lanes-collector.spec.ts",
+        "scripts/tests/ci-cacheable-lanes-evaluator.spec.ts",
+        "scripts/tests/ci-cacheable-lanes-local-harness.spec.ts",
+        "scripts/tests/ci-cacheable-security-evidence.spec.ts",
+        "scripts/tests/ci-executable-policy.spec.ts",
+        "scripts/tests/ci-lane-evidence.spec.ts",
+        "scripts/tests/ci-performance-budget.spec.ts",
+        "scripts/tests/ci-performance-observer-workflow.spec.ts",
+        "scripts/tests/ci-performance-observer.spec.ts",
+        "scripts/tests/ci-publish-critical-path.spec.ts",
+        "scripts/tests/ci-synthesis-input.spec.ts",
+        "scripts/tests/ci-verification-identity.spec.ts",
+        "scripts/tests/ci-workflow.spec.ts",
+        "scripts/tests/compiler-baseline-check.spec.ts",
+        "scripts/tests/core-coverage-warning-check.spec.ts",
+        "scripts/tests/create-croco-app-generated-smoke.spec.ts",
+        "scripts/tests/dependency-audit-policy.spec.ts",
+        "scripts/tests/doc-examples-check.spec.ts",
+        "scripts/tests/docs-cache-contract.spec.ts",
+        "scripts/tests/executable-assurance-report.spec.ts",
+        "scripts/tests/first-success-verify.spec.ts",
+        "scripts/tests/generated-secret-placeholder-policy.spec.ts",
+        "scripts/tests/live-tests-workflow.spec.ts",
+        "scripts/tests/normalize-packages.spec.ts",
+        "scripts/tests/package-bin-smoke.spec.ts",
+        "scripts/tests/package-docs-check.spec.ts",
+        "scripts/tests/package-entrypoint-smoke.spec.ts",
+        "scripts/tests/package-manifest-contracts.spec.ts",
+        "scripts/tests/package-quality-report.spec.ts",
+        "scripts/tests/post-benchmark-comment.spec.ts",
+        "scripts/tests/pr-review-companion.spec.ts",
+        "scripts/tests/problem-registry.spec.ts",
+        "scripts/tests/production-ready-check.spec.ts",
+        "scripts/tests/protocols-desktop-type-benchmark.spec.ts",
+        "scripts/tests/provenance-config-check.spec.ts",
+        "scripts/tests/provider-certification-check.spec.ts",
+        "scripts/tests/public-api-surface.spec.ts",
+        "scripts/tests/release-docs-check.spec.ts",
+        "scripts/tests/release-metadata-check.spec.ts",
+        "scripts/tests/release-reconciliation-state.spec.ts",
+        "scripts/tests/release-spine-evidence.spec.ts",
+        "scripts/tests/release-version-sync.spec.ts",
+        "scripts/tests/release-workflow.spec.ts",
+        "scripts/tests/repository-policy-audit-workflow.spec.ts",
+        "scripts/tests/security-allowlist-metadata-check.spec.ts",
+        "scripts/tests/spine-promotion-check.spec.ts",
+        "scripts/tests/static-misuse-check.spec.ts",
+        "scripts/tests/strict-contract-typecheck.spec.ts",
+        "scripts/tests/test-evidence-bundle.spec.ts",
+        "scripts/tests/test-evidence-reconcile.spec.ts",
+        "scripts/tests/test-inventory.spec.ts",
+        "scripts/tests/test-lane-evidence-check.spec.ts",
+        "scripts/tests/test-lane-runner.spec.ts",
+        "scripts/tests/tracked-file-mutation-guard.spec.ts",
+        "scripts/tests/turbo-cache-contract.spec.ts",
+        "scripts/tests/turbo-task-contract.spec.ts",
+        "scripts/tests/verification-change-classifier.spec.ts",
+        "scripts/tests/verification-command.spec.ts",
+        "scripts/tests/verification-manifest.spec.ts",
+        "scripts/tests/verification-policy.spec.ts",
+        "scripts/tests/verify-circular-allowlist.spec.ts",
+        "scripts/tests/version-packages.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "exec",
+        "vitest",
+        "run",
+        "scripts/tests/alpha-release-smoke.spec.ts",
+        "scripts/tests/api-docs-drift-check.spec.ts",
+        "scripts/tests/api-docs-pipeline.spec.ts",
+        "scripts/tests/api-docs-trigger-check.spec.ts",
+        "scripts/tests/architecture-policy-check.spec.ts",
+        "scripts/tests/auto-changeset.spec.ts",
+        "scripts/tests/bench-threshold-check.spec.ts",
+        "scripts/tests/benchmark-readiness-report.spec.ts",
+        "scripts/tests/benchmark-workflow.spec.ts",
+        "scripts/tests/branch-protection-policy.spec.ts",
+        "scripts/tests/changed-test-full-suite-status.spec.ts",
+        "scripts/tests/changed-test-plan-shadow.spec.ts",
+        "scripts/tests/changeset-required-check.spec.ts",
+        "scripts/tests/ci-cacheable-experiment-identity.spec.ts",
+        "scripts/tests/ci-cacheable-lane-cache.spec.ts",
+        "scripts/tests/ci-cacheable-lane-runner.spec.ts",
+        "scripts/tests/ci-cacheable-lanes-collector.spec.ts",
+        "scripts/tests/ci-cacheable-lanes-evaluator.spec.ts",
+        "scripts/tests/ci-cacheable-lanes-local-harness.spec.ts",
+        "scripts/tests/ci-cacheable-security-evidence.spec.ts",
+        "scripts/tests/ci-executable-policy.spec.ts",
+        "scripts/tests/ci-lane-evidence.spec.ts",
+        "scripts/tests/ci-performance-budget.spec.ts",
+        "scripts/tests/ci-performance-observer-workflow.spec.ts",
+        "scripts/tests/ci-performance-observer.spec.ts",
+        "scripts/tests/ci-publish-critical-path.spec.ts",
+        "scripts/tests/ci-synthesis-input.spec.ts",
+        "scripts/tests/ci-verification-identity.spec.ts",
+        "scripts/tests/ci-workflow.spec.ts",
+        "scripts/tests/compiler-baseline-check.spec.ts",
+        "scripts/tests/core-coverage-warning-check.spec.ts",
+        "scripts/tests/create-croco-app-generated-smoke.spec.ts",
+        "scripts/tests/dependency-audit-policy.spec.ts",
+        "scripts/tests/doc-examples-check.spec.ts",
+        "scripts/tests/docs-cache-contract.spec.ts",
+        "scripts/tests/executable-assurance-report.spec.ts",
+        "scripts/tests/first-success-verify.spec.ts",
+        "scripts/tests/generated-secret-placeholder-policy.spec.ts",
+        "scripts/tests/live-tests-workflow.spec.ts",
+        "scripts/tests/normalize-packages.spec.ts",
+        "scripts/tests/package-bin-smoke.spec.ts",
+        "scripts/tests/package-docs-check.spec.ts",
+        "scripts/tests/package-entrypoint-smoke.spec.ts",
+        "scripts/tests/package-manifest-contracts.spec.ts",
+        "scripts/tests/package-quality-report.spec.ts",
+        "scripts/tests/post-benchmark-comment.spec.ts",
+        "scripts/tests/pr-review-companion.spec.ts",
+        "scripts/tests/problem-registry.spec.ts",
+        "scripts/tests/production-ready-check.spec.ts",
+        "scripts/tests/protocols-desktop-type-benchmark.spec.ts",
+        "scripts/tests/provenance-config-check.spec.ts",
+        "scripts/tests/provider-certification-check.spec.ts",
+        "scripts/tests/public-api-surface.spec.ts",
+        "scripts/tests/release-docs-check.spec.ts",
+        "scripts/tests/release-metadata-check.spec.ts",
+        "scripts/tests/release-reconciliation-state.spec.ts",
+        "scripts/tests/release-spine-evidence.spec.ts",
+        "scripts/tests/release-version-sync.spec.ts",
+        "scripts/tests/release-workflow.spec.ts",
+        "scripts/tests/repository-policy-audit-workflow.spec.ts",
+        "scripts/tests/security-allowlist-metadata-check.spec.ts",
+        "scripts/tests/spine-promotion-check.spec.ts",
+        "scripts/tests/static-misuse-check.spec.ts",
+        "scripts/tests/strict-contract-typecheck.spec.ts",
+        "scripts/tests/test-evidence-bundle.spec.ts",
+        "scripts/tests/test-evidence-reconcile.spec.ts",
+        "scripts/tests/test-inventory.spec.ts",
+        "scripts/tests/test-lane-evidence-check.spec.ts",
+        "scripts/tests/test-lane-runner.spec.ts",
+        "scripts/tests/tracked-file-mutation-guard.spec.ts",
+        "scripts/tests/turbo-cache-contract.spec.ts",
+        "scripts/tests/turbo-task-contract.spec.ts",
+        "scripts/tests/verification-change-classifier.spec.ts",
+        "scripts/tests/verification-command.spec.ts",
+        "scripts/tests/verification-manifest.spec.ts",
+        "scripts/tests/verification-policy.spec.ts",
+        "scripts/tests/verify-circular-allowlist.spec.ts",
+        "scripts/tests/version-packages.spec.ts"
+      ],
+      "exitCode": 0,
+      "durationMs": 293690,
+      "executedPaths": [
+        "scripts/tests/alpha-release-smoke.spec.ts",
+        "scripts/tests/api-docs-drift-check.spec.ts",
+        "scripts/tests/api-docs-pipeline.spec.ts",
+        "scripts/tests/api-docs-trigger-check.spec.ts",
+        "scripts/tests/architecture-policy-check.spec.ts",
+        "scripts/tests/auto-changeset.spec.ts",
+        "scripts/tests/bench-threshold-check.spec.ts",
+        "scripts/tests/benchmark-readiness-report.spec.ts",
+        "scripts/tests/benchmark-workflow.spec.ts",
+        "scripts/tests/branch-protection-policy.spec.ts",
+        "scripts/tests/changed-test-full-suite-status.spec.ts",
+        "scripts/tests/changed-test-plan-shadow.spec.ts",
+        "scripts/tests/changeset-required-check.spec.ts",
+        "scripts/tests/ci-cacheable-experiment-identity.spec.ts",
+        "scripts/tests/ci-cacheable-lane-cache.spec.ts",
+        "scripts/tests/ci-cacheable-lane-runner.spec.ts",
+        "scripts/tests/ci-cacheable-lanes-collector.spec.ts",
+        "scripts/tests/ci-cacheable-lanes-evaluator.spec.ts",
+        "scripts/tests/ci-cacheable-lanes-local-harness.spec.ts",
+        "scripts/tests/ci-cacheable-security-evidence.spec.ts",
+        "scripts/tests/ci-executable-policy.spec.ts",
+        "scripts/tests/ci-lane-evidence.spec.ts",
+        "scripts/tests/ci-performance-budget.spec.ts",
+        "scripts/tests/ci-performance-observer-workflow.spec.ts",
+        "scripts/tests/ci-performance-observer.spec.ts",
+        "scripts/tests/ci-publish-critical-path.spec.ts",
+        "scripts/tests/ci-synthesis-input.spec.ts",
+        "scripts/tests/ci-verification-identity.spec.ts",
+        "scripts/tests/ci-workflow.spec.ts",
+        "scripts/tests/compiler-baseline-check.spec.ts",
+        "scripts/tests/core-coverage-warning-check.spec.ts",
+        "scripts/tests/create-croco-app-generated-smoke.spec.ts",
+        "scripts/tests/dependency-audit-policy.spec.ts",
+        "scripts/tests/doc-examples-check.spec.ts",
+        "scripts/tests/docs-cache-contract.spec.ts",
+        "scripts/tests/executable-assurance-report.spec.ts",
+        "scripts/tests/first-success-verify.spec.ts",
+        "scripts/tests/generated-secret-placeholder-policy.spec.ts",
+        "scripts/tests/live-tests-workflow.spec.ts",
+        "scripts/tests/normalize-packages.spec.ts",
+        "scripts/tests/package-bin-smoke.spec.ts",
+        "scripts/tests/package-docs-check.spec.ts",
+        "scripts/tests/package-entrypoint-smoke.spec.ts",
+        "scripts/tests/package-manifest-contracts.spec.ts",
+        "scripts/tests/package-quality-report.spec.ts",
+        "scripts/tests/post-benchmark-comment.spec.ts",
+        "scripts/tests/pr-review-companion.spec.ts",
+        "scripts/tests/problem-registry.spec.ts",
+        "scripts/tests/production-ready-check.spec.ts",
+        "scripts/tests/protocols-desktop-type-benchmark.spec.ts",
+        "scripts/tests/provenance-config-check.spec.ts",
+        "scripts/tests/provider-certification-check.spec.ts",
+        "scripts/tests/public-api-surface.spec.ts",
+        "scripts/tests/release-docs-check.spec.ts",
+        "scripts/tests/release-metadata-check.spec.ts",
+        "scripts/tests/release-reconciliation-state.spec.ts",
+        "scripts/tests/release-spine-evidence.spec.ts",
+        "scripts/tests/release-version-sync.spec.ts",
+        "scripts/tests/release-workflow.spec.ts",
+        "scripts/tests/repository-policy-audit-workflow.spec.ts",
+        "scripts/tests/security-allowlist-metadata-check.spec.ts",
+        "scripts/tests/spine-promotion-check.spec.ts",
+        "scripts/tests/static-misuse-check.spec.ts",
+        "scripts/tests/strict-contract-typecheck.spec.ts",
+        "scripts/tests/test-evidence-bundle.spec.ts",
+        "scripts/tests/test-evidence-reconcile.spec.ts",
+        "scripts/tests/test-inventory.spec.ts",
+        "scripts/tests/test-lane-evidence-check.spec.ts",
+        "scripts/tests/test-lane-runner.spec.ts",
+        "scripts/tests/tracked-file-mutation-guard.spec.ts",
+        "scripts/tests/turbo-cache-contract.spec.ts",
+        "scripts/tests/turbo-task-contract.spec.ts",
+        "scripts/tests/verification-change-classifier.spec.ts",
+        "scripts/tests/verification-command.spec.ts",
+        "scripts/tests/verification-manifest.spec.ts",
+        "scripts/tests/verification-policy.spec.ts",
+        "scripts/tests/verify-circular-allowlist.spec.ts",
+        "scripts/tests/version-packages.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "repo:examples",
+      "cwd": "examples/saas-billing-golden-path",
+      "paths": [
+        "src/tests/golden-path.spec.ts",
+        "src/tests/membership-quantity.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/golden-path.spec.ts",
+        "src/tests/membership-quantity.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "a5d3dda8850bf419",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/access-core",
+      "cwd": "packages/access-core",
+      "paths": [
+        "src/tests/Access.spec.ts",
+        "src/tests/AccessEngine.spec.ts",
+        "src/tests/AccessGuard.spec.ts",
+        "src/tests/CheckResult.spec.ts",
+        "src/tests/GuardChain.spec.ts",
+        "src/tests/PolicyDecisionTrace.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/Access.spec.ts",
+        "src/tests/AccessEngine.spec.ts",
+        "src/tests/AccessGuard.spec.ts",
+        "src/tests/CheckResult.spec.ts",
+        "src/tests/GuardChain.spec.ts",
+        "src/tests/PolicyDecisionTrace.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "51f16d0e452daf70",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/access-drizzle",
+      "cwd": "packages/access-drizzle",
+      "paths": [
+        "src/tests/DrizzleAccessProvider.spec.ts",
+        "src/tests/DrizzleProviderConformance.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/DrizzleAccessProvider.spec.ts",
+        "src/tests/DrizzleProviderConformance.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "d3fde8e4ddf22188",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/admin-core",
+      "cwd": "packages/admin-core",
+      "paths": [
+        "src/tests/AdminResource.spec.ts",
+        "src/tests/CreditOperations.spec.ts",
+        "src/tests/EngagementOperations.spec.ts",
+        "src/tests/TenantWorkspace.spec.ts",
+        "src/tests/WebhookOperations.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/AdminResource.spec.ts",
+        "src/tests/CreditOperations.spec.ts",
+        "src/tests/EngagementOperations.spec.ts",
+        "src/tests/TenantWorkspace.spec.ts",
+        "src/tests/WebhookOperations.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "7a136623a406d329",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/admin-generated",
+      "cwd": "packages/admin-generated",
+      "paths": [
+        "src/tests/AdminGenerated.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/AdminGenerated.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "fab2967c029c377c",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/admin-ops",
+      "cwd": "packages/admin-ops",
+      "paths": [
+        "src/tests/EngagementAdapters.spec.ts",
+        "src/tests/OperationsTimeline.spec.ts",
+        "src/tests/RetryConsole.spec.ts",
+        "src/tests/RetryConsoleReact.spec.tsx",
+        "src/tests/WebhookAdapters.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/EngagementAdapters.spec.ts",
+        "src/tests/OperationsTimeline.spec.ts",
+        "src/tests/RetryConsole.spec.ts",
+        "src/tests/RetryConsoleReact.spec.tsx",
+        "src/tests/WebhookAdapters.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "e975353730fa34ee",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/admin-react",
+      "cwd": "packages/admin-react",
+      "paths": [
+        "src/tests/AdminForm.spec.ts",
+        "src/tests/AdminFormHooks.spec.ts",
+        "src/tests/AdminPanel.spec.ts",
+        "src/tests/CreditOperationsConsole.spec.ts",
+        "src/tests/DataTable.spec.ts",
+        "src/tests/EngagementOperationsConsole.spec.ts",
+        "src/tests/LifecycleAutomationConsole.spec.ts",
+        "src/tests/PlanReleaseConsole.spec.ts",
+        "src/tests/TenantBusinessWorkspace.spec.ts",
+        "src/tests/TenantImpersonationConsole.spec.ts",
+        "src/tests/WebhookReliabilityConsole.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/AdminForm.spec.ts",
+        "src/tests/AdminFormHooks.spec.ts",
+        "src/tests/AdminPanel.spec.ts",
+        "src/tests/CreditOperationsConsole.spec.ts",
+        "src/tests/DataTable.spec.ts",
+        "src/tests/EngagementOperationsConsole.spec.ts",
+        "src/tests/LifecycleAutomationConsole.spec.ts",
+        "src/tests/PlanReleaseConsole.spec.ts",
+        "src/tests/TenantBusinessWorkspace.spec.ts",
+        "src/tests/TenantImpersonationConsole.spec.ts",
+        "src/tests/WebhookReliabilityConsole.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "f1becec35ffb8d38",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/analytics-core",
+      "cwd": "packages/analytics-core",
+      "paths": [
+        "src/tests/AnalyticsManager.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/AnalyticsManager.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "b9733cc4fda2756e",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/architecture-policy",
+      "cwd": "packages/architecture-policy",
+      "paths": [
+        "src/tests/ArchitecturePolicy.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/ArchitecturePolicy.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "2696ac8f1b75f10f",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/audit-core",
+      "cwd": "packages/audit-core",
+      "paths": [
+        "src/tests/AuditInterceptor.spec.ts",
+        "src/tests/AuditLogRepository.spec.ts",
+        "src/tests/Auditable.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/AuditInterceptor.spec.ts",
+        "src/tests/AuditLogRepository.spec.ts",
+        "src/tests/Auditable.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "b3cabd14bf31b08e",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/audit-drizzle",
+      "cwd": "packages/audit-drizzle",
+      "paths": [
+        "src/tests/DrizzleAuditLogRepository.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/DrizzleAuditLogRepository.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "c1f3bca4eebb851a",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/auth-better-auth",
+      "cwd": "packages/auth-better-auth",
+      "paths": [
+        "src/tests/AuthConformance.spec.ts",
+        "src/tests/BetterAuthFactory.spec.ts",
+        "src/tests/BetterAuthFactoryIntegration.spec.ts",
+        "src/tests/BetterAuthPlugin.spec.ts",
+        "src/tests/BetterAuthProvider.spec.ts",
+        "src/tests/BetterAuthSessionManager.spec.ts",
+        "src/tests/BetterAuthSessionManagerIntegration.spec.ts",
+        "src/tests/BetterAuthWebhookProcessor.spec.ts",
+        "src/tests/Problems.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/AuthConformance.spec.ts",
+        "src/tests/BetterAuthFactory.spec.ts",
+        "src/tests/BetterAuthFactoryIntegration.spec.ts",
+        "src/tests/BetterAuthPlugin.spec.ts",
+        "src/tests/BetterAuthProvider.spec.ts",
+        "src/tests/BetterAuthSessionManager.spec.ts",
+        "src/tests/BetterAuthSessionManagerIntegration.spec.ts",
+        "src/tests/BetterAuthWebhookProcessor.spec.ts",
+        "src/tests/Problems.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "5928371e9bc0aacb",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/auth-clerk",
+      "cwd": "packages/auth-clerk",
+      "paths": [
+        "src/tests/AuthConformance.spec.ts",
+        "src/tests/ClerkAuthPlugin.spec.ts",
+        "src/tests/ClerkAuthProvider.spec.ts",
+        "src/tests/ClerkOrganizationService.spec.ts",
+        "src/tests/ClerkProblems.spec.ts",
+        "src/tests/ClerkSessionProvider.spec.ts",
+        "src/tests/ClerkTenantMapper.spec.ts",
+        "src/tests/ClerkUserService.spec.ts",
+        "src/tests/ClerkWebhookHandler.spec.ts",
+        "src/tests/ProviderNoCredentialConformance.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/AuthConformance.spec.ts",
+        "src/tests/ClerkAuthPlugin.spec.ts",
+        "src/tests/ClerkAuthProvider.spec.ts",
+        "src/tests/ClerkOrganizationService.spec.ts",
+        "src/tests/ClerkProblems.spec.ts",
+        "src/tests/ClerkSessionProvider.spec.ts",
+        "src/tests/ClerkTenantMapper.spec.ts",
+        "src/tests/ClerkUserService.spec.ts",
+        "src/tests/ClerkWebhookHandler.spec.ts",
+        "src/tests/ProviderNoCredentialConformance.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "11a03263281b8be4",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/auth-core",
+      "cwd": "packages/auth-core",
+      "paths": [
+        "src/tests/AesGcmApiKeyRotationProtector.spec.ts",
+        "src/tests/ApiKeyGenerator.spec.ts",
+        "src/tests/ApiKeyGuard.spec.ts",
+        "src/tests/ApiKeyHasher.spec.ts",
+        "src/tests/ApiKeyManager.spec.ts",
+        "src/tests/ApiKeySecurity.spec.ts",
+        "src/tests/AuthGuard.spec.ts",
+        "src/tests/AuthProblems.spec.ts",
+        "src/tests/Permission.spec.ts",
+        "src/tests/PermissionGuard.spec.ts",
+        "src/tests/RbacEngine.spec.ts",
+        "src/tests/Role.spec.ts",
+        "src/tests/UnifiedAuthGuard.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/AesGcmApiKeyRotationProtector.spec.ts",
+        "src/tests/ApiKeyGenerator.spec.ts",
+        "src/tests/ApiKeyGuard.spec.ts",
+        "src/tests/ApiKeyHasher.spec.ts",
+        "src/tests/ApiKeyManager.spec.ts",
+        "src/tests/ApiKeySecurity.spec.ts",
+        "src/tests/AuthGuard.spec.ts",
+        "src/tests/AuthProblems.spec.ts",
+        "src/tests/Permission.spec.ts",
+        "src/tests/PermissionGuard.spec.ts",
+        "src/tests/RbacEngine.spec.ts",
+        "src/tests/Role.spec.ts",
+        "src/tests/UnifiedAuthGuard.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "66610682c671abac",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/auth-drizzle",
+      "cwd": "packages/auth-drizzle",
+      "paths": [
+        "src/tests/DrizzleApiKeyStore.spec.ts",
+        "src/tests/DrizzleProviderConformance.spec.ts",
+        "src/tests/DrizzleRoleRegistry.spec.ts",
+        "src/tests/DrizzleSessionProvider.spec.ts",
+        "src/tests/DrizzleTenantMappingProvider.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/DrizzleApiKeyStore.spec.ts",
+        "src/tests/DrizzleProviderConformance.spec.ts",
+        "src/tests/DrizzleRoleRegistry.spec.ts",
+        "src/tests/DrizzleSessionProvider.spec.ts",
+        "src/tests/DrizzleTenantMappingProvider.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "5cae9118493b2050",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/batch-core",
+      "cwd": "packages/batch-core",
+      "paths": [
+        "src/tests/ChunkExecutor.spec.ts",
+        "src/tests/JobBuilder.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/ChunkExecutor.spec.ts",
+        "src/tests/JobBuilder.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "b93750a2e22f8c69",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/batch-qstash",
+      "cwd": "packages/batch-qstash",
+      "paths": [
+        "src/tests/QStashChunkExecutor.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/QStashChunkExecutor.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "e7c2a2aeb6074960",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/billing-core",
+      "cwd": "packages/billing-core",
+      "paths": [
+        "src/tests/BillingProblems.spec.ts",
+        "src/tests/BillingProvider.spec.ts",
+        "src/tests/BillingService.spec.ts",
+        "src/tests/InMemoryBillingStore.spec.ts",
+        "src/tests/InMemoryPlanRegistry.spec.ts",
+        "src/tests/Money.spec.ts",
+        "src/tests/PlanReleaseProblems.spec.ts",
+        "src/tests/PlanReleaseService.spec.ts",
+        "src/tests/SubscriptionQuantityReconciler.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/BillingProblems.spec.ts",
+        "src/tests/BillingProvider.spec.ts",
+        "src/tests/BillingService.spec.ts",
+        "src/tests/InMemoryBillingStore.spec.ts",
+        "src/tests/InMemoryPlanRegistry.spec.ts",
+        "src/tests/Money.spec.ts",
+        "src/tests/PlanReleaseProblems.spec.ts",
+        "src/tests/PlanReleaseService.spec.ts",
+        "src/tests/SubscriptionQuantityReconciler.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "5b60deee7da71f16",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/billing-polar",
+      "cwd": "packages/billing-polar",
+      "paths": [
+        "src/tests/PolarBillingDiagnosticsProvider.spec.ts",
+        "src/tests/PolarBillingGateway.spec.ts",
+        "src/tests/PolarBillingPlugin.spec.ts",
+        "src/tests/PolarBillingProviderProfile.spec.ts",
+        "src/tests/PolarContractMappingPreflight.spec.ts",
+        "src/tests/PolarEventMapper.spec.ts",
+        "src/tests/PolarUsageBillingGateway.spec.ts",
+        "src/tests/PolarWebhookHandler.spec.ts",
+        "src/tests/PolarWebhookHandlerSdk.spec.ts",
+        "src/tests/ProviderNoCredentialConformance.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/PolarBillingDiagnosticsProvider.spec.ts",
+        "src/tests/PolarBillingGateway.spec.ts",
+        "src/tests/PolarBillingPlugin.spec.ts",
+        "src/tests/PolarBillingProviderProfile.spec.ts",
+        "src/tests/PolarContractMappingPreflight.spec.ts",
+        "src/tests/PolarEventMapper.spec.ts",
+        "src/tests/PolarUsageBillingGateway.spec.ts",
+        "src/tests/PolarWebhookHandler.spec.ts",
+        "src/tests/PolarWebhookHandlerSdk.spec.ts",
+        "src/tests/ProviderNoCredentialConformance.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "79bb8344df40cf2e",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/cache-core",
+      "cwd": "packages/cache-core",
+      "paths": [
+        "src/tests/CacheExports.spec.ts",
+        "src/tests/CacheInvalidationGraph.spec.ts",
+        "src/tests/Cacheable.spec.ts",
+        "src/tests/InMemoryCacheStore.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/CacheExports.spec.ts",
+        "src/tests/CacheInvalidationGraph.spec.ts",
+        "src/tests/Cacheable.spec.ts",
+        "src/tests/InMemoryCacheStore.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "53df3742635161ec",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/cli",
+      "cwd": "packages/cli",
+      "paths": [
+        "src/tests/CliTestContract.spec.ts",
+        "src/tests/CrocoRunner.spec.ts",
+        "src/tests/TestPlan.spec.ts",
+        "src/tests/applicationIntentEvidence.spec.ts",
+        "src/tests/architecturePolicyCheck.spec.ts",
+        "src/tests/codegenBinResolution.spec.ts",
+        "src/tests/codegenOpenapi.spec.ts",
+        "src/tests/codegenRpc.spec.ts",
+        "src/tests/codemods/registerController.spec.ts",
+        "src/tests/contractsCheck.spec.ts",
+        "src/tests/contractsDiff.spec.ts",
+        "src/tests/createDomain.spec.ts",
+        "src/tests/createPage.spec.ts",
+        "src/tests/desktop.spec.ts",
+        "src/tests/desktopArtifacts.spec.ts",
+        "src/tests/desktopConfig.spec.ts",
+        "src/tests/diCheck.spec.ts",
+        "src/tests/diGraph.spec.ts",
+        "src/tests/diagnosticCodes.spec.ts",
+        "src/tests/doctor.spec.ts",
+        "src/tests/fileWriter.spec.ts",
+        "src/tests/generateScaffold.spec.ts",
+        "src/tests/generateUsageDashboard.spec.ts",
+        "src/tests/jobs.spec.ts",
+        "src/tests/makeController.spec.ts",
+        "src/tests/makeEntity.spec.ts",
+        "src/tests/makeEvent.spec.ts",
+        "src/tests/makeListener.spec.ts",
+        "src/tests/makeRepository.spec.ts",
+        "src/tests/migrate.spec.ts",
+        "src/tests/naming.spec.ts",
+        "src/tests/opsStatus.spec.ts",
+        "src/tests/projectMap.spec.ts",
+        "src/tests/prompts.spec.ts",
+        "src/tests/runtimePolicyCheck.spec.ts",
+        "src/tests/upgrade.spec.ts",
+        "src/tests/workspace.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/CliTestContract.spec.ts",
+        "src/tests/CrocoRunner.spec.ts",
+        "src/tests/TestPlan.spec.ts",
+        "src/tests/applicationIntentEvidence.spec.ts",
+        "src/tests/architecturePolicyCheck.spec.ts",
+        "src/tests/codegenBinResolution.spec.ts",
+        "src/tests/codegenOpenapi.spec.ts",
+        "src/tests/codegenRpc.spec.ts",
+        "src/tests/codemods/registerController.spec.ts",
+        "src/tests/contractsCheck.spec.ts",
+        "src/tests/contractsDiff.spec.ts",
+        "src/tests/createDomain.spec.ts",
+        "src/tests/createPage.spec.ts",
+        "src/tests/desktop.spec.ts",
+        "src/tests/desktopArtifacts.spec.ts",
+        "src/tests/desktopConfig.spec.ts",
+        "src/tests/diCheck.spec.ts",
+        "src/tests/diGraph.spec.ts",
+        "src/tests/diagnosticCodes.spec.ts",
+        "src/tests/doctor.spec.ts",
+        "src/tests/fileWriter.spec.ts",
+        "src/tests/generateScaffold.spec.ts",
+        "src/tests/generateUsageDashboard.spec.ts",
+        "src/tests/jobs.spec.ts",
+        "src/tests/makeController.spec.ts",
+        "src/tests/makeEntity.spec.ts",
+        "src/tests/makeEvent.spec.ts",
+        "src/tests/makeListener.spec.ts",
+        "src/tests/makeRepository.spec.ts",
+        "src/tests/migrate.spec.ts",
+        "src/tests/naming.spec.ts",
+        "src/tests/opsStatus.spec.ts",
+        "src/tests/projectMap.spec.ts",
+        "src/tests/prompts.spec.ts",
+        "src/tests/runtimePolicyCheck.spec.ts",
+        "src/tests/upgrade.spec.ts",
+        "src/tests/workspace.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "5016e0d500626353",
+      "status": "passed"
+    },
+    {
+      "owner": "create-croco-app",
+      "cwd": "packages/create-croco-app",
+      "paths": [
+        "src/tests/EnvironmentTemplate.spec.ts",
+        "src/tests/GenerationResult.spec.ts",
+        "src/tests/GeneratorOptions.spec.ts",
+        "src/tests/NextTemplateSecurity.spec.ts",
+        "src/tests/NodeRuntime.spec.ts",
+        "src/tests/ProgrammaticEntry.spec.ts",
+        "src/tests/TelemetryFlushTemplate.spec.ts",
+        "src/tests/TemplatePath.spec.ts",
+        "src/tests/cli-result.spec.ts",
+        "src/tests/croco-ranges.spec.ts",
+        "src/tests/generator-cleanup.spec.ts",
+        "src/tests/generator-install.spec.ts",
+        "src/tests/options.spec.ts",
+        "src/tests/prompts.spec.ts",
+        "src/tests/secret-placeholder-policy.spec.ts",
+        "src/tests/templates-build.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/EnvironmentTemplate.spec.ts",
+        "src/tests/GenerationResult.spec.ts",
+        "src/tests/GeneratorOptions.spec.ts",
+        "src/tests/NextTemplateSecurity.spec.ts",
+        "src/tests/NodeRuntime.spec.ts",
+        "src/tests/ProgrammaticEntry.spec.ts",
+        "src/tests/TelemetryFlushTemplate.spec.ts",
+        "src/tests/TemplatePath.spec.ts",
+        "src/tests/cli-result.spec.ts",
+        "src/tests/croco-ranges.spec.ts",
+        "src/tests/generator-cleanup.spec.ts",
+        "src/tests/generator-install.spec.ts",
+        "src/tests/options.spec.ts",
+        "src/tests/prompts.spec.ts",
+        "src/tests/secret-placeholder-policy.spec.ts",
+        "src/tests/templates-build.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "420346ddcc9f1b2c",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/credits-core",
+      "cwd": "packages/credits-core",
+      "paths": [
+        "src/tests/CreditLedger.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/CreditLedger.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "fffa980a298805dd",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/credits-drizzle",
+      "cwd": "packages/credits-drizzle",
+      "paths": [
+        "src/tests/DrizzleCreditLedgerStore.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/DrizzleCreditLedgerStore.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "db33e101c67367b7",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/customer-health-core",
+      "cwd": "packages/customer-health-core",
+      "paths": [
+        "src/tests/CustomerHealthService.spec.ts",
+        "src/tests/HealthScoreCalculator.spec.ts",
+        "src/tests/InMemoryHealthScoreStore.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/CustomerHealthService.spec.ts",
+        "src/tests/HealthScoreCalculator.spec.ts",
+        "src/tests/InMemoryHealthScoreStore.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "682e9923b3691b4b",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/customer-health-drizzle",
+      "cwd": "packages/customer-health-drizzle",
+      "paths": [
+        "src/tests/BillingSignalProvider.spec.ts",
+        "src/tests/DrizzleHealthScoreStore.spec.ts",
+        "src/tests/DrizzleProviderConformance.spec.ts",
+        "src/tests/HealthEventIntentsMigration.spec.ts",
+        "src/tests/MeteringSignalProvider.spec.ts",
+        "src/tests/WidenHealthScorePrecision.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/BillingSignalProvider.spec.ts",
+        "src/tests/DrizzleHealthScoreStore.spec.ts",
+        "src/tests/DrizzleProviderConformance.spec.ts",
+        "src/tests/HealthEventIntentsMigration.spec.ts",
+        "src/tests/MeteringSignalProvider.spec.ts",
+        "src/tests/WidenHealthScorePrecision.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "e771a166475e0253",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/dataloader-core",
+      "cwd": "packages/dataloader-core",
+      "paths": [
+        "src/tests/BatchLoader.spec.ts",
+        "src/tests/TransactionAware.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/BatchLoader.spec.ts",
+        "src/tests/TransactionAware.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "7e512ae71aa74459",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/desktop-codegen",
+      "cwd": "packages/desktop-codegen",
+      "paths": [
+        "src/tests/DesktopMainRegistrationMetadata.spec.ts",
+        "src/tests/DesktopPreloadCodegen.spec.ts",
+        "src/tests/DesktopRendererGenerationProblem.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/DesktopMainRegistrationMetadata.spec.ts",
+        "src/tests/DesktopPreloadCodegen.spec.ts",
+        "src/tests/DesktopRendererGenerationProblem.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "c5f6e85925275791",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/diagnostics-core",
+      "cwd": "packages/diagnostics-core",
+      "paths": [
+        "src/tests/DiagnosticCodes.spec.ts",
+        "src/tests/DiagnosticsHealthIndicator.spec.ts",
+        "src/tests/DiagnosticsIntegration.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/DiagnosticCodes.spec.ts",
+        "src/tests/DiagnosticsHealthIndicator.spec.ts",
+        "src/tests/DiagnosticsIntegration.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "ba6de0548c4ae7d4",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/engagement-core",
+      "cwd": "packages/engagement-core",
+      "paths": [
+        "src/tests/CampaignContracts.spec.ts",
+        "src/tests/CampaignServices.spec.ts",
+        "src/tests/CampaignStore.spec.ts",
+        "src/tests/EngagementService.spec.ts",
+        "src/tests/EngagementStores.spec.ts",
+        "src/tests/MessageContracts.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/CampaignContracts.spec.ts",
+        "src/tests/CampaignServices.spec.ts",
+        "src/tests/CampaignStore.spec.ts",
+        "src/tests/EngagementService.spec.ts",
+        "src/tests/EngagementStores.spec.ts",
+        "src/tests/MessageContracts.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "185819ab2cb4ab48",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/engagement-drizzle",
+      "cwd": "packages/engagement-drizzle",
+      "paths": [
+        "src/tests/DrizzleCampaignStore.spec.ts",
+        "src/tests/DrizzleEngagementStore.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/DrizzleCampaignStore.spec.ts",
+        "src/tests/DrizzleEngagementStore.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "fe0ec6d38ad9fc63",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/entitlements-core",
+      "cwd": "packages/entitlements-core",
+      "paths": [
+        "src/tests/EntitlementDefinition.spec.ts",
+        "src/tests/EntitlementDefinitionTypes.spec.ts",
+        "src/tests/EntitlementGuard.spec.ts",
+        "src/tests/EntitlementIntegration.spec.ts",
+        "src/tests/EntitlementManager.spec.ts",
+        "src/tests/EntitlementRequirement.spec.ts",
+        "src/tests/PlanEntitlementRegistry.spec.ts",
+        "src/tests/RequireEntitlement.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/EntitlementDefinition.spec.ts",
+        "src/tests/EntitlementDefinitionTypes.spec.ts",
+        "src/tests/EntitlementGuard.spec.ts",
+        "src/tests/EntitlementIntegration.spec.ts",
+        "src/tests/EntitlementManager.spec.ts",
+        "src/tests/EntitlementRequirement.spec.ts",
+        "src/tests/PlanEntitlementRegistry.spec.ts",
+        "src/tests/RequireEntitlement.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "bbd8ba042dcf9bb1",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/entitlements-drizzle",
+      "cwd": "packages/entitlements-drizzle",
+      "paths": [
+        "src/tests/BillingStoreSubscriptionProvider.spec.ts",
+        "src/tests/DrizzlePlanEntitlementRegistry.spec.ts",
+        "src/tests/DrizzleProviderConformance.spec.ts",
+        "src/tests/PlanVersionEntitlementsMigration.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/BillingStoreSubscriptionProvider.spec.ts",
+        "src/tests/DrizzlePlanEntitlementRegistry.spec.ts",
+        "src/tests/DrizzleProviderConformance.spec.ts",
+        "src/tests/PlanVersionEntitlementsMigration.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "9854fbf3a8e3d525",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/esbuild-plugin",
+      "cwd": "packages/esbuild-plugin",
+      "paths": [
+        "src/tests/ComponentScanner.spec.ts",
+        "src/tests/CrocoPlugin.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/ComponentScanner.spec.ts",
+        "src/tests/CrocoPlugin.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "reused",
+      "cacheHash": "61cca6a27bc52403",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/events-core",
+      "cwd": "packages/events-core",
+      "paths": [
+        "src/tests/BehavioralEvidence.spec.ts",
+        "src/tests/DomainEvents.spec.ts",
+        "src/tests/EventBus.spec.ts",
+        "src/tests/EventBusConfig.spec.ts",
+        "src/tests/EventBusDiagnosticsProvider.spec.ts",
+        "src/tests/EventBusLifecycle.spec.ts",
+        "src/tests/EventBusStats.spec.ts",
+        "src/tests/EventPublisher.spec.ts",
+        "src/tests/EventRegistry.spec.ts",
+        "src/tests/EventSerializer.spec.ts",
+        "src/tests/EventSubscriptionIndex.spec.ts",
+        "src/tests/EventsProblems.spec.ts",
+        "src/tests/HandlerResolver.spec.ts",
+        "src/tests/PublicContracts.spec.ts",
+        "src/tests/RegisterEventHandler.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/BehavioralEvidence.spec.ts",
+        "src/tests/DomainEvents.spec.ts",
+        "src/tests/EventBus.spec.ts",
+        "src/tests/EventBusConfig.spec.ts",
+        "src/tests/EventBusDiagnosticsProvider.spec.ts",
+        "src/tests/EventBusLifecycle.spec.ts",
+        "src/tests/EventBusStats.spec.ts",
+        "src/tests/EventPublisher.spec.ts",
+        "src/tests/EventRegistry.spec.ts",
+        "src/tests/EventSerializer.spec.ts",
+        "src/tests/EventSubscriptionIndex.spec.ts",
+        "src/tests/EventsProblems.spec.ts",
+        "src/tests/HandlerResolver.spec.ts",
+        "src/tests/PublicContracts.spec.ts",
+        "src/tests/RegisterEventHandler.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "39ce7d9ae6e84a57",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/events-inmemory",
+      "cwd": "packages/events-inmemory",
+      "paths": [
+        "src/tests/EventBusReplayLifecycle.spec.ts",
+        "src/tests/InMemoryDeadLetterQueue.spec.ts",
+        "src/tests/InMemoryEventBus.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/EventBusReplayLifecycle.spec.ts",
+        "src/tests/InMemoryDeadLetterQueue.spec.ts",
+        "src/tests/InMemoryEventBus.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "33d280b17250abd9",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/events-tx",
+      "cwd": "packages/events-tx",
+      "paths": [
+        "src/tests/DrizzleTransactionalEventStore.spec.ts",
+        "src/tests/EventsTxProblems.spec.ts",
+        "src/tests/OutboxIdempotencyConformance.spec.ts",
+        "src/tests/TransactionalEventsConfiguration.spec.ts",
+        "src/tests/TransactionalOutbox.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/DrizzleTransactionalEventStore.spec.ts",
+        "src/tests/EventsTxProblems.spec.ts",
+        "src/tests/OutboxIdempotencyConformance.spec.ts",
+        "src/tests/TransactionalEventsConfiguration.spec.ts",
+        "src/tests/TransactionalOutbox.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "793ccea72a25b82c",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/execution-core",
+      "cwd": "packages/execution-core",
+      "paths": [
+        "src/tests/BrowserEntry.spec.ts",
+        "src/tests/ExecutionContinuation.spec.ts",
+        "src/tests/ExecutionManagerImpl.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/BrowserEntry.spec.ts",
+        "src/tests/ExecutionContinuation.spec.ts",
+        "src/tests/ExecutionManagerImpl.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "f873e3db064cb0d4",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/execution-drizzle",
+      "cwd": "packages/execution-drizzle",
+      "paths": [
+        "src/tests/DrizzleExecutionStore.spec.ts",
+        "src/tests/ExecutionSchema.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/DrizzleExecutionStore.spec.ts",
+        "src/tests/ExecutionSchema.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "66e8019eba42cb6a",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/features-core",
+      "cwd": "packages/features-core",
+      "paths": [
+        "src/tests/FeatureManager.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/FeatureManager.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "d0afb1515f917eda",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/features-posthog",
+      "cwd": "packages/features-posthog",
+      "paths": [
+        "src/tests/PostHogFeatureManager.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/PostHogFeatureManager.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "e47c5d1e5818b484",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/framework-config",
+      "cwd": "packages/framework-config",
+      "paths": [
+        "src/tests/ConfigProblems.spec.ts",
+        "src/tests/ConfigService.spec.ts",
+        "src/tests/Core.spec.ts",
+        "src/tests/ValidateConfig.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/ConfigProblems.spec.ts",
+        "src/tests/ConfigService.spec.ts",
+        "src/tests/Core.spec.ts",
+        "src/tests/ValidateConfig.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "af74fd588d3069ac",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/framework-context",
+      "cwd": "packages/framework-context",
+      "paths": [
+        "src/libs/Container.test.ts",
+        "src/libs/Middleware.test.ts",
+        "src/tests/ApplicationIntentManifest.spec.ts",
+        "src/tests/ApplicationLifecycle.spec.ts",
+        "src/tests/CircularDependency.spec.ts",
+        "src/tests/ContainerResolutionDiagnostics.spec.ts",
+        "src/tests/ContainerScope.spec.ts",
+        "src/tests/DependencyGraphManifest.spec.ts",
+        "src/tests/FrameworkContext.spec.ts",
+        "src/tests/ILogger.spec.ts",
+        "src/tests/MiddlewareChain.spec.ts",
+        "src/tests/RequestPipelineGraph.spec.ts",
+        "src/tests/RequestScoped.spec.ts",
+        "src/tests/RuntimeCapabilities.spec.ts",
+        "src/tests/RuntimeInspector.spec.ts",
+        "src/tests/RuntimePolicy.spec.ts",
+        "src/tests/ShutdownManager.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/libs/Container.test.ts",
+        "src/libs/Middleware.test.ts",
+        "src/tests/ApplicationIntentManifest.spec.ts",
+        "src/tests/ApplicationLifecycle.spec.ts",
+        "src/tests/CircularDependency.spec.ts",
+        "src/tests/ContainerResolutionDiagnostics.spec.ts",
+        "src/tests/ContainerScope.spec.ts",
+        "src/tests/DependencyGraphManifest.spec.ts",
+        "src/tests/FrameworkContext.spec.ts",
+        "src/tests/ILogger.spec.ts",
+        "src/tests/MiddlewareChain.spec.ts",
+        "src/tests/RequestPipelineGraph.spec.ts",
+        "src/tests/RequestScoped.spec.ts",
+        "src/tests/RuntimeCapabilities.spec.ts",
+        "src/tests/RuntimeInspector.spec.ts",
+        "src/tests/RuntimePolicy.spec.ts",
+        "src/tests/ShutdownManager.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "c4a8c741999b05fa",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/framework-logger",
+      "cwd": "packages/framework-logger",
+      "paths": [
+        "src/tests/Logger.spec.ts",
+        "src/tests/LoggerChild.spec.ts",
+        "src/tests/LoggerRedaction.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/Logger.spec.ts",
+        "src/tests/LoggerChild.spec.ts",
+        "src/tests/LoggerRedaction.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "d9d3476d23fe2c2a",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/framework-module",
+      "cwd": "packages/framework-module",
+      "paths": [
+        "src/tests/ApplicationRuntime.spec.ts",
+        "src/tests/DuplicateModuleName.spec.ts",
+        "src/tests/ModuleGraphManifest.spec.ts",
+        "src/tests/ModuleLifecycleCancellation.spec.ts",
+        "src/tests/ModuleRollback.spec.ts",
+        "src/tests/ModuleRuntime.spec.ts",
+        "src/tests/PluginComposition.spec.ts",
+        "src/tests/ProviderOwnership.spec.ts",
+        "src/tests/frameworkModule.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/ApplicationRuntime.spec.ts",
+        "src/tests/DuplicateModuleName.spec.ts",
+        "src/tests/ModuleGraphManifest.spec.ts",
+        "src/tests/ModuleLifecycleCancellation.spec.ts",
+        "src/tests/ModuleRollback.spec.ts",
+        "src/tests/ModuleRuntime.spec.ts",
+        "src/tests/PluginComposition.spec.ts",
+        "src/tests/ProviderOwnership.spec.ts",
+        "src/tests/frameworkModule.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "4aeedcdf7156e802",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/framework-preset",
+      "cwd": "packages/framework-preset",
+      "paths": [
+        "src/tests/defineCrocoPreset.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/defineCrocoPreset.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "reused",
+      "cacheHash": "71762e03fc071d00",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/framework-routes",
+      "cwd": "packages/framework-routes",
+      "paths": [
+        "src/__tests__/compiler.spec.ts",
+        "src/__tests__/equivalence.spec.ts",
+        "src/__tests__/framework-manifest.spec.ts",
+        "src/__tests__/intent-map.spec.ts",
+        "src/__tests__/metadata-reader.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/__tests__/compiler.spec.ts",
+        "src/__tests__/equivalence.spec.ts",
+        "src/__tests__/framework-manifest.spec.ts",
+        "src/__tests__/intent-map.spec.ts",
+        "src/__tests__/metadata-reader.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "94d6ae6ca7af961d",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/frontend-cloudflare",
+      "cwd": "packages/frontend-cloudflare",
+      "paths": [
+        "src/tests/CloudflareSsrHandler.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/CloudflareSsrHandler.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "8ae727a8f469a7b1",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/frontend-problems",
+      "cwd": "packages/frontend-problems",
+      "paths": [
+        "src/tests/problemClient.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/problemClient.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "39fa20cac47db48d",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/frontend-react",
+      "cwd": "packages/frontend-react",
+      "paths": [
+        "src/tests/authBridge.spec.ts",
+        "src/tests/createCrocoPages.spec.ts",
+        "src/tests/problemUi.spec.ts",
+        "src/tests/public-types.spec.ts",
+        "src/tests/usePageData.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/authBridge.spec.ts",
+        "src/tests/createCrocoPages.spec.ts",
+        "src/tests/problemUi.spec.ts",
+        "src/tests/public-types.spec.ts",
+        "src/tests/usePageData.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "023ad68e92789291",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/frontend-vite",
+      "cwd": "packages/frontend-vite",
+      "paths": [
+        "src/tests/crocoSpaViteConfig.spec.ts",
+        "src/tests/crocoVitePlugin.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/crocoSpaViteConfig.spec.ts",
+        "src/tests/crocoVitePlugin.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "b722aad65319c620",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/gid-core",
+      "cwd": "packages/gid-core",
+      "paths": [
+        "src/tests/GidProblems.spec.ts",
+        "src/tests/IdPrefix.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/GidProblems.spec.ts",
+        "src/tests/IdPrefix.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "61051b16c35791b2",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/governance-core",
+      "cwd": "packages/governance-core",
+      "paths": [
+        "src/tests/DataGovernanceResource.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/DataGovernanceResource.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "3fbc53842eca2ead",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/health-core",
+      "cwd": "packages/health-core",
+      "paths": [
+        "src/tests/HealthCheckService.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/HealthCheckService.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "7e2ca51ae9cc4d87",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/idempotency-core",
+      "cwd": "packages/idempotency-core",
+      "paths": [
+        "src/tests/IdempotencyConformance.spec.ts",
+        "src/tests/IdempotencyCoordinator.spec.ts",
+        "src/tests/InMemoryIdempotencyStore.spec.ts",
+        "src/tests/KeyDerivation.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/IdempotencyConformance.spec.ts",
+        "src/tests/IdempotencyCoordinator.spec.ts",
+        "src/tests/InMemoryIdempotencyStore.spec.ts",
+        "src/tests/KeyDerivation.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "16243a51fa0a70fa",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/impersonation-core",
+      "cwd": "packages/impersonation-core",
+      "paths": [
+        "src/tests/BlockDuringImpersonation.spec.ts",
+        "src/tests/ImpersonationAuditHelper.spec.ts",
+        "src/tests/ImpersonationGuard.spec.ts",
+        "src/tests/ImpersonationService.spec.ts",
+        "src/tests/InMemoryImpersonationStore.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/BlockDuringImpersonation.spec.ts",
+        "src/tests/ImpersonationAuditHelper.spec.ts",
+        "src/tests/ImpersonationGuard.spec.ts",
+        "src/tests/ImpersonationService.spec.ts",
+        "src/tests/InMemoryImpersonationStore.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "dbc1ff78911a5aea",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/integrations-posthog",
+      "cwd": "packages/integrations-posthog",
+      "paths": [
+        "src/tests/PostHogClient.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/PostHogClient.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "c77b2e8dee2d503a",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/invitation-core",
+      "cwd": "packages/invitation-core",
+      "paths": [
+        "src/tests/DomainPolicyManager.spec.ts",
+        "src/tests/DomainPolicyStore.spec.ts",
+        "src/tests/InMemoryInvitationStore.spec.ts",
+        "src/tests/InvitationManager.spec.ts",
+        "src/tests/InvitationStore.spec.ts",
+        "src/tests/InvitationToken.spec.ts",
+        "src/tests/RateLimitedInvitationService.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/DomainPolicyManager.spec.ts",
+        "src/tests/DomainPolicyStore.spec.ts",
+        "src/tests/InMemoryInvitationStore.spec.ts",
+        "src/tests/InvitationManager.spec.ts",
+        "src/tests/InvitationStore.spec.ts",
+        "src/tests/InvitationToken.spec.ts",
+        "src/tests/RateLimitedInvitationService.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "07609510aa058339",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/invitation-drizzle",
+      "cwd": "packages/invitation-drizzle",
+      "paths": [
+        "src/tests/DrizzleDomainPolicyStore.spec.ts",
+        "src/tests/DrizzleInvitationStore.spec.ts",
+        "src/tests/DrizzleProviderConformance.spec.ts",
+        "src/tests/InvitationTokenCipher.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/DrizzleDomainPolicyStore.spec.ts",
+        "src/tests/DrizzleInvitationStore.spec.ts",
+        "src/tests/DrizzleProviderConformance.spec.ts",
+        "src/tests/InvitationTokenCipher.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "0fc67d7eedd3900c",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/lifecycle-core",
+      "cwd": "packages/lifecycle-core",
+      "paths": [
+        "src/tests/LifecycleCore.spec.ts",
+        "src/tests/LifecycleRuleVersioning.spec.ts",
+        "src/tests/MonetizationLifecycle.spec.ts",
+        "src/tests/WebhookLifecycleActionAdapter.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/LifecycleCore.spec.ts",
+        "src/tests/LifecycleRuleVersioning.spec.ts",
+        "src/tests/MonetizationLifecycle.spec.ts",
+        "src/tests/WebhookLifecycleActionAdapter.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "705ffc06c4f6fde2",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/llm-core",
+      "cwd": "packages/llm-core",
+      "paths": [
+        "src/tests/AiSdkCompatibility.spec.ts",
+        "src/tests/InMemoryLlmModel.spec.ts",
+        "src/tests/LlmModel.spec.ts",
+        "src/tests/LlmService.spec.ts",
+        "src/tests/LlmTypes.spec.ts",
+        "src/tests/decorators/Llm.spec.ts",
+        "src/tests/events/LlmEvents.spec.ts",
+        "src/tests/problems/LlmProblems.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/AiSdkCompatibility.spec.ts",
+        "src/tests/InMemoryLlmModel.spec.ts",
+        "src/tests/LlmModel.spec.ts",
+        "src/tests/LlmService.spec.ts",
+        "src/tests/LlmTypes.spec.ts",
+        "src/tests/decorators/Llm.spec.ts",
+        "src/tests/events/LlmEvents.spec.ts",
+        "src/tests/problems/LlmProblems.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "8bc3b915b2cf7778",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/llm-metering",
+      "cwd": "packages/llm-metering",
+      "paths": [
+        "src/tests/LlmMeteringEvents.spec.ts",
+        "src/tests/LlmMeteringProblems.spec.ts",
+        "src/tests/LlmMeteringService.spec.ts",
+        "src/tests/LlmMeteringTypes.spec.ts",
+        "src/tests/LlmTelemetry.spec.ts",
+        "src/tests/PricingTable.spec.ts",
+        "src/tests/decorators/AiMetered.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/LlmMeteringEvents.spec.ts",
+        "src/tests/LlmMeteringProblems.spec.ts",
+        "src/tests/LlmMeteringService.spec.ts",
+        "src/tests/LlmMeteringTypes.spec.ts",
+        "src/tests/LlmTelemetry.spec.ts",
+        "src/tests/PricingTable.spec.ts",
+        "src/tests/decorators/AiMetered.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "3916a203834fcaca",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/llm-openai",
+      "cwd": "packages/llm-openai",
+      "paths": [
+        "src/tests/OpenAiLlmModel.spec.ts",
+        "src/tests/OpenAiProblems.spec.ts",
+        "src/tests/OpenAiSdkTransport.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/OpenAiLlmModel.spec.ts",
+        "src/tests/OpenAiProblems.spec.ts",
+        "src/tests/OpenAiSdkTransport.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "30f11592af48eac0",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/membership-core",
+      "cwd": "packages/membership-core",
+      "paths": [
+        "src/tests/MembershipManager.spec.ts",
+        "src/tests/MembershipService.spec.ts",
+        "src/tests/MembershipStore.spec.ts",
+        "src/tests/MembershipTypes.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/MembershipManager.spec.ts",
+        "src/tests/MembershipService.spec.ts",
+        "src/tests/MembershipStore.spec.ts",
+        "src/tests/MembershipTypes.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "632a1cad5c060c14",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/membership-drizzle",
+      "cwd": "packages/membership-drizzle",
+      "paths": [
+        "src/tests/DrizzleMembershipStore.spec.ts",
+        "src/tests/DrizzleProviderConformance.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/DrizzleMembershipStore.spec.ts",
+        "src/tests/DrizzleProviderConformance.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "a560c83783907512",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/meta-vite",
+      "cwd": "packages/meta-vite",
+      "paths": [
+        "src/tests/basic.spec.ts",
+        "src/tests/cloudflare-adapter.spec.ts",
+        "src/tests/compose-handler.spec.ts",
+        "src/tests/createIsrHandler.spec.ts",
+        "src/tests/frontend-action-manifest.spec.ts",
+        "src/tests/isr-adapter.spec.ts",
+        "src/tests/isr-middleware.spec.ts",
+        "src/tests/isr-runtime-support.spec.ts",
+        "src/tests/lambda-adapter.spec.ts",
+        "src/tests/node-adapter.spec.ts",
+        "src/tests/output-contract.spec.ts",
+        "src/tests/redis-adapter.spec.ts",
+        "src/tests/render-server.spec.ts",
+        "src/tests/route-manifest.spec.ts",
+        "src/tests/route-registry.spec.ts",
+        "src/tests/rsc-basic.spec.ts",
+        "src/tests/rsc-css-handling.spec.ts",
+        "src/tests/rsc-route.spec.ts",
+        "src/tests/rsc-server-only-leakage.spec.ts",
+        "src/tests/rsc-streaming-smoke.spec.ts",
+        "src/tests/rsc-vertical.spec.ts",
+        "src/tests/server-action.spec.ts",
+        "src/tests/ssg-prerender.spec.ts",
+        "src/tests/vite-environments.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/basic.spec.ts",
+        "src/tests/cloudflare-adapter.spec.ts",
+        "src/tests/compose-handler.spec.ts",
+        "src/tests/createIsrHandler.spec.ts",
+        "src/tests/frontend-action-manifest.spec.ts",
+        "src/tests/isr-adapter.spec.ts",
+        "src/tests/isr-middleware.spec.ts",
+        "src/tests/isr-runtime-support.spec.ts",
+        "src/tests/lambda-adapter.spec.ts",
+        "src/tests/node-adapter.spec.ts",
+        "src/tests/output-contract.spec.ts",
+        "src/tests/redis-adapter.spec.ts",
+        "src/tests/render-server.spec.ts",
+        "src/tests/route-manifest.spec.ts",
+        "src/tests/route-registry.spec.ts",
+        "src/tests/rsc-basic.spec.ts",
+        "src/tests/rsc-css-handling.spec.ts",
+        "src/tests/rsc-route.spec.ts",
+        "src/tests/rsc-server-only-leakage.spec.ts",
+        "src/tests/rsc-streaming-smoke.spec.ts",
+        "src/tests/rsc-vertical.spec.ts",
+        "src/tests/server-action.spec.ts",
+        "src/tests/ssg-prerender.spec.ts",
+        "src/tests/vite-environments.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "47545caed5bea0fa",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/metering-core",
+      "cwd": "packages/metering-core",
+      "paths": [
+        "src/tests/BillableUsageJournal.spec.ts",
+        "src/tests/IdempotencyManager.spec.ts",
+        "src/tests/MeterRef.spec.ts",
+        "src/tests/MeterRefTypes.spec.ts",
+        "src/tests/MeterRegistry.spec.ts",
+        "src/tests/MeterRepository.spec.ts",
+        "src/tests/MeteringService.spec.ts",
+        "src/tests/MeteringTypes.spec.ts",
+        "src/tests/QuotaManager.spec.ts",
+        "src/tests/RedisBillableUsageJournal.spec.ts",
+        "src/tests/RedisUsageStorage.spec.ts",
+        "src/tests/UsageAggregator.spec.ts",
+        "src/tests/UsageStorage.spec.ts",
+        "src/tests/decorators/Meter.spec.ts",
+        "src/tests/decorators/Metered.spec.ts",
+        "src/tests/events/Events.spec.ts",
+        "src/tests/problems/Problems.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/BillableUsageJournal.spec.ts",
+        "src/tests/IdempotencyManager.spec.ts",
+        "src/tests/MeterRef.spec.ts",
+        "src/tests/MeterRefTypes.spec.ts",
+        "src/tests/MeterRegistry.spec.ts",
+        "src/tests/MeterRepository.spec.ts",
+        "src/tests/MeteringService.spec.ts",
+        "src/tests/MeteringTypes.spec.ts",
+        "src/tests/QuotaManager.spec.ts",
+        "src/tests/RedisBillableUsageJournal.spec.ts",
+        "src/tests/RedisUsageStorage.spec.ts",
+        "src/tests/UsageAggregator.spec.ts",
+        "src/tests/UsageStorage.spec.ts",
+        "src/tests/decorators/Meter.spec.ts",
+        "src/tests/decorators/Metered.spec.ts",
+        "src/tests/events/Events.spec.ts",
+        "src/tests/problems/Problems.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "d3d54d0d54700919",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/metering-drizzle",
+      "cwd": "packages/metering-drizzle",
+      "paths": [
+        "src/tests/DrizzleMeterRepository.spec.ts",
+        "src/tests/WidenMeteringIntegers.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/DrizzleMeterRepository.spec.ts",
+        "src/tests/WidenMeteringIntegers.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "77dd1e056132a77c",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/metering-upstash",
+      "cwd": "packages/metering-upstash",
+      "paths": [
+        "src/tests/UpstashRedisClient.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/UpstashRedisClient.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "e92916ff45a77a90",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/metrics-billing",
+      "cwd": "packages/metrics-billing",
+      "paths": [
+        "src/tests/BillingEventHandler.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/BillingEventHandler.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "6e1ffc4d1b63283d",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/metrics-core",
+      "cwd": "packages/metrics-core",
+      "paths": [
+        "src/tests/CarryingCapacity.spec.ts",
+        "src/tests/GrowthCalculator.spec.ts",
+        "src/tests/Ltv.spec.ts",
+        "src/tests/MetricsEngine.spec.ts",
+        "src/tests/MetricsProblems.spec.ts",
+        "src/tests/MrrCalculator.spec.ts",
+        "src/tests/RetentionCalculator.spec.ts",
+        "src/tests/SnapshotScheduler.spec.ts",
+        "src/tests/TimescaleMetricsStore.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/CarryingCapacity.spec.ts",
+        "src/tests/GrowthCalculator.spec.ts",
+        "src/tests/Ltv.spec.ts",
+        "src/tests/MetricsEngine.spec.ts",
+        "src/tests/MetricsProblems.spec.ts",
+        "src/tests/MrrCalculator.spec.ts",
+        "src/tests/RetentionCalculator.spec.ts",
+        "src/tests/SnapshotScheduler.spec.ts",
+        "src/tests/TimescaleMetricsStore.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "552ac63e5a3cde85",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/migration-runner",
+      "cwd": "packages/migration-runner",
+      "paths": [
+        "src/tests/MigrationCommandE2E.spec.ts",
+        "src/tests/MigrationRunner.spec.ts",
+        "src/tests/MigrationScanner.spec.ts",
+        "src/tests/MigrationStore.spec.ts",
+        "src/tests/MigrationTransactionHarness.spec.ts",
+        "src/tests/cli.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/MigrationCommandE2E.spec.ts",
+        "src/tests/MigrationRunner.spec.ts",
+        "src/tests/MigrationScanner.spec.ts",
+        "src/tests/MigrationStore.spec.ts",
+        "src/tests/MigrationTransactionHarness.spec.ts",
+        "src/tests/cli.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "2fd133813f5d41a7",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/notifications-core",
+      "cwd": "packages/notifications-core",
+      "paths": [
+        "src/tests/NotificationDispatch.spec.ts",
+        "src/tests/NotificationPreferences.spec.ts",
+        "src/tests/NotificationProviderConformance.spec.ts",
+        "src/tests/NotificationProviderRegistry.spec.ts",
+        "src/tests/NotificationResult.spec.ts",
+        "src/tests/NotificationService.spec.ts",
+        "src/tests/NotificationTemplates.spec.ts",
+        "src/tests/SendNotificationTask.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/NotificationDispatch.spec.ts",
+        "src/tests/NotificationPreferences.spec.ts",
+        "src/tests/NotificationProviderConformance.spec.ts",
+        "src/tests/NotificationProviderRegistry.spec.ts",
+        "src/tests/NotificationResult.spec.ts",
+        "src/tests/NotificationService.spec.ts",
+        "src/tests/NotificationTemplates.spec.ts",
+        "src/tests/SendNotificationTask.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "7dbb3685d6ff05bc",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/notifications-react-email",
+      "cwd": "packages/notifications-react-email",
+      "paths": [
+        "src/tests/ReactEmail.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/ReactEmail.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "d51456ebd9faf2d1",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/notifications-resend",
+      "cwd": "packages/notifications-resend",
+      "paths": [
+        "src/tests/NotificationProviderConformance.spec.ts",
+        "src/tests/ResendProvider.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/NotificationProviderConformance.spec.ts",
+        "src/tests/ResendProvider.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "f673593c181d841f",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/onboarding-core",
+      "cwd": "packages/onboarding-core",
+      "paths": [
+        "src/tests/InMemoryOnboardingStore.spec.ts",
+        "src/tests/OnboardingManager.spec.ts",
+        "src/tests/OnboardingStoreConformance.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/InMemoryOnboardingStore.spec.ts",
+        "src/tests/OnboardingManager.spec.ts",
+        "src/tests/OnboardingStoreConformance.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "23276ed24d4363af",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/onboarding-drizzle",
+      "cwd": "packages/onboarding-drizzle",
+      "paths": [
+        "src/tests/DrizzleOnboardingStore.spec.ts",
+        "src/tests/DrizzleProviderConformance.spec.ts",
+        "src/tests/OnboardingLifecycleFieldsMigration.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/DrizzleOnboardingStore.spec.ts",
+        "src/tests/DrizzleProviderConformance.spec.ts",
+        "src/tests/OnboardingLifecycleFieldsMigration.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "56d318f4a92e812c",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/openapi-spec",
+      "cwd": "packages/openapi-spec",
+      "paths": [
+        "src/tests/Cli.spec.ts",
+        "src/tests/OpenApiCliGeneration.spec.ts",
+        "src/tests/Output.spec.ts",
+        "src/tests/emitOpenAPI.spec.ts",
+        "src/tests/loadControllers.spec.ts",
+        "src/tests/round-trip.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/Cli.spec.ts",
+        "src/tests/OpenApiCliGeneration.spec.ts",
+        "src/tests/Output.spec.ts",
+        "src/tests/emitOpenAPI.spec.ts",
+        "src/tests/loadControllers.spec.ts",
+        "src/tests/round-trip.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "79c4ae3318acf1e6",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/outbox-core",
+      "cwd": "packages/outbox-core",
+      "paths": [
+        "src/tests/TransactionalOutboxStore.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/TransactionalOutboxStore.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "2b7acaca6df28204",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/oxlint-rules",
+      "cwd": "packages/oxlint-rules",
+      "paths": [
+        "src/tests/index.spec.ts",
+        "src/tests/rest-generated-contract-schema.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/index.spec.ts",
+        "src/tests/rest-generated-contract-schema.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "reused",
+      "cacheHash": "b724989ca0e6c128",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/pagination-core",
+      "cwd": "packages/pagination-core",
+      "paths": [
+        "src/tests/CreateCursorPage.spec.ts",
+        "src/tests/CreateOffsetPage.spec.ts",
+        "src/tests/Cursor.spec.ts",
+        "src/tests/CursorCodec.spec.ts",
+        "src/tests/PackageManifest.spec.ts",
+        "src/tests/ParsePaginationParams.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/CreateCursorPage.spec.ts",
+        "src/tests/CreateOffsetPage.spec.ts",
+        "src/tests/Cursor.spec.ts",
+        "src/tests/CursorCodec.spec.ts",
+        "src/tests/PackageManifest.spec.ts",
+        "src/tests/ParsePaginationParams.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "9d11cf043b941835",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/presentation-preset",
+      "cwd": "packages/presentation-preset",
+      "paths": [
+        "src/__tests__/frontend-action-manifest.spec.ts",
+        "src/__tests__/output-contract-validator.spec.ts",
+        "src/__tests__/output-contract.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/__tests__/frontend-action-manifest.spec.ts",
+        "src/__tests__/output-contract-validator.spec.ts",
+        "src/__tests__/output-contract.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "28648a96bbf325e9",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/preset-cloudflare",
+      "cwd": "packages/preset-cloudflare",
+      "paths": [
+        "src/tests/presetCloudflare.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/presetCloudflare.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "reused",
+      "cacheHash": "516acd90d62b70ed",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/preset-lambda",
+      "cwd": "packages/preset-lambda",
+      "paths": [
+        "src/tests/presetLambda.spec.ts",
+        "src/tests/presetLambdaE2E.spec.ts",
+        "src/tests/publicTypes.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/presetLambda.spec.ts",
+        "src/tests/presetLambdaE2E.spec.ts",
+        "src/tests/publicTypes.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "c2964e68445ccb0e",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/preset-node",
+      "cwd": "packages/preset-node",
+      "paths": [
+        "src/tests/presetNode.spec.ts",
+        "src/tests/presetNodeE2E.spec.ts",
+        "src/tests/publicTypes.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/presetNode.spec.ts",
+        "src/tests/presetNodeE2E.spec.ts",
+        "src/tests/publicTypes.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "ffaef026fe0de48b",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/problems-core",
+      "cwd": "packages/problems-core",
+      "paths": [
+        "src/libs/Problem.test.ts",
+        "src/tests/Problem.spec.ts",
+        "src/tests/ProblemRegistry.spec.ts",
+        "src/tests/ProblemResponseRedaction.spec.ts",
+        "src/tests/ProblemSerializer.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/libs/Problem.test.ts",
+        "src/tests/Problem.spec.ts",
+        "src/tests/ProblemRegistry.spec.ts",
+        "src/tests/ProblemResponseRedaction.spec.ts",
+        "src/tests/ProblemSerializer.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "4b387610e039bcd1",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/protocol-codegen",
+      "cwd": "packages/protocol-codegen",
+      "paths": [
+        "src/tests/ControllerProject.spec.ts",
+        "src/tests/RestControllerSources.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/ControllerProject.spec.ts",
+        "src/tests/RestControllerSources.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "9e628bd3746e2996",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/protocols-core",
+      "cwd": "packages/protocols-core",
+      "paths": [
+        "src/tests/ContractGraph.spec.ts",
+        "src/tests/ContractGraphMonetization.spec.ts",
+        "src/tests/RoutePath.spec.ts",
+        "src/tests/SchemaDescriptor.spec.ts",
+        "src/tests/controllerDiscovery.spec.ts",
+        "src/tests/extractRouteIR.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/ContractGraph.spec.ts",
+        "src/tests/ContractGraphMonetization.spec.ts",
+        "src/tests/RoutePath.spec.ts",
+        "src/tests/SchemaDescriptor.spec.ts",
+        "src/tests/controllerDiscovery.spec.ts",
+        "src/tests/extractRouteIR.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "4c0a04472214fd28",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/protocols-desktop",
+      "cwd": "packages/protocols-desktop",
+      "paths": [
+        "src/tests/DesktopContract.spec.ts",
+        "src/tests/DesktopContractGraph.spec.ts",
+        "src/tests/DesktopContractGraphDiagnostics.spec.ts",
+        "src/tests/DesktopContractGraphDiff.spec.ts",
+        "src/tests/DesktopTypes.spec.ts",
+        "src/tests/DesktopWireSchema.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/DesktopContract.spec.ts",
+        "src/tests/DesktopContractGraph.spec.ts",
+        "src/tests/DesktopContractGraphDiagnostics.spec.ts",
+        "src/tests/DesktopContractGraphDiff.spec.ts",
+        "src/tests/DesktopTypes.spec.ts",
+        "src/tests/DesktopWireSchema.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "9434547825792127",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/protocols-graphql",
+      "cwd": "packages/protocols-graphql",
+      "paths": [
+        "src/tests/GraphQLContractSnapshot.spec.ts",
+        "src/tests/GraphQLLifecycle.spec.ts",
+        "src/tests/GraphQLProblems.spec.ts",
+        "src/tests/GraphQLResolver.spec.ts",
+        "src/tests/GuardChain.spec.ts",
+        "src/tests/InterceptorChain.spec.ts",
+        "src/tests/PackageManifest.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/GraphQLContractSnapshot.spec.ts",
+        "src/tests/GraphQLLifecycle.spec.ts",
+        "src/tests/GraphQLProblems.spec.ts",
+        "src/tests/GraphQLResolver.spec.ts",
+        "src/tests/GuardChain.spec.ts",
+        "src/tests/InterceptorChain.spec.ts",
+        "src/tests/PackageManifest.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "2e1471e0c8937bc2",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/protocols-rest",
+      "cwd": "packages/protocols-rest",
+      "paths": [
+        "src/tests/AuthGuard.spec.ts",
+        "src/tests/BehavioralEvidence.spec.ts",
+        "src/tests/Controller.spec.ts",
+        "src/tests/HttpExceptionFilter.spec.ts",
+        "src/tests/HttpMethod.spec.ts",
+        "src/tests/InputValidation.spec.ts",
+        "src/tests/Lifecycle.spec.ts",
+        "src/tests/LoggingInterceptor.spec.ts",
+        "src/tests/Params.spec.ts",
+        "src/tests/RolesGuard.spec.ts",
+        "src/tests/RouteContractGuard.spec.ts",
+        "src/tests/RouteContractTypes.spec.ts",
+        "src/tests/RouteSchema.spec.ts",
+        "src/tests/StrictSchemaSourceLocation.spec.ts",
+        "src/tests/ValidationPipe.spec.ts",
+        "src/tests/decorators/Controller.spec.ts",
+        "src/tests/decorators/Middleware.spec.ts",
+        "src/tests/decorators/Parameter.spec.ts",
+        "src/tests/decorators/Route.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/AuthGuard.spec.ts",
+        "src/tests/BehavioralEvidence.spec.ts",
+        "src/tests/Controller.spec.ts",
+        "src/tests/HttpExceptionFilter.spec.ts",
+        "src/tests/HttpMethod.spec.ts",
+        "src/tests/InputValidation.spec.ts",
+        "src/tests/Lifecycle.spec.ts",
+        "src/tests/LoggingInterceptor.spec.ts",
+        "src/tests/Params.spec.ts",
+        "src/tests/RolesGuard.spec.ts",
+        "src/tests/RouteContractGuard.spec.ts",
+        "src/tests/RouteContractTypes.spec.ts",
+        "src/tests/RouteSchema.spec.ts",
+        "src/tests/StrictSchemaSourceLocation.spec.ts",
+        "src/tests/ValidationPipe.spec.ts",
+        "src/tests/decorators/Controller.spec.ts",
+        "src/tests/decorators/Middleware.spec.ts",
+        "src/tests/decorators/Parameter.spec.ts",
+        "src/tests/decorators/Route.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "8466f349ea3d11a3",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/protocols-trpc",
+      "cwd": "packages/protocols-trpc",
+      "paths": [
+        "src/tests/TrpcExecutionContext.spec.ts",
+        "src/tests/TrpcExecutionPipeline.spec.ts",
+        "src/tests/TrpcParamResolver.spec.ts",
+        "src/tests/createTrpcRouter.spec.ts",
+        "src/tests/round-trip.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/TrpcExecutionContext.spec.ts",
+        "src/tests/TrpcExecutionPipeline.spec.ts",
+        "src/tests/TrpcParamResolver.spec.ts",
+        "src/tests/createTrpcRouter.spec.ts",
+        "src/tests/round-trip.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "29d82685a861d284",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/ratelimit-core",
+      "cwd": "packages/ratelimit-core",
+      "paths": [
+        "src/tests/InMemoryRateLimitStore.spec.ts",
+        "src/tests/RateLimit.spec.ts",
+        "src/tests/RateLimitExceededProblem.spec.ts",
+        "src/tests/RateLimitGuard.spec.ts",
+        "src/tests/RateLimitKeyBuilder.spec.ts",
+        "src/tests/RateLimitMiddleware.spec.ts",
+        "src/tests/RateLimiter.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/InMemoryRateLimitStore.spec.ts",
+        "src/tests/RateLimit.spec.ts",
+        "src/tests/RateLimitExceededProblem.spec.ts",
+        "src/tests/RateLimitGuard.spec.ts",
+        "src/tests/RateLimitKeyBuilder.spec.ts",
+        "src/tests/RateLimitMiddleware.spec.ts",
+        "src/tests/RateLimiter.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "56e6bc5b3474fb2a",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/ratelimit-upstash",
+      "cwd": "packages/ratelimit-upstash",
+      "paths": [
+        "src/tests/UpstashRateLimitStore.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/UpstashRateLimitStore.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "10f252228b2c1589",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/repository-core",
+      "cwd": "packages/repository-core",
+      "paths": [
+        "src/tests/BatchLoadProblems.spec.ts",
+        "src/tests/decorators/BatchLoad.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/BatchLoadProblems.spec.ts",
+        "src/tests/decorators/BatchLoad.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "2c7ecf91d5c6a793",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/retry-core",
+      "cwd": "packages/retry-core",
+      "paths": [
+        "src/tests/BackoffPolicy.spec.ts",
+        "src/tests/CircuitBreaker.spec.ts",
+        "src/tests/CircuitBreakerState.spec.ts",
+        "src/tests/ExponentialBackoff.spec.ts",
+        "src/tests/FailureSemantics.spec.ts",
+        "src/tests/LambdaTimeoutGuard.spec.ts",
+        "src/tests/NumericConfiguration.spec.ts",
+        "src/tests/RedisCircuitBreaker.spec.ts",
+        "src/tests/RetryCoreExports.spec.ts",
+        "src/tests/RetryEngine.spec.ts",
+        "src/tests/RetryTemplate.spec.ts",
+        "src/tests/Retryable.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/BackoffPolicy.spec.ts",
+        "src/tests/CircuitBreaker.spec.ts",
+        "src/tests/CircuitBreakerState.spec.ts",
+        "src/tests/ExponentialBackoff.spec.ts",
+        "src/tests/FailureSemantics.spec.ts",
+        "src/tests/LambdaTimeoutGuard.spec.ts",
+        "src/tests/NumericConfiguration.spec.ts",
+        "src/tests/RedisCircuitBreaker.spec.ts",
+        "src/tests/RetryCoreExports.spec.ts",
+        "src/tests/RetryEngine.spec.ts",
+        "src/tests/RetryTemplate.spec.ts",
+        "src/tests/Retryable.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "ae40410218f94315",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/rpc-codegen",
+      "cwd": "packages/rpc-codegen",
+      "paths": [
+        "src/tests/Cli.spec.ts",
+        "src/tests/ContractArtifactParity.spec.ts",
+        "src/tests/ContractCheckCli.spec.ts",
+        "src/tests/codegen.spec.ts",
+        "src/tests/loadRoutes.spec.ts",
+        "src/tests/round-trip.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/Cli.spec.ts",
+        "src/tests/ContractArtifactParity.spec.ts",
+        "src/tests/ContractCheckCli.spec.ts",
+        "src/tests/codegen.spec.ts",
+        "src/tests/loadRoutes.spec.ts",
+        "src/tests/round-trip.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "eddee842281c0392",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/search-core",
+      "cwd": "packages/search-core",
+      "paths": [
+        "src/tests/KoreanHangul.spec.ts",
+        "src/tests/SearchAutoSync.spec.ts",
+        "src/tests/SearchEngine.spec.ts",
+        "src/tests/SearchField.spec.ts",
+        "src/tests/SearchIndexRef.spec.ts",
+        "src/tests/SearchProblems.spec.ts",
+        "src/tests/SearchService.spec.ts",
+        "src/tests/SearchTransforms.spec.ts",
+        "src/tests/Searchable.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/KoreanHangul.spec.ts",
+        "src/tests/SearchAutoSync.spec.ts",
+        "src/tests/SearchEngine.spec.ts",
+        "src/tests/SearchField.spec.ts",
+        "src/tests/SearchIndexRef.spec.ts",
+        "src/tests/SearchProblems.spec.ts",
+        "src/tests/SearchService.spec.ts",
+        "src/tests/SearchTransforms.spec.ts",
+        "src/tests/Searchable.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "e9c07befd7f047a6",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/search-drizzle",
+      "cwd": "packages/search-drizzle",
+      "paths": [
+        "src/tests/DrizzleProviderConformance.spec.ts",
+        "src/tests/DrizzleSearchEngine.spec.ts",
+        "src/tests/PGroongaStrategy.spec.ts",
+        "src/tests/PgSearchStrategy.spec.ts",
+        "src/tests/PgTrgmStrategy.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/DrizzleProviderConformance.spec.ts",
+        "src/tests/DrizzleSearchEngine.spec.ts",
+        "src/tests/PGroongaStrategy.spec.ts",
+        "src/tests/PgSearchStrategy.spec.ts",
+        "src/tests/PgTrgmStrategy.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "b0be73ff6bbc0613",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/search-meilisearch",
+      "cwd": "packages/search-meilisearch",
+      "paths": [
+        "src/tests/MeilisearchDiagnosticsProvider.spec.ts",
+        "src/tests/MeilisearchEngine.spec.ts",
+        "src/tests/MeilisearchProblems.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/MeilisearchDiagnosticsProvider.spec.ts",
+        "src/tests/MeilisearchEngine.spec.ts",
+        "src/tests/MeilisearchProblems.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "9614d6cb884fd044",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/storage-cloudflare",
+      "cwd": "packages/storage-cloudflare",
+      "paths": [
+        "src/tests/CloudflareImagesDiagnosticsProvider.spec.ts",
+        "src/tests/CloudflareImagesProvider.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/CloudflareImagesDiagnosticsProvider.spec.ts",
+        "src/tests/CloudflareImagesProvider.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "f190fdeaa3364ba3",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/storage-cloudinary",
+      "cwd": "packages/storage-cloudinary",
+      "paths": [
+        "src/tests/CloudinaryDiagnosticsProvider.spec.ts",
+        "src/tests/CloudinaryProvider.spec.ts",
+        "src/tests/CloudinaryStoragePlugin.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/CloudinaryDiagnosticsProvider.spec.ts",
+        "src/tests/CloudinaryProvider.spec.ts",
+        "src/tests/CloudinaryStoragePlugin.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "f40003170a1dc60e",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/storage-core",
+      "cwd": "packages/storage-core",
+      "paths": [
+        "src/tests/BaseStorageProvider.spec.ts",
+        "src/tests/InMemoryStorageProvider.spec.ts",
+        "src/tests/NodeInterop.spec.ts",
+        "src/tests/SignedUrlExpiry.spec.ts",
+        "src/tests/StorageProviderToken.spec.ts",
+        "src/tests/problems/FileNotFoundProblem.spec.ts",
+        "src/tests/problems/InvalidKeyProblem.spec.ts",
+        "src/tests/problems/StorageOperationAbortedProblem.spec.ts",
+        "src/tests/problems/StorageProblem.spec.ts",
+        "src/tests/problems/UploadFailedProblem.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/BaseStorageProvider.spec.ts",
+        "src/tests/InMemoryStorageProvider.spec.ts",
+        "src/tests/NodeInterop.spec.ts",
+        "src/tests/SignedUrlExpiry.spec.ts",
+        "src/tests/StorageProviderToken.spec.ts",
+        "src/tests/problems/FileNotFoundProblem.spec.ts",
+        "src/tests/problems/InvalidKeyProblem.spec.ts",
+        "src/tests/problems/StorageOperationAbortedProblem.spec.ts",
+        "src/tests/problems/StorageProblem.spec.ts",
+        "src/tests/problems/UploadFailedProblem.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "277402249f1a5c84",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/storage-r2",
+      "cwd": "packages/storage-r2",
+      "paths": [
+        "src/tests/ProviderNoCredentialConformance.spec.ts",
+        "src/tests/R2Config.spec.ts",
+        "src/tests/R2StorageProvider.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/ProviderNoCredentialConformance.spec.ts",
+        "src/tests/R2Config.spec.ts",
+        "src/tests/R2StorageProvider.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "32c4d1477baa268f",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/tasks-core",
+      "cwd": "packages/tasks-core",
+      "paths": [
+        "src/tests/Task.spec.ts",
+        "src/tests/TaskReference.spec.ts",
+        "src/tests/TaskReferenceTypes.spec.ts",
+        "src/tests/TaskRegistry.spec.ts",
+        "src/tests/TaskRunner.spec.ts",
+        "src/tests/TasksCore.spec.ts",
+        "src/tests/TasksProblems.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/Task.spec.ts",
+        "src/tests/TaskReference.spec.ts",
+        "src/tests/TaskReferenceTypes.spec.ts",
+        "src/tests/TaskRegistry.spec.ts",
+        "src/tests/TaskRunner.spec.ts",
+        "src/tests/TasksCore.spec.ts",
+        "src/tests/TasksProblems.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "127b60b830c209da",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/tasks-qstash",
+      "cwd": "packages/tasks-qstash",
+      "paths": [
+        "src/tests/ProviderNoCredentialConformance.spec.ts",
+        "src/tests/QStashTaskRunner.spec.ts",
+        "src/tests/QStashTasksPlugin.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/ProviderNoCredentialConformance.spec.ts",
+        "src/tests/QStashTaskRunner.spec.ts",
+        "src/tests/QStashTasksPlugin.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "7b813d93587daaea",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/telemetry-api",
+      "cwd": "packages/telemetry-api",
+      "paths": [
+        "src/tests/BehavioralEvidence.spec.ts",
+        "src/tests/Trace.spec.ts",
+        "src/tests/frontendBridge.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/BehavioralEvidence.spec.ts",
+        "src/tests/Trace.spec.ts",
+        "src/tests/frontendBridge.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "reused",
+      "cacheHash": "bf66789ff4b7f169",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/telemetry-sdk-node",
+      "cwd": "packages/telemetry-sdk-node",
+      "paths": [
+        "src/tests/AutoInstrumentation.spec.ts",
+        "src/tests/BehavioralEvidence.spec.ts",
+        "src/tests/DeploymentEnvironment.spec.ts",
+        "src/tests/LambdaPreset.spec.ts",
+        "src/tests/NodeTelemetryPlugin.spec.ts",
+        "src/tests/ProbabilitySampler.spec.ts",
+        "src/tests/ProviderNoCredentialConformance.spec.ts",
+        "src/tests/TelemetryDiagnosticsProvider.spec.ts",
+        "src/tests/TelemetryProblems.spec.ts",
+        "src/tests/TelemetryRuntime.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/AutoInstrumentation.spec.ts",
+        "src/tests/BehavioralEvidence.spec.ts",
+        "src/tests/DeploymentEnvironment.spec.ts",
+        "src/tests/LambdaPreset.spec.ts",
+        "src/tests/NodeTelemetryPlugin.spec.ts",
+        "src/tests/ProbabilitySampler.spec.ts",
+        "src/tests/ProviderNoCredentialConformance.spec.ts",
+        "src/tests/TelemetryDiagnosticsProvider.spec.ts",
+        "src/tests/TelemetryProblems.spec.ts",
+        "src/tests/TelemetryRuntime.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "e4164e5e19c89834",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/tenant-core",
+      "cwd": "packages/tenant-core",
+      "paths": [
+        "src/tests/ActiveTenantGuard.spec.ts",
+        "src/tests/HeaderTenantResolver.spec.ts",
+        "src/tests/JwtTenantResolver.spec.ts",
+        "src/tests/SubdomainTenantResolver.spec.ts",
+        "src/tests/TenantIsolationEnforcer.spec.ts",
+        "src/tests/TenantManager.spec.ts",
+        "src/tests/TenantManagerNotRegisteredProblem.spec.ts",
+        "src/tests/TenantManagerRegistry.spec.ts",
+        "src/tests/TenantMigrationHelper.spec.ts",
+        "src/tests/TenantModelManifest.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/ActiveTenantGuard.spec.ts",
+        "src/tests/HeaderTenantResolver.spec.ts",
+        "src/tests/JwtTenantResolver.spec.ts",
+        "src/tests/SubdomainTenantResolver.spec.ts",
+        "src/tests/TenantIsolationEnforcer.spec.ts",
+        "src/tests/TenantManager.spec.ts",
+        "src/tests/TenantManagerNotRegisteredProblem.spec.ts",
+        "src/tests/TenantManagerRegistry.spec.ts",
+        "src/tests/TenantMigrationHelper.spec.ts",
+        "src/tests/TenantModelManifest.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "ada899c41446c712",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/testing",
+      "cwd": "packages/testing",
+      "paths": [
+        "src/tests/BillingProviderCapabilityConformance.spec.ts",
+        "src/tests/ChangedTestPlan.spec.ts",
+        "src/tests/ConformanceContract.spec.ts",
+        "src/tests/ContractRuntimeDifferentialIntegration.spec.ts",
+        "src/tests/ContractTesting.spec.ts",
+        "src/tests/ExecutableAssuranceGraph.spec.ts",
+        "src/tests/OperationalFailureDrill.spec.ts",
+        "src/tests/ProviderNoCredentialConformance.spec.ts",
+        "src/tests/ScenarioRuntime.spec.ts",
+        "src/tests/TestEvidence.spec.ts",
+        "src/tests/TestKernel.spec.ts",
+        "src/tests/TestRuntime.spec.ts",
+        "src/tests/testing.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/BillingProviderCapabilityConformance.spec.ts",
+        "src/tests/ChangedTestPlan.spec.ts",
+        "src/tests/ConformanceContract.spec.ts",
+        "src/tests/ContractRuntimeDifferentialIntegration.spec.ts",
+        "src/tests/ContractTesting.spec.ts",
+        "src/tests/ExecutableAssuranceGraph.spec.ts",
+        "src/tests/OperationalFailureDrill.spec.ts",
+        "src/tests/ProviderNoCredentialConformance.spec.ts",
+        "src/tests/ScenarioRuntime.spec.ts",
+        "src/tests/TestEvidence.spec.ts",
+        "src/tests/TestKernel.spec.ts",
+        "src/tests/TestRuntime.spec.ts",
+        "src/tests/testing.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "55e218bf1b862f66",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/testing-resources",
+      "cwd": "packages/testing-resources",
+      "paths": [
+        "src/tests/PluginApplicationRuntime.spec.ts",
+        "src/tests/ResourceConfiguration.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/PluginApplicationRuntime.spec.ts",
+        "src/tests/ResourceConfiguration.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "714ed7fce10aaa34",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/transports-cloudflare-workers",
+      "cwd": "packages/transports-cloudflare-workers",
+      "paths": [
+        "src/tests/PackageManifest.spec.ts",
+        "src/tests/WorkersAdapter.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/PackageManifest.spec.ts",
+        "src/tests/WorkersAdapter.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "34749e0dd8df7942",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/transports-graphql",
+      "cwd": "packages/transports-graphql",
+      "paths": [
+        "src/tests/GraphQLServer.lazy-import.spec.ts",
+        "src/tests/GraphQLServer.spec.ts",
+        "src/tests/PackageManifest.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/GraphQLServer.lazy-import.spec.ts",
+        "src/tests/GraphQLServer.spec.ts",
+        "src/tests/PackageManifest.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "bca1e064072b66b2",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/transports-http",
+      "cwd": "packages/transports-http",
+      "paths": [
+        "src/tests/BehavioralEvidence.spec.ts",
+        "src/tests/BodyLimitMiddleware.spec.ts",
+        "src/tests/CompressionMiddleware.spec.ts",
+        "src/tests/ContractRuntimeParity.spec.ts",
+        "src/tests/CorsMiddleware.spec.ts",
+        "src/tests/CrocoApp.spec.ts",
+        "src/tests/CrocoLambdaAdapter.spec.ts",
+        "src/tests/ErrorHandler.spec.ts",
+        "src/tests/FrameworkIntegration.spec.ts",
+        "src/tests/GeneratedRouteModule.spec.ts",
+        "src/tests/GracefulShutdownMiddleware.spec.ts",
+        "src/tests/HealthCheck.spec.ts",
+        "src/tests/HttpContext.spec.ts",
+        "src/tests/HttpPipeExecution.spec.ts",
+        "src/tests/HttpTransportIntegration.spec.ts",
+        "src/tests/HttpTransportPlugin.spec.ts",
+        "src/tests/LambdaAdapterConformance.spec.ts",
+        "src/tests/MinimalProductionRestAppGoldenPath.spec.ts",
+        "src/tests/NodeAbortSignal.spec.ts",
+        "src/tests/NodeAdapterSmoke.spec.ts",
+        "src/tests/NodeServeStaticSecurity.spec.ts",
+        "src/tests/OperationalEndpoints.spec.ts",
+        "src/tests/PackageManifest.spec.ts",
+        "src/tests/ParamResolver.spec.ts",
+        "src/tests/PipelineConformance.spec.ts",
+        "src/tests/PipelineRunner.spec.ts",
+        "src/tests/RateLimitMiddleware.spec.ts",
+        "src/tests/RouteCompiler.spec.ts",
+        "src/tests/RuntimeCapabilityConformance.spec.ts",
+        "src/tests/RuntimeContext.spec.ts",
+        "src/tests/SecurityHeadersMiddleware.spec.ts",
+        "src/tests/SecurityMiddlewareMarker.spec.ts",
+        "src/tests/StaticAssetConformance.spec.ts",
+        "src/tests/TelemetryMiddleware.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/BehavioralEvidence.spec.ts",
+        "src/tests/BodyLimitMiddleware.spec.ts",
+        "src/tests/CompressionMiddleware.spec.ts",
+        "src/tests/ContractRuntimeParity.spec.ts",
+        "src/tests/CorsMiddleware.spec.ts",
+        "src/tests/CrocoApp.spec.ts",
+        "src/tests/CrocoLambdaAdapter.spec.ts",
+        "src/tests/ErrorHandler.spec.ts",
+        "src/tests/FrameworkIntegration.spec.ts",
+        "src/tests/GeneratedRouteModule.spec.ts",
+        "src/tests/GracefulShutdownMiddleware.spec.ts",
+        "src/tests/HealthCheck.spec.ts",
+        "src/tests/HttpContext.spec.ts",
+        "src/tests/HttpPipeExecution.spec.ts",
+        "src/tests/HttpTransportIntegration.spec.ts",
+        "src/tests/HttpTransportPlugin.spec.ts",
+        "src/tests/LambdaAdapterConformance.spec.ts",
+        "src/tests/MinimalProductionRestAppGoldenPath.spec.ts",
+        "src/tests/NodeAbortSignal.spec.ts",
+        "src/tests/NodeAdapterSmoke.spec.ts",
+        "src/tests/NodeServeStaticSecurity.spec.ts",
+        "src/tests/OperationalEndpoints.spec.ts",
+        "src/tests/PackageManifest.spec.ts",
+        "src/tests/ParamResolver.spec.ts",
+        "src/tests/PipelineConformance.spec.ts",
+        "src/tests/PipelineRunner.spec.ts",
+        "src/tests/RateLimitMiddleware.spec.ts",
+        "src/tests/RouteCompiler.spec.ts",
+        "src/tests/RuntimeCapabilityConformance.spec.ts",
+        "src/tests/RuntimeContext.spec.ts",
+        "src/tests/SecurityHeadersMiddleware.spec.ts",
+        "src/tests/SecurityMiddlewareMarker.spec.ts",
+        "src/tests/StaticAssetConformance.spec.ts",
+        "src/tests/TelemetryMiddleware.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "39e7e4456cc99a13",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/triggers-core",
+      "cwd": "packages/triggers-core",
+      "paths": [
+        "src/tests/Cron.spec.ts",
+        "src/tests/OnEvent.spec.ts",
+        "src/tests/OnWebhook.spec.ts",
+        "src/tests/TriggerRefTypes.spec.ts",
+        "src/tests/TriggerRegistry.spec.ts",
+        "src/tests/TriggersCore.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/Cron.spec.ts",
+        "src/tests/OnEvent.spec.ts",
+        "src/tests/OnWebhook.spec.ts",
+        "src/tests/TriggerRefTypes.spec.ts",
+        "src/tests/TriggerRegistry.spec.ts",
+        "src/tests/TriggersCore.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "beff9dfd2f8956f3",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/triggers-qstash",
+      "cwd": "packages/triggers-qstash",
+      "paths": [
+        "src/tests/QStashScheduler.spec.ts",
+        "src/tests/QStashTriggerHandler.spec.ts",
+        "src/tests/TriggersQstash.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/QStashScheduler.spec.ts",
+        "src/tests/QStashTriggerHandler.spec.ts",
+        "src/tests/TriggersQstash.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "539a3d3ab303bb4d",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/tx-core",
+      "cwd": "packages/tx-core",
+      "paths": [
+        "src/libs/TxManager.test.ts",
+        "src/tests/TransactionProblems.spec.ts",
+        "src/tests/Transactional.spec.ts",
+        "src/tests/TxManager.characterization.spec.ts",
+        "src/tests/TxManager.concurrency.spec.ts",
+        "src/tests/TxManager.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/libs/TxManager.test.ts",
+        "src/tests/TransactionProblems.spec.ts",
+        "src/tests/Transactional.spec.ts",
+        "src/tests/TxManager.characterization.spec.ts",
+        "src/tests/TxManager.concurrency.spec.ts",
+        "src/tests/TxManager.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "b5328b75ea6c5827",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/tx-drizzle",
+      "cwd": "packages/tx-drizzle",
+      "paths": [
+        "src/tests/DrizzleHealthIndicator.spec.ts",
+        "src/tests/DrizzleTransactionPlugin.spec.ts",
+        "src/tests/DrizzleTxAdapter.spec.ts",
+        "src/tests/RealDb.spec.ts",
+        "src/tests/Repository.spec.ts",
+        "src/tests/RepositoryIntegration.spec.ts",
+        "src/tests/TxDrizzleProblems.spec.ts",
+        "src/tests/createRlsPolicy.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/DrizzleHealthIndicator.spec.ts",
+        "src/tests/DrizzleTransactionPlugin.spec.ts",
+        "src/tests/DrizzleTxAdapter.spec.ts",
+        "src/tests/RealDb.spec.ts",
+        "src/tests/Repository.spec.ts",
+        "src/tests/RepositoryIntegration.spec.ts",
+        "src/tests/TxDrizzleProblems.spec.ts",
+        "src/tests/createRlsPolicy.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "3edefa0735820e8a",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/ui-astryx",
+      "cwd": "packages/ui-astryx",
+      "paths": [
+        "src/tests/AstryxUi.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/AstryxUi.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "fa4aebbbcf24ac19",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/webhooks-core",
+      "cwd": "packages/webhooks-core",
+      "paths": [
+        "src/tests/OutboundWebhookRuntime.spec.ts",
+        "src/tests/WebhookEventRouter.spec.ts",
+        "src/tests/WebhookFixture.spec.ts",
+        "src/tests/WebhookGateway.spec.ts",
+        "src/tests/WebhookProviderAdapterConformance.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/OutboundWebhookRuntime.spec.ts",
+        "src/tests/WebhookEventRouter.spec.ts",
+        "src/tests/WebhookFixture.spec.ts",
+        "src/tests/WebhookGateway.spec.ts",
+        "src/tests/WebhookProviderAdapterConformance.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "ec608a6b4096dcf9",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/workflow-core",
+      "cwd": "packages/workflow-core",
+      "paths": [
+        "src/tests/InMemorySagaStore.spec.ts",
+        "src/tests/SagaRunner.spec.ts",
+        "src/tests/WorkflowCore.spec.ts",
+        "src/tests/WorkflowTypes.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test"
+      ],
+      "exitCode": 0,
+      "durationMs": 495528,
+      "cacheStatus": "miss",
+      "executedPaths": [
+        "src/tests/InMemorySagaStore.spec.ts",
+        "src/tests/SagaRunner.spec.ts",
+        "src/tests/WorkflowCore.spec.ts",
+        "src/tests/WorkflowTypes.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "cacheHash": "0bd4c568970c3f46",
+      "status": "passed"
+    }
+  ]
+}

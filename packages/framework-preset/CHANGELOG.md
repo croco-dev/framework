@@ -1,5 +1,18 @@
 # @croco/framework-preset
 
+## 0.1.0
+
+### Minor Changes
+
+- 48d775c: Allow presets to override individual output fields while preserving the remaining output configuration.
+
+### Patch Changes
+
+- b278729: - fix: block critical test tooling advisories
+- 7cdfcae: Declare audited package side effects so bundlers remove pure imports while preserving required initialization and CSS.
+- 67e0cbe: fix: resolve published package types before runtime conditions
+- 5d54fb4: declare Apache-2.0 license across all publishable package manifests and ship LICENSE in published packages
+
 ## 0.0.4
 
 ### Patch Changes

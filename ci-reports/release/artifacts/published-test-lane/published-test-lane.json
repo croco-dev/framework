@@ -1,0 +1,288 @@
+{
+  "schemaVersion": "croco.test-lane-report/v2",
+  "inventoryVersion": 1,
+  "inventoryDigest": "baf5bd70e137630064c968e440160b1b65df5e1b633ca208c2e75ef8c0ead974",
+  "lane": "published",
+  "allowLive": false,
+  "selectedOwners": [],
+  "executedPaths": [
+    "packages/create-croco-app/src/tests/PublishedCli.spec.ts",
+    "packages/engagement-core/src/tests/PublishedMessageContracts.spec.ts",
+    "packages/gid-core/src/tests/PublishedTypes.spec.ts",
+    "packages/meta-vite/src/tests/published-contract.spec.ts",
+    "packages/migration-runner/src/tests/PublishedCli.spec.ts",
+    "packages/notifications-react-email/src/tests/PublishedReactEmail.spec.ts",
+    "packages/ratelimit-core/src/tests/PublishedPolicyTypes.spec.ts",
+    "packages/rpc-codegen/src/tests/PublishedCli.spec.ts",
+    "packages/search-core/src/tests/PublishedSearchable.spec.ts",
+    "packages/storage-core/src/tests/PublishedTypes.spec.ts",
+    "packages/telemetry-sdk-node/src/tests/PublishedTypes.spec.ts",
+    "packages/transports-cloudflare-workers/src/tests/PublishedWorkerTypes.spec.ts",
+    "packages/transports-http/src/tests/PublishedListen.spec.ts"
+  ],
+  "skippedFiles": [],
+  "status": "passed",
+  "diagnostics": [],
+  "commands": [
+    {
+      "owner": "create-croco-app",
+      "cwd": "packages/create-croco-app",
+      "paths": [
+        "src/tests/PublishedCli.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:published"
+      ],
+      "exitCode": 0,
+      "durationMs": 9202,
+      "executedPaths": [
+        "src/tests/PublishedCli.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/engagement-core",
+      "cwd": "packages/engagement-core",
+      "paths": [
+        "src/tests/PublishedMessageContracts.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:published"
+      ],
+      "exitCode": 0,
+      "durationMs": 3286,
+      "executedPaths": [
+        "src/tests/PublishedMessageContracts.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/gid-core",
+      "cwd": "packages/gid-core",
+      "paths": [
+        "src/tests/PublishedTypes.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:published"
+      ],
+      "exitCode": 0,
+      "durationMs": 3879,
+      "executedPaths": [
+        "src/tests/PublishedTypes.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/meta-vite",
+      "cwd": "packages/meta-vite",
+      "paths": [
+        "src/tests/published-contract.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:published"
+      ],
+      "exitCode": 0,
+      "durationMs": 13042,
+      "executedPaths": [
+        "src/tests/published-contract.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/migration-runner",
+      "cwd": "packages/migration-runner",
+      "paths": [
+        "src/tests/PublishedCli.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:published"
+      ],
+      "exitCode": 0,
+      "durationMs": 3609,
+      "executedPaths": [
+        "src/tests/PublishedCli.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/notifications-react-email",
+      "cwd": "packages/notifications-react-email",
+      "paths": [
+        "src/tests/PublishedReactEmail.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:published"
+      ],
+      "exitCode": 0,
+      "durationMs": 10450,
+      "executedPaths": [
+        "src/tests/PublishedReactEmail.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/ratelimit-core",
+      "cwd": "packages/ratelimit-core",
+      "paths": [
+        "src/tests/PublishedPolicyTypes.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:published"
+      ],
+      "exitCode": 0,
+      "durationMs": 4891,
+      "executedPaths": [
+        "src/tests/PublishedPolicyTypes.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/rpc-codegen",
+      "cwd": "packages/rpc-codegen",
+      "paths": [
+        "src/tests/PublishedCli.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:published"
+      ],
+      "exitCode": 0,
+      "durationMs": 5159,
+      "executedPaths": [
+        "src/tests/PublishedCli.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/search-core",
+      "cwd": "packages/search-core",
+      "paths": [
+        "src/tests/PublishedSearchable.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:published"
+      ],
+      "exitCode": 0,
+      "durationMs": 4993,
+      "executedPaths": [
+        "src/tests/PublishedSearchable.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/storage-core",
+      "cwd": "packages/storage-core",
+      "paths": [
+        "src/tests/PublishedTypes.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:published"
+      ],
+      "exitCode": 0,
+      "durationMs": 5250,
+      "executedPaths": [
+        "src/tests/PublishedTypes.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/telemetry-sdk-node",
+      "cwd": "packages/telemetry-sdk-node",
+      "paths": [
+        "src/tests/PublishedTypes.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:published"
+      ],
+      "exitCode": 0,
+      "durationMs": 9158,
+      "executedPaths": [
+        "src/tests/PublishedTypes.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/transports-cloudflare-workers",
+      "cwd": "packages/transports-cloudflare-workers",
+      "paths": [
+        "src/tests/PublishedWorkerTypes.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:published"
+      ],
+      "exitCode": 0,
+      "durationMs": 2178,
+      "executedPaths": [
+        "src/tests/PublishedWorkerTypes.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    },
+    {
+      "owner": "@croco/transports-http",
+      "cwd": "packages/transports-http",
+      "paths": [
+        "src/tests/PublishedListen.spec.ts"
+      ],
+      "command": [
+        "pnpm",
+        "run",
+        "test:published"
+      ],
+      "exitCode": 0,
+      "durationMs": 2279,
+      "executedPaths": [
+        "src/tests/PublishedListen.spec.ts"
+      ],
+      "skippedFiles": [],
+      "executionState": "executed",
+      "status": "passed"
+    }
+  ]
+}
