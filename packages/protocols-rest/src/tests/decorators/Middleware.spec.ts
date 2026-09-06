@@ -19,7 +19,19 @@ class MockGuard {
   }
 }
 
+class MockGuard2 {
+  canActivate(): boolean {
+    return true;
+  }
+}
+
 class MockPipe {
+  transform(value: unknown, _metadata: ArgumentMetadata): unknown {
+    return value;
+  }
+}
+
+class MockPipe2 {
   transform(value: unknown, _metadata: ArgumentMetadata): unknown {
     return value;
   }
@@ -31,7 +43,19 @@ class MockInterceptor {
   }
 }
 
+class MockInterceptor2 {
+  async intercept(_context: unknown, next: CallHandler): Promise<unknown> {
+    return next.handle();
+  }
+}
+
 class MockFilter {
+  catch(_exception: unknown, _context: unknown): ExceptionFilterResult {
+    return undefined;
+  }
+}
+
+class MockFilter2 {
   catch(_exception: unknown, _context: unknown): ExceptionFilterResult {
     return undefined;
   }
@@ -88,6 +112,29 @@ describe("Middleware decorators", () => {
       expect(classGuards).toHaveLength(1);
       expect(methodGuards).toHaveLength(1);
     });
+
+    it("should preserve all guards when stacking @UseGuards decorators at class level", () => {
+      @Controller("/users")
+      @UseGuards(MockGuard)
+      @UseGuards(MockGuard2)
+      class UserController {}
+
+      const guards = Reflect.getMetadata(REST_GUARDS_KEY, UserController);
+      expect(guards).toEqual([MockGuard2, MockGuard]);
+    });
+
+    it("should preserve all guards when stacking @UseGuards decorators at method level", () => {
+      @Controller("/users")
+      class UserController {
+        @Get()
+        @UseGuards(MockGuard)
+        @UseGuards(MockGuard2)
+        list() {}
+      }
+
+      const guards = Reflect.getMetadata(REST_GUARDS_KEY, UserController, "list");
+      expect(guards).toEqual([MockGuard2, MockGuard]);
+    });
   });
 
   describe("@UsePipes decorator", () => {
@@ -139,6 +186,29 @@ describe("Middleware decorators", () => {
 
       expect(classPipes).toHaveLength(1);
       expect(methodPipes).toHaveLength(1);
+    });
+
+    it("should preserve all pipes when stacking @UsePipes decorators at class level", () => {
+      @Controller("/users")
+      @UsePipes(MockPipe)
+      @UsePipes(MockPipe2)
+      class UserController {}
+
+      const pipes = Reflect.getMetadata(REST_PIPES_KEY, UserController);
+      expect(pipes).toEqual([MockPipe2, MockPipe]);
+    });
+
+    it("should preserve all pipes when stacking @UsePipes decorators at method level", () => {
+      @Controller("/users")
+      class UserController {
+        @Post()
+        @UsePipes(MockPipe)
+        @UsePipes(MockPipe2)
+        create() {}
+      }
+
+      const pipes = Reflect.getMetadata(REST_PIPES_KEY, UserController, "create");
+      expect(pipes).toEqual([MockPipe2, MockPipe]);
     });
   });
 
@@ -192,6 +262,29 @@ describe("Middleware decorators", () => {
       expect(classInterceptors).toHaveLength(1);
       expect(methodInterceptors).toHaveLength(1);
     });
+
+    it("should preserve all interceptors when stacking @UseInterceptors decorators at class level", () => {
+      @Controller("/users")
+      @UseInterceptors(MockInterceptor)
+      @UseInterceptors(MockInterceptor2)
+      class UserController {}
+
+      const interceptors = Reflect.getMetadata(REST_INTERCEPTORS_KEY, UserController);
+      expect(interceptors).toEqual([MockInterceptor2, MockInterceptor]);
+    });
+
+    it("should preserve all interceptors when stacking @UseInterceptors decorators at method level", () => {
+      @Controller("/users")
+      class UserController {
+        @Get()
+        @UseInterceptors(MockInterceptor)
+        @UseInterceptors(MockInterceptor2)
+        list() {}
+      }
+
+      const interceptors = Reflect.getMetadata(REST_INTERCEPTORS_KEY, UserController, "list");
+      expect(interceptors).toEqual([MockInterceptor2, MockInterceptor]);
+    });
   });
 
   describe("@UseFilters decorator", () => {
@@ -243,6 +336,29 @@ describe("Middleware decorators", () => {
 
       expect(classFilters).toHaveLength(1);
       expect(methodFilters).toHaveLength(1);
+    });
+
+    it("should preserve all filters when stacking @UseFilters decorators at class level", () => {
+      @Controller("/users")
+      @UseFilters(MockFilter)
+      @UseFilters(MockFilter2)
+      class UserController {}
+
+      const filters = Reflect.getMetadata(REST_FILTERS_KEY, UserController);
+      expect(filters).toEqual([MockFilter2, MockFilter]);
+    });
+
+    it("should preserve all filters when stacking @UseFilters decorators at method level", () => {
+      @Controller("/users")
+      class UserController {
+        @Get()
+        @UseFilters(MockFilter)
+        @UseFilters(MockFilter2)
+        list() {}
+      }
+
+      const filters = Reflect.getMetadata(REST_FILTERS_KEY, UserController, "list");
+      expect(filters).toEqual([MockFilter2, MockFilter]);
     });
   });
 
