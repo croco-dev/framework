@@ -192,3 +192,25 @@ export class SagaFinalizationProblem extends Problem {
     );
   }
 }
+
+/**
+ * Retry the same idempotency key after the owning execution finishes.
+ * Abandoned executions require store-specific reconciliation.
+ */
+export class SagaExecutionInFlightProblem extends Problem {
+  constructor(sagaName: string, executionId: string, status: "pending" | "running") {
+    super(
+      "workflow-core/saga-execution-in-flight",
+      ProblemCategory.Conflict,
+      `Saga '${sagaName}' is already in flight at execution '${executionId}' (${status})`,
+      {
+        extensions: {
+          sagaName,
+          executionId,
+          sagaStatus: status,
+          retryable: true,
+        },
+      },
+    );
+  }
+}

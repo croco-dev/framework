@@ -599,6 +599,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`DuplicateWorkflowRegistrationProblem`](/api/workflow-core/src/classes/duplicateworkflowregistrationproblem/)
 - [`SagaDefinitionProblem`](/api/workflow-core/src/classes/sagadefinitionproblem/)
 - [`SagaExecutionFailedProblem`](/api/workflow-core/src/classes/sagaexecutionfailedproblem/)
+- [`SagaExecutionInFlightProblem`](/api/workflow-core/src/classes/sagaexecutioninflightproblem/)
 - [`SagaExecutionNotFoundProblem`](/api/workflow-core/src/classes/sagaexecutionnotfoundproblem/)
 - [`SagaFinalizationProblem`](/api/workflow-core/src/classes/sagafinalizationproblem/)
 - [`SagaListPaginationProblem`](/api/workflow-core/src/classes/sagalistpaginationproblem/)
