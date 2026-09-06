@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baselineEntryCount": 71,
+  "baselineEntryCount": 72,
   "description": "Reviewed baseline for CROCO_STATIC_RAW_ERROR_RUNTIME_BOUNDARY. New production raw built-in Error throws must be converted or added with owner and unexpired expiresOn metadata.",
   "entries": [
     {
@@ -366,7 +366,16 @@
     {
       "package": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/conformance.ts",
-      "line": 335,
+      "line": 302,
+      "excerpt": "throw new Error(\"omitted-ttl reservation must grant a finite in-flight lease\");",
+      "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-10-29"
+    },
+    {
+      "package": "@croco/idempotency-core",
+      "file": "packages/idempotency-core/src/libs/conformance.ts",
+      "line": 344,
       "excerpt": "throw new Error(`${message}. Expected ${String(expected)}, got ${String(actual)}.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
@@ -375,7 +384,7 @@
     {
       "package": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/conformance.ts",
-      "line": 347,
+      "line": 356,
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
@@ -384,7 +393,7 @@
     {
       "package": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/conformance.ts",
-      "line": 352,
+      "line": 361,
       "excerpt": "throw new Error(`Expected ${expected.name} to be thrown.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
