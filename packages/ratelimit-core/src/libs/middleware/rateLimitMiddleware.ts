@@ -75,7 +75,7 @@ export function createRateLimitMiddleware(options: CreateMiddlewareOptions): Mid
       ctx.set("rateLimitHeaders", buildHeaders(result));
     }
 
-    if (!result.success && !failOpen) {
+    if (!result.success) {
       throw new RateLimitExceededProblem(result);
     }
 
