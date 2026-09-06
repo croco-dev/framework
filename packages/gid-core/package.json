@@ -2,6 +2,7 @@
   "name": "@croco/gid-core",
   "version": "0.0.4",
   "description": "Type-safe prefixed ID generation using ULID",
+  "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/croco-dev/framework.git",

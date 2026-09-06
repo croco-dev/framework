@@ -28,6 +28,7 @@ import {
   canonicalExportConditionNames,
   DIRECT_DIST_ENTRYPOINT_PACKAGES,
   ENTRYPOINT_EXEMPTIONS,
+  EXPECTED_PACKAGE_LICENSE,
   exportConditionOrderDiagnostics,
   exportConditionSequenceParityDiagnostics,
   expectedFilesFor,
@@ -35,6 +36,7 @@ import {
   fieldMatchesPath,
   findPackageJsonFiles,
   packageHasSourceEntrypoint,
+  packageLicenseDiagnostics,
 } from "./package-manifest-contracts.mjs";
 import { isBoundedPeerDependencyRange } from "./peer-dependency-range-policy.mjs";
 import { apiDocPackages } from "../packages/docs/api-docs.config.mjs";
@@ -140,13 +142,35 @@ function main() {
   const rootDir = mode.rootDir;
   const packageJsonFiles = findWorkspacePackageJsonFiles(rootDir);
   const violations = [];
+  let checkedCount = 0;
+  let skippedCount = 0;
+  let modifiedCount = 0;
+
   const rootPackagePath = path.join(rootDir, "package.json");
   if (fs.existsSync(rootPackagePath)) {
-    const rootPackage = JSON.parse(fs.readFileSync(rootPackagePath, "utf-8"));
+    const rootPackageContent = fs.readFileSync(rootPackagePath, "utf-8");
+    const rootPackage = JSON.parse(rootPackageContent);
+    if (mode.write && rootPackage.license !== EXPECTED_PACKAGE_LICENSE) {
+      const normalizedRoot = withLicenseMetadata(rootPackage, EXPECTED_PACKAGE_LICENSE);
+      fs.writeFileSync(rootPackagePath, `${JSON.stringify(normalizedRoot, null, 2)}\n`, "utf-8");
+      console.log("✓ Normalized root package.json license");
+      modifiedCount++;
+    } else if (mode.check && rootPackage.license !== EXPECTED_PACKAGE_LICENSE) {
+      violations.push(`package.json: license must be ${JSON.stringify(EXPECTED_PACKAGE_LICENSE)}`);
+    }
     for (const violation of validatePackageScripts(rootPackage)) {
       violations.push(`package.json: ${violation}`);
     }
   }
+
+  const rootLicensePath = path.join(rootDir, "LICENSE");
+  let rootLicenseContent = null;
+  if (!fs.existsSync(rootLicensePath)) {
+    violations.push("LICENSE: repository root LICENSE file is required");
+  } else {
+    rootLicenseContent = fs.readFileSync(rootLicensePath, "utf-8");
+  }
+
   const workspacePackageRecords = readWorkspacePackageRecords(packageJsonFiles, rootDir);
   const workspacePackageNames = readWorkspacePackageNames(packageJsonFiles);
   const spinePackageNames = readSpinePackageNames(rootDir, workspacePackageRecords, violations);
@@ -162,9 +186,6 @@ function main() {
     violations,
   );
   const usedInternalPeerDependencyRangeExceptions = new Set();
-  let checkedCount = 0;
-  let skippedCount = 0;
-  let modifiedCount = 0;
 
   for (const pkgPath of packageJsonFiles) {
     const relativePath = path.relative(rootDir, pkgPath);
@@ -204,6 +225,55 @@ function main() {
       spinePackageNames,
     })) {
       violations.push(`${relativePath}: ${violation}`);
+    }
+
+    const packageLicensePath = path.join(path.dirname(pkgPath), "LICENSE");
+    if (mode.write && rootLicenseContent !== null) {
+      const currentPackageLicense = fs.existsSync(packageLicensePath)
+        ? fs.readFileSync(packageLicensePath, "utf-8")
+        : null;
+      if (currentPackageLicense !== rootLicenseContent) {
+        fs.writeFileSync(packageLicensePath, rootLicenseContent, "utf-8");
+        console.log(`✓ Synchronized LICENSE: ${pkg.name}`);
+        modifiedCount++;
+      }
+    } else if (mode.check) {
+      if (!fs.existsSync(packageLicensePath)) {
+        violations.push(
+          `${relativePath}: missing package LICENSE file; run pnpm package-manifests:write`,
+        );
+      } else if (
+        rootLicenseContent !== null &&
+        fs.readFileSync(packageLicensePath, "utf-8") !== rootLicenseContent
+      ) {
+        violations.push(
+          `${relativePath}: package LICENSE file does not match root LICENSE; run pnpm package-manifests:write`,
+        );
+      }
+    }
+
+    const packageReadmePath = path.join(path.dirname(pkgPath), "README.md");
+    if (fs.existsSync(packageReadmePath)) {
+      const readmeContent = fs.readFileSync(packageReadmePath, "utf-8");
+      const licenseHeadingMatch = readmeContent.match(/^## (License|라이선스)\s*\n+([^\n#]+)/m);
+      if (licenseHeadingMatch) {
+        const declared = licenseHeadingMatch[2].trim();
+        if (declared !== EXPECTED_PACKAGE_LICENSE) {
+          if (mode.write) {
+            const updatedContent = readmeContent.replace(
+              /^## (License|라이선스)\s*\n+[^\n#]+/m,
+              `## $1\n\n${EXPECTED_PACKAGE_LICENSE}`,
+            );
+            fs.writeFileSync(packageReadmePath, updatedContent, "utf-8");
+            console.log(`✓ Synchronized README license: ${pkg.name}`);
+            modifiedCount++;
+          } else if (mode.check) {
+            violations.push(
+              `${relativePath}: README.md license section declares ${JSON.stringify(declared)}, expected ${JSON.stringify(EXPECTED_PACKAGE_LICENSE)}; run pnpm package-manifests:write`,
+            );
+          }
+        }
+      }
     }
 
     if (mode.write && changed) {
@@ -303,6 +373,7 @@ function normalizePackage(pkg, pkgPath, rootDir, options = {}) {
     structuredClone(pkg),
     expectedRepositoryFor(pkgPath, rootDir),
   );
+  normalized = withLicenseMetadata(normalized, EXPECTED_PACKAGE_LICENSE);
   const hasSourceEntrypoint = packageHasSourceEntrypoint(pkgPath);
   const directDistRoot = DIRECT_DIST_ENTRYPOINT_PACKAGES.has(normalized.name);
   const spineSourceRoot =
@@ -400,6 +471,35 @@ function withRepositoryMetadata(pkg, repository) {
 
   if (!inserted) {
     normalized.repository = repository;
+  }
+
+  return normalized;
+}
+
+function withLicenseMetadata(pkg, license) {
+  const withoutLicense = { ...pkg };
+  delete withoutLicense.license;
+  const normalized = {};
+  const insertAfterKey = Object.hasOwn(withoutLicense, "description")
+    ? "description"
+    : Object.hasOwn(withoutLicense, "version")
+      ? "version"
+      : Object.hasOwn(withoutLicense, "private")
+        ? "private"
+        : "name";
+  let inserted = false;
+
+  for (const [key, value] of Object.entries(withoutLicense)) {
+    normalized[key] = value;
+
+    if (key === insertAfterKey) {
+      normalized.license = license;
+      inserted = true;
+    }
+  }
+
+  if (!inserted) {
+    normalized.license = license;
   }
 
   return normalized;
@@ -807,6 +907,10 @@ function validatePackage(pkg, pkgPath, rootDir, context = {}) {
 
   if (JSON.stringify(pkg.repository) !== JSON.stringify(expectedRepository)) {
     violations.push(`repository must be ${JSON.stringify(expectedRepository)}`);
+  }
+
+  for (const violation of packageLicenseDiagnostics(pkg)) {
+    violations.push(violation);
   }
 
   if (pkg.publishConfig?.access !== "public") {

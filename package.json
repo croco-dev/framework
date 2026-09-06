@@ -1,6 +1,7 @@
 {
   "name": "croco",
   "private": true,
+  "license": "Apache-2.0",
   "scripts": {
     "architecture:check:circular": "pnpm exec madge --circular --extensions ts packages",
     "architecture:check:circular:allowlist": "node --experimental-strip-types scripts/verification-command.mts --id architecture-circular-allowlist",

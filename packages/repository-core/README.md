@@ -264,4 +264,4 @@ pnpm test --filter=@croco/repository-core --coverage
 
 ## License
 
-MIT
+Apache-2.0

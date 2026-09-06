@@ -145,4 +145,4 @@ pnpm docs:catalog:check
 
 ## License
 
-MIT
+Apache-2.0

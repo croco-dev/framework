@@ -3,9 +3,11 @@ import { describe, expect, it } from "vitest";
 import {
   canonicalExportConditionNames,
   effectivePublishManifest,
+  EXPECTED_PACKAGE_LICENSE,
   exportConditionOrderDiagnostics,
   exportConditionSequenceParityDiagnostics,
   fieldMatchesPath,
+  packageLicenseDiagnostics,
 } from "../package-manifest-contracts.mjs";
 
 describe("package-manifest-contracts", () => {
@@ -121,5 +123,17 @@ describe("package-manifest-contracts", () => {
     ).toEqual([
       'exports["."] and publishConfig.exports["."] must preserve the same shared condition order',
     ]);
+  });
+
+  it("defines Apache-2.0 as the canonical package license", () => {
+    expect(EXPECTED_PACKAGE_LICENSE).toBe("Apache-2.0");
+  });
+
+  it("validates package license declarations", () => {
+    expect(packageLicenseDiagnostics({ license: "Apache-2.0" })).toEqual([]);
+    expect(packageLicenseDiagnostics({ license: "MIT" })).toEqual(['license must be "Apache-2.0"']);
+    expect(packageLicenseDiagnostics({})).toEqual(['license must be "Apache-2.0"']);
+    expect(packageLicenseDiagnostics({ private: true })).toEqual([]);
+    expect(packageLicenseDiagnostics({ private: true, license: "UNLICENSED" })).toEqual([]);
   });
 });

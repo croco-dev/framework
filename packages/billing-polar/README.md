@@ -416,7 +416,7 @@ certification 리소스를 가리키며, `POLAR_USAGE_EVENT_ID`는 재실행마�
 
 ## 라이선스
 
-MIT
+Apache-2.0
 
 ---
 

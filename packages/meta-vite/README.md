@@ -426,4 +426,4 @@ pnpm typecheck --filter=@croco/meta-vite
 
 ## License
 
-MIT
+Apache-2.0
