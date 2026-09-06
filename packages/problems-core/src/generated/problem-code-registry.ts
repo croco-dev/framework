@@ -5401,9 +5401,9 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       title: "Validation Error",
       cookbookPath: "/reference/problem-recovery-cookbook/#croco-saas-profile-mismatch",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        cause: "The generated profile and requested profile do not match.",
+        userAction: "Select the generated profile or correct the explicit profile override.",
+        operatorAction: "Compare the generated manifest with the requested profile override.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
