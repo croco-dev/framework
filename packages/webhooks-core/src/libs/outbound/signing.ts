@@ -1,6 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
+import { BlockList, isIP } from "node:net";
 import {
   InvalidOutboundWebhookSecretVersionProblem,
   InvalidOutboundWebhookUrlProblem,
@@ -176,40 +176,59 @@ function normalizeHostname(hostname: string): string {
   return hostname.replace(/^\[|\]$/g, "").toLowerCase();
 }
 
-function isBlockedIpAddress(hostname: string): boolean {
-  const ipv4 = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+function createBlockedIpRanges(): BlockList {
+  const ranges = new BlockList();
+
+  ranges.addSubnet("0.0.0.0", 8, "ipv4");
+  ranges.addSubnet("10.0.0.0", 8, "ipv4");
+  ranges.addSubnet("100.64.0.0", 10, "ipv4");
+  ranges.addSubnet("127.0.0.0", 8, "ipv4");
+  ranges.addSubnet("169.254.0.0", 16, "ipv4");
+  ranges.addSubnet("172.16.0.0", 12, "ipv4");
+  ranges.addSubnet("192.0.0.0", 24, "ipv4");
+  ranges.addSubnet("192.0.2.0", 24, "ipv4");
+  ranges.addSubnet("192.88.99.0", 24, "ipv4");
+  ranges.addSubnet("192.168.0.0", 16, "ipv4");
+  ranges.addSubnet("198.18.0.0", 15, "ipv4");
+  ranges.addSubnet("198.51.100.0", 24, "ipv4");
+  ranges.addSubnet("203.0.113.0", 24, "ipv4");
+  ranges.addSubnet("224.0.0.0", 4, "ipv4");
+  ranges.addSubnet("240.0.0.0", 4, "ipv4");
+  ranges.addAddress("255.255.255.255", "ipv4");
+
+  ranges.addSubnet("::", 96, "ipv6");
+  ranges.addSubnet("64:ff9b:1::", 48, "ipv6");
+  ranges.addSubnet("100::", 64, "ipv6");
+  ranges.addSubnet("100:0:0:1::", 64, "ipv6");
+  ranges.addSubnet("2001:2::", 48, "ipv6");
+  ranges.addSubnet("2001:db8::", 32, "ipv6");
+  ranges.addSubnet("3fff::", 20, "ipv6");
+  ranges.addSubnet("5f00::", 16, "ipv6");
+  ranges.addSubnet("fc00::", 7, "ipv6");
+  ranges.addSubnet("fe80::", 10, "ipv6");
+  ranges.addSubnet("ff00::", 8, "ipv6");
+
+  return ranges;
+}
+
+const BLOCKED_IP_RANGES = createBlockedIpRanges();
+
+export function isBlockedIpAddress(hostname: string): boolean {
+  const normalized = normalizeHostname(hostname);
+  const ipv4 = normalized.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
   if (ipv4) {
     const octets = ipv4.slice(1).map(Number);
     if (octets.some((octet) => octet > 255)) {
       return true;
     }
-    return (
-      octets[0] === 0 ||
-      octets[0] === 10 ||
-      (octets[0] === 100 && octets[1] >= 64 && octets[1] <= 127) ||
-      octets[0] === 127 ||
-      (octets[0] === 169 && octets[1] === 254) ||
-      (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
-      (octets[0] === 192 && (octets[1] === 0 || octets[1] === 168 || octets[1] === 88)) ||
-      (octets[0] === 198 && (octets[1] === 18 || octets[1] === 19)) ||
-      (octets[0] === 198 && octets[1] === 51 && octets[2] === 100) ||
-      (octets[0] === 203 && octets[1] === 0 && octets[2] === 113) ||
-      octets[0] >= 224
-    );
   }
 
-  const normalized = normalizeHostname(hostname);
-  return (
-    normalized === "::" ||
-    normalized === "::1" ||
-    normalized.startsWith("::") ||
-    normalized.startsWith("2001:db8") ||
-    normalized.startsWith("fc") ||
-    normalized.startsWith("fd") ||
-    normalized.startsWith("fe8") ||
-    normalized.startsWith("fe9") ||
-    normalized.startsWith("fea") ||
-    normalized.startsWith("feb") ||
-    normalized.startsWith("ff")
-  );
+  const ipVersion = isIP(normalized);
+  if (ipVersion === 4) {
+    return BLOCKED_IP_RANGES.check(normalized, "ipv4");
+  }
+  if (ipVersion === 6) {
+    return BLOCKED_IP_RANGES.check(normalized, "ipv6");
+  }
+  return false;
 }
