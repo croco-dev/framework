@@ -318,7 +318,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("eea58cec8def93391ebab82e58e537c876700179e9d23494f39876c939db0033");
+    ).toBe("f3ca956de56f4e7d44cab558e942f6cfecc8a427cb677c0dd63b4058aebf7efa");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -909,6 +909,41 @@ describe("verification manifest", () => {
     );
   });
 
+  it("requires only executed tests for internal-tool and admin-console selections", () => {
+    const paths = readTestInventory()
+      .inventory.tests.filter(({ lane }) => lane === "generated-app")
+      .map(({ path }) => path);
+    const internal = selectGeneratedTestPathsForSmokeCases(["goal-internal-tool"], paths);
+    const admin = selectGeneratedTestPathsForSmokeCases(["admin-console-starter"], paths);
+
+    expect(internal).toHaveLength(4);
+    expect(internal.some((path) => path.includes("/tests/journeys/"))).toBe(false);
+    expect(admin).toEqual(
+      [
+        ...internal,
+        "packages/create-croco-app/templates/admin-console/tests/journeys/plan-release.spec.ts",
+      ].sort(),
+    );
+    expect(
+      selectGeneratedTestPathsForSmokeCases(
+        [
+          "goal-saas-api",
+          "goal-internal-tool",
+          "admin-console-starter",
+          "saas-golden-path",
+          "saas-cloudflare-profile",
+          "saas-lambda-profile",
+          "ai-saas-golden-path",
+        ],
+        paths,
+      ),
+    ).toHaveLength(12);
+    expect(selectGeneratedTestPathsForSmokeCases(["rest-spa-contracts"], paths)).toEqual([]);
+    expect(() => selectGeneratedTestPathsForSmokeCases(["unknown-smoke-case"], paths)).toThrow(
+      "Unknown generated smoke case: unknown-smoke-case",
+    );
+  });
+
   it("omits all generated materialization validation arguments for an empty selected path set", () => {
     const generatedInventoryPaths = readTestInventory()
       .inventory.tests.filter(({ lane }) => lane === "generated-app")
@@ -989,6 +1024,36 @@ describe("verification manifest", () => {
         );
         await generate(projectDir, normalizeNonInteractiveOptions(cliOptions));
         assertGeneratedSmokeCaseDependencyMapping(smokeCase.name, projectDir);
+        const generatedEntries = readTestInventory().inventory.tests.filter(
+          ({ lane }) => lane === "generated-app",
+        );
+        const executedPaths = generatedEntries
+          .filter((entry) => {
+            const generatedPath = entry.generated?.generatedPath;
+            if (!generatedPath || !existsSync(join(projectDir, generatedPath))) return false;
+            return smokeCase.validations.some((validation) => {
+              if (generatedPath.startsWith("tests/journeys/")) {
+                return (
+                  validation.label === "browser journeys" &&
+                  (!validation.paths || validation.paths.includes(generatedPath))
+                );
+              }
+              return (
+                validation.label === "test" &&
+                (!validation.packagePath ||
+                  generatedPath.startsWith(`${validation.packagePath.join("/")}/`))
+              );
+            });
+          })
+          .map(({ path }) => path)
+          .sort();
+        expect(
+          selectGeneratedTestPathsForSmokeCases(
+            [smokeCase.name],
+            generatedEntries.map(({ path }) => path),
+          ),
+          smokeCase.name,
+        ).toEqual(executedPaths);
       }
     } finally {
       rmSync(generatedRoot, { recursive: true, force: true });

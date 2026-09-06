@@ -1,3 +1,5 @@
+import { join } from "node:path";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -7,7 +9,9 @@ import {
   reconcileTestEvidence,
   requiredGeneratedSourcePaths,
 } from "../test-evidence-reconcile.mts";
-import { inventoryDigest } from "../test-inventory.mts";
+import { selectGeneratedTestPathsForSmokeCases } from "../create-croco-app-generated-smoke-dependencies.mts";
+import { PUBLISH_REQUIRED_GENERATED_SMOKE_CASES } from "../verification-manifest.mts";
+import { inventoryDigest, readTestInventory } from "../test-inventory.mts";
 import type { TestInventory } from "../test-inventory.mts";
 
 const inventory: TestInventory = {
@@ -159,6 +163,54 @@ describe("test evidence reconciliation", () => {
     expect(report.entries).toEqual([
       expect.objectContaining({ requirement: "N/A", state: "not-run" }),
     ]);
+  });
+
+  it("reconciles the seven-case selection without requiring unexecuted SPA journeys", () => {
+    const { inventory: repositoryInventory, diagnostics } = readTestInventory(
+      join(import.meta.dirname, "..", "..", "test-inventory.json"),
+    );
+    expect(diagnostics).toEqual([]);
+    const generatedInventory: TestInventory = {
+      ...repositoryInventory,
+      tests: repositoryInventory.tests.filter(({ lane }) => lane === "generated-app"),
+    };
+    const allPaths = generatedInventory.tests.map(({ path }) => path);
+    const executedPaths = allPaths.filter(
+      (path) => !path.includes("/base-ddd/") && !path.includes("/spa-be-split/tests/journeys/"),
+    );
+    expect(executedPaths).toHaveLength(12);
+    const requiredGeneratedPaths = selectGeneratedTestPathsForSmokeCases(
+      [
+        "goal-saas-api",
+        "goal-internal-tool",
+        "admin-console-starter",
+        "saas-golden-path",
+        "saas-cloudflare-profile",
+        "saas-lambda-profile",
+        "ai-saas-golden-path",
+      ],
+      allPaths,
+    );
+    const reconcile = (paths: readonly string[], required = requiredGeneratedPaths) =>
+      reconcileTestEvidence({
+        inventory: generatedInventory,
+        profile: "publish",
+        reports: [],
+        requiredGeneratedPaths: required,
+        generatedExecutedPaths: paths,
+      });
+
+    expect(reconcile(executedPaths).diagnostics).toEqual([]);
+    expect(reconcile(executedPaths.slice(1)).diagnostics).toEqual([
+      expect.objectContaining({ code: "TEST_EVIDENCE_MISSING_REQUIRED", path: executedPaths[0] }),
+    ]);
+    const fullTierPaths = selectGeneratedTestPathsForSmokeCases(
+      PUBLISH_REQUIRED_GENERATED_SMOKE_CASES,
+      allPaths,
+    );
+    expect(fullTierPaths).toEqual([...allPaths].sort());
+    expect(reconcile(allPaths, fullTierPaths).diagnostics).toEqual([]);
+    expect(reconcile(executedPaths, fullTierPaths).diagnostics).toHaveLength(3);
   });
 
   it("rejects lane evidence produced from a stale inventory", () => {
