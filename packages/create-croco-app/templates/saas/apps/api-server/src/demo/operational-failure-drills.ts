@@ -49,7 +49,6 @@ const WEBHOOK_RECOVERY =
 const NORMALIZED_RESET_AT = "<normalized-reset-at>";
 const NORMALIZED_RETRY_AFTER_SECONDS = "<normalized-retry-after-seconds>";
 const NORMALIZED_REQUEST_ID = "<normalized-request-id>";
-const NORMALIZED_TRACE_ID = "<normalized-trace-id>";
 
 export async function runGeneratedOperationalFailureDrills(): Promise<OperationalFailureDrillReport> {
   const report = await runOperationalFailureDrills(
@@ -364,15 +363,14 @@ function createRouteValidationScenario(): OperationalFailureDrillScenario {
         type: "about:blank",
         extensions: {
           requestId: NORMALIZED_REQUEST_ID,
-          traceId: NORMALIZED_TRACE_ID,
         },
       },
       provenance,
       recoveryAction: ROUTE_VALIDATION_RECOVERY,
     },
-    run: () =>
-      runWithLoopbackTelemetry(async () => {
-        const app = createCrocoApp();
+    run: async () => {
+      const app = await createCrocoApp({ profileMode: "zero-credential" });
+      try {
         const response = await app.fetch(
           new Request("http://localhost/ops/jobs/failure-drill/cancel", {
             method: "POST",
@@ -393,7 +391,10 @@ function createRouteValidationScenario(): OperationalFailureDrillScenario {
           provenance,
           recoveryAction: ROUTE_VALIDATION_RECOVERY,
         };
-      }),
+      } finally {
+        await app.disposeApplicationRuntime();
+      }
+    },
   };
 }
 
@@ -421,7 +422,6 @@ function createRateLimitScenario(): OperationalFailureDrillScenario {
           requestId: NORMALIZED_REQUEST_ID,
           resetAt: NORMALIZED_RESET_AT,
           retryAfterSeconds: NORMALIZED_RETRY_AFTER_SECONDS,
-          traceId: NORMALIZED_TRACE_ID,
         },
       },
       diagnostics: [
@@ -438,9 +438,9 @@ function createRateLimitScenario(): OperationalFailureDrillScenario {
       provenance,
       recoveryAction: RATE_LIMIT_RECOVERY,
     },
-    run: () =>
-      runWithLoopbackTelemetry(async () => {
-        const app = createCrocoApp();
+    run: async () => {
+      const app = await createCrocoApp({ profileMode: "zero-credential" });
+      try {
         const request = () =>
           new Request("http://localhost/ops/jobs?limit=0", {
             headers: { "x-forwarded-for": "127.0.0.1" },
@@ -469,7 +469,10 @@ function createRateLimitScenario(): OperationalFailureDrillScenario {
           provenance,
           recoveryAction: RATE_LIMIT_RECOVERY,
         };
-      }),
+      } finally {
+        await app.disposeApplicationRuntime();
+      }
+    },
   };
 }
 
@@ -674,18 +677,12 @@ function readRateLimitHeaderEvidence(response: Response): OperationalFailureDril
 }
 
 function normalizeHttpProblemEvidence(problem: ProblemDetails): ProblemDetails {
-  if (
-    typeof problem.requestId !== "string" ||
-    problem.requestId.length === 0 ||
-    typeof problem.traceId !== "string" ||
-    problem.traceId.length === 0
-  ) {
-    throw new Error("Generated HTTP failure did not expose requestId and traceId evidence.");
+  if (typeof problem.requestId !== "string" || problem.requestId.length === 0) {
+    throw new Error("Generated HTTP failure did not expose requestId evidence.");
   }
   return {
     ...problem,
     requestId: NORMALIZED_REQUEST_ID,
-    traceId: NORMALIZED_TRACE_ID,
   };
 }
 
@@ -715,33 +712,6 @@ async function closeServer(server: Server): Promise<void> {
   await new Promise<void>((resolveClose, rejectClose) => {
     server.close((error) => (error ? rejectClose(error) : resolveClose()));
   });
-}
-
-async function runWithLoopbackTelemetry<T>(run: () => Promise<T>): Promise<T> {
-  const server = createServer((_request, response) => {
-    response.writeHead(200);
-    response.end();
-  });
-  await listenOnLoopback(server);
-  const address = server.address() as AddressInfo;
-
-  try {
-    await TelemetryRuntime.reset();
-    await TelemetryRuntime.getInstance().init({
-      serviceName: "croco-generated-failure-drill",
-      trace: {
-        enabled: true,
-        exporterUrl: `http://127.0.0.1:${address.port}/v1/traces`,
-      },
-    });
-    return await run();
-  } finally {
-    try {
-      await TelemetryRuntime.reset();
-    } finally {
-      await closeServer(server);
-    }
-  }
 }
 
 function resolveProjectRoot(): string {

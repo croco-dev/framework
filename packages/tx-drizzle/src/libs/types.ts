@@ -9,11 +9,11 @@ export type DrizzleInsertFn<TResult = unknown> = DrizzleCallable<TResult>;
 export type DrizzleUpdateFn<TResult = unknown> = DrizzleCallable<TResult>;
 export type DrizzleDeleteFn<TResult = unknown> = DrizzleCallable<TResult>;
 
-export interface DrizzleDb<TClient = unknown, TOptions = unknown> {
+export interface DrizzleDb<TClient = unknown, TOptions = never> {
   transaction: TransactionFn<TClient, TOptions>;
 }
 
-export interface DrizzleTx<TClient = unknown, TOptions = unknown> {
+export interface DrizzleTx<TClient = unknown, TOptions = never> {
   transaction: TransactionFn<TClient, TOptions>;
 }
 

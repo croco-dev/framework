@@ -317,6 +317,23 @@ Polar SDK 오류는 not-found, validation, retryable upstream, terminal upstream
 
 기본 검증은 Polar credential 없이 실행됩니다.
 
+## Canonical module plugin
+
+`polarBilling()`은 `BILLING_GATEWAY_TOKEN`을 소유하는 실행 가능한 application plugin을 반환합니다.
+생성된 애플리케이션은 이 factory의 metadata에서 필요한 환경 변수, capability, maturity, 검증 명령을
+검사할 수 있습니다. 로거는 composition root가 명시적으로 전달하므로 전역 DI 등록 순서에 의존하지 않습니다.
+
+```typescript
+import { polarBilling } from "@croco/billing-polar";
+
+const billing = polarBilling({
+  accessToken: process.env.POLAR_ACCESS_TOKEN!,
+  environment: "production",
+  webhookSecret: process.env.POLAR_WEBHOOK_SECRET!,
+  logger,
+});
+```
+
 ```bash
 pnpm --filter @croco/billing-polar test
 pnpm --filter @croco/testing test

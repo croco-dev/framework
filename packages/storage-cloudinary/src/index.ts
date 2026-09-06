@@ -3,6 +3,11 @@
  */
 export { CloudinaryProvider } from "./libs/CloudinaryProvider";
 export {
+  CLOUDINARY_STORAGE_MODULE_NAME,
+  cloudinaryStorage,
+  type CloudinaryStoragePluginOptions,
+} from "./libs/CloudinaryStoragePlugin";
+export {
   CloudinaryDiagnosticsProvider,
   CloudinaryMissingConfigProblem,
   CloudinaryRetryableUpstreamProblem,

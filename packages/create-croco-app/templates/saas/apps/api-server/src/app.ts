@@ -1,4 +1,6 @@
 import "reflect-metadata";
+import type { AuthProvider } from "@croco/auth-core";
+import { BILLING_GATEWAY_TOKEN } from "@croco/billing-core";
 import { EntitlementManager } from "@croco/entitlements-core";
 import { Container, LOGGER_TOKEN } from "@croco/framework-context";
 import type { Constructor, ILogger } from "@croco/framework-context";
@@ -14,6 +16,7 @@ import {
   bodyLimitMiddleware,
   corsMiddleware,
   createApp,
+  createGracefulShutdownController,
   createRuntimeAwareRateLimitClientIdentityPolicy,
   mb,
   type CrocoApp,
@@ -21,17 +24,38 @@ import {
   rateLimitHttpMiddleware,
   securityHeadersMiddleware,
 } from "@croco/transports-http";
+import type { Constructor as RestControllerConstructor } from "@croco/protocols-rest";
+import { InMemoryStorageProvider } from "@croco/storage-core";
+import type { TaskDispatcher } from "@croco/tasks-core";
+import { TxManager } from "@croco/tx-core";
 import { JobsController } from "./controllers/JobsController";
 import { OperationsController } from "./controllers/OperationsController";
 import { SaasController } from "./controllers/SaasController";
-import { createSaasDemoRuntime } from "./saasDemo";
+import {
+  assertGeneratedSaasProfileGraph,
+  createGeneratedSaasApplicationDefinition,
+  createGeneratedSaasHttpAppConfig,
+  type GeneratedSaasProfileMode,
+} from "./generatedSaasProviderProfile";
+import { NoopTxAdapter } from "./inMemoryAdapters";
+import {
+  DemoBillingGateway,
+  SAAS_RUNTIME_STATE_TOKEN,
+  SaasRuntimeState,
+  createSaasDemoRuntime,
+} from "./saasDemo";
 
 const OPERATIONAL_RATE_LIMIT_BYPASS_PATHS = new Set(["/ops/health", "/ops/diagnostics"]);
-const controllers = [OperationsController, JobsController, SaasController];
+const controllers: RestControllerConstructor[] = [
+  OperationsController,
+  JobsController,
+  SaasController,
+];
 const diGraphRootControllers: readonly Constructor[] = controllers;
 
 export type CreateCrocoAppOptions = {
   readonly additionalMiddlewares?: readonly MiddlewareFunction[];
+  readonly profileMode?: GeneratedSaasProfileMode;
 };
 
 export type RuntimeOwnedCrocoApp = CrocoApp & {
@@ -43,40 +67,120 @@ export function createCrocoDiGraphRoots(): readonly Constructor[] {
   return [...diGraphRootControllers];
 }
 
-export function createCrocoApp(options: CreateCrocoAppOptions = {}): RuntimeOwnedCrocoApp {
-  const runtime = createApplicationRuntime();
-
-  return runtime.run(() => {
-    const applicationSaasRuntime = createSaasDemoRuntime();
-    Container.set(LOGGER_TOKEN, new BootstrapLogger());
-    Container.set(EntitlementManager, applicationSaasRuntime.entitlementManager);
-
-    const rateLimiter = new RateLimiter(
-      new SlidingWindowInMemoryStore(),
-      new RateLimitKeyBuilder(["ip"]),
-    );
-
-    return bindApplicationRuntime(
-      createApp({
-        controllers,
-        diValidation: "warn",
-        diagnostics: {
-          providers: applicationSaasRuntime.diagnosticsCollector.getProviders(),
-        },
-        middlewares: [
-          securityHeadersMiddleware(),
-          corsMiddleware({ origins: [process.env.WEB_ORIGIN ?? "http://localhost:5173"] }),
-          bodyLimitMiddleware({ limit: mb(1) }),
-          createApiRateLimitMiddleware(rateLimiter),
-          ...(options.additionalMiddlewares ?? []),
-        ],
-      }),
-      runtime,
-    );
-  });
+export function createCrocoDiGraphApplication(): Promise<RuntimeOwnedCrocoApp> {
+  return createCrocoApp({ profileMode: "zero-credential" });
 }
 
-function bindApplicationRuntime(app: CrocoApp, runtime: ApplicationRuntime): RuntimeOwnedCrocoApp {
+export async function createCrocoApp(
+  options: CreateCrocoAppOptions = {},
+): Promise<RuntimeOwnedCrocoApp> {
+  const profileMode = options.profileMode ?? "production";
+  const logger = new BootstrapLogger();
+  const rateLimiter = new RateLimiter(
+    new SlidingWindowInMemoryStore(),
+    new RateLimitKeyBuilder(["ip"]),
+  );
+  const localProviders =
+    profileMode === "zero-credential"
+      ? {
+          auth: createLocalAuthProvider(),
+          billing: new DemoBillingGateway(),
+          storage: new InMemoryStorageProvider(),
+          tasks: createLocalTaskDispatcher(),
+          transaction: new TxManager(new NoopTxAdapter()),
+        }
+      : undefined;
+  const application = createGeneratedSaasApplicationDefinition({
+    mode: profileMode,
+    logger,
+    http: {
+      controllers: controllers.map((controller) => ({
+        id: controller.name,
+        controller,
+      })),
+      diValidation: "warn",
+    },
+    ...(localProviders === undefined ? {} : { localProviders }),
+  });
+  const runtime = createApplicationRuntime(application);
+  let disposeApplicationRuntime = () => runtime.dispose();
+
+  try {
+    await runtime.initialize();
+    assertGeneratedSaasProfileGraph(runtime.createGraphManifest(), profileMode);
+    const gracefulShutdown = createGracefulShutdownController({
+      logger,
+      onShutdown: () => runtime.dispose(),
+    });
+    disposeApplicationRuntime = gracefulShutdown.shutdown;
+
+    return runtime.run(() => {
+      const runtimeState = new SaasRuntimeState({
+        create: () =>
+          createSaasDemoRuntime({
+            billingGateway: runtime.get(BILLING_GATEWAY_TOKEN),
+          }),
+        onReset: (nextRuntime) => {
+          Container.set(EntitlementManager, nextRuntime.entitlementManager);
+        },
+      });
+      Container.set(LOGGER_TOKEN, logger);
+      Container.set(EntitlementManager, runtimeState.current.entitlementManager);
+      Container.set(SAAS_RUNTIME_STATE_TOKEN, runtimeState);
+      const httpConfig = createGeneratedSaasHttpAppConfig(runtime, profileMode);
+      const pluginDiagnostics = httpConfig.diagnostics?.providers ?? [];
+
+      return bindApplicationRuntime(
+        createApp({
+          ...httpConfig,
+          controllers,
+          middlewares: [
+            gracefulShutdown.middleware,
+            securityHeadersMiddleware(),
+            corsMiddleware({ origins: [process.env.WEB_ORIGIN ?? "http://localhost:5173"] }),
+            bodyLimitMiddleware({ limit: mb(1) }),
+            createApiRateLimitMiddleware(rateLimiter),
+            ...(options.additionalMiddlewares ?? []),
+          ],
+          diagnostics: {
+            ...httpConfig.diagnostics,
+            providers: [
+              ...pluginDiagnostics,
+              ...runtimeState.current.diagnosticsCollector.getProviders(),
+            ],
+          },
+        }),
+        runtime,
+        disposeApplicationRuntime,
+      );
+    });
+  } catch (error) {
+    await disposeApplicationRuntime();
+    throw error;
+  }
+}
+
+function createLocalAuthProvider(): AuthProvider {
+  return {
+    async authenticate() {
+      return null;
+    },
+  };
+}
+
+function createLocalTaskDispatcher(): TaskDispatcher {
+  return {
+    async execute(taskId) {
+      return { messageId: `local-${taskId}` };
+    },
+  };
+}
+
+function bindApplicationRuntime(
+  app: CrocoApp,
+  runtime: ApplicationRuntime,
+  disposeApplicationRuntime: () => Promise<void>,
+): RuntimeOwnedCrocoApp {
   bindHostCallbacks(app, runtime);
   const boundMethods = new Map<PropertyKey, (...args: never[]) => unknown>();
 
@@ -86,7 +190,7 @@ function bindApplicationRuntime(app: CrocoApp, runtime: ApplicationRuntime): Run
         return runtime;
       }
       if (property === "disposeApplicationRuntime") {
-        return () => runtime.dispose();
+        return disposeApplicationRuntime;
       }
 
       const value = Reflect.get(target, property, target) as unknown;

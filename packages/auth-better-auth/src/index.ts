@@ -1,4 +1,5 @@
 export * from "./libs/BetterAuthFactory";
+export * from "./libs/BetterAuthPlugin";
 export * from "./libs/BetterAuthDiagnosticsProvider";
 export * from "./libs/BetterAuthProvider";
 export * from "./libs/BetterAuthSessionManager";

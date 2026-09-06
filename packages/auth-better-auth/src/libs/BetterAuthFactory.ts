@@ -6,7 +6,7 @@ import * as schema from "./schema";
 
 export const DRIZZLE_TOKEN = "DRIZZLE_TOKEN";
 
-type BetterAuthDatabase = Parameters<typeof drizzleAdapter>[0];
+export type BetterAuthDatabase = Parameters<typeof drizzleAdapter>[0];
 type BetterAuthInstance = ReturnType<typeof createBetterAuthInstance>;
 
 /**

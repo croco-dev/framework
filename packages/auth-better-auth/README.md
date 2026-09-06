@@ -5,10 +5,35 @@ Better Auth와 Drizzle을 Croco 인증 흐름에 연결하는 패키지입니다
 ## 설치
 
 ```bash
-pnpm add @croco/auth-better-auth better-auth drizzle-orm
+pnpm add @croco/auth-better-auth @croco/framework-module better-auth drizzle-orm
 ```
 
 ## 사용법
+
+### Application plugin
+
+```typescript
+import { betterAuth } from "@croco/auth-better-auth";
+import { createApplicationRuntime, defineCrocoApplication } from "@croco/framework-module";
+
+const runtime = createApplicationRuntime(
+  defineCrocoApplication({
+    imports: [
+      betterAuth({
+        db,
+        baseURL: process.env.BETTER_AUTH_URL!,
+        secret: process.env.BETTER_AUTH_SECRET!,
+        webhookSecret: process.env.BETTER_AUTH_WEBHOOK_SECRET,
+      }),
+    ],
+  }),
+);
+
+await runtime.initialize();
+```
+
+`betterAuth()`는 인증 provider와 readiness diagnostics를 같은 inspectable application graph에
+등록합니다. Plugin 생성과 runtime 초기화는 전역 `Container`에 `AUTH_PROVIDER_TOKEN`을 등록하지 않습니다.
 
 ### 1. Drizzle과 팩토리 등록
 

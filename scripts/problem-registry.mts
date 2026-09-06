@@ -1894,6 +1894,14 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  CROCO_SAAS_PROFILE_MISMATCH: recovery({
+    cause: "The generated profile and requested profile do not match.",
+    userAction: "Select the generated profile or correct the explicit profile override.",
+    operatorAction: "Compare the generated manifest with the requested profile override.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
   "access-core/invalid-provider-result": recovery({
     cause: "AccessProvider.check() returned a result without a supported authoritative decision.",
     userAction:

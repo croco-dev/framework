@@ -65,6 +65,9 @@ const synchronizeTask = taskRef(BillingTasks, "synchronize", "billing.synchroniz
 
 ### 타입 안전한 `TaskRunner` 실행
 
+`TASK_DISPATCHER_TOKEN`은 외부 실행 서비스로 작업을 전달하는 `TaskDispatcher` 구현을 application graph에
+등록하기 위한 안정적인 typed composition slot입니다.
+
 두 인자 `taskRef`는 `@Task` 메타데이터의 이름을 그대로 사용하면서 handler의 payload와 awaited result 타입을 보존합니다.
 기존 string 기반 호출도 계속 지원합니다.
 

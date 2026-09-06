@@ -47,6 +47,7 @@ const EXTERNAL_CROCO_PACKAGE_RANGES = {
   "@croco/repository-core": "^0.0.4",
   "@croco/retry-core": "^0.0.4",
   "@croco/rpc-codegen": "^0.1.0",
+  "@croco/storage-core": "^0.0.4",
   "@croco/storage-cloudinary": "^0.0.4",
   "@croco/storage-r2": "^0.0.4",
   "@croco/tasks-core": "^0.0.4",

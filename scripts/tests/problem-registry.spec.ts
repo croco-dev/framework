@@ -103,6 +103,37 @@ describe("problem-registry.mts", () => {
     expect(checkResult.status).toBe("pass");
   });
 
+  it("publishes profile-selection recovery for SaaS profile mismatches", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
+      readFileSync(
+        join(
+          process.cwd(),
+          "packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts",
+        ),
+        "utf-8",
+      ),
+    );
+
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+    const mismatch = registry.problems.find(({ code }) => code === "CROCO_SAAS_PROFILE_MISMATCH");
+
+    expect(mismatch?.recovery).toEqual({
+      cause: "The generated profile and requested profile do not match.",
+      userAction: "Select the generated profile or correct the explicit profile override.",
+      operatorAction: "Compare the generated manifest with the requested profile override.",
+      retryability: "not-retryable",
+      redactionPolicy: "public",
+      telemetry: {
+        eventName: "croco.problem.info",
+        severity: "info",
+        attributes: ["problem.code", "problem.category", "problem.status"],
+      },
+    });
+  });
+
   it("publishes installation recovery for missing testing resource drivers", () => {
     const repo = createTempRepo();
     writeFile(

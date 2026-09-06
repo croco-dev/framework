@@ -5,4 +5,4 @@ prev: false
 title: "APPLICATION_INTENT_BILLING_OPTIONS"
 ---
 
-> `const` **APPLICATION_INTENT_BILLING_OPTIONS**: readonly \[`"none"`, `"demo"`\]
+> `const` **APPLICATION_INTENT_BILLING_OPTIONS**: readonly \[`"none"`, `"demo"`, `"polar"`\]

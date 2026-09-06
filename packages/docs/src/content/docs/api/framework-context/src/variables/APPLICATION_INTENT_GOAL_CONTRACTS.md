@@ -67,11 +67,11 @@ title: "APPLICATION_INTENT_GOAL_CONTRACTS"
 
 #### saas-api.auth
 
-> `readonly` **auth**: `"tenant-demo"` = `"tenant-demo"`
+> `readonly` **auth**: `"better-auth"` = `"better-auth"`
 
 #### saas-api.billing
 
-> `readonly` **billing**: `"demo"` = `"demo"`
+> `readonly` **billing**: `"polar"` = `"polar"`
 
 #### saas-api.deploymentPreset
 
@@ -91,7 +91,7 @@ title: "APPLICATION_INTENT_GOAL_CONTRACTS"
 
 #### saas-api.providers
 
-> `readonly` **providers**: readonly \[`"in-memory-tenant"`, `"in-memory-auth"`, `"in-memory-billing"`, `"in-memory-metering"`, `"in-memory-events"`\]
+> `readonly` **providers**: readonly \[`"in-memory-tenant"`, `"in-memory-metering"`, `"in-memory-events"`, `"better-auth"`, `"drizzle-transaction"`, `"polar-billing"`, `"qstash-tasks"`, `"cloudinary-storage"`, `"node-telemetry"`\]
 
 #### saas-api.qualityGates
 
@@ -107,7 +107,7 @@ title: "APPLICATION_INTENT_GOAL_CONTRACTS"
 
 #### saas-api.storage
 
-> `readonly` **storage**: readonly \[`"in-memory-demo"`\]
+> `readonly` **storage**: readonly \[`"cloudinary"`\]
 
 #### saas-api.telemetry
 

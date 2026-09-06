@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baselineEntryCount": 72,
+  "baselineEntryCount": 69,
   "description": "Reviewed baseline for CROCO_STATIC_RAW_ERROR_RUNTIME_BOUNDARY. New production raw built-in Error throws must be converted or added with owner and unexpired expiresOn metadata.",
   "entries": [
     {
@@ -314,33 +314,6 @@
       "file": "packages/create-croco-app/src/package-version.ts",
       "line": 15,
       "excerpt": "throw new Error(\"Missing package version in package.json\");",
-      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling",
-      "expiresOn": "2026-10-15"
-    },
-    {
-      "package": "create-croco-app",
-      "file": "packages/create-croco-app/src/saas-provider-profiles.ts",
-      "line": 523,
-      "excerpt": "throw new Error(",
-      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling",
-      "expiresOn": "2026-10-15"
-    },
-    {
-      "package": "create-croco-app",
-      "file": "packages/create-croco-app/src/saas-provider-profiles.ts",
-      "line": 540,
-      "excerpt": "throw new Error(`CROCO_SAAS_PROFILE_PACKAGE_RANGE_MISSING: ${packageName}`);",
-      "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
-      "owner": "framework-error-handling",
-      "expiresOn": "2026-10-15"
-    },
-    {
-      "package": "create-croco-app",
-      "file": "packages/create-croco-app/src/saas-provider-profiles.ts",
-      "line": 559,
-      "excerpt": "throw new Error(",
       "reason": "Existing CLI and generator validation currently flows through command-level Error handling; tracked for future diagnostic-code migration outside this issue.",
       "owner": "framework-error-handling",
       "expiresOn": "2026-10-15"

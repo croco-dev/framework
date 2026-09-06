@@ -49,6 +49,7 @@ import {
   createSaasProviderProfileManifest,
   getSaasProviderProfileDefinition,
   getSaasProviderPackageDependencyRange,
+  renderGeneratedSaasProviderProfileSource,
   renderSaasDeployNotes,
   renderSaasEnvExample,
   renderSaasSecretsChecklist,
@@ -300,13 +301,12 @@ function writeSaasProviderProfileArtifacts(
   writeFileSync(join(docsDir, "secrets-checklist.md"), providerSecretsChecklist);
   writeFileSync(
     join(apiServerSrcDir, "generatedSaasProviderProfile.ts"),
-    [
-      `export const generatedSaasProviderProfileManifest = ${JSON.stringify(manifest, null, 2)} as const;`,
-      `export const generatedSaasProviderProfileDocs = ${JSON.stringify(providerProfileDocs)} as const;`,
-      `export const generatedSaasProviderProfileEnvExample = ${JSON.stringify(providerEnvExample)} as const;`,
-      `export const generatedSaasProviderSecretsChecklist = ${JSON.stringify(providerSecretsChecklist)} as const;`,
-      "",
-    ].join("\n"),
+    renderGeneratedSaasProviderProfileSource({
+      manifest,
+      providerProfileDocs,
+      providerEnvExample,
+      providerSecretsChecklist,
+    }),
   );
   writeFileSync(
     join(apiServerSrcDir, "generatedTenantModel.ts"),
@@ -487,14 +487,26 @@ function writeSaasProviderPackageDependencies(
   const packageJsonPath = join(targetDir, "apps", "api-server", "package.json");
   const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as {
     dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
   };
   const dependencies = packageJson.dependencies ?? {};
+  const devDependencies = packageJson.devDependencies ?? {};
+  const developmentPackages = new Set(
+    manifest.composition.plugins.flatMap(
+      (pluginDefinition) => pluginDefinition.developmentPackages ?? [],
+    ),
+  );
 
   for (const packageName of [...manifest.packages, ...manifest.tenantModel.requiredPackages]) {
-    dependencies[packageName] ??= getSaasProviderPackageDependencyRange(packageName);
+    if (developmentPackages.has(packageName)) {
+      delete dependencies[packageName];
+      devDependencies[packageName] ??= getSaasProviderPackageDependencyRange(packageName);
+    } else {
+      dependencies[packageName] ??= getSaasProviderPackageDependencyRange(packageName);
+    }
   }
-
   packageJson.dependencies = dependencies;
+  packageJson.devDependencies = devDependencies;
   writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
 }
 
