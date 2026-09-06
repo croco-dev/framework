@@ -96,6 +96,13 @@ Expiry uses an indexed `(account, expiresAt, position, grantTransactionId)` keys
 most `limit + 1` lots. Batches are bounded to 100 and resumable without loading the whole lot table.
 Consumption also locks eligible lots in bounded pages of 100 until the requested amount is satisfied.
 
+Refunds preserve the earliest original allocation expiry that is strictly later than the refund's
+`occurredAt`. If no restored allocation has a future expiry, the new refund lot has no expiry.
+An expiry equal to `occurredAt` has already elapsed. This adapter policy keeps newly refunded credits
+spendable; it differs from the in-memory store's unconditional earliest-expiry policy. Refunds retain
+the original consumption's meter restriction and allocation lineage. Existing ledger history and
+previously persisted refund lots are not rewritten.
+
 ## Diagnostics
 
 Domain failures preserve the typed Problems from `credits-core`. Unexpected driver or SQL failures become
