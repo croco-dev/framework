@@ -9,6 +9,10 @@ title: "IDEMPOTENCY_DIAGNOSTIC_CODES"
 
 ## Type Declaration
 
+### executionIndeterminate
+
+> `readonly` **executionIndeterminate**: `"idempotency-core/execution-indeterminate"` = `"idempotency-core/execution-indeterminate"`
+
 ### invalidKey
 
 > `readonly` **invalidKey**: `"idempotency-core/invalid-key"` = `"idempotency-core/invalid-key"`
