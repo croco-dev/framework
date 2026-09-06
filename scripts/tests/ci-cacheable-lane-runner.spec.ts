@@ -726,34 +726,38 @@ describe("cacheable producer lane evidence", () => {
     ).rejects.toMatchObject({ code: "CACHEABLE_LANE_CHANGE_RANGE_FAILED", category: "input" });
   });
 
-  it("turns a physical prerequisite failure into owned failure evidence without attesting the prerequisite", async () => {
-    useCurrentRunEnvironment();
-    const rootDir = mkdtempSync(join(tmpdir(), "croco-cacheable-lane-prerequisite-"));
+  it.each(["release-metadata", "architecture-policy-runtime"])(
+    "turns a failed %s prerequisite into owned failure evidence without attesting it",
+    async (prerequisite) => {
+      useCurrentRunEnvironment();
+      const rootDir = mkdtempSync(join(tmpdir(), "croco-cacheable-lane-prerequisite-"));
 
-    const result = await runCacheableLane({
-      identity: identity(),
-      lane: "generated-apps",
-      profile: "publish",
-      rootDir,
-      runner: failingRunner("architecture-policy-runtime"),
-    });
+      const result = await runCacheableLane({
+        identity: identity(),
+        lane: "generated-apps",
+        profile: "publish",
+        rootDir,
+        runner: failingRunner(prerequisite),
+      });
 
-    expect(result.failed).toBe(true);
-    expect(result.report.checks.map(({ id }) => id)).toEqual([
-      "architecture-policy-runtime",
-      "build",
-      "generated-app-smoke",
-    ]);
-    expect(result.bundle.checks.map(({ id }) => id)).toEqual(["generated-app-smoke"]);
-    expect(result.bundle.attestations.map(({ checkId }) => checkId)).toEqual([
-      "generated-app-smoke",
-    ]);
-    expect(result.bundle.receipts).toEqual([]);
-    expect(result.bundle.checks[0]).toMatchObject({
-      outcome: "failed",
-      receiptDigest: null,
-    });
-  });
+      expect(result.failed).toBe(true);
+      expect(result.report.checks.map(({ id }) => id)).toEqual([
+        "release-metadata",
+        "architecture-policy-runtime",
+        "build",
+        "generated-app-smoke",
+      ]);
+      expect(result.bundle.checks.map(({ id }) => id)).toEqual(["generated-app-smoke"]);
+      expect(result.bundle.attestations.map(({ checkId }) => checkId)).toEqual([
+        "generated-app-smoke",
+      ]);
+      expect(result.bundle.receipts).toEqual([]);
+      expect(result.bundle.checks[0]).toMatchObject({
+        outcome: "failed",
+        receiptDigest: null,
+      });
+    },
+  );
 
   it("creates executed receipts for selected passed checks and keeps warning semantics advisory", async () => {
     useCurrentRunEnvironment();
