@@ -29,6 +29,7 @@ export {
 export {
   IDEMPOTENCY_DIAGNOSTIC_CODES,
   IdempotencyConflictProblem,
+  IdempotencyExecutionIndeterminateProblem,
   IdempotencyReservationExpiredProblem,
   IdempotencyReservationNotFoundProblem,
   IdempotencyReservationStateProblem,

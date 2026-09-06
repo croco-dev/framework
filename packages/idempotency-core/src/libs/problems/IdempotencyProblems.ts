@@ -2,6 +2,7 @@ import { Problem, ProblemCategory, type ProblemOptions } from "@croco/problems-c
 
 export const IDEMPOTENCY_DIAGNOSTIC_CODES = {
   keyConflict: "idempotency-core/key-conflict",
+  executionIndeterminate: "idempotency-core/execution-indeterminate",
   invalidKey: "idempotency-core/invalid-key",
   invalidSnapshot: "idempotency-core/invalid-snapshot",
   invalidTtl: "idempotency-core/invalid-ttl",
@@ -153,6 +154,25 @@ export class IdempotencyReservationStateProblem extends IdempotencyProblem {
         expected: options.expected,
         actual: options.actual,
         ...(options.reservationId === undefined ? {} : { reservationId: options.reservationId }),
+      },
+    });
+  }
+}
+
+export class IdempotencyExecutionIndeterminateProblem extends IdempotencyProblem {
+  constructor(options: {
+    readonly key: string;
+    readonly namespace: string;
+    readonly failedAt: Date;
+  }) {
+    super({
+      code: IDEMPOTENCY_DIAGNOSTIC_CODES.executionIndeterminate,
+      category: ProblemCategory.Conflict,
+      detail: `Idempotency key '${options.key}' may already have run side effects but its result could not be persisted; do not retry`,
+      extensions: {
+        key: options.key,
+        namespace: options.namespace,
+        failedAt: options.failedAt.toISOString(),
       },
     });
   }

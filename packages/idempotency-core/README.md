@@ -47,12 +47,13 @@ structured clone이 `lastIndex`를 초기화하므로 모든 RegExp는 `lastInde
 만료되지 않습니다. in-flight reservation은 `expiresAt` 직전까지만 완료할 수 있습니다. 만료 시각부터 `commit`과 `fail`은
 `IdempotencyReservationExpiredProblem`으로 거부되며, 새 `reserve`가 발급한 reservation만 상태를 전이할 수 있습니다.
 
-handler가 성공한 뒤 `commit`이 실패하면 coordinator는 같은 reservation을 retryable failed 상태로 전이하고 원래
-commit 오류를 다시 throw합니다. 따라서 저장 전에 실패한 요청은 다음 호출에서 handler를 다시 실행합니다. 저장은
-완료됐지만 완료 응답이 유실된 경우처럼 store가 이미 completed 상태라면 failed 전이는 보조 진단으로 남고, 다음 호출은
-저장된 응답을 replay합니다. 두 복구 경로 모두 성공을 committed된 것으로 잘못 보고하지 않습니다. failed 전이도 실패하면
-원래 commit 오류를 유지하면서 보조 오류를 `idempotencyFailureRecordError` 진단으로 첨부하며, store 상태는 운영자가
-확인해야 합니다.
+handler가 성공한 뒤 `commit`이 실패하면 coordinator는 같은 reservation을 `retryable: false` failed 상태로 전이하고 원래
+commit 오류를 다시 throw합니다. 이후 같은 key 호출은 handler를 다시 실행하지 않고
+`IdempotencyExecutionIndeterminateProblem`으로 실패합니다. 이 상태는 handler의 부수효과가 이미 완료됐을 수 있지만
+응답을 저장하지 못했음을 뜻하므로, 같은 key를 재시도하지 말고 외부 시스템을 조회해 복구해야 합니다. 저장은 완료됐지만
+완료 응답이 유실된 경우처럼 store가 이미 completed 상태라면 failed 전이는 보조 진단으로 남고, 다음 호출은 저장된 응답을
+replay합니다. failed 전이도 실패하면 원래 commit 오류를 유지하면서 보조 오류를 `idempotencyFailureRecordError` 진단으로
+첨부하며, store 상태는 운영자가 확인해야 합니다.
 
 `ttlMs`는 생략하거나 유효한 날짜 범위 안의 양의 정수 밀리초로 지정해야 합니다. `0`, 음수, 소수, `NaN`, 무한대 또는 날짜 범위를 넘는 값은 저장소 상태를 변경하기 전에 `InvalidIdempotencyTtlProblem`으로 실패합니다.
 
@@ -112,6 +113,7 @@ for (const testCase of suite.cases) {
 - `IdempotencyCoordinator`: 저장소 계약 위에서 execute/replay/in-flight/failure 결과를 통합합니다.
 - `InMemoryIdempotencyStore`: conformance와 로컬 개발에 사용할 수 있는 reference store입니다.
 - `IdempotencyConflictProblem`: 동일 key와 다른 fingerprint 충돌을 표준 Problem으로 표현합니다.
+- `IdempotencyExecutionIndeterminateProblem`: handler 실행 뒤 응답 저장이 실패해 같은 key를 재시도할 수 없는 상태를 표준 Problem으로 표현합니다.
 - `IdempotencyReservationExpiredProblem`: 만료된 reservation의 완료 시도를 안전한 진단 시각과 함께 표현합니다.
 - `InvalidIdempotencyTtlProblem`: 잘못된 TTL과 위반한 validation constraint를 표준 Problem으로 표현합니다.
 - `InvalidIdempotencySnapshotProblem`: in-memory snapshot으로 보존할 수 없는 응답 또는 metadata를 표준 Problem으로 표현합니다.
