@@ -1,6 +1,7 @@
 import type { EventTraceContext } from "@croco/events-core";
 import type { TxManager } from "@croco/tx-core";
-import { and, asc, eq, inArray, lte, or, type SQL } from "drizzle-orm";
+import { and, asc, eq, inArray, lt, lte, notExists, or, sql, type SQL } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import {
   type AppendOutboxMessageInput,
   createTransactionalEventDiagnostic,
@@ -453,52 +454,57 @@ export class DrizzleTransactionalEventStore<
     options: OutboxClaimOptions,
     context?: TransactionalEventStoreContext<TClient>,
   ): Promise<TransactionalOutboxMessage[]> {
-    const rows = await this.client(context)
-      .select()
-      .from(this.outbox)
-      .where(this.outboxClaimableCondition(options.now))
-      .orderBy(asc(this.outbox.visibleAt), asc(this.outbox.createdAt))
-      .limit(options.limit);
-
+    const predecessor = alias(this.outbox, "outbox_predecessor");
+    const noUnfinishedPredecessor = notExists(sql`(
+      select 1 from ${this.outbox} as ${sql.identifier("outbox_predecessor")}
+      where ${and(
+        eq(predecessor.aggregateId, this.outbox.aggregateId),
+        inArray(predecessor.status, ["pending", "publishing", "retrying"]),
+        or(
+          lt(predecessor.createdAt, this.outbox.createdAt),
+          and(eq(predecessor.createdAt, this.outbox.createdAt), lt(predecessor.id, this.outbox.id)),
+        ),
+      )}
+    )`);
+    const candidates = sql`(
+      select ${this.outbox.id} from ${this.outbox}
+      where ${and(this.outboxClaimableCondition(options.now), noUnfinishedPredecessor)}
+      order by ${asc(this.outbox.visibleAt)}, ${asc(this.outbox.createdAt)}, ${asc(this.outbox.id)}
+      limit ${options.limit}
+      for update skip locked
+    )`;
     const lockedUntil = new Date(options.now.getTime() + options.visibilityTimeoutMs);
-    const claimed: TransactionalOutboxMessage[] = [];
+    const diagnostic = createTransactionalEventDiagnostic(
+      "events-tx/outbox-claimed",
+      "Outbox message claimed.",
+      options.now,
+    );
+    const rows = await this.client(context)
+      .update(this.outbox)
+      .set({
+        // Invalid stored values trip NOT NULL constraints and roll back the whole claim.
+        attempts: sql`case when ${this.outbox.attempts} >= 0 then ${this.outbox.attempts} + 1 else null end`,
+        status: "publishing",
+        lockedUntil,
+        updatedAt: options.now,
+        diagnostics: sql`case when jsonb_typeof(${this.outbox.diagnostics}) = 'array'
+          then ${this.outbox.diagnostics} || jsonb_build_array(
+          ${JSON.stringify(diagnostic)}::jsonb || jsonb_build_object(
+            'details', jsonb_build_object('attempts', ${this.outbox.attempts} + 1)
+          )
+          ) else null end`,
+      })
+      .where(inArray(this.outbox.id, candidates))
+      .returning();
 
-    for (const row of rows) {
-      const current = this.mapOutboxRow(row);
-      const [updated] = await this.client(context)
-        .update(this.outbox)
-        .set({
-          attempts: current.attempts + 1,
-          status: "publishing",
-          lockedUntil,
-          updatedAt: options.now,
-          diagnostics: appendDiagnostic(
-            current.diagnostics,
-            createTransactionalEventDiagnostic(
-              "events-tx/outbox-claimed",
-              "Outbox message claimed.",
-              options.now,
-              {
-                attempts: current.attempts + 1,
-              },
-            ),
-          ),
-        })
-        .where(
-          and(
-            eq(this.outbox.id, current.id),
-            eq(this.outbox.attempts, current.attempts),
-            this.outboxClaimableCondition(options.now),
-          ),
-        )
-        .returning();
-
-      if (updated !== undefined) {
-        claimed.push(this.mapOutboxRow(updated));
-      }
-    }
-
-    return claimed;
+    return rows
+      .map((row) => this.mapOutboxRow(row))
+      .sort(
+        (left, right) =>
+          left.visibleAt.getTime() - right.visibleAt.getTime() ||
+          left.createdAt.getTime() - right.createdAt.getTime() ||
+          left.id.localeCompare(right.id),
+      );
   }
 
   async markOutboxPublished(
