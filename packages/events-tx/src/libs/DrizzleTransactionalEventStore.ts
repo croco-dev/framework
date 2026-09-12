@@ -897,6 +897,7 @@ export class DrizzleTransactionalEventStore<
 
   private outboxClaimableCondition(now: Date): SQL<unknown> | undefined {
     return and(
+      lt(this.outbox.attempts, this.outbox.maxAttempts),
       lte(this.outbox.visibleAt, now),
       or(
         inArray(this.outbox.status, ["pending", "retrying"]),
