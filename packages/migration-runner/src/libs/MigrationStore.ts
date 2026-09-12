@@ -21,8 +21,14 @@ export class MigrationStore {
   }
 
   async hasTable(db: DatabaseClient): Promise<boolean> {
+    const tableNameParts = this.tableName.split(".");
+    const regclassName =
+      tableNameParts.length === 2
+        ? sql`quote_ident(${tableNameParts[0]}) || '.' || quote_ident(${tableNameParts[1]})`
+        : sql`quote_ident(${this.tableName})`;
+
     const result = await db.execute(sql`
-      SELECT to_regclass(quote_ident(${this.tableName})) IS NOT NULL AS "exists"
+      SELECT to_regclass(${regclassName}) IS NOT NULL AS "exists"
     `);
     const rows = getResultRows(result);
     const row = rows[0];

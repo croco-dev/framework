@@ -9,11 +9,23 @@ describe("MigrationStore", () => {
     ["rows", { rows: [{ exists: false }] }],
   ])("should detect checkpoint table existence from %s results", async (_label, result) => {
     const db = { execute: vi.fn().mockResolvedValue(result) } as unknown as DatabaseClient;
-    const store = new MigrationStore("Audit.Migrations");
+    const store = new MigrationStore("_migrations");
 
     await expect(store.hasTable(db)).resolves.toBe(_label === "array");
     expect(sqlText(vi.mocked(db.execute).mock.calls[0]?.[0])).toContain("to_regclass(quote_ident(");
-    expect(sqlParams(vi.mocked(db.execute).mock.calls[0]?.[0])).toContain("Audit.Migrations");
+    expect(sqlParams(vi.mocked(db.execute).mock.calls[0]?.[0])).toEqual(["_migrations"]);
+  });
+
+  it("should quote schema-qualified checkpoint table segments independently", async () => {
+    const db = {
+      execute: vi.fn().mockResolvedValue([{ exists: true }]),
+    } as unknown as DatabaseClient;
+    const store = new MigrationStore("Audit.Migrations");
+
+    await expect(store.hasTable(db)).resolves.toBe(true);
+    const query = vi.mocked(db.execute).mock.calls[0]?.[0];
+    expect(sqlText(query)).toContain("quote_ident() || '.' || quote_ident()");
+    expect(sqlParams(query)).toEqual(["Audit", "Migrations"]);
   });
 
   it.each([
@@ -62,7 +74,7 @@ describe("MigrationStore", () => {
     await expect(store.hasTable(db)).resolves.toBe(true);
     const query = vi.mocked(db.execute).mock.calls[0]?.[0];
     expect(sqlText(query)).not.toContain(tableName);
-    expect(sqlParams(query)).toEqual([tableName]);
+    expect(sqlParams(query)).toEqual(["감사", 'Migrations"); DROP TABLE users; --']);
   });
 
   it("should read executed migrations from array-shaped adapter results", async () => {
@@ -417,7 +429,10 @@ function getQueryChunks(query: unknown): readonly unknown[] {
   if (typeof query === "object" && query !== null && "queryChunks" in query) {
     const chunks = (query as { readonly queryChunks?: unknown }).queryChunks;
     if (Array.isArray(chunks)) {
-      return chunks;
+      return chunks.flatMap((chunk) => {
+        const nestedChunks = getQueryChunks(chunk);
+        return nestedChunks.length > 0 ? nestedChunks : [chunk];
+      });
     }
   }
 
