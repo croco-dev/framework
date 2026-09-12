@@ -1,10 +1,19 @@
 import "reflect-metadata";
-import type { AuthRequest, Principal, RouteExecutionContext } from "@croco/auth-core";
+import type { AuthRequest, AuthUser, Principal, RouteExecutionContext } from "@croco/auth-core";
 import { describe, expect, it } from "vitest";
 import { ImpersonationGuard } from "../libs/ImpersonationGuard";
 
 function contextWith(principal?: Principal): RouteExecutionContext {
   const request = { principal } as unknown as AuthRequest;
+  return {
+    getClass: () => ({}),
+    getHandler: () => "handler",
+    getRequest: () => request,
+  };
+}
+
+function contextWithUser(user: AuthUser): RouteExecutionContext {
+  const request = { user } as unknown as AuthRequest;
   return {
     getClass: () => ({}),
     getHandler: () => "handler",
@@ -29,6 +38,22 @@ describe("ImpersonationGuard", () => {
     };
 
     expect(() => guard.canActivate(contextWith(principal))).toThrow(
+      expect.objectContaining({ code: "FORBIDDEN" }),
+    );
+  });
+
+  it("rejects principals with missing permissions", () => {
+    const principal = { type: "user", id: "admin-1" } as unknown as Principal;
+
+    expect(() => guard.canActivate(contextWith(principal))).toThrow(
+      expect.objectContaining({ code: "FORBIDDEN" }),
+    );
+  });
+
+  it("rejects legacy users with missing permissions", () => {
+    const user = { id: "admin-1", roles: [] } as unknown as AuthUser;
+
+    expect(() => guard.canActivate(contextWithUser(user))).toThrow(
       expect.objectContaining({ code: "FORBIDDEN" }),
     );
   });

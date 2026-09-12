@@ -299,6 +299,17 @@ describe("ImpersonationService", () => {
       expectNoStartSideEffects();
     });
 
+    it("rejects a principal with missing permissions before target lookup or side effects", async () => {
+      authProvider.principal = { id: "admin-1" } as unknown as ImpersonationPrincipal;
+
+      await expect(service.start(context("admin-1"), "user-123")).rejects.toMatchObject({
+        code: "FORBIDDEN",
+      });
+
+      expect(authProvider.targetLookupCount).toBe(0);
+      expectNoStartSideEffects();
+    });
+
     it("rejects scoped manage permission before target lookup or side effects", async () => {
       authProvider.principal = {
         id: "admin-1",
@@ -618,6 +629,18 @@ describe("ImpersonationService", () => {
         id: "admin-1",
         permissions: ["impersonation:read"],
       };
+
+      await expect(service.end(context("admin-1"), session.sessionId)).rejects.toMatchObject({
+        code: "FORBIDDEN",
+      });
+
+      expect(store.commitEndAttemptCount).toBe(0);
+      await expectNoEndSideEffects(session.sessionId);
+    });
+
+    it("rejects a principal with missing permissions before a store revocation attempt", async () => {
+      const session = await startSession();
+      authProvider.principal = { id: "admin-1" } as unknown as ImpersonationPrincipal;
 
       await expect(service.end(context("admin-1"), session.sessionId)).rejects.toMatchObject({
         code: "FORBIDDEN",
