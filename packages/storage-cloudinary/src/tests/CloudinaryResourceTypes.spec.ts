@@ -174,6 +174,7 @@ function useNamespaceBackend(actualVideoFormat?: string) {
       const deliveryParts = parts.slice(3);
       if (deliveryParts[0]?.startsWith("s--")) deliveryParts.shift();
       if (/^v\d+$/.test(deliveryParts[0] ?? "")) deliveryParts.shift();
+      if (parts[1] === "image" && deliveryParts[0] === "f_auto") deliveryParts.shift();
       const key = deliveryParts.join("/");
       const publicId = parts[1] === "video" ? key.replace(/\.[^/.]+$/, "") : key;
       const object = objects.get(`${parts[1]}:${publicId}`);
