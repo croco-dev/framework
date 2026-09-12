@@ -373,16 +373,7 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
       throw new InvalidRateLimitPolicyProblem("fixed window");
     }
 
-    const result = await this.checkFixedWindow(key, policy);
-
-    this.stats.total++;
-    if (result.success) {
-      this.stats.allowed++;
-    } else {
-      this.stats.denied++;
-    }
-
-    return result;
+    return this.checkFixedWindow(key, policy);
   }
 
   async checkFixedWindow(key: string, policy: FixedWindowPolicy): Promise<RateLimitResult> {
@@ -407,6 +398,13 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
 
     const success = result[0] === 1;
     const remaining = result[2];
+
+    this.stats.total++;
+    if (success) {
+      this.stats.allowed++;
+    } else {
+      this.stats.denied++;
+    }
 
     return {
       success,

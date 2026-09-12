@@ -350,6 +350,27 @@ describe("UpstashFixedWindowStore", () => {
     expect(await store.getStats()).toEqual({ allowed: 0, denied: 0, total: 0 });
   });
 
+  it("should keep stats aligned when refunding a direct fixed-window check", async () => {
+    mockRedis.eval
+      .mockResolvedValueOnce([1, 1, 9])
+      .mockResolvedValueOnce([1, 2, 8])
+      .mockResolvedValueOnce([1, 1, 9]);
+
+    const policy = createFixedWindowPolicy("test", 10, 60000);
+    await store.check("test-key", policy);
+    const directCheck = await store.checkFixedWindow("test-key", policy);
+    const receipt = directCheck.refundReceipt;
+    expect(receipt?.algorithm).toBe("fixed");
+    if (!receipt || receipt.algorithm !== "fixed") {
+      throw new Error("expected fixed window refund receipt");
+    }
+
+    const refund = await store.refund("test-key", policy, receipt);
+
+    expect(refund.refunded).toBe(true);
+    expect(await store.getStats()).toEqual({ allowed: 1, denied: 0, total: 1 });
+  });
+
   it("should use custom prefix", async () => {
     mockRedis.eval.mockResolvedValue([1, 1, 9]);
 
