@@ -1,4 +1,5 @@
 import type {
+  FixedWindowPolicy,
   RateLimitPolicy,
   RateLimitRefundReceipt,
   RateLimitRefundResult,
@@ -372,6 +373,19 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
       throw new InvalidRateLimitPolicyProblem("fixed window");
     }
 
+    const result = await this.checkFixedWindow(key, policy);
+
+    this.stats.total++;
+    if (result.success) {
+      this.stats.allowed++;
+    } else {
+      this.stats.denied++;
+    }
+
+    return result;
+  }
+
+  async checkFixedWindow(key: string, policy: FixedWindowPolicy): Promise<RateLimitResult> {
     const now = Date.now();
     const windowStart = Math.floor(now / policy.windowMs) * policy.windowMs;
     const redisKey = clusteredRateLimitKey(this.prefix, key);
@@ -393,13 +407,6 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
 
     const success = result[0] === 1;
     const remaining = result[2];
-
-    this.stats.total++;
-    if (success) {
-      this.stats.allowed++;
-    } else {
-      this.stats.denied++;
-    }
 
     return {
       success,

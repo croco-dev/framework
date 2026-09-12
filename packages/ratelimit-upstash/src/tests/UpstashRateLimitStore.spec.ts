@@ -298,6 +298,18 @@ describe("UpstashFixedWindowStore", () => {
     expect(result.remaining).toBe(0);
   });
 
+  it("should enforce quota through the fixed-window contract", async () => {
+    mockRedis.eval.mockResolvedValueOnce([1, 1, 0]).mockResolvedValueOnce([0, 1, 0]);
+
+    const policy = createFixedWindowPolicy("test", 1, 60000);
+    const allowed = await store.checkFixedWindow("test-key", policy);
+    const denied = await store.checkFixedWindow("test-key", policy);
+
+    expect(allowed).toMatchObject({ success: true, limit: 1, remaining: 0 });
+    expect(denied).toMatchObject({ success: false, limit: 1, remaining: 0 });
+    expect(mockRedis.eval).toHaveBeenCalledTimes(2);
+  });
+
   it("should track stats", async () => {
     mockRedis.eval.mockResolvedValue([1, 1, 9]);
 
