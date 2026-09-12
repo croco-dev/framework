@@ -190,7 +190,7 @@ describe("CloudinaryProvider", () => {
         cause: reason,
       });
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://res.cloudinary.com/test-cloud/image/upload/test-key",
+        "https://res.cloudinary.com/test-cloud/image/upload/f_auto/test-key",
         { signal: controller.signal },
       );
       expect(global.fetch).toHaveBeenCalledTimes(1);
@@ -507,7 +507,7 @@ describe("CloudinaryProvider", () => {
 
       expect(result).toBeInstanceOf(Uint8Array);
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://res.cloudinary.com/test-cloud/image/upload/test-key",
+        "https://res.cloudinary.com/test-cloud/image/upload/f_auto/test-key",
         { signal: undefined },
       );
     });
@@ -590,12 +590,28 @@ describe("CloudinaryProvider", () => {
   });
 
   describe("getStream()", () => {
-    it("should return readable stream", async () => {
+    it("should request an automatic format for an extensionless image key", async () => {
       vi.mocked(global.fetch).mockResolvedValue(new Response(new Uint8Array(10)));
 
-      const stream = await provider.getStream("test-key");
+      const stream = await provider.getStream("uploads/avatar_123");
 
       expect(stream).toBeInstanceOf(ReadableStream);
+      expect(global.fetch).toHaveBeenCalledWith(
+        "https://res.cloudinary.com/test-cloud/image/upload/f_auto/uploads/avatar_123",
+        { signal: undefined },
+      );
+    });
+
+    it("should preserve the delivery URL for an image key with an extension", async () => {
+      vi.mocked(global.fetch).mockResolvedValue(new Response(new Uint8Array(10)));
+
+      const stream = await provider.getStream("uploads/avatar.png");
+
+      expect(stream).toBeInstanceOf(ReadableStream);
+      expect(global.fetch).toHaveBeenCalledWith(
+        "https://res.cloudinary.com/test-cloud/image/upload/uploads/avatar.png",
+        { signal: undefined },
+      );
     });
   });
 
@@ -659,6 +675,10 @@ describe("CloudinaryProvider", () => {
       const result = await provider.exists("test-key");
 
       expect(result).toBe(true);
+      expect(global.fetch).toHaveBeenCalledWith(
+        "https://res.cloudinary.com/test-cloud/image/upload/f_auto/test-key",
+        { signal: undefined },
+      );
     });
 
     it("should return false for non-existing resource", async () => {

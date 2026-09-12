@@ -442,9 +442,12 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     };
   }
 
-  private buildDeliveryUrl(key: string, resourceType: string): string {
+  private buildDeliveryUrl(key: string, resourceType: CloudinaryResourceType): string {
     const protocol = this.secure ? "https" : "http";
-    return `${protocol}://res.cloudinary.com/${this.cloudName}/${resourceType}/upload/${resolvePublicId(key)}`;
+    const filename = key.slice(key.lastIndexOf("/") + 1);
+    const transformation = resourceType === "image" && !filename.includes(".") ? "f_auto/" : "";
+
+    return `${protocol}://res.cloudinary.com/${this.cloudName}/${resourceType}/upload/${transformation}${resolvePublicId(key)}`;
   }
 
   private async executeWithRetry<T>(
