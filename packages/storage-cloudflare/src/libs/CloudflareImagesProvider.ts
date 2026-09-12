@@ -243,7 +243,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       ? `https://${options.customDomain}/cdn-cgi/imagedelivery`
       : "https://imagedelivery.net";
     this.transformBaseUrl = options.customDomain
-      ? `https://${options.customDomain}`
+      ? `https://${options.customDomain}/cdn-cgi/imagedelivery`
       : "https://imagedelivery.net";
     this.apiBaseUrl = `https://api.cloudflare.com/client/v4/accounts/${options.accountId}/images/v1`;
     this.ttl = options.ttl ?? 3600;
@@ -778,7 +778,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
   }
 
   private buildTransformUrl(key: string, params: string): string {
-    return `${this.transformBaseUrl}/cdn-cgi/image/${params}/${this.options.accountHash}/${this.encodeDeliveryImageId(key, "transform-url")}/${this.options.defaultVariant ?? "public"}`;
+    return `${this.transformBaseUrl}/${this.options.accountHash}/${this.encodeDeliveryImageId(key, "transform-url")}/${params}`;
   }
 
   private encodeDeliveryImageId(key: string, operation: string): string {
