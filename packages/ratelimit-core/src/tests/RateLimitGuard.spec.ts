@@ -52,6 +52,7 @@ describe("RateLimitGuard", () => {
   beforeEach(() => {
     mockRateLimiter = {
       check: vi.fn().mockResolvedValue(successResult),
+      checkWithKey: vi.fn().mockResolvedValue(successResult),
     } as unknown as RateLimiter;
     guard = new RateLimitGuard(mockRateLimiter);
   });
@@ -76,6 +77,23 @@ describe("RateLimitGuard", () => {
 
     expect(result).toBe(true);
     expect(mockRateLimiter.check).toHaveBeenCalledWith(context, policy);
+  });
+
+  it("should evaluate and use a custom rate limit key", async () => {
+    const handler = () => {};
+    const customKey = vi.fn((value: unknown) => {
+      const context = value as GuardContext;
+      return `tenant:${context.get("tenantId")}`;
+    });
+    const metadata: RateLimitMetadata = { policy, customKey };
+    Reflect.defineMetadata(RATE_LIMIT_METADATA_KEY, metadata, handler);
+    const context = createContext(handler, { tenantId: "tenant-42" });
+
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+
+    expect(customKey).toHaveBeenCalledWith(context);
+    expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith("tenant:tenant-42", policy);
+    expect(mockRateLimiter.check).not.toHaveBeenCalled();
   });
 
   it("should throw RateLimitExceededProblem when limit exceeded", async () => {
