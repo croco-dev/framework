@@ -878,6 +878,12 @@
       "owner": "@croco/cli"
     },
     {
+      "path": "packages/create-croco-app/src/tests/E2E.spec.ts",
+      "lane": "integration",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
       "path": "packages/create-croco-app/src/tests/EnvironmentTemplate.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -945,12 +951,6 @@
     },
     {
       "path": "packages/create-croco-app/src/tests/e2e-advanced.spec.ts",
-      "lane": "integration",
-      "qualifiers": ["coverage"],
-      "owner": "create-croco-app"
-    },
-    {
-      "path": "packages/create-croco-app/src/tests/e2e-generation.spec.ts",
       "lane": "integration",
       "qualifiers": ["coverage"],
       "owner": "create-croco-app"
