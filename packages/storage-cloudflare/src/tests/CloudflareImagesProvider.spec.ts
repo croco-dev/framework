@@ -1448,9 +1448,7 @@ describe("CloudflareImagesProvider", () => {
     it("should return URL with width transformation", () => {
       const url = provider.getTransformUrl("test-image-id", { width: 800 });
 
-      expect(url).toBe(
-        "https://imagedelivery.net/cdn-cgi/image/width=800/test-account-hash/test-image-id/public",
-      );
+      expect(url).toBe("https://imagedelivery.net/test-account-hash/test-image-id/width=800");
     });
 
     it("should return URL with height transformation", () => {
@@ -1526,11 +1524,11 @@ describe("CloudflareImagesProvider", () => {
       const url = providerWithCustomDomain.getTransformUrl("test-image-id", { width: 800 });
 
       expect(url).toBe(
-        "https://cdn.example.com/cdn-cgi/image/width=800/test-account-hash/test-image-id/public",
+        "https://cdn.example.com/cdn-cgi/imagedelivery/test-account-hash/test-image-id/width=800",
       );
     });
 
-    it("should keep the same transform path shape across default and custom domains", () => {
+    it("should use hosted image delivery paths across default and custom domains", () => {
       const providerWithCustomDomain = new CloudflareImagesProvider(mockOptionsWithCustomDomain);
       const defaultUrl = provider.getTransformUrl("test-image-id", { width: 800, quality: 85 });
       const customUrl = providerWithCustomDomain.getTransformUrl("test-image-id", {
@@ -1539,10 +1537,10 @@ describe("CloudflareImagesProvider", () => {
       });
 
       expect(defaultUrl).toBe(
-        "https://imagedelivery.net/cdn-cgi/image/width=800,quality=85/test-account-hash/test-image-id/public",
+        "https://imagedelivery.net/test-account-hash/test-image-id/width=800,quality=85",
       );
       expect(customUrl).toBe(
-        "https://cdn.example.com/cdn-cgi/image/width=800,quality=85/test-account-hash/test-image-id/public",
+        "https://cdn.example.com/cdn-cgi/imagedelivery/test-account-hash/test-image-id/width=800,quality=85",
       );
     });
 
@@ -1550,7 +1548,7 @@ describe("CloudflareImagesProvider", () => {
       const url = provider.getTransformUrl("folder/50% café?#.jpg", { width: 800 });
 
       expect(url).toBe(
-        "https://imagedelivery.net/cdn-cgi/image/width=800/test-account-hash/folder/50%25%20caf%C3%A9%3F%23.jpg/public",
+        "https://imagedelivery.net/test-account-hash/folder/50%25%20caf%C3%A9%3F%23.jpg/width=800",
       );
     });
   });
