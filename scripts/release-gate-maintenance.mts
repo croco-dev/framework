@@ -63,6 +63,7 @@ export const RELEASE_GATE_ENTRYPOINT_PATHS = [
   "scripts/ci-executable-policy.mts",
   "scripts/ci-performance-budget.mts",
   "scripts/compiler-baseline-check.mts",
+  "scripts/core-coverage-runner.mts",
   "scripts/core-coverage-warning-check.mts",
   "scripts/create-croco-app-generated-smoke.mts",
   "scripts/decorator-signature-spike.mts",

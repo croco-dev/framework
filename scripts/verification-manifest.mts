@@ -5,10 +5,7 @@ import {
   selectGeneratedSmokeCasesForChangedFiles,
   selectGeneratedTestPathsForSmokeCases,
 } from "./create-croco-app-generated-smoke-dependencies.mts";
-import {
-  CORE_COVERAGE_PACKAGE_DIRECTORIES,
-  CORE_COVERAGE_PACKAGES,
-} from "./core-coverage-config.mts";
+import { CORE_COVERAGE_PACKAGE_DIRECTORIES } from "./core-coverage-config.mts";
 import { GENERATED_SMOKE_MATRIX_CASES } from "./create-croco-app-generated-smoke-matrix.mts";
 import {
   isReleaseGateMaintenancePath,
@@ -1180,16 +1177,7 @@ const spineOnly = (
       id: "core-coverage",
       label: "Core coverage gate",
       category: "coverage",
-      command: [
-        "pnpm",
-        ...CORE_COVERAGE_PACKAGES.flatMap((packageName) => ["--filter", packageName]),
-        "exec",
-        "vitest",
-        "run",
-        "--coverage",
-        "--config",
-        "../../vitest.config.ts",
-      ],
+      command: nodeScript("scripts/core-coverage-runner.mts"),
       timeoutMs: minutes(45),
       applicable: coreCoverageApplicable,
     },

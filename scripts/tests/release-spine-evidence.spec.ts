@@ -988,6 +988,58 @@ describe("release-spine-evidence.mts", () => {
     expect(events).toEqual(["start:first", "end:first", "start:second", "end:second"]);
   });
 
+  it("finishes the affected build before core coverage materializes its complete closure", async () => {
+    const repo = createTempRepo();
+    const runtimeGate = createDeferred<void>();
+    const buildGate = createDeferred<void>();
+    const coverageGate = createDeferred<void>();
+    const events: string[] = [];
+    const manifest = createVerificationManifest("publish");
+    const commands = [
+      "release-metadata",
+      "architecture-policy-runtime",
+      "build",
+      "core-coverage",
+    ].map((id) => ({
+      ...findCheck(manifest, id),
+      artifacts: [],
+    }));
+    const execution = runReleaseSpineEvidence({
+      rootDir: repo,
+      outputDir: join(repo, "out"),
+      totalTimeoutMs: 10_000,
+      maxConcurrency: 3,
+      commands,
+      runner: async (command) => {
+        events.push(`start:${command.id}`);
+        if (command.id === "architecture-policy-runtime") await runtimeGate.promise;
+        if (command.id === "build") await buildGate.promise;
+        if (command.id === "core-coverage") await coverageGate.promise;
+        events.push(`end:${command.id}`);
+        return okResult(command.id);
+      },
+    });
+
+    await vi.waitFor(() => expect(events).toContain("start:architecture-policy-runtime"));
+    expect(events).not.toContain("start:build");
+    expect(events).not.toContain("start:core-coverage");
+    runtimeGate.resolve(undefined);
+
+    await vi.waitFor(() => expect(events).toContain("start:build"));
+    expect(events).not.toContain("start:core-coverage");
+    buildGate.resolve(undefined);
+
+    await vi.waitFor(() => expect(events).toContain("start:core-coverage"));
+    coverageGate.resolve(undefined);
+
+    const report = await execution;
+    expect(report.status).toBe("passed");
+    expect(events.indexOf("end:architecture-policy-runtime")).toBeLessThan(
+      events.indexOf("start:build"),
+    );
+    expect(events.indexOf("end:build")).toBeLessThan(events.indexOf("start:core-coverage"));
+  });
+
   it("locks integration against fast tests and workspace artifacts without serializing independent work", async () => {
     const repo = createTempRepo();
     const runtimeGate = createDeferred<void>();

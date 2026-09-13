@@ -1,11 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { parseCoreCoveragePackageFilters } from "../packages/cli/src/libs/coreCoverageFilters.ts";
-import { CORE_COVERAGE_PACKAGES as CORE_COVERAGE_THRESHOLD_PACKAGES } from "./core-coverage-config.mts";
-import { getVerificationCommand } from "./verification-manifest.mts";
-import { matchVerificationDispatcherCommand } from "./verification-dispatcher.mts";
-import { VerificationProblem } from "./verification-problem.mts";
+import { CORE_COVERAGE_PACKAGES } from "./core-coverage-config.mts";
 
 export { parseCoreCoveragePackageFilters } from "../packages/cli/src/libs/coreCoverageFilters.ts";
 
@@ -54,8 +50,6 @@ export type CoreCoverageSelectionCandidate = {
 };
 
 export type CoreCoverageConfigurationInput = {
-  coreCoveragePackages: readonly string[];
-  thresholdPackages: readonly string[];
   selectionCandidates: readonly CoreCoverageSelectionCandidate[];
 };
 
@@ -116,51 +110,13 @@ const projectRoot = process.cwd();
 const baselinePath = join(projectRoot, "ci-reports", "coverage", "core-baseline.txt");
 const reportDirectory = join(projectRoot, "ci-reports", "coverage", "core-warning");
 const reportPath = join(reportDirectory, "report.md");
-const packageJsonPath = join(projectRoot, "package.json");
 const packageCatalogPath = join(projectRoot, "docs", "package-catalog.json");
 const packagesDirectory = join(projectRoot, "packages");
 const vitestConfigPath = join(projectRoot, "vitest.config.ts");
 
-const CORE_COVERAGE_PACKAGES = readCoreCoveragePackages();
 const CORE_COVERAGE_THRESHOLDS = readCoreCoverageThresholds();
 const WORKSPACE_PACKAGE_NAMES = readWorkspacePackageNames();
 const PACKAGE_CATALOG = readPackageCatalog();
-
-function readCoreCoveragePackages(): string[] {
-  const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf-8")) as {
-    scripts?: Record<string, string>;
-  };
-  const coreCoverageCommand = packageJson.scripts?.["test:coverage:core"];
-
-  if (!coreCoverageCommand) {
-    throw new Error(`failed to read test:coverage:core script from ${packageJsonPath}`);
-  }
-
-  return resolveCoreCoveragePackageFilters(coreCoverageCommand);
-}
-
-export function resolveCoreCoveragePackageFilters(coreCoverageCommand: string): string[] {
-  const dispatcherCommandId = matchVerificationDispatcherCommand(coreCoverageCommand);
-  if (dispatcherCommandId) {
-    const packages = parseCoreCoveragePackageFilters(
-      getVerificationCommand(dispatcherCommandId).command.join(" "),
-    );
-    if (packages.length > 0) return packages;
-    throw new VerificationProblem(
-      "CORE_COVERAGE_FILTERS_UNAVAILABLE",
-      "contract",
-      `failed to read core coverage package filters from ${packageJsonPath}`,
-    );
-  }
-
-  const directPackages = parseCoreCoveragePackageFilters(coreCoverageCommand);
-  if (directPackages.length > 0) return directPackages;
-  throw new VerificationProblem(
-    "CORE_COVERAGE_FILTERS_UNAVAILABLE",
-    "contract",
-    `failed to read core coverage package filters from ${packageJsonPath}`,
-  );
-}
 
 function readCoreCoverageThresholds(): Record<CoverageMetric, number> {
   return parseCoreCoverageThresholds(readFileSync(vitestConfigPath, "utf-8"), vitestConfigPath);
@@ -539,34 +495,14 @@ export function getCoreCoverageSelectionWarnings(
 }
 
 export function getCoreCoverageConfigurationErrors({
-  coreCoveragePackages,
-  thresholdPackages,
   selectionCandidates,
 }: CoreCoverageConfigurationInput): string[] {
-  const coreCoverageSet = new Set(coreCoveragePackages);
-  const thresholdSet = new Set(thresholdPackages);
   const errors: string[] = [];
 
   for (const candidate of selectionCandidates) {
     if (candidate.signals.includes("1.0 spine package") && candidate.status !== "included") {
       errors.push(
         `${candidate.packageName}: 1.0 spine package must be included in test:coverage:core. ${candidate.recoveryAction}`,
-      );
-    }
-  }
-
-  for (const packageName of coreCoveragePackages) {
-    if (!thresholdSet.has(packageName)) {
-      errors.push(
-        `${packageName}: test:coverage:core package is missing from the shared core coverage config, so core coverage thresholds would not apply.`,
-      );
-    }
-  }
-
-  for (const packageName of thresholdPackages) {
-    if (!coreCoverageSet.has(packageName)) {
-      errors.push(
-        `${packageName}: shared core coverage config entry is missing from test:coverage:core filters.`,
       );
     }
   }
@@ -621,18 +557,15 @@ function writeReport(
     "",
     "- coverage 실행: gate step (`pnpm test:coverage:core`)에서 별도 실행",
     "- PR 표시: CI job summary와 `core-coverage-warning-report` artifact에 동일 report 게시",
-    "- 종료 코드: 1.0 spine 누락, coverage/threshold set 불일치, invalid baseline data는 실패한다. 비-spine selection warning과 baseline regression warning은 advisory로 남긴다.",
+    "- 종료 코드: 1.0 spine 누락과 invalid baseline data는 실패한다. 비-spine selection warning과 baseline regression warning은 advisory로 남긴다.",
     "",
     "## 현재 core coverage set",
     ...CORE_COVERAGE_PACKAGES.map((packageName) => `- ${packageName}`),
     "",
-    "## 현재 core coverage threshold set",
-    ...CORE_COVERAGE_THRESHOLD_PACKAGES.map((packageName) => `- ${packageName}`),
-    "",
     "## Selection 정책 신호",
-    "- 후보 입력: `docs/package-catalog.json`, public workspace package manifest, `package.json`의 `test:coverage:core` filter.",
+    "- 후보 입력: `docs/package-catalog.json`, public workspace package manifest, `scripts/core-coverage-config.mts`의 `CORE_COVERAGE_PACKAGES`.",
     "- 후보 신호: 1.0 spine package, production-ready maturity, Core/Integration/Protocol/Transport catalog group, retry/events/context/auth/telemetry/transport/health/problem/framework contract package.",
-    "- 1.0 spine 누락과 coverage/threshold set 불일치는 실패한다. 비-spine 누락 후보는 warning-only로 보고한다.",
+    "- 1.0 spine 누락은 실패한다. 비-spine 누락 후보는 warning-only로 보고한다.",
     "- 임시 제외가 필요하면 `scripts/core-coverage-warning-check.mts`의 `TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS`에 package name과 사유를 추가한다.",
     "",
     "## Core coverage selection candidates",
@@ -713,8 +646,6 @@ async function main() {
     temporaryExclusions: TEMPORARY_CORE_COVERAGE_SELECTION_EXCLUSIONS,
   });
   const configurationErrors = getCoreCoverageConfigurationErrors({
-    coreCoveragePackages: CORE_COVERAGE_PACKAGES,
-    thresholdPackages: CORE_COVERAGE_THRESHOLD_PACKAGES,
     selectionCandidates,
   });
 

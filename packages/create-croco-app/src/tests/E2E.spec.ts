@@ -166,7 +166,7 @@ function readPackageJson(filePath: string): PackageJson {
 
 function runGeneratedProfileCheck(projectDir: string): { status: number | null; output: string } {
   expect(existsSync(TSX_CLI_PATH), TSX_CLI_PATH).toBe(true);
-  writeGeneratedProfileCheckRuntimeStub(projectDir);
+  writeGeneratedProfileCheckRuntimeStubs(projectDir);
 
   const result = spawnSync(
     process.execPath,
@@ -183,7 +183,15 @@ function runGeneratedProfileCheck(projectDir: string): { status: number | null; 
   };
 }
 
-function writeGeneratedProfileCheckRuntimeStub(projectDir: string): void {
+function writeGeneratedProfileCheckRuntimeStubs(projectDir: string): void {
+  const problemsCoreStubDir = join(
+    projectDir,
+    "apps",
+    "api-server",
+    "node_modules",
+    "@croco",
+    "problems-core",
+  );
   const tenantCoreStubDir = join(
     projectDir,
     "apps",
@@ -191,6 +199,36 @@ function writeGeneratedProfileCheckRuntimeStub(projectDir: string): void {
     "node_modules",
     "@croco",
     "tenant-core",
+  );
+  mkdirSync(problemsCoreStubDir, { recursive: true });
+  writeFileSync(
+    join(problemsCoreStubDir, "package.json"),
+    `${JSON.stringify(
+      {
+        type: "module",
+        exports: {
+          ".": "./index.mjs",
+        },
+      },
+      null,
+      2,
+    )}\n`,
+  );
+  writeFileSync(
+    join(problemsCoreStubDir, "index.mjs"),
+    [
+      "export class Problem extends Error {}",
+      "export const ProblemCategory = Object.freeze({",
+      '  Conflict: "Conflict",',
+      '  Forbidden: "Forbidden",',
+      '  InternalServerError: "InternalServerError",',
+      '  NotFound: "NotFound",',
+      '  NotImplemented: "NotImplemented",',
+      '  TooManyRequests: "TooManyRequests",',
+      '  ValidationError: "ValidationError",',
+      "});",
+      "",
+    ].join("\n"),
   );
   mkdirSync(tenantCoreStubDir, { recursive: true });
   writeFileSync(
@@ -602,6 +640,24 @@ describe("E2E: generate()", () => {
     expect(existsSync(testDir)).toBe(false);
     expect(existsSync(targetDir)).toBe(false);
     expect(existsSync(outsideDir)).toBe(false);
+  });
+
+  it("runs generated SaaS profile checks with explicit runtime stubs", async () => {
+    await generate(testDir, {
+      projectName: "profile-check-fixture",
+      scope: "@test",
+      preset: "saas",
+      saasProviderProfile: "saas-cloudflare",
+      tenantModel: "workspace",
+      webApps: [],
+      apiHosting: "standalone",
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    });
+
+    expectGeneratedProfileCheckPass(testDir);
   });
 
   it(

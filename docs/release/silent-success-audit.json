@@ -2142,7 +2142,7 @@
             "identifier": "installDeps"
           },
           "test": {
-            "path": "packages/create-croco-app/src/tests/e2e-generation.spec.ts",
+            "path": "packages/create-croco-app/src/tests/E2E.spec.ts",
             "identifier": "install"
           }
         },
