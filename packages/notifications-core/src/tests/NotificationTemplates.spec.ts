@@ -59,6 +59,46 @@ describe("NotificationTemplateRegistry", () => {
     });
   });
 
+  it("should render omitted optional template variables as empty strings", () => {
+    const registry = new NotificationTemplateRegistry();
+
+    registry.registerTemplate({
+      id: "optional-greeting",
+      version: "v1",
+      locale: "en-US",
+      channel: NotificationChannel.EMAIL,
+      subject: "Hello {{nickname}}",
+      content: "Welcome, {{name}}{{suffix}}{{honorific}}",
+      variablesSchema: {
+        additionalProperties: false,
+        properties: {
+          name: { type: "string", required: true },
+          nickname: { type: "string", required: false },
+          suffix: { type: "string", required: false },
+          honorific: { type: "string" },
+        },
+      },
+    });
+
+    expect(
+      registry.render({
+        id: "optional-greeting",
+        version: "v1",
+        locale: "en-US",
+        channel: NotificationChannel.EMAIL,
+        variables: {
+          name: "Ada",
+        },
+      }),
+    ).toMatchObject({
+      subject: "Hello ",
+      content: "Welcome, Ada",
+      variables: {
+        name: "Ada",
+      },
+    });
+  });
+
   it("should reject invalid variables before rendering", () => {
     const registry = new NotificationTemplateRegistry();
 
@@ -86,6 +126,43 @@ describe("NotificationTemplateRegistry", () => {
           name: 123,
           unexpected: true,
         },
+      }),
+    ).toThrow(NotificationTemplateVariablesInvalidProblem);
+  });
+
+  it("should keep requiring declared and undeclared template variables", () => {
+    const registry = new NotificationTemplateRegistry();
+
+    registry.registerTemplate(
+      createNotificationTemplateFixture({
+        id: "required-greeting",
+      }),
+    );
+    registry.registerTemplate(
+      createNotificationTemplateFixture({
+        id: "undeclared-greeting",
+        content: "Hello {{undeclared}}",
+        variablesSchema: {
+          additionalProperties: false,
+          properties: {},
+        },
+      }),
+    );
+
+    expect(() =>
+      registry.render({
+        id: "required-greeting",
+        version: "v1",
+        locale: "en-US",
+        channel: NotificationChannel.EMAIL,
+      }),
+    ).toThrow(NotificationTemplateVariablesInvalidProblem);
+    expect(() =>
+      registry.render({
+        id: "undeclared-greeting",
+        version: "v1",
+        locale: "en-US",
+        channel: NotificationChannel.EMAIL,
       }),
     ).toThrow(NotificationTemplateVariablesInvalidProblem);
   });
