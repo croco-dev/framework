@@ -1,18 +1,27 @@
 import { sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { DatabaseClient } from "./db-types";
 import { UnsupportedMigrationQueryResultProblem } from "./problems/UnsupportedMigrationQueryResultProblem";
 import type { MigrationRecord } from "./types";
 
+type QualifiedTableName = readonly [schemaName: string, tableName: string];
+
 export class MigrationStore {
   private readonly tableName: string;
+  private readonly qualifiedTableName: QualifiedTableName | undefined;
+  private readonly tableIdentifier: SQL;
 
   constructor(tableName = "_migrations") {
     this.tableName = tableName;
+    this.qualifiedTableName = getQualifiedTableName(tableName);
+    this.tableIdentifier = this.qualifiedTableName
+      ? sql`${sql.identifier(this.qualifiedTableName[0])}.${sql.identifier(this.qualifiedTableName[1])}`
+      : sql`${sql.identifier(tableName)}`;
   }
 
   async ensureTable(db: DatabaseClient): Promise<void> {
     await db.execute(sql`
-      CREATE TABLE IF NOT EXISTS ${sql.identifier(this.tableName)} (
+      CREATE TABLE IF NOT EXISTS ${this.tableIdentifier} (
         id VARCHAR(255) PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         executed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -21,8 +30,13 @@ export class MigrationStore {
   }
 
   async hasTable(db: DatabaseClient): Promise<boolean> {
+    const regclassName =
+      this.qualifiedTableName !== undefined
+        ? sql`quote_ident(${this.qualifiedTableName[0]}) || '.' || quote_ident(${this.qualifiedTableName[1]})`
+        : sql`quote_ident(${this.tableName})`;
+
     const result = await db.execute(sql`
-      SELECT to_regclass(quote_ident(${this.tableName})) IS NOT NULL AS "exists"
+      SELECT to_regclass(${regclassName}) IS NOT NULL AS "exists"
     `);
     const rows = getResultRows(result);
     const row = rows[0];
@@ -41,7 +55,7 @@ export class MigrationStore {
   async getExecutedMigrations(db: DatabaseClient): Promise<MigrationRecord[]> {
     const result = await db.execute(sql`
       SELECT id, name, executed_at as executedAt
-      FROM ${sql.identifier(this.tableName)}
+      FROM ${this.tableIdentifier}
       ORDER BY executed_at ASC
     `);
 
@@ -52,14 +66,14 @@ export class MigrationStore {
 
   async recordMigration(db: DatabaseClient, id: string, name: string): Promise<void> {
     await db.execute(sql`
-      INSERT INTO ${sql.identifier(this.tableName)} (id, name, executed_at)
+      INSERT INTO ${this.tableIdentifier} (id, name, executed_at)
       VALUES (${id}, ${name}, CURRENT_TIMESTAMP)
     `);
   }
 
   async reserveMigration(db: DatabaseClient, id: string, name: string): Promise<boolean> {
     const result = await db.execute(sql`
-      INSERT INTO ${sql.identifier(this.tableName)} (id, name, executed_at)
+      INSERT INTO ${this.tableIdentifier} (id, name, executed_at)
       VALUES (${id}, ${name}, CURRENT_TIMESTAMP)
       ON CONFLICT (id) DO NOTHING
       RETURNING id
@@ -70,7 +84,7 @@ export class MigrationStore {
 
   async completeMigration(db: DatabaseClient, id: string): Promise<void> {
     await db.execute(sql`
-      UPDATE ${sql.identifier(this.tableName)}
+      UPDATE ${this.tableIdentifier}
       SET executed_at = CURRENT_TIMESTAMP
       WHERE id = ${id}
     `);
@@ -78,7 +92,7 @@ export class MigrationStore {
 
   async claimMigrationForRollback(db: DatabaseClient, id: string): Promise<boolean> {
     const result = await db.execute(sql`
-      DELETE FROM ${sql.identifier(this.tableName)}
+      DELETE FROM ${this.tableIdentifier}
       WHERE id = ${id}
       RETURNING id
     `);
@@ -88,10 +102,19 @@ export class MigrationStore {
 
   async removeMigration(db: DatabaseClient, id: string): Promise<void> {
     await db.execute(sql`
-      DELETE FROM ${sql.identifier(this.tableName)}
+      DELETE FROM ${this.tableIdentifier}
       WHERE id = ${id}
     `);
   }
+}
+
+function getQualifiedTableName(tableName: string): QualifiedTableName | undefined {
+  const separatorIndex = tableName.indexOf(".");
+  if (separatorIndex === -1 || separatorIndex !== tableName.lastIndexOf(".")) {
+    return undefined;
+  }
+
+  return [tableName.slice(0, separatorIndex), tableName.slice(separatorIndex + 1)];
 }
 
 function getResultRows(result: unknown): unknown[] {
