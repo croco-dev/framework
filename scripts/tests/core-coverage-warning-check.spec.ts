@@ -15,17 +15,16 @@ import {
   parseBaselineContent,
   parseCoreCoverageThresholds,
   parseCoreCoveragePackageFilters,
-  resolveCoreCoveragePackageFilters,
   validateBaselineEntries,
 } from "../core-coverage-warning-check.mts";
-import { getVerificationCommand } from "../verification-manifest.mts";
+import { CORE_COVERAGE_TEST_COMMAND } from "../core-coverage-runner.mts";
 
 describe("core-coverage-warning-check.mts", () => {
   it("keeps core coverage ownership valid and aligned across local and CI selection", () => {
     expect(CORE_COVERAGE_PACKAGE_DIRECTORIES).toHaveLength(CORE_COVERAGE_PACKAGES.length);
-    expect(
-      parseCoreCoveragePackageFilters(getVerificationCommand("core-coverage").command.join(" ")),
-    ).toEqual(CORE_COVERAGE_PACKAGES);
+    expect(parseCoreCoveragePackageFilters(CORE_COVERAGE_TEST_COMMAND.join(" "))).toEqual(
+      CORE_COVERAGE_PACKAGES,
+    );
   });
 
   it("rejects duplicate or nonexistent core coverage package ownership", () => {
@@ -96,24 +95,6 @@ describe("core-coverage-warning-check.mts", () => {
     );
 
     expect(packages).toEqual(["@croco/framework-context", "create-croco-app"]);
-  });
-
-  it("resolves core coverage filters through the authoritative dispatcher", () => {
-    const packages = resolveCoreCoveragePackageFilters(
-      "pnpm --filter @croco/problems-core build && node --experimental-strip-types scripts/verification-command.mts --id core-coverage",
-    );
-
-    expect(packages).toContain("@croco/framework-context");
-    expect(packages).toContain("create-croco-app");
-    expect(packages).not.toContain("@croco/tenant-core");
-  });
-
-  it("rejects a dispatcher whose command has no core coverage filters", () => {
-    expect(() =>
-      resolveCoreCoveragePackageFilters(
-        "pnpm --filter @croco/problems-core build && node --experimental-strip-types scripts/verification-command.mts --id first-success",
-      ),
-    ).toThrow("failed to read core coverage package filters");
   });
 
   it("parses semicolonless core coverage threshold exports", () => {
@@ -267,7 +248,7 @@ export const CORE_COVERAGE_THRESHOLDS = {
     ]);
   });
 
-  it("fails configuration checks for missing spine and coverage-threshold drift", () => {
+  it("fails configuration checks for missing spine packages", () => {
     const candidates = getCoreCoverageSelectionCandidates({
       catalog: {
         spine: {
@@ -280,15 +261,9 @@ export const CORE_COVERAGE_THRESHOLDS = {
 
     expect(
       getCoreCoverageConfigurationErrors({
-        coreCoveragePackages: ["@croco/framework-context", "@croco/auth-core"],
-        thresholdPackages: ["@croco/framework-context", "create-croco-app"],
         selectionCandidates: candidates,
       }),
-    ).toEqual([
-      expect.stringContaining("create-croco-app: 1.0 spine package must be included"),
-      expect.stringContaining("@croco/auth-core: test:coverage:core package is missing"),
-      expect.stringContaining("create-croco-app: shared core coverage config entry is missing"),
-    ]);
+    ).toEqual([expect.stringContaining("create-croco-app: 1.0 spine package must be included")]);
   });
 
   it("keeps temporary selection exclusions visible without counting them as missing warnings", () => {

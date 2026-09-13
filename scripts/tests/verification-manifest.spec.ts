@@ -34,6 +34,12 @@ import {
 } from "../create-croco-app-generated-smoke-dependencies.mts";
 import { getGeneratedSmokeDependencyCaseInputs } from "../create-croco-app-generated-smoke.mts";
 import { assertPackedDependencyClosure } from "../packed-decorator-consumers.mts";
+import { CORE_COVERAGE_PACKAGES } from "../core-coverage-config.mts";
+import {
+  CORE_COVERAGE_BUILD_COMMAND,
+  CORE_COVERAGE_TEST_COMMAND,
+  runCoreCoverage,
+} from "../core-coverage-runner.mts";
 import { readTestInventory } from "../test-inventory.mts";
 import { generate } from "../../packages/create-croco-app/src/generator.ts";
 import {
@@ -319,7 +325,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("a3b7669d9640bfb6a2f5b3dfe933dc2d03bbee54389226529354624cce1836ae");
+    ).toBe("c1b85d052079c459ed81c26f29c677574655bbef54d9fd4c6fccf75d3b10f604");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -466,6 +472,56 @@ describe("verification manifest", () => {
     ]) {
       expect(manifest.find((command) => command.id === id)?.applicable, id).toBe(true);
     }
+  });
+
+  it("materializes the core coverage runtime dependency closure before running coverage", () => {
+    const coreCoverage = createVerificationManifest("publish").find(
+      ({ id }) => id === "core-coverage",
+    );
+    expect(coreCoverage?.command).toEqual([
+      "node",
+      "--experimental-strip-types",
+      "scripts/core-coverage-runner.mts",
+    ]);
+    expect(coreCoverage?.dependsOn).toEqual(["build"]);
+    expect(CORE_COVERAGE_BUILD_COMMAND).toEqual([
+      "pnpm",
+      "turbo",
+      "run",
+      "build",
+      ...CORE_COVERAGE_PACKAGES.map((packageName) => `--filter=${packageName}...`),
+    ]);
+    expect(CORE_COVERAGE_TEST_COMMAND).toEqual([
+      "pnpm",
+      ...CORE_COVERAGE_PACKAGES.flatMap((packageName) => ["--filter", packageName]),
+      "exec",
+      "vitest",
+      "run",
+      "--coverage",
+      "--config",
+      "../../vitest.config.ts",
+    ]);
+
+    const invocations: string[][] = [];
+    expect(
+      runCoreCoverage(["--testNamePattern", "focused"], (executable, args) => {
+        invocations.push([executable, ...args]);
+        return 0;
+      }),
+    ).toBe(0);
+    expect(invocations).toEqual([
+      CORE_COVERAGE_BUILD_COMMAND,
+      [...CORE_COVERAGE_TEST_COMMAND, "--testNamePattern", "focused"],
+    ]);
+
+    const failedInvocations: string[][] = [];
+    expect(
+      runCoreCoverage([], (executable, args) => {
+        failedInvocations.push([executable, ...args]);
+        return 7;
+      }),
+    ).toBe(7);
+    expect(failedInvocations).toEqual([CORE_COVERAGE_BUILD_COMMAND]);
   });
 
   it("runs packed decorator consumers for publish and relevant package changes", () => {
@@ -1523,8 +1579,8 @@ describe("verification manifest", () => {
         "provider-certification",
         "production-ready",
       ],
-      "core-coverage-warning": ["core-coverage"],
       "core-coverage": ["build"],
+      "core-coverage-warning": ["core-coverage"],
       "release-gate-tests": ["test"],
       "publish-dry-run": ["build"],
     };
