@@ -82,7 +82,9 @@ export class NotificationTemplateRegistry {
 
     const variables = request.variables ?? {};
     validateTemplateVariables(template, variables);
-    const variableEscaping = template.variableEscaping ?? "html";
+    const defaultVariableEscaping: NotificationTemplateVariableEscaping =
+      template.channel === NotificationChannel.EMAIL ? "html" : "none";
+    const variableEscaping = template.variableEscaping ?? defaultVariableEscaping;
 
     return {
       template: {
@@ -92,7 +94,7 @@ export class NotificationTemplateRegistry {
       },
       ...(template.subject === undefined
         ? {}
-        : { subject: renderTemplateString(template.subject, variables, variableEscaping) }),
+        : { subject: renderTemplateString(template.subject, variables, "none") }),
       content: renderTemplateString(template.content, variables, variableEscaping),
       variables,
     };

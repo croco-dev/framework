@@ -107,7 +107,7 @@ describe("NotificationTemplateRegistry", () => {
     );
   });
 
-  it("should escape rendered variables by default", () => {
+  it("should preserve email subjects while escaping content variables by default", () => {
     const registry = new NotificationTemplateRegistry();
 
     registry.registerTemplate({
@@ -115,7 +115,8 @@ describe("NotificationTemplateRegistry", () => {
       version: "v1",
       locale: "en-US",
       channel: NotificationChannel.EMAIL,
-      content: "<p>Hello {{name}}</p>",
+      subject: "Welcome to {{company}}",
+      content: "<p>Hello {{company}}</p>",
     });
 
     expect(
@@ -125,10 +126,66 @@ describe("NotificationTemplateRegistry", () => {
         locale: "en-US",
         channel: NotificationChannel.EMAIL,
         variables: {
-          name: '<script>alert("x")</script>',
+          company: "Ben & Jerry's",
+        },
+      }),
+    ).toMatchObject({
+      subject: "Welcome to Ben & Jerry's",
+      content: "<p>Hello Ben &amp; Jerry&#39;s</p>",
+    });
+  });
+
+  it("should preserve variables by default for non-html channels", () => {
+    const registry = new NotificationTemplateRegistry();
+
+    registry.registerTemplate({
+      id: "sms-welcome",
+      version: "v1",
+      locale: "en-US",
+      channel: NotificationChannel.SMS,
+      content: "Hello {{name}}",
+    });
+
+    expect(
+      registry.render({
+        id: "sms-welcome",
+        version: "v1",
+        locale: "en-US",
+        channel: NotificationChannel.SMS,
+        variables: {
+          name: "<Ada & Bob>",
         },
       }).content,
-    ).toBe("<p>Hello &lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;</p>");
+    ).toBe("Hello <Ada & Bob>");
+  });
+
+  it("should preserve subjects when content escaping is explicitly html", () => {
+    const registry = new NotificationTemplateRegistry();
+
+    registry.registerTemplate({
+      id: "explicit-html",
+      version: "v1",
+      locale: "en-US",
+      channel: NotificationChannel.EMAIL,
+      subject: "Welcome to {{company}}",
+      content: "<p>Welcome to {{company}}</p>",
+      variableEscaping: "html",
+    });
+
+    expect(
+      registry.render({
+        id: "explicit-html",
+        version: "v1",
+        locale: "en-US",
+        channel: NotificationChannel.EMAIL,
+        variables: {
+          company: "Ben & Jerry's",
+        },
+      }),
+    ).toMatchObject({
+      subject: "Welcome to Ben & Jerry's",
+      content: "<p>Welcome to Ben &amp; Jerry&#39;s</p>",
+    });
   });
 
   it("should allow explicit raw rendering for non-html templates", () => {
