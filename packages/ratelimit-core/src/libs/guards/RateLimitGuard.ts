@@ -38,7 +38,9 @@ export class RateLimitGuard {
       return true;
     }
 
-    const result = await this.rateLimiter.check(context, metadata.policy);
+    const result = metadata.customKey
+      ? await this.rateLimiter.checkWithKey(metadata.customKey(context), metadata.policy)
+      : await this.rateLimiter.check(context, metadata.policy);
 
     context.set("rateLimitResult", result);
 
