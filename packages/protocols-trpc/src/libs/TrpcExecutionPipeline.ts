@@ -178,29 +178,46 @@ async function toHandledProblem(result: unknown): Promise<Problem | undefined> {
       : undefined;
   }
 
+  if (!hasJsonMediaType(result)) {
+    return toTextResponseProblem(result);
+  }
+
   try {
     const body = await result.clone().json();
 
     return isRecord(body) ? createTrpcFilterProblem(body, result.status) : undefined;
   } catch {
-    try {
-      const detail = (await result.clone().text()).trim();
-      const title = detail || result.statusText || "HTTP Error";
-
-      return createTrpcFilterProblem(
-        {
-          type: "about:blank",
-          title,
-          status: result.status,
-          code: TRPC_FILTER_RESPONSE_PROBLEM_CODE,
-          ...(detail ? { detail } : {}),
-        },
-        result.status,
-      );
-    } catch {
-      return undefined;
-    }
+    return undefined;
   }
+}
+
+async function toTextResponseProblem(response: Response): Promise<Problem | undefined> {
+  try {
+    const detail = (await response.clone().text()).trim();
+    const title =
+      response.status >= 500
+        ? response.statusText || "Internal Server Error"
+        : detail || response.statusText || "HTTP Error";
+
+    return createTrpcFilterProblem(
+      {
+        type: "about:blank",
+        title,
+        status: response.status,
+        code: TRPC_FILTER_RESPONSE_PROBLEM_CODE,
+        ...(detail && response.status < 500 ? { detail } : {}),
+      },
+      response.status,
+    );
+  } catch {
+    return undefined;
+  }
+}
+
+function hasJsonMediaType(response: Response): boolean {
+  const mediaType = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
+
+  return mediaType === "application/json" || mediaType?.endsWith("+json") === true;
 }
 
 function isHttpFilterResponse(

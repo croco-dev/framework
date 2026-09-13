@@ -132,9 +132,26 @@ class PlainTextResponseFilter implements ExceptionFilter<unknown, ExecutionConte
   }
 }
 
+class TextJsonScalarResponseFilter implements ExceptionFilter<unknown, ExecutionContext> {
+  catch(): Response {
+    return new Response("123", {
+      status: 429,
+      headers: { "content-type": "text/plain" },
+    });
+  }
+}
+
 class EmptyResponseFilter implements ExceptionFilter<unknown, ExecutionContext> {
   catch(): Response {
     return new Response(null, { status: 503, statusText: "Service Unavailable" });
+  }
+}
+
+class PrivateServerResponseFilter implements ExceptionFilter<unknown, ExecutionContext> {
+  catch(): Response {
+    return new Response("database password must not cross the wire", {
+      status: 501,
+    });
   }
 }
 
@@ -321,9 +338,21 @@ class TrpcFilterDiagnosticsController {
     throw new PrivateProblem();
   }
 
+  @Get("/text-json-scalar")
+  @UseFilters(TextJsonScalarResponseFilter)
+  textJsonScalar(): never {
+    throw new PrivateProblem();
+  }
+
   @Get("/empty")
   @UseFilters(EmptyResponseFilter)
   empty(): never {
+    throw new PrivateProblem();
+  }
+
+  @Get("/private-server")
+  @UseFilters(PrivateServerResponseFilter)
+  privateServer(): never {
     throw new PrivateProblem();
   }
 
@@ -355,7 +384,9 @@ class TrpcFilterDiagnosticsController {
 type TrpcFilterDiagnosticsCaller = {
   trpcFilterDiagnostics: {
     plainText: () => Promise<unknown>;
+    textJsonScalar: () => Promise<unknown>;
     empty: () => Promise<unknown>;
+    privateServer: () => Promise<unknown>;
     json: () => Promise<unknown>;
     invalidReturn: () => Promise<unknown>;
     invalidJson: () => Promise<unknown>;
@@ -507,7 +538,7 @@ describe("tRPC Croco execution pipeline", () => {
   });
 
   it("preserves declared Problem contracts and redacts private and unknown failures", async () => {
-    const router = createTrpcRouter([TrpcProblemController]);
+    const router = createTrpcRouter([TrpcProblemController, TrpcFilterDiagnosticsController]);
     const server = createHTTPServer({ router });
     await new Promise<void>((resolve) => server.listen(0, resolve));
     const client = createTRPCClient<typeof router>({
@@ -519,6 +550,9 @@ describe("tRPC Croco execution pipeline", () => {
         notFound: { query: () => Promise<unknown> };
         unknown: { query: () => Promise<unknown> };
         unknownTrpc: { query: () => Promise<unknown> };
+      };
+      trpcFilterDiagnostics: {
+        privateServer: { query: () => Promise<unknown> };
       };
     };
 
@@ -584,6 +618,20 @@ describe("tRPC Croco execution pipeline", () => {
       expect(unknownTrpcError.data).not.toHaveProperty("croco");
       expect(unknownTrpcError.message).not.toContain("database password");
       expect(unknownTrpcError.data).not.toHaveProperty("stack");
+
+      const privateServerError = toClientError(
+        await captureRejectedValue(client.trpcFilterDiagnostics.privateServer.query()),
+      );
+      expect(privateServerError.data.code).toBe("NOT_IMPLEMENTED");
+      expect(privateServerError.data.croco).toEqual({
+        code: "protocols-trpc/filter-response",
+        status: 501,
+        title: "Internal Server Error",
+        type: "about:blank",
+        extensions: {},
+      });
+      expect(privateServerError.message).toBe("protocols-trpc/filter-response");
+      expect(privateServerError.data).not.toHaveProperty("stack");
     } finally {
       await new Promise<void>((resolve, reject) => {
         server.close((error) => {
@@ -669,6 +717,25 @@ describe("tRPC Croco execution pipeline", () => {
         status: 429,
         title: "Too Many Requests",
         detail: "Too Many Requests",
+      }),
+    });
+  });
+
+  it("treats JSON-looking text responses as plain text", async () => {
+    const diagnosticEvents = recordFilterDiagnostics();
+    const caller = createTrpcFilterDiagnosticsCaller();
+
+    const failure = caller.trpcFilterDiagnostics.textJsonScalar();
+    await expect(failure).rejects.toThrow();
+    expect(diagnosticEvents).toEqual([]);
+    await expect(failure).rejects.toMatchObject({
+      code: "TOO_MANY_REQUESTS",
+      message: "123",
+      cause: expect.objectContaining({
+        code: "protocols-trpc/filter-response",
+        status: 429,
+        title: "123",
+        detail: "123",
       }),
     });
   });
