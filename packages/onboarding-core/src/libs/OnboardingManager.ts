@@ -52,7 +52,11 @@ export class OnboardingManager {
 
     const { tenantId, userId } = this.getContext();
     const requiredStepIds = definition.steps
-      .filter((definitionStep) => definitionStep.required !== false)
+      .filter(
+        (definitionStep) =>
+          definitionStep.required ??
+          (definitionStep.type !== "optional" && definitionStep.type !== "conditional"),
+      )
       .map((definitionStep) => definitionStep.id);
 
     for (let attempt = 0; attempt < STEP_COMPLETION_MAX_ATTEMPTS; attempt += 1) {

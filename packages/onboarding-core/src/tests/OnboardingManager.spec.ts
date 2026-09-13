@@ -314,6 +314,62 @@ describe("OnboardingManager", () => {
     );
   });
 
+  it("should ignore optional and conditional step types for completion calculation", async () => {
+    manager.register({
+      id: "typed-steps",
+      steps: [
+        { id: "required-step", title: "Required", type: "required" },
+        { id: "optional-step", title: "Optional", type: "optional" },
+        { id: "conditional-step", title: "Conditional", type: "conditional" },
+      ],
+    });
+
+    await Context.run(
+      { requestId: "req-typed", user: { id: "user-typed" }, tenantId: "tenant-1" },
+      async () => {
+        await manager.completeStep("typed-steps", "required-step");
+
+        await expect(manager.getStatus("typed-steps")).resolves.toMatchObject({
+          isCompleted: true,
+        });
+        expect(analytics.capture).toHaveBeenCalledWith(
+          "onboarding_completed",
+          expect.objectContaining({ onboardingId: "typed-steps" }),
+        );
+      },
+    );
+  });
+
+  it("should require a typed optional step when required is explicitly true", async () => {
+    manager.register({
+      id: "required-override",
+      steps: [
+        { id: "required-step", title: "Required", type: "required" },
+        {
+          id: "required-optional-step",
+          title: "Required Optional",
+          required: true,
+          type: "optional",
+        },
+      ],
+    });
+
+    await Context.run(
+      { requestId: "req-override", user: { id: "user-override" }, tenantId: "tenant-1" },
+      async () => {
+        await manager.completeStep("required-override", "required-step");
+        await expect(manager.getStatus("required-override")).resolves.toMatchObject({
+          isCompleted: false,
+        });
+
+        await manager.completeStep("required-override", "required-optional-step");
+        await expect(manager.getStatus("required-override")).resolves.toMatchObject({
+          isCompleted: true,
+        });
+      },
+    );
+  });
+
   it("should persist state before emitting analytics events", async () => {
     const operations: string[] = [];
     const capture = vi.fn((event: string) => {
