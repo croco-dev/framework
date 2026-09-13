@@ -194,6 +194,19 @@ describe("Permission", () => {
   });
 
   describe("hasPermission", () => {
+    it.each([undefined, null])(
+      "should return false when user permissions are %s",
+      (userPermissions) => {
+        expect(hasPermission(userPermissions, "billing:read")).toBe(false);
+      },
+    );
+
+    it("should return false when user permissions are not an array at runtime", () => {
+      expect(
+        hasPermission({ permission: "billing:read" } as unknown as string[], "billing:read"),
+      ).toBe(false);
+    });
+
     it("should reject an empty resource id before an exact match", () => {
       expect(() => hasPermission(["posts:write:"], "posts:write:")).toThrow(
         "Invalid permission format",
