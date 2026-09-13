@@ -1,3 +1,5 @@
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { describe, expect, it, vi } from "vitest";
 import type { DatabaseClient } from "../libs/db-types";
 import { MigrationStore } from "../libs/MigrationStore";
@@ -26,6 +28,31 @@ describe("MigrationStore", () => {
     const query = vi.mocked(db.execute).mock.calls[0]?.[0];
     expect(sqlText(query)).toContain("quote_ident() || '.' || quote_ident()");
     expect(sqlParams(query)).toEqual(["Audit", "Migrations"]);
+  });
+
+  it("should use the qualified checkpoint table identifier for every store query", async () => {
+    const db = {
+      execute: vi.fn().mockResolvedValue({ rows: [] }),
+    } as unknown as DatabaseClient;
+    const store = new MigrationStore("Audit.Migrations");
+
+    await store.ensureTable(db);
+    await store.getExecutedMigrations(db);
+    await store.recordMigration(db, "20260615000001", "create_users");
+    await store.reserveMigration(db, "20260615000001", "create_users");
+    await store.completeMigration(db, "20260615000001");
+    await store.claimMigrationForRollback(db, "20260615000001");
+    await store.removeMigration(db, "20260615000001");
+
+    const dialect = new PgDialect();
+    const queries = vi
+      .mocked(db.execute)
+      .mock.calls.map(([query]) => dialect.sqlToQuery(query as SQL).sql);
+    expect(queries).toHaveLength(7);
+    for (const query of queries) {
+      expect(query).toContain('"Audit"."Migrations"');
+      expect(query).not.toContain('"Audit.Migrations"');
+    }
   });
 
   it.each([

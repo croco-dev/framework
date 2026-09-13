@@ -2,4 +2,4 @@
 "@croco/migration-runner": patch
 ---
 
-Detect schema-qualified migration metadata tables when reporting migration status.
+Use schema-qualified migration metadata tables consistently across detection and migration record operations.
