@@ -86,8 +86,15 @@ export function formatPermission(permission: Permission): string {
   return formatted;
 }
 
-export function hasPermission(userPermissions: string[], required: string): boolean {
+export function hasPermission(
+  userPermissions: readonly string[] | null | undefined,
+  required: string,
+): boolean {
   parsePermissionParts(required);
+
+  if (!Array.isArray(userPermissions)) {
+    return false;
+  }
 
   if (userPermissions.includes(required)) {
     return true;

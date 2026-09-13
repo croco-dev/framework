@@ -13,7 +13,7 @@ title: "hasPermission"
 
 ### userPermissions
 
-`string`[]
+readonly `string`[] \| `null` \| `undefined`
 
 ### required
 

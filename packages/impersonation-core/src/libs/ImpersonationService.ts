@@ -83,7 +83,7 @@ export class ImpersonationService {
       throw new ImpersonationIdentityConflictProblem();
     }
 
-    if (!hasPermission([...principal.permissions], "impersonation:manage")) {
+    if (!hasPermission(principal.permissions, "impersonation:manage")) {
       throw new ForbiddenProblem("impersonation:manage");
     }
 
