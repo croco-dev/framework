@@ -169,13 +169,13 @@ export function toTrpcError(error: unknown): TRPCError {
   });
 }
 
-async function toHandledProblem(result: unknown): Promise<Problem | undefined> {
-  if (isHttpFilterResponse(result)) {
-    return createTrpcFilterProblem(result.body, result.status);
-  }
+const TRPC_FILTER_RESPONSE_PROBLEM_CODE = "protocols-trpc/filter-response";
 
+async function toHandledProblem(result: unknown): Promise<Problem | undefined> {
   if (!(result instanceof Response)) {
-    return undefined;
+    return isHttpFilterResponse(result)
+      ? createTrpcFilterProblem(result.body, result.status)
+      : undefined;
   }
 
   try {
@@ -183,7 +183,23 @@ async function toHandledProblem(result: unknown): Promise<Problem | undefined> {
 
     return isRecord(body) ? createTrpcFilterProblem(body, result.status) : undefined;
   } catch {
-    return undefined;
+    try {
+      const detail = (await result.clone().text()).trim();
+      const title = detail || result.statusText || "HTTP Error";
+
+      return createTrpcFilterProblem(
+        {
+          type: "about:blank",
+          title,
+          status: result.status,
+          code: TRPC_FILTER_RESPONSE_PROBLEM_CODE,
+          ...(detail ? { detail } : {}),
+        },
+        result.status,
+      );
+    } catch {
+      return undefined;
+    }
   }
 }
 

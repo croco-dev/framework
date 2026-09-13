@@ -126,6 +126,39 @@ class InvalidReturnFilter implements ExceptionFilter<unknown, ExecutionContext> 
   }
 }
 
+class PlainTextResponseFilter implements ExceptionFilter<unknown, ExecutionContext> {
+  catch(): Response {
+    return new Response("Too Many Requests", { status: 429 });
+  }
+}
+
+class EmptyResponseFilter implements ExceptionFilter<unknown, ExecutionContext> {
+  catch(): Response {
+    return new Response(null, { status: 503, statusText: "Service Unavailable" });
+  }
+}
+
+class JsonResponseFilter implements ExceptionFilter<unknown, ExecutionContext> {
+  catch(): Response {
+    return Response.json(
+      {
+        type: "about:blank",
+        title: "Conflict",
+        status: 409,
+        code: "protocols-trpc/json-filter-response",
+        detail: "JSON response handled the failure",
+      },
+      { status: 409 },
+    );
+  }
+}
+
+class InvalidJsonResponseFilter implements ExceptionFilter<unknown, ExecutionContext> {
+  catch(): Response {
+    return Response.json("not a problem", { status: 429 });
+  }
+}
+
 class ThrowingFilter implements ExceptionFilter<unknown, ExecutionContext> {
   catch(): never {
     throw new Error("filter failure");
@@ -282,9 +315,33 @@ class TrpcProblemController {
 
 @Controller("/trpc/filter-diagnostics")
 class TrpcFilterDiagnosticsController {
+  @Get("/plain-text")
+  @UseFilters(PlainTextResponseFilter)
+  plainText(): never {
+    throw new PrivateProblem();
+  }
+
+  @Get("/empty")
+  @UseFilters(EmptyResponseFilter)
+  empty(): never {
+    throw new PrivateProblem();
+  }
+
+  @Get("/json")
+  @UseFilters(JsonResponseFilter)
+  json(): never {
+    throw new PrivateProblem();
+  }
+
   @Get("/invalid-return")
   @UseFilters(InvalidReturnFilter)
   invalidReturn(): never {
+    throw new PrivateProblem();
+  }
+
+  @Get("/invalid-json")
+  @UseFilters(InvalidJsonResponseFilter)
+  invalidJson(): never {
     throw new PrivateProblem();
   }
 
@@ -293,6 +350,35 @@ class TrpcFilterDiagnosticsController {
   throwing(): never {
     throw new PrivateProblem();
   }
+}
+
+type TrpcFilterDiagnosticsCaller = {
+  trpcFilterDiagnostics: {
+    plainText: () => Promise<unknown>;
+    empty: () => Promise<unknown>;
+    json: () => Promise<unknown>;
+    invalidReturn: () => Promise<unknown>;
+    invalidJson: () => Promise<unknown>;
+    throwing: () => Promise<unknown>;
+  };
+};
+
+function createTrpcFilterDiagnosticsCaller(): TrpcFilterDiagnosticsCaller {
+  return createTrpcRouter([TrpcFilterDiagnosticsController]).createCaller(
+    {},
+  ) as unknown as TrpcFilterDiagnosticsCaller;
+}
+
+function recordFilterDiagnostics(): RuntimeInspectorRecorderEventInput[] {
+  const diagnosticEvents: RuntimeInspectorRecorderEventInput[] = [];
+  const recorder = {
+    recordEvent(event: RuntimeInspectorRecorderEventInput): void {
+      diagnosticEvents.push(event);
+    },
+  };
+  Container.set(DEV_INSPECTOR_TOKEN, recorder as RuntimeInspector);
+
+  return diagnosticEvents;
 }
 
 @Controller("/trpc/di")
@@ -568,18 +654,61 @@ describe("tRPC Croco execution pipeline", () => {
     expect(events).toEqual(["method-filter"]);
   });
 
+  it("converts plain-text filter responses without recording a filter failure", async () => {
+    const diagnosticEvents = recordFilterDiagnostics();
+    const caller = createTrpcFilterDiagnosticsCaller();
+
+    const failure = caller.trpcFilterDiagnostics.plainText();
+    await expect(failure).rejects.toThrow();
+    expect(diagnosticEvents).toEqual([]);
+    await expect(failure).rejects.toMatchObject({
+      code: "TOO_MANY_REQUESTS",
+      message: "Too Many Requests",
+      cause: expect.objectContaining({
+        code: "protocols-trpc/filter-response",
+        status: 429,
+        title: "Too Many Requests",
+        detail: "Too Many Requests",
+      }),
+    });
+  });
+
+  it("converts empty filter responses without recording a filter failure", async () => {
+    const diagnosticEvents = recordFilterDiagnostics();
+    const caller = createTrpcFilterDiagnosticsCaller();
+
+    const failure = caller.trpcFilterDiagnostics.empty();
+    await expect(failure).rejects.toThrow();
+    expect(diagnosticEvents).toEqual([]);
+    await expect(failure).rejects.toMatchObject({
+      code: "SERVICE_UNAVAILABLE",
+      cause: expect.objectContaining({
+        code: "protocols-trpc/filter-response",
+        status: 503,
+        title: "Service Unavailable",
+      }),
+    });
+  });
+
+  it("continues to convert JSON Problem filter responses", async () => {
+    const caller = createTrpcFilterDiagnosticsCaller();
+
+    const failure = caller.trpcFilterDiagnostics.json();
+    await expect(failure).rejects.toThrow();
+    await expect(failure).rejects.toMatchObject({
+      code: "CONFLICT",
+      message: "JSON response handled the failure",
+      cause: expect.objectContaining({
+        code: "protocols-trpc/json-filter-response",
+        status: 409,
+        title: "Conflict",
+      }),
+    });
+  });
+
   it("preserves the original failure and records invalid filter results", async () => {
-    const diagnosticEvents: RuntimeInspectorRecorderEventInput[] = [];
-    const recorder = {
-      recordEvent(event: RuntimeInspectorRecorderEventInput): void {
-        diagnosticEvents.push(event);
-      },
-    };
-    Container.set(DEV_INSPECTOR_TOKEN, recorder as RuntimeInspector);
-    const router = createTrpcRouter([TrpcFilterDiagnosticsController]);
-    const caller = router.createCaller({}) as unknown as {
-      trpcFilterDiagnostics: { invalidReturn: () => Promise<unknown> };
-    };
+    const diagnosticEvents = recordFilterDiagnostics();
+    const caller = createTrpcFilterDiagnosticsCaller();
 
     const failure = caller.trpcFilterDiagnostics.invalidReturn();
     await expect(failure).rejects.toThrow();
@@ -597,18 +726,29 @@ describe("tRPC Croco execution pipeline", () => {
     );
   });
 
+  it("preserves the original failure for non-Problem JSON filter responses", async () => {
+    const diagnosticEvents = recordFilterDiagnostics();
+    const caller = createTrpcFilterDiagnosticsCaller();
+
+    const failure = caller.trpcFilterDiagnostics.invalidJson();
+    await expect(failure).rejects.toThrow();
+    await expect(failure).rejects.toMatchObject({
+      code: "INTERNAL_SERVER_ERROR",
+      cause: expect.objectContaining({ code: "protocols-trpc/private-problem" }),
+    });
+    expect(diagnosticEvents).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "CROCO_TRPC_FILTER_001",
+          details: expect.objectContaining({ reason: "invalid-return" }),
+        }),
+      ]),
+    );
+  });
+
   it("preserves the original failure and records throwing filters", async () => {
-    const diagnosticEvents: RuntimeInspectorRecorderEventInput[] = [];
-    const recorder = {
-      recordEvent(event: RuntimeInspectorRecorderEventInput): void {
-        diagnosticEvents.push(event);
-      },
-    };
-    Container.set(DEV_INSPECTOR_TOKEN, recorder as RuntimeInspector);
-    const router = createTrpcRouter([TrpcFilterDiagnosticsController]);
-    const caller = router.createCaller({}) as unknown as {
-      trpcFilterDiagnostics: { throwing: () => Promise<unknown> };
-    };
+    const diagnosticEvents = recordFilterDiagnostics();
+    const caller = createTrpcFilterDiagnosticsCaller();
 
     const failure = caller.trpcFilterDiagnostics.throwing();
     await expect(failure).rejects.toThrow();
