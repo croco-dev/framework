@@ -49,14 +49,10 @@ const DEFAULT_CLOUDINARY_API_BASE_URL = "https://api.cloudinary.com";
 
 type CloudinaryResourceType = "image" | "video" | "raw";
 
-function hasFileExtension(filename: string): boolean {
-  return /\.[^./]+$/.test(filename);
-}
-
 function resolveResourceType(key: string): CloudinaryResourceType {
   const filename = key.slice(key.lastIndexOf("/") + 1);
   if (
-    !hasFileExtension(filename) ||
+    !/\.[^./]+$/.test(filename) ||
     /\.(3ds|ai|arw|avif|bmp|bw|cr2|cr3|djvu|dng|eps|eps3|ept|fbx|flif|gif|glb|gltf|hdp|heic|heif|ico|indd|jp2|jpe|jpeg|jpg|jxl|jxr|obj|ply|png|ps|psd|svg|tga|tif|tiff|u3ma|usdz|wdp|webp)$/i.test(
       filename,
     )
@@ -845,4 +841,8 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     const message = getCloudinaryErrorMessage(error, "").toLowerCase();
     return message.includes("not found");
   }
+}
+
+function hasFileExtension(filename: string): boolean {
+  return /\.[^./]+$/.test(filename);
 }
