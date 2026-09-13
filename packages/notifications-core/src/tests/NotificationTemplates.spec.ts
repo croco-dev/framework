@@ -68,13 +68,14 @@ describe("NotificationTemplateRegistry", () => {
       locale: "en-US",
       channel: NotificationChannel.EMAIL,
       subject: "Hello {{nickname}}",
-      content: "Welcome, {{name}}{{suffix}}",
+      content: "Welcome, {{name}}{{suffix}}{{honorific}}",
       variablesSchema: {
         additionalProperties: false,
         properties: {
           name: { type: "string", required: true },
           nickname: { type: "string", required: false },
           suffix: { type: "string", required: false },
+          honorific: { type: "string" },
         },
       },
     });

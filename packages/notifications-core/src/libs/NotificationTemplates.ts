@@ -164,7 +164,7 @@ function validateTemplateVariables(
 
   const optionalVariables = new Set(
     Object.entries(schema?.properties ?? {})
-      .filter(([, definition]) => definition.required === false)
+      .filter(([, definition]) => definition.required !== true)
       .map(([name]) => name),
   );
 
