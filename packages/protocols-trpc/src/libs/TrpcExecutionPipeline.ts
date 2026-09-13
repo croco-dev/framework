@@ -170,6 +170,12 @@ export function toTrpcError(error: unknown): TRPCError {
 }
 
 const TRPC_FILTER_RESPONSE_PROBLEM_CODE = "protocols-trpc/filter-response";
+const SERVER_ERROR_STATUS_TITLES: ReadonlyMap<number, string> = new Map([
+  [501, "Not Implemented"],
+  [502, "Bad Gateway"],
+  [503, "Service Unavailable"],
+  [504, "Gateway Timeout"],
+]);
 
 async function toHandledProblem(result: unknown): Promise<Problem | undefined> {
   if (!(result instanceof Response)) {
@@ -194,10 +200,7 @@ async function toHandledProblem(result: unknown): Promise<Problem | undefined> {
 async function toTextResponseProblem(response: Response): Promise<Problem | undefined> {
   try {
     const detail = (await response.clone().text()).trim();
-    const title =
-      response.status >= 500
-        ? response.statusText || "Internal Server Error"
-        : detail || response.statusText || "HTTP Error";
+    const title = toTextResponseTitle(response, detail);
 
     return createTrpcFilterProblem(
       {
@@ -212,6 +215,14 @@ async function toTextResponseProblem(response: Response): Promise<Problem | unde
   } catch {
     return undefined;
   }
+}
+
+function toTextResponseTitle(response: Response, detail: string): string {
+  if (response.status < 500) {
+    return detail || response.statusText || "HTTP Error";
+  }
+
+  return SERVER_ERROR_STATUS_TITLES.get(response.status) ?? "Internal Server Error";
 }
 
 function hasJsonMediaType(response: Response): boolean {

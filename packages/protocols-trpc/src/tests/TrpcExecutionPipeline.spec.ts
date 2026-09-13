@@ -151,6 +151,7 @@ class PrivateServerResponseFilter implements ExceptionFilter<unknown, ExecutionC
   catch(): Response {
     return new Response("database password must not cross the wire", {
       status: 501,
+      statusText: "upstream token must not cross the wire",
     });
   }
 }
@@ -626,11 +627,12 @@ describe("tRPC Croco execution pipeline", () => {
       expect(privateServerError.data.croco).toEqual({
         code: "protocols-trpc/filter-response",
         status: 501,
-        title: "Internal Server Error",
+        title: "Not Implemented",
         type: "about:blank",
         extensions: {},
       });
       expect(privateServerError.message).toBe("protocols-trpc/filter-response");
+      expect(privateServerError.message).not.toContain("upstream token");
       expect(privateServerError.data).not.toHaveProperty("stack");
     } finally {
       await new Promise<void>((resolve, reject) => {
