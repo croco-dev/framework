@@ -75,7 +75,7 @@ Upstash Redis와 Lua 스크립트로 고정 윈도우 제한을 수행하는 저
 
 `Promise`\<[`RateLimitResult`](/api/ratelimit-core/src/type-aliases/ratelimitresult/)\>
 
-#### Inherited from
+#### Overrides
 
 [`FixedWindowStore`](/api/ratelimit-core/src/classes/fixedwindowstore/).[`checkFixedWindow`](/api/ratelimit-core/src/classes/fixedwindowstore/#checkfixedwindow)
 

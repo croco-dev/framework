@@ -1,4 +1,5 @@
 import type {
+  FixedWindowPolicy,
   RateLimitPolicy,
   RateLimitRefundReceipt,
   RateLimitRefundResult,
@@ -372,6 +373,10 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
       throw new InvalidRateLimitPolicyProblem("fixed window");
     }
 
+    return this.checkFixedWindow(key, policy);
+  }
+
+  async checkFixedWindow(key: string, policy: FixedWindowPolicy): Promise<RateLimitResult> {
     const now = Date.now();
     const windowStart = Math.floor(now / policy.windowMs) * policy.windowMs;
     const redisKey = clusteredRateLimitKey(this.prefix, key);
