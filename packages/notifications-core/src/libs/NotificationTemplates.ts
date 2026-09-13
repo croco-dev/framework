@@ -162,8 +162,14 @@ function validateTemplateVariables(
     }
   }
 
+  const optionalVariables = new Set(
+    Object.entries(schema?.properties ?? {})
+      .filter(([, definition]) => definition.required === false)
+      .map(([name]) => name),
+  );
+
   for (const name of extractTemplatePlaceholders(template)) {
-    if (variables[name] === undefined) {
+    if (variables[name] === undefined && !optionalVariables.has(name)) {
       issues.push(`${name} is required by template`);
     }
   }
@@ -211,7 +217,9 @@ function stringifyTemplateVariable(
 ): string {
   let stringValue: string;
 
-  if (typeof value === "string") {
+  if (value === undefined) {
+    stringValue = "";
+  } else if (typeof value === "string") {
     stringValue = value;
   } else if (typeof value === "number" || typeof value === "boolean") {
     stringValue = String(value);
