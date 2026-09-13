@@ -802,6 +802,10 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
   }
 
   private isClaimable(message: TransactionalOutboxMessage, now: Date): boolean {
+    if (message.attempts >= message.maxAttempts) {
+      return false;
+    }
+
     const visible = message.visibleAt.getTime() <= now.getTime();
     if (!visible) {
       return false;

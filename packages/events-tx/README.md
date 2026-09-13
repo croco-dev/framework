@@ -62,7 +62,7 @@ import { ShutdownManager } from "@croco/framework-context";
 ShutdownManager.getInstance().register(relay);
 ```
 
-When shutdown starts, the relay stops intake, forwards cancellation to the active publisher, and waits for a deterministic `drained` or `cancelled` outcome. A publisher that ignores cancellation may remain pending after the drain boundary; its claimed row retains the existing visibility-timeout recovery path.
+When shutdown starts, the relay stops intake, forwards cancellation to the active publisher, and waits for a deterministic `drained` or `cancelled` outcome. A publisher that ignores cancellation may remain pending after the drain boundary; its claimed row retains the visibility-timeout recovery path while publish attempts remain. If the interrupted claim used the final permitted attempt, follow the operator reconciliation path under Storage Adapters.
 
 ## Inbox Dedupe
 
@@ -114,7 +114,9 @@ Operators can reconcile interrupted work by listing `processing` records and com
 
 PostgreSQL outbox claims select and update a batch in one statement with `FOR UPDATE SKIP LOCKED`. Concurrent workers skip locked messages and claim other eligible aggregates. The store uses the supplied transaction client when present; claims in an explicit transaction hold their locks until that transaction ends.
 
-For each non-null `aggregateId`, only the first unfinished message in `(createdAt, id)` order can be claimed. A `pending`, `publishing`, or `retrying` predecessor blocks its successors even during a retry delay or an expired lease; the expired predecessor must be reclaimed first. Published, poisoned, and dead-lettered predecessors no longer block. Messages without an aggregate can be claimed independently, and eligible aggregates retain visibility-time priority.
+For each non-null `aggregateId`, only the first unfinished message in `(createdAt, id)` order can be claimed. A `pending`, `publishing`, or `retrying` predecessor blocks its successors even during a retry delay or an expired lease; an expired predecessor can be reclaimed only while `attempts < maxAttempts`. Published, poisoned, and dead-lettered predecessors no longer block. Messages without an aggregate can be claimed independently, and eligible aggregates retain visibility-time priority.
+
+When a worker is interrupted after claiming the final permitted attempt, the expired message remains `publishing` and is not claimed again. It also continues blocking later messages for the same aggregate. Operators must list expired `publishing` rows, confirm the final publisher's outcome, and complete the exact attempt with `markOutboxPublished` when delivery succeeded or `markOutboxFailed` when it failed; the failed completion moves the exhausted row to `poisoned`, after which it can be dead-lettered according to the application's incident policy.
 
 This orders persisted messages; it cannot infer a causal order for equal creation timestamps beyond the ID tie-breaker or for predecessors that have not committed yet. Producers must preserve their intended creation order and use IDs that preserve that order when timestamps tie. Lease recovery remains at-least-once: a worker that continues publishing after its lease expires can still deliver a duplicate, so consumers need inbox deduplication. MySQL is outside this PostgreSQL adapter's schema and query contract.
 
