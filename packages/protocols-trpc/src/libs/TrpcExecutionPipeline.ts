@@ -169,13 +169,23 @@ export function toTrpcError(error: unknown): TRPCError {
   });
 }
 
+const TRPC_FILTER_RESPONSE_PROBLEM_CODE = "protocols-trpc/filter-response";
+const SERVER_ERROR_STATUS_TITLES: ReadonlyMap<number, string> = new Map([
+  [501, "Not Implemented"],
+  [502, "Bad Gateway"],
+  [503, "Service Unavailable"],
+  [504, "Gateway Timeout"],
+]);
+
 async function toHandledProblem(result: unknown): Promise<Problem | undefined> {
-  if (isHttpFilterResponse(result)) {
-    return createTrpcFilterProblem(result.body, result.status);
+  if (!(result instanceof Response)) {
+    return isHttpFilterResponse(result)
+      ? createTrpcFilterProblem(result.body, result.status)
+      : undefined;
   }
 
-  if (!(result instanceof Response)) {
-    return undefined;
+  if (!hasJsonMediaType(result)) {
+    return toTextResponseProblem(result);
   }
 
   try {
@@ -185,6 +195,40 @@ async function toHandledProblem(result: unknown): Promise<Problem | undefined> {
   } catch {
     return undefined;
   }
+}
+
+async function toTextResponseProblem(response: Response): Promise<Problem | undefined> {
+  try {
+    const detail = (await response.clone().text()).trim();
+    const title = toTextResponseTitle(response, detail);
+
+    return createTrpcFilterProblem(
+      {
+        type: "about:blank",
+        title,
+        status: response.status,
+        code: TRPC_FILTER_RESPONSE_PROBLEM_CODE,
+        ...(detail && response.status < 500 ? { detail } : {}),
+      },
+      response.status,
+    );
+  } catch {
+    return undefined;
+  }
+}
+
+function toTextResponseTitle(response: Response, detail: string): string {
+  if (response.status < 500) {
+    return detail || response.statusText || "HTTP Error";
+  }
+
+  return SERVER_ERROR_STATUS_TITLES.get(response.status) ?? "Internal Server Error";
+}
+
+function hasJsonMediaType(response: Response): boolean {
+  const mediaType = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
+
+  return mediaType === "application/json" || mediaType?.endsWith("+json") === true;
 }
 
 function isHttpFilterResponse(
