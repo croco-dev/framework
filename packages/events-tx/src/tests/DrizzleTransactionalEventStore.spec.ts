@@ -35,6 +35,28 @@ describe("DrizzleTransactionalEventStore outbox claims", () => {
     expect(queries[0].params).toContain("retrying");
   });
 
+  it("filters exhausted messages before acquiring claim locks", async () => {
+    const queries: { sql: string; params: unknown[] }[] = [];
+    const db = drizzle(async (sql, params) => {
+      queries.push({ sql, params });
+      return { rows: [] };
+    });
+    const store = new DrizzleTransactionalEventStore({
+      db: db as unknown as DrizzleTransactionalEventStoreDb,
+    });
+
+    await store.claimOutboxBatch({
+      limit: 1,
+      now: new Date("2026-01-01T00:00:00.000Z"),
+      visibilityTimeoutMs: 1_000,
+    });
+
+    expect(queries).toHaveLength(1);
+    expect(queries[0].sql).toContain(
+      '"croco_outbox_messages"."attempts" < "croco_outbox_messages"."max_attempts"',
+    );
+  });
+
   it.each(["context", "transaction manager"] as const)(
     "uses the %s client for the entire claim",
     async (source) => {

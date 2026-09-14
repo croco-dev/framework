@@ -944,6 +944,31 @@ describe("TransactionalOutboxRelay", () => {
     expect((await fixture.store.listOutboxMessages())[0].status).toBe("published");
   });
 
+  it("does not reclaim an expired publishing message after exhausting its attempts", async () => {
+    const fixture = createOutboxFixture();
+    await appendMessage(fixture, { maxAttempts: 1 });
+    const [claimed] = await fixture.store.claimOutboxBatch({
+      limit: 1,
+      now: fixture.clock.now(),
+      visibilityTimeoutMs: 1_000,
+    });
+
+    expect(claimed).toMatchObject({ attempts: 1, maxAttempts: 1, status: "publishing" });
+
+    fixture.clock.advance(1_000);
+
+    await expect(
+      fixture.store.claimOutboxBatch({
+        limit: 1,
+        now: fixture.clock.now(),
+        visibilityTimeoutMs: 1_000,
+      }),
+    ).resolves.toEqual([]);
+    await expect(fixture.store.listOutboxMessages()).resolves.toMatchObject([
+      { attempts: 1, maxAttempts: 1, status: "publishing" },
+    ]);
+  });
+
   it("ignores stale completion from an expired claim after another relay wins", async () => {
     const fixture = createOutboxFixture();
     await appendMessage(fixture);
