@@ -22,6 +22,7 @@ export class TenantManager {
         tenantId,
       },
       fn,
+      { inheritScope: true },
     );
   }
 
@@ -64,6 +65,6 @@ export class TenantManager {
 
     const { tenantId: _tenantId, ...contextWithoutTenant } = currentContext;
 
-    return Context.run(contextWithoutTenant, fn);
+    return Context.run(contextWithoutTenant, fn, { inheritScope: true });
   }
 }

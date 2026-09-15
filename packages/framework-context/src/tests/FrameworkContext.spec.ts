@@ -269,6 +269,33 @@ describe("Context", () => {
     });
   });
 
+  it("should inherit the parent request scope when explicitly requested", async () => {
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValueOnce(1_000).mockReturnValue(2_000);
+
+    try {
+      await Context.run({ requestId: "outer" }, async () => {
+        const parentCache = Context.getCache();
+        const parentCreatedAt = Context.getCreatedAt();
+
+        expect(parentCreatedAt).toBe(1_000);
+        parentCache?.set("shared", "value");
+
+        await Context.run(
+          { requestId: "inner" },
+          async () => {
+            expect(Context.getRequestId()).toBe("inner");
+            expect(Context.getCache()).toBe(parentCache);
+            expect(Context.getCache()?.get("shared")).toBe("value");
+            expect(Context.getCreatedAt()).toBe(parentCreatedAt);
+          },
+          { inheritScope: true },
+        );
+      });
+    } finally {
+      nowSpy.mockRestore();
+    }
+  });
+
   it("should provide createdAt timestamp", async () => {
     const ctx = { requestId: "timestamp-test" };
     const before = Date.now();

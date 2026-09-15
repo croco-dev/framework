@@ -15,6 +15,10 @@ interface ContextData {
   scopedCache: Map<string | Constructor, unknown>;
 }
 
+export type ContextRunOptions = {
+  readonly inheritScope?: boolean;
+};
+
 const contextStorage = new AsyncLocalStorage<ContextData>();
 
 /**
@@ -23,11 +27,20 @@ const contextStorage = new AsyncLocalStorage<ContextData>();
 export class Context {
   private static readonly STORAGE = contextStorage;
 
-  static run<T>(context: RequestContext, fn: () => Promise<T> | T): Promise<T> | T {
+  /**
+   * Runs a callback with the provided request context.
+   * Nested runs create a fresh request scope unless `inheritScope` is enabled.
+   */
+  static run<T>(
+    context: RequestContext,
+    fn: () => Promise<T> | T,
+    options: ContextRunOptions = {},
+  ): Promise<T> | T {
+    const parentData = options.inheritScope ? Context.STORAGE.getStore() : undefined;
     const data: ContextData = {
       context,
-      createdAt: Date.now(),
-      scopedCache: new Map(),
+      createdAt: parentData?.createdAt ?? Date.now(),
+      scopedCache: parentData?.scopedCache ?? new Map(),
     };
     return Context.STORAGE.run(data, fn);
   }

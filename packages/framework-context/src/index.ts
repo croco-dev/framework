@@ -106,6 +106,13 @@ export { ContainerInstance } from "typedi";
 export { Context } from "./libs/Context";
 
 /**
+ * 중첩 컨텍스트 실행 시 부모 요청 scope 상속 여부를 설정합니다.
+ *
+ * @property inheritScope - `true`이면 활성 부모의 요청 시작 시각과 scoped cache를 공유합니다. 기본값은 `false`입니다.
+ */
+export type { ContextRunOptions } from "./libs/Context";
+
+/**
  * 현재 실행 중인 트랜잭션 컨텍스트를 식별하는 DI 토큰입니다.
  *
  * @example

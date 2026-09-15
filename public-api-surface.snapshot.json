@@ -13169,6 +13169,12 @@
               "compatibilityGroup": "di"
             },
             {
+              "name": "ContextRunOptions",
+              "exportKind": "named",
+              "source": "./libs/Context",
+              "compatibilityGroup": "context"
+            },
+            {
               "name": "DefinePolicyOptions",
               "exportKind": "named",
               "source": "./libs/RuntimePolicy",

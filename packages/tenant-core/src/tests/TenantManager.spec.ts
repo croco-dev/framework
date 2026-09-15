@@ -1,4 +1,4 @@
-import { Context } from "@croco/framework-context";
+import { Component, Container, Context } from "@croco/framework-context";
 import * as telemetry from "@croco/telemetry-api";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { TenantRequiredProblem } from "../libs/problems/TenantRequiredProblem";
@@ -8,6 +8,7 @@ describe("TenantManager", () => {
   let manager!: TenantManager;
 
   beforeEach(() => {
+    Container.reset();
     manager = new TenantManager();
   });
 
@@ -154,6 +155,66 @@ describe("TenantManager", () => {
           expect(Context.getTenantId()).toBe("outer");
         },
       );
+    });
+
+    it("should preserve the parent request scope while overriding tenant", async () => {
+      class RequestService {
+        readonly id = Math.random();
+      }
+
+      Component({ scope: "request" })(RequestService);
+      const nowSpy = vi.spyOn(Date, "now").mockReturnValueOnce(1_000).mockReturnValue(2_000);
+
+      try {
+        await Context.run({ requestId: "req-scope", tenantId: "outer" }, async () => {
+          const parentCache = Context.getCache();
+          const parentCreatedAt = Context.getCreatedAt();
+          const parentService = Container.get(RequestService);
+
+          expect(parentCreatedAt).toBe(1_000);
+          parentCache?.set("batch-loader", "cached");
+
+          await manager.run("inner", async () => {
+            expect(Context.getTenantId()).toBe("inner");
+            expect(Context.getCache()).toBe(parentCache);
+            expect(Context.getCache()?.get("batch-loader")).toBe("cached");
+            expect(Context.getCreatedAt()).toBe(parentCreatedAt);
+            expect(Container.get(RequestService)).toBe(parentService);
+          });
+        });
+      } finally {
+        nowSpy.mockRestore();
+      }
+    });
+
+    it("should preserve the parent request scope while suspending tenant context", async () => {
+      class RequestService {
+        readonly id = Math.random();
+      }
+
+      Component({ scope: "request" })(RequestService);
+      const nowSpy = vi.spyOn(Date, "now").mockReturnValueOnce(1_000).mockReturnValue(2_000);
+
+      try {
+        await Context.run({ requestId: "req-suspend", tenantId: "outer" }, async () => {
+          const parentCache = Context.getCache();
+          const parentCreatedAt = Context.getCreatedAt();
+          const parentService = Container.get(RequestService);
+
+          expect(parentCreatedAt).toBe(1_000);
+          parentCache?.set("batch-loader", "cached");
+
+          await manager.suspend(async () => {
+            expect(Context.getTenantId()).toBeNull();
+            expect(Context.getCache()).toBe(parentCache);
+            expect(Context.getCache()?.get("batch-loader")).toBe("cached");
+            expect(Context.getCreatedAt()).toBe(parentCreatedAt);
+            expect(Container.get(RequestService)).toBe(parentService);
+          });
+        });
+      } finally {
+        nowSpy.mockRestore();
+      }
     });
   });
 });
