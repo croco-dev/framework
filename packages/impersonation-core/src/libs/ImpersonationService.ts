@@ -20,6 +20,7 @@ import {
 } from "./interfaces";
 import type { ImpersonationPrincipal } from "./interfaces";
 import {
+  ImpersonationEventIntentConflictProblem,
   ImpersonationIdentityConflictProblem,
   type ImpersonationLifecyclePublicationStage,
   ImpersonationLifecyclePublicationProblem,
@@ -50,6 +51,16 @@ export type ImpersonationLifecycleDiagnostics = {
   readonly pendingEvents: readonly ImpersonationLifecycleDiagnostic[];
   readonly status: "healthy" | "reconciliation_required";
 };
+
+class ImpersonationPublicationStatusConfirmationError extends Error {
+  readonly errors: readonly unknown[];
+
+  constructor(errors: readonly unknown[]) {
+    super("Lifecycle publication failure includes status-confirmation failure evidence");
+    this.name = "ImpersonationPublicationStatusConfirmationError";
+    this.errors = errors;
+  }
+}
 
 function resolveExpiration(now: Date, maxDurationMs: number): Date {
   const expiresAt = new Date(now.getTime() + maxDurationMs);
@@ -134,26 +145,64 @@ export class ImpersonationService {
 
   async end(context: RequestContext, sessionId: string): Promise<void> {
     const principal = await this.resolveManager(context);
-    const session = await this.store.find(sessionId);
-    if (!session) {
-      throw new ImpersonationSessionNotFoundProblem(sessionId);
+    let intent = await this.store.findCommittedEndIntent(sessionId);
+    if (!intent) {
+      const session = await this.store.find(sessionId);
+      if (!session) {
+        intent = await this.store.findCommittedEndIntent(sessionId);
+        if (!intent) {
+          throw new ImpersonationSessionNotFoundProblem(sessionId);
+        }
+      } else {
+        intent = createImpersonationEndedEventIntent(session, new Date());
+      }
     }
-    const intent = createImpersonationEndedEventIntent(session, new Date());
-    const result = await this.store.commitEnd(intent, principal.id);
+
+    let result = await this.store.commitEnd(intent, principal.id);
+    if (result === "session-not-found") {
+      const concurrentlyCommittedIntent = await this.store.findCommittedEndIntent(sessionId);
+      if (concurrentlyCommittedIntent) {
+        intent = concurrentlyCommittedIntent;
+        result = await this.store.commitEnd(intent, principal.id);
+      }
+    }
     if (result === "session-not-found") {
       throw new ImpersonationSessionNotFoundProblem(sessionId);
     }
     if (result === "actor-mismatch") {
       throw new ImpersonationSessionActorMismatchProblem();
     }
+    if (result === "already-published") return;
+    const committedIntent = await this.store.findCommittedEndIntent(sessionId);
+    if (!committedIntent) {
+      throw new ImpersonationEventIntentConflictProblem(intent.eventId);
+    }
     if (result === "committed-start-pending") {
       throw this.publicationProblem(
-        intent,
+        committedIntent,
         "predecessor",
         new Error("Started lifecycle event must be published before the ended event"),
       );
     }
-    await this.publishEventIntent(intent);
+    try {
+      await this.publishEventIntent(committedIntent);
+    } catch (error) {
+      if (!(error instanceof ImpersonationLifecyclePublicationProblem)) throw error;
+      try {
+        if ((await this.store.commitEnd(committedIntent, principal.id)) === "already-published") {
+          return;
+        }
+      } catch (confirmationError) {
+        throw new ImpersonationLifecyclePublicationProblem(
+          error.sessionId,
+          error.eventId,
+          error.lifecycle,
+          error.stage,
+          new ImpersonationPublicationStatusConfirmationError([error.cause, confirmationError]),
+        );
+      }
+      throw error;
+    }
   }
 
   async publishPendingEvents(limit = 100): Promise<number> {

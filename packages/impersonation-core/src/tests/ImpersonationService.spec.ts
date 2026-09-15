@@ -51,6 +51,12 @@ class MockImpersonationStore extends InMemoryImpersonationStore {
   commitStartCount = 0;
   commitEndAttemptCount = 0;
   commitEndCount = 0;
+  findCommittedEndIntentCount = 0;
+  afterFindCommittedEndIntent:
+    | ((intent: ImpersonationEndedEventIntent | null, attempt: number) => Promise<void> | void)
+    | undefined;
+  commitEndFailureAtAttempt: number | undefined;
+  commitEndFailure: Error | undefined;
 
   override async commitStart(intent: ImpersonationStartedEventIntent) {
     this.commitStartCount += 1;
@@ -59,11 +65,21 @@ class MockImpersonationStore extends InMemoryImpersonationStore {
 
   override async commitEnd(intent: ImpersonationEndedEventIntent, impersonatorId: string) {
     this.commitEndAttemptCount += 1;
+    if (this.commitEndAttemptCount === this.commitEndFailureAtAttempt && this.commitEndFailure) {
+      throw this.commitEndFailure;
+    }
     const result = await super.commitEnd(intent, impersonatorId);
     if (result === "committed" || result === "committed-start-pending") {
       this.commitEndCount += 1;
     }
     return result;
+  }
+
+  override async findCommittedEndIntent(sessionId: string) {
+    const intent = await super.findCommittedEndIntent(sessionId);
+    this.findCommittedEndIntentCount += 1;
+    await this.afterFindCommittedEndIntent?.(intent, this.findCommittedEndIntentCount);
+    return intent;
   }
 }
 
@@ -691,9 +707,10 @@ describe("ImpersonationService", () => {
       await expectNoEndSideEffects(session.sessionId);
     });
 
-    it("revokes once and publishes for the authenticated impersonator", async () => {
+    it("revokes once and lets the authenticated impersonator repeat the end request", async () => {
       const session = await startSession();
 
+      await service.end(context("admin-1"), session.sessionId);
       await service.end(context("admin-1"), session.sessionId);
 
       expect(store.commitEndCount).toBe(1);
@@ -701,6 +718,21 @@ describe("ImpersonationService", () => {
       expect(eventPublisher.events).toHaveLength(1);
       expect(eventPublisher.events[0]).toBeInstanceOf(ImpersonationEndedEvent);
       expect((eventPublisher.events[0] as ImpersonationEndedEvent).session).toEqual(session);
+    });
+
+    it("rejects a different privileged actor after an end has committed", async () => {
+      const session = await startSession();
+      await service.end(context("admin-1"), session.sessionId);
+      authProvider.principal = {
+        id: "admin-2",
+        permissions: ["impersonation:manage"],
+      };
+
+      await expect(service.end(context("admin-2"), session.sessionId)).rejects.toMatchObject({
+        code: "IMPERSONATION_SESSION_ACTOR_MISMATCH",
+      });
+
+      expect(eventPublisher.events).toHaveLength(1);
     });
 
     it("revokes and publishes once when authorized endings race", async () => {
@@ -711,13 +743,82 @@ describe("ImpersonationService", () => {
         service.end(context("admin-1"), session.sessionId),
       ]);
 
-      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
-      expect(results.filter((result) => result.status === "rejected")).toEqual([
-        expect.objectContaining({
-          reason: expect.objectContaining({ code: "IMPERSONATION_SESSION_NOT_FOUND" }),
-        }),
-      ]);
+      expect(results.every((result) => result.status === "fulfilled")).toBe(true);
       expect(store.commitEndAttemptCount).toBe(2);
+      expect(store.commitEndCount).toBe(2);
+      expect(await store.find(session.sessionId)).toBeNull();
+      expect(eventPublisher.events).toHaveLength(1);
+      expect(eventPublisher.events[0]).toBeInstanceOf(ImpersonationEndedEvent);
+    });
+
+    it("does not republish an acknowledged end when a duplicate request arrives", async () => {
+      const session = await startSession();
+      await service.end(context("admin-1"), session.sessionId);
+      const attemptCount = eventPublisher.attempts.length;
+      eventPublisher.nextFailure = new Error("publisher unavailable");
+
+      await expect(service.end(context("admin-1"), session.sessionId)).resolves.toBeUndefined();
+
+      expect(eventPublisher.attempts).toHaveLength(attemptCount);
+      await expect(service.getLifecycleDiagnostics()).resolves.toEqual({
+        pendingEvents: [],
+        status: "healthy",
+      });
+      await expect(service.publishPendingEvents()).resolves.toBe(0);
+    });
+
+    it("accepts a concurrent acknowledgement after its publication status was read", async () => {
+      const session = await startSession();
+      store.afterFindCommittedEndIntent = async (_intent, attempt) => {
+        if (attempt !== 2) return;
+        store.afterFindCommittedEndIntent = undefined;
+        await service.end(context("admin-1"), session.sessionId);
+        eventPublisher.nextFailure = new Error("publisher unavailable");
+      };
+
+      await expect(service.end(context("admin-1"), session.sessionId)).resolves.toBeUndefined();
+
+      expect(eventPublisher.events).toHaveLength(1);
+      await expect(service.getLifecycleDiagnostics()).resolves.toEqual({
+        pendingEvents: [],
+        status: "healthy",
+      });
+      await expect(service.publishPendingEvents()).resolves.toBe(0);
+    });
+
+    it("preserves publication diagnostics when completion confirmation also fails", async () => {
+      const session = await startSession();
+      const publicationFailure = new Error("publisher unavailable");
+      const confirmationFailure = new Error("status read unavailable");
+      eventPublisher.nextFailure = publicationFailure;
+      store.commitEndFailureAtAttempt = 2;
+      store.commitEndFailure = confirmationFailure;
+
+      await expect(service.end(context("admin-1"), session.sessionId)).rejects.toMatchObject({
+        cause: {
+          errors: [publicationFailure, confirmationFailure],
+          name: "ImpersonationPublicationStatusConfirmationError",
+        },
+        code: "IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING",
+        eventId: `impersonation.session.ended:${session.sessionId}`,
+        lifecycle: "ended",
+        reconciliationState: "pending",
+        sessionId: session.sessionId,
+        stage: "publish",
+      });
+      await expect(store.listPendingLifecycleEventIntents()).resolves.toHaveLength(1);
+    });
+
+    it("joins an end committed between the terminal and active session reads", async () => {
+      const session = await startSession();
+      store.afterFindCommittedEndIntent = async (_intent, attempt) => {
+        if (attempt !== 1) return;
+        store.afterFindCommittedEndIntent = undefined;
+        await service.end(context("admin-1"), session.sessionId);
+      };
+
+      await expect(service.end(context("admin-1"), session.sessionId)).resolves.toBeUndefined();
+
       expect(store.commitEndCount).toBe(1);
       expect(await store.find(session.sessionId)).toBeNull();
       expect(eventPublisher.events).toHaveLength(1);
@@ -743,7 +844,7 @@ describe("ImpersonationService", () => {
       expect(pending).toHaveLength(1);
       expect(pending[0]).toMatchObject({ kind: "ended", session });
 
-      await expect(service.publishPendingEvents()).resolves.toBe(1);
+      await expect(service.end(context("admin-1"), session.sessionId)).resolves.toBeUndefined();
       expect(eventPublisher.events).toHaveLength(1);
       expect(eventPublisher.events[0]).toBeInstanceOf(ImpersonationEndedEvent);
       expect(eventPublisher.events[0]?.eventId).toBe(pending[0]?.eventId);
@@ -773,6 +874,14 @@ describe("ImpersonationService", () => {
         { kind: "ended", session: { sessionId: active?.sessionId } },
       ]);
 
+      await expect(
+        service.end(context("admin-1"), active?.sessionId ?? "missing-session"),
+      ).rejects.toMatchObject({
+        code: "IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING",
+        lifecycle: "ended",
+        stage: "predecessor",
+      });
+
       await expect(service.publishPendingEvents()).resolves.toBe(2);
 
       expect(eventPublisher.events.map((event) => event.eventName)).toEqual([
@@ -781,6 +890,14 @@ describe("ImpersonationService", () => {
       ]);
       expect(new Set(eventPublisher.events.map((event) => event.eventId)).size).toBe(2);
       await expect(store.listPendingLifecycleEventIntents()).resolves.toEqual([]);
+
+      await expect(
+        service.end(context("admin-1"), active?.sessionId ?? "missing-session"),
+      ).resolves.toBeUndefined();
+      expect(eventPublisher.events.map((event) => event.eventName)).toEqual([
+        "impersonation.session.started",
+        "impersonation.session.ended",
+      ]);
     });
 
     it("rejects a missing session", async () => {
@@ -823,7 +940,7 @@ describe("ImpersonationService", () => {
       }
     });
 
-    it("commits only one concurrent end and retains one intent", async () => {
+    it("commits concurrent end retries to the same intent", async () => {
       vi.useFakeTimers();
       try {
         vi.setSystemTime(new Date("2026-08-28T00:30:00.000Z"));
@@ -842,8 +959,9 @@ describe("ImpersonationService", () => {
           store.commitEnd(ended, active.impersonatorId),
         ]);
 
-        expect(results.sort()).toEqual(["committed", "session-not-found"]);
+        expect(results).toEqual(["committed", "committed"]);
         await expect(store.find(active.sessionId)).resolves.toBeNull();
+        await expect(store.findCommittedEndIntent(active.sessionId)).resolves.toEqual(ended);
         await expect(store.listPendingLifecycleEventIntents()).resolves.toEqual([ended]);
       } finally {
         vi.useRealTimers();

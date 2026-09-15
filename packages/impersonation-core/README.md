@@ -35,8 +35,9 @@ const impersonatorId = service.getImpersonator(context);
 const targetUserId = service.getTargetUser(context);
 ```
 
-`start()` 또는 `end()`에서 lifecycle event 발행이 실패하면 세션 변경은 이미 커밋된 상태입니다. 원래 요청을
-다시 실행하지 말고, 요청 처리와 분리된 reconciliation worker에서 저장된 intent를 재시도합니다.
+`start()` 또는 `end()`에서 lifecycle event 발행이 실패하면 세션 변경은 이미 커밋된 상태입니다. 실패한 `start()`를
+다시 실행하지 말고, 요청 처리와 분리된 reconciliation worker에서 저장된 intent를 재시도합니다. 원래 actor가 같은
+세션 ID로 `end()`를 다시 호출하면 저장소에 보존된 종료 intent에 멱등하게 합류합니다.
 
 ```typescript
 async function reconcilePendingLifecycleEvents(): Promise<void> {
@@ -166,7 +167,10 @@ actor별 세션과 시작 event intent를 원자적으로 저장합니다. 같�
 `end`도 같은 principal과 전역 `impersonation:manage` 권한을 검증하며, 세션을 시작한 원래 impersonator만 종료할 수
 있습니다. 인증, 권한, 요청 identity 또는 세션 actor 검증이 실패하면 세션은 유지되고 종료 이벤트도 발행되지 않습니다.
 `ImpersonationStore.commitEnd(intent, impersonatorId)` 구현은 actor 검증, 세션 제거, 종료 event intent 저장을 하나의
-원자적 연산으로 수행하고 단일 호출자에게만 `committed` 결과를 반환해야 합니다.
+원자적 연산으로 수행해야 합니다. 이미 커밋된 종료 요청은 원래 종료 intent를 유지한 채 현재 발행 상태를 반환하며,
+`findCommittedEndIntent(sessionId)`는 발행 acknowledgement 이후에도 같은 intent를 반환해야 합니다. 따라서 원래 actor의
+동시 또는 후속 `end()` 호출은 같은 종료 이벤트에 합류하고, 다른 actor는 계속 거부됩니다. 종료 이벤트까지 acknowledgement된
+후속 요청에는 `already-published`를 반환해 완료된 이벤트를 다시 발행하지 않아야 합니다.
 
 세션 시작과 종료는 각각 lifecycle event intent와 하나의 원자적 저장소 전환으로 커밋됩니다. 발행 또는 acknowledgement가
 실패하면 `IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING` Problem이 `sessionId`, `eventId`, lifecycle, 실패 단계와
@@ -177,7 +181,7 @@ actor별 세션과 시작 event intent를 원자적으로 저장합니다. 같�
 
 `getLifecycleDiagnostics()`는 pending intent가 있으면 `reconciliation_required`, 없으면 `healthy`를 반환합니다.
 커스텀 `ImpersonationStore`는 `commitStart()`와 `commitEnd()`에서 세션 상태와 intent를 반드시 원자적으로 저장하고,
-세션 ID를 재사용하지 않으며, pending intent 조회와 idempotent acknowledgement를 구현해야 합니다.
+세션 ID를 재사용하지 않으며, 종료 intent 보존과 pending intent 조회 및 idempotent acknowledgement를 구현해야 합니다.
 
 ### ImpersonationConfig
 

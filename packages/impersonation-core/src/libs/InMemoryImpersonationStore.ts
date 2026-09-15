@@ -24,6 +24,7 @@ export class InMemoryImpersonationStore extends ImpersonationStore {
   private readonly sessions = new Map<string, ImpersonationState>();
   private readonly activeSessionsByImpersonator = new Map<string, ImpersonationState>();
   private readonly eventIntents = new Map<string, ImpersonationLifecycleEventIntent>();
+  private readonly committedEndIntents = new Map<string, ImpersonationEndedEventIntent>();
   private readonly seenSessionIds = new Set<string>();
   private readonly now: Clock;
 
@@ -61,22 +62,36 @@ export class InMemoryImpersonationStore extends ImpersonationStore {
   async commitEnd(
     intent: ImpersonationEndedEventIntent,
     impersonatorId: string,
-  ): Promise<"actor-mismatch" | "committed" | "committed-start-pending" | "session-not-found"> {
+  ): Promise<
+    | "actor-mismatch"
+    | "already-published"
+    | "committed"
+    | "committed-start-pending"
+    | "session-not-found"
+  > {
+    const committedIntent = this.committedEndIntents.get(intent.session.sessionId);
+    if (committedIntent) {
+      if (committedIntent.session.impersonatorId !== impersonatorId) return "actor-mismatch";
+      this.assertMatchingEndIntent(committedIntent.session, intent);
+      if (this.hasPendingStart(intent.session.sessionId)) return "committed-start-pending";
+      return this.eventIntents.has(committedIntent.eventId) ? "committed" : "already-published";
+    }
+
     const session = this.findActive(intent.session.sessionId);
     if (!session) return "session-not-found";
     if (session.impersonatorId !== impersonatorId) return "actor-mismatch";
-    if (
-      intent.eventId !== `impersonation.session.ended:${intent.session.sessionId}` ||
-      !sameSession(session, intent.session)
-    ) {
-      throw new ImpersonationEventIntentConflictProblem(intent.eventId);
-    }
+    this.assertMatchingEndIntent(session, intent);
 
     this.deleteSession(session);
-    this.eventIntents.set(intent.eventId, cloneImpersonationLifecycleEventIntent(intent));
-    return this.eventIntents.has(`impersonation.session.started:${intent.session.sessionId}`)
-      ? "committed-start-pending"
-      : "committed";
+    const storedIntent = cloneEndedEventIntent(intent);
+    this.committedEndIntents.set(session.sessionId, storedIntent);
+    this.eventIntents.set(intent.eventId, cloneImpersonationLifecycleEventIntent(storedIntent));
+    return this.hasPendingStart(session.sessionId) ? "committed-start-pending" : "committed";
+  }
+
+  async findCommittedEndIntent(sessionId: string): Promise<ImpersonationEndedEventIntent | null> {
+    const intent = this.committedEndIntents.get(sessionId);
+    return intent ? cloneEndedEventIntent(intent) : null;
   }
 
   async find(sessionId: string): Promise<ImpersonationState | null> {
@@ -131,6 +146,22 @@ export class InMemoryImpersonationStore extends ImpersonationStore {
     return session.expiresAt.getTime() <= now;
   }
 
+  private assertMatchingEndIntent(
+    session: ImpersonationState,
+    intent: ImpersonationEndedEventIntent,
+  ): void {
+    if (
+      intent.eventId !== `impersonation.session.ended:${intent.session.sessionId}` ||
+      !sameSession(session, intent.session)
+    ) {
+      throw new ImpersonationEventIntentConflictProblem(intent.eventId);
+    }
+  }
+
+  private hasPendingStart(sessionId: string): boolean {
+    return this.eventIntents.has(`impersonation.session.started:${sessionId}`);
+  }
+
   private deleteSession(session: ImpersonationState): void {
     this.sessions.delete(session.sessionId);
     const active = this.activeSessionsByImpersonator.get(session.impersonatorId);
@@ -168,4 +199,14 @@ function sameSession(left: ImpersonationState, right: ImpersonationState): boole
     left.startedAt.getTime() === right.startedAt.getTime() &&
     left.expiresAt.getTime() === right.expiresAt.getTime()
   );
+}
+
+function cloneEndedEventIntent(
+  intent: ImpersonationEndedEventIntent,
+): ImpersonationEndedEventIntent {
+  return {
+    ...intent,
+    occurredAt: new Date(intent.occurredAt),
+    session: cloneImpersonationState(intent.session),
+  };
 }

@@ -7227,7 +7227,7 @@ Sources:
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
 - Cause: The impersonation session mutation committed, but its lifecycle event remains pending at the reported publish, acknowledge, or predecessor stage.
-- User action: Do not repeat the original session mutation; ask the service operator to reconcile the pending lifecycle event.
+- User action: Do not repeat a failed start request. An end request may be retried with the same session and authenticated actor; ask the service operator to reconcile the pending lifecycle event if it remains pending.
 - Operator action: Inspect the Problem reconciliationState and stage, call getLifecycleDiagnostics() to confirm reconciliation_required, then call publishPendingEvents() to replay and acknowledge the stored intent.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
