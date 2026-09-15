@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   createTransactionalOutboxStoreContractSuite,
   InMemoryTransactionalOutboxStore,
+  OUTBOX_DISPATCH_PROBLEM_CODE,
   OutboxDispatchProblem,
   OutboxUnitOfWorkContextProblem,
 } from "../index";
@@ -86,6 +87,85 @@ describe("TransactionalOutboxStore contract", () => {
       dispatcherId: "dispatcher-a",
       claimedAt: new Date("2026-01-01T00:00:00.000Z"),
       expiresAt: new Date("2026-01-01T00:00:01.000Z"),
+    });
+  });
+
+  it("terminally fails an expired claim after its retry budget is exhausted", async () => {
+    const store = new InMemoryTransactionalOutboxStore();
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    await store.record(createIntent("expired-exhausted-claim"), {
+      id: "expired-exhausted-claim",
+      now,
+      retry: { maxAttempts: 1 },
+    });
+
+    await store.claimBatch({
+      limit: 1,
+      now,
+      visibilityTimeoutMs: 1_000,
+    });
+
+    await expect(
+      store.claimBatch({
+        limit: 1,
+        now: new Date("2026-01-01T00:00:01.000Z"),
+        visibilityTimeoutMs: 1_000,
+      }),
+    ).resolves.toEqual([]);
+    await expect(store.findRecord("expired-exhausted-claim")).resolves.toMatchObject({
+      status: "failed",
+      retry: {
+        attempt: 1,
+        maxAttempts: 1,
+        terminal: true,
+      },
+      claim: undefined,
+      failure: {
+        problem: {
+          code: OUTBOX_DISPATCH_PROBLEM_CODE,
+          outboxAttempt: 1,
+          outboxMaxAttempts: 1,
+          outboxTerminal: true,
+        },
+        retry: {
+          attempt: 1,
+          maxAttempts: 1,
+          terminal: true,
+        },
+      },
+    });
+  });
+
+  it("claims healthy work after terminally failing an older expired claim", async () => {
+    const store = new InMemoryTransactionalOutboxStore();
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    await store.record(createIntent("expired-exhausted-claim"), {
+      id: "expired-exhausted-claim",
+      now,
+      retry: { maxAttempts: 1 },
+    });
+    await store.record(createIntent("healthy-pending-claim"), {
+      id: "healthy-pending-claim",
+      now,
+    });
+
+    const [first] = await store.claimBatch({
+      limit: 1,
+      now,
+      visibilityTimeoutMs: 1_000,
+    });
+    expect(first.id).toBe("expired-exhausted-claim");
+
+    const [next] = await store.claimBatch({
+      limit: 1,
+      now: new Date("2026-01-01T00:00:01.000Z"),
+      visibilityTimeoutMs: 1_000,
+    });
+
+    expect(next.id).toBe("healthy-pending-claim");
+    await expect(store.findRecord("expired-exhausted-claim")).resolves.toMatchObject({
+      status: "failed",
+      retry: { attempt: 1, terminal: true },
     });
   });
 

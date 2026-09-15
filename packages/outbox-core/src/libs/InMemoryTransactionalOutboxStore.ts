@@ -3,6 +3,7 @@ import type { Problem } from "@croco/problems-core";
 import { assertValidClaimBatchOptions } from "./claimValidation";
 import {
   createOutboxFailureProblemExtensions,
+  OutboxDispatchProblem,
   OutboxFailureMetadataProblem,
   OutboxRecordIdConflictProblem,
   OutboxUnitOfWorkContextProblem,
@@ -353,6 +354,8 @@ export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStor
     state: InMemoryTransactionalOutboxStoreState,
     options: ClaimBatchOptions<InMemoryTransactionalOutboxStoreClient>,
   ): ClaimedOutboxRecord[] {
+    this.failExpiredExhaustedClaims(state, options);
+
     const limit = Math.max(0, options.limit);
     const ready = [...state.records.values()]
       .filter((record) => this.isClaimable(record, options))
@@ -388,6 +391,40 @@ export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStor
       state.records.set(claimed.id, cloneOutboxRecord(claimed));
       return cloneOutboxRecord(claimed) as ClaimedOutboxRecord;
     });
+  }
+
+  private failExpiredExhaustedClaims(
+    state: InMemoryTransactionalOutboxStoreState,
+    options: ClaimBatchOptions<InMemoryTransactionalOutboxStoreClient>,
+  ): void {
+    for (const record of state.records.values()) {
+      if (
+        record.status !== "claimed" ||
+        !record.claim ||
+        record.claim.expiresAt.getTime() > options.now.getTime() ||
+        (options.tenant && tenantKey(record.tenant) !== tenantKey(options.tenant)) ||
+        (!record.retry.terminal && record.retry.attempt < record.retry.maxAttempts)
+      ) {
+        continue;
+      }
+
+      const failure: OutboxFailureMetadata = {
+        retryable: record.retry.retryable,
+        terminal: true,
+        attempt: record.retry.attempt,
+        maxAttempts: record.retry.maxAttempts,
+        failedAt: new Date(options.now.getTime()),
+      };
+      this.markFailedInState(
+        state,
+        record.id,
+        new OutboxDispatchProblem({
+          detail: "Outbox claim lease expired after retry budget exhaustion.",
+          failure,
+        }),
+        failure,
+      );
+    }
   }
 
   private markDispatchedInState(
@@ -491,6 +528,10 @@ export class InMemoryTransactionalOutboxStore implements TransactionalOutboxStor
     }
 
     if (record.status === "dispatched" || record.status === "failed") {
+      return false;
+    }
+
+    if (record.retry.terminal || record.retry.attempt >= record.retry.maxAttempts) {
       return false;
     }
 
