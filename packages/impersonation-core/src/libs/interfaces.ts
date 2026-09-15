@@ -27,12 +27,22 @@ export abstract class ImpersonationStore {
   ): Promise<"committed" | "impersonator-active">;
   /**
    * Atomically revokes the active session and persists its pending ended-event intent.
-   * Returns `committed-start-pending` when the started-event intent still requires publication.
+   * Repeated commits for the same session and actor must retain the first canonical intent and
+   * return its current publication status. Returns `committed-start-pending` when the started-event
+   * intent still requires publication and `already-published` after the ended event is acknowledged.
    */
   abstract commitEnd(
     intent: ImpersonationEndedEventIntent,
     impersonatorId: string,
-  ): Promise<"actor-mismatch" | "committed" | "committed-start-pending" | "session-not-found">;
+  ): Promise<
+    | "actor-mismatch"
+    | "already-published"
+    | "committed"
+    | "committed-start-pending"
+    | "session-not-found"
+  >;
+  /** Returns the canonical committed end intent, including after publication acknowledgement. */
+  abstract findCommittedEndIntent(sessionId: string): Promise<ImpersonationEndedEventIntent | null>;
   abstract find(sessionId: string): Promise<ImpersonationState | null>;
   abstract findByImpersonator(impersonatorId: string): Promise<ImpersonationState | null>;
   /** Lists oldest intents first and preserves started-before-ended ordering for each session. */

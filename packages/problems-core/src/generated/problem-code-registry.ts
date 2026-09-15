@@ -11184,7 +11184,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         cause:
           "The impersonation session mutation committed, but its lifecycle event remains pending at the reported publish, acknowledge, or predecessor stage.",
         userAction:
-          "Do not repeat the original session mutation; ask the service operator to reconcile the pending lifecycle event.",
+          "Do not repeat a failed start request. An end request may be retried with the same session and authenticated actor; ask the service operator to reconcile the pending lifecycle event if it remains pending.",
         operatorAction:
           "Inspect the Problem reconciliationState and stage, call getLifecycleDiagnostics() to confirm reconciliation_required, then call publishPendingEvents() to replay and acknowledge the stored intent.",
         retryability: "conditional",

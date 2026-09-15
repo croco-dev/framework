@@ -29,10 +29,12 @@ title: "ImpersonationStore"
 
 ### commitEnd()
 
-> `abstract` **commitEnd**(`intent`, `impersonatorId`): `Promise`\<`"committed"` \| `"actor-mismatch"` \| `"committed-start-pending"` \| `"session-not-found"`\>
+> `abstract` **commitEnd**(`intent`, `impersonatorId`): `Promise`\<`"committed"` \| `"actor-mismatch"` \| `"already-published"` \| `"committed-start-pending"` \| `"session-not-found"`\>
 
 Atomically revokes the active session and persists its pending ended-event intent.
-Returns `committed-start-pending` when the started-event intent still requires publication.
+Repeated commits for the same session and actor must retain the first canonical intent and
+return its current publication status. Returns `committed-start-pending` when the started-event
+intent still requires publication and `already-published` after the ended event is acknowledged.
 
 #### Parameters
 
@@ -46,7 +48,7 @@ Returns `committed-start-pending` when the started-event intent still requires p
 
 #### Returns
 
-`Promise`\<`"committed"` \| `"actor-mismatch"` \| `"committed-start-pending"` \| `"session-not-found"`\>
+`Promise`\<`"committed"` \| `"actor-mismatch"` \| `"already-published"` \| `"committed-start-pending"` \| `"session-not-found"`\>
 
 ---
 
@@ -100,6 +102,24 @@ expired actor claim in the same operation.
 #### Returns
 
 `Promise`\<[`ImpersonationState`](/api/impersonation-core/src/type-aliases/impersonationstate/) \| `null`\>
+
+---
+
+### findCommittedEndIntent()
+
+> `abstract` **findCommittedEndIntent**(`sessionId`): `Promise`\<[`ImpersonationEndedEventIntent`](/api/impersonation-core/src/type-aliases/impersonationendedeventintent/) \| `null`\>
+
+Returns the canonical committed end intent, including after publication acknowledgement.
+
+#### Parameters
+
+##### sessionId
+
+`string`
+
+#### Returns
+
+`Promise`\<[`ImpersonationEndedEventIntent`](/api/impersonation-core/src/type-aliases/impersonationendedeventintent/) \| `null`\>
 
 ---
 

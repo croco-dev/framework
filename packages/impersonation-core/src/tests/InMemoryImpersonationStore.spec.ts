@@ -139,7 +139,7 @@ function impersonationStoreConformance(createStore: () => ImpersonationStore): v
       await expect(store.listPendingLifecycleEventIntents()).resolves.toEqual([intent]);
     });
 
-    it("returns one committed result when authorized endings race", async () => {
+    it("returns the same committed end when authorized endings race", async () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
       const store = createStore();
@@ -154,11 +154,52 @@ function impersonationStoreConformance(createStore: () => ImpersonationStore): v
         store.commitEnd(ended, activeSession.impersonatorId),
       ]);
 
-      expect(results).toContain("committed");
-      expect(results).toContain("session-not-found");
+      expect(results).toEqual(["committed", "committed"]);
       await expect(store.find(activeSession.sessionId)).resolves.toBeNull();
       await expect(store.findByImpersonator(activeSession.impersonatorId)).resolves.toBeNull();
+      await expect(store.findCommittedEndIntent(activeSession.sessionId)).resolves.toEqual(ended);
       await expect(store.listPendingLifecycleEventIntents()).resolves.toEqual([ended]);
+    });
+
+    it("retains the canonical committed end after publication acknowledgement", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      const store = createStore();
+      const activeSession = session("imp-retry", "admin-1");
+      const started = createImpersonationStartedEventIntent(activeSession);
+      await store.commitStart(started);
+      await store.markLifecycleEventPublished(started.eventId);
+      const committed = createImpersonationEndedEventIntent(
+        activeSession,
+        new Date("2026-01-01T00:30:00.000Z"),
+      );
+
+      await expect(store.commitEnd(committed, activeSession.impersonatorId)).resolves.toBe(
+        "committed",
+      );
+      await store.markLifecycleEventPublished(committed.eventId);
+      const retried = createImpersonationEndedEventIntent(
+        activeSession,
+        new Date("2026-01-01T00:45:00.000Z"),
+      );
+
+      await expect(store.commitEnd(retried, activeSession.impersonatorId)).resolves.toBe(
+        "already-published",
+      );
+      await expect(store.findCommittedEndIntent(activeSession.sessionId)).resolves.toEqual(
+        committed,
+      );
+      await expect(store.listPendingLifecycleEventIntents()).resolves.toEqual([]);
+      await expect(store.commitEnd(retried, "admin-2")).resolves.toBe("actor-mismatch");
+      await expect(
+        store.commitEnd(
+          createImpersonationEndedEventIntent(
+            { ...activeSession, targetUserId: "target-conflict" },
+            new Date("2026-01-01T00:45:00.000Z"),
+          ),
+          activeSession.impersonatorId,
+        ),
+      ).rejects.toMatchObject({ code: "impersonation-core/event-intent-conflict" });
     });
 
     it("treats an expired session as not found", async () => {
