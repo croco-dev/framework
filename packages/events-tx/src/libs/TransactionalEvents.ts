@@ -433,16 +433,16 @@ export function normalizeTransactionalEventError(error: unknown): TransactionalE
   if (error instanceof Error) {
     const code = "code" in error && typeof error.code === "string" ? error.code : undefined;
     return {
-      name: error.name,
-      message: error.message,
-      ...(error.stack ? { stack: error.stack } : {}),
-      ...(code ? { code } : {}),
+      name: escapeTransactionalEventErrorString(error.name),
+      message: escapeTransactionalEventErrorString(error.message),
+      ...(error.stack ? { stack: escapeTransactionalEventErrorString(error.stack) } : {}),
+      ...(code ? { code: escapeTransactionalEventErrorString(code) } : {}),
     };
   }
 
   return {
     name: "Error",
-    message: String(error),
+    message: escapeTransactionalEventErrorString(String(error)),
   };
 }
 
@@ -1148,4 +1148,8 @@ export function createEventBusOutboxPublisher(
     };
     await eventBus.publish(event);
   };
+}
+
+function escapeTransactionalEventErrorString(value: string): string {
+  return value.split("\0").join("\\0");
 }
