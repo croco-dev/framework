@@ -597,6 +597,53 @@ describe("TransactionalOutbox", () => {
 });
 
 describe("TransactionalOutboxRelay", () => {
+  it("escapes null bytes before persisting outbox failures", async () => {
+    const fixture = createOutboxFixture();
+    await appendMessage(fixture);
+    const publishError = new Error("broker\0offline");
+    publishError.name = "Broker\0Error";
+    publishError.stack = "Broker\0Error: broker\0offline";
+    Object.assign(publishError, { code: "BROKER\0OFFLINE" });
+    const expectedError = {
+      name: "Broker\\0Error",
+      message: "broker\\0offline",
+      stack: "Broker\\0Error: broker\\0offline",
+      code: "BROKER\\0OFFLINE",
+    };
+    const failedSpy = vi.spyOn(fixture.store, "markOutboxFailed");
+    const relay = new TransactionalOutboxRelay({
+      store: fixture.store,
+      publish: async () => {
+        throw publishError;
+      },
+      now: fixture.clock.now,
+    });
+
+    const result = await relay.publishBatch({ limit: 1, now: fixture.clock.now() });
+
+    expect(result).toMatchObject({
+      status: "completed",
+      scheduledRetry: 1,
+      results: [
+        {
+          status: "scheduled_retry",
+          error: expectedError,
+          message: {
+            status: "retrying",
+            lastError: expectedError,
+          },
+        },
+      ],
+    });
+    expect(failedSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expectedError,
+        diagnostic: expect.objectContaining({ message: "broker\\0offline" }),
+      }),
+      undefined,
+    );
+  });
+
   it("cancels an active batch and releases every unstarted claim for retry", async () => {
     const fixture = createOutboxFixture();
     await appendMessage(fixture, { idempotencyKey: "credit-acct-1" });
@@ -1124,6 +1171,50 @@ describe("TransactionalOutboxRelay", () => {
 });
 
 describe("TransactionalInboxConsumer", () => {
+  it("escapes null bytes before persisting inbox failures", async () => {
+    const fixture = createOutboxFixture();
+    const message = await appendMessage(fixture);
+    const handlerError = new Error("projection\0offline");
+    handlerError.name = "Projection\0Error";
+    handlerError.stack = "Projection\0Error: projection\0offline";
+    Object.assign(handlerError, { code: "PROJECTION\0OFFLINE" });
+    const expectedError = {
+      name: "Projection\\0Error",
+      message: "projection\\0offline",
+      stack: "Projection\\0Error: projection\\0offline",
+      code: "PROJECTION\\0OFFLINE",
+    };
+    const failedSpy = vi.spyOn(fixture.store, "markInboxFailed");
+    const consumer = new TransactionalInboxConsumer({
+      store: fixture.store,
+      consumerId: "risk-projection",
+      now: fixture.clock.now,
+      throwOnError: false,
+    });
+
+    const result = await consumer.handle(message, async () => {
+      throw handlerError;
+    });
+
+    expect(result).toMatchObject({
+      status: "failed",
+      error: expectedError,
+      record: {
+        status: "failed",
+        failureReason: "projection\\0offline",
+        lastError: expectedError,
+      },
+    });
+    expect(failedSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expectedError,
+        reason: "projection\\0offline",
+        diagnostic: expect.objectContaining({ message: "projection\\0offline" }),
+      }),
+      undefined,
+    );
+  });
+
   it("deduplicates processed inbox keys and retries failed inbox records explicitly", async () => {
     const fixture = createOutboxFixture();
     const message = await appendMessage(fixture);
@@ -2977,6 +3068,24 @@ describe("transactional event helpers", () => {
     expect(normalizeTransactionalEventError("offline")).toEqual({
       name: "Error",
       message: "offline",
+    });
+  });
+
+  it("escapes null bytes in every persistent error field", () => {
+    const error = new Error("broker\0offline");
+    error.name = "Broker\0Error";
+    error.stack = "Broker\0Error: broker\0offline";
+    Object.assign(error, { code: "BROKER\0OFFLINE" });
+
+    expect(normalizeTransactionalEventError(error)).toEqual({
+      name: "Broker\\0Error",
+      message: "broker\\0offline",
+      stack: "Broker\\0Error: broker\\0offline",
+      code: "BROKER\\0OFFLINE",
+    });
+    expect(normalizeTransactionalEventError("broker\0offline")).toEqual({
+      name: "Error",
+      message: "broker\\0offline",
     });
   });
 });
