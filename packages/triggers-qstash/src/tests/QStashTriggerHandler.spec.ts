@@ -573,6 +573,152 @@ describe("QStashTriggerHandler", () => {
     expect(getSpy).not.toHaveBeenCalledWith(WrongNamedHandler);
   });
 
+  it.each(["wrong-first", "exact-first"] as const)(
+    "콜론이 포함된 cron name도 등록 순서와 무관하게 정확한 클래스로 매칭해야 한다 (%s)",
+    async (registrationOrder) => {
+      class WrongColonNamedHandler {
+        async run(): Promise<string> {
+          return "wrong";
+        }
+      }
+
+      class ExactColonNamedHandler {
+        async run(): Promise<string> {
+          return "exact";
+        }
+      }
+
+      const wrongTrigger: CronTriggerMetadata = {
+        type: "cron",
+        expression: "* * * * *",
+        methodName: "run",
+        target: WrongColonNamedHandler.prototype,
+        options: {
+          name: "billing:sync-invoices",
+        },
+      };
+
+      const exactTrigger: CronTriggerMetadata = {
+        type: "cron",
+        expression: "* * * * *",
+        methodName: "run",
+        target: ExactColonNamedHandler.prototype,
+        options: {
+          name: "WrongColonNamedHandler:billing:sync-invoices",
+        },
+      };
+
+      const triggers =
+        registrationOrder === "wrong-first"
+          ? [wrongTrigger, exactTrigger]
+          : [exactTrigger, wrongTrigger];
+      for (const trigger of triggers) {
+        triggerRegistry.register(trigger);
+      }
+
+      const targetInstance = new ExactColonNamedHandler();
+      Container.set(ExactColonNamedHandler, targetInstance);
+
+      const receiver = {
+        verify: vi.fn().mockResolvedValue(undefined),
+      } as unknown as Receiver;
+
+      const { create, manager: executionManager } = createIdempotentExecutionManager();
+
+      const getSpy = vi.spyOn(Container, "get");
+
+      const handler = new QStashTriggerHandler({
+        receiver,
+        executionManager,
+      });
+
+      const result = await handler.handle(
+        JSON.stringify({
+          scheduleId:
+            "croco-trigger:ExactColonNamedHandler:WrongColonNamedHandler:billing:sync-invoices:run",
+          className: "ExactColonNamedHandler",
+          triggerName: "WrongColonNamedHandler:billing:sync-invoices",
+          methodName: "run",
+          cronExpression: "* * * * *",
+          timestamp: new Date().toISOString(),
+        }),
+        "valid-signature",
+        delivery,
+      );
+
+      expect(result.success).toBe(true);
+      expect(result.statusCode).toBe(200);
+      expect(getSpy).toHaveBeenCalledWith(ExactColonNamedHandler);
+      expect(getSpy).not.toHaveBeenCalledWith(WrongColonNamedHandler);
+
+      const ambiguousResult = await handler.handle(
+        JSON.stringify({
+          scheduleId:
+            "croco-trigger:ExactColonNamedHandler:WrongColonNamedHandler:billing:sync-invoices:run",
+          methodName: "run",
+          cronExpression: "* * * * *",
+          timestamp: new Date().toISOString(),
+        }),
+        "valid-signature",
+        { messageId: `msg-ambiguous-${registrationOrder}` },
+      );
+
+      expect(ambiguousResult.success).toBe(false);
+      expect(ambiguousResult.statusCode).toBe(404);
+      expect(getSpy).not.toHaveBeenCalledWith(WrongColonNamedHandler);
+      expect(create).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each([
+    ["className", { className: "OtherHandler", triggerName: "billing:sync" }],
+    ["triggerName", { className: "ExplicitIdentityHandler", triggerName: "billing:other" }],
+  ] as const)(
+    "명시적 %s가 등록 정보와 다르면 단일 메서드 fallback으로 실행하면 안 된다",
+    async (_identityField, explicitIdentity) => {
+      class ExplicitIdentityHandler {
+        async run(): Promise<string> {
+          return "handled";
+        }
+      }
+
+      triggerRegistry.register({
+        type: "cron",
+        expression: "* * * * *",
+        methodName: "run",
+        target: ExplicitIdentityHandler.prototype,
+        options: {
+          name: "billing:sync",
+        },
+      });
+
+      Container.set(ExplicitIdentityHandler, new ExplicitIdentityHandler());
+      const receiver = {
+        verify: vi.fn().mockResolvedValue(undefined),
+      } as unknown as Receiver;
+      const { create, manager: executionManager } = createIdempotentExecutionManager();
+      const getSpy = vi.spyOn(Container, "get");
+      const handler = new QStashTriggerHandler({ receiver, executionManager });
+
+      const result = await handler.handle(
+        JSON.stringify({
+          scheduleId: "croco-trigger:ExplicitIdentityHandler:billing:sync:run",
+          ...explicitIdentity,
+          methodName: "run",
+          cronExpression: "* * * * *",
+          timestamp: new Date().toISOString(),
+        }),
+        "valid-signature",
+        delivery,
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.statusCode).toBe(404);
+      expect(getSpy).not.toHaveBeenCalled();
+      expect(create).not.toHaveBeenCalled();
+    },
+  );
+
   it("커스텀 schedule prefix에서도 class/name/method 식별자로 정확한 핸들러를 매칭해야 한다", async () => {
     class WrongCustomPrefixHandler {
       async execute(): Promise<string> {
