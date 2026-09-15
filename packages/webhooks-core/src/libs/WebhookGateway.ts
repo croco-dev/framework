@@ -220,7 +220,7 @@ export class WebhookGateway {
         stableStringify({
           eventType: event.type,
           provider: event.provider,
-          rawBody: rawBodyToString(rawBody),
+          rawBody: rawBodyToFingerprintValue(rawBody),
         }),
     });
   }
@@ -453,14 +453,23 @@ function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function rawBodyToString(rawBody: WebhookRawBody): string {
+function rawBodyToFingerprintValue(
+  rawBody: WebhookRawBody,
+): string | { readonly encoding: "hex"; readonly value: string } {
   if (typeof rawBody === "string") {
     return rawBody;
   }
 
-  return Array.from(rawBody)
-    .map((byte) => byte.toString(16).padStart(2, "0"))
-    .join("");
+  try {
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(rawBody);
+  } catch {
+    return {
+      encoding: "hex",
+      value: Array.from(rawBody)
+        .map((byte) => byte.toString(16).padStart(2, "0"))
+        .join(""),
+    };
+  }
 }
 
 function stableStringify(value: unknown): string {

@@ -32,7 +32,8 @@ function createAdapter(): WebhookProviderAdapter {
         });
       }
 
-      const parsed = JSON.parse(String(rawBody)) as {
+      const body = typeof rawBody === "string" ? rawBody : new TextDecoder().decode(rawBody);
+      const parsed = JSON.parse(body.replace(/^\uFEFF/u, "")) as {
         id: string;
         type: string;
         data: { subscriptionId: string; tenantId: string };
@@ -134,6 +135,72 @@ describe("WebhookGateway", () => {
 
     expect(second.originalOutcome).toBe("handled");
     expect(second.dispatch).toEqual(first.dispatch);
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("deduplicates equivalent string and Uint8Array bodies with the same fingerprint", async () => {
+    const { gateway, handler } = createGateway();
+    const request = signedRequest();
+
+    const first = await gateway.handle(request);
+    const second = await gateway.handle({
+      ...request,
+      rawBody: new TextEncoder().encode(request.rawBody),
+    });
+
+    expect(second.outcome).toBe("duplicate");
+    expect(second.idempotencyKey).toEqual(first.idempotencyKey);
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("preserves a leading byte order mark across string and Uint8Array bodies", async () => {
+    const { gateway, handler } = createGateway();
+    const request = signedRequest();
+    const rawBody = `\uFEFF${request.rawBody}`;
+
+    const first = await gateway.handle({ ...request, rawBody });
+    const second = await gateway.handle({
+      ...request,
+      rawBody: new TextEncoder().encode(rawBody),
+    });
+
+    expect(second.outcome).toBe("duplicate");
+    expect(second.idempotencyKey).toEqual(first.idempotencyKey);
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps malformed binary bodies distinct from valid text and other malformed bytes", async () => {
+    const handler = vi.fn(async () => ({ stored: "sub-1" }));
+    const gateway = new WebhookGateway({
+      adapter: {
+        provider: "fixture",
+        verify: () => ({
+          id: "evt-1",
+          provider: "fixture",
+          type: "subscription.created",
+          payload: { subscriptionId: "sub-1", tenantId: "tenant-1" },
+          tenantId: "tenant-1",
+        }),
+      },
+      router: createWebhookEventRouter<FixtureEvents>().register("subscription.created", handler),
+      idempotencyStore: new InMemoryIdempotencyStore<WebhookGatewayStoredResult>(),
+      unknownEventPolicy: "fail",
+    });
+
+    await gateway.handle({ rawBody: Uint8Array.of(0xff), headers: {} });
+
+    await expect(
+      gateway.handle({ rawBody: Uint8Array.of(0xfe), headers: {} }),
+    ).rejects.toMatchObject({ code: "idempotency-core/key-conflict" });
+    await expect(
+      gateway.handle({ rawBody: new TextEncoder().encode("ff"), headers: {} }),
+    ).rejects.toMatchObject({ code: "idempotency-core/key-conflict" });
+    await expect(gateway.handle({ rawBody: "ff", headers: {} })).rejects.toMatchObject({
+      code: "idempotency-core/key-conflict",
+    });
+    await expect(gateway.handle({ rawBody: "�", headers: {} })).rejects.toMatchObject({
+      code: "idempotency-core/key-conflict",
+    });
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
