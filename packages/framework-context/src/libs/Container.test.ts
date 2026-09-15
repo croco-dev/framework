@@ -78,7 +78,7 @@ describe("Container.getRequestScoped", () => {
     expect(instance1).toBe(instance2);
   });
 
-  it("should work with nested Context.run() calls", () => {
+  it("should use a fresh request scope for nested Context.run() calls by default", () => {
     class MyService {
       public value = Math.random();
     }
@@ -97,6 +97,31 @@ describe("Container.getRequestScoped", () => {
     });
 
     expect(outerInstance).not.toBe(innerInstance);
+  });
+
+  it("should preserve request-scoped instances when a nested run inherits scope", () => {
+    class MyService {
+      public value = Math.random();
+    }
+
+    Component({ scope: "request" })(MyService);
+
+    let outerInstance!: MyService;
+    let innerInstance!: MyService;
+
+    Context.run({ requestId: "outer" }, () => {
+      outerInstance = Container.get(MyService);
+
+      Context.run(
+        { requestId: "inner" },
+        () => {
+          innerInstance = Container.get(MyService);
+        },
+        { inheritScope: true },
+      );
+    });
+
+    expect(outerInstance).toBe(innerInstance);
   });
 
   it("should respect @Inject token metadata for transient services", () => {

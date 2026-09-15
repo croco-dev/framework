@@ -335,7 +335,7 @@ const frameworkContextCompatibilityContract = {
       exports: [
         {
           source: "./libs/Context",
-          names: ["Context"],
+          names: ["Context", "ContextRunOptions"],
         },
         {
           source: "./libs/TransactionContext",

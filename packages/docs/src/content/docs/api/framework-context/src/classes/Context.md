@@ -123,7 +123,10 @@ Get active trace ID from request context propagation
 
 ### run()
 
-> `static` **run**\<`T`\>(`context`, `fn`): `T` \| `Promise`\<`T`\>
+> `static` **run**\<`T`\>(`context`, `fn`, `options?`): `T` \| `Promise`\<`T`\>
+
+Runs a callback with the provided request context.
+Nested runs create a fresh request scope unless `inheritScope` is enabled.
 
 #### Type Parameters
 
@@ -140,6 +143,10 @@ Get active trace ID from request context propagation
 ##### fn
 
 () => `T` \| `Promise`\<`T`\>
+
+##### options?
+
+[`ContextRunOptions`](/api/framework-context/src/type-aliases/contextrunoptions/) = `{}`
 
 #### Returns
 
