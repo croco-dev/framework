@@ -34,6 +34,7 @@ export type InMemoryTransactionalOutboxStoreClient = {
 };
 
 const DEFAULT_MAX_ATTEMPTS = 3;
+const DEFAULT_RETRY_DELAY_MS = 1_000;
 
 function createEmptyState(): InMemoryTransactionalOutboxStoreState {
   return {
@@ -178,6 +179,9 @@ function normalizeFailureMetadata(
 ): OutboxFailureMetadata {
   const terminal = failure.terminal || failure.attempt >= maxAttempts;
   const shouldRetry = failure.retryable && !terminal;
+  const nextVisibleAt = shouldRetry
+    ? (failure.nextVisibleAt ?? addMs(failure.failedAt, DEFAULT_RETRY_DELAY_MS))
+    : undefined;
 
   return {
     retryable: failure.retryable,
@@ -185,9 +189,7 @@ function normalizeFailureMetadata(
     attempt: failure.attempt,
     maxAttempts,
     failedAt: new Date(failure.failedAt.getTime()),
-    ...(shouldRetry && failure.nextVisibleAt
-      ? { nextVisibleAt: new Date(failure.nextVisibleAt.getTime()) }
-      : {}),
+    ...(nextVisibleAt ? { nextVisibleAt: new Date(nextVisibleAt.getTime()) } : {}),
   };
 }
 
