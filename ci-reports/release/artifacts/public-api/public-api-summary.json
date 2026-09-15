@@ -1,0 +1,16 @@
+{
+  "status": "pass",
+  "packageCount": 120,
+  "changedPackages": 0,
+  "changedEntrypoints": 0,
+  "entrypointsAdded": 0,
+  "entrypointsRemoved": 0,
+  "targetChanges": 0,
+  "runtimeAdded": 0,
+  "runtimeRemoved": 0,
+  "typeAdded": 0,
+  "typeRemoved": 0,
+  "snapshotPath": "public-api-surface.snapshot.json",
+  "reportPath": "ci-reports/package-quality/public-api-diff.md",
+  "updateCommand": "pnpm public-api:write"
+}
