@@ -20,7 +20,7 @@ import {
   validateResponse,
 } from "@croco/protocols-rest";
 import { HttpExecutionContext } from "./HttpExecutionContext";
-import { resolveParamsWithRoutePipes } from "./ParamResolver";
+import { isPipeTarget, resolveParamsWithRoutePipes } from "./ParamResolver";
 import type { PipelineRunner } from "./PipelineRunner";
 import type {
   CompiledRoute,
@@ -227,14 +227,16 @@ export class RouteCompiler {
         handlerLabel: `${controller.name}.${String(routeIR.methodName)}`,
         guards: [...globalGuards, ...routeGuards],
         interceptors: [...globalInterceptors, ...routeInterceptors],
-        pipes: routeParams.flatMap((param) =>
-          [...(options.globalPipes || []), ...routePipes].map((pipe, pipeIndex) => ({
-            pipe,
-            parameterIndex: param.index,
-            parameterType: param.type,
-            pipeIndex,
-          })),
-        ),
+        pipes: routeParams
+          .filter((param) => isPipeTarget(param.type))
+          .flatMap((param) =>
+            [...(options.globalPipes || []), ...routePipes].map((pipe, pipeIndex) => ({
+              pipe,
+              parameterIndex: param.index,
+              parameterType: param.type,
+              pipeIndex,
+            })),
+          ),
         filters: [...globalFilters, ...routeFilters],
       },
     };

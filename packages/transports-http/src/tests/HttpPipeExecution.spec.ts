@@ -5,9 +5,11 @@ import {
   type ArgumentMetadata,
   Body,
   Controller,
+  Ctx,
   type ExecutionContext,
   Post,
   Query,
+  Raw,
   type PipeTransform,
   UseGuards,
   UseInterceptors,
@@ -85,6 +87,16 @@ class FailingPipe implements PipeTransform {
   }
 }
 
+class ContextProtectionPipe implements PipeTransform {
+  transform(value: unknown, metadata: ArgumentMetadata): unknown {
+    executionOrder.push(`pipe:protected:${metadata.type}`);
+    if (metadata.type === "custom") {
+      throw new PipeFailureProblem();
+    }
+    return value;
+  }
+}
+
 @Controller("/pipe-execution")
 class FailingPipeController {
   @Post("/failure")
@@ -92,6 +104,19 @@ class FailingPipeController {
   transform(@Body() value: unknown): { value: unknown } {
     executionOrder.push("controller:failure");
     return { value };
+  }
+}
+
+@Controller("/pipe-context")
+@UsePipes(ContextProtectionPipe)
+class ContextPipeController {
+  @Post("/inspect")
+  inspect(
+    @Body() body: { value: string },
+    @Ctx() ctx: { raw: unknown },
+    @Raw() raw: unknown,
+  ): { contextPreserved: boolean; value: string } {
+    return { contextPreserved: ctx.raw === raw, value: body.value };
   }
 }
 
@@ -125,6 +150,7 @@ describe("HTTP pipe execution", () => {
     Container.set(AllowGuard, new AllowGuard());
     Container.set(OrderInterceptor, new OrderInterceptor());
     Container.set(FailingPipe, new FailingPipe());
+    Container.set(ContextProtectionPipe, new ContextProtectionPipe());
     Container.set(GraphPipe, new GraphPipe());
   });
 
@@ -224,5 +250,34 @@ describe("HTTP pipe execution", () => {
       }),
     );
     expect(executionOrder).not.toContain("controller:failure");
+  });
+
+  it("keeps route pipes away from framework context parameters", async () => {
+    const app = createApp({
+      controllers: [ContextPipeController],
+      securityValidation: "off",
+    });
+
+    const response = await app.fetch(
+      new Request("http://localhost/pipe-context/inspect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: "preserved" }),
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({
+      contextPreserved: true,
+      value: "preserved",
+    });
+    expect(executionOrder).toEqual(["pipe:protected:body"]);
+
+    const graph = app
+      .describeRequestPipelineGraphs()
+      .find((entry) => entry.target === "POST /pipe-context/inspect");
+    expect(graph?.successOrder.filter((nodeId) => nodeId.startsWith("pipe:"))).toEqual([
+      "pipe:0:0",
+    ]);
   });
 });

@@ -350,7 +350,7 @@ class ParamResolverEngine {
     };
 
     let result = value;
-    for (const pipe of routePipes) {
+    for (const pipe of isPipeTarget(param.type) ? routePipes : []) {
       result = await pipe.transform(result, metadata);
     }
 
@@ -360,7 +360,7 @@ class ParamResolverEngine {
       return fallbackPipe ? fallbackPipe.transform(result, metadata) : result;
     }
 
-    for (const pipe of param.pipes) {
+    for (const pipe of isPipeTarget(param.type) ? param.pipes : []) {
       const pipeInstance: PipeTransform = this.resolvePipe(pipe);
       result = await pipeInstance.transform(result, metadata);
     }
@@ -387,6 +387,11 @@ class ParamResolverEngine {
 
     return pipeInstance;
   }
+}
+
+/** @internal */
+export function isPipeTarget(type: ParamType): boolean {
+  return type !== ParamType.CTX && type !== ParamType.RAW;
 }
 
 /** @internal RouteCompiler bridge that keeps route-level pipe wiring out of the public ParamResolver API. */

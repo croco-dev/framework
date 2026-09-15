@@ -6,12 +6,14 @@ import type { PipeTransform } from "@croco/protocols-rest";
 import {
   Body,
   Controller,
+  Ctx,
   Get,
   HttpMethod,
   defineRouteContract,
   Param,
   Query,
   ParamType,
+  Raw,
   REST_PARAMS_KEY,
   RequestValidationProblem,
 } from "@croco/protocols-rest";
@@ -419,6 +421,40 @@ describe("ParamResolver", () => {
 
     vi.mocked(ctx.header).mockReturnValue(undefined);
     await expect(resolver.resolveParams(ctx, TestController, "read")).resolves.toEqual([undefined]);
+  });
+
+  it("preserves @Ctx and @Raw values without running route or parameter pipes", async () => {
+    class TestController {
+      inspect(@Ctx() _ctx: unknown, @Raw() _raw: unknown) {}
+    }
+
+    const params = Reflect.getOwnMetadata(REST_PARAMS_KEY, TestController) as Map<
+      string | symbol,
+      Array<{
+        type: ParamType;
+        index: number;
+        pipes?: PipeTransform[];
+      }>
+    >;
+    const paramPipe = { transform: vi.fn(() => "parameter-pipe-result") };
+    for (const param of params.get("inspect") ?? []) {
+      param.pipes = [paramPipe];
+    }
+    const routePipe = { transform: vi.fn(() => "route-pipe-result") };
+    const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"]);
+
+    const args = await resolveParamsWithRoutePipes(
+      ctx,
+      TestController,
+      "inspect",
+      [routePipe],
+      () => undefined,
+    );
+
+    expect(args[0]).toBe(ctx);
+    expect(args[1]).toBe(ctx.raw);
+    expect(routePipe.transform).not.toHaveBeenCalled();
+    expect(paramPipe.transform).not.toHaveBeenCalled();
   });
 
   describe("auth parameter decorators (@User, @CurrentPrincipal, @CurrentApiKey)", () => {
