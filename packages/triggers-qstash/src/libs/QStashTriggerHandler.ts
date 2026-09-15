@@ -704,6 +704,7 @@ export class QStashTriggerHandler {
   private resolveTargetClass(payload: QStashWebhookPayload): Constructor | undefined {
     const allTriggers = triggerRegistry.getAllTriggers();
     const methodMatches: Constructor[] = [];
+    const scheduleMatches: Constructor[] = [];
 
     for (const [target, triggers] of allTriggers.entries()) {
       const targetClass = this.getTargetClass(target);
@@ -711,31 +712,44 @@ export class QStashTriggerHandler {
         continue;
       }
 
-      const hasMatchingMethod = [...triggers.keys()].some(
-        (registeredMethodName) => String(registeredMethodName) === payload.methodName,
-      );
-
-      if (!hasMatchingMethod) {
+      if (payload.className !== undefined && payload.className !== targetClass.name) {
         continue;
       }
 
-      const matchingTrigger = [...triggers.values()].find(
+      const matchingTriggers = [...triggers.values()].filter(
         (trigger) =>
           trigger.type === "cron" &&
           String(trigger.methodName) === payload.methodName &&
+          (payload.triggerName === undefined ||
+            payload.triggerName === (trigger.options?.name ?? String(trigger.methodName))),
+      );
+
+      if (matchingTriggers.length === 0) {
+        continue;
+      }
+
+      if (
+        matchingTriggers.some((trigger) =>
           this.matchesScheduleId(
             payload.scheduleId,
             targetClass.name,
             trigger.options?.name,
             payload.methodName,
           ),
-      );
-
-      if (matchingTrigger) {
-        return targetClass;
+        )
+      ) {
+        scheduleMatches.push(targetClass);
       }
 
       methodMatches.push(targetClass);
+    }
+
+    if (scheduleMatches.length === 1) {
+      return scheduleMatches[0];
+    }
+
+    if (scheduleMatches.length > 1) {
+      return undefined;
     }
 
     if (methodMatches.length === 1) {
@@ -752,15 +766,7 @@ export class QStashTriggerHandler {
     methodName: string,
   ): boolean {
     const identifier = triggerName ?? methodName;
-    const [payloadClassName, payloadIdentifier, payloadMethodName] = scheduleId
-      .split(":")
-      .slice(-3);
-
-    return (
-      payloadClassName === className &&
-      payloadIdentifier === identifier &&
-      payloadMethodName === methodName
-    );
+    return scheduleId.endsWith(`:${className}:${identifier}:${methodName}`);
   }
 
   private formatTriggerKey(payload: QStashWebhookPayload): string {
