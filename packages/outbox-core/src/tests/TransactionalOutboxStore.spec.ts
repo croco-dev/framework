@@ -169,6 +169,67 @@ describe("TransactionalOutboxStore contract", () => {
     });
   });
 
+  it("delays retryable failures when the dispatcher omits nextVisibleAt", async () => {
+    const store = new InMemoryTransactionalOutboxStore();
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    await store.record(createIntent("default-retry-delay"), {
+      id: "default-retry-delay",
+      now,
+    });
+    const [claimed] = await store.claimBatch({
+      limit: 1,
+      now,
+      visibilityTimeoutMs: 1_000,
+    });
+    const failedAt = new Date("2026-01-01T00:00:00.100Z");
+    const nextVisibleAt = new Date("2026-01-01T00:00:01.100Z");
+
+    await store.markFailed(
+      claimed.id,
+      new OutboxDispatchProblem({
+        detail: "Provider temporarily rejected payload.",
+        failure: {
+          retryable: true,
+          terminal: false,
+          attempt: claimed.claim.attempt,
+          maxAttempts: claimed.retry.maxAttempts,
+          failedAt,
+        },
+      }),
+    );
+
+    const [record] = await store.listRecords();
+    expect(record).toMatchObject({
+      status: "retrying",
+      availableAt: nextVisibleAt,
+      failure: {
+        problem: {
+          outboxNextVisibleAt: nextVisibleAt.toISOString(),
+        },
+        retry: {
+          nextVisibleAt,
+        },
+      },
+      retry: {
+        nextVisibleAt,
+      },
+    });
+    await expect(
+      store.claimBatch({
+        limit: 1,
+        now: failedAt,
+        visibilityTimeoutMs: 1_000,
+      }),
+    ).resolves.toEqual([]);
+    await expect(
+      store.claimBatch({
+        limit: 1,
+        now: nextVisibleAt,
+        visibilityTimeoutMs: 1_000,
+      }),
+    ).resolves.toMatchObject([{ id: "default-retry-delay", status: "claimed" }]);
+  });
+
   it("rejects root mutations started from an active Unit of Work callback", async () => {
     const cases: ReadonlyArray<{
       readonly name: string;
