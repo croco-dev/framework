@@ -68,6 +68,47 @@ function getErrorType(error: Error): string {
   return typeof name === "string" && name ? name : "Error";
 }
 
+function mergeErrorSerialization(
+  sanitized: Record<string, unknown>,
+  error: Error,
+  depth: number,
+  ancestors: WeakSet<object>,
+): void {
+  const toJSON = getDataProperty(error, "toJSON");
+  if (typeof toJSON !== "function") {
+    return;
+  }
+
+  let serialized: unknown;
+  try {
+    serialized = Reflect.apply(toJSON, error, []);
+  } catch {
+    return;
+  }
+
+  if (!serialized || typeof serialized !== "object" || Array.isArray(serialized)) {
+    return;
+  }
+
+  const sanitizedSerialization = sanitizeObject(serialized, depth, ancestors);
+  if (typeof sanitizedSerialization === "string" || Array.isArray(sanitizedSerialization)) {
+    return;
+  }
+
+  for (const [key, value] of Object.entries(sanitizedSerialization)) {
+    if (Object.prototype.hasOwnProperty.call(sanitized, key)) {
+      continue;
+    }
+
+    Object.defineProperty(sanitized, key, {
+      configurable: true,
+      enumerable: true,
+      value,
+      writable: true,
+    });
+  }
+}
+
 function getErrorTextWithCauses(
   error: object,
   key: "message" | "stack",
@@ -142,6 +183,8 @@ function sanitizeError(
         sanitized[key] = sanitizedValue;
       }
     }
+
+    mergeErrorSerialization(sanitized, error, depth, ancestors);
 
     const errors = getDataProperty(error, "errors");
     if (Array.isArray(errors)) {

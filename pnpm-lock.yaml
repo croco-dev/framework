@@ -1879,6 +1879,9 @@ importers:
         specifier: ^13.1.3
         version: 13.1.3
     devDependencies:
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
       '@types/node':
         specifier: ^22
         version: 22.19.3
