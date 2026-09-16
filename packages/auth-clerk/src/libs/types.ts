@@ -20,6 +20,13 @@ export type ClerkOrgEvent = {
   [key: string]: unknown;
 };
 
+export type ClerkDeletedObjectEvent = {
+  id: string;
+  object?: string;
+  deleted: boolean;
+  [key: string]: unknown;
+};
+
 export type ClerkMembershipEvent = {
   id: string;
   organization: { id: string; name?: string };
@@ -40,6 +47,17 @@ export type WebhookEventType =
   | "organizationMembership.created"
   | "organizationMembership.deleted";
 
+type WebhookEventData = {
+  "user.created": ClerkUserEvent;
+  "user.updated": ClerkUserEvent;
+  "user.deleted": ClerkDeletedObjectEvent;
+  "organization.created": ClerkOrgEvent;
+  "organization.updated": ClerkOrgEvent;
+  "organization.deleted": ClerkDeletedObjectEvent;
+  "organizationMembership.created": ClerkMembershipEvent;
+  "organizationMembership.deleted": ClerkMembershipEvent;
+};
+
 export type WebhookHandlerOptions = {
   readonly signingSecret: string;
   readonly idempotencyStore: IdempotencyStore<ClerkWebhookDeliveryOutcome>;
@@ -53,9 +71,7 @@ export type ClerkWebhookDeliveryOutcome = {
 };
 
 export type WebhookEventHandler = {
-  [K in WebhookEventType]?: (
-    data: ClerkUserEvent | ClerkOrgEvent | ClerkMembershipEvent,
-  ) => Promise<void>;
+  [K in WebhookEventType]?: (data: WebhookEventData[K]) => Promise<void>;
 };
 
 export type AuthorizationHeaderCarrier = {

@@ -8,6 +8,7 @@ import {
   WebhookVerificationProblem,
 } from "./problems/ClerkProblems";
 import type {
+  ClerkDeletedObjectEvent,
   ClerkMembershipEvent,
   ClerkOrgEvent,
   ClerkUserEvent,
@@ -48,6 +49,15 @@ function isClerkOrgEvent(data: unknown): data is ClerkOrgEvent {
     hasStringField(data, "id") &&
     hasStringField(data, "name") &&
     hasStringField(data, "slug")
+  );
+}
+
+function isClerkDeletedObjectEvent(data: unknown): data is ClerkDeletedObjectEvent {
+  return (
+    isObjectRecord(data) &&
+    hasStringField(data, "id") &&
+    typeof data.deleted === "boolean" &&
+    (data.object === undefined || typeof data.object === "string")
   );
 }
 
@@ -101,6 +111,13 @@ export class ClerkWebhookHandler {
 
   private parseOrgEvent(data: unknown, eventType: string): ClerkOrgEvent {
     if (!isClerkOrgEvent(data)) {
+      throw new InvalidWebhookPayloadProblem(eventType);
+    }
+    return data;
+  }
+
+  private parseDeletedObjectEvent(data: unknown, eventType: string): ClerkDeletedObjectEvent {
+    if (!isClerkDeletedObjectEvent(data)) {
       throw new InvalidWebhookPayloadProblem(eventType);
     }
     return data;
@@ -177,7 +194,7 @@ export class ClerkWebhookHandler {
         break;
       case "user.deleted":
         await this.handlers["user.deleted"]?.(
-          this.parseUserEvent(webhookEvent.data, webhookEvent.type),
+          this.parseDeletedObjectEvent(webhookEvent.data, webhookEvent.type),
         );
         break;
       case "organization.created":
@@ -192,7 +209,7 @@ export class ClerkWebhookHandler {
         break;
       case "organization.deleted":
         await this.handlers["organization.deleted"]?.(
-          this.parseOrgEvent(webhookEvent.data, webhookEvent.type),
+          this.parseDeletedObjectEvent(webhookEvent.data, webhookEvent.type),
         );
         break;
       case "organizationMembership.created":

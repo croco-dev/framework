@@ -91,6 +91,82 @@ describe("ClerkWebhookHandler", () => {
     expect(mockHandlers["organization.updated"]).toHaveBeenCalledWith(eventData);
   });
 
+  it("should call registered handler for user.deleted with a deleted object payload", async () => {
+    const request = createRequest("msg_user_deleted");
+    const eventData = { id: "user_123", object: "user", deleted: true };
+    const handler = vi.fn();
+    webhookHandler = new ClerkWebhookHandler(
+      { signingSecret, idempotencyStore },
+      { "user.deleted": handler },
+    );
+    vi.mocked(verifyWebhook).mockResolvedValue({
+      type: "user.deleted",
+      data: eventData,
+    } as unknown as VerifiedWebhook);
+
+    await expect(webhookHandler.handleWebhook(request)).resolves.toMatchObject({
+      eventType: "user.deleted",
+      outcome: "handled",
+    });
+    expect(handler).toHaveBeenCalledWith(eventData);
+  });
+
+  it("should call registered handler for organization.deleted with a deleted object payload", async () => {
+    const request = createRequest("msg_organization_deleted");
+    const eventData = { id: "org_123", object: "organization", deleted: true };
+    const handler = vi.fn();
+    webhookHandler = new ClerkWebhookHandler(
+      { signingSecret, idempotencyStore },
+      { "organization.deleted": handler },
+    );
+    vi.mocked(verifyWebhook).mockResolvedValue({
+      type: "organization.deleted",
+      data: eventData,
+    } as unknown as VerifiedWebhook);
+
+    await expect(webhookHandler.handleWebhook(request)).resolves.toMatchObject({
+      eventType: "organization.deleted",
+      outcome: "handled",
+    });
+    expect(handler).toHaveBeenCalledWith(eventData);
+  });
+
+  it("should keep full user payload validation for create and update events", async () => {
+    const assertRejected = async (eventType: "user.created" | "user.updated") => {
+      const handlers: WebhookEventHandler =
+        eventType === "user.created" ? { "user.created": vi.fn() } : { "user.updated": vi.fn() };
+      webhookHandler = new ClerkWebhookHandler({ signingSecret, idempotencyStore }, handlers);
+      vi.mocked(verifyWebhook).mockResolvedValue({
+        type: eventType,
+        data: { id: "user_123", object: "user", deleted: true },
+      } as unknown as VerifiedWebhook);
+
+      await expect(
+        webhookHandler.handleWebhook(createRequest(`msg_strict_${eventType}`)),
+      ).rejects.toBeInstanceOf(InvalidWebhookPayloadProblem);
+    };
+
+    await assertRejected("user.created");
+    await assertRejected("user.updated");
+  });
+
+  it("should reject a deleted object payload without the deletion marker", async () => {
+    const handler = vi.fn();
+    webhookHandler = new ClerkWebhookHandler(
+      { signingSecret, idempotencyStore },
+      { "user.deleted": handler },
+    );
+    vi.mocked(verifyWebhook).mockResolvedValue({
+      type: "user.deleted",
+      data: { id: "user_123", object: "user" },
+    } as unknown as VerifiedWebhook);
+
+    await expect(
+      webhookHandler.handleWebhook(createRequest("msg_invalid_user_deleted")),
+    ).rejects.toBeInstanceOf(InvalidWebhookPayloadProblem);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
   it("should invoke a mutation handler once for repeated delivery IDs", async () => {
     const event = {
       type: "user.created",

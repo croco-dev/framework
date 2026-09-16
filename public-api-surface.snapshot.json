@@ -4104,6 +4104,11 @@
               "source": "./libs/ClerkAuthDiagnosticsProvider"
             },
             {
+              "name": "ClerkDeletedObjectEvent",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "ClerkMembershipEvent",
               "exportKind": "named",
               "source": "./libs/types"
