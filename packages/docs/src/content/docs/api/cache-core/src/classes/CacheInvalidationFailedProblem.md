@@ -15,7 +15,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### Constructor
 
-> **new CacheInvalidationFailedProblem**(`eventName`, `adapterName`, `operation`, `cause`): `CacheInvalidationFailedProblem`
+> **new CacheInvalidationFailedProblem**(`eventName`, `adapterName`, `operation`, `cause`, `additionalFailures?`): `CacheInvalidationFailedProblem`
 
 #### Parameters
 
@@ -34,6 +34,10 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 ##### cause
 
 `unknown`
+
+##### additionalFailures?
+
+readonly [`CacheInvalidationFailure`](/api/cache-core/src/type-aliases/cacheinvalidationfailure/)[] = `[]`
 
 #### Returns
 
@@ -104,6 +108,12 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 #### Inherited from
 
 [`Problem`](/api/problems-core/src/classes/problem/).[`extensions`](/api/problems-core/src/classes/problem/#extensions)
+
+---
+
+### failures
+
+> `readonly` **failures**: readonly [`CacheInvalidationFailure`](/api/cache-core/src/type-aliases/cacheinvalidationfailure/)[]
 
 ---
 

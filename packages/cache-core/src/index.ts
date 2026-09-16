@@ -64,6 +64,7 @@ export {
   CacheKeyArgumentProblem,
   CacheInvalidationAssertionProblem,
   CacheInvalidationFailedProblem,
+  type CacheInvalidationFailure,
   type CacheInvalidationDiagnostic,
   CacheInvalidationGraphProblem,
   UnknownCacheInvalidationEventProblem,

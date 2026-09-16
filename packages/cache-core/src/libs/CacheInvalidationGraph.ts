@@ -301,6 +301,7 @@ export async function invalidateCacheForEvent(
   }
 
   const adapterName = resolveAdapterName(options.adapter);
+  const failures: CacheInvalidationFailedProblem[] = [];
   const operations: CacheInvalidationAppliedOperation[] = [];
 
   for (const operation of event.invalidates) {
@@ -321,8 +322,23 @@ export async function invalidateCacheForEvent(
     } catch (cause) {
       const problem = new CacheInvalidationFailedProblem(eventName, adapterName, operation, cause);
       recordTelemetryError(options.telemetry, problem, context);
-      throw problem;
+      failures.push(problem);
     }
+  }
+
+  const [firstFailure, ...remainingFailures] = failures;
+  if (firstFailure !== undefined) {
+    if (remainingFailures.length === 0) {
+      throw firstFailure;
+    }
+
+    throw new CacheInvalidationFailedProblem(
+      firstFailure.eventName,
+      firstFailure.adapterName,
+      firstFailure.operation,
+      firstFailure.cause ?? firstFailure.failures[0]?.causeMessage,
+      remainingFailures.flatMap((failure) => failure.failures),
+    );
   }
 
   return {

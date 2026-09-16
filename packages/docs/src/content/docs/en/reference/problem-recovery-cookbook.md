@@ -3004,7 +3004,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:21:1` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:29:1` (problem-class)
 
 <a id="cache-core-invalid-configuration"></a>
 
@@ -3040,7 +3040,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:11:1` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:19:1` (problem-class)
 
 <a id="cache-core-invalid-ttl"></a>
 
@@ -3076,7 +3076,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:119:1` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:140:1` (problem-class)
 
 <a id="cache-core-invalidation-capability-unsupported"></a>
 
@@ -3094,7 +3094,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:72:1` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:80:1` (problem-class)
 
 <a id="cache-core-invalidation-event-unknown"></a>
 
@@ -3112,7 +3112,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:58:1` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:66:1` (problem-class)
 
 <a id="cache-core-invalidation-failed"></a>
 
@@ -3130,7 +3130,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:89:1` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:97:1` (problem-class)
 
 <a id="cache-core-invalidation-graph-invalid"></a>
 
@@ -3148,7 +3148,7 @@ Sources:
 
 Sources:
 
-- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:44:1` (problem-class)
+- `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:52:1` (problem-class)
 
 <a id="circuit-breaker-open"></a>
 
