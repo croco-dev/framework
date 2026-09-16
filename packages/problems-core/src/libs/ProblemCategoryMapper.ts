@@ -41,6 +41,8 @@ export function toHttpStatus(category: ProblemCategory): number {
       return 410;
     case ProblemCategory.PayloadTooLarge:
       return 413;
+    case ProblemCategory.UnsupportedMediaType:
+      return 415;
     case ProblemCategory.ValidationError:
       return 422;
     case ProblemCategory.BusinessRuleViolation:
@@ -74,6 +76,8 @@ export function toTitle(category: ProblemCategory): string {
       return "Gone";
     case ProblemCategory.PayloadTooLarge:
       return "Payload Too Large";
+    case ProblemCategory.UnsupportedMediaType:
+      return "Unsupported Media Type";
     case ProblemCategory.ValidationError:
       return "Validation Error";
     case ProblemCategory.BusinessRuleViolation:

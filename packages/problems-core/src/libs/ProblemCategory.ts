@@ -17,6 +17,8 @@ export enum ProblemCategory {
   Gone = "Gone",
   /** 요청 본문이 허용된 크기를 초과한 상태를 나타냅니다. (413) */
   PayloadTooLarge = "PayloadTooLarge",
+  /** 요청 본문의 미디어 타입을 지원하지 않는 상태를 나타냅니다. (415) */
+  UnsupportedMediaType = "UnsupportedMediaType",
   /** 입력 검증 실패를 나타냅니다. (422) */
   ValidationError = "ValidationError",
   /** 비즈니스 규칙 위반을 나타냅니다. (422) */

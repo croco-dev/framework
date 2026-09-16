@@ -39,6 +39,7 @@ import {
   type RoutePathParamName,
   type RoutePathParams,
   type RouteProblem,
+  type RouteProblemStatus,
   type RouteQuery,
   type RouteQueryParam,
   type RouteResponse,
@@ -237,6 +238,7 @@ describe("route contract types", () => {
     expectTypeOf<RouteProblem<typeof getUserContract>>().toEqualTypeOf<UserNotFoundProblem>();
     expectTypeOf<RouteProblem<typeof updateUserContract>>().toEqualTypeOf<UserForbiddenProblem>();
     expectTypeOf(routeProblemResponses(updateUserContract)[0]?.status).toEqualTypeOf<403>();
+    expectTypeOf<RouteProblemStatus<ProblemCategory.UnsupportedMediaType>>().toEqualTypeOf<415>();
     expectTypeOf<RoutePathParams<typeof getUserContract>>().toEqualTypeOf<{ id: string }>();
     expectTypeOf<RouteContractRequest<typeof createUserContract>["body"]>().toEqualTypeOf<{
       name: string;

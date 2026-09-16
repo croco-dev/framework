@@ -1029,6 +1029,7 @@ function isProblemCategory(value: unknown): boolean {
     value === "Conflict" ||
     value === "Gone" ||
     value === "PayloadTooLarge" ||
+    value === "UnsupportedMediaType" ||
     value === "ValidationError" ||
     value === "BusinessRuleViolation" ||
     value === "TooManyRequests" ||

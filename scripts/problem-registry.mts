@@ -167,6 +167,7 @@ export const ProblemCategory = {
   Conflict: "Conflict",
   Gone: "Gone",
   PayloadTooLarge: "PayloadTooLarge",
+  UnsupportedMediaType: "UnsupportedMediaType",
   ValidationError: "ValidationError",
   BusinessRuleViolation: "BusinessRuleViolation",
   TooManyRequests: "TooManyRequests",
@@ -193,6 +194,7 @@ const factoryMethodCategory = {
   conflict: ProblemCategory.Conflict,
   gone: ProblemCategory.Gone,
   payloadTooLarge: ProblemCategory.PayloadTooLarge,
+  unsupportedMediaType: ProblemCategory.UnsupportedMediaType,
   validationError: ProblemCategory.ValidationError,
   businessRuleViolation: ProblemCategory.BusinessRuleViolation,
   tooManyRequests: ProblemCategory.TooManyRequests,
@@ -1850,6 +1852,14 @@ const recoveryMetadataByCategory = {
     redactionPolicy: "public",
     severity: "info",
   }),
+  [ProblemCategory.UnsupportedMediaType]: recovery({
+    cause: "The request body uses a media type that the endpoint does not support.",
+    userAction: "Send the request body with a supported Content-Type and retry.",
+    operatorAction: "Confirm the route media-type contract and request Content-Type header.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
   [ProblemCategory.ValidationError]: recovery({
     cause: "The request or generated contract failed schema or semantic validation.",
     userAction: "Fix the invalid fields and retry with schema-conformant input.",
@@ -2720,6 +2730,8 @@ function toHttpStatus(category: ProblemCategory): number {
       return 410;
     case ProblemCategory.PayloadTooLarge:
       return 413;
+    case ProblemCategory.UnsupportedMediaType:
+      return 415;
     case ProblemCategory.ValidationError:
     case ProblemCategory.BusinessRuleViolation:
       return 422;
@@ -2748,6 +2760,8 @@ function toTitle(category: ProblemCategory): string {
       return "Gone";
     case ProblemCategory.PayloadTooLarge:
       return "Payload Too Large";
+    case ProblemCategory.UnsupportedMediaType:
+      return "Unsupported Media Type";
     case ProblemCategory.ValidationError:
       return "Validation Error";
     case ProblemCategory.BusinessRuleViolation:

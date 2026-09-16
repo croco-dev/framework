@@ -360,21 +360,24 @@ before interceptors and pipes; interceptor `before` logic wraps pipe execution, 
 `after` logic runs after the controller returns. A pipe failure skips controller invocation and is
 handled by the route's exception filters or the standard Problem response contract.
 
-### Request body parse failures
+### Request body media types and parse failures
 
-`@Body()` 파라미터가 있는 라우트에서 transport는 Hono `ctx.json()`으로 요청 본문을 한 번 읽고,
-성공 또는 실패한 parse promise를 같은 요청 컨텍스트에 캐시합니다. malformed JSON, 빈 JSON body,
-그리고 Hono parser 경계에서 JSON으로 해석할 수 없는 unexpected content type payload는 모두
-`RequestValidationProblem`으로 정규화됩니다.
+`@Body()` 파라미터가 있는 라우트는 `Content-Type: application/json`을 지원합니다. Media type은
+대소문자를 구분하지 않으며 `application/json; charset=utf-8`처럼 파라미터가 붙어도 허용합니다.
+비어 있지 않은 본문의 `Content-Type`이 없거나 지원하지 않는 media type이면 JSON으로 파싱하지 않고
+`415 Unsupported Media Type`, `code: "transports-http/unsupported-media-type"`으로 거부합니다.
+응답은 `Content-Type: application/problem+json`인 RFC 7807 Problem Details입니다.
+Raw body나 multipart 파싱은 이 `@Body()` 계약의 지원 범위에 포함되지 않습니다.
 
-이 응답은 `422 Validation Error`, `code: "protocols-rest/request-validation-failed"`를 사용하고,
-`issues`는 `body.value` 경로와 `Request body must contain valid JSON` 메시지를 포함합니다. 이
-계약은 body parse 실패에만 적용되며, Zod schema validation, guard, interceptor, controller,
+Transport는 JSON 본문을 텍스트로 한 번 읽어 파싱하고, 성공 또는 실패한 parse promise를 같은 요청
+컨텍스트에 캐시합니다. 생략된 본문과 zero-byte JSON 본문은 `undefined`로 전달되며, 허용 여부는
+선언한 schema가 결정합니다. `Content-Type` 없이 `Content-Length: 0`으로 전달된 본문도 동일하게
+처리합니다. 공백만 있는 JSON 본문 등 malformed JSON은 `RequestValidationProblem`으로 정규화됩니다.
+
+JSON parse 실패 응답은 `422 Validation Error`, `code: "protocols-rest/request-validation-failed"`를
+사용하고, `issues`는 `body.value` 경로와 `Request body must contain valid JSON` 메시지를 포함합니다.
+이 계약은 body parse 실패에만 적용되며, Zod schema validation, guard, interceptor, controller,
 filter가 명시적으로 던진 Croco `Problem`은 다시 감싸지 않습니다.
-
-transport는 이 계약만으로 strict `415 Unsupported Media Type` negotiation을 추가하지 않습니다.
-애플리케이션이 media type을 강제해야 한다면 라우트 앞단 middleware나 policy에서 별도로 검증해야
-합니다.
 
 ### Middleware continuation and short-circuit semantics
 

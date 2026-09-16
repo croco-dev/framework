@@ -7,6 +7,7 @@ describe("ProblemCategoryMapper", () => {
     expect(ProblemCategoryMapper.toHttpStatus(ProblemCategory.BadRequest)).toBe(400);
     expect(ProblemCategoryMapper.toHttpStatus(ProblemCategory.ValidationError)).toBe(422);
     expect(ProblemCategoryMapper.toHttpStatus(ProblemCategory.PayloadTooLarge)).toBe(413);
+    expect(ProblemCategoryMapper.toHttpStatus(ProblemCategory.UnsupportedMediaType)).toBe(415);
   });
 
   it("should map all categories to titles", () => {
@@ -15,6 +16,9 @@ describe("ProblemCategoryMapper", () => {
     expect(ProblemCategoryMapper.toTitle(ProblemCategory.ValidationError)).toBe("Validation Error");
     expect(ProblemCategoryMapper.toTitle(ProblemCategory.PayloadTooLarge)).toBe(
       "Payload Too Large",
+    );
+    expect(ProblemCategoryMapper.toTitle(ProblemCategory.UnsupportedMediaType)).toBe(
+      "Unsupported Media Type",
     );
   });
 });
@@ -95,6 +99,7 @@ describe("ProblemFactory", () => {
       ProblemFactory.conflict("CONFLICT"),
       ProblemFactory.gone("GONE"),
       ProblemFactory.payloadTooLarge("PAYLOAD_TOO_LARGE"),
+      ProblemFactory.unsupportedMediaType("UNSUPPORTED_MEDIA_TYPE"),
       ProblemFactory.validationError("VALIDATION"),
       ProblemFactory.businessRuleViolation("BUSINESS_RULE"),
       ProblemFactory.tooManyRequests("TOO_MANY"),

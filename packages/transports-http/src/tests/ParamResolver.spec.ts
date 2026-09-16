@@ -53,7 +53,7 @@ function createMockHttpContext(
     } as unknown as CrocoHttpContext["raw"],
     param: vi.fn(),
     query: vi.fn(),
-    header: vi.fn(),
+    header: vi.fn((name: string) => request.headers.get(name) ?? undefined),
     json,
     set: (key, value) => {
       store.set(key, value);
@@ -225,6 +225,53 @@ describe("ParamResolver", () => {
     );
     expect(ctx.raw.req.text).toHaveBeenCalledTimes(1);
     expect(json).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    "application/json",
+    "application/json; charset=utf-8",
+    "Application/JSON ; Charset=UTF-8",
+  ])("parses JSON request bodies with content type %s", async (contentType) => {
+    class TestController {
+      create(@Body() _body: unknown) {}
+    }
+
+    const parsedBody = { name: "croco" };
+    const request = new Request("http://localhost/test", {
+      method: "POST",
+      headers: { "Content-Type": contentType },
+      body: JSON.stringify(parsedBody),
+    });
+    const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"], request);
+
+    await expect(new ParamResolver().resolveParams(ctx, TestController, "create")).resolves.toEqual(
+      [parsedBody],
+    );
+  });
+
+  it.each([
+    { contentType: "text/plain", body: '{"name":"croco"}' },
+    { contentType: "application/octet-stream", body: new Uint8Array([0xff, 0x00, 0xfe]) },
+  ])("rejects $contentType bodies before reading them", async ({ contentType, body }) => {
+    class TestController {
+      create(@Body() _body: unknown) {}
+    }
+
+    const request = new Request("http://localhost/test", {
+      method: "POST",
+      headers: { "Content-Type": contentType },
+      body,
+    });
+    const ctx = createMockHttpContext(vi.fn() as CrocoHttpContext["json"], request);
+
+    await expect(
+      new ParamResolver().resolveParams(ctx, TestController, "create"),
+    ).rejects.toMatchObject({
+      code: "transports-http/unsupported-media-type",
+      status: 415,
+      title: "Unsupported Media Type",
+    });
+    expect(ctx.raw.req.text).not.toHaveBeenCalled();
   });
 
   it("같은 인자 슬롯에 중복된 parameter metadata가 있으면 fail fast", async () => {

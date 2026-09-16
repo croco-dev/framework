@@ -98,6 +98,14 @@ RFC 7807 Problem Details와 HTTP 의미론을 연결하는 문제 카테고리 �
 
 ---
 
+### UnsupportedMediaType
+
+> **UnsupportedMediaType**: `"UnsupportedMediaType"`
+
+요청 본문의 미디어 타입을 지원하지 않는 상태를 나타냅니다. (415)
+
+---
+
 ### ValidationError
 
 > **ValidationError**: `"ValidationError"`

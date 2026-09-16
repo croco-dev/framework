@@ -1178,6 +1178,35 @@ describe("buildContractGraph", () => {
     ];
 
     expect(isContractGraphSnapshot({ ...snapshot, diagnostics: [validDiagnostic] })).toBe(true);
+    expect(
+      isContractGraphSnapshot({
+        ...snapshot,
+        routes: [
+          {
+            ...route,
+            problems: [
+              {
+                code: "UNSUPPORTED_MEDIA_TYPE",
+                category: "UnsupportedMediaType",
+                status: 415,
+                registry: {
+                  package: "@croco/example",
+                  code: "UNSUPPORTED_MEDIA_TYPE",
+                  category: "UnsupportedMediaType",
+                  status: 415,
+                  retryable: false,
+                  retryability: "not-retryable",
+                  public: true,
+                  visibility: "public",
+                  redaction: "public",
+                  cookbookPath: "/reference/problem-recovery-cookbook/#unsupported-media-type",
+                },
+              },
+            ],
+          },
+        ],
+      }),
+    ).toBe(true);
     for (const malformed of malformedSnapshots) {
       expect(isContractGraphSnapshot(malformed)).toBe(false);
     }

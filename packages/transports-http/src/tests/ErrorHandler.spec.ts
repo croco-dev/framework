@@ -56,10 +56,14 @@ describe("ErrorHandler", () => {
         method: "GET",
         headers: new Headers(),
       },
+      res: {
+        status: 200,
+        headers: {},
+      },
       jsonResponse: (body: unknown, status: number) => {
         return new Response(JSON.stringify(body), {
           status,
-          headers: { "Content-Type": "application/problem+json" },
+          headers: { "Content-Type": "application/json" },
         });
       },
     } as unknown as CrocoHttpContext;

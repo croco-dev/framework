@@ -147,6 +147,8 @@ function toFallbackCategory(status: number, sourceProblem: Problem | undefined):
       return ProblemCategory.Gone;
     case 413:
       return ProblemCategory.PayloadTooLarge;
+    case 415:
+      return ProblemCategory.UnsupportedMediaType;
     case 422:
       return ProblemCategory.BusinessRuleViolation;
     case 429:

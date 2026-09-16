@@ -492,26 +492,24 @@ describe("Framework integration", () => {
     ]);
   });
 
-  it("serializes unexpected content-type parse failures as Problem Details", async () => {
+  it("serializes unsupported body media types as Problem Details", async () => {
     const response = await app.fetch(
       new Request("http://localhost/framework/integration/widgets", {
         method: "POST",
         headers: { "Content-Type": "text/plain" },
-        body: "not-json",
+        body: '{"name":"croco","quantity":1}',
       }),
     );
 
-    const problem = await expectBodyValidationProblem(
-      response,
-      "http://localhost/framework/integration/widgets",
-    );
-    expect(problem.detail).toContain("body.value");
-    expect(problem.issues).toEqual([
-      {
-        path: "body.value",
-        message: "Request body must contain valid JSON",
-      },
-    ]);
+    expect(response.status).toBe(415);
+    expect(response.headers.get("content-type")).toContain("application/problem+json");
+    await expect(readJson<ValidationProblemResponse>(response)).resolves.toMatchObject({
+      title: "Unsupported Media Type",
+      status: 415,
+      code: "transports-http/unsupported-media-type",
+      detail: "Request body Content-Type must be application/json",
+      instance: "http://localhost/framework/integration/widgets",
+    });
   });
 
   it("serializes repeated body parse failures as Problem Details", async () => {
