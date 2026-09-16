@@ -56,7 +56,7 @@ function isClerkDeletedObjectEvent(data: unknown): data is ClerkDeletedObjectEve
   return (
     isObjectRecord(data) &&
     hasStringField(data, "id") &&
-    typeof data.deleted === "boolean" &&
+    data.deleted === true &&
     (data.object === undefined || typeof data.object === "string")
   );
 }

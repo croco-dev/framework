@@ -167,6 +167,23 @@ describe("ClerkWebhookHandler", () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
+  it("should reject a deleted object payload with a false deletion marker", async () => {
+    const handler = vi.fn();
+    webhookHandler = new ClerkWebhookHandler(
+      { signingSecret, idempotencyStore },
+      { "user.deleted": handler },
+    );
+    vi.mocked(verifyWebhook).mockResolvedValue({
+      type: "user.deleted",
+      data: { id: "user_123", object: "user", deleted: false },
+    } as unknown as VerifiedWebhook);
+
+    await expect(
+      webhookHandler.handleWebhook(createRequest("msg_false_user_deleted")),
+    ).rejects.toBeInstanceOf(InvalidWebhookPayloadProblem);
+    expect(handler).not.toHaveBeenCalled();
+  });
+
   it("should invoke a mutation handler once for repeated delivery IDs", async () => {
     const event = {
       type: "user.created",

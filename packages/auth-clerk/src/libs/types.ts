@@ -23,7 +23,7 @@ export type ClerkOrgEvent = {
 export type ClerkDeletedObjectEvent = {
   id: string;
   object?: string;
-  deleted: boolean;
+  deleted: true;
   [key: string]: unknown;
 };
 
