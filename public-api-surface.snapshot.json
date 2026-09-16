@@ -20325,6 +20325,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "widenUsageRecordIdsPostgres",
+              "exportKind": "declaration",
+              "source": "./migrations/widenUsageRecordIds",
+              "declarationKind": "function"
+            },
+            {
               "name": "DrizzleMeterRepository",
               "exportKind": "named",
               "source": "./DrizzleMeterRepository",
@@ -20372,6 +20378,12 @@
               "name": "MeteringMigrationClient",
               "exportKind": "declaration",
               "source": "./migrations/addUsageEnvelopeFields",
+              "declarationKind": "type"
+            },
+            {
+              "name": "UsageRecordIdMigrationClient",
+              "exportKind": "declaration",
+              "source": "./migrations/widenUsageRecordIds",
               "declarationKind": "type"
             },
             {

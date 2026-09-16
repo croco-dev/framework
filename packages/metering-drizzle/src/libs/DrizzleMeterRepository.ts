@@ -2,8 +2,9 @@ import { and, eq, getTableColumns } from "drizzle-orm";
 import { InvalidUsageValueProblem, MeterRepository } from "@croco/metering-core";
 import { ProblemFactory } from "@croco/problems-core";
 
+import type { AnyColumn, SQL, Table } from "drizzle-orm";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import type { SQLiteColumn, SQLiteTable } from "drizzle-orm/sqlite-core";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { ILogger } from "@croco/framework-context";
 import type { MeterDefinition, MeterRegistrationOptions, UsageRecord } from "@croco/metering-core";
 import type { TxManager } from "@croco/tx-core";
@@ -20,48 +21,89 @@ const DRIZZLE_JSON_COLUMN_TYPES = new Set([
   "SQLiteTextJson",
 ]);
 
+type DrizzleSelect =
+  | BetterSQLite3Database<Record<string, never>>["select"]
+  | NodePgDatabase<Record<string, never>>["select"];
+
+type DrizzleInsert =
+  | BetterSQLite3Database<Record<string, never>>["insert"]
+  | NodePgDatabase<Record<string, never>>["insert"];
+
+type DrizzleQueryResult<T> = PromiseLike<T>;
+
+type DrizzleSelectLimitQuery = DrizzleQueryResult<unknown[]>;
+
+type DrizzleSelectWhereQuery = DrizzleQueryResult<unknown[]> & {
+  limit(limit: number): DrizzleSelectLimitQuery;
+};
+
+type DrizzleSelectFromQuery = DrizzleQueryResult<unknown[]> & {
+  where(condition: SQL<unknown> | undefined): DrizzleSelectWhereQuery;
+};
+
+type DrizzleSelectQuery = {
+  from(table: Table): DrizzleSelectFromQuery;
+};
+
+type DrizzleInsertValuesQuery = {
+  onConflictDoNothing(): DrizzleQueryResult<unknown>;
+  returning(): DrizzleQueryResult<unknown[]>;
+};
+
+type DrizzleInsertQuery = {
+  values(values: Record<string, unknown> | Record<string, unknown>[]): DrizzleInsertValuesQuery;
+};
+
+type DrizzleQueryClient = {
+  insert(table: Table): DrizzleInsertQuery;
+  select(): DrizzleSelectQuery;
+};
+
 /**
- * 미터 저장소에서 사용하는 기본 Drizzle SQLite 클라이언트 타입입니다.
+ * 미터 저장소에서 사용하는 Drizzle SQLite 또는 PostgreSQL 클라이언트 타입입니다.
  */
-export type DrizzleDb = BetterSQLite3Database<Record<string, never>>;
+export type DrizzleDb = {
+  insert: DrizzleInsert;
+  select: DrizzleSelect;
+};
 
 /**
  * 미터 정의 테이블 컬럼 매핑입니다.
  */
 export type MeterTable = {
-  id: SQLiteColumn;
-  tenantId: SQLiteColumn;
-  meterId: SQLiteColumn;
-  type: SQLiteColumn;
-  quota: SQLiteColumn;
-  allowOverQuota: SQLiteColumn;
-  metadata: SQLiteColumn;
-  createdAt: SQLiteColumn;
-  updatedAt: SQLiteColumn;
+  id: AnyColumn;
+  tenantId: AnyColumn;
+  meterId: AnyColumn;
+  type: AnyColumn;
+  quota: AnyColumn;
+  allowOverQuota: AnyColumn;
+  metadata: AnyColumn;
+  createdAt: AnyColumn;
+  updatedAt: AnyColumn;
 };
 
 /**
  * 사용량 기록 테이블 컬럼 매핑입니다.
  */
 export type UsageRecordTable = {
-  id: SQLiteColumn;
-  tenantId: SQLiteColumn;
-  meterId: SQLiteColumn;
-  value: SQLiteColumn;
-  recordedAt: SQLiteColumn;
-  metadata: SQLiteColumn;
-  idempotencyKey: SQLiteColumn;
-  eventId?: SQLiteColumn;
-  dimensions?: SQLiteColumn;
+  id: AnyColumn;
+  tenantId: AnyColumn;
+  meterId: AnyColumn;
+  value: AnyColumn;
+  recordedAt: AnyColumn;
+  metadata: AnyColumn;
+  idempotencyKey: AnyColumn;
+  eventId?: AnyColumn;
+  dimensions?: AnyColumn;
 };
 
 /**
  * 저장소 초기화에 필요한 스키마와 직렬화 설정입니다.
  */
 export type DrizzleMeterRepositoryConfig = {
-  meterTable: unknown;
+  meterTable: Table;
   meterSchema: MeterTable;
-  usageRecordTable: unknown;
+  usageRecordTable: Table;
   usageRecordSchema: UsageRecordTable;
   serializeJson?: (value: unknown) => string;
   deserializeJson?: (value: string) => unknown;
@@ -73,9 +115,9 @@ export type DrizzleMeterRepositoryConfig = {
 export class DrizzleMeterRepository extends MeterRepository {
   readonly replayContract = "idempotent" as const;
 
-  private readonly meterTable: unknown;
+  private readonly meterTable: Table;
   private readonly meterSchema: MeterTable;
-  private readonly usageRecordTable: unknown;
+  private readonly usageRecordTable: Table;
   private readonly usageRecordSchema: UsageRecordTable;
   private readonly serializeJson: (value: unknown) => string;
   private readonly deserializeJson: (value: string) => unknown;
@@ -98,8 +140,8 @@ export class DrizzleMeterRepository extends MeterRepository {
     this.deserializeJson = config.deserializeJson ?? JSON.parse;
   }
 
-  private getClient(): DrizzleDb {
-    return this.txManager.getClient() ?? this.db;
+  private getClient(): DrizzleQueryClient {
+    return (this.txManager.getClient() ?? this.db) as unknown as DrizzleQueryClient;
   }
 
   /**
@@ -108,9 +150,9 @@ export class DrizzleMeterRepository extends MeterRepository {
   async findByMeterIdAndTenant(meterId: string, tenantId: string): Promise<MeterDefinition | null> {
     const client = this.getClient();
 
-    const results = await (client as DrizzleDb)
+    const results = await client
       .select()
-      .from(this.meterTable as SQLiteTable)
+      .from(this.meterTable)
       .where(and(eq(this.meterSchema.tenantId, tenantId), eq(this.meterSchema.meterId, meterId)))
       .limit(1);
 
@@ -137,14 +179,11 @@ export class DrizzleMeterRepository extends MeterRepository {
       quota: meter.quota ?? null,
       allowOverQuota: meter.allowOverQuota ? 1 : 0,
       metadata: this.encodeJsonColumn(meter.metadata ?? {}, this.meterSchema.metadata),
-      createdAt: now.getTime(),
-      updatedAt: now.getTime(),
+      createdAt: this.encodeDateColumn(now, this.meterSchema.createdAt),
+      updatedAt: this.encodeDateColumn(now, this.meterSchema.updatedAt),
     };
 
-    const [inserted] = await (client as DrizzleDb)
-      .insert(this.meterTable as SQLiteTable)
-      .values(values)
-      .returning();
+    const [inserted] = await client.insert(this.meterTable).values(values).returning();
 
     if (!inserted) {
       throw ProblemFactory.internalServerError(
@@ -162,7 +201,7 @@ export class DrizzleMeterRepository extends MeterRepository {
   async findAll(): Promise<MeterDefinition[]> {
     const client = this.getClient();
 
-    const results = await (client as DrizzleDb).select().from(this.meterTable as SQLiteTable);
+    const results = await client.select().from(this.meterTable);
 
     return (results as Record<string, unknown>[]).map((r) => this.mapToMeterDefinition(r));
   }
@@ -173,9 +212,9 @@ export class DrizzleMeterRepository extends MeterRepository {
   async findByTenant(tenantId: string): Promise<MeterDefinition[]> {
     const client = this.getClient();
 
-    const results = await (client as DrizzleDb)
+    const results = await client
       .select()
-      .from(this.meterTable as SQLiteTable)
+      .from(this.meterTable)
       .where(eq(this.meterSchema.tenantId, tenantId));
 
     return (results as Record<string, unknown>[]).map((r) => this.mapToMeterDefinition(r));
@@ -210,20 +249,27 @@ export class DrizzleMeterRepository extends MeterRepository {
       throw new UsageEnvelopeConfigurationProblem(missingMappings);
     }
 
-    const columns = getTableColumns(this.usageRecordTable as SQLiteTable);
+    const columns = getTableColumns(this.usageRecordTable);
     const columnKeys = this.getUsageRecordColumnKeys(columns);
     const values = records.map((record) => {
       const value: Record<string, unknown> = {
         [columnKeys.tenantId]: record.tenantId,
         [columnKeys.meterId]: record.meterId,
         [columnKeys.value]: record.value,
-        [columnKeys.recordedAt]: record.timestamp.getTime(),
+        [columnKeys.recordedAt]: this.encodeDateColumn(
+          record.timestamp,
+          this.usageRecordSchema.recordedAt,
+        ),
         [columnKeys.metadata]: this.encodeJsonColumn(
           record.metadata ?? {},
           this.usageRecordSchema.metadata,
         ),
         [columnKeys.idempotencyKey]: record.idempotencyKey,
       };
+
+      if (this.usageRecordSchema.id.dataType === "string") {
+        value[columnKeys.id] = record.id;
+      }
 
       if (columnKeys.eventId) {
         value[columnKeys.eventId] = record.eventId ?? null;
@@ -238,10 +284,7 @@ export class DrizzleMeterRepository extends MeterRepository {
       return value;
     });
 
-    await (client as DrizzleDb)
-      .insert(this.usageRecordTable as SQLiteTable)
-      .values(values)
-      .onConflictDoNothing();
+    await client.insert(this.usageRecordTable).values(values).onConflictDoNothing();
   }
 
   private encodeJsonColumn(value: unknown, column: unknown): unknown {
@@ -250,16 +293,20 @@ export class DrizzleMeterRepository extends MeterRepository {
       : this.serializeJson(value);
   }
 
+  private encodeDateColumn(value: Date, column: AnyColumn): Date | number {
+    return column.dataType === "date" ? value : value.getTime();
+  }
+
   private getUsageRecordColumnKeys(
-    columns: Record<string, SQLiteColumn>,
+    columns: Record<string, AnyColumn>,
   ): Partial<Record<keyof UsageRecordTable, string>> &
     Record<
-      "tenantId" | "meterId" | "value" | "recordedAt" | "metadata" | "idempotencyKey",
+      "id" | "tenantId" | "meterId" | "value" | "recordedAt" | "metadata" | "idempotencyKey",
       string
     > {
     return Object.fromEntries(
       Object.entries(this.usageRecordSchema)
-        .filter((entry): entry is [string, SQLiteColumn] => entry[1] !== undefined)
+        .filter((entry): entry is [string, AnyColumn] => entry[1] !== undefined)
         .map(([schemaKey, schemaColumn]) => {
           const columnKey =
             Object.entries(columns).find(([, tableColumn]) => tableColumn === schemaColumn)?.[0] ??
@@ -268,7 +315,7 @@ export class DrizzleMeterRepository extends MeterRepository {
         }),
     ) as Partial<Record<keyof UsageRecordTable, string>> &
       Record<
-        "tenantId" | "meterId" | "value" | "recordedAt" | "metadata" | "idempotencyKey",
+        "id" | "tenantId" | "meterId" | "value" | "recordedAt" | "metadata" | "idempotencyKey",
         string
       >;
   }

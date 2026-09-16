@@ -39,7 +39,9 @@ export const metersPg = pgTable("meters", {
 export const usageRecordsPg = pgTable(
   "usage_records",
   {
-    id: uuid("id").defaultRandom().primaryKey(),
+    id: text("id")
+      .default(sql`gen_random_uuid()::text`)
+      .primaryKey(),
     tenantId: text("tenant_id").notNull(),
     meterId: text("meter_id").notNull(),
     value: bigint("value", { mode: "number" }).notNull().default(1),
