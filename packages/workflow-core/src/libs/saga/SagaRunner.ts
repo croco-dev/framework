@@ -104,7 +104,11 @@ function isRetryableError(error: unknown): boolean {
     return Boolean(error.retryable);
   }
 
-  return error instanceof Problem && error.extensions?.retryable === true;
+  if (error instanceof Problem) {
+    return error.extensions?.retryable === true;
+  }
+
+  return error instanceof Error;
 }
 
 function getMaxAttempts(step: SagaStepDefinition): number {
@@ -524,25 +528,12 @@ export class SagaRunner {
           ),
       };
 
+      let result: unknown;
       try {
-        const result = await withSpan(() => step.run(stepInput, context), {
+        result = await withSpan(() => step.run(stepInput, context), {
           name: `saga:${definition.name}:step:${step.id}`,
           attributes: getStepRecordAttributes(definition, execution.id, step),
         });
-        const completedRecord: SagaStepExecutionRecord = {
-          ...record,
-          status: "completed",
-          result,
-          outboxMessages,
-          completedAt: new Date(),
-        };
-        await this.replaceStepRecord(execution.id, completedRecord);
-        return {
-          result: {
-            stepId: step.id,
-            result,
-          },
-        };
       } catch (error) {
         const failure = toSagaFailure(error);
         record = await this.replaceStepRecord(execution.id, {
@@ -567,6 +558,32 @@ export class SagaRunner {
         });
         throw error;
       }
+
+      const completedRecord: SagaStepExecutionRecord = {
+        ...record,
+        status: "completed",
+        result,
+        outboxMessages,
+        completedAt: new Date(),
+      };
+      try {
+        await this.replaceStepRecord(execution.id, completedRecord);
+      } catch (error) {
+        await this.replaceStepRecord(execution.id, {
+          ...record,
+          status: "failed",
+          attempts: attempt,
+          error: toSagaFailure(error),
+          completedAt: new Date(),
+        });
+        throw error;
+      }
+      return {
+        result: {
+          stepId: step.id,
+          result,
+        },
+      };
     }
 
     throw new SagaDefinitionProblem(
