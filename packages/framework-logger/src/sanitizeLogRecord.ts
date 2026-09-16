@@ -1,3 +1,5 @@
+import { Problem } from "@croco/problems-core";
+
 const CIRCULAR_VALUE = "[Circular]";
 const MAX_PROTOTYPE_DEPTH = 16;
 const TRUNCATED_VALUE = "[Truncated]";
@@ -66,6 +68,42 @@ function getErrorType(error: Error): string {
     return constructorName;
   }
   return typeof name === "string" && name ? name : "Error";
+}
+
+function mergeProblemSerialization(
+  sanitized: Record<string, unknown>,
+  problem: Problem,
+  depth: number,
+  ancestors: WeakSet<object>,
+): void {
+  let serialized: unknown;
+  try {
+    serialized = Reflect.apply(Problem.prototype.toJSON, problem, []);
+  } catch {
+    return;
+  }
+
+  if (!serialized || typeof serialized !== "object" || Array.isArray(serialized)) {
+    return;
+  }
+
+  const sanitizedSerialization = sanitizeObject(serialized, depth, ancestors);
+  if (typeof sanitizedSerialization === "string" || Array.isArray(sanitizedSerialization)) {
+    return;
+  }
+
+  for (const [key, value] of Object.entries(sanitizedSerialization)) {
+    if (Object.prototype.hasOwnProperty.call(sanitized, key)) {
+      continue;
+    }
+
+    Object.defineProperty(sanitized, key, {
+      configurable: true,
+      enumerable: true,
+      value,
+      writable: true,
+    });
+  }
 }
 
 function getErrorTextWithCauses(
@@ -141,6 +179,10 @@ function sanitizeError(
       if (sanitizedValue !== undefined) {
         sanitized[key] = sanitizedValue;
       }
+    }
+
+    if (error instanceof Problem) {
+      mergeProblemSerialization(sanitized, error, depth, ancestors);
     }
 
     const errors = getDataProperty(error, "errors");

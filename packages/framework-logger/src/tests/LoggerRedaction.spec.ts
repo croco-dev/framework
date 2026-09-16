@@ -1,12 +1,39 @@
 import { Writable } from "node:stream";
 import type { ConfigService } from "@croco/framework-config";
 import { Context } from "@croco/framework-context";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import pino from "pino";
 import { describe, expect, it } from "vitest";
 import { Logger } from "../Logger";
 import { MAX_LOG_NESTING_DEPTH } from "../sanitizeLogRecord";
 
 type LogRecord = Record<string, unknown>;
+
+class LoggedNotFoundProblem extends Problem {
+  constructor() {
+    super("RESOURCE_NOT_FOUND", ProblemCategory.NotFound, "Resource missing", {
+      instance: "/resources/missing",
+      type: "https://croco.dev/problems/resource-not-found",
+      extensions: {
+        operation: "resource.read",
+        token: "problem-token",
+      },
+    });
+  }
+}
+
+class ThrowingTitleProblem extends Problem {
+  public titleReads = 0;
+
+  constructor() {
+    super("BROKEN_TITLE", ProblemCategory.InternalServerError, "Title unavailable");
+  }
+
+  override get title(): string {
+    this.titleReads += 1;
+    throw new Error("problem-title-secret");
+  }
+}
 
 function createCapturedLogger(): { logger: Logger; raw: () => string; records: () => LogRecord[] } {
   const chunks: string[] = [];
@@ -138,6 +165,69 @@ describe("Logger serialized redaction", () => {
       });
     },
   );
+
+  it("preserves sanitized Problem details and extensions", () => {
+    const { logger, raw, records } = createCapturedLogger();
+
+    logger.error("resource request failed", new LoggedNotFoundProblem());
+
+    const output = records();
+    const bytes = raw();
+    expect(bytes).not.toContain("problem-token");
+    expect(output[0]).toMatchObject({
+      err: {
+        type: "LoggedNotFoundProblem",
+        message: "Resource missing",
+        code: "RESOURCE_NOT_FOUND",
+        detail: "Resource missing",
+        instance: "/resources/missing",
+        title: "Not Found",
+        status: 404,
+        operation: "resource.read",
+      },
+    });
+  });
+
+  it("falls back to Error diagnostics when Problem serialization throws", () => {
+    const { logger, raw, records } = createCapturedLogger();
+    const problem = new ThrowingTitleProblem();
+
+    expect(() => logger.error("broken problem request failed", problem)).not.toThrow();
+
+    expect(problem.titleReads).toBe(1);
+    expect(raw()).not.toContain("problem-title-secret");
+    expect(records()[0]).toMatchObject({
+      err: {
+        type: "ThrowingTitleProblem",
+        message: "Title unavailable",
+        code: "BROKEN_TITLE",
+        detail: "Title unavailable",
+      },
+    });
+  });
+
+  it("does not invoke serialization methods on non-Problem errors", () => {
+    const { logger, raw, records } = createCapturedLogger();
+    let serializationCalls = 0;
+    const error = Object.assign(new Error("custom error failure"), {
+      toJSON: () => {
+        serializationCalls += 1;
+        return { status: 418, token: "custom-error-token" };
+      },
+    });
+
+    logger.error("custom error request failed", error);
+
+    expect(serializationCalls).toBe(0);
+    expect(raw()).not.toContain("custom-error-token");
+    expect(records()[0]).toMatchObject({
+      err: {
+        type: "Error",
+        message: "custom error failure",
+      },
+    });
+    expect(records()[0]?.err).not.toHaveProperty("status");
+  });
 
   it("preserves cause and aggregate Error diagnostics", () => {
     const { logger, raw, records } = createCapturedLogger();

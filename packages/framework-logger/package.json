@@ -40,6 +40,7 @@
   "dependencies": {
     "@croco/framework-config": "workspace:*",
     "@croco/framework-context": "workspace:*",
+    "@croco/problems-core": "workspace:*",
     "@opentelemetry/api": "^1.9.0",
     "pino": "^9.14.0",
     "pino-pretty": "^13.1.3"
