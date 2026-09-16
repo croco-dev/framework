@@ -154,6 +154,91 @@ describe("TaskRunner integration", () => {
     vi.useRealTimers();
   });
 
+  it("retries an ordinary Error while attempts remain", async () => {
+    @Component()
+    class RetriableTask {
+      @Task({ name: "retriable-task", maxAttempts: 3 })
+      async handle(): Promise<never> {
+        throw new Error("Temporary network failure");
+      }
+    }
+
+    Container.set(RetriableTask, new RetriableTask());
+    const store = new MemoryExecutionStore();
+    const manager = new ExecutionManagerImpl(store);
+    const runner = new TaskRunner(manager, TaskRegistry.fromMetadata());
+
+    await expect(runner.execute("retriable-task", {})).rejects.toThrow("Temporary network failure");
+
+    const [retrying] = await store.list({ type: "retriable-task" });
+    expect(retrying).toMatchObject({
+      status: "retrying",
+      attempts: 1,
+      maxAttempts: 3,
+      error: { message: "Temporary network failure", retryable: true },
+    });
+  });
+
+  it("fails immediately when an error is explicitly non-retryable", async () => {
+    @Component()
+    class PermanentFailureTask {
+      @Task({ name: "permanent-failure-task", maxAttempts: 3 })
+      async handle(): Promise<never> {
+        const error = new Error("Invalid account state") as Error & { retryable: boolean };
+        error.retryable = false;
+        throw error;
+      }
+    }
+
+    Container.set(PermanentFailureTask, new PermanentFailureTask());
+    const store = new MemoryExecutionStore();
+    const manager = new ExecutionManagerImpl(store);
+    const runner = new TaskRunner(manager, TaskRegistry.fromMetadata());
+
+    await expect(runner.execute("permanent-failure-task", {})).rejects.toThrow(
+      "Invalid account state",
+    );
+
+    const [failed] = await store.list({ type: "permanent-failure-task" });
+    expect(failed).toMatchObject({
+      status: "failed",
+      attempts: 1,
+      maxAttempts: 3,
+      error: { message: "Invalid account state", retryable: false },
+    });
+  });
+
+  it("uses the task retry predicate for errors without an explicit retryability flag", async () => {
+    @Component()
+    class ClassifiedFailureTask {
+      @Task({
+        name: "classified-failure-task",
+        maxAttempts: 3,
+        isRetryable: (error) => error.message !== "Invalid account state",
+      })
+      async handle(): Promise<never> {
+        throw new Error("Invalid account state");
+      }
+    }
+
+    Container.set(ClassifiedFailureTask, new ClassifiedFailureTask());
+    const store = new MemoryExecutionStore();
+    const manager = new ExecutionManagerImpl(store);
+    const runner = new TaskRunner(manager, TaskRegistry.fromMetadata());
+
+    await expect(runner.execute("classified-failure-task", {})).rejects.toThrow(
+      "Invalid account state",
+    );
+
+    const [failed] = await store.list({ type: "classified-failure-task" });
+    expect(failed).toMatchObject({
+      status: "failed",
+      attempts: 1,
+      maxAttempts: 3,
+      error: { message: "Invalid account state", retryable: false },
+    });
+  });
+
   it("should enforce a persisted deadline and retry the same execution through a real store", async () => {
     @Component()
     class RetriableTimedTask {

@@ -102,6 +102,7 @@ export class TaskRegistry {
   ): boolean {
     return (
       existingOptions?.maxAttempts === nextOptions?.maxAttempts &&
+      existingOptions?.isRetryable === nextOptions?.isRetryable &&
       existingOptions?.timeout === nextOptions?.timeout &&
       existingOptions?.idempotencyKey === nextOptions?.idempotencyKey &&
       existingOptions?.name === nextOptions?.name

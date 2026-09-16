@@ -20,6 +20,7 @@ import { TaskRegistry } from "./TaskRegistry";
 import type {
   TaskExecutionContext,
   TaskExecutionOptions,
+  TaskOptions,
   TaskReference,
   TaskReferencePayload,
   TaskReferenceResult,
@@ -91,12 +92,41 @@ function normalizeThrownError(error: unknown): Error {
   return error instanceof Error ? error : new Error(String(error));
 }
 
-function isTaskErrorRetryable(error: Error): boolean {
-  if ("retryable" in error) {
-    return Boolean(error.retryable);
+function readTaskErrorProperty(
+  value: object,
+  property: "extensions" | "retryable" | "status",
+): unknown {
+  return (value as Record<string, unknown>)[property];
+}
+
+function isTaskErrorRetryable(error: Error, isRetryable?: (error: Error) => boolean): boolean {
+  const declaredRetryability = readTaskErrorProperty(error, "retryable");
+  if (typeof declaredRetryability === "boolean") {
+    return declaredRetryability;
   }
 
-  return error instanceof Problem && error.extensions?.retryable === true;
+  if (error instanceof Problem) {
+    const extensions = readTaskErrorProperty(error, "extensions");
+    if (typeof extensions === "object" && extensions !== null) {
+      const extensionRetryability = readTaskErrorProperty(extensions, "retryable");
+      if (typeof extensionRetryability === "boolean") {
+        return extensionRetryability;
+      }
+    }
+  }
+
+  if (isRetryable !== undefined) {
+    return isRetryable(error);
+  }
+
+  const status = readTaskErrorProperty(error, "status");
+  return !(
+    typeof status === "number" &&
+    status >= 400 &&
+    status < 500 &&
+    status !== 408 &&
+    status !== 429
+  );
 }
 
 class TaskFailureRecordingAggregateError extends Error {
@@ -255,12 +285,7 @@ export class TaskRunner {
       return { executionId: execution.id, result: execution.result };
     }
 
-    const result = await this.runExecution(
-      task.target,
-      task.methodName,
-      execution,
-      taskOptions.timeoutRetry,
-    );
+    const result = await this.runExecution(task.target, task.methodName, execution, taskOptions);
     return { executionId: execution.id, result };
   }
 
@@ -282,7 +307,7 @@ export class TaskRunner {
       task.target,
       task.methodName,
       retryingExecution,
-      task.metadata.options?.timeoutRetry,
+      task.metadata.options ?? {},
     );
   }
 
@@ -311,8 +336,9 @@ export class TaskRunner {
     target: object,
     methodName: string | symbol,
     execution: Execution,
-    timeoutRetryPolicy?: TaskTimeoutRetryPolicy,
+    taskOptions: TaskOptions,
   ): Promise<unknown> {
+    const timeoutRetryPolicy: TaskTimeoutRetryPolicy | undefined = taskOptions.timeoutRetry;
     const hasEnforcedTimeout = execution.timeout !== undefined && execution.timeout > 0;
     const attemptManager: ExecutionAttemptManager | undefined =
       hasEnforcedTimeout && supportsAttemptFencing(this.executionManager)
@@ -353,6 +379,7 @@ export class TaskRunner {
       timeoutRetryPolicy === "idempotent" || timeoutRetryPolicy === "fenced";
     let timeoutClaimed = false;
     let handlerSettled = false;
+    let handlerReturned = false;
     let settlementScheduled = false;
     let handlerPromise: Promise<unknown> | undefined;
     let timeoutCommit: Promise<Execution> | undefined;
@@ -449,6 +476,7 @@ export class TaskRunner {
         return await timeoutPromise;
       }
 
+      handlerReturned = true;
       cancelTimeout?.();
 
       try {
@@ -479,15 +507,25 @@ export class TaskRunner {
         throw error;
       }
 
+      if (handlerReturned) {
+        throw error;
+      }
+
       if (deadline !== undefined && this.now() >= deadline && triggerTimeout !== undefined) {
         triggerTimeout();
         return await timeoutPromise;
       }
 
       const taskError = normalizeThrownError(error);
+      let retryable = false;
+      try {
+        retryable = isTaskErrorRetryable(taskError, taskOptions.isRetryable);
+      } catch (retryabilityError) {
+        recordDiagnosticError(retryabilityError);
+      }
       const executionError = {
         message: taskError.message,
-        retryable: isTaskErrorRetryable(taskError),
+        retryable,
         code: "code" in taskError ? String(taskError.code) : undefined,
         stack: taskError.stack,
       };

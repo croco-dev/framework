@@ -89,6 +89,27 @@ export async function resizeImage(taskRunner: TaskRunner) {
 reference를 만든 뒤 decorator metadata의 이름이나 handler 등록이 달라지면 `TaskRunner`는
 `InvalidTaskReferenceProblem`으로 계약 drift를 명시적으로 거부합니다.
 
+### 실패 재시도 정책
+
+`maxAttempts`가 남아 있는 동안 일반 `Error`는 기본적으로 재시도 가능한 실패로 기록됩니다. 즉시 실패해야 하는
+오류는 `retryable: false`를 직접 제공하거나 Croco `Problem`의 `extensions.retryable`을 `false`로 선언할 수 있습니다.
+오류 자체에 명시적인 boolean 값이 없을 때만 `isRetryable` 술어가 적용됩니다. 별도 설정이 없는 4xx `Problem`은
+408과 429를 제외하고 재시도하지 않습니다.
+
+핸들러가 성공한 뒤 완료 상태 저장에 실패한 경우에는 핸들러 실패로 분류하거나 핸들러를 재실행하지 않습니다.
+완료 상태 저장 실패는 실행 저장소의 별도 복구 또는 조정 경계에서 처리해야 합니다.
+
+```typescript
+@Task({
+  name: "sync-subscription",
+  maxAttempts: 3,
+  isRetryable: (error) => !(error instanceof SubscriptionValidationError),
+})
+async syncSubscription(payload: SyncSubscriptionPayload) {
+  // 네트워크 오류 등 명시되지 않은 일반 Error는 기본적으로 재시도됩니다.
+}
+```
+
 ### 실행 제한 시간과 협력적 취소
 
 `TaskRunner`로 실행할 때 `timeout`은 실행 저장소에 기록된 `startedAt + timeout` 기준으로 강제됩니다.

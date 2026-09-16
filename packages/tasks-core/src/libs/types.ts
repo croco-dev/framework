@@ -13,6 +13,13 @@ export type TaskOptions = {
    */
   maxAttempts?: number;
   /**
+   * Classifies task handler errors that do not declare a boolean `retryable` value.
+   *
+   * Ordinary errors are retryable by default. An error-level `retryable` property or
+   * Problem `extensions.retryable` value takes precedence over this predicate.
+   */
+  isRetryable?: (error: Error) => boolean;
+  /**
    * Timeout in milliseconds (default: no timeout).
    */
   timeout?: number;
