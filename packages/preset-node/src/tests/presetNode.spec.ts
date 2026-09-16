@@ -92,10 +92,11 @@ describe("createNodeEntry", () => {
 
   it("closes the server lifecycle object", async () => {
     const close = vi.fn((callback?: () => void) => callback?.());
+    const closeIdleConnections = vi.fn();
     vi.mocked(serve).mockImplementationOnce((_options, callback) => {
       callback?.({ address: "127.0.0.1", family: "IPv4", port: 3000 });
 
-      return createTestServer(close);
+      return Object.assign(createTestServer(close), { closeIdleConnections });
     });
     const entry = createNodeEntry({ fetch: vi.fn(async () => new Response("ok")) });
 
@@ -103,6 +104,10 @@ describe("createNodeEntry", () => {
     await entry.close();
 
     expect(close).toHaveBeenCalledWith(expect.any(Function));
+    expect(closeIdleConnections).toHaveBeenCalledOnce();
+    expect(close.mock.invocationCallOrder[0]).toBeLessThan(
+      closeIdleConnections.mock.invocationCallOrder[0],
+    );
     expect(entry.server).toBeNull();
   });
 
@@ -268,7 +273,8 @@ describe("createNodeEntry", () => {
     const close = vi.fn((callback?: (error?: Error) => void) => {
       finishClose = () => callback?.();
     });
-    const server = createTestServer(close);
+    const closeAllConnections = vi.fn();
+    const server = Object.assign(createTestServer(close), { closeAllConnections });
     vi.mocked(serve).mockImplementationOnce((_options, callback) => {
       callback?.({ address: "127.0.0.1", family: "IPv4", port: 3000 });
       return server;
@@ -286,6 +292,7 @@ describe("createNodeEntry", () => {
 
       await vi.advanceTimersByTimeAsync(50);
       await stalledCloseResult;
+      expect(closeAllConnections).toHaveBeenCalledOnce();
       await expect(entry.start()).rejects.toMatchObject({
         code: "preset-node/lifecycle-conflict",
         extensions: { operation: "start", state: "closing" },
