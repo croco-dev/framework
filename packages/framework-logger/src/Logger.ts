@@ -17,7 +17,7 @@ function isError(value: unknown): value is Error {
   }
 }
 
-function mergeLogContext(base: LogContext, context: LogContext): LogContext {
+function mergeLogContext(base: LogContext, context: object): LogContext {
   const merged = { ...base };
 
   try {
@@ -114,7 +114,7 @@ export class Logger implements ILogger {
     return context;
   }
 
-  private getLogContext(context?: LogContext): LogContext {
+  private getLogContext(context?: LogContext | Error): LogContext {
     const base = this.getContext();
     return context ? mergeLogContext(base, context) : base;
   }
@@ -133,7 +133,7 @@ export class Logger implements ILogger {
 
   error(message: string, context?: LogContext | Error): void {
     if (isError(context)) {
-      this.logger.error({ ...this.getContext(), err: context }, message);
+      this.logger.error({ ...this.getLogContext(context), err: context }, message);
     } else {
       this.logger.error(this.getLogContext(context), message);
     }
@@ -141,7 +141,7 @@ export class Logger implements ILogger {
 
   fatal(message: string, context?: LogContext | Error): void {
     if (isError(context)) {
-      this.logger.fatal({ ...this.getContext(), err: context }, message);
+      this.logger.fatal({ ...this.getLogContext(context), err: context }, message);
     } else {
       this.logger.fatal(this.getLogContext(context), message);
     }
