@@ -1,3 +1,5 @@
+import { Problem } from "@croco/problems-core";
+
 const CIRCULAR_VALUE = "[Circular]";
 const MAX_PROTOTYPE_DEPTH = 16;
 const TRUNCATED_VALUE = "[Truncated]";
@@ -68,20 +70,15 @@ function getErrorType(error: Error): string {
   return typeof name === "string" && name ? name : "Error";
 }
 
-function mergeErrorSerialization(
+function mergeProblemSerialization(
   sanitized: Record<string, unknown>,
-  error: Error,
+  problem: Problem,
   depth: number,
   ancestors: WeakSet<object>,
 ): void {
-  const toJSON = getDataProperty(error, "toJSON");
-  if (typeof toJSON !== "function") {
-    return;
-  }
-
   let serialized: unknown;
   try {
-    serialized = Reflect.apply(toJSON, error, []);
+    serialized = Reflect.apply(Problem.prototype.toJSON, problem, []);
   } catch {
     return;
   }
@@ -184,7 +181,9 @@ function sanitizeError(
       }
     }
 
-    mergeErrorSerialization(sanitized, error, depth, ancestors);
+    if (error instanceof Problem) {
+      mergeProblemSerialization(sanitized, error, depth, ancestors);
+    }
 
     const errors = getDataProperty(error, "errors");
     if (Array.isArray(errors)) {

@@ -100,7 +100,8 @@ import { LogLevel } from "@croco/framework-logger";
 이 계약은 최상위 로그 컨텍스트를 포함한 최대 8단계의 객체와 배열, child logger 바인딩, `Error` 메타데이터에
 동일하게 적용됩니다. 8단계를 넘는 분기는 `[Truncated]`, 순환 참조는 `[Circular]`, 검사할 수 없는 값은
 `[Unserializable]`로 기록됩니다. 열거 가능한 getter와 함수 또는 symbol 값은 실행하지 않고 생략합니다. 따라서
-직렬화 실패 시 원본 컨텍스트를 그대로 기록하는 fallback은 없습니다.
+직렬화 실패 시 원본 컨텍스트를 그대로 기록하는 fallback은 없습니다. 단, `@croco/problems-core`의 `Problem`은
+표준 `toJSON()` 계약만 실행한 뒤 그 결과에 동일한 정제 규칙을 적용합니다.
 
 필드 이름 기반 계약이므로 로그 메시지, stack trace, 그 밖의 자유 형식 문자열 안에 포함된 값은 탐지하지 않습니다.
 

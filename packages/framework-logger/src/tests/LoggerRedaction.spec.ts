@@ -206,6 +206,29 @@ describe("Logger serialized redaction", () => {
     });
   });
 
+  it("does not invoke serialization methods on non-Problem errors", () => {
+    const { logger, raw, records } = createCapturedLogger();
+    let serializationCalls = 0;
+    const error = Object.assign(new Error("custom error failure"), {
+      toJSON: () => {
+        serializationCalls += 1;
+        return { status: 418, token: "custom-error-token" };
+      },
+    });
+
+    logger.error("custom error request failed", error);
+
+    expect(serializationCalls).toBe(0);
+    expect(raw()).not.toContain("custom-error-token");
+    expect(records()[0]).toMatchObject({
+      err: {
+        type: "Error",
+        message: "custom error failure",
+      },
+    });
+    expect(records()[0]?.err).not.toHaveProperty("status");
+  });
+
   it("preserves cause and aggregate Error diagnostics", () => {
     const { logger, raw, records } = createCapturedLogger();
     const nestedError = Object.assign(new Error("nested failure"), { token: "nested-token" });
