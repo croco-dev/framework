@@ -228,6 +228,34 @@ describe("Logger serialized redaction", () => {
     });
     expect(records()[0]?.err).not.toHaveProperty("status");
   });
+  it.each(["error", "fatal"] as const)(
+    "keeps Error-attached caller context at %s severity",
+    (severity) => {
+      const { logger, raw, records } = createCapturedLogger();
+      const child = logger.child({ component: "billing" });
+      const error = Object.assign(new Error("provider failed"), {
+        password: "caller-password",
+        userId: "user-2504",
+      });
+
+      Context.run({ requestId: "req-2504", traceId: "trace-2504" }, () => {
+        child[severity]("provider request failed", error);
+      });
+
+      const output = records();
+      expect(raw()).not.toContain("caller-password");
+      expect(output[0]).toMatchObject({
+        component: "billing",
+        requestId: "req-2504",
+        traceId: "trace-2504",
+        userId: "user-2504",
+        err: {
+          message: "provider failed",
+          userId: "user-2504",
+        },
+      });
+    },
+  );
 
   it("preserves cause and aggregate Error diagnostics", () => {
     const { logger, raw, records } = createCapturedLogger();
