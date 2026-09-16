@@ -276,10 +276,35 @@ describe("TaskRegistry", () => {
     ).toThrow(DuplicateTaskRegistrationProblem);
   });
 
+  it("should reject duplicate registrations with different retry predicates", () => {
+    class TaskHandler {
+      async handle(): Promise<void> {}
+    }
+
+    const registry = new TaskRegistry();
+    registry.register("predicate-sensitive-task", TaskHandler, "handle", {
+      name: "predicate-sensitive-task",
+      target: TaskHandler,
+      methodName: "handle",
+      options: { isRetryable: () => true },
+    });
+
+    expect(() =>
+      registry.register("predicate-sensitive-task", TaskHandler, "handle", {
+        name: "predicate-sensitive-task",
+        target: TaskHandler,
+        methodName: "handle",
+        options: { isRetryable: () => false },
+      }),
+    ).toThrow(DuplicateTaskRegistrationProblem);
+  });
+
   it("should allow collecting cloned metadata when task definition is identical", () => {
     class TaskHandler {
       async handle(): Promise<void> {}
     }
+
+    const isRetryable = (error: Error): boolean => error.message !== "permanent";
 
     const metadata: TaskMetadata = {
       name: "cloned-task",
@@ -287,6 +312,7 @@ describe("TaskRegistry", () => {
       methodName: "handle",
       options: {
         maxAttempts: 3,
+        isRetryable,
         timeout: 1_000,
         idempotencyKey: "dedupe-key",
       },
@@ -298,6 +324,7 @@ describe("TaskRegistry", () => {
       methodName: metadata.methodName,
       options: {
         maxAttempts: metadata.options?.maxAttempts,
+        isRetryable: metadata.options?.isRetryable,
         timeout: metadata.options?.timeout,
         idempotencyKey: metadata.options?.idempotencyKey,
       },

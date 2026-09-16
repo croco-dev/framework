@@ -19,6 +19,27 @@ Optional idempotency key for deduplication.
 
 ---
 
+### isRetryable?
+
+> `optional` **isRetryable?**: (`error`) => `boolean`
+
+Classifies task handler errors that do not declare a boolean `retryable` value.
+
+Ordinary errors are retryable by default. An error-level `retryable` property or
+Problem `extensions.retryable` value takes precedence over this predicate.
+
+#### Parameters
+
+##### error
+
+`Error`
+
+#### Returns
+
+`boolean`
+
+---
+
 ### maxAttempts?
 
 > `optional` **maxAttempts?**: `number`

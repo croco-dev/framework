@@ -46,6 +46,7 @@ describe("@Task decorator", () => {
       @Task({
         name: "retryable-task",
         maxAttempts: 3,
+        isRetryable: (error) => error.message !== "permanent",
         timeout: 5000,
         idempotencyKey: "unique-key",
       })
@@ -60,6 +61,7 @@ describe("@Task decorator", () => {
     expect(metadata.value.options).toEqual({
       name: "retryable-task",
       maxAttempts: 3,
+      isRetryable: expect.any(Function),
       timeout: 5000,
       idempotencyKey: "unique-key",
     });

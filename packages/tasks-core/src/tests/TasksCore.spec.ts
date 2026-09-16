@@ -49,6 +49,7 @@ describe("@croco/tasks-core package exports", () => {
     const typeCheck: TaskOptions = {
       name: "custom-name",
       maxAttempts: 3,
+      isRetryable: (error) => error.message !== "permanent",
       timeout: 5000,
       idempotencyKey: "unique-key",
     };

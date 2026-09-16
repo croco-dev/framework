@@ -163,6 +163,59 @@ describe("TaskRunner", () => {
     expect(mockExecutionManager.complete).toHaveBeenCalledWith("exec-123", "processed: test");
   });
 
+  it("should not classify a completion persistence failure as a task failure", async () => {
+    const completionFailure = new Error("Completion persistence failed");
+    const handle = vi.fn().mockResolvedValue("completed effect");
+
+    @Component()
+    class CompletionFailureTaskHandler {
+      @Task({ name: "completion-failure-task", maxAttempts: 3 })
+      async handle(): Promise<string> {
+        return handle();
+      }
+    }
+
+    Container.set(CompletionFailureTaskHandler, new CompletionFailureTaskHandler());
+    registry.collectFromMetadata();
+    mockExecutionManager.complete = vi.fn().mockRejectedValue(completionFailure);
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.execute("completion-failure-task", {})).rejects.toBe(completionFailure);
+
+    expect(handle).toHaveBeenCalledOnce();
+    expect(mockExecutionManager.fail).not.toHaveBeenCalled();
+    expect(mockExecutionManager.failAttempt).not.toHaveBeenCalled();
+  });
+
+  it("should not fail an attempt when fenced completion persistence fails", async () => {
+    const completionFailure = new Error("Attempt completion persistence failed");
+    const handle = vi.fn().mockResolvedValue("completed effect");
+
+    @Component()
+    class FencedCompletionFailureTaskHandler {
+      @Task({ name: "fenced-completion-failure-task", maxAttempts: 3, timeout: 1_000 })
+      async handle(): Promise<string> {
+        return handle();
+      }
+    }
+
+    Container.set(FencedCompletionFailureTaskHandler, new FencedCompletionFailureTaskHandler());
+    registry.collectFromMetadata();
+    mockExecutionManager.completeAttempt = vi.fn().mockRejectedValue(completionFailure);
+    mockExecutionManager.get = vi
+      .fn()
+      .mockResolvedValue(execution({ status: "running", attempts: 1 }));
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.execute("fenced-completion-failure-task", {})).rejects.toBe(
+      completionFailure,
+    );
+
+    expect(handle).toHaveBeenCalledOnce();
+    expect(mockExecutionManager.failAttempt).not.toHaveBeenCalled();
+    expect(mockExecutionManager.fail).not.toHaveBeenCalled();
+  });
+
   it("should return the persisted execution id with a tracked result", async () => {
     const runner = new TaskRunner(mockExecutionManager, registry);
 
@@ -353,7 +406,7 @@ describe("TaskRunner", () => {
       "exec-123",
       expect.objectContaining({
         message: "Task failed",
-        retryable: false,
+        retryable: true,
       }),
     );
   });
@@ -544,6 +597,88 @@ describe("TaskRunner", () => {
     );
   });
 
+  it("should preserve an explicit non-retryable error flag", async () => {
+    @Component()
+    class NonRetryableTaskHandler {
+      @Task({ name: "non-retryable-fail", maxAttempts: 3 })
+      async fail(): Promise<never> {
+        const error = new Error("Permanent error") as Error & { retryable: boolean };
+        error.retryable = false;
+        throw error;
+      }
+    }
+
+    Container.set(NonRetryableTaskHandler, new NonRetryableTaskHandler());
+    registry.collectFromMetadata();
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.execute("non-retryable-fail", {})).rejects.toThrow("Permanent error");
+
+    expect(mockExecutionManager.fail).toHaveBeenCalledWith(
+      "exec-123",
+      expect.objectContaining({
+        message: "Permanent error",
+        retryable: false,
+      }),
+    );
+  });
+
+  it("should use the task retry predicate for errors without an explicit flag", async () => {
+    const isRetryable = vi.fn((error: Error) => error.message.includes("temporary"));
+
+    @Component()
+    class ClassifiedTaskHandler {
+      @Task({ name: "classified-fail", maxAttempts: 3, isRetryable })
+      async fail(): Promise<never> {
+        throw new Error("permanent validation failure");
+      }
+    }
+
+    Container.set(ClassifiedTaskHandler, new ClassifiedTaskHandler());
+    registry.collectFromMetadata();
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.execute("classified-fail", {})).rejects.toThrow(
+      "permanent validation failure",
+    );
+
+    expect(isRetryable).toHaveBeenCalledWith(
+      expect.objectContaining({ message: "permanent validation failure" }),
+    );
+    expect(mockExecutionManager.fail).toHaveBeenCalledWith(
+      "exec-123",
+      expect.objectContaining({ retryable: false }),
+    );
+  });
+
+  it("should prefer an explicit retryable flag over the task predicate", async () => {
+    const isRetryable = vi.fn(() => true);
+
+    @Component()
+    class ExplicitlyPermanentTaskHandler {
+      @Task({ name: "explicitly-permanent-fail", maxAttempts: 3, isRetryable })
+      async fail(): Promise<never> {
+        const error = new Error("Permanent error") as Error & { retryable: boolean };
+        error.retryable = false;
+        throw error;
+      }
+    }
+
+    Container.set(ExplicitlyPermanentTaskHandler, new ExplicitlyPermanentTaskHandler());
+    registry.collectFromMetadata();
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.execute("explicitly-permanent-fail", {})).rejects.toThrow(
+      "Permanent error",
+    );
+
+    expect(isRetryable).not.toHaveBeenCalled();
+    expect(mockExecutionManager.fail).toHaveBeenCalledWith(
+      "exec-123",
+      expect.objectContaining({ retryable: false }),
+    );
+  });
+
   it("should extract retryability from Problem extensions", async () => {
     class RetryableTaskProblem extends Problem {
       constructor() {
@@ -581,6 +716,98 @@ describe("TaskRunner", () => {
       }),
     );
   });
+
+  it("should treat an unmarked client-error Problem as non-retryable", async () => {
+    const problem = new TaskNotFoundProblem("nested-task");
+
+    @Component()
+    class MissingDependencyTaskHandler {
+      @Task({ name: "missing-dependency-task", maxAttempts: 3 })
+      async fail(): Promise<never> {
+        throw problem;
+      }
+    }
+
+    Container.set(MissingDependencyTaskHandler, new MissingDependencyTaskHandler());
+    registry.collectFromMetadata();
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.execute("missing-dependency-task", {})).rejects.toBe(problem);
+
+    expect(mockExecutionManager.fail).toHaveBeenCalledWith(
+      "exec-123",
+      expect.objectContaining({
+        code: "tasks-core/task-not-found",
+        retryable: false,
+      }),
+    );
+  });
+
+  it("should fail closed when the task retry predicate throws", async () => {
+    const taskFailure = new Error("Task failed");
+    const predicateFailure = new Error("Retry predicate failed");
+    const isRetryable = vi.fn(() => {
+      throw predicateFailure;
+    });
+
+    @Component()
+    class BrokenClassifierTaskHandler {
+      @Task({ name: "broken-classifier-task", maxAttempts: 3, isRetryable })
+      async fail(): Promise<never> {
+        throw taskFailure;
+      }
+    }
+
+    Container.set(BrokenClassifierTaskHandler, new BrokenClassifierTaskHandler());
+    registry.collectFromMetadata();
+    const recordErrorSpy = vi.spyOn(telemetry, "recordError").mockImplementation(() => {});
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.execute("broken-classifier-task", {})).rejects.toBe(taskFailure);
+
+    expect(recordErrorSpy).toHaveBeenCalledWith(predicateFailure);
+    expect(mockExecutionManager.fail).toHaveBeenCalledWith(
+      "exec-123",
+      expect.objectContaining({ retryable: false }),
+    );
+  });
+
+  it.each(["retryable", "status"] as const)(
+    "should fail closed when the task error %s property cannot be read",
+    async (property) => {
+      const taskFailure = new Error("Task failed");
+      const classificationFailure = new Error(`Cannot read ${property}`);
+      Object.defineProperty(taskFailure, property, {
+        get() {
+          throw classificationFailure;
+        },
+      });
+
+      @Component()
+      class UnreadableFailureMetadataTaskHandler {
+        @Task({ name: `unreadable-${property}-task`, maxAttempts: 3 })
+        async fail(): Promise<never> {
+          throw taskFailure;
+        }
+      }
+
+      Container.set(
+        UnreadableFailureMetadataTaskHandler,
+        new UnreadableFailureMetadataTaskHandler(),
+      );
+      registry.collectFromMetadata();
+      const recordErrorSpy = vi.spyOn(telemetry, "recordError").mockImplementation(() => {});
+      const runner = new TaskRunner(mockExecutionManager, registry);
+
+      await expect(runner.execute(`unreadable-${property}-task`, {})).rejects.toBe(taskFailure);
+
+      expect(recordErrorSpy).toHaveBeenCalledWith(classificationFailure);
+      expect(mockExecutionManager.fail).toHaveBeenCalledWith(
+        "exec-123",
+        expect.objectContaining({ retryable: false }),
+      );
+    },
+  );
 
   it("should extract code from error", async () => {
     @Component()
