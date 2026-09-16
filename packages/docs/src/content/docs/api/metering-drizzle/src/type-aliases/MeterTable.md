@@ -13,52 +13,52 @@ title: "MeterTable"
 
 ### allowOverQuota
 
-> **allowOverQuota**: `SQLiteColumn`
+> **allowOverQuota**: `AnyColumn`
 
 ---
 
 ### createdAt
 
-> **createdAt**: `SQLiteColumn`
+> **createdAt**: `AnyColumn`
 
 ---
 
 ### id
 
-> **id**: `SQLiteColumn`
+> **id**: `AnyColumn`
 
 ---
 
 ### metadata
 
-> **metadata**: `SQLiteColumn`
+> **metadata**: `AnyColumn`
 
 ---
 
 ### meterId
 
-> **meterId**: `SQLiteColumn`
+> **meterId**: `AnyColumn`
 
 ---
 
 ### quota
 
-> **quota**: `SQLiteColumn`
+> **quota**: `AnyColumn`
 
 ---
 
 ### tenantId
 
-> **tenantId**: `SQLiteColumn`
+> **tenantId**: `AnyColumn`
 
 ---
 
 ### type
 
-> **type**: `SQLiteColumn`
+> **type**: `AnyColumn`
 
 ---
 
 ### updatedAt
 
-> **updatedAt**: `SQLiteColumn`
+> **updatedAt**: `AnyColumn`

@@ -13,52 +13,52 @@ title: "UsageRecordTable"
 
 ### dimensions?
 
-> `optional` **dimensions?**: `SQLiteColumn`
+> `optional` **dimensions?**: `AnyColumn`
 
 ---
 
 ### eventId?
 
-> `optional` **eventId?**: `SQLiteColumn`
+> `optional` **eventId?**: `AnyColumn`
 
 ---
 
 ### id
 
-> **id**: `SQLiteColumn`
+> **id**: `AnyColumn`
 
 ---
 
 ### idempotencyKey
 
-> **idempotencyKey**: `SQLiteColumn`
+> **idempotencyKey**: `AnyColumn`
 
 ---
 
 ### metadata
 
-> **metadata**: `SQLiteColumn`
+> **metadata**: `AnyColumn`
 
 ---
 
 ### meterId
 
-> **meterId**: `SQLiteColumn`
+> **meterId**: `AnyColumn`
 
 ---
 
 ### recordedAt
 
-> **recordedAt**: `SQLiteColumn`
+> **recordedAt**: `AnyColumn`
 
 ---
 
 ### tenantId
 
-> **tenantId**: `SQLiteColumn`
+> **tenantId**: `AnyColumn`
 
 ---
 
 ### value
 
-> **value**: `SQLiteColumn`
+> **value**: `AnyColumn`

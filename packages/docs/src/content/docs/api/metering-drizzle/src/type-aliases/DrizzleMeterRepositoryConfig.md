@@ -35,7 +35,7 @@ title: "DrizzleMeterRepositoryConfig"
 
 ### meterTable
 
-> **meterTable**: `unknown`
+> **meterTable**: `Table`
 
 ---
 
@@ -63,4 +63,4 @@ title: "DrizzleMeterRepositoryConfig"
 
 ### usageRecordTable
 
-> **usageRecordTable**: `unknown`
+> **usageRecordTable**: `Table`
