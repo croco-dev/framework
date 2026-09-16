@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { Node, Project, SyntaxKind } from "ts-morph";
+import { CliError } from "./CliError.js";
 
 const DEPENDENCY_FIELDS = [
   "dependencies",
@@ -36,7 +37,8 @@ export async function assertGeneratedImportDependencies(
     return;
   }
 
-  throw new Error(
+  throw new CliError(
+    "CROCO_CLI_GENERATED_DEPENDENCY_MISSING",
     [
       `Missing dependencies in ${options.manifestLabel} for generated imports: ${missingPackages.join(", ")}.`,
       `Add ${formatPackageList(missingPackages)} to ${options.manifestLabel} before running this generator.`,

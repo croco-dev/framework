@@ -1,3 +1,5 @@
+import { CliError } from "../libs/CliError.js";
+
 export type TextReplacement = {
   readonly start: number;
   readonly end: number;
@@ -196,7 +198,10 @@ export function applyReplacements(
     const current = ordered[index];
 
     if (previous && current && previous.end > current.start) {
-      throw new Error("Upgrade codemod replacements overlap.");
+      throw new CliError(
+        "CROCO_CLI_UPGRADE_REPLACEMENTS_OVERLAP",
+        "Upgrade codemod replacements overlap.",
+      );
     }
   }
 

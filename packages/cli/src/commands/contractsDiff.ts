@@ -13,6 +13,7 @@ import {
   type ContractGraphDiffChange,
   type ContractGraphSnapshot,
 } from "@croco/protocols-core";
+import { CliError } from "../libs/CliError.js";
 import { GLOBAL_OPTIONS } from "./options.js";
 import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 
@@ -250,7 +251,10 @@ function readSnapshot(path: string, io: ContractsDiffIo): ContractGraphSnapshot 
   const snapshot = parseContractGraphSnapshot(JSON.parse(io.readFile(resolvePath(path, io.cwd))));
 
   if (!snapshot) {
-    throw new Error(`${path} is not a croco.contract-graph.snapshot.v1 JSON snapshot.`);
+    throw new CliError(
+      "CROCO_CLI_MANIFEST_INVALID",
+      `${path} is not a croco.contract-graph.snapshot.v1 JSON snapshot.`,
+    );
   }
 
   return snapshot;

@@ -638,6 +638,12 @@
       "owner": "@croco/cache-core"
     },
     {
+      "path": "packages/cli/src/tests/CliError.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/cli"
+    },
+    {
       "path": "packages/cli/src/tests/CliTestContract.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

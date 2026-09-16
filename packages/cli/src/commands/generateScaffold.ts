@@ -1,4 +1,5 @@
 import { defineCommand } from "citty";
+import { CliError } from "../libs/CliError.js";
 import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import { runCreateDomain } from "./createDomain.js";
 import type { PageMode, RunCreatePageResult } from "./createPage.js";
@@ -31,17 +32,21 @@ export async function runGenerateScaffold(
   } = options;
   const domain = await runCreateDomain(name, { dryRun, overwrite, cwd, register });
   if (!domain) {
-    throw new Error("Scaffold generation failed: domain generation failed.");
+    throw new CliError(
+      "CROCO_CLI_GENERATION_FAILED",
+      "Scaffold generation failed: domain generation failed.",
+    );
   }
 
   try {
     const page = await runCreatePage(name, { dryRun, overwrite, cwd, mode });
     if (!page) {
-      throw new Error("page generation failed");
+      throw new CliError("CROCO_CLI_GENERATION_FAILED", "page generation failed");
     }
     return { domain, page };
   } catch (error) {
-    throw new Error(
+    throw new CliError(
+      "CROCO_CLI_GENERATION_FAILED",
       `Scaffold partially generated: domain succeeded, page failed. ${formatError(error)}`,
     );
   }
@@ -84,7 +89,7 @@ export const generateScaffold = defineCommand({
 function parsePageMode(value: unknown): PageMode {
   if (value === undefined || value === "ssr") return "ssr";
   if (value === "spa") return "spa";
-  throw new Error(`Invalid page mode: ${String(value)}`);
+  throw new CliError("CROCO_CLI_PAGE_MODE_INVALID", `Invalid page mode: ${String(value)}`);
 }
 
 function formatError(error: unknown): string {
