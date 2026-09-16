@@ -168,6 +168,7 @@ export function createNodeHost(
               }
               resolve();
             });
+            activeServer.closeIdleConnections?.();
           } catch (error) {
             reject(new NodeEntryLifecycleIoProblem("close", asError(error)));
           }
@@ -198,6 +199,12 @@ export function createNodeHost(
         let settled = false;
         const closeTimer = setTimeout(() => {
           settled = true;
+          try {
+            activeServer.closeAllConnections?.();
+          } catch (error) {
+            reject(new NodeEntryLifecycleIoProblem("close", asError(error)));
+            return;
+          }
           reject(
             new NodeEntryLifecycleIoProblem(
               "close",
