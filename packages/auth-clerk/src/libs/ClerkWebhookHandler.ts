@@ -8,6 +8,7 @@ import {
   WebhookVerificationProblem,
 } from "./problems/ClerkProblems";
 import type {
+  ClerkDeletedObjectEvent,
   ClerkMembershipEvent,
   ClerkOrgEvent,
   ClerkUserEvent,
@@ -48,6 +49,18 @@ function isClerkOrgEvent(data: unknown): data is ClerkOrgEvent {
     hasStringField(data, "id") &&
     hasStringField(data, "name") &&
     hasStringField(data, "slug")
+  );
+}
+
+function isClerkDeletedObjectEvent<TObject extends "user" | "organization">(
+  data: unknown,
+  object: TObject,
+): data is ClerkDeletedObjectEvent<TObject> {
+  return (
+    isObjectRecord(data) &&
+    hasStringField(data, "id") &&
+    data.object === object &&
+    data.deleted === true
   );
 }
 
@@ -101,6 +114,17 @@ export class ClerkWebhookHandler {
 
   private parseOrgEvent(data: unknown, eventType: string): ClerkOrgEvent {
     if (!isClerkOrgEvent(data)) {
+      throw new InvalidWebhookPayloadProblem(eventType);
+    }
+    return data;
+  }
+
+  private parseDeletedObjectEvent<TObject extends "user" | "organization">(
+    data: unknown,
+    eventType: string,
+    object: TObject,
+  ): ClerkDeletedObjectEvent<TObject> {
+    if (!isClerkDeletedObjectEvent(data, object)) {
       throw new InvalidWebhookPayloadProblem(eventType);
     }
     return data;
@@ -175,11 +199,11 @@ export class ClerkWebhookHandler {
           this.parseUserEvent(webhookEvent.data, webhookEvent.type),
         );
         break;
-      case "user.deleted":
-        await this.handlers["user.deleted"]?.(
-          this.parseUserEvent(webhookEvent.data, webhookEvent.type),
-        );
+      case "user.deleted": {
+        const event = this.parseDeletedObjectEvent(webhookEvent.data, webhookEvent.type, "user");
+        await this.handlers["user.deleted"]?.(event);
         break;
+      }
       case "organization.created":
         await this.handlers["organization.created"]?.(
           this.parseOrgEvent(webhookEvent.data, webhookEvent.type),
@@ -190,11 +214,15 @@ export class ClerkWebhookHandler {
           this.parseOrgEvent(webhookEvent.data, webhookEvent.type),
         );
         break;
-      case "organization.deleted":
-        await this.handlers["organization.deleted"]?.(
-          this.parseOrgEvent(webhookEvent.data, webhookEvent.type),
+      case "organization.deleted": {
+        const event = this.parseDeletedObjectEvent(
+          webhookEvent.data,
+          webhookEvent.type,
+          "organization",
         );
+        await this.handlers["organization.deleted"]?.(event);
         break;
+      }
       case "organizationMembership.created":
         await this.handlers["organizationMembership.created"]?.(
           this.parseMembershipEvent(webhookEvent.data, webhookEvent.type),

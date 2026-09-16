@@ -108,6 +108,7 @@ export {
  */
 export type {
   AuthorizationHeaderCarrier,
+  ClerkDeletedObjectEvent,
   ClerkMembershipEvent,
   ClerkOrgEvent,
   ClerkUserEvent,
