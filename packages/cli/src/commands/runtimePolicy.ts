@@ -194,7 +194,16 @@ Options:
 }
 
 function parseManifest(content: string, manifestPath: string): RuntimePolicyCheckManifest {
-  const parsed = JSON.parse(content) as unknown;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content) as unknown;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new CliError(
+      "CROCO_CLI_JSON_READ_FAILED",
+      `Unable to read JSON '${manifestPath}': ${message}`,
+    );
+  }
 
   if (!isRecord(parsed)) {
     throw new CliError(

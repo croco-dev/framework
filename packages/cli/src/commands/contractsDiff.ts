@@ -248,7 +248,15 @@ function formatChange(change: ContractGraphDiffChange): string {
 }
 
 function readSnapshot(path: string, io: ContractsDiffIo): ContractGraphSnapshot {
-  const snapshot = parseContractGraphSnapshot(JSON.parse(io.readFile(resolvePath(path, io.cwd))));
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(io.readFile(resolvePath(path, io.cwd))) as unknown;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new CliError("CROCO_CLI_JSON_READ_FAILED", `Unable to read JSON '${path}': ${message}`);
+  }
+
+  const snapshot = parseContractGraphSnapshot(parsed);
 
   if (!snapshot) {
     throw new CliError(

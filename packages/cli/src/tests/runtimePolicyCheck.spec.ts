@@ -74,6 +74,22 @@ describe("runtimePolicyCheck", () => {
     expect(exitCode).toBe(0);
     expect(stdout).toEqual(["Runtime policy check passed for 1 plan(s) against target 'lambda'."]);
   });
+
+  it("reports invalid manifest JSON with a stable diagnostic message", async () => {
+    const stderr: string[] = [];
+
+    const exitCode = await runRuntimePolicyCheck(["--manifest", "policy.json"], {
+      io: {
+        cwd: "/workspace/app",
+        readFile: () => "{invalid",
+        stderr: (message) => stderr.push(message),
+      },
+    });
+
+    expect(exitCode).toBe(1);
+    expect(stderr).toHaveLength(1);
+    expect(stderr[0]).toContain("Unable to read JSON '/workspace/app/policy.json':");
+  });
 });
 
 function createPolicyTable(requiredCapabilities: readonly RuntimeCapabilityName[]): PolicyTable {

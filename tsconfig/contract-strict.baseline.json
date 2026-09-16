@@ -3395,7 +3395,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/runtimePolicy.ts",
-      "line": 206,
+      "line": 215,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ version: string | undefined; target: string | undefined; runtime: { readonly platform?: RuntimePlatform; readonly capabilities?: Partial<Record<RuntimeCapabilityName, boolean>>; readonly source?: PolicySource; } | undefined; table: PolicyTable | undefined; plans: readonly PolicyExecutionPlan[] | undefined; }' is not assignable to type 'RuntimePolicyCheckManifest' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3403,7 +3403,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/runtimePolicy.ts",
-      "line": 207,
+      "line": 216,
       "column": 40,
       "code": "TS4111",
       "message": "Property 'version' comes from an index signature, so it must be accessed with ['version']."
@@ -3411,7 +3411,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/runtimePolicy.ts",
-      "line": 208,
+      "line": 217,
       "column": 39,
       "code": "TS4111",
       "message": "Property 'target' comes from an index signature, so it must be accessed with ['target']."
@@ -3419,7 +3419,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/runtimePolicy.ts",
-      "line": 209,
+      "line": 218,
       "column": 39,
       "code": "TS4111",
       "message": "Property 'runtime' comes from an index signature, so it must be accessed with ['runtime']."
@@ -3427,7 +3427,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/runtimePolicy.ts",
-      "line": 210,
+      "line": 219,
       "column": 35,
       "code": "TS4111",
       "message": "Property 'table' comes from an index signature, so it must be accessed with ['table']."
@@ -3435,7 +3435,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/runtimePolicy.ts",
-      "line": 211,
+      "line": 220,
       "column": 35,
       "code": "TS4111",
       "message": "Property 'plans' comes from an index signature, so it must be accessed with ['plans']."
@@ -3443,7 +3443,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/runtimePolicy.ts",
-      "line": 235,
+      "line": 244,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ platform: string | undefined; capabilities: Partial<Record<keyof RuntimeCapabilities, boolean>> | undefined; source: PolicySource | undefined; }' is not assignable to type '{ readonly platform?: RuntimePlatform; readonly capabilities?: Partial<Record<keyof RuntimeCapabilities, boolean>>; readonly source?: PolicySource; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3451,7 +3451,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/runtimePolicy.ts",
-      "line": 236,
+      "line": 245,
       "column": 40,
       "code": "TS4111",
       "message": "Property 'platform' comes from an index signature, so it must be accessed with ['platform']."
@@ -3459,7 +3459,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/runtimePolicy.ts",
-      "line": 237,
+      "line": 246,
       "column": 42,
       "code": "TS4111",
       "message": "Property 'capabilities' comes from an index signature, so it must be accessed with ['capabilities']."
@@ -3467,7 +3467,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/runtimePolicy.ts",
-      "line": 238,
+      "line": 247,
       "column": 36,
       "code": "TS4111",
       "message": "Property 'source' comes from an index signature, so it must be accessed with ['source']."
@@ -3475,7 +3475,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/runtimePolicy.ts",
-      "line": 247,
+      "line": 256,
       "column": 39,
       "code": "TS4111",
       "message": "Property 'plans' comes from an index signature, so it must be accessed with ['plans']."
@@ -3483,7 +3483,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/runtimePolicy.ts",
-      "line": 280,
+      "line": 289,
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ packageName: string | undefined; file: string | undefined; symbol: string | undefined; decorator: string | undefined; }' is not assignable to type 'PolicySource' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -3491,7 +3491,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/runtimePolicy.ts",
-      "line": 281,
+      "line": 290,
       "column": 43,
       "code": "TS4111",
       "message": "Property 'packageName' comes from an index signature, so it must be accessed with ['packageName']."
@@ -3499,7 +3499,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/runtimePolicy.ts",
-      "line": 282,
+      "line": 291,
       "column": 36,
       "code": "TS4111",
       "message": "Property 'file' comes from an index signature, so it must be accessed with ['file']."
@@ -3507,7 +3507,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/runtimePolicy.ts",
-      "line": 283,
+      "line": 292,
       "column": 38,
       "code": "TS4111",
       "message": "Property 'symbol' comes from an index signature, so it must be accessed with ['symbol']."
@@ -3515,7 +3515,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/runtimePolicy.ts",
-      "line": 284,
+      "line": 293,
       "column": 41,
       "code": "TS4111",
       "message": "Property 'decorator' comes from an index signature, so it must be accessed with ['decorator']."
