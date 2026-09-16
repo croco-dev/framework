@@ -184,6 +184,46 @@ describe("ClerkWebhookHandler", () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["user.deleted", { id: "user_123", deleted: true }, "msg_missing_user_object"],
+    [
+      "organization.deleted",
+      { id: "org_123", object: "user", deleted: true },
+      "msg_wrong_organization_object",
+    ],
+  ] as const)(
+    "should reject %s when the deleted object type is missing or does not match",
+    async (eventType, data, deliveryId) => {
+      const handler = vi.fn();
+      const handlers: WebhookEventHandler =
+        eventType === "user.deleted"
+          ? { "user.deleted": handler }
+          : { "organization.deleted": handler };
+      webhookHandler = new ClerkWebhookHandler({ signingSecret, idempotencyStore }, handlers);
+      vi.mocked(verifyWebhook).mockResolvedValue({
+        type: eventType,
+        data,
+      } as unknown as VerifiedWebhook);
+
+      await expect(webhookHandler.handleWebhook(createRequest(deliveryId))).rejects.toBeInstanceOf(
+        InvalidWebhookPayloadProblem,
+      );
+      expect(handler).not.toHaveBeenCalled();
+    },
+  );
+
+  it("should validate deleted payloads when no handler is registered", async () => {
+    webhookHandler = new ClerkWebhookHandler({ signingSecret, idempotencyStore }, {});
+    vi.mocked(verifyWebhook).mockResolvedValue({
+      type: "user.deleted",
+      data: { id: "user_123", object: "user" },
+    } as unknown as VerifiedWebhook);
+
+    await expect(
+      webhookHandler.handleWebhook(createRequest("msg_unhandled_invalid_user_deleted")),
+    ).rejects.toBeInstanceOf(InvalidWebhookPayloadProblem);
+  });
+
   it("should invoke a mutation handler once for repeated delivery IDs", async () => {
     const event = {
       type: "user.created",
@@ -350,7 +390,7 @@ describe("ClerkWebhookHandler", () => {
     const request = createRequest();
     vi.mocked(verifyWebhook).mockResolvedValue({
       type: "user.deleted",
-      data: { id: "user_123" },
+      data: { id: "user_123", object: "user", deleted: true },
     } as unknown as VerifiedWebhook);
 
     await webhookHandler.handleWebhook(request);

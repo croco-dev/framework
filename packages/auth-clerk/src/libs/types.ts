@@ -20,9 +20,11 @@ export type ClerkOrgEvent = {
   [key: string]: unknown;
 };
 
-export type ClerkDeletedObjectEvent = {
+export type ClerkDeletedObjectEvent<
+  TObject extends "user" | "organization" = "user" | "organization",
+> = {
   id: string;
-  object?: string;
+  object: TObject;
   deleted: true;
   [key: string]: unknown;
 };
@@ -50,10 +52,10 @@ export type WebhookEventType =
 type WebhookEventData = {
   "user.created": ClerkUserEvent;
   "user.updated": ClerkUserEvent;
-  "user.deleted": ClerkDeletedObjectEvent;
+  "user.deleted": ClerkDeletedObjectEvent<"user">;
   "organization.created": ClerkOrgEvent;
   "organization.updated": ClerkOrgEvent;
-  "organization.deleted": ClerkDeletedObjectEvent;
+  "organization.deleted": ClerkDeletedObjectEvent<"organization">;
   "organizationMembership.created": ClerkMembershipEvent;
   "organizationMembership.deleted": ClerkMembershipEvent;
 };

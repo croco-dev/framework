@@ -5,9 +5,15 @@ prev: false
 title: "ClerkDeletedObjectEvent"
 ---
 
-> **ClerkDeletedObjectEvent** = `object`
+> **ClerkDeletedObjectEvent**\<`TObject`\> = `object`
 
 Clerk 웹훅과 인증 요청에 필요한 공개 타입입니다.
+
+## Type Parameters
+
+### TObject
+
+`TObject` _extends_ `"user"` \| `"organization"` = `"user"` \| `"organization"`
 
 ## Indexable
 
@@ -27,6 +33,6 @@ Clerk 웹훅과 인증 요청에 필요한 공개 타입입니다.
 
 ---
 
-### object?
+### object
 
-> `optional` **object?**: `string`
+> **object**: `TObject`
