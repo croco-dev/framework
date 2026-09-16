@@ -1,3 +1,5 @@
+import { CliError } from "./CliError.js";
+
 export function toPascalCase(input: string): string {
   if (!input) return "";
   const words = splitMixedCase(input);
@@ -195,7 +197,10 @@ export function validate(input: string): boolean {
 export function normalize(input: string, kind: "pascal" | "kebab" | "camel"): string {
   const words = splitMixedCase(input);
   if (words.length === 0) {
-    throw new Error("Invalid input: cannot normalize empty result");
+    throw new CliError(
+      "CROCO_CLI_NORMALIZATION_INVALID",
+      "Invalid input: cannot normalize empty result",
+    );
   }
 
   switch (kind) {
@@ -206,6 +211,6 @@ export function normalize(input: string, kind: "pascal" | "kebab" | "camel"): st
     case "camel":
       return words[0].toLowerCase() + words.slice(1).map(capitalize).join("");
     default:
-      throw new Error("Unknown kind: " + kind);
+      throw new CliError("CROCO_CLI_NORMALIZATION_INVALID", "Unknown kind: " + kind);
   }
 }

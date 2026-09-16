@@ -197,6 +197,25 @@ describe("contractsDiff", () => {
     ).rejects.toThrow("current.json is not a croco.contract-graph.snapshot.v1 JSON snapshot.");
   });
 
+  it("should identify invalid snapshot JSON with a stable code", async () => {
+    const baseline = stringifyContractGraphSnapshot(
+      createContractGraphSnapshot(createGraph(["UsersController.listUsers"])),
+    );
+
+    await expect(
+      runContractsDiff(["--baseline", "baseline.json", "--current-snapshot", "current.json"], {
+        io: {
+          cwd: "/workspace/app",
+          readFile: (path) => (path.endsWith("baseline.json") ? baseline : "{invalid"),
+        },
+      }),
+    ).rejects.toMatchObject({
+      name: "CliError",
+      code: "CROCO_CLI_JSON_READ_FAILED",
+      message: expect.stringContaining("Unable to read JSON 'current.json':"),
+    });
+  });
+
   it("should fail with breaking route drift", async () => {
     const stdout: string[] = [];
     const baseline = stringifyContractGraphSnapshot(

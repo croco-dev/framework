@@ -1,5 +1,6 @@
 import { defineCommand } from "citty";
 import { dirname, join } from "node:path";
+import { CliError } from "../libs/CliError.js";
 import type { WriteResult } from "../libs/fileWriter.js";
 import { write as fileWriterWrite } from "../libs/fileWriter.js";
 import { getCrocoCommandRuntime, logWriteResult } from "../libs/cliRuntime.js";
@@ -42,10 +43,10 @@ export async function runCreatePage(
   } = options;
 
   if (!validate(name)) {
-    throw new Error(`Invalid name: ${name}`);
+    throw new CliError("CROCO_CLI_NAME_INVALID", `Invalid name: ${name}`);
   }
   if (!isPageMode(mode)) {
-    throw new Error(`Invalid page mode: ${mode}`);
+    throw new CliError("CROCO_CLI_PAGE_MODE_INVALID", `Invalid page mode: ${mode}`);
   }
 
   const pageName = normalize(name, "pascal");
@@ -62,7 +63,8 @@ export async function runCreatePage(
   const supportedModes = await detectSupportedPageModes(consoleWebManifestPath);
 
   if (supportedModes && !supportedModes.includes(mode)) {
-    throw new Error(
+    throw new CliError(
+      "CROCO_CLI_PAGE_MODE_INVALID",
       `Page mode '${mode}' is not supported by apps/console-web. Supported modes: ${supportedModes.join(", ")}`,
     );
   }
@@ -135,7 +137,7 @@ export const createPage = defineCommand({
 function parsePageMode(value: unknown): PageMode {
   if (value === undefined || value === "ssr") return "ssr";
   if (value === "spa") return "spa";
-  throw new Error(`Invalid page mode: ${String(value)}`);
+  throw new CliError("CROCO_CLI_PAGE_MODE_INVALID", `Invalid page mode: ${String(value)}`);
 }
 
 function isPageMode(value: string): value is PageMode {

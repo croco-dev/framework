@@ -31,6 +31,7 @@ import {
   projectMapContractGraphLegacyCode,
   projectMapFrameworkManifestLegacyCode,
 } from "../libs/diagnosticCodes.js";
+import { CliError } from "../libs/CliError.js";
 import { GLOBAL_OPTIONS } from "./options.js";
 import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 
@@ -1412,7 +1413,8 @@ function readFrameworkManifest(
   const manifestPath = resolvePath(path, projectRoot);
 
   if (!io.exists(manifestPath)) {
-    throw new Error(
+    throw new CliError(
+      "CROCO_CLI_MANIFEST_MISSING",
       `Missing framework manifest '${manifestPath}'. Pass --controllers <glob> or run @croco/framework-routes first.`,
     );
   }
@@ -1430,7 +1432,10 @@ function readOptionalContractGraphSnapshot(
 
   if (!io.exists(manifestPath)) {
     if (required) {
-      throw new Error(`Missing Contract Graph snapshot '${manifestPath}'.`);
+      throw new CliError(
+        "CROCO_CLI_MANIFEST_MISSING",
+        `Missing Contract Graph snapshot '${manifestPath}'.`,
+      );
     }
 
     return undefined;
@@ -1439,7 +1444,8 @@ function readOptionalContractGraphSnapshot(
   const snapshot = parseContractGraphSnapshot(readJson(manifestPath, io));
 
   if (!snapshot) {
-    throw new Error(
+    throw new CliError(
+      "CROCO_CLI_MANIFEST_INVALID",
       `Contract Graph snapshot '${manifestPath}' must be croco.contract-graph.snapshot.v1.`,
     );
   }
@@ -1457,7 +1463,10 @@ function readOptionalRuntimePolicyManifest(
 
   if (!io.exists(manifestPath)) {
     if (required) {
-      throw new Error(`Missing runtime policy manifest '${manifestPath}'.`);
+      throw new CliError(
+        "CROCO_CLI_MANIFEST_MISSING",
+        `Missing runtime policy manifest '${manifestPath}'.`,
+      );
     }
 
     return undefined;
@@ -1479,7 +1488,10 @@ function readOptionalProviderProfileManifest(
 
   if (!io.exists(manifestPath)) {
     if (required) {
-      throw new Error(`Missing provider profile manifest '${manifestPath}'.`);
+      throw new CliError(
+        "CROCO_CLI_MANIFEST_MISSING",
+        `Missing provider profile manifest '${manifestPath}'.`,
+      );
     }
 
     return undefined;
@@ -1517,7 +1529,10 @@ function parseRuntimePolicyManifest(
   const record = asRecord(parsed);
 
   if (!record) {
-    throw new Error(`Runtime policy manifest at ${manifestPath} must be a JSON object.`);
+    throw new CliError(
+      "CROCO_CLI_MANIFEST_INVALID",
+      `Runtime policy manifest at ${manifestPath} must be a JSON object.`,
+    );
   }
 
   return {
@@ -1613,7 +1628,7 @@ function readJsonContent(content: string, path: string): unknown {
     return JSON.parse(content) as unknown;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    throw new Error(`Unable to read JSON '${path}': ${message}`);
+    throw new CliError("CROCO_CLI_JSON_READ_FAILED", `Unable to read JSON '${path}': ${message}`);
   }
 }
 

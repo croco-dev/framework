@@ -1,5 +1,6 @@
 import { defineCommand } from "citty";
 import { join } from "node:path";
+import { CliError } from "../libs/CliError.js";
 import type { WriteResult } from "../libs/fileWriter.js";
 import { write as fileWriterWrite } from "../libs/fileWriter.js";
 import { getCrocoCommandRuntime, logWriteResult } from "../libs/cliRuntime.js";
@@ -25,7 +26,7 @@ export async function generateEntity(
   const { dryRun = false, overwrite = false, cwd = getCrocoCommandRuntime().cwd } = options;
 
   if (!validate(name)) {
-    throw new Error(`Invalid name: ${name}`);
+    throw new CliError("CROCO_CLI_NAME_INVALID", `Invalid name: ${name}`);
   }
 
   const className = normalize(name, "pascal");

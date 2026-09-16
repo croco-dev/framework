@@ -1,6 +1,7 @@
 import { defineCommand } from "citty";
 import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { CliError } from "../libs/CliError.js";
 import { registerController } from "../libs/codemods/registerController.js";
 import type { RegisterControllerResult } from "../libs/codemods/registerController.js";
 import type { WriteResult } from "../libs/fileWriter.js";
@@ -37,7 +38,7 @@ export async function runCreateDomain(
   } = options;
 
   if (!validate(name)) {
-    throw new Error(`Invalid name: ${name}`);
+    throw new CliError("CROCO_CLI_NAME_INVALID", `Invalid name: ${name}`);
   }
 
   const className = normalize(name, "pascal");

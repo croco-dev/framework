@@ -181,34 +181,39 @@ describe("Cache Invalidation Graph", () => {
     expect(loader).toHaveBeenCalledTimes(1);
   });
 
-  it("records telemetry evidence and throws a Problem when invalidation fails", async () => {
+  it("preserves the original adapter cause and reported Problem when error telemetry throws", async () => {
     const manifest = assertCacheInvalidationGraphValid(
       createCacheInvalidationManifest(createUserInvalidationGraph()),
     );
+    const adapterFailure = new Error("adapter unavailable");
     const adapter = {
       capabilities: {
         exactKey: true,
-        pattern: false,
+        pattern: true,
         tag: false,
       },
       invalidateKey: vi.fn(async () => ({ affectedCount: 1 })),
+      invalidatePattern: vi.fn(async () => {
+        throw adapterFailure;
+      }),
       name: "limited-cache",
     };
     const telemetry = {
-      recordError: vi.fn(() => {
+      recordError: vi.fn((_problem: CacheInvalidationFailedProblem) => {
         throw new Error("telemetry unavailable");
       }),
       recordEvent: vi.fn(),
     };
 
-    await expect(
-      invalidateCacheForEvent({
-        adapter,
-        event: "user.updated",
-        manifest,
-        telemetry,
-      }),
-    ).rejects.toBeInstanceOf(CacheInvalidationFailedProblem);
+    const invalidation = invalidateCacheForEvent({
+      adapter,
+      event: "user.updated",
+      manifest,
+      telemetry,
+    });
+    await expect(invalidation).rejects.toBeInstanceOf(CacheInvalidationFailedProblem);
+    await expect(invalidation).rejects.toHaveProperty("cause", adapterFailure);
+    await expect(invalidation).rejects.toBe(telemetry.recordError.mock.calls[0]?.[0]);
 
     expect(telemetry.recordError).toHaveBeenCalledWith(
       expect.objectContaining({ code: "cache-core/invalidation-failed" }),
@@ -219,6 +224,8 @@ describe("Cache Invalidation Graph", () => {
       }),
     );
     expect(telemetry.recordEvent).not.toHaveBeenCalled();
+    expect(telemetry.recordError).toHaveBeenCalledTimes(1);
+    expect(adapter.invalidateKey).not.toHaveBeenCalled();
   });
 
   it("serializes invalidation failures without a cause code for non-Problem causes", () => {
@@ -269,6 +276,7 @@ describe("Cache Invalidation Graph", () => {
     });
     expect(await cache.get("user:123")).toBeUndefined();
     expect(await cache.get("users:list")).toBeUndefined();
+    expect(telemetry.recordEvent).toHaveBeenCalledTimes(2);
   });
 
   it("describes cache adapter invalidation capabilities", () => {

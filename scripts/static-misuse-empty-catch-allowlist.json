@@ -8,18 +8,18 @@
       "file": "packages/cache-core/src/libs/CacheInvalidationGraph.ts",
       "line": 683,
       "excerpt": "} catch {",
-      "reason": "Telemetry event delivery is best-effort and must not replace the cache invalidation outcome.",
+      "reason": "Reviewed 2026-09-16: optional telemetry event callbacks must not interrupt remaining invalidations or replace successful cache results. CacheInvalidationGraph.spec.ts verifies both operations complete when each callback throws; no independent non-throwing diagnostic sink exists.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-15"
+      "expiresOn": "2026-12-15"
     },
     {
       "package": "@croco/cache-core",
       "file": "packages/cache-core/src/libs/CacheInvalidationGraph.ts",
       "line": 695,
       "excerpt": "} catch {",
-      "reason": "Telemetry error reporting is best-effort and must not replace the original adapter failure evidence.",
+      "reason": "Reviewed 2026-09-16: optional telemetry error callbacks must not replace the original adapter Problem or its cause. CacheInvalidationGraph.spec.ts verifies the exact reported Problem is rejected with its original adapter cause when reporting throws; no independent non-throwing diagnostic sink exists.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-15"
+      "expiresOn": "2026-12-15"
     },
     {
       "package": "@croco/framework-context",

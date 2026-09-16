@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, relative, resolve, sep } from "node:path";
 import { defineCommand } from "citty";
+import { CliError } from "../libs/CliError.js";
 import { GLOBAL_OPTIONS } from "./options.js";
 import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import { applyReplacements, applyUpgradeRules } from "./upgradeRules.js";
@@ -320,7 +321,10 @@ function collectSourceFiles(targets: readonly string[], cwd: string, io: Upgrade
 
 function collectSourceFilesFromPath(path: string, io: UpgradeIo, files: Set<string>): void {
   if (!io.exists(path)) {
-    throw new Error(`Upgrade target '${path}' does not exist.`);
+    throw new CliError(
+      "CROCO_CLI_UPGRADE_TARGET_MISSING",
+      `Upgrade target '${path}' does not exist.`,
+    );
   }
 
   const stat = io.stat(path);

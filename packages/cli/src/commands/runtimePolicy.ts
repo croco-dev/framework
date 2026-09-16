@@ -14,6 +14,7 @@ import {
   type RuntimePlatform,
   type RuntimePolicyPresetConfig,
 } from "@croco/framework-context";
+import { CliError } from "../libs/CliError.js";
 import { GLOBAL_OPTIONS } from "./options.js";
 import { getCrocoCommandRuntime } from "../libs/cliRuntime.js";
 
@@ -193,10 +194,22 @@ Options:
 }
 
 function parseManifest(content: string, manifestPath: string): RuntimePolicyCheckManifest {
-  const parsed = JSON.parse(content) as unknown;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content) as unknown;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new CliError(
+      "CROCO_CLI_JSON_READ_FAILED",
+      `Unable to read JSON '${manifestPath}': ${message}`,
+    );
+  }
 
   if (!isRecord(parsed)) {
-    throw new Error(`Runtime policy manifest at ${manifestPath} must be a JSON object.`);
+    throw new CliError(
+      "CROCO_CLI_MANIFEST_INVALID",
+      `Runtime policy manifest at ${manifestPath} must be a JSON object.`,
+    );
   }
 
   return {
@@ -217,7 +230,10 @@ function getManifestPolicyTable(manifest: RuntimePolicyCheckManifest): PolicyTab
     return { plans: manifest.plans };
   }
 
-  throw new Error("Runtime policy manifest must contain table.plans or plans.");
+  throw new CliError(
+    "CROCO_CLI_MANIFEST_INVALID",
+    "Runtime policy manifest must contain table.plans or plans.",
+  );
 }
 
 function readRuntimeConfig(value: unknown): RuntimePolicyCheckManifest["runtime"] {
