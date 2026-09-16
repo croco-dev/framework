@@ -405,7 +405,7 @@ describe("SagaRunner", () => {
     );
   });
 
-  it("does not publish or complete a step when completed intent persistence fails", async () => {
+  it("does not rerun or publish a completed step when intent persistence fails", async () => {
     const delegate = new InMemorySagaStore();
     let rejectCompletion = true;
     const store: SagaStore = {
@@ -416,19 +416,22 @@ describe("SagaRunner", () => {
       update: (id, data) => {
         if (rejectCompletion && data.steps?.some((step) => step.status === "completed")) {
           rejectCompletion = false;
-          throw new ProviderProblem("completed intent persistence failed");
+          throw new Error("completed intent persistence failed");
         }
         return delegate.update(id, data);
       },
     };
     const publish = vi.fn();
+    const effects: string[] = [];
     const definition: SagaDefinition = {
       name: "failed-outbox-persistence",
       outbox: { publish },
       steps: [
         {
           id: "reserve-payment",
+          retry: { maxAttempts: 3 },
           run: (_input, { enqueueOutbox }) => {
+            effects.push("reserve-payment");
             enqueueOutbox({
               id: "payment-reserved",
               topic: "billing.reserved",
@@ -447,6 +450,7 @@ describe("SagaRunner", () => {
     const [execution] = await runner.listExecutions({ sagaName: definition.name });
 
     expect(publish).not.toHaveBeenCalled();
+    expect(effects).toEqual(["reserve-payment"]);
     expect(execution.status).toBe("failed");
     expect(execution.steps[0]).toEqual(
       expect.objectContaining({
@@ -865,6 +869,91 @@ describe("SagaRunner", () => {
     );
     expect(attempts).toBe(2);
     await expect(runner.listExecutions({ sagaName: definition.name })).resolves.toHaveLength(1);
+  });
+
+  it("retries standard Errors by default until the step succeeds", async () => {
+    let attempts = 0;
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "standard-error-retry",
+      steps: [
+        {
+          id: "charge-provider",
+          retry: { maxAttempts: 3 },
+          run: () => {
+            attempts += 1;
+            if (attempts < 3) {
+              throw new Error("payment provider temporarily unavailable");
+            }
+            return "charged";
+          },
+        },
+      ],
+    };
+
+    const result = await runner.execute(definition, {});
+
+    expect(attempts).toBe(3);
+    expect(result.execution.status).toBe("completed");
+    expect(result.steps).toEqual([{ stepId: "charge-provider", result: "charged" }]);
+  });
+
+  it("records standard Errors as retryable when retries are exhausted", async () => {
+    let attempts = 0;
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "standard-error-retry-exhaustion",
+      steps: [
+        {
+          id: "charge-provider",
+          retry: { maxAttempts: 3 },
+          run: () => {
+            attempts += 1;
+            throw new Error("payment provider temporarily unavailable");
+          },
+        },
+      ],
+    };
+
+    await expect(runner.execute(definition, {})).rejects.toThrow(SagaExecutionFailedProblem);
+
+    const [execution] = await runner.listExecutions({ sagaName: definition.name });
+    expect(attempts).toBe(3);
+    expect(execution.error).toEqual(expect.objectContaining({ retryable: true }));
+    expect(execution.steps[0]?.error).toEqual(expect.objectContaining({ retryable: true }));
+  });
+
+  it("uses a custom shouldRetry result before the default Error classification", async () => {
+    let attempts = 0;
+    const shouldRetry = vi.fn(() => false);
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: "standard-error-custom-retry",
+      steps: [
+        {
+          id: "charge-provider",
+          retry: { maxAttempts: 3, shouldRetry },
+          run: () => {
+            attempts += 1;
+            throw new Error("payment provider temporarily unavailable");
+          },
+        },
+      ],
+    };
+
+    await expect(runner.execute(definition, {})).rejects.toThrow(SagaExecutionFailedProblem);
+
+    expect(attempts).toBe(1);
+    expect(shouldRetry).toHaveBeenCalledOnce();
+    expect(shouldRetry).toHaveBeenCalledWith(
+      expect.objectContaining({
+        saga: definition,
+        attempt: 1,
+        error: expect.objectContaining({
+          message: "payment provider temporarily unavailable",
+        }),
+      }),
+    );
   });
 
   it("retries Problems marked retryable through extensions", async () => {
