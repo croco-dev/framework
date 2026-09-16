@@ -31,6 +31,7 @@ import { z } from "zod";
 import { createTrpcRouter } from "../libs/createTrpcRouter";
 import { TrpcExecutionContext } from "../libs/TrpcExecutionContext";
 import { toTrpcError } from "../libs/TrpcExecutionPipeline";
+import { createTrpcFilterProblem, createTrpcProblemDetails } from "../libs/TrpcProblemError";
 
 const events: string[] = [];
 let observedTrpcContext: unknown;
@@ -473,6 +474,32 @@ describe("tRPC Croco execution pipeline", () => {
     expect(toTrpcError(new StatusProblem(status))).toMatchObject({
       code: "INTERNAL_SERVER_ERROR",
       cause: expect.objectContaining({ status }),
+    });
+  });
+
+  it("preserves public unsupported-media-type details from filter responses", () => {
+    const problem = createTrpcFilterProblem(
+      {
+        type: "about:blank",
+        title: "Unsupported Media Type",
+        status: 415,
+        code: "protocols-trpc/unsupported-media-type",
+        detail: "Send application/json",
+      },
+      415,
+    );
+
+    expect(problem).toMatchObject({
+      category: ProblemCategory.UnsupportedMediaType,
+      status: 415,
+    });
+    if (!problem) {
+      return;
+    }
+    expect(createTrpcProblemDetails(problem)).toMatchObject({
+      status: 415,
+      title: "Unsupported Media Type",
+      detail: "Send application/json",
     });
   });
 

@@ -285,6 +285,10 @@ describe("ProblemCategory", () => {
     expect(ProblemCategory.PayloadTooLarge).not.toBeUndefined();
   });
 
+  it("should have UnsupportedMediaType category", () => {
+    expect(ProblemCategory.UnsupportedMediaType).not.toBeUndefined();
+  });
+
   it("should have ValidationError category", () => {
     expect(ProblemCategory.ValidationError).not.toBeUndefined();
 

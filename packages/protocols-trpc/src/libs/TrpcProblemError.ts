@@ -96,6 +96,8 @@ function toProblemCategory(status: number): ProblemCategory {
       return ProblemCategory.Gone;
     case 413:
       return ProblemCategory.PayloadTooLarge;
+    case 415:
+      return ProblemCategory.UnsupportedMediaType;
     case 422:
       return ProblemCategory.ValidationError;
     case 429:

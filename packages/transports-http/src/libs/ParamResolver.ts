@@ -32,6 +32,9 @@ const PARAM_TYPE_MAP: Record<ParamType, ArgumentMetadata["type"]> = {
 };
 
 const BODY_PARSE_FAILURE_MESSAGE = "Request body must contain valid JSON";
+const JSON_MEDIA_TYPE = "application/json";
+const UNSUPPORTED_MEDIA_TYPE_CODE = "transports-http/unsupported-media-type";
+const UNSUPPORTED_MEDIA_TYPE_MESSAGE = "Request body Content-Type must be application/json";
 
 const SCHEMALESS_NAMED_PARAM_PIPES: Partial<Record<ParamType, PipeTransform>> = {
   [ParamType.QUERY]: new ValidationPipe(getHttpParamFallbackSchema("query")),
@@ -208,8 +211,20 @@ class ParamResolverEngine {
   }
 
   private async parseBody(ctx: CrocoHttpContext): Promise<unknown> {
-    if (ctx.raw.req.raw.body === null) {
+    const contentType = ctx.header("content-type");
+    if (
+      ctx.raw.req.raw.body === null ||
+      (contentType === undefined && ctx.header("content-length")?.trim() === "0")
+    ) {
       return undefined;
+    }
+
+    const mediaType = contentType?.split(";", 1)[0]?.trim().toLowerCase();
+    if (mediaType !== JSON_MEDIA_TYPE) {
+      throw ProblemFactory.unsupportedMediaType(
+        UNSUPPORTED_MEDIA_TYPE_CODE,
+        UNSUPPORTED_MEDIA_TYPE_MESSAGE,
+      );
     }
 
     try {

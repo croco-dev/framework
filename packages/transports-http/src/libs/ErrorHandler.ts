@@ -51,8 +51,11 @@ export class ErrorHandler {
 
   private handleProblem(problem: Problem, ctx: CrocoHttpContext): Response {
     const body = this.createProblemResponseBody(problem, ctx);
+    ctx.res.headers["content-type"] = "application/problem+json";
+    const response = ctx.jsonResponse(body, body.status);
+    response.headers.set("Content-Type", "application/problem+json");
 
-    return ctx.jsonResponse(body, body.status);
+    return response;
   }
 
   createProblemResponseBody(problem: Problem, ctx: CrocoHttpContext): ProblemDetails {

@@ -169,7 +169,7 @@ describe("NodeAdapter real server smoke", () => {
       "GET /node-smoke/problem",
     );
     expect(problemResponse.status).toBe(422);
-    expect(problemResponse.headers.get("content-type")).toContain("application/json");
+    expect(problemResponse.headers.get("content-type")).toContain("application/problem+json");
     expect(await problemResponse.json()).toMatchObject({
       code: "protocols-rest/request-validation-failed",
       detail: "query.mode: must be a supported smoke mode",

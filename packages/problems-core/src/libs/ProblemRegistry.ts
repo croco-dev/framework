@@ -129,17 +129,19 @@ export type ProblemRegistryStatusForCategory<Category extends ProblemCategory> =
               ? 410
               : Category extends ProblemCategory.PayloadTooLarge
                 ? 413
-                : Category extends ProblemCategory.ValidationError
-                  ? 422
-                  : Category extends ProblemCategory.BusinessRuleViolation
+                : Category extends ProblemCategory.UnsupportedMediaType
+                  ? 415
+                  : Category extends ProblemCategory.ValidationError
                     ? 422
-                    : Category extends ProblemCategory.TooManyRequests
-                      ? 429
-                      : Category extends ProblemCategory.InternalServerError
-                        ? 500
-                        : Category extends ProblemCategory.NotImplemented
-                          ? 501
-                          : number;
+                    : Category extends ProblemCategory.BusinessRuleViolation
+                      ? 422
+                      : Category extends ProblemCategory.TooManyRequests
+                        ? 429
+                        : Category extends ProblemCategory.InternalServerError
+                          ? 500
+                          : Category extends ProblemCategory.NotImplemented
+                            ? 501
+                            : number;
 
 export type DefinedProblemRegistryEntries<Problems extends ProblemRegistryProblemDefinitions> = {
   readonly [Code in keyof Problems & string]: PackageProblemRegistryEntry<
@@ -502,6 +504,14 @@ const CATEGORY_RECOVERY_METADATA = {
     userAction: "Reduce the request body and retry.",
     operatorAction:
       "Confirm route body limits and upstream proxy limits match the intended upload policy.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  [ProblemCategory.UnsupportedMediaType]: createRecoveryMetadata({
+    cause: "The request body uses a media type that the endpoint does not support.",
+    userAction: "Send the request body with a supported Content-Type and retry.",
+    operatorAction: "Confirm the route media-type contract and request Content-Type header.",
     retryability: "not-retryable",
     redactionPolicy: "public",
     severity: "info",
