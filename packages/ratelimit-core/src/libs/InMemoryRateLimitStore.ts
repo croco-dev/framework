@@ -43,6 +43,66 @@ type MutableRateLimitStats = {
   total: number;
 };
 
+type InMemoryCounterEntry = {
+  count: number;
+  expiresAtMs?: number;
+};
+
+function getActiveCounter(
+  counters: Map<string, InMemoryCounterEntry>,
+  key: string,
+  now: number,
+): InMemoryCounterEntry | undefined {
+  const entry = counters.get(key);
+  if (entry?.expiresAtMs !== undefined && entry.expiresAtMs <= now) {
+    counters.delete(key);
+    return undefined;
+  }
+  return entry;
+}
+
+function incrementCounter(
+  counters: Map<string, InMemoryCounterEntry>,
+  key: string,
+  amount: number,
+  now: number,
+): number {
+  const entry = getActiveCounter(counters, key, now);
+  if (entry) {
+    entry.count += amount;
+    return entry.count;
+  }
+
+  counters.set(key, { count: amount });
+  return amount;
+}
+
+function expireCounter(
+  counters: Map<string, InMemoryCounterEntry>,
+  key: string,
+  ttlMs: number,
+  now: number,
+): void {
+  const entry = getActiveCounter(counters, key, now);
+  if (!entry) return;
+  if (ttlMs <= 0) {
+    counters.delete(key);
+    return;
+  }
+  entry.expiresAtMs = now + ttlMs;
+}
+
+function pruneExpiredCounters(counters: Map<string, InMemoryCounterEntry>, now: number): number {
+  let deletedCount = 0;
+  for (const [key, entry] of counters) {
+    if (entry.expiresAtMs !== undefined && entry.expiresAtMs <= now) {
+      counters.delete(key);
+      deletedCount++;
+    }
+  }
+  return deletedCount;
+}
+
 function recordRefund(stats: MutableRateLimitStats): void {
   stats.allowed = Math.max(0, stats.allowed - 1);
   stats.total = Math.max(0, stats.total - 1);
@@ -195,6 +255,7 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
     string,
     { entries: Array<{ timestamp: number; receiptId: string }>; windowMs: number }
   >();
+  private readonly counters = new Map<string, InMemoryCounterEntry>();
   private readonly _windowMsCache = new Map<string, number>();
   private readonly globalStats = { allowed: 0, denied: 0, total: 0 };
   private readonly cancelPruning?: () => void;
@@ -323,24 +384,26 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
     }
   }
 
-  async increment(): Promise<number> {
-    return 0;
+  async increment(key: string, amount = 1): Promise<number> {
+    return incrementCounter(this.counters, key, amount, this.now());
   }
 
-  async getCount(): Promise<number> {
-    return 0;
+  async getCount(key: string): Promise<number> {
+    return getActiveCounter(this.counters, key, this.now())?.count ?? 0;
   }
 
   async reset(key?: string): Promise<void> {
     if (key !== undefined) {
       this.windows.delete(key);
+      this.counters.delete(key);
     } else {
       this.windows.clear();
+      this.counters.clear();
     }
   }
 
-  async expire(): Promise<void> {
-    return;
+  async expire(key: string, ttlMs: number): Promise<void> {
+    expireCounter(this.counters, key, ttlMs, this.now());
   }
 
   async pruneExpired(): Promise<number> {
@@ -361,7 +424,7 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
       deletedCount += originalLength - entry.entries.length;
     }
 
-    return deletedCount;
+    return deletedCount + pruneExpiredCounters(this.counters, now);
   }
 
   async getStats(): Promise<{ allowed: number; denied: number; total: number }> {
@@ -374,6 +437,7 @@ export class TokenBucketInMemoryStore extends TokenBucketStore {
     string,
     { tokens: number; lastRefill: number; ttlMs: number }
   >();
+  private readonly counters = new Map<string, InMemoryCounterEntry>();
   private readonly globalStats = { allowed: 0, denied: 0, total: 0 };
   private readonly cancelPruning?: () => void;
 
@@ -430,21 +494,23 @@ export class TokenBucketInMemoryStore extends TokenBucketStore {
     this.buckets.set(key, { ...entry, ttlMs });
   }
 
-  async increment(): Promise<number> {
-    return 0;
+  async increment(key: string, amount = 1): Promise<number> {
+    return incrementCounter(this.counters, key, amount, this.now());
   }
 
-  async getCount(): Promise<number> {
-    return 0;
+  async getCount(key: string): Promise<number> {
+    return getActiveCounter(this.counters, key, this.now())?.count ?? 0;
   }
 
   async reset(key: string): Promise<void> {
     this.buckets.delete(key);
+    this.counters.delete(key);
     this.clearTokenBucketRefundReceipts(key);
   }
 
-  async expire(key: string, _ttlMs: number): Promise<void> {
+  async expire(key: string, ttlMs: number): Promise<void> {
     this.buckets.delete(key);
+    expireCounter(this.counters, key, ttlMs, this.now());
     this.clearTokenBucketRefundReceipts(key);
   }
 
@@ -462,7 +528,7 @@ export class TokenBucketInMemoryStore extends TokenBucketStore {
       deletedCount++;
     }
 
-    return deletedCount;
+    return deletedCount + pruneExpiredCounters(this.counters, now);
   }
 
   async getStats(): Promise<{ allowed: number; denied: number; total: number }> {

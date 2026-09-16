@@ -437,6 +437,79 @@ describe("InMemoryRateLimitStore", () => {
     tokenStore.close();
   });
 
+  it("should persist sliding-window counters independently from request quota", async () => {
+    let now = 0;
+    const slidingStore = new SlidingWindowInMemoryStore({ now: () => now, pruneIntervalMs: 0 });
+
+    expect(await slidingStore.getCount("user:counter")).toBe(0);
+    expect(await slidingStore.increment("user:counter")).toBe(1);
+    expect(await slidingStore.increment("user:counter", 1.5)).toBe(2.5);
+    expect(await slidingStore.increment("user:counter", -0.25)).toBe(2.25);
+    expect(await slidingStore.getCount("user:other")).toBe(0);
+
+    const result = await slidingStore.check("user:counter", policy);
+
+    expect(result.remaining).toBe(2);
+    expect(await slidingStore.getCount("user:counter")).toBe(2.25);
+    expect(await slidingStore.getStats()).toEqual({ allowed: 1, denied: 0, total: 1 });
+
+    await slidingStore.expire("user:counter", 5000);
+
+    now = 4999;
+    expect(await slidingStore.increment("user:counter", 0.5)).toBe(2.75);
+    expect(await slidingStore.getCount("user:counter")).toBe(2.75);
+
+    now = 5000;
+    expect(await slidingStore.getCount("user:counter")).toBe(0);
+
+    await slidingStore.increment("user:counter", 4);
+    await slidingStore.reset("user:counter");
+
+    expect(await slidingStore.getCount("user:counter")).toBe(0);
+
+    slidingStore.close();
+  });
+
+  it("should persist token-bucket counters independently from request quota", async () => {
+    let now = 0;
+    const tokenPolicy: TokenBucketPolicy = {
+      name: "token-counter",
+      algorithm: "token-bucket",
+      capacity: 3,
+      refillRate: 1,
+      refillIntervalMs: 1000,
+    };
+    const tokenStore = new TokenBucketInMemoryStore({ now: () => now, pruneIntervalMs: 0 });
+
+    expect(await tokenStore.getCount("user:counter")).toBe(0);
+    expect(await tokenStore.increment("user:counter")).toBe(1);
+    expect(await tokenStore.increment("user:counter", 2.25)).toBe(3.25);
+    expect(await tokenStore.increment("user:counter", -0.5)).toBe(2.75);
+    expect(await tokenStore.getCount("user:other")).toBe(0);
+
+    const result = await tokenStore.check("user:counter", tokenPolicy);
+
+    expect(result.remaining).toBe(2);
+    expect(await tokenStore.getCount("user:counter")).toBe(2.75);
+    expect(await tokenStore.getStats()).toEqual({ allowed: 1, denied: 0, total: 1 });
+
+    await tokenStore.expire("user:counter", 5000);
+
+    now = 4999;
+    expect(await tokenStore.increment("user:counter", 0.5)).toBe(3.25);
+    expect(await tokenStore.getCount("user:counter")).toBe(3.25);
+
+    now = 5000;
+    expect(await tokenStore.getCount("user:counter")).toBe(0);
+
+    await tokenStore.increment("user:counter", 4);
+    await tokenStore.reset("user:counter");
+
+    expect(await tokenStore.getCount("user:counter")).toBe(0);
+
+    tokenStore.close();
+  });
+
   describe("SlidingWindowInMemoryStore custom windowMs", () => {
     let slidingStore!: SlidingWindowInMemoryStore;
     const customWindowPolicy: SlidingWindowPolicy = {
