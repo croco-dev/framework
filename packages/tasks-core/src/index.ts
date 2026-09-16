@@ -20,6 +20,11 @@ export {
 export { InvalidTaskReferenceProblem } from "./libs/problems/TasksProblems";
 
 /**
+ * 동일한 멱등 키가 이미 실패, 취소 또는 타임아웃된 실행을 가리킬 때 복구 정보를 제공하는 Problem입니다.
+ */
+export { TaskExecutionAlreadySettledProblem } from "./libs/problems/TasksProblems";
+
+/**
  * 태스크 메타데이터를 수집하고 조회하는 전역 레지스트리입니다.
  */
 export { TaskRegistry } from "./libs/TaskRegistry";

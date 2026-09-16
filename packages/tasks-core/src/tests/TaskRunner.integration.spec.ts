@@ -522,6 +522,39 @@ describe("TaskRunner integration", () => {
     expect(invocationCount).toBe(1);
   });
 
+  it("should report a settled execution instead of restarting a failed idempotent task", async () => {
+    let invocationCount = 0;
+
+    @Component()
+    class FailedIdempotentTask {
+      @Task({ name: "failed-idempotent-task", maxAttempts: 3 })
+      handle(): never {
+        invocationCount += 1;
+        const error = new Error("Permanent failure") as Error & { retryable: boolean };
+        error.retryable = false;
+        throw error;
+      }
+    }
+
+    Container.set(FailedIdempotentTask, new FailedIdempotentTask());
+    const manager = new ExecutionManagerImpl(new MemoryExecutionStore());
+    const runner = new TaskRunner(manager, TaskRegistry.fromMetadata());
+
+    await expect(
+      runner.execute("failed-idempotent-task", {}, { idempotencyKey: "same" }),
+    ).rejects.toThrow("Permanent failure");
+    await expect(
+      runner.execute("failed-idempotent-task", {}, { idempotencyKey: "same" }),
+    ).rejects.toMatchObject({
+      code: "tasks-core/execution-already-settled",
+      extensions: {
+        executionId: "exec-0001",
+        executionStatus: "failed",
+      },
+    });
+    expect(invocationCount).toBe(1);
+  });
+
   it("should reuse only a matching legacy runtime key during scoped-key rollout", async () => {
     let invocationCount = 0;
 

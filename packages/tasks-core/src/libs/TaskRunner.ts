@@ -11,6 +11,7 @@ import { Problem } from "@croco/problems-core";
 import { recordError } from "@croco/telemetry-api";
 import {
   InvalidTaskReferenceProblem,
+  TaskExecutionAlreadySettledProblem,
   TaskExecutionTimeoutProblem,
   TaskNotFoundProblem,
   TaskRunnerDIFailureProblem,
@@ -283,6 +284,14 @@ export class TaskRunner {
 
     if (execution.status === "completed") {
       return { executionId: execution.id, result: execution.result };
+    }
+
+    if (
+      execution.status === "failed" ||
+      execution.status === "cancelled" ||
+      execution.status === "timed_out"
+    ) {
+      throw new TaskExecutionAlreadySettledProblem(taskId, execution.id, execution.status);
     }
 
     const result = await this.runExecution(task.target, task.methodName, execution, taskOptions);
