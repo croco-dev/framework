@@ -103,7 +103,7 @@ title: "TokenBucketInMemoryStore"
 
 ### expire()
 
-> **expire**(`key`, `_ttlMs`): `Promise`\<`void`\>
+> **expire**(`key`, `ttlMs`): `Promise`\<`void`\>
 
 #### Parameters
 
@@ -111,7 +111,7 @@ title: "TokenBucketInMemoryStore"
 
 `string`
 
-##### \_ttlMs
+##### ttlMs
 
 `number`
 
@@ -127,7 +127,13 @@ title: "TokenBucketInMemoryStore"
 
 ### getCount()
 
-> **getCount**(): `Promise`\<`number`\>
+> **getCount**(`key`): `Promise`\<`number`\>
+
+#### Parameters
+
+##### key
+
+`string`
 
 #### Returns
 
@@ -155,7 +161,17 @@ title: "TokenBucketInMemoryStore"
 
 ### increment()
 
-> **increment**(): `Promise`\<`number`\>
+> **increment**(`key`, `amount?`): `Promise`\<`number`\>
+
+#### Parameters
+
+##### key
+
+`string`
+
+##### amount?
+
+`number` = `1`
 
 #### Returns
 

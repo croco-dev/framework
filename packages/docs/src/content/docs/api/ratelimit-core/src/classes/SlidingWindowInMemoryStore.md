@@ -103,7 +103,17 @@ title: "SlidingWindowInMemoryStore"
 
 ### expire()
 
-> **expire**(): `Promise`\<`void`\>
+> **expire**(`key`, `ttlMs`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### key
+
+`string`
+
+##### ttlMs
+
+`number`
 
 #### Returns
 
@@ -117,7 +127,13 @@ title: "SlidingWindowInMemoryStore"
 
 ### getCount()
 
-> **getCount**(): `Promise`\<`number`\>
+> **getCount**(`key`): `Promise`\<`number`\>
+
+#### Parameters
+
+##### key
+
+`string`
 
 #### Returns
 
@@ -145,7 +161,17 @@ title: "SlidingWindowInMemoryStore"
 
 ### increment()
 
-> **increment**(): `Promise`\<`number`\>
+> **increment**(`key`, `amount?`): `Promise`\<`number`\>
+
+#### Parameters
+
+##### key
+
+`string`
+
+##### amount?
+
+`number` = `1`
 
 #### Returns
 
