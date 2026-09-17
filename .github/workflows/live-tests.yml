@@ -106,6 +106,15 @@ jobs:
           --lane live --allow-live --owner @croco/metering-core
           --output ci-reports/package-quality/live-test-lanes/metering-core.json
 
+      - name: Run @croco/metering-drizzle live tests
+        continue-on-error: true
+        env:
+          METERING_POSTGRES_URL: ${{ secrets.METERING_POSTGRES_URL }}
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/metering-drizzle
+          --output ci-reports/package-quality/live-test-lanes/metering-drizzle.json
+
       - name: Run @croco/metrics-core live tests
         continue-on-error: true
         run: >-
@@ -199,6 +208,7 @@ jobs:
           --lane-report ci-reports/package-quality/live-test-lanes/llm-openai.json
           --lane-report ci-reports/package-quality/live-test-lanes/membership-drizzle.json
           --lane-report ci-reports/package-quality/live-test-lanes/metering-core.json
+          --lane-report ci-reports/package-quality/live-test-lanes/metering-drizzle.json
           --lane-report ci-reports/package-quality/live-test-lanes/metrics-core.json
           --lane-report ci-reports/package-quality/live-test-lanes/migration-runner.json
           --lane-report ci-reports/package-quality/live-test-lanes/notifications-resend.json
