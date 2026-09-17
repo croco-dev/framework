@@ -5,6 +5,7 @@ import { Client } from "pg";
 import { describe, expect, it } from "vitest";
 import { DrizzleMeterRepository } from "../libs/DrizzleMeterRepository";
 import { metersPg, usageRecordsPg } from "../libs/schema";
+import { widenUsageRecordIdsPostgres } from "../migrations/widenUsageRecordIds";
 
 const connectionString = process.env.METERING_POSTGRES_URL ?? "";
 
@@ -64,6 +65,51 @@ describe.skipIf(connectionString.length === 0)(
             dimensions: null,
           },
         ]);
+      } finally {
+        await client.end();
+      }
+    });
+
+    it("widens legacy UUID IDs to text without changing existing values or the UUID default", async () => {
+      const client = new Client({ connectionString });
+      await client.connect();
+      try {
+        await client.query(`
+          CREATE TEMPORARY TABLE usage_records (
+            id uuid PRIMARY KEY DEFAULT gen_random_uuid()
+          )
+        `);
+        const legacyId = "7c06af3e-b493-48b7-8d92-844b5c6a54e3";
+        await client.query("INSERT INTO usage_records (id) VALUES ($1)", [legacyId]);
+
+        const db = drizzle(client);
+        await widenUsageRecordIdsPostgres(db);
+
+        const existingRecord = await client.query<{ id: string; idType: string }>(
+          `SELECT id, pg_typeof(id)::text AS "idType" FROM usage_records WHERE id = $1`,
+          [legacyId],
+        );
+        expect(existingRecord.rows).toEqual([{ id: legacyId, idType: "text" }]);
+
+        const defaultExpression = await client.query<{ expression: string }>(`
+          SELECT pg_get_expr(definition.adbin, definition.adrelid) AS expression
+          FROM pg_attribute AS attribute
+          JOIN pg_attrdef AS definition
+            ON definition.adrelid = attribute.attrelid
+            AND definition.adnum = attribute.attnum
+          WHERE attribute.attrelid = 'usage_records'::regclass
+            AND attribute.attname = 'id'
+        `);
+        expect(defaultExpression.rows).toEqual([{ expression: "(gen_random_uuid())::text" }]);
+
+        const generatedRecord = await client.query<{ id: string; idType: string }>(
+          `INSERT INTO usage_records DEFAULT VALUES RETURNING id, pg_typeof(id)::text AS "idType"`,
+        );
+        expect(generatedRecord.rows).toHaveLength(1);
+        expect(generatedRecord.rows[0]?.idType).toBe("text");
+        expect(generatedRecord.rows[0]?.id).toMatch(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+        );
       } finally {
         await client.end();
       }
