@@ -6,7 +6,7 @@
     {
       "package": "@croco/cache-core",
       "file": "packages/cache-core/src/libs/CacheInvalidationGraph.ts",
-      "line": 683,
+      "line": 699,
       "excerpt": "} catch {",
       "reason": "Reviewed 2026-09-16: optional telemetry event callbacks must not interrupt remaining invalidations or replace successful cache results. CacheInvalidationGraph.spec.ts verifies both operations complete when each callback throws; no independent non-throwing diagnostic sink exists.",
       "owner": "framework-error-handling",
@@ -15,7 +15,7 @@
     {
       "package": "@croco/cache-core",
       "file": "packages/cache-core/src/libs/CacheInvalidationGraph.ts",
-      "line": 695,
+      "line": 711,
       "excerpt": "} catch {",
       "reason": "Reviewed 2026-09-16: optional telemetry error callbacks must not replace the original adapter Problem or its cause. CacheInvalidationGraph.spec.ts verifies the exact reported Problem is rejected with its original adapter cause when reporting throws; no independent non-throwing diagnostic sink exists.",
       "owner": "framework-error-handling",

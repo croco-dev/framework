@@ -6638,6 +6638,11 @@
               "source": "./libs/CacheInvalidationGraph"
             },
             {
+              "name": "CacheInvalidationFailure",
+              "exportKind": "named",
+              "source": "./libs/problems/CacheDecoratorProblems"
+            },
+            {
               "name": "CacheInvalidationGraphDefinition",
               "exportKind": "named",
               "source": "./libs/CacheInvalidationGraph"

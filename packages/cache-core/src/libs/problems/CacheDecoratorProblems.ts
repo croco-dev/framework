@@ -8,6 +8,14 @@ type CacheInvalidationProblemOperation = {
   readonly tag?: string;
 };
 
+export type CacheInvalidationFailure = {
+  readonly adapterName: string;
+  readonly causeCode?: string;
+  readonly causeMessage: string;
+  readonly eventName: string;
+  readonly operation: CacheInvalidationProblemOperation;
+};
+
 export class CacheDecoratorConfigProblem extends Problem {
   readonly code = "cache-core/invalid-decorator-config";
   readonly category = ProblemCategory.InternalServerError;
@@ -89,19 +97,31 @@ export class UnsupportedCacheInvalidationCapabilityProblem extends Problem {
 export class CacheInvalidationFailedProblem extends Problem {
   readonly code = "cache-core/invalidation-failed";
   readonly category = ProblemCategory.InternalServerError;
+  readonly failures: readonly CacheInvalidationFailure[];
 
   constructor(
     readonly eventName: string,
     readonly adapterName: string,
     readonly operation: CacheInvalidationProblemOperation,
     cause: unknown,
+    additionalFailures: readonly CacheInvalidationFailure[] = [],
   ) {
     const causeMessage = cause instanceof Error ? cause.message : String(cause);
     const causeCode = cause instanceof Problem ? cause.code : undefined;
+    const failure = {
+      adapterName,
+      ...(causeCode === undefined ? {} : { causeCode }),
+      causeMessage,
+      eventName,
+      operation,
+    };
+    const failures = [failure, ...additionalFailures];
     super(
       "cache-core/invalidation-failed",
       ProblemCategory.InternalServerError,
-      `Cache invalidation for event '${eventName}' failed at ${operation.kind} operation '${operation.id ?? ""}'.`,
+      failures.length === 1
+        ? `Cache invalidation for event '${eventName}' failed at ${operation.kind} operation '${operation.id ?? ""}'.`
+        : `Cache invalidation for event '${eventName}' failed for ${failures.length} operations.`,
       {
         cause: cause instanceof Error ? cause : undefined,
         extensions: {
@@ -113,6 +133,7 @@ export class CacheInvalidationFailedProblem extends Problem {
         },
       },
     );
+    this.failures = failures;
   }
 }
 

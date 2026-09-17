@@ -3827,7 +3827,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 21,
+          line: 29,
           column: 1,
           kind: "problem-class",
         },
@@ -3891,7 +3891,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 11,
+          line: 19,
           column: 1,
           kind: "problem-class",
         },
@@ -3954,7 +3954,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 119,
+          line: 140,
           column: 1,
           kind: "problem-class",
         },
@@ -3987,7 +3987,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 72,
+          line: 80,
           column: 1,
           kind: "problem-class",
         },
@@ -4017,7 +4017,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 58,
+          line: 66,
           column: 1,
           kind: "problem-class",
         },
@@ -4049,7 +4049,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 89,
+          line: 97,
           column: 1,
           kind: "problem-class",
         },
@@ -4079,7 +4079,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
-          line: 44,
+          line: 52,
           column: 1,
           kind: "problem-class",
         },
