@@ -37,6 +37,7 @@ const MISSING_DELIVERY_IDENTITY_ERROR_CODE = "triggers-qstash/missing-delivery-i
 const METHOD_NOT_FOUND_ERROR_CODE = "triggers-qstash/method-not-found";
 const SERVICE_RESOLUTION_ERROR_CODE = "triggers-qstash/service-resolution-failed";
 const TARGET_NOT_FOUND_ERROR_CODE = "triggers-qstash/target-not-found";
+const MAX_TIMER_DELAY_MS = 2_147_483_647;
 
 /**
  * Configuration options for QStashTriggerHandler.
@@ -142,6 +143,18 @@ export type QStashWebhookPayload = {
     readonly enabled?: boolean;
     readonly timezone?: string;
   };
+};
+
+/** Runtime context passed to a QStash cron target after its webhook payload. */
+export type QStashTriggerExecutionContext = {
+  /** Persisted execution identifier used for inspection and idempotent effects. */
+  readonly executionId: string;
+
+  /** Persisted attempt number returned by ExecutionManager.start(). */
+  readonly attempt: number;
+
+  /** Cooperative cancellation signal aborted when executionTimeout expires. */
+  readonly signal: AbortSignal;
 };
 
 /**
@@ -537,11 +550,74 @@ export class QStashTriggerHandler {
       executionId: execution.id,
     };
     const attemptManager = this.getAttemptManager();
+    const controller = new AbortController();
+    const context: QStashTriggerExecutionContext = {
+      executionId: execution.id,
+      attempt: startedExecution.attempts,
+      signal: controller.signal,
+    };
+    const timeoutMs = startedExecution.timeout ?? this.executionTimeout;
+    const startedAt = startedExecution.startedAt?.getTime() ?? Date.now();
+    const deadline = startedAt + timeoutMs;
+    let timeoutClaimed = false;
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    let triggerTimeout: (() => void) | undefined;
+    const timeoutPromise = new Promise<Execution>((resolve, reject) => {
+      triggerTimeout = () => {
+        if (timeoutClaimed) return;
+        timeoutClaimed = true;
+        if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
+        controller.abort();
+        void this.claimTimeout(attemptManager, attemptToken).then(resolve, reject);
+      };
+
+      const scheduleTimeout = () => {
+        const remaining = deadline - Date.now();
+        if (remaining <= 0) {
+          triggerTimeout?.();
+          return;
+        }
+        timeoutHandle = setTimeout(scheduleTimeout, Math.min(remaining, MAX_TIMER_DELAY_MS));
+      };
+      scheduleTimeout();
+    });
+    const cancelTimeout = () => {
+      if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
+    };
+    const claimExpiredTimeout = () => {
+      if (!timeoutClaimed && Date.now() >= deadline) triggerTimeout?.();
+      return timeoutClaimed;
+    };
+
+    if (timeoutClaimed) {
+      return this.createTimeoutResult(await timeoutPromise);
+    }
+
+    const handlerPromise = Promise.resolve().then(() =>
+      (
+        method as (payload: QStashWebhookPayload, context: QStashTriggerExecutionContext) => unknown
+      ).call(target, payload, context),
+    );
 
     let result: unknown;
     try {
-      result = await (method as () => unknown).call(target);
+      const outcome = await Promise.race([
+        handlerPromise.then((value) => ({ kind: "completed" as const, value })),
+        timeoutPromise.then((timedOut) => ({ kind: "timed_out" as const, timedOut })),
+      ]);
+      if (claimExpiredTimeout()) {
+        return this.createTimeoutResult(await timeoutPromise);
+      }
+      if (outcome.kind === "timed_out") {
+        return this.createTimeoutResult(outcome.timedOut);
+      }
+      cancelTimeout();
+      result = outcome.value;
     } catch (error) {
+      if (claimExpiredTimeout()) {
+        return this.createTimeoutResult(await timeoutPromise);
+      }
+      cancelTimeout();
       const executionError = {
         message: error instanceof Error ? error.message : String(error),
         stack: error instanceof Error ? error.stack : undefined,
@@ -603,18 +679,66 @@ export class QStashTriggerHandler {
       execution.status === "cancelled" ||
       execution.status === "timed_out"
     ) {
+      return this.createTerminalResult(execution);
+    }
+
+    return undefined;
+  }
+
+  private createTerminalResult(execution: Execution): HandleResult {
+    return {
+      success: false,
+      executionId: execution.id,
+      statusCode: 200,
+      body: {
+        executionId: execution.id,
+        status: execution.status,
+      },
+    };
+  }
+
+  private createTimeoutResult(execution: Execution): HandleResult {
+    if (execution.status === "completed") {
       return {
-        success: false,
+        success: true,
         executionId: execution.id,
         statusCode: 200,
         body: {
           executionId: execution.id,
-          status: execution.status,
+          result: execution.result,
         },
       };
     }
+    if (
+      execution.status === "pending" ||
+      execution.status === "running" ||
+      execution.status === "retrying"
+    ) {
+      return this.createRetryPendingResult(execution);
+    }
+    return this.createTerminalResult(execution);
+  }
 
-    return undefined;
+  private async claimTimeout(
+    attemptManager: ExecutionAttemptManager | undefined,
+    attemptToken: ExecutionAttemptToken,
+  ): Promise<Execution> {
+    if (!attemptManager) {
+      return this.executionManager.timeout(attemptToken.executionId);
+    }
+
+    try {
+      return await attemptManager.timeoutAttempt(attemptToken, { retryable: false });
+    } catch (error) {
+      if (!(error instanceof Problem) || error.category !== ProblemCategory.Conflict) {
+        throw error;
+      }
+      const current = await this.executionManager.get(attemptToken.executionId);
+      if (current.status === "running" && current.attempts === attemptToken.attempt) {
+        throw error;
+      }
+      return current;
+    }
   }
 
   private async recoverExpiredExecution(execution: Execution): Promise<Execution> {
@@ -626,8 +750,10 @@ export class QStashTriggerHandler {
       return execution;
     }
 
+    const attemptManager = this.getAttemptManager();
+    const token = { attempt: execution.attempts, executionId: execution.id };
     try {
-      await this.executionManager.timeout(execution.id);
+      await this.claimTimeout(attemptManager, token);
     } catch (error) {
       if (!(error instanceof Problem) || error.category !== ProblemCategory.Conflict) {
         throw error;
@@ -638,16 +764,18 @@ export class QStashTriggerHandler {
       return reconciled;
     }
 
-    const attemptManager = this.getAttemptManager();
     if (!attemptManager) {
       throw ExecutionProblems.attemptFencingUnsupported(
         `QStash execution '${reconciled.id}' requires atomic attempt fencing for idempotent timeout recovery`,
       );
     }
 
-    const token = { attempt: reconciled.attempts, executionId: reconciled.id };
+    const reconciledToken = { attempt: reconciled.attempts, executionId: reconciled.id };
     try {
-      await attemptManager.resolveIndeterminateTimeout(token, "QStash target declared idempotent");
+      await attemptManager.resolveIndeterminateTimeout(
+        reconciledToken,
+        "QStash target declared idempotent",
+      );
       return await this.executionManager.retry(reconciled.id);
     } catch (error) {
       if (!(error instanceof Problem) || error.category !== ProblemCategory.Conflict) {
@@ -664,6 +792,7 @@ export class QStashTriggerHandler {
       !candidate.supportsAttemptFencing() ||
       typeof candidate.completeAttempt !== "function" ||
       typeof candidate.failAttempt !== "function" ||
+      typeof candidate.timeoutAttempt !== "function" ||
       typeof candidate.resolveIndeterminateTimeout !== "function"
     ) {
       return undefined;

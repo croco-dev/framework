@@ -22,6 +22,7 @@ export type {
   QStashDeliveryIdentityVerification,
   QStashDeliveryIdentityVerificationFailure,
   QStashDeliveryIdentityVerifier,
+  QStashTriggerExecutionContext,
   QStashTriggerHandlerOptions,
   QStashWebhookPayload,
 } from "./libs/QStashTriggerHandler";

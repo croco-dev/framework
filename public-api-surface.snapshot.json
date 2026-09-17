@@ -34042,6 +34042,11 @@
               "source": "./libs/QStashScheduler"
             },
             {
+              "name": "QStashTriggerExecutionContext",
+              "exportKind": "named",
+              "source": "./libs/QStashTriggerHandler"
+            },
+            {
               "name": "QStashTriggerHandlerOptions",
               "exportKind": "named",
               "source": "./libs/QStashTriggerHandler"

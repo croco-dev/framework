@@ -18,6 +18,8 @@ import {
   createQStashApiDeliveryIdentityVerifier,
   QStashScheduler,
   QStashTriggerHandler,
+  type QStashTriggerExecutionContext,
+  type QStashWebhookPayload,
 } from "@croco/triggers-qstash";
 import { Client, Receiver } from "@upstash/qstash";
 
@@ -47,7 +49,20 @@ const handler = new QStashTriggerHandler({
 const result = await handler.handle(rawBody, upstashSignature, {
   messageId: upstashMessageId,
 });
+
+class ScheduledJob {
+  async execute(payload: QStashWebhookPayload, context: QStashTriggerExecutionContext) {
+    await fetch("https://api.example.com/reconcile", {
+      method: "POST",
+      body: JSON.stringify({ scheduleId: payload.scheduleId }),
+      signal: context.signal,
+    });
+  }
+}
 ```
+
+Cron targets receive the verified webhook payload and an execution context with `executionId`, `attempt`,
+and an `AbortSignal`. Existing zero-argument targets remain valid because JavaScript ignores extra arguments.
 
 ## Public API
 
@@ -60,6 +75,7 @@ const result = await handler.handle(rawBody, upstashSignature, {
 | `ScheduleSyncDetail`                      | Per-schedule action, target, method, diagnostic code, retryability, and upstream status.                                                                         |
 | `QStashTriggerHandler`                    | Verifies QStash signatures and dispatches the target trigger execution.                                                                                          |
 | `QStashTriggerHandlerOptions`             | Requires receiver, delivery identity verifier, execution manager, and timeout; configures attempts, timeout policy, failure observation, and service resolution. |
+| `QStashTriggerExecutionContext`           | Carries the execution ID, attempt number, and cooperative timeout cancellation signal supplied to cron targets.                                                  |
 | `QStashDeliveryIdentity`                  | Carries the verified `Upstash-Message-Id` used to deduplicate one scheduled occurrence.                                                                          |
 | `QStashDeliveryIdentityVerifier`          | Authenticates the message identity before it becomes a durable execution key.                                                                                    |
 | `createQStashApiDeliveryIdentityVerifier` | Binds identity to body and schedule through QStash's authenticated message API.                                                                                  |
@@ -90,9 +106,10 @@ const result = await handler.handle(rawBody, upstashSignature, {
 - QStash retries reuse the original execution ID. Completed outcomes are replayed. Running duplicates and
   retryable execution failures return retryable `503` responses so QStash redelivery supplies provider-managed
   backoff and resumes the same execution up to `maxAttempts`.
-- `executionTimeout` bounds abandoned running attempts. The default `indeterminate` timeout policy stops rather
-  than risking duplicate side effects. Targets explicitly configured with `timeoutRetryPolicy: "idempotent"`
-  may recover the same execution through atomic attempt fencing when the execution manager supports it.
+- `executionTimeout` actively bounds target execution, aborts the target context signal, and records `timed_out`
+  before returning. The default `indeterminate` timeout policy stops rather than risking duplicate side effects.
+  Targets explicitly configured with `timeoutRetryPolicy: "idempotent"` may recover the same execution through
+  atomic attempt fencing when the execution manager supports it.
 - Invalid JSON or malformed payloads return `400` with `code: "triggers-qstash/invalid-payload"`.
 - Unknown target classes and methods return deterministic diagnostic-coded response bodies instead
   of generic strings.
