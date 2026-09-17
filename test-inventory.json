@@ -2559,6 +2559,12 @@
       "owner": "@croco/metering-core"
     },
     {
+      "path": "packages/metering-drizzle/src/tests/DrizzleMeterRepository.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/metering-drizzle"
+    },
+    {
       "path": "packages/metering-drizzle/src/tests/DrizzleMeterRepository.spec.ts",
       "lane": "fast",
       "qualifiers": [],
