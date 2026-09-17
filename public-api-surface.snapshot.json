@@ -29101,6 +29101,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "TaskExecutionAlreadySettledProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/TasksProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "TaskExecutionTimeoutProblem",
               "exportKind": "named",
               "source": "./libs/problems/TasksProblems",

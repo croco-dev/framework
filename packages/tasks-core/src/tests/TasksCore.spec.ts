@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { taskRef } from "../index";
+import { taskRef, TaskExecutionAlreadySettledProblem } from "../index";
 import { TASK_METADATA_KEY, Task } from "../libs/decorators/Task";
 import { TaskRegistry } from "../libs/TaskRegistry";
 import { TaskRunner } from "../libs/TaskRunner";
@@ -25,6 +25,10 @@ describe("@croco/tasks-core package exports", () => {
 
   it("should export TaskRunner class", () => {
     expect(typeof TaskRunner).toBe("function");
+  });
+
+  it("should export TaskExecutionAlreadySettledProblem", () => {
+    expect(typeof TaskExecutionAlreadySettledProblem).toBe("function");
   });
 
   it("should export RegisteredTask type", () => {

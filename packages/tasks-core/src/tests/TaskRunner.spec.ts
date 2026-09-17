@@ -6,6 +6,7 @@ import * as telemetry from "@croco/telemetry-api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Task } from "../libs/decorators/Task";
 import {
+  TaskExecutionAlreadySettledProblem,
   TaskExecutionTimeoutProblem,
   TaskNotFoundProblem,
   TaskRunnerDIFailureProblem,
@@ -388,6 +389,33 @@ describe("TaskRunner", () => {
     expect(mockExecutionManager.start).not.toHaveBeenCalled();
     expect(mockExecutionManager.complete).not.toHaveBeenCalled();
   });
+
+  it.each(["failed", "cancelled", "timed_out"] as const)(
+    "should reject an idempotent execution already settled as %s",
+    async (status) => {
+      mockExecutionManager.create = vi.fn().mockResolvedValue(
+        execution({
+          id: "exec-settled",
+          payload: { data: "test" },
+          status,
+        }),
+      );
+      const runner = new TaskRunner(mockExecutionManager, registry);
+
+      await expect(
+        runner.execute("test-task", { data: "test" }, { idempotencyKey: "key" }),
+      ).rejects.toMatchObject({
+        code: "tasks-core/execution-already-settled",
+        executionId: "exec-settled",
+        executionStatus: status,
+      });
+      await expect(
+        runner.execute("test-task", { data: "test" }, { idempotencyKey: "key" }),
+      ).rejects.toBeInstanceOf(TaskExecutionAlreadySettledProblem);
+      expect(mockExecutionManager.start).not.toHaveBeenCalled();
+      expect(mockExecutionManager.retry).not.toHaveBeenCalled();
+    },
+  );
 
   it("should throw error for non-existent task", async () => {
     const runner = new TaskRunner(mockExecutionManager, registry);

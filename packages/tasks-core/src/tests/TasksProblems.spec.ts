@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   DuplicateTaskRegistrationProblem,
   InvalidTaskReferenceProblem,
+  TaskExecutionAlreadySettledProblem,
   TaskExecutionTimeoutProblem,
   TaskNotFoundProblem,
   TaskRunnerDIFailureProblem,
@@ -68,6 +69,26 @@ describe("TasksProblems", () => {
       retryable: false,
       indeterminate: true,
       recoveryAction: expect.stringContaining("TaskRunner.recoverTimeout"),
+    });
+  });
+
+  it.each([
+    ["failed", "TaskRunner.retry"],
+    ["timed_out", "TaskRunner.recoverTimeout"],
+    ["cancelled", "new idempotency key"],
+  ] as const)("should describe recovery for a %s idempotent execution", (status, recovery) => {
+    const problem = new TaskExecutionAlreadySettledProblem("task-123", "exec-123", status);
+
+    expect(problem.code).toBe("tasks-core/execution-already-settled");
+    expect(problem.category).toBe(ProblemCategory.Conflict);
+    expect(problem.executionId).toBe("exec-123");
+    expect(problem.executionStatus).toBe(status);
+    expect(problem.toJSON()).toMatchObject({
+      taskId: "task-123",
+      executionId: "exec-123",
+      executionStatus: status,
+      retryable: false,
+      recoveryAction: expect.stringContaining(recovery),
     });
   });
 });
