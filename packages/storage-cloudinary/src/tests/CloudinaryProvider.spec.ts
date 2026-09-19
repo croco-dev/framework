@@ -1529,7 +1529,7 @@ function useInMemoryCloudinaryBackend(): void {
 
         const key = url.searchParams.get("public_id");
         const object = key === null ? undefined : objects.get(key);
-        return object
+        return object && url.searchParams.get("format") === object.format
           ? new Response(new Uint8Array(object.data))
           : new Response("Not found", { status: 404 });
       }

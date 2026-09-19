@@ -210,7 +210,7 @@ function useNamespaceBackend(actualVideoFormat?: string) {
 
         const publicId = url.searchParams.get("public_id");
         const object = publicId === null ? undefined : objects.get(`${resource}:${publicId}`);
-        return object
+        return object && url.searchParams.get("format") === object.format
           ? new Response(new Uint8Array(object.data))
           : new Response(null, { status: 404 });
       }
@@ -460,6 +460,16 @@ describe("Cloudinary resource namespaces", () => {
       const invalidSignatureUrl = new URL(url);
       invalidSignatureUrl.searchParams.set("signature", "invalid");
       expect((await fetch(invalidSignatureUrl)).status).toBe(401);
+
+      const mismatchedFormatUrl = new URL(url);
+      mismatchedFormatUrl.searchParams.set("format", "unexpected");
+      const mismatchedFormatSignature = createHash("sha1")
+        .update(
+          `expires_at=${mismatchedFormatUrl.searchParams.get("expires_at")}&format=unexpected&public_id=${mismatchedFormatUrl.searchParams.get("public_id")}&timestamp=${mismatchedFormatUrl.searchParams.get("timestamp")}&type=${mismatchedFormatUrl.searchParams.get("type")}${config.apiSecret}`,
+        )
+        .digest("hex");
+      mismatchedFormatUrl.searchParams.set("signature", mismatchedFormatSignature);
+      expect((await fetch(mismatchedFormatUrl)).status).toBe(404);
 
       const expiresAt = Number(parsedUrl.searchParams.get("expires_at"));
       vi.spyOn(Date, "now").mockReturnValue((expiresAt + 1) * 1_000);
