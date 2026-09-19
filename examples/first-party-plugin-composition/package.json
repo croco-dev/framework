@@ -1,0 +1,36 @@
+{
+  "name": "@croco-example/first-party-plugin-composition",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "start": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@croco/auth-better-auth": "workspace:*",
+    "@croco/billing-polar": "workspace:*",
+    "@croco/framework-context": "workspace:*",
+    "@croco/framework-module": "workspace:*",
+    "@croco/preset-node": "workspace:*",
+    "@croco/protocols-rest": "workspace:*",
+    "@croco/ratelimit-core": "workspace:*",
+    "@croco/tasks-qstash": "workspace:*",
+    "@croco/telemetry-sdk-node": "workspace:*",
+    "@croco/transports-http": "workspace:*",
+    "@croco/tx-drizzle": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "pg": "^8.11.0",
+    "reflect-metadata": "^0.2.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/pg": "8.20.0",
+    "tsx": "^4.0.0",
+    "typescript": "^6.0.3",
+    "vitest": "4.1.8"
+  }
+}

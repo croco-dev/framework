@@ -105,7 +105,7 @@ export async function runGenerateUsageDashboard(
     apiSources.map((source) => fileWriterWrite(source.path, source.content, { dryRun, overwrite })),
   );
   const registration = await registerController({
-    entryPath: resolveApiEntryPath(apiServerSrc),
+    ...resolveControllerRegistrationTarget(apiServerSrc),
     importPath: "./controllers/UsageDashboardController",
     className: CONTROLLER_CLASS_NAME,
     dryRun,
@@ -250,17 +250,31 @@ function createApiSources(apiServerSrc: string, route: RouteParts): GeneratedSou
   ];
 }
 
-function resolveApiEntryPath(apiServerSrc: string): string {
+function resolveControllerRegistrationTarget(apiServerSrc: string): {
+  readonly entryPath: string;
+  readonly registrationArrayName?: string;
+} {
+  const applicationModulePath = join(apiServerSrc, "applicationModule.ts");
+  if (existsSync(applicationModulePath)) {
+    const content = readFileSync(applicationModulePath, "utf-8");
+    if (content.includes("SAAS_APPLICATION_CONTROLLERS")) {
+      return {
+        entryPath: applicationModulePath,
+        registrationArrayName: "SAAS_APPLICATION_CONTROLLERS",
+      };
+    }
+  }
+
   const appPath = join(apiServerSrc, "app.ts");
   if (existsSync(appPath)) {
     const content = readFileSync(appPath, "utf-8");
     if (hasControllerRegistrationTarget(content)) {
-      return appPath;
+      return { entryPath: appPath };
     }
   }
 
   const indexPath = join(apiServerSrc, "index.ts");
-  return existsSync(indexPath) ? indexPath : appPath;
+  return { entryPath: existsSync(indexPath) ? indexPath : appPath };
 }
 
 function hasControllerRegistrationTarget(content: string): boolean {

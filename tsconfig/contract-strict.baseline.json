@@ -1635,7 +1635,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1071,
+      "line": 1075,
       "column": 62,
       "code": "TS4111",
       "message": "Property 'groups' comes from an index signature, so it must be accessed with ['groups']."
@@ -1643,7 +1643,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1072,
+      "line": 1076,
       "column": 64,
       "code": "TS4111",
       "message": "Property 'maturity' comes from an index signature, so it must be accessed with ['maturity']."
@@ -1651,7 +1651,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1073,
+      "line": 1077,
       "column": 66,
       "code": "TS4111",
       "message": "Property 'spine' comes from an index signature, so it must be accessed with ['spine']."
@@ -1659,7 +1659,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1073,
+      "line": 1077,
       "column": 74,
       "code": "TS4111",
       "message": "Property 'packages' comes from an index signature, so it must be accessed with ['packages']."
@@ -1667,7 +1667,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1281,
+      "line": 1285,
       "column": 41,
       "code": "TS4111",
       "message": "Property 'total' comes from an index signature, so it must be accessed with ['total']."
@@ -1675,7 +1675,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1289,
+      "line": 1293,
       "column": 44,
       "code": "TS4111",
       "message": "Property 'pct' comes from an index signature, so it must be accessed with ['pct']."
@@ -1683,7 +1683,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1311,
+      "line": 1315,
       "column": 61,
       "code": "TS4111",
       "message": "Property 'packages' comes from an index signature, so it must be accessed with ['packages']."
@@ -1691,7 +1691,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1352,
+      "line": 1356,
       "column": 31,
       "code": "TS18048",
       "message": "'reason' is possibly 'undefined'."
@@ -1699,7 +1699,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1355,
+      "line": 1359,
       "column": 32,
       "code": "TS2345",
       "message": "Argument of type '(string | undefined)[]' is not assignable to parameter of type 'readonly string[]'."
@@ -1707,7 +1707,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1472,
+      "line": 1476,
       "column": 5,
       "code": "TS2345",
       "message": "Argument of type '(string | undefined)[]' is not assignable to parameter of type 'readonly string[]'."
@@ -1715,7 +1715,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1582,
+      "line": 1586,
       "column": 45,
       "code": "TS4111",
       "message": "Property 'artifacts' comes from an index signature, so it must be accessed with ['artifacts']."
@@ -1723,7 +1723,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1582,
+      "line": 1586,
       "column": 67,
       "code": "TS4111",
       "message": "Property 'artifacts' comes from an index signature, so it must be accessed with ['artifacts']."
@@ -1731,7 +1731,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1608,
+      "line": 1612,
       "column": 18,
       "code": "TS4111",
       "message": "Property 'bytes' comes from an index signature, so it must be accessed with ['bytes']."
@@ -1739,7 +1739,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1609,
+      "line": 1613,
       "column": 27,
       "code": "TS4111",
       "message": "Property 'bytes' comes from an index signature, so it must be accessed with ['bytes']."
@@ -1747,7 +1747,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1610,
+      "line": 1614,
       "column": 11,
       "code": "TS4111",
       "message": "Property 'bytes' comes from an index signature, so it must be accessed with ['bytes']."
@@ -1755,7 +1755,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1611,
+      "line": 1615,
       "column": 13,
       "code": "TS4111",
       "message": "Property 'bytes' comes from an index signature, so it must be accessed with ['bytes']."
@@ -1763,7 +1763,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1757,
+      "line": 1761,
       "column": 43,
       "code": "TS4111",
       "message": "Property 'scripts' comes from an index signature, so it must be accessed with ['scripts']."
@@ -1771,7 +1771,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1758,
+      "line": 1762,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'private' comes from an index signature, so it must be accessed with ['private']."
@@ -1779,7 +1779,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1758,
+      "line": 1762,
       "column": 61,
       "code": "TS4111",
       "message": "Property 'build' comes from an index signature, so it must be accessed with ['build']."
@@ -1787,7 +1787,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1810,
+      "line": 1814,
       "column": 25,
       "code": "TS2345",
       "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
@@ -1795,7 +1795,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1821,
+      "line": 1825,
       "column": 14,
       "code": "TS4111",
       "message": "Property 'version' comes from an index signature, so it must be accessed with ['version']."
@@ -1803,7 +1803,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1825,
+      "line": 1829,
       "column": 29,
       "code": "TS4111",
       "message": "Property 'runs' comes from an index signature, so it must be accessed with ['runs']."
@@ -1811,7 +1811,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1829,
+      "line": 1833,
       "column": 24,
       "code": "TS4111",
       "message": "Property 'checks' comes from an index signature, so it must be accessed with ['checks']."
@@ -1819,7 +1819,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1833,
+      "line": 1837,
       "column": 29,
       "code": "TS4111",
       "message": "Property 'rows' comes from an index signature, so it must be accessed with ['rows']."
@@ -1827,7 +1827,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1876,
+      "line": 1880,
       "column": 35,
       "code": "TS4111",
       "message": "Property 'reports' comes from an index signature, so it must be accessed with ['reports']."
@@ -1835,7 +1835,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1883,
+      "line": 1887,
       "column": 51,
       "code": "TS4111",
       "message": "Property 'gateFailures' comes from an index signature, so it must be accessed with ['gateFailures']."
@@ -1843,7 +1843,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1884,
+      "line": 1888,
       "column": 20,
       "code": "TS4111",
       "message": "Property 'gateFailures' comes from an index signature, so it must be accessed with ['gateFailures']."
@@ -1851,7 +1851,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1887,
+      "line": 1891,
       "column": 45,
       "code": "TS4111",
       "message": "Property 'reports' comes from an index signature, so it must be accessed with ['reports']."
@@ -1859,7 +1859,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1889,
+      "line": 1893,
       "column": 54,
       "code": "TS4111",
       "message": "Property 'name' comes from an index signature, so it must be accessed with ['name']."
@@ -1867,7 +1867,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1897,
+      "line": 1901,
       "column": 16,
       "code": "TS4111",
       "message": "Property 'thresholdStatus' comes from an index signature, so it must be accessed with ['thresholdStatus']."
@@ -1875,7 +1875,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1897,
+      "line": 1901,
       "column": 69,
       "code": "TS4111",
       "message": "Property 'threshold' comes from an index signature, so it must be accessed with ['threshold']."
@@ -1883,7 +1883,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1904,
+      "line": 1908,
       "column": 32,
       "code": "TS4111",
       "message": "Property 'p75' comes from an index signature, so it must be accessed with ['p75']."
@@ -1891,7 +1891,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1911,
+      "line": 1915,
       "column": 16,
       "code": "TS4111",
       "message": "Property 'baselineStatus' comes from an index signature, so it must be accessed with ['baselineStatus']."
@@ -1899,7 +1899,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1911,
+      "line": 1915,
       "column": 68,
       "code": "TS4111",
       "message": "Property 'baseline' comes from an index signature, so it must be accessed with ['baseline']."
@@ -1907,7 +1907,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1920,
+      "line": 1924,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'threshold' comes from an index signature, so it must be accessed with ['threshold']."
@@ -1915,7 +1915,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1921,
+      "line": 1925,
       "column": 24,
       "code": "TS4111",
       "message": "Property 'baseline' comes from an index signature, so it must be accessed with ['baseline']."
@@ -1923,7 +1923,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1935,
+      "line": 1939,
       "column": 38,
       "code": "TS4111",
       "message": "Property 'allPassed' comes from an index signature, so it must be accessed with ['allPassed']."
@@ -1931,7 +1931,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1935,
+      "line": 1939,
       "column": 77,
       "code": "TS4111",
       "message": "Property 'allPassed' comes from an index signature, so it must be accessed with ['allPassed']."
@@ -1939,7 +1939,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1949,
+      "line": 1953,
       "column": 16,
       "code": "TS4111",
       "message": "Property 'source' comes from an index signature, so it must be accessed with ['source']."
@@ -1947,7 +1947,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1952,
+      "line": 1956,
       "column": 32,
       "code": "TS4111",
       "message": "Property 'reviewedAt' comes from an index signature, so it must be accessed with ['reviewedAt']."
@@ -1955,7 +1955,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1956,
+      "line": 1960,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'tolerance' comes from an index signature, so it must be accessed with ['tolerance']."
@@ -1963,7 +1963,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1957,
+      "line": 1961,
       "column": 34,
       "code": "TS4111",
       "message": "Property 'tolerance' comes from an index signature, so it must be accessed with ['tolerance']."
@@ -1971,7 +1971,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1964,
+      "line": 1968,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'rows' comes from an index signature, so it must be accessed with ['rows']."
@@ -1979,7 +1979,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1970,
+      "line": 1974,
       "column": 14,
       "code": "TS4111",
       "message": "Property 'runs' comes from an index signature, so it must be accessed with ['runs']."
@@ -1987,7 +1987,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1974,
+      "line": 1978,
       "column": 47,
       "code": "TS4111",
       "message": "Property 'selection' comes from an index signature, so it must be accessed with ['selection']."
@@ -1995,7 +1995,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1976,
+      "line": 1980,
       "column": 14,
       "code": "TS4111",
       "message": "Property 'checks' comes from an index signature, so it must be accessed with ['checks']."
@@ -2003,7 +2003,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 1984,
+      "line": 1988,
       "column": 14,
       "code": "TS4111",
       "message": "Property 'checks' comes from an index signature, so it must be accessed with ['checks']."
@@ -2011,7 +2011,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2087,
+      "line": 2091,
       "column": 53,
       "code": "TS4111",
       "message": "Property 'id' comes from an index signature, so it must be accessed with ['id']."
@@ -2019,7 +2019,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2099,
+      "line": 2103,
       "column": 47,
       "code": "TS4111",
       "message": "Property 'url' comes from an index signature, so it must be accessed with ['url']."
@@ -2027,7 +2027,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2102,
+      "line": 2106,
       "column": 32,
       "code": "TS4111",
       "message": "Property 'headSha' comes from an index signature, so it must be accessed with ['headSha']."
@@ -2035,7 +2035,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2105,
+      "line": 2109,
       "column": 39,
       "code": "TS4111",
       "message": "Property 'headBranch' comes from an index signature, so it must be accessed with ['headBranch']."
@@ -2043,7 +2043,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2108,
+      "line": 2112,
       "column": 19,
       "code": "TS4111",
       "message": "Property 'baseBranch' comes from an index signature, so it must be accessed with ['baseBranch']."
@@ -2051,7 +2051,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2112,
+      "line": 2116,
       "column": 51,
       "code": "TS4111",
       "message": "Property 'createdAt' comes from an index signature, so it must be accessed with ['createdAt']."
@@ -2059,7 +2059,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2119,
+      "line": 2123,
       "column": 19,
       "code": "TS4111",
       "message": "Property 'workflowStatus' comes from an index signature, so it must be accessed with ['workflowStatus']."
@@ -2067,7 +2067,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2122,
+      "line": 2126,
       "column": 19,
       "code": "TS4111",
       "message": "Property 'workflowConclusion' comes from an index signature, so it must be accessed with ['workflowConclusion']."
@@ -2075,7 +2075,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2127,
+      "line": 2131,
       "column": 17,
       "code": "TS4111",
       "message": "Property 'artifact' comes from an index signature, so it must be accessed with ['artifact']."
@@ -2083,7 +2083,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2139,
+      "line": 2143,
       "column": 82,
       "code": "TS2532",
       "message": "Object is possibly 'undefined'."
@@ -2091,7 +2091,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2159,
+      "line": 2163,
       "column": 29,
       "code": "TS4111",
       "message": "Property 'allPassed' comes from an index signature, so it must be accessed with ['allPassed']."
@@ -2099,7 +2099,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2162,
+      "line": 2166,
       "column": 38,
       "code": "TS4111",
       "message": "Property 'reportCount' comes from an index signature, so it must be accessed with ['reportCount']."
@@ -2107,7 +2107,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2162,
+      "line": 2166,
       "column": 69,
       "code": "TS4111",
       "message": "Property 'reportCount' comes from an index signature, so it must be accessed with ['reportCount']."
@@ -2115,7 +2115,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2168,
+      "line": 2172,
       "column": 35,
       "code": "TS4111",
       "message": "Property 'gateFailures' comes from an index signature, so it must be accessed with ['gateFailures']."
@@ -2123,7 +2123,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2169,
+      "line": 2173,
       "column": 20,
       "code": "TS4111",
       "message": "Property 'gateFailures' comes from an index signature, so it must be accessed with ['gateFailures']."
@@ -2131,7 +2131,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2175,
+      "line": 2179,
       "column": 39,
       "code": "TS4111",
       "message": "Property 'gateFailures' comes from an index signature, so it must be accessed with ['gateFailures']."
@@ -2139,7 +2139,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2178,
+      "line": 2182,
       "column": 22,
       "code": "TS4111",
       "message": "Property 'allPassed' comes from an index signature, so it must be accessed with ['allPassed']."
@@ -2147,7 +2147,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2183,
+      "line": 2187,
       "column": 22,
       "code": "TS4111",
       "message": "Property 'allPassed' comes from an index signature, so it must be accessed with ['allPassed']."
@@ -2155,7 +2155,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2219,
+      "line": 2223,
       "column": 40,
       "code": "TS4111",
       "message": "Property 'latestGreenTrunkRunIds' comes from an index signature, so it must be accessed with ['latestGreenTrunkRunIds']."
@@ -2163,7 +2163,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2252,
+      "line": 2256,
       "column": 14,
       "code": "TS4111",
       "message": "Property 'sameRowSet' comes from an index signature, so it must be accessed with ['sameRowSet']."
@@ -2171,7 +2171,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2288,
+      "line": 2292,
       "column": 28,
       "code": "TS4111",
       "message": "Property 'prePromotionBaselineFailures' comes from an index signature, so it must be accessed with ['prePromotionBaselineFailures']."
@@ -2179,7 +2179,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2289,
+      "line": 2293,
       "column": 12,
       "code": "TS4111",
       "message": "Property 'prePromotionBaselineFailures' comes from an index signature, so it must be accessed with ['prePromotionBaselineFailures']."
@@ -2187,7 +2187,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2293,
+      "line": 2297,
       "column": 30,
       "code": "TS4111",
       "message": "Property 'promotedBaselineFailures' comes from an index signature, so it must be accessed with ['promotedBaselineFailures']."
@@ -2195,7 +2195,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2293,
+      "line": 2297,
       "column": 66,
       "code": "TS4111",
       "message": "Property 'promotedBaselineFailures' comes from an index signature, so it must be accessed with ['promotedBaselineFailures']."
@@ -2203,7 +2203,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2315,
+      "line": 2319,
       "column": 59,
       "code": "TS4111",
       "message": "Property 'name' comes from an index signature, so it must be accessed with ['name']."
@@ -2211,7 +2211,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2351,
+      "line": 2355,
       "column": 19,
       "code": "TS4111",
       "message": "Property 'status' comes from an index signature, so it must be accessed with ['status']."
@@ -2219,7 +2219,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2360,
+      "line": 2364,
       "column": 41,
       "code": "TS4111",
       "message": "Property 'p75ByRun' comes from an index signature, so it must be accessed with ['p75ByRun']."
@@ -2227,7 +2227,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2380,
+      "line": 2384,
       "column": 34,
       "code": "TS18048",
       "message": "'median' is possibly 'undefined'."
@@ -2235,7 +2235,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2382,
+      "line": 2386,
       "column": 39,
       "code": "TS4111",
       "message": "Property 'min' comes from an index signature, so it must be accessed with ['min']."
@@ -2243,7 +2243,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2385,
+      "line": 2389,
       "column": 39,
       "code": "TS4111",
       "message": "Property 'median' comes from an index signature, so it must be accessed with ['median']."
@@ -2251,7 +2251,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2385,
+      "line": 2389,
       "column": 47,
       "code": "TS2345",
       "message": "Argument of type 'number | undefined' is not assignable to parameter of type 'number'."
@@ -2259,7 +2259,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2388,
+      "line": 2392,
       "column": 39,
       "code": "TS4111",
       "message": "Property 'max' comes from an index signature, so it must be accessed with ['max']."
@@ -2267,7 +2267,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2391,
+      "line": 2395,
       "column": 39,
       "code": "TS4111",
       "message": "Property 'spread' comes from an index signature, so it must be accessed with ['spread']."
@@ -2275,7 +2275,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2414,
+      "line": 2418,
       "column": 88,
       "code": "TS2345",
       "message": "Argument of type 'number | undefined' is not assignable to parameter of type 'number'."
@@ -2283,7 +2283,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2419,
+      "line": 2423,
       "column": 14,
       "code": "TS4111",
       "message": "Property 'promotedBaselineFailures' comes from an index signature, so it must be accessed with ['promotedBaselineFailures']."
@@ -2291,7 +2291,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2535,
+      "line": 2539,
       "column": 35,
       "code": "TS4111",
       "message": "Property 'entries' comes from an index signature, so it must be accessed with ['entries']."
@@ -2299,15 +2299,15 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2536,
-      "column": 23,
+      "line": 872,
+      "column": 53,
       "code": "TS4111",
       "message": "Property 'schemaVersion' comes from an index signature, so it must be accessed with ['schemaVersion']."
     },
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2567,
+      "line": 2571,
       "column": 29,
       "code": "TS4111",
       "message": "Property 'line' comes from an index signature, so it must be accessed with ['line']."
@@ -2315,7 +2315,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2570,
+      "line": 2574,
       "column": 49,
       "code": "TS4111",
       "message": "Property 'owner' comes from an index signature, so it must be accessed with ['owner']."
@@ -2323,7 +2323,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2571,
+      "line": 2575,
       "column": 37,
       "code": "TS4111",
       "message": "Property 'expiresOn' comes from an index signature, so it must be accessed with ['expiresOn']."
@@ -2331,7 +2331,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2588,
+      "line": 2592,
       "column": 50,
       "code": "TS4111",
       "message": "Property 'package' comes from an index signature, so it must be accessed with ['package']."
@@ -2339,7 +2339,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2589,
+      "line": 2593,
       "column": 43,
       "code": "TS4111",
       "message": "Property 'file' comes from an index signature, so it must be accessed with ['file']."
@@ -2347,7 +2347,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2590,
+      "line": 2594,
       "column": 46,
       "code": "TS4111",
       "message": "Property 'excerpt' comes from an index signature, so it must be accessed with ['excerpt']."
@@ -2355,7 +2355,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 2631,
+      "line": 2635,
       "column": 7,
       "code": "TS2375",
       "message": "Type '{ file: string; packageName: string | undefined; }' is not assignable to type 'DoctorLocation' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2363,583 +2363,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3071,
-      "column": 68,
-      "code": "TS4111",
-      "message": "Property 'diagnostics' comes from an index signature, so it must be accessed with ['diagnostics']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3076,
-      "column": 20,
-      "code": "TS4111",
-      "message": "Property 'status' comes from an index signature, so it must be accessed with ['status']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3149,
-      "column": 69,
-      "code": "TS4111",
-      "message": "Property 'schemaVersion' comes from an index signature, so it must be accessed with ['schemaVersion']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3405,
-      "column": 47,
-      "code": "TS2345",
-      "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3420,
-      "column": 10,
-      "code": "TS2532",
-      "message": "Object is possibly 'undefined'."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3572,
-      "column": 16,
-      "code": "TS2345",
-      "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3664,
-      "column": 45,
-      "code": "TS2345",
-      "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3827,
-      "column": 22,
-      "code": "TS2345",
-      "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3837,
-      "column": 44,
-      "code": "TS4111",
-      "message": "Property 'name' comes from an index signature, so it must be accessed with ['name']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3850,
-      "column": 22,
-      "code": "TS4111",
-      "message": "Property 'name' comes from an index signature, so it must be accessed with ['name']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3851,
-      "column": 32,
-      "code": "TS4111",
-      "message": "Property 'version' comes from an index signature, so it must be accessed with ['version']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3851,
-      "column": 62,
-      "code": "TS4111",
-      "message": "Property 'version' comes from an index signature, so it must be accessed with ['version']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3852,
-      "column": 25,
-      "code": "TS4111",
-      "message": "Property 'private' comes from an index signature, so it must be accessed with ['private']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3855,
-      "column": 75,
-      "code": "TS4111",
-      "message": "Property 'name' comes from an index signature, so it must be accessed with ['name']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3928,
-      "column": 26,
-      "code": "TS4111",
-      "message": "Property 'name' comes from an index signature, so it must be accessed with ['name']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3928,
-      "column": 55,
-      "code": "TS4111",
-      "message": "Property 'name' comes from an index signature, so it must be accessed with ['name']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3972,
-      "column": 43,
-      "code": "TS4111",
-      "message": "Property 'publishConfig' comes from an index signature, so it must be accessed with ['publishConfig']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3972,
-      "column": 69,
-      "code": "TS4111",
-      "message": "Property 'publishConfig' comes from an index signature, so it must be accessed with ['publishConfig']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3981,
-      "column": 33,
-      "code": "TS4111",
-      "message": "Property 'main' comes from an index signature, so it must be accessed with ['main']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3982,
-      "column": 33,
-      "code": "TS4111",
-      "message": "Property 'module' comes from an index signature, so it must be accessed with ['module']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3983,
-      "column": 33,
-      "code": "TS4111",
-      "message": "Property 'types' comes from an index signature, so it must be accessed with ['types']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 3984,
-      "column": 35,
-      "code": "TS4111",
-      "message": "Property 'exports' comes from an index signature, so it must be accessed with ['exports']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4053,
-      "column": 52,
-      "code": "TS4111",
-      "message": "Property 'npm_execpath' comes from an index signature, so it must be accessed with ['npm_execpath']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4094,
-      "column": 37,
-      "code": "TS4111",
-      "message": "Property 'scripts' comes from an index signature, so it must be accessed with ['scripts']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4135,
-      "column": 11,
-      "code": "TS4111",
-      "message": "Property 'snapshotVersion' comes from an index signature, so it must be accessed with ['snapshotVersion']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4136,
-      "column": 11,
-      "code": "TS4111",
-      "message": "Property 'graphVersion' comes from an index signature, so it must be accessed with ['graphVersion']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4137,
-      "column": 25,
-      "code": "TS4111",
-      "message": "Property 'controllers' comes from an index signature, so it must be accessed with ['controllers']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4138,
-      "column": 25,
-      "code": "TS4111",
-      "message": "Property 'routes' comes from an index signature, so it must be accessed with ['routes']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4139,
-      "column": 25,
-      "code": "TS4111",
-      "message": "Property 'diagnostics' comes from an index signature, so it must be accessed with ['diagnostics']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4144,
-      "column": 13,
-      "code": "TS4111",
-      "message": "Property 'version' comes from an index signature, so it must be accessed with ['version']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4144,
-      "column": 82,
-      "code": "TS4111",
-      "message": "Property 'problems' comes from an index signature, so it must be accessed with ['problems']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4148,
-      "column": 23,
-      "code": "TS4111",
-      "message": "Property 'problemCount' comes from an index signature, so it must be accessed with ['problemCount']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4148,
-      "column": 58,
-      "code": "TS4111",
-      "message": "Property 'problemCount' comes from an index signature, so it must be accessed with ['problemCount']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4148,
-      "column": 81,
-      "code": "TS4111",
-      "message": "Property 'problems' comes from an index signature, so it must be accessed with ['problems']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4152,
-      "column": 13,
-      "code": "TS4111",
-      "message": "Property 'version' comes from an index signature, so it must be accessed with ['version']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4154,
-      "column": 20,
-      "code": "TS4111",
-      "message": "Property 'platform' comes from an index signature, so it must be accessed with ['platform']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4156,
-      "column": 27,
-      "code": "TS4111",
-      "message": "Property 'diagnostics' comes from an index signature, so it must be accessed with ['diagnostics']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4160,
-      "column": 34,
-      "code": "TS4111",
-      "message": "Property 'runtime' comes from an index signature, so it must be accessed with ['runtime']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4160,
-      "column": 51,
-      "code": "TS4111",
-      "message": "Property 'runtime' comes from an index signature, so it must be accessed with ['runtime']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4161,
-      "column": 32,
-      "code": "TS4111",
-      "message": "Property 'table' comes from an index signature, so it must be accessed with ['table']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4161,
-      "column": 47,
-      "code": "TS4111",
-      "message": "Property 'table' comes from an index signature, so it must be accessed with ['table']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4164,
-      "column": 12,
-      "code": "TS4111",
-      "message": "Property 'schemaVersion' comes from an index signature, so it must be accessed with ['schemaVersion']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4165,
-      "column": 13,
-      "code": "TS4111",
-      "message": "Property 'version' comes from an index signature, so it must be accessed with ['version']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4166,
-      "column": 21,
-      "code": "TS4111",
-      "message": "Property 'platform' comes from an index signature, so it must be accessed with ['platform']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4167,
-      "column": 26,
-      "code": "TS4111",
-      "message": "Property 'plans' comes from an index signature, so it must be accessed with ['plans']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4172,
-      "column": 20,
-      "code": "TS4111",
-      "message": "Property 'platform' comes from an index signature, so it must be accessed with ['platform']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4173,
-      "column": 18,
-      "code": "TS4111",
-      "message": "Property 'platform' comes from an index signature, so it must be accessed with ['platform']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4176,
-      "column": 34,
-      "code": "TS4111",
-      "message": "Property 'runtime' comes from an index signature, so it must be accessed with ['runtime']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4176,
-      "column": 51,
-      "code": "TS4111",
-      "message": "Property 'runtime' comes from an index signature, so it must be accessed with ['runtime']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4177,
-      "column": 38,
-      "code": "TS4111",
-      "message": "Property 'platform' comes from an index signature, so it must be accessed with ['platform']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4185,
-      "column": 41,
-      "code": "TS4111",
-      "message": "Property 'tenantModel' comes from an index signature, so it must be accessed with ['tenantModel']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4190,
-      "column": 57,
-      "code": "TS4111",
-      "message": "Property 'manifest' comes from an index signature, so it must be accessed with ['manifest']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4224,
-      "column": 73,
-      "code": "TS4111",
-      "message": "Property 'schemaVersion' comes from an index signature, so it must be accessed with ['schemaVersion']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4269,
-      "column": 34,
-      "code": "TS4111",
-      "message": "Property 'profile' comes from an index signature, so it must be accessed with ['profile']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4272,
-      "column": 11,
-      "code": "TS4111",
-      "message": "Property 'schemaVersion' comes from an index signature, so it must be accessed with ['schemaVersion']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4277,
-      "column": 25,
-      "code": "TS4111",
-      "message": "Property 'packages' comes from an index signature, so it must be accessed with ['packages']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4278,
-      "column": 25,
-      "code": "TS4111",
-      "message": "Property 'capabilities' comes from an index signature, so it must be accessed with ['capabilities']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4283,
-      "column": 35,
-      "code": "TS4111",
-      "message": "Property 'selected' comes from an index signature, so it must be accessed with ['selected']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4286,
-      "column": 11,
-      "code": "TS4111",
-      "message": "Property 'schemaVersion' comes from an index signature, so it must be accessed with ['schemaVersion']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4287,
-      "column": 18,
-      "code": "TS4111",
-      "message": "Property 'currentModel' comes from an index signature, so it must be accessed with ['currentModel']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4288,
-      "column": 18,
-      "code": "TS4111",
-      "message": "Property 'defaultModel' comes from an index signature, so it must be accessed with ['defaultModel']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4290,
-      "column": 21,
-      "code": "TS4111",
-      "message": "Property 'name' comes from an index signature, so it must be accessed with ['name']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4291,
-      "column": 25,
-      "code": "TS4111",
-      "message": "Property 'models' comes from an index signature, so it must be accessed with ['models']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4292,
-      "column": 20,
-      "code": "TS4111",
-      "message": "Property 'schema' comes from an index signature, so it must be accessed with ['schema']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4293,
-      "column": 20,
-      "code": "TS4111",
-      "message": "Property 'migration' comes from an index signature, so it must be accessed with ['migration']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4313,
-      "column": 40,
-      "code": "TS4111",
-      "message": "Property 'code' comes from an index signature, so it must be accessed with ['code']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4314,
-      "column": 25,
-      "code": "TS4111",
-      "message": "Property 'severity' comes from an index signature, so it must be accessed with ['severity']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4315,
-      "column": 43,
-      "code": "TS4111",
-      "message": "Property 'message' comes from an index signature, so it must be accessed with ['message']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4335,
-      "column": 49,
-      "code": "TS4111",
-      "message": "Property 'capability' comes from an index signature, so it must be accessed with ['capability']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4336,
-      "column": 47,
-      "code": "TS4111",
-      "message": "Property 'provider' comes from an index signature, so it must be accessed with ['provider']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4337,
-      "column": 45,
-      "code": "TS4111",
-      "message": "Property 'status' comes from an index signature, so it must be accessed with ['status']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 4417,
-      "column": 54,
-      "code": "TS2345",
-      "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/doctor.ts",
-      "line": 788,
+      "line": 792,
       "column": 65,
       "code": "TS4111",
       "message": "Property 'diagnostics' comes from an index signature, so it must be accessed with ['diagnostics']."
@@ -2947,8 +2371,584 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/doctor.ts",
-      "line": 868,
-      "column": 53,
+      "line": 3206,
+      "column": 20,
+      "code": "TS4111",
+      "message": "Property 'status' comes from an index signature, so it must be accessed with ['status']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 2540,
+      "column": 23,
+      "code": "TS4111",
+      "message": "Property 'schemaVersion' comes from an index signature, so it must be accessed with ['schemaVersion']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 3535,
+      "column": 47,
+      "code": "TS2345",
+      "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 3550,
+      "column": 10,
+      "code": "TS2532",
+      "message": "Object is possibly 'undefined'."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 3702,
+      "column": 16,
+      "code": "TS2345",
+      "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 3816,
+      "column": 45,
+      "code": "TS2345",
+      "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 3979,
+      "column": 22,
+      "code": "TS2345",
+      "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 3989,
+      "column": 44,
+      "code": "TS4111",
+      "message": "Property 'name' comes from an index signature, so it must be accessed with ['name']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4002,
+      "column": 22,
+      "code": "TS4111",
+      "message": "Property 'name' comes from an index signature, so it must be accessed with ['name']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4003,
+      "column": 32,
+      "code": "TS4111",
+      "message": "Property 'version' comes from an index signature, so it must be accessed with ['version']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4003,
+      "column": 62,
+      "code": "TS4111",
+      "message": "Property 'version' comes from an index signature, so it must be accessed with ['version']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4004,
+      "column": 25,
+      "code": "TS4111",
+      "message": "Property 'private' comes from an index signature, so it must be accessed with ['private']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4007,
+      "column": 75,
+      "code": "TS4111",
+      "message": "Property 'name' comes from an index signature, so it must be accessed with ['name']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4080,
+      "column": 26,
+      "code": "TS4111",
+      "message": "Property 'name' comes from an index signature, so it must be accessed with ['name']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4080,
+      "column": 55,
+      "code": "TS4111",
+      "message": "Property 'name' comes from an index signature, so it must be accessed with ['name']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4124,
+      "column": 43,
+      "code": "TS4111",
+      "message": "Property 'publishConfig' comes from an index signature, so it must be accessed with ['publishConfig']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4124,
+      "column": 69,
+      "code": "TS4111",
+      "message": "Property 'publishConfig' comes from an index signature, so it must be accessed with ['publishConfig']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4133,
+      "column": 33,
+      "code": "TS4111",
+      "message": "Property 'main' comes from an index signature, so it must be accessed with ['main']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4134,
+      "column": 33,
+      "code": "TS4111",
+      "message": "Property 'module' comes from an index signature, so it must be accessed with ['module']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4135,
+      "column": 33,
+      "code": "TS4111",
+      "message": "Property 'types' comes from an index signature, so it must be accessed with ['types']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4136,
+      "column": 35,
+      "code": "TS4111",
+      "message": "Property 'exports' comes from an index signature, so it must be accessed with ['exports']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4205,
+      "column": 52,
+      "code": "TS4111",
+      "message": "Property 'npm_execpath' comes from an index signature, so it must be accessed with ['npm_execpath']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4246,
+      "column": 37,
+      "code": "TS4111",
+      "message": "Property 'scripts' comes from an index signature, so it must be accessed with ['scripts']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4287,
+      "column": 11,
+      "code": "TS4111",
+      "message": "Property 'snapshotVersion' comes from an index signature, so it must be accessed with ['snapshotVersion']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4288,
+      "column": 11,
+      "code": "TS4111",
+      "message": "Property 'graphVersion' comes from an index signature, so it must be accessed with ['graphVersion']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4289,
+      "column": 25,
+      "code": "TS4111",
+      "message": "Property 'controllers' comes from an index signature, so it must be accessed with ['controllers']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4290,
+      "column": 25,
+      "code": "TS4111",
+      "message": "Property 'routes' comes from an index signature, so it must be accessed with ['routes']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 3201,
+      "column": 68,
+      "code": "TS4111",
+      "message": "Property 'diagnostics' comes from an index signature, so it must be accessed with ['diagnostics']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4296,
+      "column": 13,
+      "code": "TS4111",
+      "message": "Property 'version' comes from an index signature, so it must be accessed with ['version']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4296,
+      "column": 82,
+      "code": "TS4111",
+      "message": "Property 'problems' comes from an index signature, so it must be accessed with ['problems']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4300,
+      "column": 23,
+      "code": "TS4111",
+      "message": "Property 'problemCount' comes from an index signature, so it must be accessed with ['problemCount']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4300,
+      "column": 58,
+      "code": "TS4111",
+      "message": "Property 'problemCount' comes from an index signature, so it must be accessed with ['problemCount']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4300,
+      "column": 81,
+      "code": "TS4111",
+      "message": "Property 'problems' comes from an index signature, so it must be accessed with ['problems']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4304,
+      "column": 13,
+      "code": "TS4111",
+      "message": "Property 'version' comes from an index signature, so it must be accessed with ['version']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4306,
+      "column": 20,
+      "code": "TS4111",
+      "message": "Property 'platform' comes from an index signature, so it must be accessed with ['platform']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4291,
+      "column": 25,
+      "code": "TS4111",
+      "message": "Property 'diagnostics' comes from an index signature, so it must be accessed with ['diagnostics']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4312,
+      "column": 34,
+      "code": "TS4111",
+      "message": "Property 'runtime' comes from an index signature, so it must be accessed with ['runtime']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4312,
+      "column": 51,
+      "code": "TS4111",
+      "message": "Property 'runtime' comes from an index signature, so it must be accessed with ['runtime']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4313,
+      "column": 32,
+      "code": "TS4111",
+      "message": "Property 'table' comes from an index signature, so it must be accessed with ['table']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4313,
+      "column": 47,
+      "code": "TS4111",
+      "message": "Property 'table' comes from an index signature, so it must be accessed with ['table']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 3279,
+      "column": 69,
+      "code": "TS4111",
+      "message": "Property 'schemaVersion' comes from an index signature, so it must be accessed with ['schemaVersion']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4317,
+      "column": 13,
+      "code": "TS4111",
+      "message": "Property 'version' comes from an index signature, so it must be accessed with ['version']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4318,
+      "column": 21,
+      "code": "TS4111",
+      "message": "Property 'platform' comes from an index signature, so it must be accessed with ['platform']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4319,
+      "column": 26,
+      "code": "TS4111",
+      "message": "Property 'plans' comes from an index signature, so it must be accessed with ['plans']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4324,
+      "column": 20,
+      "code": "TS4111",
+      "message": "Property 'platform' comes from an index signature, so it must be accessed with ['platform']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4325,
+      "column": 18,
+      "code": "TS4111",
+      "message": "Property 'platform' comes from an index signature, so it must be accessed with ['platform']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4328,
+      "column": 34,
+      "code": "TS4111",
+      "message": "Property 'runtime' comes from an index signature, so it must be accessed with ['runtime']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4328,
+      "column": 51,
+      "code": "TS4111",
+      "message": "Property 'runtime' comes from an index signature, so it must be accessed with ['runtime']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4329,
+      "column": 38,
+      "code": "TS4111",
+      "message": "Property 'platform' comes from an index signature, so it must be accessed with ['platform']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4337,
+      "column": 41,
+      "code": "TS4111",
+      "message": "Property 'tenantModel' comes from an index signature, so it must be accessed with ['tenantModel']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4342,
+      "column": 57,
+      "code": "TS4111",
+      "message": "Property 'manifest' comes from an index signature, so it must be accessed with ['manifest']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4316,
+      "column": 12,
+      "code": "TS4111",
+      "message": "Property 'schemaVersion' comes from an index signature, so it must be accessed with ['schemaVersion']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4421,
+      "column": 34,
+      "code": "TS4111",
+      "message": "Property 'profile' comes from an index signature, so it must be accessed with ['profile']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4376,
+      "column": 73,
+      "code": "TS4111",
+      "message": "Property 'schemaVersion' comes from an index signature, so it must be accessed with ['schemaVersion']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4429,
+      "column": 25,
+      "code": "TS4111",
+      "message": "Property 'packages' comes from an index signature, so it must be accessed with ['packages']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4430,
+      "column": 25,
+      "code": "TS4111",
+      "message": "Property 'capabilities' comes from an index signature, so it must be accessed with ['capabilities']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4435,
+      "column": 35,
+      "code": "TS4111",
+      "message": "Property 'selected' comes from an index signature, so it must be accessed with ['selected']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4424,
+      "column": 11,
+      "code": "TS4111",
+      "message": "Property 'schemaVersion' comes from an index signature, so it must be accessed with ['schemaVersion']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4439,
+      "column": 18,
+      "code": "TS4111",
+      "message": "Property 'currentModel' comes from an index signature, so it must be accessed with ['currentModel']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4440,
+      "column": 18,
+      "code": "TS4111",
+      "message": "Property 'defaultModel' comes from an index signature, so it must be accessed with ['defaultModel']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4442,
+      "column": 21,
+      "code": "TS4111",
+      "message": "Property 'name' comes from an index signature, so it must be accessed with ['name']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4443,
+      "column": 25,
+      "code": "TS4111",
+      "message": "Property 'models' comes from an index signature, so it must be accessed with ['models']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4444,
+      "column": 20,
+      "code": "TS4111",
+      "message": "Property 'schema' comes from an index signature, so it must be accessed with ['schema']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4445,
+      "column": 20,
+      "code": "TS4111",
+      "message": "Property 'migration' comes from an index signature, so it must be accessed with ['migration']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4465,
+      "column": 40,
+      "code": "TS4111",
+      "message": "Property 'code' comes from an index signature, so it must be accessed with ['code']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4466,
+      "column": 25,
+      "code": "TS4111",
+      "message": "Property 'severity' comes from an index signature, so it must be accessed with ['severity']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4467,
+      "column": 43,
+      "code": "TS4111",
+      "message": "Property 'message' comes from an index signature, so it must be accessed with ['message']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4487,
+      "column": 49,
+      "code": "TS4111",
+      "message": "Property 'capability' comes from an index signature, so it must be accessed with ['capability']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4488,
+      "column": 47,
+      "code": "TS4111",
+      "message": "Property 'provider' comes from an index signature, so it must be accessed with ['provider']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4489,
+      "column": 45,
+      "code": "TS4111",
+      "message": "Property 'status' comes from an index signature, so it must be accessed with ['status']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4569,
+      "column": 54,
+      "code": "TS2345",
+      "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4308,
+      "column": 27,
+      "code": "TS4111",
+      "message": "Property 'diagnostics' comes from an index signature, so it must be accessed with ['diagnostics']."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/commands/doctor.ts",
+      "line": 4438,
+      "column": 11,
       "code": "TS4111",
       "message": "Property 'schemaVersion' comes from an index signature, so it must be accessed with ['schemaVersion']."
     },
@@ -3531,7 +3531,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/libs/naming.ts",
-      "line": 115,
+      "line": 13,
       "column": 10,
       "code": "TS2532",
       "message": "Object is possibly 'undefined'."
@@ -3539,10 +3539,18 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/libs/naming.ts",
-      "line": 13,
-      "column": 10,
+      "line": 58,
+      "column": 21,
       "code": "TS2532",
       "message": "Object is possibly 'undefined'."
+    },
+    {
+      "packageName": "@croco/cli",
+      "file": "packages/cli/src/libs/naming.ts",
+      "line": 85,
+      "column": 19,
+      "code": "TS2345",
+      "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
     },
     {
       "packageName": "@croco/cli",
@@ -3555,16 +3563,8 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/libs/naming.ts",
-      "line": 159,
-      "column": 18,
-      "code": "TS2345",
-      "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/libs/naming.ts",
-      "line": 212,
-      "column": 14,
+      "line": 115,
+      "column": 10,
       "code": "TS2532",
       "message": "Object is possibly 'undefined'."
     },
@@ -3659,8 +3659,8 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/libs/naming.ts",
-      "line": 58,
-      "column": 21,
+      "line": 212,
+      "column": 14,
       "code": "TS2532",
       "message": "Object is possibly 'undefined'."
     },
@@ -3683,8 +3683,8 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/libs/naming.ts",
-      "line": 85,
-      "column": 19,
+      "line": 159,
+      "column": 18,
       "code": "TS2345",
       "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
     },
