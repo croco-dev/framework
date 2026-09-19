@@ -134,6 +134,42 @@ const cases = [
 
 type StoredObject = { data: Uint8Array; format: string; publicId: string };
 
+function rejectInvalidSignedDownload(url: URL): Response | undefined {
+  const expiresAt = url.searchParams.get("expires_at");
+  const format = url.searchParams.get("format");
+  const publicId = url.searchParams.get("public_id");
+  const signature = url.searchParams.get("signature");
+  const timestamp = url.searchParams.get("timestamp");
+  const type = url.searchParams.get("type");
+  const expiresAtSeconds = Number(expiresAt);
+
+  if (
+    expiresAt === null ||
+    format === null ||
+    publicId === null ||
+    signature === null ||
+    timestamp === null ||
+    type === null ||
+    !Number.isSafeInteger(expiresAtSeconds)
+  ) {
+    return Response.json({ error: { message: "Invalid signature" } }, { status: 401 });
+  }
+
+  if (expiresAtSeconds <= Math.floor(Date.now() / 1_000)) {
+    return Response.json({ error: { message: "URL expired" } }, { status: 401 });
+  }
+
+  const expectedSignature = createHash("sha1")
+    .update(
+      `expires_at=${expiresAt}&format=${format}&public_id=${publicId}&timestamp=${timestamp}&type=${type}${config.apiSecret}`,
+    )
+    .digest("hex");
+
+  return signature === expectedSignature
+    ? undefined
+    : Response.json({ error: { message: "Invalid signature" } }, { status: 401 });
+}
+
 function useNamespaceBackend(actualVideoFormat?: string) {
   const objects = new Map<string, StoredObject>();
   const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
@@ -169,6 +205,9 @@ function useNamespaceBackend(actualVideoFormat?: string) {
         return Response.json({ public_id: publicId });
       }
       if (parts[3] === "download") {
+        const rejection = rejectInvalidSignedDownload(url);
+        if (rejection) return rejection;
+
         const publicId = url.searchParams.get("public_id");
         const object = publicId === null ? undefined : objects.get(`${resource}:${publicId}`);
         return object
@@ -414,7 +453,17 @@ describe("Cloudinary resource namespaces", () => {
       expect(parsedUrl.pathname).toBe(`/v1_1/${config.cloudName}/${resource}/download`);
       expect(parsedUrl.searchParams.get("public_id")).toBe(publicId);
       expect(parsedUrl.searchParams.get("expires_at")).not.toBeNull();
-      expect(new Uint8Array(await (await fetch(url)).arrayBuffer())).toEqual(payload);
+      const beforeExpiry = await fetch(url);
+      expect(beforeExpiry.status).toBe(200);
+      expect(new Uint8Array(await beforeExpiry.arrayBuffer())).toEqual(payload);
+
+      const invalidSignatureUrl = new URL(url);
+      invalidSignatureUrl.searchParams.set("signature", "invalid");
+      expect((await fetch(invalidSignatureUrl)).status).toBe(401);
+
+      const expiresAt = Number(parsedUrl.searchParams.get("expires_at"));
+      vi.spyOn(Date, "now").mockReturnValue((expiresAt + 1) * 1_000);
+      expect((await fetch(url)).status).toBe(401);
     });
   });
 

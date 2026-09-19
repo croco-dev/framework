@@ -1446,6 +1446,42 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+function rejectInvalidSignedDownload(url: URL, apiSecret: string): Response | undefined {
+  const expiresAt = url.searchParams.get("expires_at");
+  const format = url.searchParams.get("format");
+  const publicId = url.searchParams.get("public_id");
+  const signature = url.searchParams.get("signature");
+  const timestamp = url.searchParams.get("timestamp");
+  const type = url.searchParams.get("type");
+  const expiresAtSeconds = Number(expiresAt);
+
+  if (
+    expiresAt === null ||
+    format === null ||
+    publicId === null ||
+    signature === null ||
+    timestamp === null ||
+    type === null ||
+    !Number.isSafeInteger(expiresAtSeconds)
+  ) {
+    return jsonResponse({ error: { message: "Invalid signature" } }, 401);
+  }
+
+  if (expiresAtSeconds <= Math.floor(Date.now() / 1_000)) {
+    return jsonResponse({ error: { message: "URL expired" } }, 401);
+  }
+
+  const expectedSignature = createHash("sha1")
+    .update(
+      `expires_at=${expiresAt}&format=${format}&public_id=${publicId}&timestamp=${timestamp}&type=${type}${apiSecret}`,
+    )
+    .digest("hex");
+
+  return signature === expectedSignature
+    ? undefined
+    : jsonResponse({ error: { message: "Invalid signature" } }, 401);
+}
+
 function useInMemoryCloudinaryBackend(): void {
   const objects = new Map<string, StoredCloudinaryObject>();
 
@@ -1488,6 +1524,9 @@ function useInMemoryCloudinaryBackend(): void {
       }
 
       if (url.pathname === `/v1_1/test-cloud/${resourceType}/download`) {
+        const rejection = rejectInvalidSignedDownload(url, "test-api-secret");
+        if (rejection) return rejection;
+
         const key = url.searchParams.get("public_id");
         const object = key === null ? undefined : objects.get(key);
         return object
