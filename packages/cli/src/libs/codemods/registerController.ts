@@ -13,6 +13,7 @@ export type RegisterControllerOptions = {
   readonly entryPath: string;
   readonly importPath: string;
   readonly className: string;
+  readonly registrationArrayName?: string;
   readonly dryRun?: boolean;
 };
 
@@ -43,7 +44,9 @@ export async function registerController(
   });
   const sourceFile = project.createSourceFile(options.entryPath, content, { overwrite: true });
 
-  const activeResult = addToActiveRegistration(sourceFile, options.className);
+  const activeResult = options.registrationArrayName
+    ? addToNamedArray(sourceFile, options.registrationArrayName, options.className)
+    : addToActiveRegistration(sourceFile, options.className);
   const updateResult =
     activeResult === "not-found"
       ? addCommentedRegistration(sourceFile, options.className)
@@ -72,7 +75,9 @@ export async function registerController(
     );
   }
 
-  const registeredIdentifier = findRegisteredControllerIdentifier(sourceFile, options.className);
+  const registeredIdentifier = options.registrationArrayName
+    ? findIdentifierInNamedArray(sourceFile, options.registrationArrayName, options.className)
+    : findRegisteredControllerIdentifier(sourceFile, options.className);
   if (!registeredIdentifier) {
     return unsupportedResult(options, "Could not resolve the controller registration identifier.");
   }

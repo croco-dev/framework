@@ -214,6 +214,47 @@ await app.listen(3000);
     expect(indexContent).not.toContain("addControllers");
   });
 
+  it("registers in the canonical application module when present", async () => {
+    const cwd = await createWorkspace();
+    const appPath = path.join(cwd, "apps", "api-server", "src", "app.ts");
+    const applicationModulePath = path.join(
+      cwd,
+      "apps",
+      "api-server",
+      "src",
+      "applicationModule.ts",
+    );
+    await fs.writeFile(
+      appPath,
+      `import { createApp } from '@croco/transports-http';
+
+export function createCrocoApp(runtime: unknown) {
+  return createApp(createHttpAppConfig(runtime));
+}
+`,
+    );
+    await fs.writeFile(
+      applicationModulePath,
+      `import { OperationsController } from './controllers/OperationsController';
+
+export const SAAS_APPLICATION_CONTROLLERS = [OperationsController];
+`,
+    );
+
+    const result = await runGenerateUsageDashboard({ cwd, page: false });
+    const appContent = await fs.readFile(appPath, "utf-8");
+    const applicationModuleContent = await fs.readFile(applicationModulePath, "utf-8");
+
+    expect(result?.api.registration.status).toBe("updated");
+    expect(appContent).not.toContain("UsageDashboardController");
+    expect(applicationModuleContent).toContain(
+      "import { UsageDashboardController } from './controllers/UsageDashboardController';",
+    );
+    expect(applicationModuleContent).toContain(
+      "export const SAAS_APPLICATION_CONTROLLERS = [OperationsController, UsageDashboardController];",
+    );
+  });
+
   it("falls back to index.ts when app.ts only exposes DI graph roots", async () => {
     const cwd = await createWorkspace();
     await fs.writeFile(

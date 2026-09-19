@@ -122,6 +122,10 @@ type SourceSlice = {
   readonly maskedSource: string;
 };
 
+type DoctorSourceFile = SourceSlice & {
+  readonly file: string;
+};
+
 type AdvisoryGateReadinessSection = {
   readonly label: string;
   readonly diagnostics: readonly DoctorDiagnostic[];
@@ -2943,19 +2947,26 @@ function httpSecurityMiddlewareContractCheck(
       (dependency) => dependency.name === "@croco/transports-http",
     ),
   );
-  const appSourceFiles = httpPackages.flatMap((workspacePackage) =>
-    listSourceFiles(workspacePackage.absoluteDir)
-      .map((file) => {
-        const source = stripTypeScriptComments(readFileSync(file, "utf-8"));
-        return {
-          file,
-          packageName: workspacePackage.name,
-          source,
-          maskedSource: maskTypeScriptStringLiterals(source),
-        };
-      })
-      .filter(({ maskedSource }) => /\bcreateApp\s*\(/.test(maskedSource)),
-  );
+  const appSourceFiles = httpPackages.flatMap((workspacePackage) => {
+    const packageSources = listSourceFiles(workspacePackage.absoluteDir).map((file) => {
+      const source = stripTypeScriptComments(readFileSync(file, "utf-8"));
+      return {
+        file,
+        packageName: workspacePackage.name,
+        source,
+        maskedSource: maskTypeScriptStringLiterals(source),
+      };
+    });
+    return packageSources
+      .filter(({ maskedSource }) => /\bcreateApp\s*\(/.test(maskedSource))
+      .map((sourceFile) => ({
+        ...sourceFile,
+        moduleOwnedSecurityMiddleware: hasReachableModuleOwnedHttpSecurityMiddleware(
+          sourceFile.file,
+          packageSources,
+        ),
+      }));
+  });
 
   if (appSourceFiles.length === 0) {
     return {
@@ -2967,57 +2978,65 @@ function httpSecurityMiddlewareContractCheck(
     };
   }
 
-  const diagnostics = appSourceFiles.flatMap(({ file, packageName, source, maskedSource }) =>
-    extractCreateAppOptionSources(source, maskedSource).flatMap((optionsSlice) => {
-      const middlewareSource = extractPropertyValueSource(
-        optionsSlice.maskedSource,
-        "middlewares",
-        "[",
-        "]",
-      );
-      const disabledDiagnostics =
-        /securityValidation\s*:\s*["']off["']/.test(optionsSlice.source) ||
-        /unsafeSkipSecurityValidation\s*:\s*true/.test(optionsSlice.source)
-          ? [
-              {
-                code: CLI_DIAGNOSTIC_CODES.doctorHttpSecurityValidationDisabled,
-                severity: "error" as const,
-                checkId,
-                cause: "The HTTP app disables security middleware validation.",
-                location: {
-                  file: toPosixPath(relative(rootDir, file)),
-                  packageName,
+  const diagnostics = appSourceFiles.flatMap(
+    ({ file, moduleOwnedSecurityMiddleware, packageName, source, maskedSource }) =>
+      extractCreateAppOptionSources(source, maskedSource).flatMap((optionsSlice) => {
+        const middlewareSource = extractPropertyValueSource(
+          optionsSlice.maskedSource,
+          "middlewares",
+          "[",
+          "]",
+        );
+        const hasMiddlewareOverride = hasObjectProperty(optionsSlice.source, "middlewares");
+        const usesRuntimeHttpConfig = /\bcreate[A-Za-z0-9_$]*HttpAppConfig\s*\(/.test(
+          optionsSlice.maskedSource,
+        );
+        const disabledDiagnostics =
+          /securityValidation\s*:\s*["']off["']/.test(optionsSlice.source) ||
+          /unsafeSkipSecurityValidation\s*:\s*true/.test(optionsSlice.source)
+            ? [
+                {
+                  code: CLI_DIAGNOSTIC_CODES.doctorHttpSecurityValidationDisabled,
+                  severity: "error" as const,
+                  checkId,
+                  cause: "The HTTP app disables security middleware validation.",
+                  location: {
+                    file: toPosixPath(relative(rootDir, file)),
+                    packageName,
+                  },
+                  action:
+                    "Remove the securityValidation escape hatch and configure Croco security headers, CORS, body limit, and rate-limit middleware.",
                 },
-                action:
-                  "Remove the securityValidation escape hatch and configure Croco security headers, CORS, body limit, and rate-limit middleware.",
-              },
-            ]
-          : [];
-      const missingMiddlewares = requiredHttpSecurityMiddleware.filter(
-        (middlewareName) =>
-          middlewareSource === null ||
-          !hasRequiredHttpMiddlewareCall(middlewareName, middlewareSource, maskedSource),
-      );
-      const missingMiddlewareDiagnostics =
-        missingMiddlewares.length > 0
-          ? [
-              {
-                code: CLI_DIAGNOSTIC_CODES.doctorHttpSecurityMiddlewareMissing,
-                severity: "error" as const,
-                checkId,
-                cause: `The HTTP app is missing required middleware: ${missingMiddlewares.join(", ")}.`,
-                location: {
-                  file: toPosixPath(relative(rootDir, file)),
-                  packageName,
+              ]
+            : [];
+        const missingMiddlewares =
+          moduleOwnedSecurityMiddleware && usesRuntimeHttpConfig && !hasMiddlewareOverride
+            ? []
+            : requiredHttpSecurityMiddleware.filter(
+                (middlewareName) =>
+                  middlewareSource === null ||
+                  !hasRequiredHttpMiddlewareCall(middlewareName, middlewareSource, maskedSource),
+              );
+        const missingMiddlewareDiagnostics =
+          missingMiddlewares.length > 0
+            ? [
+                {
+                  code: CLI_DIAGNOSTIC_CODES.doctorHttpSecurityMiddlewareMissing,
+                  severity: "error" as const,
+                  checkId,
+                  cause: `The HTTP app is missing required middleware: ${missingMiddlewares.join(", ")}.`,
+                  location: {
+                    file: toPosixPath(relative(rootDir, file)),
+                    packageName,
+                  },
+                  action:
+                    "Add the missing middleware to createApp({ middlewares: [...] }) or a module-owned HTTP middleware contribution before deployment.",
                 },
-                action:
-                  "Add the missing middleware to createApp({ middlewares: [...] }) before deployment.",
-              },
-            ]
-          : [];
+              ]
+            : [];
 
-      return [...disabledDiagnostics, ...missingMiddlewareDiagnostics];
-    }),
+        return [...disabledDiagnostics, ...missingMiddlewareDiagnostics];
+      }),
   );
 
   return {
@@ -3028,8 +3047,119 @@ function httpSecurityMiddlewareContractCheck(
     note:
       diagnostics.length > 0
         ? `${diagnostics.length} HTTP security contract issue(s) found.`
-        : `${appSourceFiles.length} HTTP app factory file(s) include the required security middleware.`,
+        : `${appSourceFiles.length} HTTP app factory file(s) include the required security middleware directly or through module-owned contributions.`,
   };
+}
+
+function hasReachableModuleOwnedHttpSecurityMiddleware(
+  entryFile: string,
+  sources: readonly DoctorSourceFile[],
+): boolean {
+  const sourcesByFile = new Map(
+    sources.map((sourceFile) => [resolve(sourceFile.file), sourceFile]),
+  );
+  const pending = [resolve(entryFile)];
+  const visited = new Set<string>();
+
+  while (pending.length > 0) {
+    const file = pending.pop();
+    if (file === undefined || visited.has(file)) {
+      continue;
+    }
+    visited.add(file);
+
+    const sourceFile = sourcesByFile.get(file);
+    if (sourceFile === undefined) {
+      continue;
+    }
+    if (hasModuleOwnedHttpSecurityMiddleware(sourceFile.maskedSource)) {
+      return true;
+    }
+
+    for (const moduleSpecifier of extractRelativeModuleSpecifiers(sourceFile.source)) {
+      const importedFile = resolveDoctorSourceImport(file, moduleSpecifier, sourcesByFile);
+      if (importedFile !== undefined) {
+        pending.push(importedFile);
+      }
+    }
+  }
+
+  return false;
+}
+
+function hasModuleOwnedHttpSecurityMiddleware(maskedSource: string): boolean {
+  return (
+    /\bdefineCrocoModule\s*\(/.test(maskedSource) &&
+    /\bcontributions\s*:/.test(maskedSource) &&
+    /\bMODULE_CONTRIBUTION_KINDS\.httpMiddleware\b/.test(maskedSource) &&
+    requiredHttpSecurityMiddleware.every((middlewareName) =>
+      new RegExp(`\\b${escapeRegExp(middlewareName)}\\s*\\(`).test(maskedSource),
+    )
+  );
+}
+
+function extractRelativeModuleSpecifiers(source: string): readonly string[] {
+  let sourceFile: Morph.SourceFile | undefined;
+  try {
+    sourceFile = doctorSourceProject.createSourceFile("/doctor/module-graph.ts", source, {
+      overwrite: true,
+    });
+    const imports = sourceFile.getImportDeclarations().flatMap((declaration) => {
+      const moduleSpecifier = declaration.getModuleSpecifierValue();
+      return moduleSpecifier.startsWith(".") && !isTypeOnlyImportDeclaration(declaration)
+        ? [moduleSpecifier]
+        : [];
+    });
+    const exports = sourceFile.getExportDeclarations().flatMap((declaration) => {
+      const moduleSpecifier = declaration.getModuleSpecifierValue();
+      return moduleSpecifier?.startsWith(".") && !isTypeOnlyExportDeclaration(declaration)
+        ? [moduleSpecifier]
+        : [];
+    });
+    return [...imports, ...exports];
+  } catch {
+    return [];
+  } finally {
+    if (sourceFile) {
+      doctorSourceProject.removeSourceFile(sourceFile);
+    }
+  }
+}
+
+function isTypeOnlyImportDeclaration(declaration: Morph.ImportDeclaration): boolean {
+  if (declaration.isTypeOnly()) {
+    return true;
+  }
+  if (declaration.getDefaultImport() || declaration.getNamespaceImport()) {
+    return false;
+  }
+  const namedImports = declaration.getNamedImports();
+  return namedImports.length > 0 && namedImports.every((specifier) => specifier.isTypeOnly());
+}
+
+function isTypeOnlyExportDeclaration(declaration: Morph.ExportDeclaration): boolean {
+  if (declaration.isTypeOnly()) {
+    return true;
+  }
+  const namedExports = declaration.getNamedExports();
+  return namedExports.length > 0 && namedExports.every((specifier) => specifier.isTypeOnly());
+}
+
+function resolveDoctorSourceImport(
+  importingFile: string,
+  moduleSpecifier: string,
+  sourcesByFile: ReadonlyMap<string, DoctorSourceFile>,
+): string | undefined {
+  const importedPath = resolve(dirname(importingFile), moduleSpecifier);
+  const extensionlessPath = importedPath.replace(/\.(?:cjs|js|jsx|mjs)$/, "");
+  const candidates = new Set([importedPath, extensionlessPath]);
+
+  for (const extension of sourceFileExtensions) {
+    candidates.add(`${extensionlessPath}${extension}`);
+    candidates.add(join(extensionlessPath, `index${extension}`));
+  }
+
+  return [...candidates].find((candidate) => sourcesByFile.has(candidate));
 }
 
 function diGraphBootstrapCheck(rootDir: string): DoctorCheckResult {
@@ -3614,7 +3744,7 @@ function extractCreateAppOptionSources(
     const maskedCallArguments = maskedSource.slice(callStart + 1, callEnd);
     const objectStart = maskedCallArguments.indexOf("{");
     if (objectStart === -1) {
-      optionSources.push({ source: "", maskedSource: "" });
+      optionSources.push({ source: callArguments, maskedSource: maskedCallArguments });
       match = createAppPattern.exec(maskedSource);
       continue;
     }
@@ -3657,6 +3787,28 @@ function extractPropertyValueSource(
 
   const valueEnd = findBalancedDelimitedEnd(source, valueStart, openDelimiter, closeDelimiter);
   return valueEnd === null ? null : source.slice(valueStart, valueEnd + 1);
+}
+
+function hasObjectProperty(source: string, propertyName: string): boolean {
+  let sourceFile: Morph.SourceFile | undefined;
+  try {
+    sourceFile = doctorSourceProject.createSourceFile(
+      "/doctor/object-property.ts",
+      `const value = ${source};`,
+      { overwrite: true },
+    );
+    const initializer = sourceFile.getVariableDeclaration("value")?.getInitializer();
+    return (
+      Node.isObjectLiteralExpression(initializer) &&
+      initializer.getProperty(propertyName) !== undefined
+    );
+  } catch {
+    return false;
+  } finally {
+    if (sourceFile) {
+      doctorSourceProject.removeSourceFile(sourceFile);
+    }
+  }
 }
 
 function skipWhitespace(source: string, startIndex: number): number {

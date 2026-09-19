@@ -25,7 +25,7 @@ pnpm failure-drill:smoke
 `ops:smoke`는 diagnostics를 token mode로 켜고 unauthenticated 요청이 `403`으로 거부되는지 확인한 뒤, `croco ops check` contract로 `/health`, `/ready`, `/diagnostics`를 검증합니다.
 `failure-drill:smoke`는 기존 credential-free failure catalog와 함께 provider 환경 누락, telemetry exporter 장애, DI provider/scope 오류, route validation, rate limit, auth verifier 장애, webhook signature 오류를 실제 public boundary에서 실행합니다. 각 drill은 안정적인 Problem/diagnostic code, response shape, provenance, recovery action이 없으면 실패하며 deterministic 결과를 `ci-reports/failure-drills/operational.json`, `ci-reports/failure-drills/operational.md`에 기록합니다.
 
-API bootstrap은 DI validation을 `warn`으로 켭니다. `pnpm di:graph`는 selected profile graph의 zero-credential replacement를 실행해 root 기반 manifest를 만들고, `pnpm di:verify`가 bootstrap diagnostic과 artifact drift를 함께 검사합니다. Production composition이 모든 등록 component를 제공하는 경우 `apps/api-server/src/app.ts`에서 `enforce`로 올리세요.
+API bootstrap은 DI validation을 `warn`으로 켭니다. `apps/api-server/src/compositionRoot.ts`가 selected profile plugin과 application module을 한 graph로 구성하며, `app.ts`와 `pnpm di:graph`가 모두 이 root를 사용합니다. `pnpm di:graph`는 같은 graph의 zero-credential replacement를 실행해 root 기반 manifest를 만들고, `pnpm di:verify`가 bootstrap diagnostic과 artifact drift를 함께 검사합니다. Production composition이 모든 등록 component를 제공하는 경우 composition root의 HTTP plugin 설정을 `enforce`로 올리세요.
 
 ## Usage Dashboard
 
@@ -104,7 +104,7 @@ SAAS_DEMO_ENDPOINTS_ENABLED=true pnpm --filter {{scope}}/api-server dev
 
 ## Provider Profiles
 
-`saas-node-postgres`는 생성된 TypeScript composition graph가 production bootstrap과 metadata 생성의 단일 source of truth인 실행 가능 프로필입니다. 이 그래프는 `@croco/transports-http`, `@croco/auth-better-auth`, `@croco/tx-drizzle`, `@croco/billing-polar`, `@croco/tasks-qstash`, `@croco/storage-cloudinary`, `@croco/telemetry-sdk-node`의 canonical factory를 구성합니다.
+`saas-node-postgres`는 생성된 TypeScript profile과 `apps/api-server/src/compositionRoot.ts`가 production bootstrap과 metadata 생성의 단일 source of truth인 실행 가능 프로필입니다. 이 root는 `@croco/transports-http`, `@croco/auth-better-auth`, `@croco/tx-drizzle`, `@croco/billing-polar`, `@croco/tasks-qstash`, `@croco/storage-cloudinary`, `@croco/telemetry-sdk-node`의 canonical factory와 application-owned controller, middleware, provider를 한 graph로 구성합니다.
 
 외부 credential 없이 검증할 때도 별도 in-memory 애플리케이션으로 우회하지 않습니다. 같은 그래프를 실행하되 auth, transaction, billing, tasks, storage owner slot을 명시적인 local replacement로 바꾸고, graph manifest가 production 구성과 같은 slot shape인지 확인합니다.
 

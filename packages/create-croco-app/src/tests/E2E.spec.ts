@@ -3187,6 +3187,10 @@ describe("E2E: generate()", () => {
       const rootPackageJson = readPackageJson(join(testDir, "package.json"));
       const apiPackageJson = readPackageJson(join(testDir, "apps", "api-server", "package.json"));
       const appSource = readFileSync(join(testDir, "apps", "api-server", "src", "app.ts"), "utf8");
+      const compositionRootSource = readFileSync(
+        join(testDir, "apps", "api-server", "src", "compositionRoot.ts"),
+        "utf8",
+      );
       const aiControllerSource = readFileSync(
         join(testDir, "apps", "api-server", "src", "controllers", "AiController.ts"),
         "utf8",
@@ -3237,17 +3241,21 @@ describe("E2E: generate()", () => {
       expect(apiPackageJson.scripts?.["jobs:smoke"]).toBe("tsx src/demo/jobs-smoke.ts");
       expect(appSource).toContain("createApplicationRuntime");
       expect(appSource).toContain("applicationRuntime");
-      expect(appSource).toContain("AI_SAAS_RUNTIME_TOKEN");
+      expect(compositionRootSource).toContain("AI_SAAS_RUNTIME_TOKEN");
       const aiRuntimeSource = readFileSync(
         join(testDir, "apps", "api-server", "src", "aiSaas.ts"),
         "utf8",
       );
       expect(aiRuntimeSource).toContain('new Token<AiSaasRuntime>("AiSaasRuntime")');
-      expect(appSource).toContain("registerRuntimeScopedProviders(runtimeState.current)");
-      expect(appSource).toContain("createAiSaasRuntime(runtime)");
+      expect(compositionRootSource).toContain("createSaasApplicationModule");
+      expect(compositionRootSource).toContain(
+        "ctx.set(AI_SAAS_RUNTIME_TOKEN, createAiSaasRuntime(runtime))",
+      );
       expect(appSource).toContain("runtime.bindHostCallback");
-      expect(appSource).toContain('hostPlatform?: "node" | "lambda" | "cloudflare-workers"');
-      expect(appSource).toContain('options.hostPlatform === "cloudflare-workers"');
+      expect(appSource).toMatch(
+        /hostPlatform\?: ['"]node['"] \| ['"]lambda['"] \| ['"]cloudflare-workers['"]/,
+      );
+      expect(appSource).not.toContain("Container.set");
       expect(appSource).not.toContain("Container.has(LOGGER_TOKEN)");
       expect(aiControllerSource).toContain("getAiSaasRuntime()");
       expect(aiControllerSource).not.toMatch(/defaultAiSaasRuntime|defaultSaasRuntime/);
@@ -3256,11 +3264,9 @@ describe("E2E: generate()", () => {
         "tsx src/demo/failure-drill-smoke.ts",
       );
       expect(failureDrillSource).toContain("assertSaasSmokeContract(snapshot)");
-      expect(appSource).toMatch(/AiController/);
       expect(appSource).toContain("createCrocoDiGraphRoots");
-      expect(appSource).toMatch(
-        /\[\s*OperationsController,\s*JobsController,\s*SaasController,\s*AiController,?\s*\]/,
-      );
+      expect(compositionRootSource).toContain("const AI_APPLICATION_CONTROLLERS = [AiController]");
+      expect(compositionRootSource).toContain("additionalControllers: AI_APPLICATION_CONTROLLERS");
       expect(existsSync(join(testDir, "README.md"))).toBe(true);
       expect(existsSync(join(testDir, "apps", "api-server", "src", "aiSaas.ts"))).toBe(true);
       expect(existsSync(join(testDir, "apps", "api-server", "src", "aiProblems.ts"))).toBe(true);
