@@ -3,6 +3,7 @@ import {
   DomainEvent,
   EventBusConfig,
   EventBusIntakeClosedProblem,
+  EventPublisher,
   EventBusStats,
   type HandlerResolver,
   InvalidEventBusDrainTimeoutProblem,
@@ -15,6 +16,8 @@ import {
   DEV_INSPECTOR_TOKEN,
   RuntimeInspector,
   ShutdownManager,
+  TRANSACTION_CONTEXT_TOKEN,
+  type TransactionContext,
 } from "@croco/framework-context";
 import * as telemetryApi from "@croco/telemetry-api";
 import * as otelApi from "@opentelemetry/api";
@@ -23,6 +26,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   EventPublishDroppedProblem,
   EventPublishFailedError,
+  InMemoryDeadLetterQueue,
   InMemoryEventBus,
   InvalidEventBusConfigurationProblem,
   MAX_EVENT_BUS_CONCURRENCY,
@@ -196,6 +200,24 @@ describe("InMemoryEventBus", () => {
 
       expect(testHandler.handledEvents).toHaveLength(1);
       expect(testHandler.handledEvents[0].message).toBe("hello");
+    });
+
+    it("preserves preparation rejection identity while counting the failed publish", async () => {
+      const preparationFailure = Object.create(null) as object;
+      const event = new TestEvent("preparation-failure");
+      Object.defineProperty(event, "message", {
+        enumerable: true,
+        get: () => {
+          throw preparationFailure;
+        },
+      });
+
+      await expect(eventBus.publish(event)).rejects.toBe(preparationFailure);
+      expect(EventBusConfig.getStats()?.getStats()).toEqual({
+        publishedCount: 0,
+        failCount: 1,
+        droppedPublishCount: 0,
+      });
     });
 
     it("records publish and handler lifecycle events for the active runtime inspector request", async () => {
@@ -491,6 +513,11 @@ describe("InMemoryEventBus", () => {
         ],
       });
       expect(successHandler.handledEvents).toHaveLength(1);
+      expect(EventBusConfig.getStats()?.getStats()).toEqual({
+        publishedCount: 0,
+        failCount: 1,
+        droppedPublishCount: 0,
+      });
     });
 
     it("should not mutate original event metadata when publishing same event twice", async () => {
@@ -1682,6 +1709,73 @@ describe("InMemoryEventBus", () => {
   });
 
   describe("shutdown lifecycle", () => {
+    it("counts an after-commit preparation failure exactly once", async () => {
+      class UnsupportedPayloadEvent extends DomainEvent {
+        static readonly eventName = "UnsupportedPayloadEvent";
+        readonly payload = () => undefined;
+      }
+
+      let registeredHook: (() => void | Promise<void>) | undefined;
+      const onError = vi.fn();
+      const txContext: TransactionContext = {
+        isInTransaction: () => true,
+        canRegisterAfterCommit: () => true,
+        onAfterCommit: (hook) => {
+          registeredHook = hook;
+        },
+      };
+      const bus = new InMemoryEventBus({ deadLetterQueue: new InMemoryDeadLetterQueue() });
+      const config = EventBusConfig.getInstance();
+      config.setEventBus(bus);
+      Container.set(TRANSACTION_CONTEXT_TOKEN as never, txContext as never);
+
+      new EventPublisher(config).publishAfterCommit(new UnsupportedPayloadEvent(), { onError });
+
+      await expect(registeredHook?.()).rejects.toMatchObject({
+        code: "events-core/after-commit-publish-failed",
+        cause: expect.objectContaining({
+          code: "events-inmemory/unsupported-dead-letter-value",
+        }),
+      });
+      expect(onError).toHaveBeenCalledOnce();
+      expect(EventBusConfig.getStats()?.getStats()).toEqual({
+        publishedCount: 0,
+        failCount: 1,
+        droppedPublishCount: 0,
+      });
+    });
+
+    it("counts a rejected after-commit publish exactly once after intake closes", async () => {
+      let registeredHook: (() => void | Promise<void>) | undefined;
+      const onError = vi.fn();
+      const txContext: TransactionContext = {
+        isInTransaction: () => true,
+        canRegisterAfterCommit: () => true,
+        onAfterCommit: (hook) => {
+          registeredHook = hook;
+        },
+      };
+      const config = EventBusConfig.getInstance();
+      config.setEventBus(eventBus);
+      Container.set(TRANSACTION_CONTEXT_TOKEN as never, txContext as never);
+
+      new EventPublisher(config).publishAfterCommit(new TestEvent("after-shutdown"), { onError });
+      await eventBus.shutdown();
+
+      await expect(registeredHook?.()).rejects.toMatchObject({
+        code: "events-core/after-commit-publish-failed",
+        cause: expect.objectContaining({
+          code: "events-core/event-bus-intake-closed",
+        }),
+      });
+      expect(onError).toHaveBeenCalledOnce();
+      expect(EventBusConfig.getStats()?.getStats()).toEqual({
+        publishedCount: 0,
+        failCount: 1,
+        droppedPublishCount: 0,
+      });
+    });
+
     it("closes intake, releases backpressure waiters, and drains only started handlers", async () => {
       const firstStarted = createDeferred();
       const firstRelease = createDeferred();

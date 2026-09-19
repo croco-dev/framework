@@ -27,19 +27,39 @@ title: "EventPublisher"
 
 ### publishAfterCommit()
 
+#### Call Signature
+
 > **publishAfterCommit**(`event`, `onPublished?`): `void`
 
-#### Parameters
+##### Parameters
 
-##### event
+###### event
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
-##### onPublished?
+###### onPublished?
 
 () => `void`
 
-#### Returns
+##### Returns
+
+`void`
+
+#### Call Signature
+
+> **publishAfterCommit**(`event`, `options?`): `void`
+
+##### Parameters
+
+###### event
+
+[`DomainEvent`](/api/events-core/src/classes/domainevent/)
+
+###### options?
+
+[`PublishAfterCommitOptions`](/api/events-core/src/type-aliases/publishaftercommitoptions/)
+
+##### Returns
 
 `void`
 

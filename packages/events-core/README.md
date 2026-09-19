@@ -45,6 +45,14 @@ await config.start({ handlers: [UserCreatedHandler] });
 await new EventPublisher().publish(new UserCreatedEvent("user-1"));
 ```
 
+`publishAfterCommit(event, options)`는 커밋 뒤 발행이 성공하면 `onPublished`를, 실패하면
+`onError`를 호출합니다. 실패 콜백과 after-commit 결과에는 원인을 보존한
+`EventAfterCommitPublishFailedProblem`이 전달되며, 구성된 `EventBusStats`에도 실패가 기록됩니다.
+기존의 두 번째 인자 `onPublished` 콜백 형식도 계속 지원합니다.
+
+자체적으로 `EventBusStats`에 발행 결과를 기록하는 사용자 정의 `EventBus` 구현은
+`managesPublishStats = true`를 선언해야 after-commit 실패가 중복 집계되지 않습니다.
+
 ### graceful shutdown
 
 `EventBus` 자체는 기존 발행/구독 계약을 유지합니다. drain을 지원하는 구현체는 별도 `EventBusLifecycle`을 구현하며,

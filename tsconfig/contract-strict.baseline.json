@@ -931,7 +931,7 @@
     {
       "packageName": "@croco/events-core",
       "file": "packages/events-core/src/libs/EventBus.ts",
-      "line": 54,
+      "line": 57,
       "column": 15,
       "code": "TS2339",
       "message": "Property 'parent' does not exist on type '{ parent: TrieNode<TValue>; char: string; node: TrieNode<TValue>; } | undefined'."
@@ -939,7 +939,7 @@
     {
       "packageName": "@croco/events-core",
       "file": "packages/events-core/src/libs/EventBus.ts",
-      "line": 54,
+      "line": 57,
       "column": 23,
       "code": "TS2339",
       "message": "Property 'char' does not exist on type '{ parent: TrieNode<TValue>; char: string; node: TrieNode<TValue>; } | undefined'."
@@ -947,7 +947,7 @@
     {
       "packageName": "@croco/events-core",
       "file": "packages/events-core/src/libs/EventBus.ts",
-      "line": 54,
+      "line": 57,
       "column": 29,
       "code": "TS2339",
       "message": "Property 'node' does not exist on type '{ parent: TrieNode<TValue>; char: string; node: TrieNode<TValue>; } | undefined'."
