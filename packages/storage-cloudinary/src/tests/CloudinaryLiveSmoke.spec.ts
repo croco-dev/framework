@@ -144,12 +144,16 @@ describe("Cloudinary live smoke", () => {
 
       try {
         await provider.put(key, image, { contentType: "image/png" });
-        const signedUrl = await provider.getSignedUrl(key, { expiresIn: 2 });
+        const signedUrl = await provider.getSignedUrl(key, { expiresIn: 10 });
         const beforeExpiry = await fetch(signedUrl);
 
         expect(beforeExpiry.status).toBe(200);
 
-        await new Promise((resolve) => setTimeout(resolve, 4_000));
+        const expiresAt = Number(new URL(signedUrl).searchParams.get("expires_at")) * 1_000;
+        expect(Number.isSafeInteger(expiresAt)).toBe(true);
+        await new Promise((resolve) =>
+          setTimeout(resolve, Math.max(0, expiresAt - Date.now() + 1_000)),
+        );
 
         const afterExpiry = await fetch(signedUrl);
         expect(afterExpiry.status).toBe(401);
