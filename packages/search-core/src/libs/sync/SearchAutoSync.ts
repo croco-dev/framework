@@ -106,6 +106,7 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
       this.processedEvents.add(eventKey);
     } catch (error) {
       await this.publishSyncFailure(event, error);
+      throw error;
     }
   }
 

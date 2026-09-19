@@ -350,12 +350,41 @@ describe("SearchAutoSync", () => {
 
     it("should retry a failed event and deduplicate it only after success", async () => {
       mockUserAutoSyncMetadata();
+      const error = new Error("Indexing failed");
       (searchEngine.indexDocument as Mock)
-        .mockRejectedValueOnce(new Error("Indexing failed"))
+        .mockRejectedValueOnce(error)
         .mockResolvedValueOnce(undefined);
       const event = new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "John" });
 
+      await expect(searchAutoSync.handle(event)).rejects.toBe(error);
       await searchAutoSync.handle(event);
+      await searchAutoSync.handle(event);
+
+      expect(searchEngine.indexDocument).toHaveBeenCalledTimes(2);
+      expect(eventBusMock.publishNow).toHaveBeenCalledTimes(1);
+    });
+
+    it("should reject coalesced failed deliveries and retry them after the in-flight operation clears", async () => {
+      mockUserAutoSyncMetadata();
+      const error = new Error("Indexing failed");
+      let rejectWrite = (_error: Error): void => undefined;
+      const pendingWrite = new Promise<void>((_resolve, reject) => {
+        rejectWrite = reject;
+      });
+      (searchEngine.indexDocument as Mock)
+        .mockReturnValueOnce(pendingWrite)
+        .mockResolvedValueOnce(undefined);
+      const event = new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "John" });
+
+      const first = searchAutoSync.handle(event);
+      const duplicate = searchAutoSync.handle(event);
+      const deliveries = Promise.all([first, duplicate]);
+      await vi.waitFor(() => expect(searchEngine.indexDocument).toHaveBeenCalledTimes(1));
+      rejectWrite(error);
+
+      await expect(deliveries).rejects.toBe(error);
+      expect(eventBusMock.publishNow).toHaveBeenCalledTimes(1);
+
       await searchAutoSync.handle(event);
       await searchAutoSync.handle(event);
 
@@ -436,7 +465,7 @@ describe("SearchAutoSync", () => {
 
       const event = new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "John" });
 
-      await searchAutoSync.handle(event);
+      await expect(searchAutoSync.handle(event)).rejects.toBe(error);
 
       expect(eventBusMock.publishNow).toHaveBeenCalledWith(expect.any(SearchSyncFailedEvent));
       const failedEvent = eventBusMock.publishNow.mock.calls[0][0];
@@ -457,7 +486,7 @@ describe("SearchAutoSync", () => {
 
       const event = new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "John" });
 
-      await expect(searchAutoSync.handle(event)).resolves.toBeUndefined();
+      await expect(searchAutoSync.handle(event)).rejects.toBe(originalError);
 
       expect(logger.child).toHaveBeenCalledWith({
         searchSyncFailedEvent: {
@@ -490,7 +519,7 @@ describe("SearchAutoSync", () => {
 
       const event = new DocumentIndexedEvent("users", "user-1", "tenant-1", { name: "John" });
 
-      await expect(searchAutoSync.handle(event)).resolves.toBeUndefined();
+      await expect(searchAutoSync.handle(event)).rejects.toBe(originalError);
 
       expect(consoleError).toHaveBeenCalledWith(
         "Failed to publish search sync failed event",
@@ -583,7 +612,7 @@ describe("SearchAutoSync", () => {
 
       const event = new DocumentDeletedEvent("users", "user-1", "tenant-1");
 
-      await searchAutoSync.handle(event);
+      await expect(searchAutoSync.handle(event)).rejects.toBe(error);
 
       expect(eventBusMock.publishNow).toHaveBeenCalledWith(expect.any(SearchSyncFailedEvent));
       const failedEvent = eventBusMock.publishNow.mock.calls[0][0];
@@ -608,7 +637,7 @@ describe("SearchAutoSync", () => {
 
       await expect(
         searchAutoSync.handle(new DocumentDeletedEvent("users", "user-1", "tenant-1")),
-      ).resolves.toBeUndefined();
+      ).rejects.toBe(error);
       expect(eventBusMock.publishNow).not.toHaveBeenCalled();
     });
   });

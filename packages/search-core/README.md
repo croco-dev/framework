@@ -116,8 +116,8 @@ void chosung;
 값의 reserved field는 허용하지만 실제 어댑터 입력에는 이벤트 envelope의 값이 적용됩니다.
 
 `SearchAutoSync`는 검색 인덱싱 또는 삭제 실패를 `SearchSyncFailedEvent`로 발행합니다. 이 실패 이벤트 발행은
-best-effort 계약입니다. `failedEventPublisher.publishNow()`가 reject되어도 `handle()`은 publisher 오류를 호출자에게
-전파하지 않고 완료됩니다.
+best-effort 계약입니다. `failedEventPublisher.publishNow()`가 reject되면 publisher 오류는 로깅만 하며, 원래 검색
+동기화 오류를 대체하거나 숨기지 않습니다. `handle()`은 원래 오류를 호출자에게 다시 전파합니다.
 
 성공한 동기화만 중복 처리 캐시에 기록합니다. 실패한 이벤트는 이후 delivery에서 다시 시도할 수 있으며, 같은
 이벤트가 동시에 전달되면 진행 중인 작업을 공유하여 중복 어댑터 호출을 방지합니다.
