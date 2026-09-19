@@ -132,7 +132,7 @@ const cases = [
   },
 ] as const;
 
-type StoredObject = { data: Uint8Array; publicId: string };
+type StoredObject = { data: Uint8Array; format: string; publicId: string };
 
 function useNamespaceBackend(actualVideoFormat?: string) {
   const objects = new Map<string, StoredObject>();
@@ -143,7 +143,11 @@ function useNamespaceBackend(actualVideoFormat?: string) {
       if (parts[2] === "resources") {
         const object = objects.get(`${parts[3]}:${parts.slice(5).join("/")}`);
         return object
-          ? Response.json({ bytes: object.data.length, created_at: "2026-01-01T00:00:00Z" })
+          ? Response.json({
+              bytes: object.data.length,
+              created_at: "2026-01-01T00:00:00Z",
+              format: object.format,
+            })
           : Response.json({ error: { message: "Resource not found" } }, { status: 404 });
       }
       const resource = parts[2];
@@ -157,8 +161,19 @@ function useNamespaceBackend(actualVideoFormat?: string) {
         const file = form.get("file");
         assert(file !== null && typeof file !== "string", "Missing upload file");
         const data = new Uint8Array(await file.arrayBuffer());
-        objects.set(`${resource}:${publicId}`, { data, publicId });
+        objects.set(`${resource}:${publicId}`, {
+          data,
+          format: resolveStoredFormat(resource, publicId, actualVideoFormat),
+          publicId,
+        });
         return Response.json({ public_id: publicId });
+      }
+      if (parts[3] === "download") {
+        const publicId = url.searchParams.get("public_id");
+        const object = publicId === null ? undefined : objects.get(`${resource}:${publicId}`);
+        return object
+          ? new Response(new Uint8Array(object.data))
+          : new Response(null, { status: 404 });
       }
       if (parts[3] === "destroy") {
         const fields = new URLSearchParams(String(init?.body));
@@ -190,6 +205,19 @@ function useNamespaceBackend(actualVideoFormat?: string) {
   });
   vi.stubGlobal("fetch", fetchMock);
   return { objects, fetchMock };
+}
+
+function resolveStoredFormat(
+  resource: string,
+  publicId: string,
+  actualVideoFormat: string | undefined,
+): string {
+  if (resource === "video") {
+    return actualVideoFormat ?? publicId.match(/-d([a-z0-9]+)$/i)?.[1] ?? "mp4";
+  }
+
+  const extension = publicId.match(/\.([a-z0-9]+)$/i)?.[1];
+  return extension ?? (resource === "raw" ? "bin" : "png");
 }
 
 describe("Cloudinary resource namespaces", () => {
@@ -283,6 +311,7 @@ describe("Cloudinary resource namespaces", () => {
 
       it("delivers original bytes through the signed URL", async () => {
         const url = await new CloudinaryProvider(config).getSignedUrl(key, { expiresIn: 60 });
+        expect(new URL(url).searchParams.get("format")).toBe("mov");
         expect(new Uint8Array(await (await fetch(url)).arrayBuffer())).toEqual(movBytes);
       });
 
@@ -381,7 +410,10 @@ describe("Cloudinary resource namespaces", () => {
       useNamespaceBackend();
       await new CloudinaryProvider(config).put(key, payload, { contentType });
       const url = await new CloudinaryProvider(config).getSignedUrl(key, { expiresIn: 60 });
-      expect(new URL(url).pathname).toMatch(new RegExp(`/${resource}/upload/s--[^/]+--/`));
+      const parsedUrl = new URL(url);
+      expect(parsedUrl.pathname).toBe(`/v1_1/${config.cloudName}/${resource}/download`);
+      expect(parsedUrl.searchParams.get("public_id")).toBe(publicId);
+      expect(parsedUrl.searchParams.get("expires_at")).not.toBeNull();
       expect(new Uint8Array(await (await fetch(url)).arrayBuffer())).toEqual(payload);
     });
   });
