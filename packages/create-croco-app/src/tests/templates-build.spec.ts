@@ -935,6 +935,10 @@ function checkSaasStructure() {
   checkFileExists("saas", "apps", "api-server", "wrangler.toml.hbs");
   checkFileExists("saas", "apps", "api-server", "vitest.config.ts");
   checkFileExists("saas", "apps", "api-server", "src", "saasDemo.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "app.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "applicationModule.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "bootstrapLogger.ts");
+  checkFileExists("saas", "apps", "api-server", "src", "compositionRoot.ts");
   checkFileExists("saas", "apps", "api-server", "src", "providerProfiles.ts");
   checkFileExists("saas", "apps", "api-server", "src", "provider-profile-check.ts");
   checkFileExists("saas", "apps", "api-server", "src", "provider-profile-env.ts");
@@ -1097,7 +1101,7 @@ function checkSaasStructure() {
   );
   checkFileContains(
     "saas",
-    ["apps", "api-server", "src", "app.ts"],
+    ["apps", "api-server", "src", "compositionRoot.ts"],
     /createGeneratedSaasApplicationDefinition/,
   );
   checkFileContains("saas", ["apps", "api-server", "src", "index.ts"], /createNodeHost/);
@@ -1291,18 +1295,22 @@ function checkSaasStructure() {
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /EventBusStats/);
   checkFileContains(
     "saas",
-    ["apps", "api-server", "src", "app.ts"],
-    /runtimeState\.current\.diagnosticsCollector\.getProviders/,
+    ["apps", "api-server", "src", "applicationModule.ts"],
+    /MODULE_CONTRIBUTION_KINDS\.diagnosticsProvider/,
   );
-  checkFileContains("saas", ["apps", "api-server", "src", "app.ts"], /rateLimitHttpMiddleware/);
   checkFileContains(
     "saas",
-    ["apps", "api-server", "src", "app.ts"],
+    ["apps", "api-server", "src", "applicationModule.ts"],
+    /rateLimitHttpMiddleware/,
+  );
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "applicationModule.ts"],
     /clientIdentity: createRuntimeAwareRateLimitClientIdentityPolicy\(\)/,
   );
   checkFileContains(
     "saas",
-    ["apps", "api-server", "src", "app.ts"],
+    ["apps", "api-server", "src", "applicationModule.ts"],
     /OPERATIONAL_RATE_LIMIT_BYPASS_PATHS/,
   );
   checkFileContains(
@@ -1375,7 +1383,7 @@ function checkSaasStructure() {
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "app.ts"],
-    /createGracefulShutdownController[\s\S]*onShutdown: \(\) => runtime\.dispose\(\)[\s\S]*gracefulShutdown\.middleware/,
+    /createGracefulShutdownController[\s\S]*onShutdown: \(\) => disposeRuntime\(\)[\s\S]*shutdownMiddleware: gracefulShutdown\.middleware[\s\S]*disposeRuntime = \(\) => runtime\.dispose\(\)/,
   );
   checkFileContains(
     "saas",
@@ -1489,7 +1497,11 @@ function checkAiSaasStructure() {
   expect(apiPackageJson.dependencies).not.toHaveProperty("@croco/testing");
   expect(apiPackageJson.devDependencies).not.toHaveProperty("@croco/protocols-core");
 
-  checkFileContains("ai-saas", ["apps", "api-server", "src", "app.ts.hbs"], /AiController/);
+  checkFileContains(
+    "ai-saas",
+    ["apps", "api-server", "src", "compositionRoot.ts.hbs"],
+    /const AI_APPLICATION_CONTROLLERS = \[AiController\][\s\S]*\.\.\.AI_APPLICATION_CONTROLLERS[\s\S]*additionalControllers: AI_APPLICATION_CONTROLLERS/,
+  );
   checkFileContains(
     "ai-saas",
     ["apps", "api-server", "src", "tests", "AiSaas.spec.ts"],
@@ -1497,8 +1509,8 @@ function checkAiSaasStructure() {
   );
   checkFileContains(
     "ai-saas",
-    ["apps", "api-server", "src", "app.ts.hbs"],
-    /registerRuntimeScopedProviders\(runtimeState\.current\)[\s\S]*createAiSaasRuntime\(runtime\)/,
+    ["apps", "api-server", "src", "compositionRoot.ts.hbs"],
+    /onRuntimeReset:[\s\S]*ctx\.set\(AI_SAAS_RUNTIME_TOKEN, createAiSaasRuntime\(runtime\)\)/,
   );
   checkFileDoesNotContain(
     "ai-saas",
@@ -1506,11 +1518,15 @@ function checkAiSaasStructure() {
     /defaultAiSaasRuntime|defaultSaasRuntime/,
   );
   checkFileContains(
-    "ai-saas",
-    ["apps", "api-server", "src", "app.ts.hbs"],
-    /hostPlatform\?: "node" \| "lambda" \| "cloudflare-workers"/,
+    "saas",
+    ["apps", "api-server", "src", "app.ts"],
+    /hostPlatform\?: ['"]node['"] \| ['"]lambda['"] \| ['"]cloudflare-workers['"]/,
   );
-  checkFileContains("ai-saas", ["apps", "api-server", "src", "app.ts.hbs"], /pruneIntervalMs: 0/);
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "src", "applicationModule.ts"],
+    /pruneIntervalMs: 0/,
+  );
   checkFileContains("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /PROMPT_TOKENS/);
   checkFileContains("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /COST_USD_NANOS/);
   checkFileContains(
@@ -1762,6 +1778,46 @@ describe.each(["spa-be-split", "saas", "ai-saas", "admin-console"])(
 );
 
 describe("Generated application DI bootstrap validation", () => {
+  it("keeps production presets on one module-owned composition root", () => {
+    checkFileExists("saas", "apps", "api-server", "src", "compositionRoot.ts");
+    checkFileDoesNotContain(
+      "saas",
+      ["apps", "api-server", "src", "app.ts"],
+      /Container\.set|const controllers|diagnosticsCollector\.getProviders/,
+    );
+    checkFileContains(
+      "saas",
+      ["apps", "api-server", "src", "compositionRoot.ts"],
+      /createGeneratedSaasApplicationDefinition[\s\S]*applicationModules:[\s\S]*createSaasApplicationModule/,
+    );
+    checkFileContains(
+      "saas",
+      ["apps", "api-server", "src", "applicationModule.ts"],
+      /defineCrocoModule[\s\S]*MODULE_CONTRIBUTION_KINDS\.httpController/,
+    );
+    checkFileExists("ai-saas", "apps", "api-server", "src", "compositionRoot.ts.hbs");
+    checkFileDoesNotContain(
+      "ai-saas",
+      ["apps", "api-server", "src", "compositionRoot.ts.hbs"],
+      /Container\.set/,
+    );
+
+    const canonicalExamplesRoot = join(
+      TEMPLATES_DIR,
+      "../../../examples/first-party-plugin-composition/src",
+    );
+    const canonicalExampleSources = readdirSync(canonicalExamplesRoot, {
+      recursive: true,
+      withFileTypes: true,
+    })
+      .filter((entry) => entry.isFile() && entry.name.endsWith(".ts"))
+      .map((entry) => readFileSync(join(entry.parentPath, entry.name), "utf8"))
+      .join("\n");
+    expect(canonicalExampleSources).not.toMatch(
+      /Container\.set|set(?:Auth|Billing|Metering|Storage|Task|Telemetry)\w*\(/,
+    );
+  });
+
   it("does not disable DI validation in shipped templates", () => {
     const files = readdirSync(TEMPLATES_DIR, { recursive: true, withFileTypes: true }).filter(
       (entry) => entry.isFile(),

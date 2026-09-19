@@ -1005,11 +1005,12 @@ describe("test lane runner", () => {
       rootDir: root,
       runner: (command) => ({ exitCode: 0, durationMs: 1, executedPaths: command.paths }),
     });
-    const exampleCommand = plan.find(({ owner }) => owner === "repo:examples");
+    const exampleCommands = plan.filter(({ owner }) => owner === "repo:examples");
 
     expect(report.diagnostics).toEqual([]);
-    expect(exampleCommand).toBeDefined();
-    expect(resolveTurboPackageFilters(root, exampleCommand ? [exampleCommand] : [])).toEqual([
+    expect(exampleCommands).not.toHaveLength(0);
+    expect(resolveTurboPackageFilters(root, exampleCommands)).toEqual([
+      "@croco-example/first-party-plugin-composition",
       "@croco-example/saas-billing-golden-path",
     ]);
   });

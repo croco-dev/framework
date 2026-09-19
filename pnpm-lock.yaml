@@ -124,6 +124,67 @@ importers:
         specifier: 2.9.0
         version: 2.9.0
 
+  examples/first-party-plugin-composition:
+    dependencies:
+      '@croco/auth-better-auth':
+        specifier: workspace:*
+        version: link:../../packages/auth-better-auth
+      '@croco/billing-polar':
+        specifier: workspace:*
+        version: link:../../packages/billing-polar
+      '@croco/framework-context':
+        specifier: workspace:*
+        version: link:../../packages/framework-context
+      '@croco/framework-module':
+        specifier: workspace:*
+        version: link:../../packages/framework-module
+      '@croco/preset-node':
+        specifier: workspace:*
+        version: link:../../packages/preset-node
+      '@croco/protocols-rest':
+        specifier: workspace:*
+        version: link:../../packages/protocols-rest
+      '@croco/ratelimit-core':
+        specifier: workspace:*
+        version: link:../../packages/ratelimit-core
+      '@croco/tasks-qstash':
+        specifier: workspace:*
+        version: link:../../packages/tasks-qstash
+      '@croco/telemetry-sdk-node':
+        specifier: workspace:*
+        version: link:../../packages/telemetry-sdk-node
+      '@croco/transports-http':
+        specifier: workspace:*
+        version: link:../../packages/transports-http
+      '@croco/tx-drizzle':
+        specifier: workspace:*
+        version: link:../../packages/tx-drizzle
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.20.0)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.17)(pg@8.22.0)
+      pg:
+        specifier: ^8.11.0
+        version: 8.22.0
+      reflect-metadata:
+        specifier: ^0.2.2
+        version: 0.2.2
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.19.3
+      '@types/pg':
+        specifier: 8.20.0
+        version: 8.20.0
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.8
+        version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@22.19.3)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@22.19.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
+
   examples/quick-start-lambda:
     dependencies:
       '@croco/auth-core':
