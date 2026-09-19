@@ -8,6 +8,7 @@ import { AggregateRoot } from "../libs/AggregateRoot";
 import { DomainEvent } from "../libs/DomainEvent";
 import type { EventBus } from "../libs/EventBus";
 import { EventBusConfig } from "../libs/EventBusConfig";
+import { EventBusStats } from "../libs/EventBusStats";
 import { EventPublisher } from "../libs/EventPublisher";
 import {
   EventAfterCommitOutcomeRequiredProblem,
@@ -61,6 +62,7 @@ describe("EventPublisher", () => {
     mockEventBus = new MockEventBus();
     config = EventBusConfig.getInstance();
     config.setEventBus(mockEventBus);
+    EventBusConfig.setStats(new EventBusStats());
     publisher = new EventPublisher(config);
   });
 
@@ -260,6 +262,242 @@ describe("EventPublisher", () => {
 
       await expect(registeredHook?.()).rejects.toThrow("Event bus error");
       expect(failedAcknowledged).toBe(false);
+    });
+
+    it("should report a committed publish failure with stable diagnostics and stats", async () => {
+      let registeredHook: (() => void | Promise<void>) | undefined;
+      const publishError = new Error("Event bus error");
+      const onPublished = vi.fn();
+      const onError = vi.fn();
+      const mockTxContext: TransactionContext = {
+        isInTransaction: () => true,
+        canRegisterAfterCommit: () => true,
+        onAfterCommit: (hook) => {
+          registeredHook = hook;
+        },
+      };
+      const errorEventBus = {
+        async publish(): Promise<void> {
+          throw publishError;
+        },
+        subscribe(): void {},
+        unsubscribe(): void {},
+        clear(): void {},
+      } satisfies EventBus;
+
+      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      config.setEventBus(errorEventBus);
+
+      publisher.publishAfterCommit(new TestEvent("failed-after-commit"), {
+        onError,
+        onPublished,
+      });
+
+      await expect(registeredHook?.()).rejects.toMatchObject({
+        cause: publishError,
+        code: "events-core/after-commit-publish-failed",
+        eventName: "TestEvent",
+      });
+      expect(onError).toHaveBeenCalledOnce();
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          cause: publishError,
+          code: "events-core/after-commit-publish-failed",
+          eventName: "TestEvent",
+        }),
+      );
+      expect(onPublished).not.toHaveBeenCalled();
+      expect(EventBusConfig.getStats()?.getStats()).toEqual({
+        publishedCount: 0,
+        failCount: 1,
+        droppedPublishCount: 0,
+      });
+    });
+
+    it("should report a non-stringifiable committed publish failure", async () => {
+      let registeredHook: (() => void | Promise<void>) | undefined;
+      const publishFailure = Object.create(null) as object;
+      const onPublished = vi.fn();
+      const onError = vi.fn();
+      const mockTxContext: TransactionContext = {
+        isInTransaction: () => true,
+        canRegisterAfterCommit: () => true,
+        onAfterCommit: (hook) => {
+          registeredHook = hook;
+        },
+      };
+      const errorEventBus = {
+        async publish(): Promise<void> {
+          throw publishFailure;
+        },
+        subscribe(): void {},
+        unsubscribe(): void {},
+        clear(): void {},
+      } satisfies EventBus;
+
+      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      config.setEventBus(errorEventBus);
+
+      publisher.publishAfterCommit(new TestEvent("non-stringifiable-failure"), {
+        onError,
+        onPublished,
+      });
+
+      let rejected: unknown;
+      try {
+        await registeredHook?.();
+      } catch (error) {
+        rejected = error;
+      }
+
+      expect(rejected).toMatchObject({
+        cause: expect.objectContaining({
+          cause: publishFailure,
+          message: "Unknown event publication failure",
+        }),
+        code: "events-core/after-commit-publish-failed",
+        eventName: "TestEvent",
+      });
+      expect(onError).toHaveBeenCalledOnce();
+      expect(onError).toHaveBeenCalledWith(rejected);
+      expect(onPublished).not.toHaveBeenCalled();
+      expect(EventBusConfig.getStats()?.getStats()).toEqual({
+        publishedCount: 0,
+        failCount: 1,
+        droppedPublishCount: 0,
+      });
+    });
+
+    it("should not duplicate failure stats recorded by the event bus", async () => {
+      let registeredHook: (() => void | Promise<void>) | undefined;
+      const stats = EventBusConfig.getStats();
+      const mockTxContext: TransactionContext = {
+        isInTransaction: () => true,
+        canRegisterAfterCommit: () => true,
+        onAfterCommit: (hook) => {
+          registeredHook = hook;
+        },
+      };
+      const statsManagedEventBus = {
+        managesPublishStats: true,
+        async publish(): Promise<void> {
+          stats?.publish(true);
+          throw new Error("Managed event bus error");
+        },
+        subscribe(): void {},
+        unsubscribe(): void {},
+        clear(): void {},
+      } satisfies EventBus;
+
+      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      config.setEventBus(statsManagedEventBus);
+
+      publisher.publishAfterCommit(new TestEvent("managed-failure"), { onError: vi.fn() });
+
+      await expect(registeredHook?.()).rejects.toMatchObject({
+        code: "events-core/after-commit-publish-failed",
+      });
+      expect(stats?.getStats()).toEqual({
+        publishedCount: 0,
+        failCount: 1,
+        droppedPublishCount: 0,
+      });
+    });
+
+    it("should preserve the publish failure when the onError observer also fails", async () => {
+      let registeredHook: (() => void | Promise<void>) | undefined;
+      const publishError = new Error("Event bus error");
+      const observerError = new Error("Observer error");
+      const mockTxContext: TransactionContext = {
+        isInTransaction: () => true,
+        canRegisterAfterCommit: () => true,
+        onAfterCommit: (hook) => {
+          registeredHook = hook;
+        },
+      };
+      const errorEventBus = {
+        async publish(): Promise<void> {
+          throw publishError;
+        },
+        subscribe(): void {},
+        unsubscribe(): void {},
+        clear(): void {},
+      } satisfies EventBus;
+
+      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      config.setEventBus(errorEventBus);
+
+      publisher.publishAfterCommit(new TestEvent("observer-failure"), {
+        onError: () => {
+          throw observerError;
+        },
+      });
+
+      await expect(registeredHook?.()).rejects.toMatchObject({
+        cause: publishError,
+        code: "events-core/after-commit-publish-failed",
+        eventName: "TestEvent",
+        observerError,
+      });
+    });
+
+    it("should preserve a non-stringifiable onError observer failure", async () => {
+      let registeredHook: (() => void | Promise<void>) | undefined;
+      const publishError = new Error("Event bus error");
+      const observerFailure = Object.create(null) as object;
+      const mockTxContext: TransactionContext = {
+        isInTransaction: () => true,
+        canRegisterAfterCommit: () => true,
+        onAfterCommit: (hook) => {
+          registeredHook = hook;
+        },
+      };
+      const errorEventBus = {
+        async publish(): Promise<void> {
+          throw publishError;
+        },
+        subscribe(): void {},
+        unsubscribe(): void {},
+        clear(): void {},
+      } satisfies EventBus;
+
+      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      config.setEventBus(errorEventBus);
+
+      publisher.publishAfterCommit(new TestEvent("observer-failure"), {
+        onError: () => {
+          throw observerFailure;
+        },
+      });
+
+      await expect(registeredHook?.()).rejects.toMatchObject({
+        cause: publishError,
+        code: "events-core/after-commit-publish-failed",
+        eventName: "TestEvent",
+        observerError: expect.objectContaining({
+          cause: observerFailure,
+          message: "Unknown event publication failure",
+        }),
+      });
+    });
+
+    it("should support onPublished inside the options contract", async () => {
+      let registeredHook: (() => void | Promise<void>) | undefined;
+      const onPublished = vi.fn();
+      const mockTxContext: TransactionContext = {
+        isInTransaction: () => true,
+        canRegisterAfterCommit: () => true,
+        onAfterCommit: (hook) => {
+          registeredHook = hook;
+        },
+      };
+
+      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+
+      publisher.publishAfterCommit(new TestEvent("options-success"), { onPublished });
+      await registeredHook?.();
+
+      expect(onPublished).toHaveBeenCalledOnce();
     });
   });
 

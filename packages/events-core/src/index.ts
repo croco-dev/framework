@@ -67,6 +67,7 @@ export { getEventHandlerSubscriptions, RegisterEventHandler } from "./libs/Event
  * 구성된 EventBus를 통해 단건/다건 이벤트를 발행하는 헬퍼입니다.
  */
 export { EventPublisher } from "./libs/EventPublisher";
+export type { PublishAfterCommitOptions } from "./libs/EventPublisher";
 /**
  * 이벤트 타입 레지스트리와 전역 레지스트리 및 등록 데코레이터입니다.
  */
@@ -112,6 +113,7 @@ export {
   DuplicateEventFieldProblem,
   DuplicateEventNameProblem,
   EventAfterCommitOutcomeRequiredProblem,
+  EventAfterCommitPublishFailedProblem,
   EventAfterCommitRequiresActiveTransactionProblem,
   EventBusDrainIncompleteProblem,
   EventBusIntakeClosedProblem,

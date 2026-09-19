@@ -2,6 +2,7 @@ import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import {
   EventAfterCommitOutcomeRequiredProblem,
+  EventAfterCommitPublishFailedProblem,
   EventBusDrainIncompleteProblem,
   EventBusIntakeClosedProblem,
   EventBusNotSetProblem,
@@ -55,6 +56,21 @@ describe("EventsProblems", () => {
     expect(problem.category).toBe(ProblemCategory.InternalServerError);
     expect(problem.detail).toBe(
       "publishAfterCommit requires a transaction that can return after-commit delivery evidence.",
+    );
+  });
+
+  it("should preserve stable diagnostics for a committed publish failure", () => {
+    const cause = new Error("Event bus error");
+    const observerError = new Error("Observer error");
+    const problem = new EventAfterCommitPublishFailedProblem("order.created", cause, observerError);
+
+    expect(problem.code).toBe("events-core/after-commit-publish-failed");
+    expect(problem.category).toBe(ProblemCategory.InternalServerError);
+    expect(problem.eventName).toBe("order.created");
+    expect(problem.cause).toBe(cause);
+    expect(problem.observerError).toBe(observerError);
+    expect(problem.detail).toBe(
+      "Failed to publish committed event 'order.created': Event bus error",
     );
   });
 

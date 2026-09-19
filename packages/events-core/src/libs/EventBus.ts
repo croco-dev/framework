@@ -4,7 +4,10 @@ import type { EventSubscribing } from "./interfaces/EventSubscribing";
 import type { EventNamePattern } from "./types/EventSubscription";
 
 export interface EventBus<TEvent extends DomainEvent = DomainEvent>
-  extends EventPublishing<TEvent>, EventSubscribing<TEvent> {}
+  extends EventPublishing<TEvent>, EventSubscribing<TEvent> {
+  /** Indicates that the bus records its own publish outcomes in EventBusStats. */
+  readonly managesPublishStats?: true;
+}
 
 type TrieNode<TValue> = {
   children: Map<string, TrieNode<TValue>>;

@@ -167,6 +167,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`DuplicateEventFieldProblem`](/api/events-core/src/classes/duplicateeventfieldproblem/)
 - [`DuplicateEventNameProblem`](/api/events-core/src/classes/duplicateeventnameproblem/)
 - [`EventAfterCommitOutcomeRequiredProblem`](/api/events-core/src/classes/eventaftercommitoutcomerequiredproblem/)
+- [`EventAfterCommitPublishFailedProblem`](/api/events-core/src/classes/eventaftercommitpublishfailedproblem/)
 - [`EventAfterCommitRequiresActiveTransactionProblem`](/api/events-core/src/classes/eventaftercommitrequiresactivetransactionproblem/)
 - [`EventBusDrainIncompleteProblem`](/api/events-core/src/classes/eventbusdrainincompleteproblem/)
 - [`EventBusIntakeClosedProblem`](/api/events-core/src/classes/eventbusintakeclosedproblem/)
