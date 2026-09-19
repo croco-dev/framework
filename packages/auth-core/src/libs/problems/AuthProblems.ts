@@ -5,7 +5,7 @@ export class UnauthorizedProblem extends Problem {
   readonly code = "UNAUTHORIZED";
   readonly category = ProblemCategory.Unauthorized;
   constructor(detail = "Authentication required") {
-    super(detail);
+    super(undefined, undefined, detail);
   }
 }
 
@@ -13,7 +13,7 @@ export class ForbiddenProblem extends Problem {
   readonly code = "FORBIDDEN";
   readonly category = ProblemCategory.Forbidden;
   constructor(detail = "Insufficient permissions") {
-    super(detail);
+    super(undefined, undefined, detail);
   }
 }
 
@@ -48,7 +48,7 @@ export class ApiKeyExpiredProblem extends Problem {
   readonly code = "API_KEY_EXPIRED";
   readonly category = ProblemCategory.Unauthorized;
   constructor(detail = "API key has expired") {
-    super(detail);
+    super(undefined, undefined, detail);
   }
 }
 
@@ -56,7 +56,7 @@ export class ApiKeyRevokedProblem extends Problem {
   readonly code = "API_KEY_REVOKED";
   readonly category = ProblemCategory.Unauthorized;
   constructor(detail = "API key has been revoked") {
-    super(detail);
+    super(undefined, undefined, detail);
   }
 }
 
@@ -80,7 +80,7 @@ export class ApiKeyCreationFailedProblem extends Problem {
   readonly code = "auth-core/api-key-creation-failed";
   readonly category = ProblemCategory.InternalServerError;
   constructor(detail = "Failed to create API key") {
-    super(detail);
+    super(undefined, undefined, detail);
   }
 }
 
@@ -88,7 +88,7 @@ export class ApiKeyRotationConflictProblem extends Problem {
   readonly code = "auth-core/api-key-rotation-conflict";
   readonly category = ProblemCategory.Conflict;
   constructor(detail = "API key rotation conflicts with an existing rotation") {
-    super(detail);
+    super(undefined, undefined, detail);
   }
 }
 
@@ -96,6 +96,10 @@ export class InvalidApiKeyRotationIdempotencyKeyProblem extends Problem {
   readonly code = "auth-core/invalid-api-key-rotation-idempotency-key";
   readonly category = ProblemCategory.ValidationError;
   constructor() {
-    super("API key rotation idempotency key must contain between 1 and 255 characters");
+    super(
+      undefined,
+      undefined,
+      "API key rotation idempotency key must contain between 1 and 255 characters",
+    );
   }
 }

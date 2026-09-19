@@ -3291,6 +3291,12 @@
       "owner": "@croco/ratelimit-core"
     },
     {
+      "path": "packages/ratelimit-core/src/tests/RateLimitConfigProblems.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/ratelimit-core"
+    },
+    {
       "path": "packages/ratelimit-core/src/tests/RateLimitExceededProblem.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -3394,6 +3400,12 @@
     },
     {
       "path": "packages/retry-core/src/tests/RetryEngine.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/retry-core"
+    },
+    {
+      "path": "packages/retry-core/src/tests/RetryInfrastructureProblem.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/retry-core"
@@ -4054,6 +4066,12 @@
     },
     {
       "path": "packages/transports-graphql/src/tests/GraphQLServer.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/transports-graphql"
+    },
+    {
+      "path": "packages/transports-graphql/src/tests/GraphQLTransportProblems.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/transports-graphql"

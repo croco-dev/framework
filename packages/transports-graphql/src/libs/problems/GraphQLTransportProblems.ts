@@ -54,7 +54,7 @@ export class GraphQLServerNotInitializedProblem extends Problem {
   readonly code = "transports-graphql/server-not-initialized";
   readonly category = ProblemCategory.InternalServerError;
   constructor(detail = "Server not initialized. Call initialize() first.") {
-    super(detail);
+    super(undefined, undefined, detail);
   }
 }
 

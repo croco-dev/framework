@@ -8,7 +8,7 @@ export class RateLimitKeyBuilderProblem extends Problem {
 
   // biome-ignore lint/complexity/noUselessConstructor: Problem 클래스의 protected constructor 호출 필요
   constructor(detail: string) {
-    super(detail);
+    super(undefined, undefined, detail);
   }
 }
 
@@ -18,7 +18,7 @@ export class RateLimitWindowProblem extends Problem {
 
   // biome-ignore lint/complexity/noUselessConstructor: Problem 클래스의 protected constructor 호출 필요
   constructor(detail: string) {
-    super(detail);
+    super(undefined, undefined, detail);
   }
 }
 
