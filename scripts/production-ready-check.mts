@@ -87,7 +87,7 @@ type PublicApiSnapshotEvidence = {
 };
 
 type FastTestLaneEvidence = {
-  readonly commandsByOwner: ReadonlyMap<string, LaneReport["commands"][number]>;
+  readonly commandsByOwnerAndWorkspace: ReadonlyMap<string, LaneReport["commands"][number]>;
   readonly errors: readonly string[];
 };
 
@@ -175,6 +175,10 @@ function readJsonFile(filePath: string): unknown {
   return JSON.parse(readFileSync(filePath, "utf-8")) as unknown;
 }
 
+function fastTestLaneCommandKey(owner: string, cwd: string): string {
+  return `${cwd}\u0000${owner}`;
+}
+
 function loadFastTestLaneEvidenceFromValue(
   report: unknown,
   label: string,
@@ -189,12 +193,13 @@ function loadFastTestLaneEvidenceFromValue(
       throw new Error("inventory digest does not match the current test inventory");
     }
 
-    const commandsByOwner = new Map<string, LaneReport["commands"][number]>();
+    const commandsByOwnerAndWorkspace = new Map<string, LaneReport["commands"][number]>();
     for (const command of report.commands) {
-      if (commandsByOwner.has(command.owner)) {
-        throw new Error(`owner ${command.owner} appears more than once`);
+      const key = fastTestLaneCommandKey(command.owner, command.cwd);
+      if (commandsByOwnerAndWorkspace.has(key)) {
+        throw new Error(`owner ${command.owner} appears more than once in ${command.cwd}`);
       }
-      commandsByOwner.set(command.owner, command);
+      commandsByOwnerAndWorkspace.set(key, command);
     }
     if (report.selectedOwners.length !== 0) {
       throw new Error("expected a full repository fast-lane report without owner filtering");
@@ -207,7 +212,9 @@ function loadFastTestLaneEvidenceFromValue(
       throw new Error("completed commands do not cover the full fast-lane plan");
     }
     for (const expected of expectedPlan) {
-      const actual = commandsByOwner.get(expected.owner);
+      const actual = commandsByOwnerAndWorkspace.get(
+        fastTestLaneCommandKey(expected.owner, expected.cwd),
+      );
       if (
         !actual ||
         actual.cwd !== expected.cwd ||
@@ -220,10 +227,10 @@ function loadFastTestLaneEvidenceFromValue(
       }
     }
 
-    return { commandsByOwner, errors: [] };
+    return { commandsByOwnerAndWorkspace, errors: [] };
   } catch (error) {
     return {
-      commandsByOwner: new Map(),
+      commandsByOwnerAndWorkspace: new Map(),
       errors: [
         `Fast test lane evidence ${label} is invalid: ${error instanceof Error ? error.message : String(error)}`,
       ],
@@ -267,7 +274,9 @@ function applyFastTestLaneEvidence(
   }
 
   return rows.map((row) => {
-    const command = evidence.commandsByOwner.get(row.packageName);
+    const command = evidence.commandsByOwnerAndWorkspace.get(
+      fastTestLaneCommandKey(row.packageName, row.relativeDir),
+    );
     return {
       ...row,
       tasks: {
