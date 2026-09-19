@@ -1,7 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { CircuitState, InMemoryCircuitBreakerStateStore } from "../libs/CircuitBreakerState";
 
 describe("InMemoryCircuitBreakerStateStore", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe("상태 관리", () => {
     it("기본 상태는 CLOSED여야 한다", async () => {
       const store = new InMemoryCircuitBreakerStateStore();
@@ -132,31 +136,38 @@ describe("InMemoryCircuitBreakerStateStore", () => {
   });
 
   describe("메모리 경계 관리", () => {
-    it("maxEntries를 초과하면 가장 오래된 idle 회로를 제거해야 한다", async () => {
+    it("maxEntries 압박에서는 OPEN과 HALF_OPEN을 보존하고 CLOSED 회로만 제거해야 한다", async () => {
       const store = new InMemoryCircuitBreakerStateStore({ maxEntries: 2, idleTtlMs: 60_000 });
 
-      await store.setState("circuit-1", CircuitState.OPEN);
-      await store.setState("circuit-2", CircuitState.HALF_OPEN);
-      await store.setState("circuit-3", CircuitState.CLOSED);
+      await store.setState("open-circuit", CircuitState.OPEN);
+      await store.setState("half-open-circuit", CircuitState.HALF_OPEN);
+      await store.setState("closed-circuit-1", CircuitState.CLOSED);
+      await store.incrementFailureCount("closed-circuit-1");
+      await store.setState("closed-circuit-2", CircuitState.CLOSED);
 
-      expect(await store.getState("circuit-1")).toBe(CircuitState.CLOSED);
-      expect(await store.getState("circuit-2")).toBe(CircuitState.HALF_OPEN);
-      expect(await store.getState("circuit-3")).toBe(CircuitState.CLOSED);
+      expect(await store.getState("open-circuit")).toBe(CircuitState.OPEN);
+      expect(await store.getState("half-open-circuit")).toBe(CircuitState.HALF_OPEN);
+      expect(await store.getFailureCount("closed-circuit-1")).toBe(0);
+      expect(await store.getState("closed-circuit-2")).toBe(CircuitState.CLOSED);
     });
 
-    it("idle TTL이 지난 회로는 다음 접근 시 정리되어야 한다", async () => {
+    it("idle TTL이 지나도 OPEN과 HALF_OPEN을 보존하고 CLOSED 회로만 정리해야 한다", async () => {
+      const now = vi.spyOn(Date, "now").mockReturnValue(0);
       const store = new InMemoryCircuitBreakerStateStore({ maxEntries: 10, idleTtlMs: 5 });
 
-      await store.setState("stale-circuit", CircuitState.OPEN);
-      await store.incrementFailureCount("stale-circuit");
-      await store.setLastFailureTime("stale-circuit", Date.now());
+      await store.setState("open-circuit", CircuitState.OPEN);
+      await store.setState("half-open-circuit", CircuitState.HALF_OPEN);
+      await store.setState("closed-circuit", CircuitState.CLOSED);
+      await store.incrementFailureCount("closed-circuit");
+      await store.setLastFailureTime("closed-circuit", Date.now());
 
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      now.mockReturnValue(6);
 
       expect(await store.getState("fresh-circuit")).toBe(CircuitState.CLOSED);
-      expect(await store.getState("stale-circuit")).toBe(CircuitState.CLOSED);
-      expect(await store.getFailureCount("stale-circuit")).toBe(0);
-      expect(await store.getLastFailureTime("stale-circuit")).toBeNull();
+      expect(await store.getState("open-circuit")).toBe(CircuitState.OPEN);
+      expect(await store.getState("half-open-circuit")).toBe(CircuitState.HALF_OPEN);
+      expect(await store.getFailureCount("closed-circuit")).toBe(0);
+      expect(await store.getLastFailureTime("closed-circuit")).toBeNull();
     });
 
     it("lock이 잡힌 회로는 eviction 대상에서 건너뛰어야 한다", async () => {
