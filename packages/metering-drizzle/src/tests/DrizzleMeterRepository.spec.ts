@@ -13,7 +13,7 @@ import type { SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
 import { drizzle as drizzlePostgres } from "drizzle-orm/node-postgres";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { PgDialect } from "drizzle-orm/pg-core";
+import { bigint, jsonb, pgTable, PgDialect, text, timestamp } from "drizzle-orm/pg-core";
 import { SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import {
@@ -860,12 +860,55 @@ describe("DrizzleMeterRepository", () => {
         unknown[],
       ];
       expect(queryConfig.text).toContain('insert into "usage_records"');
+      expect(queryConfig.text).toContain(
+        'on conflict ("tenant_id","meter_id","idempotency_key") where "usage_records"."idempotency_key" IS NOT NULL do nothing',
+      );
       expect(parameters).toEqual(
         expect.arrayContaining([
           "01K5CQ9AG7J7C3Q1M7QSV41N4T",
           timestamp.toISOString(),
           '{"route":"/usage"}',
         ]),
+      );
+    });
+
+    it("should apply PostgreSQL casing to the idempotency conflict predicate", async () => {
+      const casedUsageRecords = pgTable("cased_usage_records", {
+        id: text().primaryKey(),
+        tenantId: text().notNull(),
+        meterId: text().notNull(),
+        value: bigint({ mode: "number" }).notNull(),
+        recordedAt: timestamp().notNull(),
+        metadata: jsonb().notNull(),
+        idempotencyKey: text(),
+      });
+      const query = vi.fn().mockResolvedValue({ rows: [] });
+      const pgDb = drizzlePostgres({ client: { query } as never, casing: "snake_case" });
+      const pgRepository = new DrizzleMeterRepository(
+        pgDb,
+        new TxManager(createDrizzleTxAdapter(pgDb)),
+        {
+          meterTable: metersPg,
+          meterSchema: metersPg,
+          usageRecordTable: casedUsageRecords,
+          usageRecordSchema: casedUsageRecords,
+        },
+      );
+
+      await pgRepository.saveUsageRecords([
+        {
+          id: "usage-cased",
+          tenantId: "tenant-cased",
+          meterId: "api_calls",
+          value: 1,
+          timestamp: new Date("2026-09-19T00:00:00.000Z"),
+          idempotencyKey: "request-cased",
+        },
+      ]);
+
+      const [queryConfig] = query.mock.calls[0] as unknown as [{ text: string }];
+      expect(queryConfig.text).toContain(
+        'on conflict ("tenant_id","meter_id","idempotency_key") where "cased_usage_records"."idempotency_key" IS NOT NULL do nothing',
       );
     });
 

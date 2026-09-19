@@ -9,6 +9,27 @@ import { widenUsageRecordIdsPostgres } from "../migrations/widenUsageRecordIds";
 
 const connectionString = process.env.METERING_POSTGRES_URL ?? "";
 
+async function createUsageRecordsTable(client: Client): Promise<void> {
+  await client.query(`
+    CREATE TEMPORARY TABLE usage_records (
+      id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      tenant_id text NOT NULL,
+      meter_id text NOT NULL,
+      value bigint NOT NULL DEFAULT 1,
+      recorded_at timestamp NOT NULL DEFAULT now(),
+      metadata jsonb NOT NULL DEFAULT '{}',
+      idempotency_key text,
+      event_id text,
+      dimensions jsonb
+    )
+  `);
+  await client.query(`
+    CREATE UNIQUE INDEX usage_records_idempotency_unique
+    ON usage_records (tenant_id, meter_id, idempotency_key)
+    WHERE idempotency_key IS NOT NULL
+  `);
+}
+
 describe.skipIf(connectionString.length === 0)(
   "DrizzleMeterRepository PostgreSQL round trip",
   () => {
@@ -16,19 +37,7 @@ describe.skipIf(connectionString.length === 0)(
       const client = new Client({ connectionString });
       await client.connect();
       try {
-        await client.query(`
-        CREATE TEMPORARY TABLE usage_records (
-          id text PRIMARY KEY DEFAULT gen_random_uuid()::text,
-          tenant_id text NOT NULL,
-          meter_id text NOT NULL,
-          value bigint NOT NULL DEFAULT 1,
-          recorded_at timestamp NOT NULL DEFAULT now(),
-          metadata jsonb NOT NULL DEFAULT '{}',
-          idempotency_key text,
-          event_id text,
-          dimensions jsonb
-        )
-      `);
+        await createUsageRecordsTable(client);
         const db = drizzle(client);
         const repository = new DrizzleMeterRepository(
           db,
@@ -64,6 +73,58 @@ describe.skipIf(connectionString.length === 0)(
             eventId: null,
             dimensions: null,
           },
+        ]);
+      } finally {
+        await client.end();
+      }
+    });
+
+    it("rejects a reused usage ID when the idempotency identity is different", async () => {
+      const client = new Client({ connectionString });
+      await client.connect();
+      try {
+        await createUsageRecordsTable(client);
+        const db = drizzle(client);
+        const repository = new DrizzleMeterRepository(
+          db,
+          new TxManager(createDrizzleTxAdapter(db)),
+          {
+            meterTable: metersPg,
+            meterSchema: metersPg,
+            usageRecordTable: usageRecordsPg,
+            usageRecordSchema: usageRecordsPg,
+          },
+        );
+        const firstRecord = {
+          id: "usage-shared-id",
+          tenantId: "postgres-tenant",
+          meterId: "api-requests",
+          value: 1,
+          timestamp: new Date("2026-09-01T12:34:56.789Z"),
+          metadata: { source: "first" },
+          idempotencyKey: "postgres-first",
+        };
+
+        await repository.saveUsageRecords([firstRecord]);
+
+        await expect(
+          repository.saveUsageRecords([
+            {
+              ...firstRecord,
+              value: 2,
+              metadata: { source: "second" },
+              idempotencyKey: "postgres-second",
+            },
+          ]),
+        ).rejects.toMatchObject({
+          cause: expect.objectContaining({ code: "23505" }),
+        });
+        expect(await db.select().from(usageRecordsPg)).toEqual([
+          expect.objectContaining({
+            id: firstRecord.id,
+            idempotencyKey: firstRecord.idempotencyKey,
+            value: firstRecord.value,
+          }),
         ]);
       } finally {
         await client.end();

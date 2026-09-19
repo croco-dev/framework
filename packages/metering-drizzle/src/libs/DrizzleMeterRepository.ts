@@ -1,4 +1,4 @@
-import { and, eq, getTableColumns } from "drizzle-orm";
+import { and, eq, getTableColumns, sql } from "drizzle-orm";
 import { InvalidUsageValueProblem, MeterRepository } from "@croco/metering-core";
 import { ProblemFactory } from "@croco/problems-core";
 
@@ -46,7 +46,10 @@ type DrizzleSelectQuery = {
 };
 
 type DrizzleInsertValuesQuery = {
-  onConflictDoNothing(): DrizzleQueryResult<unknown>;
+  onConflictDoNothing(config?: {
+    target?: AnyColumn | AnyColumn[];
+    where?: SQL;
+  }): DrizzleQueryResult<unknown>;
   returning(): DrizzleQueryResult<unknown[]>;
 };
 
@@ -284,7 +287,21 @@ export class DrizzleMeterRepository extends MeterRepository {
       return value;
     });
 
-    await client.insert(this.usageRecordTable).values(values).onConflictDoNothing();
+    const insertQuery = client.insert(this.usageRecordTable).values(values);
+
+    if (this.usageRecordSchema.id.columnType.startsWith("Pg")) {
+      await insertQuery.onConflictDoNothing({
+        target: [
+          this.usageRecordSchema.tenantId,
+          this.usageRecordSchema.meterId,
+          this.usageRecordSchema.idempotencyKey,
+        ],
+        where: sql`${this.usageRecordSchema.idempotencyKey} IS NOT NULL`,
+      });
+      return;
+    }
+
+    await insertQuery.onConflictDoNothing();
   }
 
   private encodeJsonColumn(value: unknown, column: unknown): unknown {
