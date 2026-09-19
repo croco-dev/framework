@@ -170,7 +170,7 @@ CROCO_LIVE_CLOUDINARY=1 \
 CLOUDINARY_CLOUD_NAME=... \
 CLOUDINARY_API_KEY=... \
 CLOUDINARY_API_SECRET=... \
-pnpm --filter @croco/storage-cloudinary test -- CloudinaryLiveSmoke
+pnpm --filter @croco/storage-cloudinary test:live
 ```
 
 ## 동작 메모
