@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import type { AddressInfo } from "node:net";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createAuthExample } from "../auth";
@@ -82,13 +83,17 @@ describe("first-party plugin composition examples", () => {
 
     const runtime = await createProductionGoldenPathRuntime();
     try {
-      const response = await runtime.app.fetch(new Request("http://localhost/golden"));
+      await runtime.host.start();
+      const address = runtime.host.server?.address();
+      expect(address).not.toBeNull();
+      expect(typeof address).toBe("object");
+
+      const response = await fetch(`http://127.0.0.1:${(address as AddressInfo).port}/golden`);
       expect(response.status).toBe(200);
       await expect(response.json()).resolves.toEqual({ status: "ok" });
-      await runtime.host.start();
       expect(runtime.host.server?.listening).toBe(true);
     } finally {
       await runtime.dispose();
     }
-  });
+  }, 10000);
 });

@@ -126,6 +126,22 @@ type DoctorSourceFile = SourceSlice & {
   readonly file: string;
 };
 
+type MiddlewareOptionAnalysis = {
+  readonly hasMiddlewareOverride: boolean;
+  readonly middlewareSource: string | null;
+  readonly runtimeBinding: string | null;
+};
+
+type CompositionEvidence = {
+  applicationDefinition: boolean;
+  securityMiddleware: boolean;
+};
+
+type DoctorCallable = {
+  readonly file: Morph.SourceFile;
+  readonly node: Morph.Node;
+};
+
 type AdvisoryGateReadinessSection = {
   readonly label: string;
   readonly diagnostics: readonly DoctorDiagnostic[];
@@ -2959,13 +2975,7 @@ function httpSecurityMiddlewareContractCheck(
     });
     return packageSources
       .filter(({ maskedSource }) => /\bcreateApp\s*\(/.test(maskedSource))
-      .map((sourceFile) => ({
-        ...sourceFile,
-        moduleOwnedSecurityMiddleware: hasReachableModuleOwnedHttpSecurityMiddleware(
-          sourceFile.file,
-          packageSources,
-        ),
-      }));
+      .map((sourceFile) => ({ ...sourceFile, packageSources }));
   });
 
   if (appSourceFiles.length === 0) {
@@ -2979,17 +2989,13 @@ function httpSecurityMiddlewareContractCheck(
   }
 
   const diagnostics = appSourceFiles.flatMap(
-    ({ file, moduleOwnedSecurityMiddleware, packageName, source, maskedSource }) =>
+    ({ file, packageName, packageSources, source, maskedSource }) =>
       extractCreateAppOptionSources(source, maskedSource).flatMap((optionsSlice) => {
-        const middlewareSource = extractPropertyValueSource(
-          optionsSlice.maskedSource,
-          "middlewares",
-          "[",
-          "]",
-        );
-        const hasMiddlewareOverride = hasObjectProperty(optionsSlice.source, "middlewares");
-        const usesRuntimeHttpConfig = /\bcreate[A-Za-z0-9_$]*HttpAppConfig\s*\(/.test(
-          optionsSlice.maskedSource,
+        const optionAnalysis = analyzeMiddlewareOptions(optionsSlice.maskedSource);
+        const moduleOwnedSecurityMiddleware = hasReachableModuleOwnedHttpSecurityMiddleware(
+          file,
+          optionAnalysis.runtimeBinding,
+          packageSources,
         );
         const disabledDiagnostics =
           /securityValidation\s*:\s*["']off["']/.test(optionsSlice.source) ||
@@ -3010,12 +3016,18 @@ function httpSecurityMiddlewareContractCheck(
               ]
             : [];
         const missingMiddlewares =
-          moduleOwnedSecurityMiddleware && usesRuntimeHttpConfig && !hasMiddlewareOverride
+          moduleOwnedSecurityMiddleware &&
+          optionAnalysis.runtimeBinding !== null &&
+          !optionAnalysis.hasMiddlewareOverride
             ? []
             : requiredHttpSecurityMiddleware.filter(
                 (middlewareName) =>
-                  middlewareSource === null ||
-                  !hasRequiredHttpMiddlewareCall(middlewareName, middlewareSource, maskedSource),
+                  optionAnalysis.middlewareSource === null ||
+                  !hasRequiredHttpMiddlewareCall(
+                    middlewareName,
+                    optionAnalysis.middlewareSource,
+                    maskedSource,
+                  ),
               );
         const missingMiddlewareDiagnostics =
           missingMiddlewares.length > 0
@@ -3053,96 +3065,474 @@ function httpSecurityMiddlewareContractCheck(
 
 function hasReachableModuleOwnedHttpSecurityMiddleware(
   entryFile: string,
+  runtimeBinding: string | null,
   sources: readonly DoctorSourceFile[],
 ): boolean {
+  if (runtimeBinding === null) {
+    return false;
+  }
+
+  const project = new Project({
+    useInMemoryFileSystem: true,
+    skipAddingFilesFromTsConfig: true,
+  });
   const sourcesByFile = new Map(
     sources.map((sourceFile) => [resolve(sourceFile.file), sourceFile]),
   );
-  const pending = [resolve(entryFile)];
-  const visited = new Set<string>();
-
-  while (pending.length > 0) {
-    const file = pending.pop();
-    if (file === undefined || visited.has(file)) {
+  const astByFile = new Map<string, Morph.SourceFile>();
+  for (const source of sources) {
+    try {
+      astByFile.set(
+        resolve(source.file),
+        project.createSourceFile(resolve(source.file), source.source, { overwrite: true }),
+      );
+    } catch {
       continue;
     }
-    visited.add(file);
+  }
 
-    const sourceFile = sourcesByFile.get(file);
-    if (sourceFile === undefined) {
+  const entrySourceFile = astByFile.get(resolve(entryFile));
+  if (entrySourceFile === undefined) {
+    return false;
+  }
+  const runtimeInitializer = entrySourceFile
+    .getDescendantsOfKind(SyntaxKind.VariableDeclaration)
+    .find(
+      (declaration) =>
+        declaration.getName() === runtimeBinding &&
+        isNamedCall(declaration.getInitializer(), "createApplicationRuntime"),
+    )
+    ?.getInitializer();
+  if (!Node.isCallExpression(runtimeInitializer)) {
+    return false;
+  }
+  const applicationExpression = runtimeInitializer.getArguments()[0];
+  if (applicationExpression === undefined) {
+    return false;
+  }
+
+  const evidence: CompositionEvidence = {
+    applicationDefinition: false,
+    securityMiddleware: false,
+  };
+  inspectCompositionExpression(
+    applicationExpression,
+    entrySourceFile,
+    astByFile,
+    sourcesByFile,
+    evidence,
+    new Set(),
+  );
+  return evidence.applicationDefinition && evidence.securityMiddleware;
+}
+
+function inspectCompositionExpression(
+  expression: Morph.Node,
+  sourceFile: Morph.SourceFile,
+  astByFile: ReadonlyMap<string, Morph.SourceFile>,
+  sourcesByFile: ReadonlyMap<string, DoctorSourceFile>,
+  evidence: CompositionEvidence,
+  visited: Set<string>,
+  parameters: ReadonlyMap<string, DoctorCallable> = new Map(),
+): void {
+  if (Node.isArrayLiteralExpression(expression)) {
+    for (const element of expression.getElements()) {
+      inspectCompositionExpression(
+        element,
+        sourceFile,
+        astByFile,
+        sourcesByFile,
+        evidence,
+        visited,
+        parameters,
+      );
+    }
+    return;
+  }
+  if (isTransparentCompositionExpression(expression)) {
+    inspectCompositionExpression(
+      unwrapTransparentCompositionExpression(expression),
+      sourceFile,
+      astByFile,
+      sourcesByFile,
+      evidence,
+      visited,
+      parameters,
+    );
+    return;
+  }
+  if (Node.isCallExpression(expression)) {
+    inspectCompositionCall(
+      expression,
+      sourceFile,
+      astByFile,
+      sourcesByFile,
+      evidence,
+      visited,
+      parameters,
+    );
+    return;
+  }
+  if (!Node.isIdentifier(expression)) {
+    return;
+  }
+
+  const binding =
+    parameters.get(expression.getText()) ??
+    resolveDoctorBinding(expression.getText(), sourceFile, astByFile, sourcesByFile);
+  if (binding) {
+    const bindingKey = `${binding.file.getFilePath()}:binding:${binding.node.getStart()}`;
+    if (visited.has(bindingKey)) {
+      return;
+    }
+    visited.add(bindingKey);
+    const initializer = Node.isVariableDeclaration(binding.node)
+      ? binding.node.getInitializer()
+      : binding.node;
+    if (initializer) {
+      inspectCompositionExpression(
+        initializer,
+        binding.file,
+        astByFile,
+        sourcesByFile,
+        evidence,
+        visited,
+        parameters,
+      );
+    }
+  }
+}
+
+function inspectCompositionCall(
+  call: Morph.CallExpression,
+  sourceFile: Morph.SourceFile,
+  astByFile: ReadonlyMap<string, Morph.SourceFile>,
+  sourcesByFile: ReadonlyMap<string, DoctorSourceFile>,
+  evidence: CompositionEvidence,
+  visited: Set<string>,
+  parameters: ReadonlyMap<string, DoctorCallable>,
+): void {
+  const callName = getCallIdentifierName(call);
+  if (callName === "defineCrocoApplication" && hasApplicationImports(call)) {
+    evidence.applicationDefinition = true;
+    const imports = getObjectPropertyInitializer(call, "imports");
+    if (imports) {
+      inspectCompositionExpression(
+        imports,
+        sourceFile,
+        astByFile,
+        sourcesByFile,
+        evidence,
+        visited,
+        parameters,
+      );
+    }
+  }
+  if (
+    callName === "defineCrocoModule" &&
+    hasHttpSecurityContribution(call, sourceFile, astByFile, sourcesByFile)
+  ) {
+    evidence.securityMiddleware = true;
+  }
+
+  let callable =
+    callName === undefined
+      ? undefined
+      : resolveDoctorCallable(callName, sourceFile, astByFile, sourcesByFile);
+  const callee = call.getExpression();
+  if (Node.isPropertyAccessExpression(callee)) {
+    const receiver = parameters.get(callee.getExpression().getText());
+    const property =
+      receiver && Node.isObjectLiteralExpression(receiver.node)
+        ? receiver.node.getProperty(callee.getName())
+        : undefined;
+    const value = Node.isPropertyAssignment(property) ? property.getInitializer() : undefined;
+    if (receiver && (Node.isArrowFunction(value) || Node.isFunctionExpression(value))) {
+      callable = { file: receiver.file, node: value };
+    }
+  }
+  if (callable === undefined) {
+    return;
+  }
+  const callableKey = `${callable.file.getFilePath()}:${callName}:${callable.node.getStart()}`;
+  if (visited.has(callableKey)) {
+    return;
+  }
+  visited.add(callableKey);
+  if (
+    Node.isFunctionDeclaration(callable.node) ||
+    Node.isArrowFunction(callable.node) ||
+    Node.isFunctionExpression(callable.node)
+  ) {
+    const callParameters = new Map(parameters);
+    callable.node.getParameters().forEach((parameter, index) => {
+      const argument = call.getArguments()[index];
+      if (argument) {
+        callParameters.set(parameter.getName(), { file: sourceFile, node: argument });
+      }
+    });
+    for (const value of getDoctorReturnedValues(callable.node)) {
+      inspectCompositionExpression(
+        value,
+        callable.file,
+        astByFile,
+        sourcesByFile,
+        evidence,
+        visited,
+        callParameters,
+      );
+    }
+  }
+}
+
+function getDoctorReturnedValues(
+  callable: Morph.FunctionDeclaration | Morph.ArrowFunction | Morph.FunctionExpression,
+): Morph.Node[] {
+  const body = callable.getBody();
+  if (body === undefined) {
+    return [];
+  }
+  if (!Node.isBlock(body)) {
+    return [body];
+  }
+  return body
+    .getDescendantsOfKind(SyntaxKind.ReturnStatement)
+    .filter(
+      (statement) =>
+        statement.getFirstAncestor(
+          (ancestor) =>
+            Node.isFunctionDeclaration(ancestor) ||
+            Node.isArrowFunction(ancestor) ||
+            Node.isFunctionExpression(ancestor),
+        ) === callable,
+    )
+    .flatMap((statement) => (statement.getExpression() ? [statement.getExpressionOrThrow()] : []));
+}
+
+function hasApplicationImports(call: Morph.CallExpression): boolean {
+  const imports = getObjectPropertyInitializer(call, "imports");
+  return (
+    imports !== undefined &&
+    (!Node.isArrayLiteralExpression(imports) || imports.getElements().length > 0)
+  );
+}
+
+function hasHttpSecurityContribution(
+  call: Morph.CallExpression,
+  sourceFile: Morph.SourceFile,
+  astByFile: ReadonlyMap<string, Morph.SourceFile>,
+  sourcesByFile: ReadonlyMap<string, DoctorSourceFile>,
+): boolean {
+  const contributions = getObjectPropertyInitializer(call, "contributions");
+  if (contributions === undefined) {
+    return false;
+  }
+
+  const directValues = contributions
+    .getDescendantsOfKind(SyntaxKind.ObjectLiteralExpression)
+    .filter((object) =>
+      object.getProperty("kind")?.getText().includes("MODULE_CONTRIBUTION_KINDS.httpMiddleware"),
+    )
+    .flatMap((object) => {
+      const value = object.getProperty("value");
+      return Node.isPropertyAssignment(value) && value.getInitializer()
+        ? [value.getInitializerOrThrow().getText()]
+        : [];
+    });
+  if (containsRequiredHttpMiddlewareCalls(directValues.join("\n"))) {
+    return true;
+  }
+
+  const contributionCalls = [
+    ...(Node.isCallExpression(contributions) ? [contributions] : []),
+    ...contributions.getDescendantsOfKind(SyntaxKind.CallExpression),
+  ];
+  for (const mapCall of contributionCalls) {
+    const expression = mapCall.getExpression();
+    if (!Node.isPropertyAccessExpression(expression) || expression.getName() !== "map") {
       continue;
     }
-    if (hasModuleOwnedHttpSecurityMiddleware(sourceFile.maskedSource)) {
+    const collection = expression.getExpression();
+    const callback = mapCall.getArguments()[0];
+    if (callback === undefined) {
+      continue;
+    }
+    const itemName =
+      Node.isArrowFunction(callback) || Node.isFunctionExpression(callback)
+        ? callback.getParameters()[0]?.getName()
+        : undefined;
+    const callbackSource = callback.getText();
+    if (
+      itemName === undefined ||
+      !callbackSource.includes("MODULE_CONTRIBUTION_KINDS.httpMiddleware") ||
+      (!new RegExp(`\\bvalue\\s*:\\s*${escapeRegExp(itemName)}\\b`).test(callbackSource) &&
+        !new RegExp(`\\b${escapeRegExp(itemName)}\\s*[,}]`).test(callbackSource))
+    ) {
+      continue;
+    }
+
+    if (
+      Node.isArrayLiteralExpression(collection) &&
+      containsRequiredHttpMiddlewareCalls(collection.getText())
+    ) {
       return true;
     }
+    if (!Node.isIdentifier(collection)) {
+      continue;
+    }
 
-    for (const moduleSpecifier of extractRelativeModuleSpecifiers(sourceFile.source)) {
-      const importedFile = resolveDoctorSourceImport(file, moduleSpecifier, sourcesByFile);
-      if (importedFile !== undefined) {
-        pending.push(importedFile);
-      }
+    const binding = resolveDoctorBinding(
+      collection.getText(),
+      sourceFile,
+      astByFile,
+      sourcesByFile,
+    );
+    if (
+      binding &&
+      Node.isVariableDeclaration(binding.node) &&
+      hasRequiredMiddlewareCollection(
+        binding.node.getInitializer(),
+        binding.file,
+        astByFile,
+        sourcesByFile,
+      )
+    ) {
+      return true;
     }
   }
 
   return false;
 }
 
-function hasModuleOwnedHttpSecurityMiddleware(maskedSource: string): boolean {
-  return (
-    /\bdefineCrocoModule\s*\(/.test(maskedSource) &&
-    /\bcontributions\s*:/.test(maskedSource) &&
-    /\bMODULE_CONTRIBUTION_KINDS\.httpMiddleware\b/.test(maskedSource) &&
-    requiredHttpSecurityMiddleware.every((middlewareName) =>
-      new RegExp(`\\b${escapeRegExp(middlewareName)}\\s*\\(`).test(maskedSource),
-    )
+function hasRequiredMiddlewareCollection(
+  initializer: Morph.Expression | undefined,
+  sourceFile: Morph.SourceFile,
+  astByFile: ReadonlyMap<string, Morph.SourceFile>,
+  sourcesByFile: ReadonlyMap<string, DoctorSourceFile>,
+): boolean {
+  if (initializer === undefined) {
+    return false;
+  }
+  if (containsRequiredHttpMiddlewareCalls(initializer.getText())) {
+    return true;
+  }
+  if (!Node.isCallExpression(initializer)) {
+    return false;
+  }
+
+  const callName = getCallIdentifierName(initializer);
+  if (callName === undefined) {
+    return false;
+  }
+  const callable = resolveDoctorCallable(callName, sourceFile, astByFile, sourcesByFile);
+  if (callable === undefined) {
+    return false;
+  }
+  const returnedValues = callable.node
+    .getDescendantsOfKind(SyntaxKind.ReturnStatement)
+    .flatMap((statement) => (statement.getExpression() ? [statement.getExpressionOrThrow()] : []));
+  return returnedValues.some((value) => containsRequiredHttpMiddlewareCalls(value.getText()));
+}
+
+function containsRequiredHttpMiddlewareCalls(source: string): boolean {
+  return requiredHttpSecurityMiddleware.every((middlewareName) =>
+    new RegExp(`\\b${escapeRegExp(middlewareName)}\\s*\\(`).test(source),
   );
 }
 
-function extractRelativeModuleSpecifiers(source: string): readonly string[] {
-  let sourceFile: Morph.SourceFile | undefined;
-  try {
-    sourceFile = doctorSourceProject.createSourceFile("/doctor/module-graph.ts", source, {
-      overwrite: true,
-    });
-    const imports = sourceFile.getImportDeclarations().flatMap((declaration) => {
-      const moduleSpecifier = declaration.getModuleSpecifierValue();
-      return moduleSpecifier.startsWith(".") && !isTypeOnlyImportDeclaration(declaration)
-        ? [moduleSpecifier]
-        : [];
-    });
-    const exports = sourceFile.getExportDeclarations().flatMap((declaration) => {
-      const moduleSpecifier = declaration.getModuleSpecifierValue();
-      return moduleSpecifier?.startsWith(".") && !isTypeOnlyExportDeclaration(declaration)
-        ? [moduleSpecifier]
-        : [];
-    });
-    return [...imports, ...exports];
-  } catch {
-    return [];
-  } finally {
-    if (sourceFile) {
-      doctorSourceProject.removeSourceFile(sourceFile);
+function getObjectPropertyInitializer(
+  call: Morph.CallExpression,
+  propertyName: string,
+): Morph.Expression | undefined {
+  const options = call.getArguments()[0];
+  if (!Node.isObjectLiteralExpression(options)) {
+    return undefined;
+  }
+  const property = options.getProperty(propertyName);
+  return Node.isPropertyAssignment(property) ? property.getInitializer() : undefined;
+}
+
+function resolveDoctorCallable(
+  name: string,
+  sourceFile: Morph.SourceFile,
+  astByFile: ReadonlyMap<string, Morph.SourceFile>,
+  sourcesByFile: ReadonlyMap<string, DoctorSourceFile>,
+): DoctorCallable | undefined {
+  const binding = resolveDoctorBinding(name, sourceFile, astByFile, sourcesByFile);
+  if (binding === undefined) {
+    return undefined;
+  }
+  if (Node.isFunctionDeclaration(binding.node)) {
+    return binding;
+  }
+  if (Node.isVariableDeclaration(binding.node)) {
+    const initializer = binding.node.getInitializer();
+    return Node.isArrowFunction(initializer) || Node.isFunctionExpression(initializer)
+      ? { file: binding.file, node: initializer }
+      : undefined;
+  }
+  return undefined;
+}
+
+function resolveDoctorBinding(
+  name: string,
+  sourceFile: Morph.SourceFile,
+  astByFile: ReadonlyMap<string, Morph.SourceFile>,
+  sourcesByFile: ReadonlyMap<string, DoctorSourceFile>,
+): DoctorCallable | undefined {
+  const localFunction = sourceFile.getFunction(name);
+  if (localFunction) {
+    return { file: sourceFile, node: localFunction };
+  }
+  const localVariable = sourceFile
+    .getDescendantsOfKind(SyntaxKind.VariableDeclaration)
+    .find((declaration) => declaration.getName() === name);
+  if (localVariable) {
+    return { file: sourceFile, node: localVariable };
+  }
+
+  for (const declaration of sourceFile.getImportDeclarations()) {
+    const moduleSpecifier = declaration.getModuleSpecifierValue();
+    if (!moduleSpecifier.startsWith(".")) {
+      continue;
+    }
+    const specifier = declaration
+      .getNamedImports()
+      .find((candidate) => (candidate.getAliasNode()?.getText() ?? candidate.getName()) === name);
+    if (specifier === undefined || specifier.isTypeOnly()) {
+      continue;
+    }
+    const importedFilePath = resolveDoctorSourceImport(
+      sourceFile.getFilePath(),
+      moduleSpecifier,
+      sourcesByFile,
+    );
+    const importedFile = importedFilePath ? astByFile.get(importedFilePath) : undefined;
+    if (importedFile === undefined) {
+      continue;
+    }
+    const importedName = specifier.getName();
+    const importedFunction = importedFile.getFunction(importedName);
+    if (importedFunction) {
+      return { file: importedFile, node: importedFunction };
+    }
+    const importedVariable = importedFile
+      .getDescendantsOfKind(SyntaxKind.VariableDeclaration)
+      .find((declaration) => declaration.getName() === importedName);
+    if (importedVariable) {
+      return { file: importedFile, node: importedVariable };
     }
   }
+  return undefined;
 }
 
-function isTypeOnlyImportDeclaration(declaration: Morph.ImportDeclaration): boolean {
-  if (declaration.isTypeOnly()) {
-    return true;
-  }
-  if (declaration.getDefaultImport() || declaration.getNamespaceImport()) {
-    return false;
-  }
-  const namedImports = declaration.getNamedImports();
-  return namedImports.length > 0 && namedImports.every((specifier) => specifier.isTypeOnly());
+function getCallIdentifierName(call: Morph.CallExpression): string | undefined {
+  const expression = call.getExpression();
+  return Node.isIdentifier(expression) ? expression.getText() : undefined;
 }
 
-function isTypeOnlyExportDeclaration(declaration: Morph.ExportDeclaration): boolean {
-  if (declaration.isTypeOnly()) {
-    return true;
-  }
-  const namedExports = declaration.getNamedExports();
-  return namedExports.length > 0 && namedExports.every((specifier) => specifier.isTypeOnly());
+function isNamedCall(node: Morph.Node | undefined, name: string): boolean {
+  return Node.isCallExpression(node) && getCallIdentifierName(node) === name;
 }
 
 function resolveDoctorSourceImport(
@@ -3769,55 +4159,78 @@ function extractCreateAppOptionSources(
   return optionSources;
 }
 
-function extractPropertyValueSource(
-  source: string,
-  propertyName: string,
-  openDelimiter: string,
-  closeDelimiter: string,
-): string | null {
-  const propertyMatch = new RegExp(`\\b${propertyName}\\s*:`).exec(source);
-  if (!propertyMatch || propertyMatch.index === undefined) {
-    return null;
-  }
-
-  const valueStart = skipWhitespace(source, propertyMatch.index + propertyMatch[0].length);
-  if (source[valueStart] !== openDelimiter) {
-    return null;
-  }
-
-  const valueEnd = findBalancedDelimitedEnd(source, valueStart, openDelimiter, closeDelimiter);
-  return valueEnd === null ? null : source.slice(valueStart, valueEnd + 1);
-}
-
-function hasObjectProperty(source: string, propertyName: string): boolean {
+function analyzeMiddlewareOptions(source: string): MiddlewareOptionAnalysis {
   let sourceFile: Morph.SourceFile | undefined;
   try {
     sourceFile = doctorSourceProject.createSourceFile(
-      "/doctor/object-property.ts",
+      "/doctor/middleware-options.ts",
       `const value = ${source};`,
       { overwrite: true },
     );
     const initializer = sourceFile.getVariableDeclaration("value")?.getInitializer();
-    return (
-      Node.isObjectLiteralExpression(initializer) &&
-      initializer.getProperty(propertyName) !== undefined
-    );
+    let runtimeBinding: string | null = null;
+    if (
+      Node.isCallExpression(initializer) &&
+      /^create[A-Za-z0-9_$]*HttpAppConfig$/.test(getCallIdentifierName(initializer) ?? "")
+    ) {
+      const runtimeArgument = initializer.getArguments()[0];
+      runtimeBinding = Node.isIdentifier(runtimeArgument) ? runtimeArgument.getText() : null;
+    }
+    if (!Node.isObjectLiteralExpression(initializer)) {
+      return { hasMiddlewareOverride: false, middlewareSource: null, runtimeBinding };
+    }
+
+    let lastRuntimeConfigIndex = -1;
+    let lastPotentialMiddlewareIndex = -1;
+    let lastMiddlewareIndex = -1;
+    let middlewareSource: string | null = null;
+    initializer.getProperties().forEach((property, index) => {
+      if (Node.isSpreadAssignment(property)) {
+        lastPotentialMiddlewareIndex = index;
+        const spreadExpression = property.getExpression();
+        if (
+          Node.isCallExpression(spreadExpression) &&
+          /^create[A-Za-z0-9_$]*HttpAppConfig$/.test(getCallIdentifierName(spreadExpression) ?? "")
+        ) {
+          lastRuntimeConfigIndex = index;
+          const runtimeArgument = spreadExpression.getArguments()[0];
+          runtimeBinding = Node.isIdentifier(runtimeArgument) ? runtimeArgument.getText() : null;
+        } else {
+          runtimeBinding = null;
+        }
+      }
+      if (
+        (Node.isPropertyAssignment(property) || Node.isShorthandPropertyAssignment(property)) &&
+        property.getName() === "middlewares"
+      ) {
+        lastPotentialMiddlewareIndex = index;
+        lastMiddlewareIndex = index;
+        runtimeBinding = null;
+        const propertyInitializer = Node.isPropertyAssignment(property)
+          ? property.getInitializer()
+          : undefined;
+        middlewareSource = propertyInitializer?.getText() ?? null;
+      }
+    });
+
+    const runtimeConfigWins =
+      lastRuntimeConfigIndex >= 0 && lastRuntimeConfigIndex === lastPotentialMiddlewareIndex;
+    const hasMiddlewareOverride = lastPotentialMiddlewareIndex >= 0 && !runtimeConfigWins;
+    return {
+      hasMiddlewareOverride,
+      middlewareSource:
+        hasMiddlewareOverride && lastMiddlewareIndex === lastPotentialMiddlewareIndex
+          ? middlewareSource
+          : null,
+      runtimeBinding: runtimeConfigWins ? runtimeBinding : null,
+    };
   } catch {
-    return false;
+    return { hasMiddlewareOverride: false, middlewareSource: null, runtimeBinding: null };
   } finally {
     if (sourceFile) {
       doctorSourceProject.removeSourceFile(sourceFile);
     }
   }
-}
-
-function skipWhitespace(source: string, startIndex: number): number {
-  let index = startIndex;
-  while (index < source.length && /\s/.test(source[index])) {
-    index += 1;
-  }
-
-  return index;
 }
 
 function extractExportedHandlerSource(source: string): string | null {
@@ -5030,4 +5443,26 @@ function hasRuntimeCapabilitiesAndComposition(value: Record<string, unknown>): b
 function hasOptionalNonEmptyString(record: Record<string, unknown>, key: string): boolean {
   const value = record[key];
   return value === undefined || (typeof value === "string" && value.length > 0);
+}
+
+type TransparentCompositionExpression =
+  | Morph.SpreadElement
+  | Morph.ParenthesizedExpression
+  | Morph.BinaryExpression;
+
+function isTransparentCompositionExpression(
+  expression: Morph.Node,
+): expression is TransparentCompositionExpression {
+  return (
+    Node.isSpreadElement(expression) ||
+    Node.isParenthesizedExpression(expression) ||
+    (Node.isBinaryExpression(expression) &&
+      expression.getOperatorToken().getKind() === SyntaxKind.QuestionQuestionToken)
+  );
+}
+
+function unwrapTransparentCompositionExpression(
+  expression: TransparentCompositionExpression,
+): Morph.Expression {
+  return Node.isBinaryExpression(expression) ? expression.getLeft() : expression.getExpression();
 }

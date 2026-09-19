@@ -107,19 +107,23 @@ describe("production-ready-check.mts", () => {
     const repo = createReadyRepo();
     const inventoryPath = join(repo, "test-inventory.json");
     const inventoryValue = JSON.parse(readFileSync(inventoryPath, "utf-8")) as FixtureInventory;
-    for (const example of ["first", "second"]) {
+    const exampleWorkspaces = [
+      { directory: "first", testFile: "First.spec.ts" },
+      { directory: "second", testFile: "Second.spec.ts" },
+    ] as const;
+    for (const { directory, testFile } of exampleWorkspaces) {
       writeFile(
         repo,
-        `examples/${example}/src/tests/${example}.spec.ts`,
+        `examples/${directory}/src/tests/${testFile}`,
         'import { expect, it } from "vitest";\nit("passes", () => expect(true).toBe(true));\n',
       );
-      writeJson(join(repo, "examples", example, "package.json"), {
-        name: `@croco-example/${example}`,
+      writeJson(join(repo, "examples", directory, "package.json"), {
+        name: `@croco-example/${directory}`,
         private: true,
         scripts: { test: "vitest run" },
       });
       inventoryValue.tests.push({
-        path: `examples/${example}/src/tests/${example}.spec.ts`,
+        path: `examples/${directory}/src/tests/${testFile}`,
         lane: "fast",
         qualifiers: [],
         owner: "repo:examples",
@@ -133,19 +137,19 @@ describe("production-ready-check.mts", () => {
     });
     const inventory = readTestInventory(inventoryPath).inventory;
     const packageReport = createFastTestLaneReport(repo, ["stable"]);
-    const exampleCommands = ["first", "second"].map((example) => ({
+    const exampleCommands = exampleWorkspaces.map(({ directory, testFile }) => ({
       owner: "repo:examples",
-      cwd: `examples/${example}`,
-      paths: [`src/tests/${example}.spec.ts`],
+      cwd: `examples/${directory}`,
+      paths: [`src/tests/${testFile}`],
       command: ["pnpm", "run", "test"],
       durationMs: 1,
       exitCode: 0,
       status: "passed" as const,
       cacheStatus: "miss" as const,
-      executedPaths: [`src/tests/${example}.spec.ts`],
+      executedPaths: [`src/tests/${testFile}`],
       skippedFiles: [],
       executionState: "executed" as const,
-      cacheHash: `${example}-test-hash`,
+      cacheHash: `${directory}-test-hash`,
     }));
     const fastTestLaneReport = {
       ...packageReport,

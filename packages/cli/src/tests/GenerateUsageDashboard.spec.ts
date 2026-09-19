@@ -24,7 +24,7 @@ type GeneratedServiceModule = {
   }) => GeneratedUsageDashboardService;
 };
 
-describe("runGenerateUsageDashboard", () => {
+describe("GenerateUsageDashboard", () => {
   it("should create a usage dashboard API and console page", async () => {
     const cwd = await createWorkspace();
 
@@ -257,6 +257,11 @@ export const SAAS_APPLICATION_CONTROLLERS = [OperationsController];
 
   it("falls back to index.ts when app.ts only exposes DI graph roots", async () => {
     const cwd = await createWorkspace();
+    await fs.writeFile(
+      path.join(cwd, "apps", "api-server", "src", "applicationModule.ts"),
+      `export { SAAS_APPLICATION_CONTROLLERS } from './compositionRoot';
+`,
+    );
     await fs.writeFile(
       path.join(cwd, "apps", "api-server", "src", "app.ts"),
       `import { OperationsController } from './controllers/OperationsController';

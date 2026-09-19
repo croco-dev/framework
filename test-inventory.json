@@ -2,7 +2,7 @@
   "version": 1,
   "tests": [
     {
-      "path": "examples/first-party-plugin-composition/src/tests/composition.spec.ts",
+      "path": "examples/first-party-plugin-composition/src/tests/FirstPartyPluginComposition.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:examples"
@@ -662,6 +662,12 @@
       "owner": "@croco/cli"
     },
     {
+      "path": "packages/cli/src/tests/GenerateUsageDashboard.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/cli"
+    },
+    {
       "path": "packages/cli/src/tests/TestPlan.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -777,12 +783,6 @@
     },
     {
       "path": "packages/cli/src/tests/generateScaffold.spec.ts",
-      "lane": "fast",
-      "qualifiers": ["coverage"],
-      "owner": "@croco/cli"
-    },
-    {
-      "path": "packages/cli/src/tests/generateUsageDashboard.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/cli"
