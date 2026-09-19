@@ -61,7 +61,7 @@ export class RenderServer {
         nodeType: "rsc-flight",
         path: route.path,
         content: html,
-      });
+      }).replace(/</g, "\\u003c");
       const headMetadata = route.head?.();
 
       return this.createHtmlResponse(
