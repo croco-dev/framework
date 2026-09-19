@@ -23,6 +23,7 @@ type StoredCloudinaryObject = {
   readonly createdAt: string;
   readonly data: Buffer;
   readonly etag: string;
+  readonly format: string;
 };
 
 // Cloudinary SDK 모킹
@@ -84,7 +85,7 @@ describe("CloudinaryProvider", () => {
         putContentType: "application/octet-stream",
         providerName: "storage-cloudinary",
         publicUrl: "https://res.cloudinary.com/test-cloud/raw/upload/",
-        signedUrl: /s=mock-signature/,
+        signedUrl: /expires_at=/,
       }).cases,
     )("$name", async ({ run }) => {
       await run();
@@ -732,23 +733,72 @@ describe("CloudinaryProvider", () => {
   });
 
   describe("getSignedUrl()", () => {
-    it("should return signed URL with expiration", async () => {
-      vi.mocked(cloudinary.url).mockReturnValue(
-        "https://res.cloudinary.com/test-cloud/image/upload/test-key?s=sig",
+    it("should return an authenticated download URL with enforced expiration", async () => {
+      const now = 1_800_000_000_000;
+      vi.spyOn(Date, "now").mockReturnValue(now);
+      vi.mocked(global.fetch).mockResolvedValue(
+        Response.json({
+          bytes: 4,
+          created_at: "2026-01-01T00:00:00.000Z",
+          format: "png",
+        }),
       );
-
       const options: SignedUrlOptions = { expiresIn: MAX_SIGNED_URL_EXPIRY_SECONDS };
       const url = await provider.getSignedUrl("test-key", options);
+      const parsedUrl = new URL(url);
+      const expiresAt = Math.floor(now / 1000) + MAX_SIGNED_URL_EXPIRY_SECONDS;
+      const expectedSignature = createHash("sha1")
+        .update(
+          `expires_at=${expiresAt}&format=png&public_id=test-key&timestamp=1800000000&type=upload${mockConfig.apiSecret}`,
+        )
+        .digest("hex");
 
-      expect(url).toBe("https://res.cloudinary.com/test-cloud/image/upload/test-key?s=sig");
+      expect(parsedUrl.origin).toBe("https://api.cloudinary.com");
+      expect(parsedUrl.pathname).toBe("/v1_1/test-cloud/image/download");
+      expect(Object.fromEntries(parsedUrl.searchParams)).toEqual({
+        api_key: mockConfig.apiKey,
+        expires_at: String(expiresAt),
+        format: "png",
+        public_id: "test-key",
+        signature: expectedSignature,
+        timestamp: "1800000000",
+        type: "upload",
+      });
+      expect(cloudinary.url).not.toHaveBeenCalled();
+    });
 
-      const now = Date.now() / 1000;
-      expect(cloudinary.url).toHaveBeenCalledWith("test-key", {
-        cloud_name: "test-cloud",
-        api_secret: "test-api-secret",
-        secure: true,
-        sign_url: true,
-        expiration: Math.floor(now) + MAX_SIGNED_URL_EXPIRY_SECONDS,
+    it("should use the configured API base URL for authenticated downloads", async () => {
+      const customProvider = new CloudinaryProvider({
+        ...mockConfig,
+        apiBaseUrl: "https://api-eu.example.com",
+      });
+      vi.mocked(global.fetch).mockResolvedValue(
+        Response.json({ created_at: "2026-01-01T00:00:00.000Z", format: "png" }),
+      );
+
+      const url = await customProvider.getSignedUrl("test-key", { expiresIn: 60 });
+
+      expect(new URL(url).origin).toBe("https://api-eu.example.com");
+    });
+
+    it("should report a missing resource before generating a signed URL", async () => {
+      vi.mocked(global.fetch).mockResolvedValue(
+        Response.json({ error: { message: "Resource not found" } }, { status: 404 }),
+      );
+
+      await expect(provider.getSignedUrl("missing-key", { expiresIn: 60 })).rejects.toThrow(
+        FileNotFoundProblem,
+      );
+    });
+
+    it("should reject resource metadata without a download format", async () => {
+      vi.mocked(global.fetch).mockResolvedValue(
+        Response.json({ created_at: "2026-01-01T00:00:00.000Z" }),
+      );
+
+      await expect(provider.getSignedUrl("test-key", { expiresIn: 60 })).rejects.toMatchObject({
+        code: "storage-cloudinary/validation-failed",
+        extensions: expect.objectContaining({ upstreamCode: "missing-resource-format" }),
       });
     });
 
@@ -1432,8 +1482,17 @@ function useInMemoryCloudinaryBackend(): void {
           createdAt: "2026-01-01T00:00:00Z",
           data: upload.data,
           etag: `${upload.publicId}:etag`,
+          format: upload.publicId.slice(upload.publicId.lastIndexOf(".") + 1),
         });
         return jsonResponse({ public_id: upload.publicId });
+      }
+
+      if (url.pathname === `/v1_1/test-cloud/${resourceType}/download`) {
+        const key = url.searchParams.get("public_id");
+        const object = key === null ? undefined : objects.get(key);
+        return object
+          ? new Response(new Uint8Array(object.data))
+          : new Response("Not found", { status: 404 });
       }
 
       if (url.pathname === `/v1_1/test-cloud/${resourceType}/destroy`) {
@@ -1455,6 +1514,7 @@ function useInMemoryCloudinaryBackend(): void {
           context: object.context,
           created_at: object.createdAt,
           etag: object.etag,
+          format: object.format,
         });
       }
 

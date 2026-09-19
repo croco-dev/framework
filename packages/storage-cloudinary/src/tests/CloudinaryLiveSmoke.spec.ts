@@ -131,6 +131,39 @@ describe("Cloudinary live smoke", () => {
       });
     },
   );
+
+  it.skipIf(missingLiveSmokeEnv.length > 0)(
+    "rejects an authenticated download URL after its expiry",
+    async () => {
+      const key = `croco-live-signed-url/${randomUUID()}`;
+      const image = Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Y9Z7WkAAAAASUVORK5CYII=",
+        "base64",
+      );
+      const provider = new CloudinaryProvider(liveConfig);
+
+      try {
+        await provider.put(key, image, { contentType: "image/png" });
+        const signedUrl = await provider.getSignedUrl(key, { expiresIn: 2 });
+        const beforeExpiry = await fetch(signedUrl);
+
+        expect(beforeExpiry.status).toBe(200);
+
+        await new Promise((resolve) => setTimeout(resolve, 4_000));
+
+        const afterExpiry = await fetch(signedUrl);
+        expect(afterExpiry.status).toBe(401);
+        await expect(afterExpiry.json()).resolves.toMatchObject({
+          error: {
+            message: expect.stringMatching(/expired|signature/i),
+          },
+        });
+      } finally {
+        await provider.delete(key);
+      }
+    },
+    30_000,
+  );
 });
 
 describe("Cloudinary live smoke cleanup", () => {
