@@ -322,8 +322,15 @@ describe("AuditInterceptor", () => {
     );
   });
 
-  it("should fail closed when audit persistence fails", async () => {
-    createSpy.mockRejectedValueOnce(new Error("repository unavailable"));
+  it("should preserve a successful result and warn when audit persistence fails", async () => {
+    const auditWriteError = new Error("repository unavailable");
+    const telemetryError = new Error("telemetry unavailable");
+    const logger = createLogger();
+    Container.set(LOGGER_TOKEN, logger);
+    createSpy.mockRejectedValueOnce(auditWriteError);
+    const recordErrorSpy = vi.spyOn(telemetry, "recordError").mockImplementation(() => {
+      throw telemetryError;
+    });
     vi.spyOn(Context, "get").mockReturnValue({
       requestId: "req-2",
       tenantId: "tenant-2",
@@ -344,8 +351,205 @@ describe("AuditInterceptor", () => {
       },
     });
 
-    await expect(interceptor.intercept(context, createCallHandler({ ok: true }))).rejects.toThrow(
-      "repository unavailable",
+    const expectedResult = { ok: true };
+
+    await expect(interceptor.intercept(context, createCallHandler(expectedResult))).resolves.toBe(
+      expectedResult,
+    );
+
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    expect(recordErrorSpy).toHaveBeenCalledWith(auditWriteError);
+    expect(logger.warn).toHaveBeenCalledWith("[AuditInterceptor] Failed to write audit log", {
+      error: "repository unavailable",
+    });
+  });
+
+  it("should report audit persistence failures without a logger or active span", async () => {
+    const auditWriteError = new Error("repository unavailable");
+    createSpy.mockRejectedValueOnce(auditWriteError);
+    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-standalone-audit-failure",
+      tenantId: "tenant-standalone-audit-failure",
+      user: { id: "actor-standalone-audit-failure" },
+    } as RequestContextStub);
+
+    class TestController {
+      update() {}
+    }
+
+    const context = createExecutionContext({
+      controller: TestController,
+      handler: "update",
+      method: "PATCH",
+      path: "/projects/project-standalone-audit-failure",
+      request: { headers: {} },
+    });
+
+    await expect(interceptor.intercept(context, createCallHandler({ ok: true }))).resolves.toEqual({
+      ok: true,
+    });
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith("[AuditInterceptor] Failed to write audit log", {
+      error: "repository unavailable",
+    });
+  });
+
+  it("should sanitize successful payloads and HTTP metadata before persistence", async () => {
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-sanitized-success",
+      tenantId: "tenant-sanitized-success",
+      user: { id: "actor-sanitized-success" },
+    } as RequestContextStub);
+    createSpy.mockImplementationOnce(async (entry) => {
+      JSON.stringify(entry);
+      return createPersistedEntry(entry);
+    });
+
+    class TestController {
+      update() {}
+    }
+
+    const requestBody: Record<string, unknown> = {
+      name: "croco",
+      accessToken: "request-secret",
+    };
+    requestBody["self"] = requestBody;
+    const expectedResult: Record<string, unknown> = {
+      id: "project-sanitized",
+      password: "result-secret",
+    };
+    expectedResult["self"] = expectedResult;
+    const context = createExecutionContext({
+      controller: TestController,
+      handler: "update",
+      method: "PATCH",
+      path: "/projects/project-sanitized",
+      request: {
+        headers: {},
+        body: requestBody,
+      },
+    });
+
+    await expect(interceptor.intercept(context, createCallHandler(expectedResult))).resolves.toBe(
+      expectedResult,
+    );
+
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: {
+          result: {
+            id: "project-sanitized",
+            password: "[Redacted]",
+            self: "[Circular]",
+          },
+        },
+        metadata: {
+          http: {
+            method: "PATCH",
+            path: "/projects/project-sanitized",
+            ip: "unknown",
+            body: {
+              name: "croco",
+              accessToken: "[Redacted]",
+              self: "[Circular]",
+            },
+          },
+        },
+      }),
+    );
+  });
+
+  it("should preserve the payload object contract for unserializable results", async () => {
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-unserializable-success",
+      tenantId: "tenant-unserializable-success",
+      user: { id: "actor-unserializable-success" },
+    } as RequestContextStub);
+
+    class TestController {
+      update() {}
+    }
+
+    const expectedResult = new Proxy(new Date(), {});
+    const context = createExecutionContext({
+      controller: TestController,
+      handler: "update",
+      method: "PATCH",
+      path: "/projects/project-unserializable",
+      request: { headers: {} },
+    });
+
+    await expect(interceptor.intercept(context, createCallHandler(expectedResult))).resolves.toBe(
+      expectedResult,
+    );
+
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: { result: "[Unserializable]" },
+      }),
+    );
+  });
+
+  it("should sanitize failed payloads and HTTP metadata before persistence", async () => {
+    vi.spyOn(Context, "get").mockReturnValue({
+      requestId: "req-sanitized-failure",
+      tenantId: "tenant-sanitized-failure",
+      user: { id: "actor-sanitized-failure" },
+    } as RequestContextStub);
+    createSpy.mockImplementationOnce(async (entry) => {
+      JSON.stringify(entry);
+      return createPersistedEntry(entry);
+    });
+
+    class TestController {
+      update() {}
+    }
+
+    const requestBody: Record<string, unknown> = {
+      name: "croco",
+      authorization: "Bearer request-secret",
+    };
+    requestBody["self"] = requestBody;
+    const handlerError = new Error("request failed password=result-secret");
+    const context = createExecutionContext({
+      controller: TestController,
+      handler: "update",
+      method: "PATCH",
+      path: "/projects/project-sanitized-failure",
+      request: {
+        headers: {},
+        body: requestBody,
+      },
+    });
+    const next = {
+      handle: vi.fn(async () => {
+        throw handlerError;
+      }),
+    } as CallHandler;
+
+    await expect(interceptor.intercept(context, next)).rejects.toBe(handlerError);
+
+    expect(createSpy).toHaveBeenCalledTimes(1);
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        payload: {
+          error: "request failed password=[Redacted]",
+        },
+        metadata: {
+          http: {
+            method: "PATCH",
+            path: "/projects/project-sanitized-failure",
+            ip: "unknown",
+            body: {
+              name: "croco",
+              authorization: "[Redacted]",
+              self: "[Circular]",
+            },
+          },
+        },
+      }),
     );
   });
 
@@ -353,6 +557,8 @@ describe("AuditInterceptor", () => {
     const handlerError = new Error("validation failed");
     const auditWriteError = new Error("repository unavailable");
     const telemetryError = new Error("telemetry unavailable");
+    const logger = createLogger();
+    Container.set(LOGGER_TOKEN, logger);
     createSpy.mockRejectedValueOnce(auditWriteError);
     const recordErrorSpy = vi.spyOn(telemetry, "recordError").mockImplementation(() => {
       throw telemetryError;
@@ -386,6 +592,9 @@ describe("AuditInterceptor", () => {
 
     expect((handlerError as Error & { cause?: unknown }).cause).toBe(auditWriteError);
     expect(recordErrorSpy).toHaveBeenCalledWith(auditWriteError);
+    expect(logger.warn).toHaveBeenCalledWith("[AuditInterceptor] Failed to write audit log", {
+      error: "repository unavailable",
+    });
   });
 
   it("should create exactly one entry for a successful @Auditable handler", async () => {
