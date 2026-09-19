@@ -50,7 +50,7 @@ export function createMetaFetchHandler(options: MetaFetchHandlerOptions): CrocoF
 
     // URL-based API route dispatch: /api/* → apiRoutes matching
     if (options.apiRoutes && pathname.startsWith("/api/")) {
-      const pathMatchedRoutes = options.apiRoutes.filter((r) => routePathMatches(pathname, r.path));
+      const pathMatchedRoutes = getMostSpecificRoutes(options.apiRoutes, pathname);
       const route = pathMatchedRoutes.find(
         (r) => r.method === undefined || r.method === request.method,
       );
@@ -98,6 +98,29 @@ function isRenderServer(
 
 function routePathMatches(pathname: string, routePath: string): boolean {
   return pathname === routePath || pathname.startsWith(`${routePath}/`);
+}
+
+function getMostSpecificRoutes(
+  routes: readonly ApiRouteIR[],
+  pathname: string,
+): readonly ApiRouteIR[] {
+  const matchedRoutes: ApiRouteIR[] = [];
+  let longestPathLength = -1;
+
+  for (const route of routes) {
+    if (!routePathMatches(pathname, route.path) || route.path.length < longestPathLength) {
+      continue;
+    }
+
+    if (route.path.length > longestPathLength) {
+      matchedRoutes.length = 0;
+      longestPathLength = route.path.length;
+    }
+
+    matchedRoutes.push(route);
+  }
+
+  return matchedRoutes;
 }
 
 function getAllowedMethods(routes: readonly ApiRouteIR[]): string[] {

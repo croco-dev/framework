@@ -2301,6 +2301,12 @@
       "owner": "@croco/membership-drizzle"
     },
     {
+      "path": "packages/meta-vite/src/tests/ComposeHandler.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
       "path": "packages/meta-vite/src/tests/basic.spec.ts",
       "lane": "fast",
       "qualifiers": [],
