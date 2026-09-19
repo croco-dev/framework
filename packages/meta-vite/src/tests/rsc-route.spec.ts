@@ -111,6 +111,33 @@ describe("RSC route rendering", () => {
     });
   });
 
+  it("keeps script-closing sequences inside the Flight payload", async () => {
+    const server = createRegistryServer([
+      {
+        path: "/rsc-script-content",
+        mode: "rsc",
+        component: () =>
+          createElement("script", { type: "application/json" }, '{"marker":"</script>"}'),
+      },
+    ]);
+
+    const response = await server.handle(new Request("https://example.com/rsc-script-content"));
+    const html = await response.text();
+    const flightMarker = '<script type="text/x-component">';
+    const flightPayloadText = html.slice(
+      html.indexOf(flightMarker) + flightMarker.length,
+      html.lastIndexOf("</script>"),
+    );
+    const payload = extractFlightPayload(html);
+
+    expect(response.status).toBe(200);
+    expect(flightPayloadText).toContain("\\u003c/script>");
+    expect(flightPayloadText).not.toContain("</script>");
+    expect(payload.content).toBe(
+      '<script type="application/json">{"marker":"</\\u0073cript>"}</script>',
+    );
+  });
+
   it("supports client component hydration marker", async () => {
     const { default: BrowserEntry } = await import("./fixtures/rsc-basic/entry.browser");
     const source = await readFixture("entry.browser.tsx");
