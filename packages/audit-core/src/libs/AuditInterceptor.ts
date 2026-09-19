@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { Context } from "@croco/framework-context";
+import { Container, Context, LOGGER_TOKEN } from "@croco/framework-context";
 import { recordError } from "@croco/telemetry-api";
 import type { AuditLogRepository } from "./AuditLogRepository";
 import {
@@ -11,6 +11,7 @@ import { AUDIT_METADATA_KEY } from "./constants";
 import { resolveImpersonationContext } from "./impersonationState";
 import type { AuditExecutionContext, CallHandler, Interceptor } from "./interfaces/Interceptor";
 import { AuditClientIpConfigurationProblem } from "./problems/AuditClientIpConfigurationProblem";
+import { sanitizeAuditValue } from "./sanitizeAuditValue";
 import type { AuditLogEntry } from "./types";
 
 type RequestHeaderValue = string | readonly string[] | undefined;
@@ -74,6 +75,45 @@ function safelyRecordError(error: unknown): void {
   } catch {
     return;
   }
+}
+
+function getErrorMessage(error: unknown): string {
+  try {
+    return error instanceof Error ? error.message : String(error);
+  } catch {
+    return "[Unserializable]";
+  }
+}
+
+function safelyReportAuditWriteFailure(error: unknown): void {
+  safelyRecordError(error);
+
+  const message = "[AuditInterceptor] Failed to write audit log";
+  const metadata: Record<string, unknown> = {
+    error: sanitizeAuditValue(getErrorMessage(error)),
+  };
+  try {
+    const logger = Container.getOptional(LOGGER_TOKEN);
+    if (logger) {
+      logger.warn(message, metadata);
+      return;
+    }
+  } catch (loggerError) {
+    metadata["loggerError"] = sanitizeAuditValue(getErrorMessage(loggerError));
+  }
+
+  try {
+    console.error(message, metadata);
+  } catch {
+    return;
+  }
+}
+
+function sanitizeMetadataRecord(value: Record<string, unknown>): Record<string, unknown> {
+  const sanitized = sanitizeAuditValue(value);
+  return sanitized && typeof sanitized === "object" && !Array.isArray(sanitized)
+    ? (sanitized as Record<string, unknown>)
+    : { value: sanitized };
 }
 
 export type AuditInterceptorOptions = {
@@ -281,12 +321,22 @@ function mergeMetadata(
   impersonation: AuditableMetadata,
   http: HttpMetadata,
 ): AuditableMetadata {
-  const safeExisting = existing && typeof existing === "object" ? existing : {};
+  const safeExisting = sanitizeMetadataRecord(
+    existing && typeof existing === "object" ? existing : {},
+  );
+  const sanitizedHttp: Record<string, unknown> = {
+    method: sanitizeAuditValue(http.method),
+    path: sanitizeAuditValue(http.path),
+    ip: sanitizeAuditValue(http.ip),
+  };
+  if (http.body !== undefined) {
+    sanitizedHttp["body"] = sanitizeAuditValue(http.body);
+  }
 
   return {
     ...safeExisting,
-    ...impersonation,
-    http,
+    ...sanitizeMetadataRecord(impersonation),
+    http: sanitizedHttp,
   };
 }
 
@@ -367,32 +417,11 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
       ? createAuditCoordinationState(resolveAuditMetadataTarget(target, handler), handler)
       : undefined;
 
+    let result: unknown;
     try {
-      const result = await (coordination
+      result = await (coordination
         ? runWithAuditCoordination(coordination, () => next.handle())
         : next.handle());
-
-      if (coordination?.auditWritten) {
-        return result;
-      }
-
-      await this.writeAuditLog({
-        tenantId: contextData?.tenantId ?? "unknown",
-        actorId,
-        action: resolveAction(controllerName, handler),
-        resourceType: resolveResourceType(controllerName),
-        resourceId: resolveResourceId(http.path),
-        payload: {
-          result,
-        },
-        diff: null,
-        metadata: mergeMetadata(existingMetadata, impersonationMetadata, http),
-      });
-      if (coordination) {
-        markAuditWrite(coordination.target, coordination.propertyKey);
-      }
-
-      return result;
     } catch (error) {
       if (coordination?.auditWritten) {
         throw error;
@@ -405,9 +434,7 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
           action: resolveAction(controllerName, handler),
           resourceType: resolveResourceType(controllerName),
           resourceId: resolveResourceId(http.path),
-          payload: {
-            error: error instanceof Error ? error.message : String(error),
-          },
+          payload: { error: sanitizeAuditValue(getErrorMessage(error)) },
           diff: null,
           metadata: mergeMetadata(existingMetadata, impersonationMetadata, http),
         });
@@ -416,10 +443,34 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
         }
       } catch (auditWriteError) {
         attachAuditWriteCause(error, auditWriteError);
-        safelyRecordError(auditWriteError);
+        safelyReportAuditWriteFailure(auditWriteError);
       }
 
       throw error;
     }
+
+    if (coordination?.auditWritten) {
+      return result;
+    }
+
+    try {
+      await this.writeAuditLog({
+        tenantId: contextData?.tenantId ?? "unknown",
+        actorId,
+        action: resolveAction(controllerName, handler),
+        resourceType: resolveResourceType(controllerName),
+        resourceId: resolveResourceId(http.path),
+        payload: { result: sanitizeAuditValue(result) },
+        diff: null,
+        metadata: mergeMetadata(existingMetadata, impersonationMetadata, http),
+      });
+      if (coordination) {
+        markAuditWrite(coordination.target, coordination.propertyKey);
+      }
+    } catch (auditWriteError) {
+      safelyReportAuditWriteFailure(auditWriteError);
+    }
+
+    return result;
   }
 }
