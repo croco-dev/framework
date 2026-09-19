@@ -17,6 +17,14 @@ title: "EventBus"
 
 `TEvent` _extends_ [`DomainEvent`](/api/events-core/src/classes/domainevent/) = [`DomainEvent`](/api/events-core/src/classes/domainevent/)
 
+## Properties
+
+### managesPublishStats?
+
+> `readonly` `optional` **managesPublishStats?**: `true`
+
+Indicates that the bus records its own publish outcomes in EventBusStats.
+
 ## Methods
 
 ### clear()

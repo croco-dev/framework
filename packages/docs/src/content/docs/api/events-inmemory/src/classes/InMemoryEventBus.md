@@ -34,6 +34,18 @@ TypeDI와 OpenTelemetry를 사용하는 인메모리 EventBus 구현체입니다
 
 `InMemoryEventBus`\<`TEvent`\>
 
+## Properties
+
+### managesPublishStats
+
+> `readonly` **managesPublishStats**: `true`
+
+Indicates that the bus records its own publish outcomes in EventBusStats.
+
+#### Implementation of
+
+[`EventBus`](/api/events-core/src/interfaces/eventbus/).[`managesPublishStats`](/api/events-core/src/interfaces/eventbus/#managespublishstats)
+
 ## Methods
 
 ### clear()

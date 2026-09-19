@@ -4,9 +4,10 @@ import {
   type TransactionContext,
 } from "@croco/framework-context";
 import type { DomainEvent } from "./DomainEvent";
-import type { EventBusConfig } from "./EventBusConfig";
+import { EventBusConfig } from "./EventBusConfig";
 import {
   EventAfterCommitOutcomeRequiredProblem,
+  EventAfterCommitPublishFailedProblem,
   EventAfterCommitRequiresActiveTransactionProblem,
   EventTransactionContextUnavailableProblem,
 } from "./problems/EventsProblems";
@@ -17,8 +18,39 @@ export type PublishResult<T extends DomainEvent> = {
   error?: Error;
 };
 
+export type PublishAfterCommitOptions = {
+  onPublished?: () => void;
+  onError?: (error: Error) => void;
+};
+
+const UNKNOWN_PUBLICATION_FAILURE = "Unknown event publication failure";
+
 function toError(error: unknown): Error {
-  return error instanceof Error ? error : new Error(String(error));
+  let nativeError: Error | undefined;
+  try {
+    nativeError = error instanceof Error ? error : undefined;
+  } catch {
+    nativeError = undefined;
+  }
+  if (nativeError) {
+    return nativeError;
+  }
+
+  let message = UNKNOWN_PUBLICATION_FAILURE;
+  try {
+    message = String(error);
+  } catch {
+    message = UNKNOWN_PUBLICATION_FAILURE;
+  }
+
+  const normalizedError = new Error(message);
+  Object.defineProperty(normalizedError, "cause", {
+    configurable: true,
+    enumerable: false,
+    value: error,
+    writable: true,
+  });
+  return normalizedError;
 }
 
 /**
@@ -48,7 +80,12 @@ export class EventPublisher {
     await this.eventBus.publish(event);
   }
 
-  publishAfterCommit(event: DomainEvent, onPublished?: () => void): void {
+  publishAfterCommit(event: DomainEvent, onPublished?: () => void): void;
+  publishAfterCommit(event: DomainEvent, options?: PublishAfterCommitOptions): void;
+  publishAfterCommit(
+    event: DomainEvent,
+    onPublishedOrOptions?: (() => void) | PublishAfterCommitOptions,
+  ): void {
     const txContext = this.tryGetTransactionContext();
     if (!txContext?.isInTransaction()) {
       throw new EventAfterCommitRequiresActiveTransactionProblem();
@@ -57,9 +94,33 @@ export class EventPublisher {
       throw new EventAfterCommitOutcomeRequiredProblem();
     }
 
+    const options =
+      typeof onPublishedOrOptions === "function"
+        ? { onPublished: onPublishedOrOptions }
+        : (onPublishedOrOptions ?? {});
+
     txContext.onAfterCommit(async () => {
-      await this.eventBus.publish(event);
-      onPublished?.();
+      const eventBus = this.eventBus;
+      try {
+        await eventBus.publish(event);
+      } catch (error) {
+        if (eventBus.managesPublishStats !== true) {
+          EventBusConfig.getStats()?.publish(true);
+        }
+        const publishError = toError(error);
+        const failure = new EventAfterCommitPublishFailedProblem(event.eventName, publishError);
+        try {
+          options.onError?.(failure);
+        } catch (observerError) {
+          throw new EventAfterCommitPublishFailedProblem(
+            event.eventName,
+            publishError,
+            toError(observerError),
+          );
+        }
+        throw failure;
+      }
+      options.onPublished?.();
     });
   }
 

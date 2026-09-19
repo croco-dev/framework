@@ -164,6 +164,8 @@ type SubscriberExecutionResult<TEvent extends DomainEvent> = {
 export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
   implements EventBus<TEvent>, EventBusLifecycle
 {
+  readonly managesPublishStats = true as const;
+
   private readonly index = new EventSubscriptionIndex<RegisteredSubscriber<TEvent>>();
   private readonly subscriptions = new Map<
     string,
@@ -224,6 +226,20 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
   }
 
   async publish(event: TEvent): Promise<void> {
+    try {
+      await this.publishEvent(event);
+      EventBusConfig.getStats()?.publish(false);
+    } catch (error) {
+      if (error instanceof EventPublishDroppedProblem) {
+        EventBusConfig.getStats()?.drop();
+      } else {
+        EventBusConfig.getStats()?.publish(true);
+      }
+      throw error;
+    }
+  }
+
+  private async publishEvent(event: TEvent): Promise<void> {
     this.assertIntakeOpen();
     const eventName = event.eventName;
     const traceInfo = getActiveTraceInfo();
@@ -373,7 +389,6 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
     try {
       await this.executeWithBackpressure(subscribers, baseEvent, eventName);
       publishSpan.setStatus({ code: SpanStatusCode.OK });
-      EventBusConfig.getStats()?.publish(false);
     } catch (error) {
       const normalizedError = this.normalizeError(error);
       publishSpan.recordException(normalizedError);
@@ -386,9 +401,6 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
           "event.delivered_count": normalizedError.deliveredCount,
           "event.dropped_count": normalizedError.droppedCount,
         });
-        EventBusConfig.getStats()?.drop();
-      } else {
-        EventBusConfig.getStats()?.publish(true);
       }
       throw normalizedError;
     } finally {

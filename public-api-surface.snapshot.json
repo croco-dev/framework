@@ -10867,6 +10867,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "EventAfterCommitPublishFailedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "EventAfterCommitRequiresActiveTransactionProblem",
               "exportKind": "named",
               "source": "./libs/problems/EventsProblems",
@@ -11095,6 +11101,11 @@
               "name": "HandlerResolver",
               "exportKind": "named",
               "source": "./libs/HandlerResolver"
+            },
+            {
+              "name": "PublishAfterCommitOptions",
+              "exportKind": "named",
+              "source": "./libs/EventPublisher"
             },
             {
               "name": "RetryableEventHandler",

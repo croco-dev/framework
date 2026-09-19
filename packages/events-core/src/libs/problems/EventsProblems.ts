@@ -167,3 +167,24 @@ export class EventAfterCommitOutcomeRequiredProblem extends Problem {
     );
   }
 }
+
+/**
+ * 커밋이 완료된 뒤 예약된 이벤트 발행이 실패했을 때 발생하는 Problem입니다.
+ */
+export class EventAfterCommitPublishFailedProblem extends Problem {
+  readonly code = "events-core/after-commit-publish-failed";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(
+    readonly eventName: string,
+    cause: Error,
+    readonly observerError?: Error,
+  ) {
+    super(
+      undefined,
+      undefined,
+      `Failed to publish committed event '${eventName}': ${cause.message}`,
+      { cause },
+    );
+  }
+}
