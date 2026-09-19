@@ -336,17 +336,64 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     this.validateKey(key);
     this.assertOperationNotAborted(options, "getSignedUrl", key);
     const expiresIn = validateSignedUrlExpiry(options.expiresIn);
+    const resourceType = resolveResourceType(key);
 
-    const url = cloudinary.url(resolvePublicId(key), {
-      cloud_name: this.cloudName,
-      api_secret: this.apiSecret,
-      secure: this.secure,
-      sign_url: true,
-      ...(resolveResourceType(key) === "image" ? {} : { resource_type: resolveResourceType(key) }),
-      expiration: Math.floor(Date.now() / 1000) + expiresIn,
-    });
+    try {
+      const resource = await this.executeWithRetry(
+        async () => await this.fetchResource(key, options),
+        options,
+        "getSignedUrl",
+        key,
+      );
+      const format =
+        typeof resource === "object" &&
+        resource !== null &&
+        typeof Reflect.get(resource, "format") === "string"
+          ? String(Reflect.get(resource, "format"))
+          : undefined;
+      if (format === undefined || format.length === 0) {
+        throw new CloudinaryValidationProblem(
+          {
+            provider: "cloudinary",
+            operation: "getSignedUrl",
+            key,
+            upstreamCode: "missing-resource-format",
+          },
+          "Cloudinary resource metadata is missing the format required for an expiring download URL",
+        );
+      }
 
-    return url;
+      const timestamp = Math.floor(Date.now() / 1000);
+      const signedFields = {
+        expires_at: timestamp + expiresIn,
+        format,
+        public_id: resolvePublicId(key),
+        timestamp,
+        type: "upload",
+      };
+      const signature = cloudinary.utils.api_sign_request(signedFields, this.apiSecret);
+      const url = new URL(this.buildCloudinaryApiUrl(resourceType, "download"));
+      url.search = new URLSearchParams({
+        api_key: this.apiKey,
+        expires_at: String(signedFields.expires_at),
+        format: signedFields.format,
+        public_id: signedFields.public_id,
+        signature,
+        timestamp: String(signedFields.timestamp),
+        type: signedFields.type,
+      })
+        .toString()
+        .replace(/%2F/g, "/");
+
+      return url.toString();
+    } catch (error) {
+      this.rethrowOperationAbort(error, options, "getSignedUrl", key);
+      if (this.isNotFoundError(error)) {
+        this.throwNotFound(key, error);
+      }
+
+      throw normalizeCloudinaryStorageError(error, { key, operation: "getSignedUrl" });
+    }
   }
 
   async getMetadata(key: string, options?: StorageOperationOptions): Promise<ObjectMetadata> {

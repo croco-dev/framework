@@ -70,6 +70,24 @@ const response = await fetch(intent.uploadUrl, {
 });
 ```
 
+### 만료 다운로드 URL
+
+`getSignedUrl()`은 일반 CDN delivery URL에 변조 방지 서명만 붙이지 않습니다. Cloudinary의 인증
+download API URL을 생성하고 `expires_at`을 API secret으로 서명하므로, 반환 URL은 만료 후 Cloudinary에서
+거부됩니다.
+
+```typescript
+const signedUrl = await provider.getSignedUrl("uploads/hero.jpg", { expiresIn: 300 });
+```
+
+이 경로는 요청마다 Cloudinary API에서 인증하며 CDN에 캐시되지 않으므로, 공개 delivery URL보다 대역폭 비용이
+클 수 있습니다. `getPublicUrl()`은 기존 공개 CDN URL을 계속 반환하며 해당 URL의 공개 접근성은 바뀌지 않습니다.
+
+Cloudinary auth token 암호화 키는 필요하지 않습니다. Token-based access는 별도의 Advanced plan 기능이며
+asset의 `access_control` 설정도 요구하므로, 공개 URL 계약을 유지하는 이 provider의 만료 다운로드 경로에는
+사용하지 않습니다. 객체 자체를 모든 공개 경로에서 비공개로 만들어야 한다면 Cloudinary의 private 또는
+authenticated delivery 설정을 별도로 적용해야 합니다.
+
 `CloudinaryProvider`는 키의 마지막 확장자로 업로드, URL, 조회, 삭제에 사용할 리소스 타입을 결정합니다.
 
 - 이미지 확장자(`jpg`, `png`, `webp` 등)와 확장자 없는 기존 키는 `image`를 사용합니다.
@@ -152,7 +170,7 @@ CROCO_LIVE_CLOUDINARY=1 \
 CLOUDINARY_CLOUD_NAME=... \
 CLOUDINARY_API_KEY=... \
 CLOUDINARY_API_SECRET=... \
-pnpm --filter @croco/storage-cloudinary test -- CloudinaryLiveSmoke
+pnpm --filter @croco/storage-cloudinary test:live
 ```
 
 ## 동작 메모
@@ -160,6 +178,7 @@ pnpm --filter @croco/storage-cloudinary test -- CloudinaryLiveSmoke
 - `cover`, `contain`, `fill`, `inside`, `outside`를 Cloudinary crop 값으로 변환합니다.
 - 일시적 네트워크 오류와 5xx 응답은 최대 3회 재시도합니다.
 - 업로드 인텐트는 직접 업로드 엔드포인트, 공개 URL, `public_id`, `timestamp`, `api_key`, `signature` multipart 필드를 반환합니다. API secret은 반환하지 않으며 Cloudinary의 서명 유효 시간에 맞춰 TTL은 최대 1시간입니다.
+- `getSignedUrl()`은 먼저 저장된 리소스의 실제 포맷을 조회한 뒤, 해당 포맷과 만료 시각을 서명한 인증 download API URL을 반환합니다. 일반 CDN `sign_url`은 만료 접근 제어로 사용하지 않습니다.
 - 이미지 직접 업로드 인텐트의 키는 기존처럼 확장자를 생략하며, raw 파일은 전체 키를 `public_id`로 사용합니다.
 - 영상·오디오 키는 `-`를 `--`로, `.`을 `-d`로 순서대로 이스케이프한 `public_id`를 사용합니다.
   예를 들어 `clip.mp4`는 `clip-dmp4`, `clip-d.mp4`는 `clip--d-dmp4`가 되어 서로 충돌하지 않습니다.
