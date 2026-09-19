@@ -674,6 +674,7 @@ jobs:
               - 'packages/membership-core/**'
               - 'packages/membership-drizzle/**'
               - 'packages/metering-core/**'
+              - 'packages/metering-drizzle/**'
               - 'packages/migration-runner/**'
               - 'packages/problems-core/**'
               - 'packages/testing/**'
@@ -1497,6 +1498,7 @@ jobs:
           ENTITLEMENTS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           EXECUTION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+          METERING_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
         run: |
           pnpm build --filter=@croco/credits-drizzle...
           pnpm --filter @croco/credits-drizzle test:postgres
@@ -1508,6 +1510,8 @@ jobs:
           pnpm --filter @croco/membership-drizzle exec vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts
           pnpm build --filter=@croco/execution-drizzle...
           pnpm --filter @croco/execution-drizzle test:postgres
+          pnpm build --filter=@croco/metering-drizzle...
+          pnpm --filter @croco/metering-drizzle test:postgres
 
       - name: Verify fresh migration status against PostgreSQL
         env:

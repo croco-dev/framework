@@ -897,6 +897,11 @@ describe("CI verification profile contract", () => {
       "MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
     );
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/credits-drizzle...");
+    expect(REAL_RESOURCE_JOB).toContain(
+      "METERING_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
+    );
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/metering-drizzle...");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/metering-drizzle test:postgres");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/credits-drizzle test:postgres");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/engagement-drizzle...");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/engagement-drizzle test:postgres");
@@ -920,6 +925,10 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("              - 'packages/credits-core/**'");
     expect(WORKFLOW).toContain("              - 'packages/credits-drizzle/**'");
     expect(WORKFLOW).toContain("              - 'packages/credits-drizzle/src/**'");
+  });
+
+  it("routes metering persistence changes to the real PostgreSQL round-trip suite", () => {
+    expect(WORKFLOW).toContain("              - 'packages/metering-drizzle/**'");
   });
 
   it("routes engagement persistence changes to the real PostgreSQL conformance suite", () => {

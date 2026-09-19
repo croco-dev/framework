@@ -2565,7 +2565,19 @@
       "owner": "@croco/metering-drizzle"
     },
     {
+      "path": "packages/metering-drizzle/src/tests/DrizzleMeterRepositoryPostgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/metering-drizzle"
+    },
+    {
       "path": "packages/metering-drizzle/src/tests/WidenMeteringIntegers.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metering-drizzle"
+    },
+    {
+      "path": "packages/metering-drizzle/src/tests/WidenUsageRecordIds.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/metering-drizzle"

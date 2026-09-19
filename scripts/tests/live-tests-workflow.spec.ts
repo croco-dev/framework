@@ -89,6 +89,22 @@ describe("scheduled live test workflow", () => {
     expect(Object.keys(step?.env ?? {}).sort()).toEqual(requiredNames);
   });
 
+  it("runs metering-drizzle with its declared PostgreSQL resource and reconciles its report", () => {
+    const owner = "@croco/metering-drizzle";
+    const step = parsed.jobs.live.steps.find(({ run }) => run?.includes(`--owner ${owner}`));
+    const reconciliation = parsed.jobs.live.steps.find(
+      ({ name }) => name === "Enforce scheduled-live evidence",
+    );
+
+    expect(resources[owner]).toEqual(["METERING_POSTGRES_URL"]);
+    expect(step?.env).toEqual({
+      METERING_POSTGRES_URL: "${{ secrets.METERING_POSTGRES_URL }}",
+    });
+    expect(reconciliation?.run).toContain(
+      "--lane-report ci-reports/package-quality/live-test-lanes/metering-drizzle.json",
+    );
+  });
+
   it("declares the Cloudinary live-smoke opt-in as a required scheduled resource", () => {
     expect(resources["@croco/storage-cloudinary"]).toContain("CROCO_LIVE_CLOUDINARY");
   });

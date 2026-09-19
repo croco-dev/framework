@@ -76,6 +76,23 @@ const allMeters = await repository.findAll();
 const tenantMeters = await repository.findByTenant("tenant-1");
 ```
 
+Node PostgreSQL 클라이언트도 SQLite cast 없이 같은 저장소에 전달할 수 있습니다. 이 경로에서는 애플리케이션에
+`pg` 드라이버를 함께 설치합니다.
+
+```typescript
+import { drizzle as drizzlePostgres } from "drizzle-orm/node-postgres";
+import { DrizzleMeterRepository, metersPg, usageRecordsPg } from "@croco/metering-drizzle";
+
+const pgDb = drizzlePostgres("postgresql://user:password@localhost:5432/app");
+const pgTxManager = new TxManager(createDrizzleTxAdapter(pgDb), { defaultNesting: "join" });
+const pgRepository = new DrizzleMeterRepository(pgDb, pgTxManager, {
+  meterTable: metersPg,
+  meterSchema: metersPg,
+  usageRecordTable: usageRecordsPg,
+  usageRecordSchema: usageRecordsPg,
+});
+```
+
 기존 테이블을 업그레이드할 때는 사용하는 dialect에 맞는 migration을 실행한 뒤 새 column mapping을
 설정합니다.
 
@@ -104,6 +121,8 @@ await addUsageEnvelopeFieldsSqlite(migrationClient);
 PostgreSQL을 사용하는 경우에는 대신 `addUsageEnvelopeFieldsPostgres(postgresClient)`를 실행합니다.
 safe-integer usage 또는 고정 소수점 quota를 사용하려면 `widenMeteringIntegersPostgres(postgresClient)`도
 실행해 `usage_records.value`와 `meters.quota`를 `BIGINT`로 확장합니다.
+기존 UUID 기반 `usage_records.id`가 있는 배포는 `widenUsageRecordIdsPostgres(postgresClient)`를 실행해
+기존 UUID 값을 보존하면서 metering operation ID를 저장할 수 있는 `TEXT` 컬럼으로 확장합니다.
 기존 PostgreSQL 배포에서는 애플리케이션 롤아웃 전에 이 마이그레이션을 완료해야 하며, 롤링 배포 중에는
 마이그레이션 완료 전 새 버전의 writer를 시작하지 않습니다.
 
@@ -117,6 +136,10 @@ PostgreSQL JSONB를 그대로 쓰고 싶다면 `serializeJson`, `deserializeJson
 `(tenantId, meterId, idempotencyKey)`별 최초 기록만 저장합니다. 커스텀 테이블에도 제공 스키마와 같은
 unique index가 필요합니다. 삭제가 실패하면 flush는 실패하며, 새 aggregator 인스턴스에서 재시도해도
 이미 저장된 사용량은 중복 반영되지 않습니다.
+
+PostgreSQL 스키마는 `UsageRecord.id`를 `TEXT`로 보존하고 timestamp 컬럼에는 `Date`를 전달합니다.
+SQLite 스키마는 기존 호환성을 위해 내부 정수 row ID를 계속 자동 생성하며 timestamp는 epoch millisecond
+정수로 저장합니다. 두 dialect 모두 replay 중복 방지는 `idempotencyKey` 계약을 따릅니다.
 
 ## API 레퍼런스
 

@@ -4,3 +4,4 @@
 export * from "./libs";
 export * from "./migrations/addUsageEnvelopeFields";
 export * from "./migrations/widenMeteringIntegers";
+export * from "./migrations/widenUsageRecordIds";

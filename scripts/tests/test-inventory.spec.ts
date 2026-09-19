@@ -630,6 +630,7 @@ describe("classification, CLI, and repository migration", () => {
       ["packages/example/src/tests/PublishedConsumer.spec.ts", "published"],
       ["packages/example/src/tests/integration/jobs-e2e.spec.ts", "integration"],
       ["packages/example/src/tests/Store.postgres.spec.ts", "live"],
+      ["packages/example/src/tests/DrizzleMeterRepositoryPostgres.spec.ts", "live"],
       ["packages/example/src/tests/RedisMetering.integration.spec.ts", "live"],
       ["packages/example/src/tests/TimescaleMetricsStore.integration.spec.ts", "live"],
       ["packages/example/src/tests/MigrationStatusPostgres.spec.ts", "live"],
