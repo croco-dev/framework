@@ -344,7 +344,7 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
         continue;
       }
 
-      if (this.locks.has(circuitId)) {
+      if (!this.isEvictableCircuit(circuitId)) {
         continue;
       }
 
@@ -365,7 +365,7 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
 
   private findOldestEvictableCircuitId(): string | null {
     for (const circuitId of this.lastAccessed.keys()) {
-      if (this.locks.has(circuitId)) {
+      if (!this.isEvictableCircuit(circuitId)) {
         continue;
       }
 
@@ -373,5 +373,12 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
     }
 
     return null;
+  }
+
+  private isEvictableCircuit(circuitId: string): boolean {
+    return (
+      !this.locks.has(circuitId) &&
+      (this.states.get(circuitId) ?? CircuitState.CLOSED) === CircuitState.CLOSED
+    );
   }
 }
