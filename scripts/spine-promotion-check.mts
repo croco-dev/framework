@@ -1015,12 +1015,17 @@ function readReleaseTestTasks(
     throw new Error("Release test lane evidence contains duplicate selected owners");
   }
 
-  const commandsByOwner = new Map<string, LaneReport["commands"][number]>();
+  const commandKey = (command: Pick<LaneReport["commands"][number], "cwd" | "owner">) =>
+    `${command.cwd}\u0000${command.owner}`;
+  const commandsByOwnerAndWorkspace = new Map<string, LaneReport["commands"][number]>();
   for (const command of laneReport.commands) {
-    if (commandsByOwner.has(command.owner)) {
-      throw new Error(`Release test lane evidence contains duplicate owner ${command.owner}`);
+    const key = commandKey(command);
+    if (commandsByOwnerAndWorkspace.has(key)) {
+      throw new Error(
+        `Release test lane evidence contains duplicate owner ${command.owner} in ${command.cwd}`,
+      );
     }
-    commandsByOwner.set(command.owner, command);
+    commandsByOwnerAndWorkspace.set(key, command);
   }
   const selectedOwners = check.command.flatMap((value, index) =>
     value === "--owner" ? [check.command[index + 1]] : [],
@@ -1038,7 +1043,7 @@ function readReleaseTestTasks(
     );
   }
   for (const expected of expectedPlan) {
-    const actual = commandsByOwner.get(expected.owner);
+    const actual = commandsByOwnerAndWorkspace.get(commandKey(expected));
     if (
       !actual ||
       actual.cwd !== expected.cwd ||
@@ -1051,10 +1056,10 @@ function readReleaseTestTasks(
     }
   }
 
-  return laneReport.commands.map((command) => ({
-    packageName: command.owner,
+  return [...new Set(laneReport.commands.map(({ owner }) => owner))].map((owner) => ({
+    packageName: owner,
     status: "passed",
-    taskId: `${command.owner}#${lane === "fast" ? "test" : "test:integration"}`,
+    taskId: `${owner}#${lane === "fast" ? "test" : "test:integration"}`,
   }));
 }
 

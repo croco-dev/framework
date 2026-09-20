@@ -437,6 +437,46 @@ describe("spine-promotion-check.mts", () => {
     expect(hasSpinePromotionFailures(createReport(fixture.repo, context))).toBe(false);
   });
 
+  it("accepts release fast-lane commands that share an owner across workspaces", () => {
+    const fixture = createPromotionFixture("protocols-core");
+    const exampleWorkspaces = [
+      { directory: "first", testFile: "First.spec.ts" },
+      { directory: "second", testFile: "Second.spec.ts" },
+    ] as const;
+    for (const { directory, testFile } of exampleWorkspaces) {
+      writeJson(join(fixture.repo, "examples", directory, "package.json"), {
+        name: `@croco-example/${directory}`,
+        private: true,
+        scripts: { test: "vitest run" },
+      });
+      const testPath = join(fixture.repo, "examples", directory, "src", "tests", testFile);
+      mkdirSync(dirname(testPath), { recursive: true });
+      writeFileSync(testPath, "export {};\n");
+    }
+    writeJson(join(fixture.repo, "test-inventory.json"), {
+      version: 1,
+      tests: exampleWorkspaces.map(({ directory, testFile }) => ({
+        path: `examples/${directory}/src/tests/${testFile}`,
+        lane: "fast",
+        qualifiers: [],
+        owner: "repo:examples",
+      })),
+      exceptions: [],
+    });
+    writeReleaseCheckpoint(fixture.repo, "run-1", "1", { laneOwners: ["repo:examples"] });
+
+    const context = createReleasePromotionEvidenceContext({
+      checkpointPath: join(fixture.repo, "release-checkpoint.json"),
+      commitSha,
+      runId: "run-1",
+      runAttempt: "1",
+    });
+
+    expect(context.commands.find(({ commandId }) => commandId === "test")?.testTasks).toEqual([
+      { packageName: "repo:examples", status: "passed", taskId: "repo:examples#test" },
+    ]);
+  });
+
   it("fails release synthesis when the fast-lane report omits the promotion owner", () => {
     const fixture = createPromotionFixture("protocols-core");
     writeReleaseCheckpoint(fixture.repo, "run-1", "1");
