@@ -103,6 +103,78 @@ describe("production-ready-check.mts", () => {
     );
   });
 
+  it("accepts fast-lane commands that share a repository owner across workspaces", () => {
+    const repo = createReadyRepo();
+    const inventoryPath = join(repo, "test-inventory.json");
+    const inventoryValue = JSON.parse(readFileSync(inventoryPath, "utf-8")) as FixtureInventory;
+    const exampleWorkspaces = [
+      { directory: "first", testFile: "First.spec.ts" },
+      { directory: "second", testFile: "Second.spec.ts" },
+    ] as const;
+    for (const { directory, testFile } of exampleWorkspaces) {
+      writeFile(
+        repo,
+        `examples/${directory}/src/tests/${testFile}`,
+        'import { expect, it } from "vitest";\nit("passes", () => expect(true).toBe(true));\n',
+      );
+      writeJson(join(repo, "examples", directory, "package.json"), {
+        name: `@croco-example/${directory}`,
+        private: true,
+        scripts: { test: "vitest run" },
+      });
+      inventoryValue.tests.push({
+        path: `examples/${directory}/src/tests/${testFile}`,
+        lane: "fast",
+        qualifiers: [],
+        owner: "repo:examples",
+      });
+    }
+    writeJson(inventoryPath, inventoryValue);
+    writeTurboSummaries(repo, ["@croco/stable"]);
+    const quality = createPackageQualityReport({
+      rootDir: repo,
+      summaryDir: join(repo, ".turbo", "runs"),
+    });
+    const inventory = readTestInventory(inventoryPath).inventory;
+    const packageReport = createFastTestLaneReport(repo, ["stable"]);
+    const exampleCommands = exampleWorkspaces.map(({ directory, testFile }) => ({
+      owner: "repo:examples",
+      cwd: `examples/${directory}`,
+      paths: [`src/tests/${testFile}`],
+      command: ["pnpm", "run", "test"],
+      durationMs: 1,
+      exitCode: 0,
+      status: "passed" as const,
+      cacheStatus: "miss" as const,
+      executedPaths: [`src/tests/${testFile}`],
+      skippedFiles: [],
+      executionState: "executed" as const,
+      cacheHash: `${directory}-test-hash`,
+    }));
+    const fastTestLaneReport = {
+      ...packageReport,
+      inventoryDigest: inventoryDigest(inventory),
+      executedPaths: [
+        ...packageReport.executedPaths,
+        ...exampleCommands.flatMap(({ cwd, paths }) => paths.map((path) => `${cwd}/${path}`)),
+      ].sort(),
+      commands: [...packageReport.commands, ...exampleCommands],
+    };
+
+    const report = createProductionReadyReport({
+      fastTestLaneReport,
+      generatedAt: "2026-01-01T00:00:00.000Z",
+      inventory,
+      qualityRows: quality.rows,
+      requireTaskSummaries: true,
+      rootDir: repo,
+      summaryDir: "normalized-synthesis-input",
+    });
+
+    expect(report.catalogErrors).toEqual([]);
+    expect(hasProductionReadyFailures(report)).toBe(false);
+  });
+
   it("rejects affected-owner evidence when production-ready requires a full fast lane", () => {
     const repo = createReadyRepo();
     writeTurboSummaries(repo, ["@croco/stable"]);

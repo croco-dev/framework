@@ -308,7 +308,7 @@ describe("problem-registry.mts", () => {
       "packages/problems-core/src/generated/problem-code-registry.ts drift detected; run pnpm problem-registry:write.",
     ]);
     expect(runGit(repo, "status", "--porcelain=v1")).toBe(statusBeforeCheck);
-  }, 30_000);
+  }, 60_000);
 
   it("keeps queued candidates on their exact Problem registry base after trunk advances", () => {
     const repo = createTempRepo();

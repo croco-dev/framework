@@ -1,58 +1,17 @@
 import "reflect-metadata";
-import type { AuthProvider } from "@croco/auth-core";
-import { BILLING_GATEWAY_TOKEN } from "@croco/billing-core";
-import { EntitlementManager } from "@croco/entitlements-core";
-import { Container, LOGGER_TOKEN } from "@croco/framework-context";
-import type { Constructor, ILogger } from "@croco/framework-context";
+import type { Constructor } from "@croco/framework-context";
 import { createApplicationRuntime } from "@croco/framework-module";
 import type { ApplicationRuntime } from "@croco/framework-module";
-import {
-  createSlidingWindowPolicy,
-  RateLimiter,
-  RateLimitKeyBuilder,
-  SlidingWindowInMemoryStore,
-} from "@croco/ratelimit-core";
-import {
-  bodyLimitMiddleware,
-  corsMiddleware,
-  createApp,
-  createGracefulShutdownController,
-  createRuntimeAwareRateLimitClientIdentityPolicy,
-  mb,
-  type CrocoApp,
-  type MiddlewareFunction,
-  rateLimitHttpMiddleware,
-  securityHeadersMiddleware,
-} from "@croco/transports-http";
-import type { Constructor as RestControllerConstructor } from "@croco/protocols-rest";
-import { InMemoryStorageProvider } from "@croco/storage-core";
-import type { TaskDispatcher } from "@croco/tasks-core";
-import { TxManager } from "@croco/tx-core";
-import { JobsController } from "./controllers/JobsController";
-import { OperationsController } from "./controllers/OperationsController";
-import { SaasController } from "./controllers/SaasController";
+import { createApp, createGracefulShutdownController } from "@croco/transports-http";
+import type { CrocoApp, MiddlewareFunction } from "@croco/transports-http";
+import { BootstrapLogger } from "./bootstrapLogger";
+import { APPLICATION_CONTROLLERS, createSaasCompositionRoot } from "./compositionRoot";
 import {
   assertGeneratedSaasProfileGraph,
-  createGeneratedSaasApplicationDefinition,
   createGeneratedSaasHttpAppConfig,
   type GeneratedSaasProfileMode,
 } from "./generatedSaasProviderProfile";
-import { NoopTxAdapter } from "./inMemoryAdapters";
 import { ApplicationBootstrapProblem } from "./problems";
-import {
-  DemoBillingGateway,
-  SAAS_RUNTIME_STATE_TOKEN,
-  SaasRuntimeState,
-  createSaasDemoRuntime,
-} from "./saasDemo";
-
-const OPERATIONAL_RATE_LIMIT_BYPASS_PATHS = new Set(["/ops/health", "/ops/diagnostics"]);
-const controllers: RestControllerConstructor[] = [
-  OperationsController,
-  JobsController,
-  SaasController,
-];
-const diGraphRootControllers: readonly Constructor[] = controllers;
 
 export type CreateCrocoAppOptions = {
   readonly additionalMiddlewares?: readonly MiddlewareFunction[];
@@ -66,7 +25,7 @@ export type RuntimeOwnedCrocoApp = CrocoApp & {
 };
 
 export function createCrocoDiGraphRoots(): readonly Constructor[] {
-  return [...diGraphRootControllers];
+  return [...APPLICATION_CONTROLLERS];
 }
 
 export function createCrocoDiGraphApplication(): Promise<RuntimeOwnedCrocoApp> {
@@ -78,87 +37,36 @@ export async function createCrocoApp(
 ): Promise<RuntimeOwnedCrocoApp> {
   const profileMode = options.profileMode ?? "production";
   const logger = new BootstrapLogger();
-  const rateLimiter = new RateLimiter(
-    options.hostPlatform === "cloudflare-workers"
-      ? new SlidingWindowInMemoryStore({ pruneIntervalMs: 0 })
-      : new SlidingWindowInMemoryStore(),
-    new RateLimitKeyBuilder(["ip"]),
-  );
-  const localProviders =
-    profileMode === "zero-credential"
-      ? {
-          auth: createLocalAuthProvider(),
-          billing: new DemoBillingGateway(),
-          storage: new InMemoryStorageProvider(),
-          tasks: createLocalTaskDispatcher(),
-          transaction: new TxManager(new NoopTxAdapter()),
-        }
-      : undefined;
-  const application = createGeneratedSaasApplicationDefinition({
-    mode: profileMode,
+  let disposeRuntime = (): Promise<void> => Promise.resolve();
+  const gracefulShutdown = createGracefulShutdownController({
     logger,
-    http: {
-      controllers: controllers.map((controller) => ({
-        id: controller.name,
-        controller,
-      })),
-      diValidation: "warn",
-    },
-    ...(localProviders === undefined ? {} : { localProviders }),
+    ...(options.hostPlatform === undefined ? {} : { signals: [] }),
+    onShutdown: () => disposeRuntime(),
   });
-  const runtime = createApplicationRuntime(application);
-  let disposeApplicationRuntime = () => runtime.dispose();
+  const disposeApplicationRuntime = gracefulShutdown.shutdown;
 
   try {
+    const application = createSaasCompositionRoot({
+      profileMode,
+      logger,
+      shutdownMiddleware: gracefulShutdown.middleware,
+      ...(options.additionalMiddlewares === undefined
+        ? {}
+        : { additionalMiddlewares: options.additionalMiddlewares }),
+      ...(options.hostPlatform === undefined ? {} : { hostPlatform: options.hostPlatform }),
+    });
+    const runtime = createApplicationRuntime(application);
+    disposeRuntime = () => runtime.dispose();
     await runtime.initialize();
     assertGeneratedSaasProfileGraph(runtime.createGraphManifest(), profileMode);
-    const gracefulShutdown = createGracefulShutdownController({
-      logger,
-      ...(options.hostPlatform === undefined ? {} : { signals: [] }),
-      onShutdown: () => runtime.dispose(),
-    });
-    disposeApplicationRuntime = gracefulShutdown.shutdown;
 
-    return runtime.run(() => {
-      const runtimeState = new SaasRuntimeState({
-        create: () =>
-          createSaasDemoRuntime({
-            billingGateway: runtime.get(BILLING_GATEWAY_TOKEN),
-          }),
-        onReset: (nextRuntime) => {
-          Container.set(EntitlementManager, nextRuntime.entitlementManager);
-        },
-      });
-      Container.set(LOGGER_TOKEN, logger);
-      Container.set(EntitlementManager, runtimeState.current.entitlementManager);
-      Container.set(SAAS_RUNTIME_STATE_TOKEN, runtimeState);
-      const httpConfig = createGeneratedSaasHttpAppConfig(runtime, profileMode);
-      const pluginDiagnostics = httpConfig.diagnostics?.providers ?? [];
-
-      return bindApplicationRuntime(
-        createApp({
-          ...httpConfig,
-          controllers,
-          middlewares: [
-            gracefulShutdown.middleware,
-            securityHeadersMiddleware(),
-            corsMiddleware({ origins: [process.env.WEB_ORIGIN ?? "http://localhost:5173"] }),
-            bodyLimitMiddleware({ limit: mb(1) }),
-            createApiRateLimitMiddleware(rateLimiter),
-            ...(options.additionalMiddlewares ?? []),
-          ],
-          diagnostics: {
-            ...httpConfig.diagnostics,
-            providers: [
-              ...pluginDiagnostics,
-              ...runtimeState.current.diagnosticsCollector.getProviders(),
-            ],
-          },
-        }),
+    return runtime.run(() =>
+      bindApplicationRuntime(
+        createApp(createGeneratedSaasHttpAppConfig(runtime, profileMode)),
         runtime,
         disposeApplicationRuntime,
-      );
-    });
+      ),
+    );
   } catch (error) {
     try {
       await disposeApplicationRuntime();
@@ -167,22 +75,6 @@ export async function createCrocoApp(
     }
     throw error;
   }
-}
-
-function createLocalAuthProvider(): AuthProvider {
-  return {
-    async authenticate() {
-      return null;
-    },
-  };
-}
-
-function createLocalTaskDispatcher(): TaskDispatcher {
-  return {
-    async execute(taskId) {
-      return { messageId: `local-${taskId}` };
-    },
-  };
 }
 
 function bindApplicationRuntime(
@@ -238,79 +130,4 @@ function bindHostCallbacks(app: CrocoApp, runtime: ApplicationRuntime): void {
     runtimeBoundHono = hono;
     return hono;
   };
-}
-
-class BootstrapLogger implements ILogger {
-  constructor(private readonly bindings: Record<string, unknown> = {}) {}
-
-  debug(message: string, context?: Record<string, unknown>): void {
-    const outputContext = this.withBindings(context);
-    if (outputContext === undefined) {
-      console.debug(message);
-      return;
-    }
-    console.debug(message, outputContext);
-  }
-
-  info(message: string, context?: Record<string, unknown>): void {
-    const outputContext = this.withBindings(context);
-    if (outputContext === undefined) {
-      console.info(message);
-      return;
-    }
-    console.info(message, outputContext);
-  }
-
-  warn(message: string, context?: Record<string, unknown>): void {
-    const outputContext = this.withBindings(context);
-    if (outputContext === undefined) {
-      console.warn(message);
-      return;
-    }
-    console.warn(message, outputContext);
-  }
-
-  error(message: string, context?: Record<string, unknown> | Error): void {
-    this.writeError(message, context);
-  }
-
-  fatal(message: string, context?: Record<string, unknown> | Error): void {
-    this.writeError(message, context);
-  }
-
-  child(bindings: Record<string, unknown>): ILogger {
-    return new BootstrapLogger({ ...this.bindings, ...bindings });
-  }
-
-  private writeError(message: string, context?: Record<string, unknown> | Error): void {
-    if (context instanceof Error) {
-      if (Object.keys(this.bindings).length === 0) {
-        console.error(message, context);
-        return;
-      }
-      console.error(message, this.bindings, context);
-      return;
-    }
-
-    const outputContext = this.withBindings(context);
-    if (outputContext === undefined) {
-      console.error(message);
-      return;
-    }
-    console.error(message, outputContext);
-  }
-
-  private withBindings(context?: Record<string, unknown>): Record<string, unknown> | undefined {
-    const outputContext = { ...this.bindings, ...context };
-    return Object.keys(outputContext).length === 0 ? undefined : outputContext;
-  }
-}
-
-function createApiRateLimitMiddleware(rateLimiter: RateLimiter): MiddlewareFunction {
-  return rateLimitHttpMiddleware({
-    rateLimiter,
-    policy: createSlidingWindowPolicy("api", 100, 60_000),
-    clientIdentity: createRuntimeAwareRateLimitClientIdentityPolicy(),
-    skip: (ctx) => OPERATIONAL_RATE_LIMIT_BYPASS_PATHS.has(ctx.req.path),
-  });
 }

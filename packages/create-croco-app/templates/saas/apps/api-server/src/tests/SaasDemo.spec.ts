@@ -229,6 +229,38 @@ describe("SaaS golden path demo", () => {
   );
 
   executableProfileTest(
+    "keeps plugins and application-owned contributions in one runtime graph",
+    async () => {
+      const app = await createCrocoApp({ profileMode: "zero-credential" });
+
+      try {
+        const graph = app.applicationRuntime.createGraphManifest();
+        const applicationContributions = graph.contributions.filter(
+          ({ moduleName }) => moduleName === "saas-application",
+        );
+
+        expect(graph.moduleGraph.modules.map(({ name }) => name)).toContain("saas-application");
+        expect(graph.plugins.map(({ name }) => name)).toEqual(
+          expect.arrayContaining([
+            "better-auth",
+            "cloudinary-storage",
+            "drizzle-transaction",
+            "node-telemetry",
+            "polar-billing",
+            "qstash-tasks",
+            "transports-http",
+          ]),
+        );
+        expect(applicationContributions.map(({ kind }) => kind)).toEqual(
+          expect.arrayContaining(["diagnostics.provider", "http.controller", "http.middleware"]),
+        );
+      } finally {
+        await app.disposeApplicationRuntime();
+      }
+    },
+  );
+
+  executableProfileTest(
     "keeps telemetry unavailable in zero-credential mode when the environment enables it",
     async () => {
       const previousTelemetryEnabled = process.env.TELEMETRY_ENABLED;
@@ -281,6 +313,23 @@ describe("SaaS golden path demo", () => {
       expect(process.listenerCount("SIGTERM")).toBe(sigtermListeners);
     } finally {
       await app.disposeApplicationRuntime();
+    }
+  });
+
+  executableProfileTest("releases signal handlers when composition fails", async () => {
+    const previousDatabaseUrl = process.env.DATABASE_URL;
+    const sigintListeners = process.listenerCount("SIGINT");
+    const sigtermListeners = process.listenerCount("SIGTERM");
+    process.env.DATABASE_URL = "<missing>";
+
+    try {
+      await expect(createCrocoApp()).rejects.toMatchObject({
+        code: "CROCO_SAAS_PROFILE_ENV_MISSING",
+      });
+      expect(process.listenerCount("SIGINT")).toBe(sigintListeners);
+      expect(process.listenerCount("SIGTERM")).toBe(sigtermListeners);
+    } finally {
+      restoreEnvironment("DATABASE_URL", previousDatabaseUrl);
     }
   });
 
@@ -825,6 +874,14 @@ function captureActiveScope(scopes: string[]): MiddlewareFunction {
     scopes.push(CrocoContainer.getActiveScopeId() ?? "missing");
     return next();
   };
+}
+
+function restoreEnvironment(name: string, value: string | undefined): void {
+  if (value === undefined) {
+    delete process.env[name];
+    return;
+  }
+  process.env[name] = value;
 }
 
 function createLambdaEvent(): LambdaEvent {

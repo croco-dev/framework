@@ -5230,7 +5230,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/cli/src/commands/generateUsageDashboard.ts",
-          line: 25,
+          line: 30,
           column: 5,
           kind: "problem-constructor",
         },

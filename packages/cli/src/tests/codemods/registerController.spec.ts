@@ -298,6 +298,25 @@ export function createCrocoApp() {
     expect(content).toContain("return controllers;");
   });
 
+  it("adds a controller to an explicitly selected registration array", async () => {
+    await writeFixture(`
+import { FooController } from './somewhere';
+
+export const APPLICATION_CONTROLLERS = [FooController];
+`);
+
+    const result = await registerBarController({
+      registrationArrayName: "APPLICATION_CONTROLLERS",
+    });
+    const content = await readFixture();
+
+    expect(result.status).toBe("updated");
+    expect(content).toContain(
+      "export const APPLICATION_CONTROLLERS = [FooController, BarController];",
+    );
+    expect(content).toContain("import { BarController } from './domains/bar/BarController';");
+  });
+
   it("inserts addControllers before app.listen when no registration exists", async () => {
     await writeFixture(`
 import { createCrocoApp } from './app';
@@ -472,12 +491,18 @@ app.listen({ port: 3000 });
     expect(after).toBe(before);
   });
 
-  async function registerBarController(options: { readonly dryRun?: boolean } = {}) {
+  async function registerBarController(
+    options: {
+      readonly dryRun?: boolean;
+      readonly registrationArrayName?: string;
+    } = {},
+  ) {
     return registerController({
       entryPath,
       importPath: "./domains/bar/BarController",
       className: "BarController",
       dryRun: options.dryRun,
+      registrationArrayName: options.registrationArrayName,
     });
   }
 

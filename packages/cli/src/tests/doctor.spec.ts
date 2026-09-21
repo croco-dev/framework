@@ -3245,6 +3245,554 @@ describe("doctor", () => {
     expect(report.diagnostics).toEqual([]);
   });
 
+  it("accepts HTTP security middleware contributed by the application module", () => {
+    const repo = createCrocoWorkspace();
+    writeWorkspacePackage(repo, "packages/api", "@smoke/api-server", {
+      dependencies: {
+        "@croco/transports-http": "file:../packs/croco-transports-http.tgz",
+      },
+    });
+    writeNodeModulePackage(repo, "@croco/transports-http", "packages/api");
+    writeFile(
+      repo,
+      "packages/api/src/app.ts",
+      [
+        'import { createApplicationRuntime } from "@croco/framework-module";',
+        'import { createApp } from "@croco/transports-http";',
+        'import { createApplication } from "./compositionRoot";',
+        "export function createApiApp() {",
+        "  const runtime = createApplicationRuntime(createApplication());",
+        "  return createApp(createHttpAppConfig(runtime));",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/api/src/compositionRoot.ts",
+      [
+        'import { defineCrocoApplication } from "@croco/framework-module";',
+        'import { applicationModule } from "./applicationModule";',
+        "export function createApplication() {",
+        '  return defineCrocoApplication({ name: "api", imports: [applicationModule] });',
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/api/src/applicationModule.ts",
+      [
+        'import { defineCrocoModule, MODULE_CONTRIBUTION_KINDS } from "@croco/framework-module";',
+        'import { bodyLimitMiddleware, corsMiddleware, rateLimitHttpMiddleware, securityHeadersMiddleware } from "@croco/transports-http";',
+        "const middlewares = [",
+        "  securityHeadersMiddleware(),",
+        "  corsMiddleware({ origins: ['http://localhost:5173'] }),",
+        "  bodyLimitMiddleware({ limit: 1024 }),",
+        "  rateLimitHttpMiddleware({ rateLimiter: {} as never, policy: {} as never }),",
+        "];",
+        "export const applicationModule = defineCrocoModule({",
+        '  name: "application",',
+        "  contributions: middlewares.map((value, order) => ({",
+        "    kind: MODULE_CONTRIBUTION_KINDS.httpMiddleware,",
+        "    id: String(order),",
+        "    value,",
+        "  })),",
+        "});",
+        "",
+      ].join("\n"),
+    );
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("healthy");
+    expect(report.diagnostics).toEqual([]);
+  });
+
+  it("accepts runtime middleware when its config spread follows an earlier override", () => {
+    const repo = createCrocoWorkspace();
+    writeWorkspacePackage(repo, "packages/api", "@smoke/api-server", {
+      dependencies: {
+        "@croco/transports-http": "file:../packs/croco-transports-http.tgz",
+      },
+    });
+    writeNodeModulePackage(repo, "@croco/transports-http", "packages/api");
+    writeFile(
+      repo,
+      "packages/api/src/app.ts",
+      [
+        'import { createApplicationRuntime } from "@croco/framework-module";',
+        'import { createApp } from "@croco/transports-http";',
+        'import { createApplication } from "./compositionRoot";',
+        "export function createApiApp() {",
+        "  const runtime = createApplicationRuntime(createApplication());",
+        "  return createApp({ middlewares: [], ...createHttpAppConfig(runtime) });",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeConnectedHttpSecurityApplication(repo);
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("healthy");
+    expect(report.diagnostics).toEqual([]);
+  });
+
+  it("accepts module contributions composed through an application callback", () => {
+    const repo = createCrocoWorkspace();
+    writeWorkspacePackage(repo, "packages/api", "@smoke/api-server", {
+      dependencies: {
+        "@croco/transports-http": "file:../packs/croco-transports-http.tgz",
+      },
+    });
+    writeNodeModulePackage(repo, "@croco/transports-http", "packages/api");
+    writeFile(
+      repo,
+      "packages/api/src/app.ts",
+      [
+        'import { createApplicationRuntime } from "@croco/framework-module";',
+        'import { createApp } from "@croco/transports-http";',
+        'import { createComposition } from "./compositionRoot";',
+        "export function createApiApp() {",
+        "  const runtime = createApplicationRuntime(createComposition());",
+        "  return createApp(createHttpAppConfig(runtime));",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/api/src/compositionRoot.ts",
+      [
+        'import { createApplicationModule } from "./applicationModule";',
+        'import { createGeneratedApplication } from "./generatedProfile";',
+        "export function createComposition() {",
+        "  return createGeneratedApplication({",
+        "    applicationModules: () => [createApplicationModule()],",
+        "  });",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/api/src/generatedProfile.ts",
+      [
+        'import { defineCrocoApplication } from "@croco/framework-module";',
+        "export function createGeneratedApplication(options: { applicationModules?(): readonly unknown[] }) {",
+        "  const applicationModules = options.applicationModules?.() ?? [];",
+        '  return defineCrocoApplication({ name: "api", imports: [...applicationModules] });',
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/api/src/applicationModule.ts",
+      [
+        'import { defineCrocoModule, MODULE_CONTRIBUTION_KINDS } from "@croco/framework-module";',
+        'import { bodyLimitMiddleware, corsMiddleware, rateLimitHttpMiddleware, securityHeadersMiddleware } from "@croco/transports-http";',
+        "export function createApplicationModule() {",
+        "  const middlewares = createApplicationMiddlewares();",
+        "  return defineCrocoModule({",
+        '    name: "application",',
+        "    contributions: middlewares.map((value, order) => ({",
+        "      kind: MODULE_CONTRIBUTION_KINDS.httpMiddleware,",
+        "      id: String(order),",
+        "      value,",
+        "    })),",
+        "  });",
+        "}",
+        "function createApplicationMiddlewares() {",
+        "  return [",
+        "    securityHeadersMiddleware(),",
+        "    corsMiddleware({ origins: ['http://localhost:5173'] }),",
+        "    bodyLimitMiddleware({ limit: 1024 }),",
+        "    rateLimitHttpMiddleware({ rateLimiter: {} as never, policy: {} as never }),",
+        "  ];",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("healthy");
+    expect(report.diagnostics).toEqual([]);
+  });
+
+  it("rejects module-owned HTTP security middleware that is only imported", () => {
+    const repo = createCrocoWorkspace();
+    writeWorkspacePackage(repo, "packages/api", "@smoke/api-server", {
+      dependencies: {
+        "@croco/transports-http": "file:../packs/croco-transports-http.tgz",
+      },
+    });
+    writeNodeModulePackage(repo, "@croco/transports-http", "packages/api");
+    writeFile(
+      repo,
+      "packages/api/src/app.ts",
+      [
+        'import { createApplicationRuntime } from "@croco/framework-module";',
+        'import { createApp } from "@croco/transports-http";',
+        'import { applicationModule } from "./applicationModule";',
+        'import { createApplication } from "./compositionRoot";',
+        "export function createApiApp() {",
+        "  void applicationModule;",
+        "  const runtime = createApplicationRuntime(createApplication());",
+        "  return createApp(createHttpAppConfig(runtime));",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/api/src/compositionRoot.ts",
+      [
+        'import { defineCrocoApplication } from "@croco/framework-module";',
+        "export function createApplication() {",
+        '  return defineCrocoApplication({ name: "api", imports: [] });',
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeModuleOwnedHttpSecuritySource(repo);
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("issues_detected");
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({ code: "CROCO_DOCTOR_HTTP_SECURITY_MIDDLEWARE_MISSING" }),
+    ]);
+  });
+
+  it("rejects middleware calls outside the HTTP contribution value", () => {
+    const repo = createCrocoWorkspace();
+    writeWorkspacePackage(repo, "packages/api", "@smoke/api-server", {
+      dependencies: {
+        "@croco/transports-http": "file:../packs/croco-transports-http.tgz",
+      },
+    });
+    writeNodeModulePackage(repo, "@croco/transports-http", "packages/api");
+    writeFile(
+      repo,
+      "packages/api/src/app.ts",
+      [
+        'import { createApplicationRuntime } from "@croco/framework-module";',
+        'import { createApp } from "@croco/transports-http";',
+        'import { createApplication } from "./compositionRoot";',
+        "export function createApiApp() {",
+        "  const runtime = createApplicationRuntime(createApplication());",
+        "  return createApp(createHttpAppConfig(runtime));",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/api/src/compositionRoot.ts",
+      [
+        'import { defineCrocoApplication } from "@croco/framework-module";',
+        'import { applicationModule } from "./applicationModule";',
+        "export function createApplication() {",
+        '  return defineCrocoApplication({ name: "api", imports: [applicationModule] });',
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/api/src/applicationModule.ts",
+      [
+        'import { defineCrocoModule, MODULE_CONTRIBUTION_KINDS } from "@croco/framework-module";',
+        'import { bodyLimitMiddleware, corsMiddleware, rateLimitHttpMiddleware, securityHeadersMiddleware } from "@croco/transports-http";',
+        "export const applicationModule = defineCrocoModule({",
+        '  name: "application",',
+        "  contributions: [{",
+        "    kind: MODULE_CONTRIBUTION_KINDS.httpMiddleware,",
+        '    id: "unsecured",',
+        "    value: {} as never,",
+        "  }],",
+        "});",
+        "function unusedSecurityMiddleware() {",
+        "  securityHeadersMiddleware();",
+        "  corsMiddleware({ origins: ['http://localhost:5173'] });",
+        "  bodyLimitMiddleware({ limit: 1024 });",
+        "  rateLimitHttpMiddleware({ rateLimiter: {} as never, policy: {} as never });",
+        "}",
+        "void unusedSecurityMiddleware;",
+        "",
+      ].join("\n"),
+    );
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("issues_detected");
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({ code: "CROCO_DOCTOR_HTTP_SECURITY_MIDDLEWARE_MISSING" }),
+    ]);
+  });
+
+  it("rejects HTTP security middleware from a disconnected application module", () => {
+    const repo = createCrocoWorkspace();
+    writeWorkspacePackage(repo, "packages/api", "@smoke/api-server", {
+      dependencies: {
+        "@croco/transports-http": "file:../packs/croco-transports-http.tgz",
+      },
+    });
+    writeNodeModulePackage(repo, "@croco/transports-http", "packages/api");
+    writeFile(
+      repo,
+      "packages/api/src/app.ts",
+      [
+        'import { createApp } from "@croco/transports-http";',
+        "export function createApiApp(runtime: unknown) {",
+        "  return createApp(createHttpAppConfig(runtime));",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/api/src/applicationModule.ts",
+      [
+        'import { defineCrocoModule, MODULE_CONTRIBUTION_KINDS } from "@croco/framework-module";',
+        'import { bodyLimitMiddleware, corsMiddleware, rateLimitHttpMiddleware, securityHeadersMiddleware } from "@croco/transports-http";',
+        "const middlewares = [",
+        "  securityHeadersMiddleware(),",
+        "  corsMiddleware({ origins: ['http://localhost:5173'] }),",
+        "  bodyLimitMiddleware({ limit: 1024 }),",
+        "  rateLimitHttpMiddleware({ rateLimiter: {} as never, policy: {} as never }),",
+        "];",
+        "export const applicationModule = defineCrocoModule({",
+        '  name: "application",',
+        "  contributions: middlewares.map((value, order) => ({",
+        "    kind: MODULE_CONTRIBUTION_KINDS.httpMiddleware,",
+        "    id: String(order),",
+        "    value,",
+        "  })),",
+        "});",
+        "",
+      ].join("\n"),
+    );
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("issues_detected");
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({ code: "CROCO_DOCTOR_HTTP_SECURITY_MIDDLEWARE_MISSING" }),
+    ]);
+  });
+
+  it.each([
+    ["a discarded secure module", "createSecureModule();"],
+    ["an unused nested secure module", "function unused() { return createSecureModule(); }"],
+  ])("rejects security evidence from %s", (_label, discardedSource) => {
+    const repo = createCrocoWorkspace();
+    writeWorkspacePackage(repo, "packages/api", "@smoke/api-server", {
+      dependencies: { "@croco/transports-http": "file:../packs/croco-transports-http.tgz" },
+    });
+    writeNodeModulePackage(repo, "@croco/transports-http", "packages/api");
+    writeConnectedHttpSecurityApplication(repo);
+    writeFile(
+      repo,
+      "packages/api/src/app.ts",
+      [
+        'import { createApp } from "@croco/transports-http";',
+        'import { createApplication } from "./compositionRoot";',
+        "const runtime = createApplicationRuntime(createApplication());",
+        "export const app = createApp({ ...createHttpAppConfig(runtime) });",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/api/src/compositionRoot.ts",
+      [
+        "function createSecureModule() {",
+        'return defineCrocoModule({ name: "security", contributions: [',
+        "securityHeadersMiddleware(), corsMiddleware(), bodyLimitMiddleware(), rateLimitHttpMiddleware(),",
+        "].map((value) => ({ kind: MODULE_CONTRIBUTION_KINDS.httpMiddleware, value })) });",
+        "}",
+        "export function createApplication() {",
+        discardedSource,
+        'return defineCrocoApplication({ name: "api", imports: [defineCrocoModule({ name: "empty" })] });',
+        "}",
+      ].join("\n"),
+    );
+
+    expect(runDoctor({ cwd: repo }).diagnostics).toEqual([
+      expect.objectContaining({ code: "CROCO_DOCTOR_HTTP_SECURITY_MIDDLEWARE_MISSING" }),
+    ]);
+  });
+
+  it.each([
+    [
+      "the final empty runtime spread",
+      "...createHttpAppConfig(secureRuntime), ...createHttpAppConfig(emptyRuntime)",
+    ],
+    ["a later unproven spread", "...createHttpAppConfig(secureRuntime), ...unprovenConfig"],
+    ["an unused nested config call", "...{ unused: () => createHttpAppConfig(secureRuntime) }"],
+  ])("rejects security evidence overridden by %s", (_label, options) => {
+    const repo = createCrocoWorkspace();
+    writeWorkspacePackage(repo, "packages/api", "@smoke/api-server", {
+      dependencies: { "@croco/transports-http": "file:../packs/croco-transports-http.tgz" },
+    });
+    writeNodeModulePackage(repo, "@croco/transports-http", "packages/api");
+    writeConnectedHttpSecurityApplication(repo);
+    writeFile(
+      repo,
+      "packages/api/src/app.ts",
+      [
+        'import { createApp } from "@croco/transports-http";',
+        'import { createApplication } from "./compositionRoot";',
+        "const secureRuntime = createApplicationRuntime(createApplication());",
+        'const emptyRuntime = createApplicationRuntime(defineCrocoApplication({ name: "empty", imports: [] }));',
+        "const unprovenConfig = getUntrustedOptions();",
+        `export const app = createApp({ ${options} });`,
+      ].join("\n"),
+    );
+
+    expect(runDoctor({ cwd: repo }).diagnostics).toEqual([
+      expect.objectContaining({ code: "CROCO_DOCTOR_HTTP_SECURITY_MIDDLEWARE_MISSING" }),
+    ]);
+  });
+
+  it("rejects an empty middleware override over module-owned security contributions", () => {
+    const repo = createCrocoWorkspace();
+    writeWorkspacePackage(repo, "packages/api", "@smoke/api-server", {
+      dependencies: {
+        "@croco/transports-http": "file:../packs/croco-transports-http.tgz",
+      },
+    });
+    writeNodeModulePackage(repo, "@croco/transports-http", "packages/api");
+    writeFile(
+      repo,
+      "packages/api/src/app.ts",
+      [
+        'import { createApp } from "@croco/transports-http";',
+        'import { createApplication } from "./compositionRoot";',
+        "export function createApiApp() {",
+        "  const runtime = createApplicationRuntime(createApplication());",
+        "  return createApp({ ...createHttpAppConfig(runtime), middlewares: [] });",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeConnectedHttpSecurityApplication(repo);
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("issues_detected");
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({ code: "CROCO_DOCTOR_HTTP_SECURITY_MIDDLEWARE_MISSING" }),
+    ]);
+  });
+
+  it("rejects a shorthand middleware override over module-owned security contributions", () => {
+    const repo = createCrocoWorkspace();
+    writeWorkspacePackage(repo, "packages/api", "@smoke/api-server", {
+      dependencies: {
+        "@croco/transports-http": "file:../packs/croco-transports-http.tgz",
+      },
+    });
+    writeNodeModulePackage(repo, "@croco/transports-http", "packages/api");
+    writeFile(
+      repo,
+      "packages/api/src/app.ts",
+      [
+        'import { createApp } from "@croco/transports-http";',
+        'import { createApplication } from "./compositionRoot";',
+        "export function createApiApp() {",
+        "  const runtime = createApplicationRuntime(createApplication());",
+        "  const middlewares = [];",
+        "  return createApp({ ...createHttpAppConfig(runtime), middlewares });",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeConnectedHttpSecurityApplication(repo);
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("issues_detected");
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({ code: "CROCO_DOCTOR_HTTP_SECURITY_MIDDLEWARE_MISSING" }),
+    ]);
+  });
+
+  it.each([
+    ["an import type declaration", 'import type { ApplicationModule } from "./applicationModule";'],
+    ["an inline type import", 'import { type ApplicationModule } from "./applicationModule";'],
+  ])("rejects HTTP security middleware reached only through %s", (_label, typeImport) => {
+    const repo = createCrocoWorkspace();
+    writeWorkspacePackage(repo, "packages/api", "@smoke/api-server", {
+      dependencies: {
+        "@croco/transports-http": "file:../packs/croco-transports-http.tgz",
+      },
+    });
+    writeNodeModulePackage(repo, "@croco/transports-http", "packages/api");
+    writeFile(
+      repo,
+      "packages/api/src/app.ts",
+      [
+        'import { createApp } from "@croco/transports-http";',
+        typeImport,
+        "export function createApiApp(runtime: unknown) {",
+        "  return createApp(createHttpAppConfig(runtime));",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeModuleOwnedHttpSecuritySource(repo, true);
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("issues_detected");
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({ code: "CROCO_DOCTOR_HTTP_SECURITY_MIDDLEWARE_MISSING" }),
+    ]);
+  });
+
+  it.each([
+    ["an export type declaration", 'export type { ApplicationModule } from "./applicationModule";'],
+    ["an inline type export", 'export { type ApplicationModule } from "./applicationModule";'],
+  ])("rejects HTTP security middleware reached only through %s", (_label, typeExport) => {
+    const repo = createCrocoWorkspace();
+    writeWorkspacePackage(repo, "packages/api", "@smoke/api-server", {
+      dependencies: {
+        "@croco/transports-http": "file:../packs/croco-transports-http.tgz",
+      },
+    });
+    writeNodeModulePackage(repo, "@croco/transports-http", "packages/api");
+    writeFile(
+      repo,
+      "packages/api/src/app.ts",
+      [
+        'import { createApp } from "@croco/transports-http";',
+        'import { runtimeMarker } from "./bridge";',
+        "export function createApiApp(runtime: unknown) {",
+        "  void runtimeMarker;",
+        "  return createApp(createHttpAppConfig(runtime));",
+        "}",
+        "",
+      ].join("\n"),
+    );
+    writeFile(
+      repo,
+      "packages/api/src/bridge.ts",
+      ["export const runtimeMarker = true;", typeExport, ""].join("\n"),
+    );
+    writeModuleOwnedHttpSecuritySource(repo, true);
+
+    const report = runDoctor({ cwd: repo });
+
+    expect(report.summary).toBe("issues_detected");
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({ code: "CROCO_DOCTOR_HTTP_SECURITY_MIDDLEWARE_MISSING" }),
+    ]);
+  });
+
   it("fails ProblemRegistry readiness when the declared drift gate fails", () => {
     const repo = createCrocoWorkspace();
     writeRootPackage(repo, {
@@ -3946,6 +4494,48 @@ function writeTenantModelManifest(repo: string, manifest: Record<string, unknown
 
 function writeJson(repo: string, relativePath: string, value: unknown): void {
   writeFile(repo, relativePath, `${JSON.stringify(value, null, 2)}\n`);
+}
+
+function writeModuleOwnedHttpSecuritySource(repo: string, exportType = false): void {
+  writeFile(
+    repo,
+    "packages/api/src/applicationModule.ts",
+    [
+      'import { defineCrocoModule, MODULE_CONTRIBUTION_KINDS } from "@croco/framework-module";',
+      'import { bodyLimitMiddleware, corsMiddleware, rateLimitHttpMiddleware, securityHeadersMiddleware } from "@croco/transports-http";',
+      ...(exportType ? ["export type ApplicationModule = {};"] : []),
+      "export const applicationModule = defineCrocoModule({",
+      '  name: "application",',
+      "  contributions: [",
+      "    securityHeadersMiddleware(),",
+      "    corsMiddleware({ origins: ['http://localhost:5173'] }),",
+      "    bodyLimitMiddleware({ limit: 1024 }),",
+      "    rateLimitHttpMiddleware({ rateLimiter: {} as never, policy: {} as never }),",
+      "  ].map((value, order) => ({",
+      "    kind: MODULE_CONTRIBUTION_KINDS.httpMiddleware,",
+      "    id: String(order),",
+      "    value,",
+      "  })),",
+      "});",
+      "",
+    ].join("\n"),
+  );
+}
+
+function writeConnectedHttpSecurityApplication(repo: string): void {
+  writeFile(
+    repo,
+    "packages/api/src/compositionRoot.ts",
+    [
+      'import { defineCrocoApplication } from "@croco/framework-module";',
+      'import { applicationModule } from "./applicationModule";',
+      "export function createApplication() {",
+      '  return defineCrocoApplication({ name: "api", imports: [applicationModule] });',
+      "}",
+      "",
+    ].join("\n"),
+  );
+  writeModuleOwnedHttpSecuritySource(repo);
 }
 
 function normalizeDoctorReportForSnapshot(report: DoctorReport, rootDir: string): DoctorReport {
