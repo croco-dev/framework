@@ -99,6 +99,7 @@ describe("MeteringService", () => {
       markMeteringEventsPublishing: vi.fn().mockResolvedValue(undefined),
       releaseMeteringProcessing: vi.fn().mockResolvedValue(undefined),
       releaseMeteringEvents: vi.fn().mockResolvedValue(undefined),
+      releaseMeteringQuotaRejection: vi.fn().mockResolvedValue(undefined),
       completeMeteringProcessing: vi.fn().mockResolvedValue(undefined),
       abortMeteringProcessing: vi.fn().mockResolvedValue(undefined),
     } as unknown as IdempotencyManager;
@@ -739,12 +740,13 @@ describe("MeteringService", () => {
         }),
       ).rejects.toThrow(QuotaExceededProblem);
 
-      expect(mockIdempotency.completeMeteringProcessing).toHaveBeenCalledWith(
+      expect(mockIdempotency.releaseMeteringQuotaRejection).toHaveBeenCalledWith(
         "tenant-1",
         "api_calls",
         "generated-key",
         "claim-token",
       );
+      expect(mockIdempotency.completeMeteringProcessing).not.toHaveBeenCalled();
       expect(mockIdempotency.abortMeteringProcessing).not.toHaveBeenCalled();
       expect(mockIdempotency.releaseMeteringEvents).not.toHaveBeenCalled();
     });

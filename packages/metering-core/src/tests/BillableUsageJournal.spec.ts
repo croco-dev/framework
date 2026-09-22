@@ -70,6 +70,33 @@ describe("InMemoryBillableUsageJournal", () => {
     ).resolves.toMatchObject({ state: "delivering", ownerId: "worker-1" });
   });
 
+  it("keeps quota-rejected usage recoverable without losing failure evidence", async () => {
+    const now = new Date("2026-08-01T00:00:00.000Z");
+    const failure = { code: "metering/quota-exceeded", message: "over quota" };
+    await journal.append(EVENT, now);
+
+    await journal.markUndeliverable(EVENT.eventId, failure, now);
+    await journal.markUndeliverable(EVENT.eventId, failure, now);
+
+    await expect(journal.get(EVENT.eventId)).resolves.toMatchObject({
+      state: "pending",
+      failure,
+    });
+    await expect(
+      journal.claimNext({ ownerId: "worker-1", leaseDurationMs: 1_000, now }),
+    ).resolves.toBeNull();
+    await expect(journal.getDiagnostics(now)).resolves.toMatchObject({
+      backlogCount: 1,
+      terminalFailureCount: 0,
+    });
+
+    await journal.markDeliverable(EVENT.eventId, now);
+    expect((await journal.get(EVENT.eventId))?.failure).toBeUndefined();
+    await expect(
+      journal.claimNext({ ownerId: "worker-1", leaseDurationMs: 1_000, now }),
+    ).resolves.toMatchObject({ state: "delivering" });
+  });
+
   it("permits one active owner and fences a stale owner after lease expiry", async () => {
     const startedAt = new Date("2026-08-01T00:00:00.000Z");
     await journal.append(EVENT, startedAt);

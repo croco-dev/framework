@@ -133,7 +133,7 @@ export class MeteringService {
     );
     let publishingClaimed = claim.delivery !== undefined;
     let persistenceStarted = claim.delivery !== undefined;
-    let processingCompleted = false;
+    let claimSettled = false;
 
     try {
       let delivery = claim.delivery;
@@ -172,10 +172,10 @@ export class MeteringService {
       }
 
       return await this.publishDelivery(claim, delivery, () => {
-        processingCompleted = true;
+        claimSettled = true;
       });
     } catch (error) {
-      if (processingCompleted) {
+      if (claimSettled) {
         throw error;
       }
       if (publishingClaimed) {
@@ -357,7 +357,7 @@ export class MeteringService {
   private async publishDelivery(
     claim: MeteringProcessingClaim,
     delivery: PendingMeteringDelivery,
-    onCompleted: () => void,
+    onClaimSettled: () => void,
   ): Promise<UsageRecord> {
     const usageRecord: UsageRecord = {
       ...delivery.usageRecord,
@@ -380,13 +380,13 @@ export class MeteringService {
     }
 
     if (quota?.exceeded && !quota.allowOverQuota) {
-      await this.idempotencyManager.completeMeteringProcessing(
+      await this.idempotencyManager.releaseMeteringQuotaRejection(
         tenantId,
         meterId,
         idempotencyKey,
         claim.token,
       );
-      onCompleted();
+      onClaimSettled();
       this.quotaManager.validateOrThrow({
         meterId,
         quota: quota.quota,
@@ -415,7 +415,7 @@ export class MeteringService {
       idempotencyKey,
       claim.token,
     );
-    onCompleted();
+    onClaimSettled();
     return usageRecord;
   }
 

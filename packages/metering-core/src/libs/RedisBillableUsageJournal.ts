@@ -87,17 +87,25 @@ if entry.state ~= 'pending' then return { 0, 'STATUS:' .. tostring(entry.state),
 
 local redisTime = redis.call('TIME')
 local nowMs = tonumber(redisTime[1]) * 1000 + math.floor(tonumber(redisTime[2]) / 1000)
+local failure = cjson.decode(ARGV[3])
+local quotaRejected = ARGV[1] == 'terminal-failed' and failure.code == 'metering/quota-exceeded'
 entry.updatedAt = nowMs
 if ARGV[1] == 'deliverable' then
   entry.deliverableAt = nowMs
+  entry.failure = nil
+elseif quotaRejected then
+  entry.deliverableAt = nil
+  entry.failure = failure
 else
   entry.state = 'terminal-failed'
-  entry.failure = cjson.decode(ARGV[3])
+  entry.failure = failure
 end
 local updated = cjson.encode(entry)
 redis.call('SET', KEYS[1], updated)
 if ARGV[1] == 'deliverable' then
   redis.call('ZADD', KEYS[2], nowMs, ARGV[2])
+elseif quotaRejected then
+  redis.call('ZREM', KEYS[2], ARGV[2])
 else
   redis.call('ZREM', KEYS[2], ARGV[2])
   redis.call('ZREM', KEYS[3], ARGV[2])

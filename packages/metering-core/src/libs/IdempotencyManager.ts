@@ -453,6 +453,42 @@ export class IdempotencyManager {
     this.requireStagedTransition(transitioned, reason, idempotencyKey, "release-events");
   }
 
+  async releaseMeteringQuotaRejection(
+    tenantId: string,
+    meterId: string,
+    idempotencyKey: string,
+    token: IdempotencyClaim,
+  ): Promise<void> {
+    const key = this.buildDeliveryKey(tenantId, meterId, idempotencyKey);
+    const [transitioned, reason] = await this.redis.eval<[number, string]>(
+      `
+        local stateJson = redis.call('GET', KEYS[1])
+        if not stateJson then
+          return { 0, 'MISSING' }
+        end
+
+        local state = cjson.decode(stateJson)
+        if state.status ~= 'PUBLISHING' then
+          return { 0, 'STATUS:' .. tostring(state.status) }
+        end
+        if state.token ~= ARGV[1] then
+          return { 0, 'TOKEN' }
+        end
+
+        state.status = 'PROCESSING'
+        state.delivery = nil
+        state.persistenceStarted = nil
+        state.token = nil
+        state.leaseExpiresAt = 0
+        redis.call('SET', KEYS[1], cjson.encode(state), 'EX', ARGV[2])
+        return { 1, 'OK' }
+      `,
+      [key],
+      [token, this.activeStateTtlSeconds],
+    );
+    this.requireStagedTransition(transitioned, reason, idempotencyKey, "release-quota-rejection");
+  }
+
   async completeMeteringProcessing(
     tenantId: string,
     meterId: string,

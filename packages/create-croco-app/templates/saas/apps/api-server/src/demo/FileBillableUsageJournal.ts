@@ -91,6 +91,7 @@ export class FileBillableUsageJournal implements BillableUsageJournal {
   ): Promise<BillableUsageJournalEntry> {
     return updateSqliteFixtureState(this.filePath, EMPTY_JOURNAL, (journal) => {
       const entry = requirePending(journal, eventId, "activate-billable-usage");
+      entry.failure = undefined;
       entry.deliverableAt = now.toISOString();
       entry.updatedAt = now.toISOString();
       return toEntry(entry);
@@ -104,9 +105,13 @@ export class FileBillableUsageJournal implements BillableUsageJournal {
   ): Promise<BillableUsageJournalEntry> {
     return updateSqliteFixtureState(this.filePath, EMPTY_JOURNAL, (journal) => {
       const entry = requirePending(journal, eventId, "reject-pending-billable-usage");
-      entry.state = "terminal-failed";
       entry.failure = { ...failure };
       entry.updatedAt = now.toISOString();
+      if (failure.code === "metering/quota-exceeded") {
+        entry.deliverableAt = undefined;
+        return toEntry(entry);
+      }
+      entry.state = "terminal-failed";
       return toEntry(entry);
     });
   }

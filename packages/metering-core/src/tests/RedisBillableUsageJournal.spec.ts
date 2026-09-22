@@ -66,6 +66,27 @@ describe("RedisBillableUsageJournal", () => {
     });
   });
 
+  it("keeps quota rejection recoverable while preserving its failure", async () => {
+    const quotaRejected = {
+      event: EVENT,
+      state: "pending",
+      createdAt: "2026-08-01T00:00:00.000Z",
+      updatedAt: "2026-08-01T00:00:00.000Z",
+      retryCount: 0,
+      failure: { code: "metering/quota-exceeded", message: "over quota" },
+    };
+    vi.mocked(redis.eval).mockResolvedValue([1, "OK", JSON.stringify(storedEntry(quotaRejected))]);
+
+    await expect(
+      journal.markUndeliverable(EVENT.eventId, quotaRejected.failure),
+    ).resolves.toMatchObject({ state: "pending", failure: quotaRejected.failure });
+
+    const [script, , args] = vi.mocked(redis.eval).mock.calls[0];
+    expect(script).toContain("failure.code == 'metering/quota-exceeded'");
+    expect(script).toContain("entry.failure = failure");
+    expect(args[2]).toBe(JSON.stringify(quotaRejected.failure));
+  });
+
   it("restores claim timestamps and persists acceptance before removing pending state", async () => {
     const claim = {
       event: EVENT,

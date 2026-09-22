@@ -165,14 +165,20 @@ function createStagedRedis(): {
       }
 
       if (script.includes("state.leaseExpiresAt = 0")) {
+        const releasesQuotaRejection = script.includes("state.delivery = nil");
         if (!state) {
           return [0, "MISSING"] as unknown as TResult;
         }
-        if (state.status !== "PROCESSING") {
+        if (state.status !== (releasesQuotaRejection ? "PUBLISHING" : "PROCESSING")) {
           return [0, `STATUS:${state.status}`] as unknown as TResult;
         }
         if (state.token !== String(args[0])) {
           return [0, "TOKEN"] as unknown as TResult;
+        }
+        if (releasesQuotaRejection) {
+          state.status = "PROCESSING";
+          delete state.delivery;
+          delete state.persistenceStarted;
         }
         delete state.token;
         leaseExpired = true;
@@ -879,6 +885,67 @@ describe("IdempotencyManager", () => {
       );
     });
 
+    it("should discard a rejected quota delivery so a retry can re-evaluate policy", async () => {
+      const stagedRedis = createStagedRedis();
+      const stagedManager = new IdempotencyManager(stagedRedis.redis, 60, 1_000);
+      const firstClaim = await stagedManager.claimMeteringProcessingOrThrow(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+      );
+      await stagedManager.markMeteringPersistenceStarted(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+        firstClaim.token,
+      );
+      await stagedManager.markMeteringEventsPublishing(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+        firstClaim.token,
+        delivery,
+      );
+
+      await stagedManager.releaseMeteringQuotaRejection(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+        firstClaim.token,
+      );
+      await expect(
+        stagedManager.getMeteringRecordStatus("tenant-1", "api_calls", "key-123"),
+      ).resolves.toBe("retryable");
+
+      const retryClaim = await stagedManager.claimMeteringProcessingOrThrow(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+      );
+      expect(retryClaim.operationId).toBe(firstClaim.operationId);
+      expect(retryClaim.delivery).toBeUndefined();
+    });
+
+    it("should release only the current rejected quota claim", async () => {
+      vi.mocked(mockRedis.eval).mockResolvedValue([1, "OK"]);
+
+      await manager.releaseMeteringQuotaRejection(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+        deliveryClaim,
+      );
+
+      expect(mockRedis.eval).toHaveBeenCalledWith(
+        expect.stringContaining("state.delivery = nil"),
+        ["idem2:delivery:tenant-1:api_calls:key-123"],
+        [deliveryClaim, 86_400],
+      );
+      expect(vi.mocked(mockRedis.eval).mock.calls[0]?.[0]).toContain(
+        "state.persistenceStarted = nil",
+      );
+    });
+
     it("should complete only the current publication claim", async () => {
       vi.mocked(mockRedis.eval).mockResolvedValue([1, "OK"]);
 
@@ -945,6 +1012,14 @@ describe("IdempotencyManager", () => {
       );
       await expect(
         stagedManager.releaseMeteringEvents("tenant-1", "api_calls", "key-123", firstClaim.token),
+      ).rejects.toThrow(MeteringTransitionProblem);
+      await expect(
+        stagedManager.releaseMeteringQuotaRejection(
+          "tenant-1",
+          "api_calls",
+          "key-123",
+          firstClaim.token,
+        ),
       ).rejects.toThrow(MeteringTransitionProblem);
       await expect(
         stagedManager.completeMeteringProcessing(
