@@ -61,6 +61,7 @@ const ROOT_SCRIPT_RECOVERY = {
   "release-docs:check": "Fix the reported release documentation contract",
   "release-version-sync:check": "pnpm release-version-sync:write && pnpm docs:catalog:write",
   "security-allowlists:check": "Fix the reported security allowlist metadata",
+  "skill:check": "pnpm skill:write",
   "spine-promotion:check": "Fix the reported beta spine promotion violations",
   "static-misuse:check": "Fix the reported source misuse",
   "strict-contract-typecheck": "Fix the reported strict contract diagnostic",
@@ -332,6 +333,9 @@ function rootNonmutationEvidence(name: string): string {
   }
   if (name === "test-inventory:check") {
     return "Check mode compares discoveries with the committed inventory and writes reports only when an explicit output path is supplied";
+  }
+  if (name === "skill:check") {
+    return "Check mode reads canonical catalog and Skill files, compares generated content in memory, and never invokes the explicit writer";
   }
   if (name === "verification-policy:check") {
     return "The verification dispatcher guards the policy command and the policy itself only reads repository files";

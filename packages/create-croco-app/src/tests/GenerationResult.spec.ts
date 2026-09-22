@@ -87,6 +87,7 @@ describe("GenerationResult", () => {
       { kind: "node-runtime", path: ".nvmrc" },
       { kind: "runtime-capability", path: "croco-runtime-capability.manifest.json" },
       { kind: "application-intent", path: "croco.app.json" },
+      { kind: "agent-skill", path: ".agents/skills/croco/SKILL.md" },
       { kind: "provider-profile", path: "croco-saas-profile.manifest.json" },
       { kind: "tenant-model", path: "croco-tenant-model.manifest.json" },
       { kind: "tenant-model-schema", path: "croco-tenant-model.schema.json" },
@@ -97,6 +98,17 @@ describe("GenerationResult", () => {
       { command: "pnpm", args: ["install"], cwd: targetDir },
       { command: "pnpm", args: ["dev:api"], cwd: targetDir },
     ]);
+  });
+
+  it("reports the official Skill when agent rules are requested for a blank project", async () => {
+    const targetDir = join(testRoot, "blank-with-agent-rules");
+    const result = await generate(targetDir, { ...createBlankOptions(), agentRules: true });
+
+    expect(result.artifacts).toContainEqual({
+      kind: "agent-skill",
+      path: ".agents/skills/croco/SKILL.md",
+    });
+    expect(existsSync(join(targetDir, ".agents", "skills", "croco", "SKILL.md"))).toBe(true);
   });
 });
 

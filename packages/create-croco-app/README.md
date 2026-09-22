@@ -59,6 +59,10 @@ console.log(result.targetDir, result.nextSteps);
 Generation failures still reject with the existing Problem contract; a partial scaffold is
 never returned as a successful `GenerationResult`.
 
+When `agentRules` is enabled, the generated project includes the official Croco Skill at
+`.agents/skills/croco/SKILL.md`. The generated `AGENTS.md` remains a concise index to that Skill and
+the project-specific Croco manifests instead of duplicating package-selection guidance.
+
 ## Usage
 
 ```bash

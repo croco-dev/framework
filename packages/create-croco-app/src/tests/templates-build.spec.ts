@@ -1778,6 +1778,18 @@ describe.each(["spa-be-split", "saas", "ai-saas", "admin-console"])(
 );
 
 describe("Generated application DI bootstrap validation", () => {
+  it("ships the official Croco Skill through the agent-rules addon", () => {
+    checkFileExists("addons/agent-rules", ".agents/skills/croco/SKILL.md");
+    checkFileExists("addons/agent-rules", ".agents/skills/croco/references/package-selection.md");
+    checkFileExists("addons/agent-rules", ".agents/skills/croco/scripts/inspect-croco-project.mjs");
+    checkFileContains("addons/agent-rules", ["AGENTS.md"], /\.agents\/skills\/croco\/SKILL\.md/);
+    checkFileContains(
+      "addons/agent-rules",
+      [".agents", "skills", "croco", "SKILL.md"],
+      /providerReplacements[\s\S]*Container\.set\(\)/,
+    );
+  });
+
   it("keeps production presets on one module-owned composition root", () => {
     checkFileExists("saas", "apps", "api-server", "src", "compositionRoot.ts");
     checkFileDoesNotContain(
