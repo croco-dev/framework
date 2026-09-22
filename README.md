@@ -1,29 +1,68 @@
-# 🐊 Croco Framework
+# 🐊 Croco — Product Growth Framework
 
-**Move fast, build robustly.**  
-Croco는 AWS Lambda와 API Gateway를 1급 시민(First-class Citizen)으로 지원하는 Node.js 기반의 **Opinionated(주견이 뚜렷한)** 프레임워크입니다.  
-복잡한 비즈니스 로직을 다루는 엔터프라이즈 환경부터 빠른 배포가 필요한 스타트업까지, DDD(Domain-Driven Design) 패턴과 강력한 타입 안전성을 제공합니다.
+Croco는 coding agent와 함께 TypeScript 제품을 만드는 팀이 인프라 조립보다 **제품 가치와 성장 로직**에
+집중하게 하는 베타 프레임워크입니다. 저수준 API와 그 위의 실행 가능한 계약·정책·운영 UI·관측 경계를
+함께 제공하고, 렌더링과 프로토콜을 제품 실행 경로에 연결하는 것을 지향합니다.
 
----
+## 제품 약속
 
-## ✨ 한 줄 소개
+Croco가 겨냥하는 제품 루프는 다음과 같습니다.
 
-AWS Lambda에 최적화된 Node.js 기반 **Opinionated(주견이 뚜렷한)** 프레임워크입니다. DDD(Domain-Driven Design) 패턴과 강력한 타입 안전성을 통해 빠르고 견고하게 서비스를 구축할 수 있습니다.
+**검색 유입 → 빠르고 개인화된 경험 → 가치 행동 → 개입·실험 → 측정·학습**
 
----
+이는 성장률이나 경쟁사 대비 성능을 이미 증명했다는 뜻이 아닙니다. Croco는 각 단계의 의도, 실행, 실패,
+관측 결과를 코드와 검증 산출물로 연결하는 것을 제품 방향으로 삼습니다.
 
-## 🎯 왜 Croco인가?
+### 사람, coding agent, Croco의 역할
 
-Croco는 AWS Lambda 지향 TypeScript 애플리케이션에서 HTTP 진입점, DDD 이벤트, 트랜잭션, SaaS 지표/미터링, 관찰 가능성을 하나의 일관된 데코레이터·타입 시스템으로 묶어 주는 opinionated TypeScript 프레임워크입니다.
+| 주체         | 소유하는 판단                                                                             |
+| ------------ | ----------------------------------------------------------------------------------------- |
+| 사람         | 어떤 가치를 누구에게 제공할지, 어떤 지표와 기준으로 성공·실패를 판단할지 정합니다.        |
+| coding agent | 코드, 계약, 테스트, 운영 근거를 찾고 제품 의도와 실행 경로를 연결합니다.                  |
+| Croco        | 제품 의도를 실행 가능한 타입, 정책, 생성 산출물, 운영 UI, 관측 및 복구 경계로 유지합니다. |
 
-기존의 Node.js 프레임워크들은 유연하지만, 대규모 프로젝트에서 아키텍처의 일관성을 유지하기 어렵습니다. Croco는 다음과 같은 문제를 해결합니다:
+LLM 호출은 일반 사용자 요청 경로의 필수 단계가 아닙니다. `llm-*` 패키지는 필요한 제품이 명시적으로
+조합하는 선택 가능한 기능입니다.
 
-- **명시적인 역할별 패키지 경계**: 팀 간 코드 일관성 유지
-- **AWS Lambda 환경에 최적화된 명시적 Host 계약**
-- **이벤트 주도 아키텍처(EDA)와 Unit of Work 트랜잭션 관리 기본 제공**
-- **타입 정의만으로 REST/GraphQL API와 문서 자동 생성 지원**
+## 현재 사용 가능한 기반
 
-### 🧭 핵심 설계 원칙
+아래는 프레임워크 전체의 production-ready 선언이 아니라, 현재 source와 검증 경로가 있는 기반을 설명합니다.
+개별 패키지의 정확한 성숙도는 [자동 생성 패키지 카탈로그](#-패키지-카탈로그)를 따릅니다.
+
+- **실행·프로토콜**: Node, Lambda, Cloudflare Workers Host와 HTTP Transport를 조합하고, REST를
+  production-ready 계약으로, GraphQL과 tRPC를 beta 계약으로 제공합니다.
+- **통합 렌더링**: SSR, SSG, API route, server action, exact-key TTL ISR 경로가 있습니다. 프레젠테이션
+  패키지는 beta이며 runtime별 한계는 [Presentation Runtime Support](packages/docs/src/content/docs/en/reference/presentation-runtime-support.md)에
+  명시됩니다.
+- **클라이언트 연결**: RPC codegen은 TanStack Query hook 출력을, `create-croco-app`은 Apollo 기반 GraphQL
+  server/client scaffold를 생성합니다. 이들은 검증된 연결 경로이지 모든 구성의 보편적 호환성 보장이 아닙니다.
+- **성장 도메인 블록**: analytics, feature flag, engagement, onboarding, customer health, billing, metering,
+  admin 패키지가 각자의 계약과 테스트를 갖춥니다. 이들을 하나의 완결된 성장 제품으로 조합하는 작업은 진행 중입니다.
+- **실패·운영 계약**: RFC 7807 Problem, retry, timeout, circuit breaker, idempotency, telemetry, package
+  boundary와 public API drift gate를 통해 실패와 복구 가능성을 드러냅니다.
+
+## 개발 중인 제품 경로
+
+- **실제 React Flight 기반 RSC**: 현재 `rsc` 모드는 server-rendered HTML과 JSON payload를 전달하는 beta
+  경로입니다. React Flight를 끝까지 연결한 RSC로 간주하지 않습니다.
+- **개인화 SSR·서버 실험 배정·캐시 통합**: SSR와 feature/analytics 계약, exact-key ISR은 존재하지만,
+  사용자별 정책과 실험 배정, 개인화 캐시 키·무효화, 성능 근거를 하나의 제품 경로로 검증하는 작업은
+  남아 있습니다.
+- **검색 유입 연동**: Google Search Console 연동과 sitemap 자동화는 현재 출시된 기능이 아닙니다.
+- **하나의 운영 UI와 학습 루프**: `admin-react`와 개별 성장 패키지는 존재하지만,
+  유입→행동→개입→측정을 하나의 production-ready UI로 제공하지는 않습니다.
+
+열린 GitHub Issue는 우선순위와 계획을 나타낼 뿐, 구현 완료 증거가 아닙니다. 상태 판단은 source, 실행
+테스트, 아래의 생성 카탈로그를 함께 따릅니다.
+
+## 의도적으로 소유하지 않는 범위
+
+Croco는 외부 엔진을 재구현하는 범용 플랫폼이 아닙니다. 데이터베이스, 캐시, 검색, 결제, 분석, LLM
+제공자는 명시적인 adapter 경계 너머에 둡니다. 반면 개인화 SSR, 서버 실험 배정, 실제 RSC, 캐시·성능 통합,
+REST·GraphQL·tRPC와 TanStack Query·Apollo 연결은 Croco가 계속 투자할 제품 경계입니다. Croco는 SSR을
+제거하거나 어떤 프레임워크에나 붙이는 SDK로 축소하지 않습니다.
+
+## 🧭 핵심 설계 원칙
 
 Croco는 런타임에서 추측하게 하지 않고, 빌드타임에 의도를 명시하고 검증하며, 사람과 LLM이 모두 이해할 수 있는 실행 가능한 계약을 중심으로 동작해야 합니다.
 
@@ -38,81 +77,55 @@ Croco는 런타임에서 추측하게 하지 않고, 빌드타임에 의도를 �
 - **LLM-readable architecture**: 안정적인 에러 코드, source location, manifest, intent map, 타입 기반 문서, deterministic generated output을 선호합니다. 사람과 LLM이 같은 구조를 읽고 같은 수정 지점을 찾을 수 있어야 합니다.
 - **Composable boundaries**: adapter, middleware graph, policy, runtime capability, package layering 경계를 명확히 하며 core package가 provider/runtime 구현체에 오염되지 않게 합니다.
 
-### 🆚 설계 철학 비교
-
-|                     | Croco                          | NestJS                 | Hono                   | tRPC           |
-| ------------------- | ------------------------------ | ---------------------- | ---------------------- | -------------- |
-| 주 타겟             | AWS Lambda + SaaS 도메인       | 엔터프라이즈 일반 서버 | 초경량 엣지/멀티런타임 | 타입 안전 RPC  |
-| 아키텍처            | 역할별 계약 경계               | 모듈 기반 MVC          | 라우터 중심            | 스키마리스 RPC |
-| SaaS 빌딩 블록      | 빌링/메트릭/멤버십/미터링 제공 | 별도 통합 필요         | 별도 통합 필요         | 별도 통합 필요 |
-| DDD 이벤트/트랜잭션 | 기본 내장                      | 별도 통합 필요         | ❌                     | ❌             |
-| Lambda 최적화       | ✅ 명시적 Lambda Host          | ❌                     | ✅ (별도 어댑터)       | ❌             |
-
-> 위 표는 Croco의 설계 중심을 설명하며, 성능 수치나 경쟁사 부정평가는 포함하지 않습니다.
-
----
-
 ## 🏗 아키텍처
 
-Croco의 패키지는 **Kernel, Contracts, Plugins, Application, Profiles, Tooling** 역할로 구분합니다. 역할의 source of truth는 `docs/package-catalog.json`의 `packageRoles`이며, [Architecture Guide](packages/docs/src/content/docs/en/guides/architecture.mdx)가 의존 방향과 런타임 조합을 설명합니다.
-
-| 역할        | 책임                                                            | 예시                                                                         |
-| ----------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Kernel      | DI, request context, module lifecycle 등 프레임워크 런타임 기반 | `framework-context`, `framework-module`                                      |
-| Contracts   | provider와 runtime에 독립적인 도메인·프로토콜 계약              | `repository-core`, `protocols-rest`, `telemetry-api`                         |
-| Plugins     | 계약의 구체적인 구현과 환경 바인딩                              | `tx-drizzle` (provider), `transports-http` (transport), `preset-node` (host) |
-| Application | 앱 소유 모듈과 composition root                                 | 생성된 앱의 `apps/*`                                                         |
-| Profiles    | 검증된 plugin/module 조합                                       | `presentation-preset`                                                        |
-| Tooling     | build, codegen, testing, CLI 도구                               | `framework-preset` (build-target), `rpc-codegen`, `openapi-spec`             |
-
-화살표는 **의존하는 쪽 → 의존 대상**을 뜻합니다. 모든 요청이 통과하는 실행 순서가 아닙니다.
-
-```mermaid
-flowchart LR
-  application[Application] --> profiles[Profiles]
-  application --> plugins[Plugins]
-  application --> contracts[Contracts]
-  profiles --> plugins
-  plugins --> contracts
-  plugins --> kernel[Kernel]
-  contracts --> kernel
-```
-
-Kernel과 Contracts는 구체적인 Plugins에 의존하지 않습니다. 도메인, plugin subtype, runtime 지원, maturity, certification, spine 여부는 역할과 별도의 메타데이터입니다. 기존 Core, Domain, Provider, Integration, Protocol, Transport, Host, Presentation 그룹은 패키지 탐색을 위한 보조 분류입니다.
-
-### Host, Transport, Build Target
-
-- **Host**는 Node process/server, Lambda invocation, Workers fetch 수명주기를 소유하는 Plugin입니다. `preset-node`, `preset-lambda`, `preset-cloudflare`의 `create*Host` API로 구성합니다.
-- **Transport**는 HTTP, GraphQL, RPC 같은 프로토콜 표면을 실행하는 Plugin입니다. Host는 하나 이상의 Transport 콜백을 바인딩할 수 있습니다.
-- **Build Target**은 entrypoint, 출력 디렉터리, module format, bundling 제약을 선언하는 Tooling 계약입니다. `framework-preset`과 환경 preset의 `create*BuildTarget` API로 명시하며 Host나 Transport를 실행하지 않습니다.
-
-`preset-*` 패키지는 host-primary 호환 facade로 build-target API도 제공합니다. `transports-cloudflare-workers`는 기존 이름을 유지하지만 Workers host Plugin입니다. Integration과 Presentation 역시 Plugin subtype이며, Provider → Transport → Integration → Presentation 순서로 실행되는 계층을 뜻하지 않습니다.
+Croco의 canonical role은 **Kernel, Contracts, Plugins, Application, Profiles, Tooling**입니다. 역할은 요청
+실행 순서가 아니며 `docs/package-catalog.json`의 `packageRoles`가 source of truth입니다.
+[Architecture Guide](packages/docs/src/content/docs/en/guides/architecture.mdx)가 의존 방향, Host·Transport·Build Target,
+런타임 조합을 설명합니다. 패키지 목록과 성숙도는 아래의 자동 생성 카탈로그에서 확인합니다.
 
 ---
 
 ## 🚀 Quick Start
 
-> 실행 가능한 SaaS REST API 골든 패스를 빠르게 시작하세요.
->
-> **첫 번째 프로젝트 생성**:
->
-> ```bash
-> npx create-croco-app@latest my-saas-api --goal saas-api --scope @myorg --no-install --no-git
-> cd my-saas-api && pnpm install && pnpm demo:smoke
-> ```
->
-> `demo:smoke` validates the generated REST contracts, in-memory SaaS flow, and operational smoke without external credentials.
->
-> **Route A (Scaffold)**: [Getting Started Guide](packages/docs/src/content/docs/en/guides/getting-started.mdx)에서 scaffold부터 Auth, Metering, Lambda 배포까지 단계별로 SaaS API를 구축하세요.
->
-> **Route B (Example)**: [Quick Start Example](examples/quick-start-lambda/)에서 Auth와 Metering이 포함된 완성된 Lambda API를 `pnpm dev`로 바로 실행하세요.
+현재 공개된 first-success 경로는 외부 credential 없이 검증할 수 있는 SaaS REST API입니다. 성장
+대시보드나 개인화 데모를 이미 제공하는 것으로 해석하지 않습니다.
+
+```bash
+npx create-croco-app@latest my-saas-api --goal saas-api --scope @myorg --no-install --no-git
+cd my-saas-api
+pnpm install
+pnpm demo:smoke
+```
+
+`demo:smoke`는 생성된 REST 계약, in-memory SaaS flow, credential 없는 운영 smoke를 검증합니다.
+
+- [Getting Started Guide](packages/docs/src/content/docs/en/guides/getting-started.mdx): scaffold, Auth, Metering,
+  Lambda 배포 경로
+- [Quick Start Lambda Example](examples/quick-start-lambda/): Auth와 Metering이 포함된 실행 가능한 API
+- [SaaS Billing Golden Path](examples/saas-billing-golden-path/): 결제·멤버십·미터링 흐름의 실행 예제
+
+저장소를 clone한 뒤 공개 예제와 README 계약을 다음 명령으로 검증할 수 있습니다.
+
+```bash
+pnpm quick-start-lambda:smoke
+pnpm saas-billing-golden-path:smoke
+pnpm first-success:verify
+```
+
+### 베타·마이그레이션 정책
+
+Croco는 베타입니다. 제품 계약을 명확히 하기 위한 breaking change를 허용하되, 알려진
+소비자에게는 변경된 계약과 마이그레이션 경로를 명시합니다. 마이그레이션 준비가 되지 않은
+사용자는 안내된 마지막 호환 구버전을 고정하고 migration guide와 changeset을 확인한 뒤
+업그레이드해야 합니다.
 
 #### 패키지 성숙도 안내
 
 Croco의 package count, group, maturity metadata는 아래 [패키지 카탈로그](#-패키지-카탈로그) 섹션에서 자동 생성됩니다. 사용 전 상태를 확인하세요.
 
-- 🟢 production-ready — 안정화, 적극 사용 권장
-- 🟡 beta — 기능 완성, 실사용 검증 중
+- 🟢 production-ready — 카탈로그의 안정성·문서·검증 gate를 충족
+- 🟡 beta — 실행 가능한 계약과 근거가 있지만 제한·마이그레이션·실사용 검증이 남아 있음
 - 🔴 alpha/WIP — 개발 중, 사용 시 주의 필요
 - ⚠️ deprecated — 대체 패키지 존재, 마이그레이션 권장
 
@@ -806,17 +819,12 @@ pnpm typecheck        # TypeScript 타입 검사
 
 ---
 
-## 🚢 배포 전략
+## 🚢 배포와 릴리스
 
-Croco는 **AWS Lambda**를 최우선으로 고려합니다.
-
-- **Fast Startup**: 불필요한 의존성을 배제하고 트리쉐이킹에 최적화된 빌드를 제공합니다.
-- **API Gateway v2 Support**: 고성능 HTTP API를 위한 어댑터를 기본 제공합니다.
-- **pnpm + Turbo**: 고성능 빌드 파이프라인을 통해 배포 속도를 극대화합니다.
-
-```bash
-pnpm run deploy -- --otp <otp>
-```
+Node, Lambda, Cloudflare Workers의 Host·Transport 경계와 runtime별 제약은
+[Deployment Recipes](packages/docs/src/content/docs/en/guides/deployment-recipes.mdx)와
+[Runtime Contract](packages/docs/src/content/docs/en/guides/runtime-contract.mdx)를 따릅니다. 패키지 버전과 npm 배포는
+[RELEASING.md](RELEASING.md)의 Changesets 절차로만 진행합니다.
 
 ---
 
