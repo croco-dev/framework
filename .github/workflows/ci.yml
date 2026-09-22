@@ -662,6 +662,8 @@ jobs:
               - 'packages/auth-drizzle/**'
               - 'packages/credits-core/**'
               - 'packages/credits-drizzle/**'
+              - 'packages/customer-health-core/**'
+              - 'packages/customer-health-drizzle/**'
               - 'packages/engagement-core/**'
               - 'packages/engagement-drizzle/**'
               - 'packages/entitlements-core/**'
@@ -1495,6 +1497,7 @@ jobs:
       - name: Verify persistence concurrency against PostgreSQL
         env:
           CREDITS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+          CUSTOMER_HEALTH_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           ENGAGEMENT_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           ENTITLEMENTS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           EXECUTION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
@@ -1503,6 +1506,8 @@ jobs:
         run: |
           pnpm build --filter=@croco/credits-drizzle...
           pnpm --filter @croco/credits-drizzle test:postgres
+          pnpm build --filter=@croco/customer-health-drizzle...
+          pnpm --filter @croco/customer-health-drizzle test:postgres
           pnpm build --filter=@croco/engagement-drizzle...
           pnpm --filter @croco/engagement-drizzle test:postgres
           pnpm build --filter=@croco/entitlements-drizzle...

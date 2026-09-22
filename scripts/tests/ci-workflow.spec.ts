@@ -885,6 +885,9 @@ describe("CI verification profile contract", () => {
       "CREDITS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
     );
     expect(REAL_RESOURCE_JOB).toContain(
+      "CUSTOMER_HEALTH_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
+    );
+    expect(REAL_RESOURCE_JOB).toContain(
       "ENTITLEMENTS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
     );
     expect(REAL_RESOURCE_JOB).toContain(
@@ -897,6 +900,10 @@ describe("CI verification profile contract", () => {
       "MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
     );
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/credits-drizzle...");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/customer-health-drizzle...");
+    expect(REAL_RESOURCE_JOB).toContain(
+      "pnpm --filter @croco/customer-health-drizzle test:postgres",
+    );
     expect(REAL_RESOURCE_JOB).toContain(
       "METERING_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
     );
@@ -925,6 +932,11 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("              - 'packages/credits-core/**'");
     expect(WORKFLOW).toContain("              - 'packages/credits-drizzle/**'");
     expect(WORKFLOW).toContain("              - 'packages/credits-drizzle/src/**'");
+  });
+
+  it("routes customer health persistence changes to the real PostgreSQL transaction suite", () => {
+    expect(WORKFLOW).toContain("              - 'packages/customer-health-core/**'");
+    expect(WORKFLOW).toContain("              - 'packages/customer-health-drizzle/**'");
   });
 
   it("routes metering persistence changes to the real PostgreSQL round-trip suite", () => {

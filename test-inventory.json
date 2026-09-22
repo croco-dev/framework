@@ -1233,6 +1233,12 @@
       "owner": "@croco/customer-health-drizzle"
     },
     {
+      "path": "packages/customer-health-drizzle/src/tests/DrizzleHealthScoreStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/customer-health-drizzle"
+    },
+    {
       "path": "packages/customer-health-drizzle/src/tests/DrizzleHealthScoreStore.spec.ts",
       "lane": "fast",
       "qualifiers": [],

@@ -5,7 +5,7 @@
 ## 설치
 
 ```bash
-pnpm add @croco/customer-health-drizzle @croco/customer-health-core drizzle-orm
+pnpm add @croco/customer-health-drizzle @croco/customer-health-core @croco/tx-core @croco/tx-drizzle drizzle-orm
 ```
 
 ## 사용법
@@ -18,9 +18,12 @@ import {
   DrizzleHealthSignalRegistry,
   MeteringSignalProvider,
 } from "@croco/customer-health-drizzle";
+import { TxManager } from "@croco/tx-core";
+import { createDrizzleTxAdapter } from "@croco/tx-drizzle";
 
 await addHealthEventIntents(db);
-const scoreStore = new DrizzleHealthScoreStore(db);
+const txManager = new TxManager(createDrizzleTxAdapter(db));
+const scoreStore = new DrizzleHealthScoreStore(db, txManager);
 const usageProvider = new MeteringSignalProvider(usageStorage);
 const billingProvider = new BillingSignalProvider(subscriptionStorage);
 const registry = new DrizzleHealthSignalRegistry(usageProvider, billingProvider);
@@ -84,6 +87,10 @@ COMMIT;
 - `findLatest(tenantId)`, 최신 건강 점수를 조회합니다.
 - `findHistory(tenantId, limit)`, 최근 점수 이력을 조회합니다.
 - `findHistoryByPeriod(tenantId, period, startDate, endDate)`, 기간별 이력을 조회합니다.
+
+`saveTransition`이 호출자 트랜잭션에 참여하면 결과에 `eventPublicationDeferred: true`가 포함됩니다.
+이때 이벤트 의도는 커밋 전 외부로 발행하지 않으며, 호출자 커밋 후 `publishPendingEvents` 또는 outbox worker가
+발행해야 합니다.
 
 ### 신호 제공자
 

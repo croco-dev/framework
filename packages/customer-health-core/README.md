@@ -122,6 +122,9 @@ const score = await service.calculateAndStore("tenant-1", profile);
 시도하고, 계속 커밋되지 않으면 `HealthTransitionPersistenceRetryExhaustedProblem`을 던집니다. 별도 복구
 작업에서는 `publishPendingEvents(tenantId)`를 호출할 수 있습니다.
 
+저장소가 호출자 트랜잭션에 참여하면 `calculateAndStore`는 커밋 전 외부 발행을 건너뛰고 이벤트 의도를
+pending 상태로 남깁니다. 호출자 커밋 후 `publishPendingEvents` 또는 별도 outbox worker로 발행하세요.
+
 ### 추세 분석
 
 ```typescript

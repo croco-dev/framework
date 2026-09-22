@@ -44,10 +44,10 @@ export class CustomerHealthService {
     score.tenantId = tenantId;
 
     const previous = await this.store.findLatest(tenantId);
-    await this.persistTransition(score, previous);
+    const eventPublicationDeferred = await this.persistTransition(score, previous);
 
     const eventPublisher = this.getEventPublisher();
-    if (eventPublisher) {
+    if (eventPublisher && !eventPublicationDeferred) {
       const intents = await this.store.listPendingEventIntents(tenantId, 100);
       await this.publishEventIntents(intents, eventPublisher);
     }
@@ -58,14 +58,14 @@ export class CustomerHealthService {
   private async persistTransition(
     score: TenantHealthScore,
     initialPrevious: TenantHealthScore | null,
-  ): Promise<void> {
+  ): Promise<boolean> {
     let previous = initialPrevious;
 
     for (let attempt = 1; attempt <= MAX_TRANSITION_PERSISTENCE_ATTEMPTS; attempt += 1) {
       this.applyPreviousScore(score, previous);
       const eventIntents = createHealthTransitionEventIntents(previous, score);
       const commit = await this.store.saveTransition(score, previous, eventIntents);
-      if (commit.committed) return;
+      if (commit.committed) return commit.eventPublicationDeferred === true;
 
       previous = commit.latest;
       if (attempt < MAX_TRANSITION_PERSISTENCE_ATTEMPTS) {

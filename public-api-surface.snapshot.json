@@ -8408,6 +8408,12 @@
               "declarationKind": "type"
             },
             {
+              "name": "HealthTransitionCommitResult",
+              "exportKind": "declaration",
+              "source": "./libs/interfaces",
+              "declarationKind": "type"
+            },
+            {
               "name": "HealthTrend",
               "exportKind": "declaration",
               "source": "./libs/types",
