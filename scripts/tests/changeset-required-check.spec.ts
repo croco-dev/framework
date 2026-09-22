@@ -416,6 +416,74 @@ describe("changeset-required-check.mts", () => {
     expect(result.stdout).toContain("packages/public/src/index.ts");
   });
 
+  it("allows a consumed changeset for a public package removed in the same change", () => {
+    const repo = createTempRepo();
+    commitFile(
+      repo,
+      ".changeset/remove-public.md",
+      "---\n'@croco/public': major\n---\n\nRemove the public package.\n",
+      "chore: add pending removal changeset",
+    );
+    checkoutBranch(repo, "breaking/remove-public-package");
+    git(repo, ["rm", "-r", "packages/public", ".changeset/remove-public.md"]);
+    writeFile(
+      repo,
+      "public-api-surface.snapshot.json",
+      `${JSON.stringify({ schemaVersion: 2, packages: [] }, null, 2)}\n`,
+    );
+    git(repo, ["add", "public-api-surface.snapshot.json"]);
+    git(repo, ["commit", "-m", "feat: remove public package"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "changeset-required: no publishable package behavior changes detected (passing)",
+    );
+  });
+
+  it("requires a consumed changeset for a public package removed in the same change", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "breaking/remove-public-package-without-changeset");
+    git(repo, ["rm", "-r", "packages/public"]);
+    writeFile(
+      repo,
+      "public-api-surface.snapshot.json",
+      `${JSON.stringify({ schemaVersion: 2, packages: [] }, null, 2)}\n`,
+    );
+    git(repo, ["add", "public-api-surface.snapshot.json"]);
+    git(repo, ["commit", "-m", "feat: remove public package"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("@croco/public (public API snapshot (.))");
+    expect(result.stdout).toContain("public-api-surface.snapshot.json");
+  });
+
+  it("rejects an active changeset for a package removed in the same change", () => {
+    const repo = createTempRepo();
+    checkoutBranch(repo, "breaking/remove-public-package-with-active-changeset");
+    git(repo, ["rm", "-r", "packages/public"]);
+    writeFile(
+      repo,
+      "public-api-surface.snapshot.json",
+      `${JSON.stringify({ schemaVersion: 2, packages: [] }, null, 2)}\n`,
+    );
+    writeFile(
+      repo,
+      ".changeset/remove-public.md",
+      "---\n'@croco/public': major\n---\n\nRemove the public package.\n",
+    );
+    git(repo, ["add", "public-api-surface.snapshot.json", ".changeset/remove-public.md"]);
+    git(repo, ["commit", "-m", "feat: remove public package"]);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toContain("- @croco/public (unknown package)");
+  });
+
   it("fails when public package template markdown changes without a release changeset", () => {
     const repo = createTempRepo();
     checkoutBranch(repo, "fix/template-markdown");

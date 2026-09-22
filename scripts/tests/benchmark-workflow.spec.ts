@@ -80,21 +80,6 @@ describe("benchmark workflow", () => {
     );
   });
 
-  it("gates desktop contract compiler time, memory, and fixture changes", () => {
-    const workflow = readBenchmarkWorkflow();
-
-    expect(workflow).toContain("filename.startsWith('packages/protocols-desktop/type-fixtures/')");
-    expect(workflow).toContain("filename === 'packages/protocols-desktop/tsconfig.json'");
-    expect(workflow).toContain("filename.startsWith('tsconfig/')");
-    expect(workflow).toContain("- name: Check desktop type fixtures");
-    expect(workflow).toContain("run: pnpm desktop-contracts:type-fixtures");
-    expect(workflow).toContain("- name: Check desktop contract compiler baseline");
-    expect(workflow).toContain(
-      "run: pnpm desktop-contracts:bench --output=ci-reports/benchmark/protocols-desktop-types.json",
-    );
-    expect(workflow).toContain("ci-reports/benchmark/protocols-desktop-types.json");
-  });
-
   it("prepares benchmark inputs through an explicit Turbo dependency boundary", () => {
     const workflow = readBenchmarkWorkflow();
     const benchmark = workflow.slice(
@@ -109,7 +94,7 @@ describe("benchmark workflow", () => {
     ).toBe("string");
     if (typeof preparationCommand !== "string") return;
 
-    const expectedFilters = [...benchmarkOwnerPackages(), "@croco/protocols-desktop"]
+    const expectedFilters = benchmarkOwnerPackages()
       .sort()
       .map((packageName) => `${packageName}...`);
     const actualFilters = [...preparationCommand.matchAll(/--filter=([^\s]+)/g)]
@@ -117,23 +102,16 @@ describe("benchmark workflow", () => {
       .sort();
 
     expect(preparationCommand).toMatch(SCOPED_TURBO_BUILD_PATTERN);
-    expect(
-      actualFilters,
-      "bench:prepare filters must match every Vitest benchmark owner plus desktop contracts",
-    ).toEqual(expectedFilters);
+    expect(actualFilters, "bench:prepare filters must match every Vitest benchmark owner").toEqual(
+      expectedFilters,
+    );
     expect(benchmark).not.toMatch(UNSCOPED_PNPM_BUILD_PATTERN);
 
     const preparationIndex = benchmark.indexOf("- name: Prepare benchmark dependencies");
-    const fixtureIndex = benchmark.indexOf("- name: Check desktop type fixtures");
-    const compilerBaselineIndex = benchmark.indexOf(
-      "- name: Check desktop contract compiler baseline",
-    );
     const benchmarkIndex = benchmark.indexOf("- name: Run benchmarks with threshold check");
     expect(preparationIndex).toBeGreaterThan(-1);
     expect(benchmark).toContain("run: pnpm bench:prepare");
-    expect(fixtureIndex).toBeGreaterThan(preparationIndex);
-    expect(compilerBaselineIndex).toBeGreaterThan(fixtureIndex);
-    expect(benchmarkIndex).toBeGreaterThan(compilerBaselineIndex);
+    expect(benchmarkIndex).toBeGreaterThan(preparationIndex);
   });
 
   it("accepts only a single filtered Turbo build for benchmark preparation", () => {

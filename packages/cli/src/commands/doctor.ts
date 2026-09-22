@@ -4618,8 +4618,8 @@ function resolvePackageManagerCommand(): {
   const npmExecPath = getCrocoCommandRuntime().env.npm_execpath;
   if (npmExecPath?.includes("pnpm")) {
     return {
-      command: process.execPath,
-      args: [npmExecPath, "run", "problem-registry:check"],
+      command: resolvePackageManagerExecutable(npmExecPath),
+      args: resolvePackageManagerArgs(npmExecPath),
     };
   }
 
@@ -5465,4 +5465,18 @@ function unwrapTransparentCompositionExpression(
   expression: TransparentCompositionExpression,
 ): Morph.Expression {
   return Node.isBinaryExpression(expression) ? expression.getLeft() : expression.getExpression();
+}
+
+function isJavaScriptEntrypoint(path: string): boolean {
+  return [".js", ".cjs", ".mjs"].some((extension) => path.endsWith(extension));
+}
+
+function resolvePackageManagerExecutable(npmExecPath: string): string {
+  return isJavaScriptEntrypoint(npmExecPath) ? process.execPath : npmExecPath;
+}
+
+function resolvePackageManagerArgs(npmExecPath: string): readonly string[] {
+  return isJavaScriptEntrypoint(npmExecPath)
+    ? [npmExecPath, "run", "problem-registry:check"]
+    : ["run", "problem-registry:check"];
 }

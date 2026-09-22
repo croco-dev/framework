@@ -7,6 +7,7 @@ import {
 } from "../libs/cliRuntime.js";
 import type { CrocoCommandDependencies, CrocoCommandRuntime } from "../libs/cliRuntime.js";
 import { getDelegatedCommandRuntimeOptions } from "../libs/delegatedCommand.js";
+import { desktopRemoved, runDesktopRemoved } from "./desktopRemoved.js";
 import { doctor } from "./doctor.js";
 import {
   createMigrateCommand,
@@ -35,11 +36,17 @@ export async function runCroco(
 ): Promise<CrocoRunResult> {
   const runtime = createCrocoCommandRuntime(dependencies);
   const command = createBoundCrocoCommand(runtime);
-  const rawArgs = normalizeMigrateRootArgs(normalizeDesktopRootArgs(argv));
+  const rootCommandIndex = findRootCommandIndex(argv);
+  if (rootCommandIndex !== undefined && argv[rootCommandIndex] === "desktop") {
+    return runDesktopRemoved(runtime);
+  }
+  const rawArgs = normalizeMigrateRootArgs(argv);
 
   try {
     if (rawArgs.includes("--help") || rawArgs.includes("-h")) {
-      runtime.stdout(`${await renderHelpUsage(command, rawArgs)}\n`);
+      const helpCommandIndex = findRootCommandIndex(rawArgs);
+      const helpArgs = helpCommandIndex === undefined ? [] : rawArgs.slice(helpCommandIndex);
+      runtime.stdout(`${await renderHelpUsage(command, helpArgs)}\n`);
       return toRunResult(runtime.getExitCode());
     }
 
@@ -114,11 +121,7 @@ function createBoundCrocoCommand(runtime: CrocoCommandRuntime): CommandDef<typeo
         "Validate Croco contract graph artifacts",
         async () => (await import("./contracts.js")).contracts as LoadedCommand,
       ),
-      desktop: lazyCommand(
-        "desktop",
-        "Generate and validate Croco desktop contract artifacts",
-        async () => (await import("./desktop.js")).desktop as LoadedCommand,
-      ),
+      desktop: desktopRemoved,
       "architecture-policy": lazyCommand(
         "architecture-policy",
         "Validate Croco static architecture policy manifests",
@@ -215,36 +218,30 @@ export function normalizeMigrateRootArgs(rawArgs: readonly string[]): string[] {
   return [...rawArgs];
 }
 
-function normalizeDesktopRootArgs(rawArgs: readonly string[]): string[] {
-  const desktopIndex = rawArgs.indexOf("desktop");
-  const commandIndex = rawArgs.findIndex(
-    (argument, index) => index > desktopIndex && ["generate", "check", "diff"].includes(argument),
-  );
-  if (desktopIndex === -1 || commandIndex === -1) return [...rawArgs];
-
-  const normalized: string[] = [];
-  const cwdArguments: string[] = [];
-  for (let index = 0; index < rawArgs.length; index++) {
-    const argument = rawArgs[index];
-    if (argument?.startsWith("--cwd=")) {
-      if (argument.length === "--cwd=".length) return [...rawArgs];
-      cwdArguments.push(argument);
-      continue;
-    }
-    if (argument !== "--cwd") {
-      if (argument !== undefined) normalized.push(argument);
-      continue;
-    }
-    const value = rawArgs[index + 1];
-    if (!value || value.startsWith("--")) return [...rawArgs];
-    cwdArguments.push(argument, value);
-    index++;
-  }
-  return [...normalized, ...cwdArguments];
-}
-
 function findRootMigrateIndex(rawArgs: readonly string[]): number | undefined {
   return findCommandIndex(rawArgs, 0, (argument) => argument === "migrate");
+}
+
+function findRootCommandIndex(rawArgs: readonly string[]): number | undefined {
+  for (let index = 0; index < rawArgs.length; index++) {
+    const argument = rawArgs[index];
+    if (argument === undefined) {
+      continue;
+    }
+
+    if (argument === "--cwd") {
+      index++;
+      continue;
+    }
+
+    if (argument.startsWith("-")) {
+      continue;
+    }
+
+    return index;
+  }
+
+  return undefined;
 }
 
 function findMigrateSubcommandIndex(

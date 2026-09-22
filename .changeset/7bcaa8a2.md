@@ -66,7 +66,6 @@
 "@croco/preset-lambda": patch
 "@croco/preset-node": patch
 "@croco/protocols-core": patch
-"@croco/protocols-desktop": patch
 "@croco/protocols-rest": patch
 "@croco/ratelimit-core": patch
 "@croco/ratelimit-upstash": patch

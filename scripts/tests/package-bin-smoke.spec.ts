@@ -237,9 +237,9 @@ describe("package-bin-smoke.mts", () => {
     spawnTimeoutMs,
   );
 
-  it(
-    "executes explicit functional contracts for create-croco-app, croco, and RPC codegen",
-    () => {
+  it.each([false, true])(
+    "executes create-croco-app, croco, and RPC contracts and catches removed desktop output: %s",
+    (createsDesktopOutput) => {
       const root = createTempRoot();
       writeBinPackage(root, {
         commandName: "create-croco-app",
@@ -263,9 +263,6 @@ describe("package-bin-smoke.mts", () => {
         },
         directoryName: "cli",
         packageName: "@croco/cli",
-        additionalFiles: {
-          "desktop-config-worker.js": "export {};\n",
-        },
         script: [
           "#!/usr/bin/env node",
           'import { mkdirSync, writeFileSync } from "node:fs";',
@@ -291,26 +288,11 @@ describe("package-bin-smoke.mts", () => {
           "  process.exit(1);",
           "}",
           'if (JSON.stringify(process.argv.slice(2)) === JSON.stringify(["desktop", "generate", "--config", "bin smoke/croco desktop.config.ts", "--out-dir", "bin smoke/generated desktop", "--strict", "--json"])) {',
-          '  mkdirSync("bin smoke/generated desktop", { recursive: true });',
-          '  writeFileSync("bin smoke/generated desktop/desktop-contract-graph.json", "{}\\n");',
-          '  console.log(JSON.stringify({ semanticHash: "desktop-smoke" }));',
-          "  process.exit(0);",
-          "}",
-          'if (JSON.stringify(process.argv.slice(2)) === JSON.stringify(["desktop", "check", "--config", "bin smoke/croco desktop.config.ts", "--out-dir", "bin smoke/generated desktop", "--strict", "--json"])) {',
-          '  console.log(JSON.stringify({ semanticHash: "desktop-smoke" }));',
-          "  process.exit(0);",
-          "}",
-          'if (JSON.stringify(process.argv.slice(2)) === JSON.stringify(["desktop", "check", "--config", "bin smoke/rejected desktop.config.ts", "--out-dir", "bin smoke/generated desktop", "--json"])) {',
-          '  console.log("Code generation from strings disallowed");',
-          "  process.exit(16);",
-          "}",
-          'if (JSON.stringify(process.argv.slice(2)) === JSON.stringify(["desktop", "check", "--config", "bin smoke/unsupported desktop subpath.config.ts", "--out-dir", "bin smoke/generated desktop", "--json"])) {',
-          '  console.log("CROCO_DESKTOP_CONFIG_UNSUPPORTED_PACKAGE");',
-          "  process.exit(16);",
-          "}",
-          'if (JSON.stringify(process.argv.slice(2)) === JSON.stringify(["desktop", "diff", "--config", "bin smoke/croco desktop.config.ts", "--baseline", "bin smoke/generated desktop/desktop-contract-graph.json", "--strict", "--json"])) {',
-          '  console.log(JSON.stringify({ semanticHash: "desktop-smoke" }));',
-          "  process.exit(0);",
+          ...(createsDesktopOutput
+            ? ['  writeFileSync("bin smoke/unexpected-desktop-output.json", "{}");']
+            : []),
+          '  console.error("CROCO_DESKTOP_REMOVED");',
+          "  process.exit(1);",
           "}",
           "process.exit(9);",
           "",
@@ -321,7 +303,7 @@ describe("package-bin-smoke.mts", () => {
         [
           join(root, "packages", "cli", "dist", "cli.js"),
           "desktop",
-          "check",
+          "generate",
           "--config",
           "bin",
           "smoke/croco",
@@ -352,6 +334,13 @@ describe("package-bin-smoke.mts", () => {
 
       const result = runScript(root);
 
+      if (createsDesktopOutput) {
+        expect(result.status).toBe(1);
+        expect(result.stderr).toContain("changed the fixture");
+        expect(result.stderr).toContain("unexpected-desktop-output.json");
+        return;
+      }
+
       expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
       expect(result.stdout).toContain(
         "package-bin-smoke: create-croco-app create-croco-app bin-smoke-app --preset blank --scope @croco-smoke --no-install --no-git --json",
@@ -362,18 +351,6 @@ describe("package-bin-smoke.mts", () => {
       );
       expect(result.stdout).toContain(
         "package-bin-smoke: @croco/cli croco desktop generate --config bin smoke/croco desktop.config.ts --out-dir bin smoke/generated desktop --strict --json",
-      );
-      expect(result.stdout).toContain(
-        "package-bin-smoke: @croco/cli croco desktop check --config bin smoke/croco desktop.config.ts --out-dir bin smoke/generated desktop --strict --json",
-      );
-      expect(result.stdout).toContain(
-        "package-bin-smoke: @croco/cli croco desktop check --config bin smoke/rejected desktop.config.ts --out-dir bin smoke/generated desktop --json",
-      );
-      expect(result.stdout).toContain(
-        "package-bin-smoke: @croco/cli croco desktop check --config bin smoke/unsupported desktop subpath.config.ts --out-dir bin smoke/generated desktop --json",
-      );
-      expect(result.stdout).toContain(
-        "package-bin-smoke: @croco/cli croco desktop diff --config bin smoke/croco desktop.config.ts --baseline bin smoke/generated desktop/desktop-contract-graph.json --strict --json",
       );
       expect(result.stdout).toContain(
         "package-bin-smoke: @croco/rpc-codegen croco-rpc-codegen --controllers bin-smoke/SmokeController.ts --tsconfig bin-smoke/tsconfig.json --check --compatibility-problems --compatibility-schemas",

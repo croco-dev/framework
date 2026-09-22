@@ -51,7 +51,6 @@
   "dependencies": {
     "@clack/prompts": "^0.9.1",
     "@croco/architecture-policy": "workspace:*",
-    "@croco/desktop-codegen": "workspace:*",
     "@croco/diagnostics-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/framework-routes": "workspace:*",
@@ -59,7 +58,6 @@
     "@croco/openapi-spec": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/protocols-core": "workspace:*",
-    "@croco/protocols-desktop": "workspace:*",
     "@croco/rpc-codegen": "workspace:*",
     "@croco/testing": "workspace:*",
     "citty": "^0.1.6",

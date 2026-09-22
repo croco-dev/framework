@@ -303,34 +303,28 @@ describe("doc-examples-check.mts", () => {
   );
 
   it(
-    "recognizes desktop config diagnostics without hiding unknown environment variables",
+    "recognizes desktop removal diagnostics without hiding unknown environment variables",
     () => {
       const root = createTempRoot();
       writeValidDocs(root, [
         "",
-        "`CROCO_DESKTOP_CONFIG_INVALID` and `CROCO_DESKTOP_CONFIG_WORKER_FAILED` report config failures.",
-        "Set `CROCO_DESKTOP_CONFIG_MODE` to configure the runtime.",
+        "`CROCO_DESKTOP_REMOVED` reports the removed command.",
+        "Set `CROCO_UNKNOWN_CONFIG_MODE` to configure the runtime.",
       ]);
       writeOperationalEnvironmentTemplate(root);
       writeOperationalSource(
         root,
-        "packages/cli/src/workers/desktopConfigWorker.ts",
-        'class DesktopConfigValidationError extends Error { readonly code = "CROCO_DESKTOP_CONFIG_INVALID"; }\n',
-      );
-      writeOperationalSource(
-        root,
-        "packages/cli/src/libs/desktopConfig.ts",
-        'const failure = { code: "CROCO_DESKTOP_CONFIG_WORKER_FAILED" };\n',
+        "packages/cli/src/commands/desktopRemoved.ts",
+        'const diagnostic = { code: "CROCO_DESKTOP_REMOVED" };\n',
       );
 
       const result = runScript(root, "--check");
 
       expect(result.status).toBe(1);
       expect(result.stdout).toContain(
-        "CROCO_DESKTOP_CONFIG_MODE is documented as operational configuration but missing from the operational environment policy",
+        "CROCO_UNKNOWN_CONFIG_MODE is documented as operational configuration but missing from the operational environment policy",
       );
-      expect(result.stdout).not.toContain("CROCO_DESKTOP_CONFIG_INVALID is documented");
-      expect(result.stdout).not.toContain("CROCO_DESKTOP_CONFIG_WORKER_FAILED is documented");
+      expect(result.stdout).not.toContain("CROCO_DESKTOP_REMOVED is documented");
     },
     scriptTestTimeout,
   );

@@ -21,7 +21,6 @@
 "@croco/pagination-core": patch
 "@croco/problems-core": patch
 "@croco/protocols-core": patch
-"@croco/protocols-desktop": patch
 "@croco/protocols-graphql": patch
 "@croco/protocols-rest": patch
 "@croco/protocols-trpc": patch

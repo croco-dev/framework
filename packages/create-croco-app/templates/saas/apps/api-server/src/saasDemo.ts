@@ -1439,11 +1439,12 @@ async function runUsageRecoveryProcess(): Promise<RecoveryDeliveryResult> {
       "Usage recovery requires npm_execpath from the package manager runtime.",
     );
   }
+  const packageManager = resolvePackageManagerInvocation(packageManagerCli);
   let stdout: string;
   try {
     ({ stdout } = await execFileAsync(
-      process.execPath,
-      [packageManagerCli, "run", "demo:usage-recover"],
+      packageManager.command,
+      [...packageManager.args, "run", "demo:usage-recover"],
       {
         cwd: process.cwd(),
         env: process.env,
@@ -1471,6 +1472,15 @@ async function runUsageRecoveryProcess(): Promise<RecoveryDeliveryResult> {
       "Usage recovery process returned an invalid delivery result.",
     );
   }
+}
+
+function resolvePackageManagerInvocation(packageManagerCli: string): {
+  readonly command: string;
+  readonly args: readonly string[];
+} {
+  return [".js", ".cjs", ".mjs"].some((extension) => packageManagerCli.endsWith(extension))
+    ? { command: process.execPath, args: [packageManagerCli] }
+    : { command: packageManagerCli, args: [] };
 }
 
 function readRecoveryProcessFailure(error: unknown): string {

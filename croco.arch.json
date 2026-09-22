@@ -73,8 +73,7 @@
         "@croco/tx-core",
         "@croco/webhooks-core",
         "@croco/workflow-core"
-      ],
-      "paths": ["packages/protocols-desktop"]
+      ]
     },
     "plugins": {
       "packages": [
@@ -140,7 +139,6 @@
         "@croco/architecture-policy",
         "@croco/cli",
         "create-croco-app",
-        "@croco/desktop-codegen",
         "@croco/esbuild-plugin",
         "@croco/framework-preset",
         "@croco/frontend-vite",
@@ -155,10 +153,6 @@
     },
     "application": {
       "packages": []
-    },
-    "desktop-contracts": {
-      "description": "Browser-safe desktop contract declarations and schema compiler inputs.",
-      "packages": ["@croco/protocols-desktop"]
     }
   },
   "rules": {
@@ -167,7 +161,7 @@
         "id": "framework-provider-package-boundary",
         "description": "Canonical contract and kernel boundaries exclude concrete Plugins.",
         "from": {
-          "groups": ["kernel", "contracts", "desktop-contracts"]
+          "groups": ["kernel", "contracts"]
         },
         "to": {
           "groups": ["plugins"]
@@ -179,7 +173,7 @@
         "id": "framework-provider-sdk-boundary",
         "description": "Framework and core packages must not depend on concrete provider/runtime SDKs.",
         "from": {
-          "groups": ["kernel", "contracts", "desktop-contracts"]
+          "groups": ["kernel", "contracts"]
         },
         "to": {
           "specifiers": [
@@ -199,54 +193,9 @@
         },
         "message": "Framework/core packages cannot import provider or runtime implementation SDKs.",
         "recovery": "Move provider/runtime implementation code behind an adapter package and keep the framework/core package on an explicit contract."
-      },
-      {
-        "id": "desktop-contract-runtime-imports",
-        "description": "Desktop protocol contracts must remain independent of Electron, Node, and Electron transport runtimes.",
-        "from": {
-          "groups": ["desktop-contracts"]
-        },
-        "to": {
-          "specifiers": [
-            "electron",
-            "electron/*",
-            "node:*",
-            "@croco/transports-electron",
-            "@croco/transports-electron/*"
-          ]
-        },
-        "appliesTo": ["source"],
-        "message": "Desktop protocol contracts cannot import Electron, Node runtime APIs, or Electron transports.",
-        "recovery": "Move runtime integration behind an Electron transport package and keep protocols-desktop browser-safe."
-      },
-      {
-        "id": "desktop-contract-application-imports",
-        "description": "Desktop protocol contracts must not import application bootstrap packages.",
-        "from": {
-          "groups": ["desktop-contracts"]
-        },
-        "to": {
-          "groups": ["application", "tooling"]
-        },
-        "appliesTo": ["source"],
-        "message": "Desktop protocol contracts cannot import application bootstrap packages.",
-        "recovery": "Keep application composition outside protocols-desktop and depend only on declared contract packages."
       }
     ],
-    "allowedGroupImports": [
-      {
-        "id": "desktop-contract-package-dependencies",
-        "fromGroups": ["desktop-contracts"],
-        "allowGroups": [],
-        "allowSpecifiers": ["vitest", "zod"],
-        "allowSameGroup": false,
-        "allowExternal": false,
-        "appliesTo": ["package-manifest"],
-        "message": "Desktop protocol package manifests may depend only on contract libraries and declared test/schema tooling.",
-        "recovery": "Keep protocols-desktop dependencies limited to @croco/problems-core, @croco/protocols-core, vitest, and zod.",
-        "allowPackages": ["@croco/problems-core", "@croco/protocols-core"]
-      }
-    ],
+    "allowedGroupImports": [],
     "publicEntrypoints": {
       "id": "croco-public-entrypoints",
       "description": "Production source imports between Croco packages must use declared package exports instead of src/dist internals.",
