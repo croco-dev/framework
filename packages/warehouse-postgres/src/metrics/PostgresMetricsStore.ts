@@ -1,43 +1,42 @@
-import type { MetricsSnapshot, MRRMovement, Period, RetentionMetrics } from "../../types";
-import { MetricsRepository } from "../interfaces/MetricsRepository";
-import { RetentionCalculator } from "../RetentionCalculator";
+import { MetricsRepository, RetentionCalculator } from "@croco/metrics-core";
+import { ProblemFactory } from "@croco/problems-core";
 
-/**
- * PostgreSQL 클라이언트 인터페이스 (pg 또는 호환 라이브러리)
- *
- * @description
- * pg.Pool, pg.Client, 또는 Prisma Client 등과 호환되는 최소 인터페이스
- */
-export interface PostgresClient {
-  /**
-   * 쿼리 실행
-   *
-   * @param sql - SQL 쿼리 문자열 (parameterized query: $1, $2, ...)
-   * @param params - 쿼리 파라미터
-   * @returns 쿼리 결과 rows
-   */
-  query<T = unknown>(sql: string, params?: unknown[]): Promise<{ rows: T[] }>;
-}
+import type { MetricsSnapshot, MRRMovement, Period, RetentionMetrics } from "@croco/metrics-core";
+import type { MetricsPostgresClient } from "./MetricsPostgresClient";
 
-/**
- * TimescaleDB 기반 MetricsRepository 구현체
- *
- * @description
- * - TimescaleDB Hypertable에 MRR 변동 이력과 스냅샷 저장
- * - recordSnapshot은 upsert (ON CONFLICT UPDATE) 사용
- * - getRetentionMetrics은 스냅샷과 변동 이력을 집계하여 계산
- *
- * **참고**: 실제 구현 시 쿼리 로직을 완성해야 합니다.
- * 이 파일은 인터페이스와 스켈레톤만 제공합니다.
- */
-export class TimescaleMetricsStore extends MetricsRepository {
+type NumericColumn = number | string;
+
+type SnapshotRow = {
+  readonly activeCustomers: NumericColumn;
+  readonly date: Date | string;
+  readonly total_mrr_amount: NumericColumn;
+  readonly total_mrr_currency: string;
+};
+
+type MovementRow = {
+  readonly churned_mrr_amount: NumericColumn;
+  readonly churned_mrr_currency: string;
+  readonly contraction_mrr_amount: NumericColumn;
+  readonly contraction_mrr_currency: string;
+  readonly expansion_mrr_amount: NumericColumn;
+  readonly expansion_mrr_currency: string;
+  readonly net_mrr_amount: NumericColumn;
+  readonly net_mrr_currency: string;
+  readonly new_mrr_amount: NumericColumn;
+  readonly new_mrr_currency: string;
+  readonly reactivation_mrr_amount: NumericColumn;
+  readonly reactivation_mrr_currency: string;
+};
+
+/** PostgreSQL implementation of the metrics repository contract. */
+export class PostgresMetricsStore extends MetricsRepository {
   private static readonly MRR_MOVEMENTS_TABLE = "mrr_movements";
   private static readonly MRR_MOVEMENT_EVENT_KEYS_TABLE = "mrr_movement_event_keys";
   private static readonly SNAPSHOTS_TABLE = "metrics_snapshots";
 
   private readonly retentionCalculator = new RetentionCalculator();
 
-  constructor(private readonly db: PostgresClient) {
+  constructor(private readonly db: MetricsPostgresClient) {
     super();
   }
 
@@ -54,7 +53,7 @@ export class TimescaleMetricsStore extends MetricsRepository {
         SELECT DISTINCT candidate.event_key
         FROM unnest($16::text[]) AS candidate(event_key)
       ), claimed_event_keys AS (
-        INSERT INTO ${TimescaleMetricsStore.MRR_MOVEMENT_EVENT_KEYS_TABLE} (tenant_id, event_key)
+        INSERT INTO ${PostgresMetricsStore.MRR_MOVEMENT_EVENT_KEYS_TABLE} (tenant_id, event_key)
         SELECT $1, candidate.event_key
         FROM candidate_event_keys AS candidate
         ORDER BY candidate.event_key
@@ -66,7 +65,7 @@ export class TimescaleMetricsStore extends MetricsRepository {
           AND (SELECT COUNT(*) FROM claimed_event_keys) = (SELECT COUNT(*) FROM candidate_event_keys)
           AS won
       )
-      INSERT INTO ${TimescaleMetricsStore.MRR_MOVEMENTS_TABLE} (
+      INSERT INTO ${PostgresMetricsStore.MRR_MOVEMENTS_TABLE} (
         tenant_id, event_key, timestamp,
         new_mrr_amount, new_mrr_currency,
         expansion_mrr_amount, expansion_mrr_currency,
@@ -80,7 +79,7 @@ export class TimescaleMetricsStore extends MetricsRepository {
       WHERE claim.won
     `
       : `
-      INSERT INTO ${TimescaleMetricsStore.MRR_MOVEMENTS_TABLE} (
+      INSERT INTO ${PostgresMetricsStore.MRR_MOVEMENTS_TABLE} (
         tenant_id, timestamp,
         new_mrr_amount, new_mrr_currency,
         expansion_mrr_amount, expansion_mrr_currency,
@@ -114,7 +113,7 @@ export class TimescaleMetricsStore extends MetricsRepository {
 
   async recordSnapshot(tenantId: string, snapshot: MetricsSnapshot, date: Date): Promise<void> {
     const sql = `
-      INSERT INTO ${TimescaleMetricsStore.SNAPSHOTS_TABLE} (
+      INSERT INTO ${PostgresMetricsStore.SNAPSHOTS_TABLE} (
         tenant_id, snapshot_date, total_mrr_amount, total_mrr_currency, active_customers
       ) VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (tenant_id, snapshot_date)
@@ -125,56 +124,36 @@ export class TimescaleMetricsStore extends MetricsRepository {
         created_at = NOW()
     `;
 
-    const params = [
+    await this.db.query(sql, [
       tenantId,
       date,
       snapshot.totalMRR.amount,
       snapshot.totalMRR.currency,
       snapshot.activeCustomers,
-    ];
-
-    await this.db.query(sql, params);
+    ]);
   }
 
   async getSnapshot(tenantId: string, date: Date): Promise<MetricsSnapshot | null> {
-    const sql = `
+    const result = await this.db.query<SnapshotRow>(
+      `
       SELECT
-        snapshot_date as "date",
+        snapshot_date AS "date",
         total_mrr_amount,
         total_mrr_currency,
-        active_customers as "activeCustomers"
-      FROM ${TimescaleMetricsStore.SNAPSHOTS_TABLE}
+        active_customers AS "activeCustomers"
+      FROM ${PostgresMetricsStore.SNAPSHOTS_TABLE}
       WHERE tenant_id = $1 AND snapshot_date = $2
-    `;
-
-    const result = await this.db.query<{
-      date: Date;
-      total_mrr_amount: number;
-      total_mrr_currency: string;
-      activeCustomers: number;
-    }>(sql, [tenantId, date]);
-
-    if (result.rows.length === 0) {
-      return null;
-    }
+    `,
+      [tenantId, date],
+    );
 
     const row = result.rows[0];
-    if (!row) {
-      return null;
-    }
-
-    return {
-      date: row.date,
-      totalMRR: {
-        amount: row.total_mrr_amount,
-        currency: row.total_mrr_currency,
-      },
-      activeCustomers: row.activeCustomers,
-    };
+    return row ? decodeSnapshot(row) : null;
   }
 
   async getMRRHistory(tenantId: string, period: Period): Promise<MRRMovement[]> {
-    const sql = `
+    const result = await this.db.query<MovementRow>(
+      `
       SELECT
         new_mrr_amount,
         new_mrr_currency,
@@ -188,45 +167,16 @@ export class TimescaleMetricsStore extends MetricsRepository {
         reactivation_mrr_currency,
         net_mrr_amount,
         net_mrr_currency
-      FROM ${TimescaleMetricsStore.MRR_MOVEMENTS_TABLE}
+      FROM ${PostgresMetricsStore.MRR_MOVEMENTS_TABLE}
       WHERE tenant_id = $1
         AND timestamp >= $2
         AND timestamp < $3
       ORDER BY timestamp ASC
-    `;
-
-    const result = await this.db.query<{
-      new_mrr_amount: number;
-      new_mrr_currency: string;
-      expansion_mrr_amount: number;
-      expansion_mrr_currency: string;
-      contraction_mrr_amount: number;
-      contraction_mrr_currency: string;
-      churned_mrr_amount: number;
-      churned_mrr_currency: string;
-      reactivation_mrr_amount: number;
-      reactivation_mrr_currency: string;
-      net_mrr_amount: number;
-      net_mrr_currency: string;
-    }>(sql, [tenantId, period.from, period.to]);
-
-    return result.rows.map(
-      (row) =>
-        ({
-          new: { amount: row.new_mrr_amount, currency: row.new_mrr_currency },
-          expansion: { amount: row.expansion_mrr_amount, currency: row.expansion_mrr_currency },
-          contraction: {
-            amount: row.contraction_mrr_amount,
-            currency: row.contraction_mrr_currency,
-          },
-          churned: { amount: row.churned_mrr_amount, currency: row.churned_mrr_currency },
-          reactivation: {
-            amount: row.reactivation_mrr_amount,
-            currency: row.reactivation_mrr_currency,
-          },
-          net: { amount: row.net_mrr_amount, currency: row.net_mrr_currency },
-        }) as MRRMovement,
+    `,
+      [tenantId, period.from, period.to],
     );
+
+    return result.rows.map(decodeMovement);
   }
 
   async getRetentionMetrics(tenantId: string, period: Period): Promise<RetentionMetrics> {
@@ -260,44 +210,27 @@ export class TimescaleMetricsStore extends MetricsRepository {
     tenantId: string,
     date: Date,
   ): Promise<MetricsSnapshot | null> {
-    const sql = `
+    const result = await this.db.query<SnapshotRow>(
+      `
       SELECT
-        snapshot_date as "date",
+        snapshot_date AS "date",
         total_mrr_amount,
         total_mrr_currency,
-        active_customers as "activeCustomers"
-      FROM ${TimescaleMetricsStore.SNAPSHOTS_TABLE}
+        active_customers AS "activeCustomers"
+      FROM ${PostgresMetricsStore.SNAPSHOTS_TABLE}
       WHERE tenant_id = $1 AND snapshot_date <= $2
       ORDER BY snapshot_date DESC
       LIMIT 1
-    `;
-
-    const result = await this.db.query<{
-      date: Date;
-      total_mrr_amount: number;
-      total_mrr_currency: string;
-      activeCustomers: number;
-    }>(sql, [tenantId, date]);
+    `,
+      [tenantId, date],
+    );
 
     const row = result.rows[0];
-
-    if (!row) {
-      return null;
-    }
-
-    return {
-      date: row.date,
-      totalMRR: {
-        amount: row.total_mrr_amount,
-        currency: row.total_mrr_currency,
-      },
-      activeCustomers: row.activeCustomers,
-    };
+    return row ? decodeSnapshot(row) : null;
   }
 
   private aggregateMovements(movements: MRRMovement[], currency: string): MRRMovement {
     const aggregate = (): { amount: number; currency: string } => ({ amount: 0, currency });
-
     const totals: MRRMovement = {
       new: aggregate(),
       expansion: aggregate(),
@@ -334,4 +267,69 @@ export class TimescaleMetricsStore extends MetricsRepository {
 
     return (churnedCustomers / startingSnapshot.activeCustomers) * 100;
   }
+}
+
+function decodeSnapshot(row: SnapshotRow): MetricsSnapshot {
+  return {
+    date: decodeDate(row.date, "snapshot_date"),
+    totalMRR: {
+      amount: decodeSafeInteger(row.total_mrr_amount, "total_mrr_amount"),
+      currency: row.total_mrr_currency,
+    },
+    activeCustomers: decodeSafeInteger(row.activeCustomers, "active_customers"),
+  };
+}
+
+function decodeMovement(row: MovementRow): MRRMovement {
+  return {
+    new: {
+      amount: decodeSafeInteger(row.new_mrr_amount, "new_mrr_amount"),
+      currency: row.new_mrr_currency,
+    },
+    expansion: {
+      amount: decodeSafeInteger(row.expansion_mrr_amount, "expansion_mrr_amount"),
+      currency: row.expansion_mrr_currency,
+    },
+    contraction: {
+      amount: decodeSafeInteger(row.contraction_mrr_amount, "contraction_mrr_amount"),
+      currency: row.contraction_mrr_currency,
+    },
+    churned: {
+      amount: decodeSafeInteger(row.churned_mrr_amount, "churned_mrr_amount"),
+      currency: row.churned_mrr_currency,
+    },
+    reactivation: {
+      amount: decodeSafeInteger(row.reactivation_mrr_amount, "reactivation_mrr_amount"),
+      currency: row.reactivation_mrr_currency,
+    },
+    net: {
+      amount: decodeSafeInteger(row.net_mrr_amount, "net_mrr_amount"),
+      currency: row.net_mrr_currency,
+    },
+  };
+}
+
+function decodeSafeInteger(value: NumericColumn, column: string): number {
+  const decoded =
+    typeof value === "number" ? value : /^[+-]?\d+$/.test(value) ? Number(value) : Number.NaN;
+  if (!Number.isSafeInteger(decoded)) {
+    invalidMetricsRow(column, "a safe integer");
+  }
+  return decoded;
+}
+
+function decodeDate(value: Date | string, column: string): Date {
+  const decoded =
+    value instanceof Date ? new Date(value.getTime()) : new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(decoded.getTime())) {
+    invalidMetricsRow(column, "a valid date");
+  }
+  return decoded;
+}
+
+function invalidMetricsRow(column: string, expected: string): never {
+  throw ProblemFactory.internalServerError(
+    "warehouse-postgres/metrics-row-invalid",
+    `PostgreSQL metrics column '${column}' must contain ${expected}.`,
+  );
 }

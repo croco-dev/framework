@@ -1951,6 +1951,15 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "warehouse-postgres/metrics-row-invalid": recovery({
+    cause: "A persisted PostgreSQL metrics row failed validation or decoding.",
+    userAction: "Do not retry until the invalid persisted metrics row has been corrected.",
+    operatorAction:
+      "Use traces and logs to identify the invalid column, then repair or remove the persisted metrics row.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "testing-resources/missing-live-dependency": recovery({
     cause:
       "A PostgreSQL or Redis test resource was started without its required optional live driver.",

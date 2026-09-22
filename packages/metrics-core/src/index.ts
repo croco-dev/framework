@@ -84,17 +84,6 @@ export type { SnapshotInput, SnapshotSchedulerConfig } from "./libs/SnapshotSche
 export { SnapshotScheduler, SnapshotTenantRequiredProblem } from "./libs/SnapshotScheduler";
 
 /**
- * Timescale 스토어가 요구하는 Postgres 클라이언트 계약입니다.
- */
-export type { PostgresClient } from "./libs/stores/TimescaleMetricsStore";
-// Stores
-
-/**
- * TimescaleDB 기반 메트릭 저장소 구현체입니다.
- */
-export { TimescaleMetricsStore } from "./libs/stores/TimescaleMetricsStore";
-
-/**
  * metrics-core에서 공통으로 사용하는 핵심 메트릭 타입들입니다.
  */
 export type {

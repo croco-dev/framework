@@ -1161,7 +1161,7 @@ export function classifyDiscoveredTest(rootDir: string, path: string): TestInven
   else if (path.startsWith("packages/create-croco-app/templates/")) lane = "generated-app";
   else if (
     /(?:^|[/._-])(?:live|provider-certification|provider-e2e)(?:[/._-]|$)/.test(lower) ||
-    /(?:postgres\.spec|redismetering\.integration|timescalemetricsstore\.integration|migrationstatuspostgres|testing-resources\/.*\/realresources|livesmoke)/.test(
+    /(?:postgres\.spec|redismetering\.integration|(?:postgres|timescale)metricsstore\.integration|migrationstatuspostgres|testing-resources\/.*\/realresources|livesmoke)/.test(
       lower,
     )
   )

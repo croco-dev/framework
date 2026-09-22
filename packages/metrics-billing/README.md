@@ -5,7 +5,7 @@ Billing 도메인 이벤트를 Metrics 계산으로 연결하는 파이프라인
 ## 설치
 
 ```bash
-pnpm add @croco/metrics-billing
+pnpm add @croco/metrics-billing @croco/warehouse-postgres
 ```
 
 ## 개요
@@ -24,10 +24,10 @@ pnpm add @croco/metrics-billing
 
 ```typescript
 import { BillingEventHandler } from "@croco/metrics-billing";
-import { TimescaleMetricsStore } from "@croco/metrics-core";
+import { PostgresMetricsStore } from "@croco/warehouse-postgres/metrics";
 import { Container } from "@croco/framework-context";
 
-const metricsRepository = new TimescaleMetricsStore(db);
+const metricsRepository = new PostgresMetricsStore(db);
 const handler = new BillingEventHandler(planRegistry, billingStore, metricsRepository);
 
 await eventBus.publish(
@@ -79,13 +79,13 @@ Container.register(BillingEventHandler, {
 eventKey = `${eventName}_${event.eventId}`
 ```
 
-동일한 이벤트 키로 중복 호출되면 TimescaleMetricsStore의 `ON CONFLICT DO NOTHING`이 처리합니다.
+동일한 이벤트 키로 중복 호출되면 PostgresMetricsStore의 atomic claim이 처리합니다.
 서로 다른 billing event는 같은 millisecond에 발생해도 `DomainEvent.eventId`가 다르므로
 별도 metric으로 기록됩니다.
 
 이전 버전은 `${eventName}_${timestamp.getTime()}` 형식의 timestamp 기반 키를 사용했습니다.
 `BillingEventHandler`는 primary key로 `eventId` 기반 키를 전달하고, timestamp 기반 키를
-compatibility dedupe alias로 함께 전달합니다. TimescaleMetricsStore는 alias가 이미 저장된
+compatibility dedupe alias로 함께 전달합니다. PostgresMetricsStore는 alias가 이미 저장된
 row를 발견하면 새 primary key insert를 건너뛰어 배포 전후 replay가 중복 MRR을 만들지 않게 합니다.
 
 ## Failure semantics

@@ -115,6 +115,7 @@
   "@croco/tx-core": "contracts",
   "@croco/tx-drizzle": "plugins",
   "@croco/ui-astryx": "plugins",
+  "@croco/warehouse-postgres": "plugins",
   "@croco/webhooks-core": "contracts",
   "@croco/workflow-core": "contracts"
 }

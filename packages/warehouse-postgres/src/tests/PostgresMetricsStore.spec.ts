@@ -1,10 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { MetricsSnapshot, MRRMovement } from "../../src/types";
-import { type PostgresClient, TimescaleMetricsStore } from "../libs/stores/TimescaleMetricsStore";
+import type { MRRMovement } from "@croco/metrics-core";
+import {
+  installPostgresMetricsSchema,
+  installTimescaleMetricsSchema,
+  type MetricsPostgresClient,
+  migrateLegacyMetricsSchema,
+  PostgresMetricsStore,
+} from "../metrics";
 
-describe("TimescaleMetricsStore", () => {
-  let db!: PostgresClient;
-  let store!: TimescaleMetricsStore;
+describe("PostgresMetricsStore", () => {
+  let db!: MetricsPostgresClient;
+  let store!: PostgresMetricsStore;
 
   const movement: MRRMovement = {
     new: { amount: 1000, currency: "USD" },
@@ -19,7 +25,7 @@ describe("TimescaleMetricsStore", () => {
     db = {
       query: vi.fn().mockResolvedValue({ rows: [] }),
     };
-    store = new TimescaleMetricsStore(db);
+    store = new PostgresMetricsStore(db);
   });
 
   it("should atomically claim an event key before inserting a movement", async () => {
@@ -133,6 +139,20 @@ describe("TimescaleMetricsStore", () => {
     ]);
   });
 
+  it.each([
+    ["PostgreSQL installer", installPostgresMetricsSchema],
+    ["TimescaleDB installer", installTimescaleMetricsSchema],
+    ["legacy migration", migrateLegacyMetricsSchema],
+  ] as const)("does not take transaction ownership in the %s", async (_name, helper) => {
+    await helper(db);
+
+    const sql = vi
+      .mocked(db.query)
+      .mock.calls.map(([statement]) => statement)
+      .join("\n");
+    expect(sql).not.toMatch(/\b(?:BEGIN|START\s+TRANSACTION|COMMIT|ROLLBACK)\b/i);
+  });
+
   it("should calculate retention metrics from snapshots and movement history", async () => {
     vi.mocked(db.query)
       .mockResolvedValueOnce({
@@ -210,5 +230,60 @@ describe("TimescaleMetricsStore", () => {
       grr: 100,
       nrr: 100,
     });
+  });
+
+  it("decodes PostgreSQL numeric and date strings into a typed snapshot", async () => {
+    vi.mocked(db.query).mockResolvedValueOnce({
+      rows: [
+        {
+          date: "2026-03-01",
+          total_mrr_amount: "1000",
+          total_mrr_currency: "USD",
+          activeCustomers: "10",
+        },
+      ],
+    });
+    await expect(
+      store.getSnapshot("tenant-1", new Date("2026-03-01T00:00:00.000Z")),
+    ).resolves.toEqual({
+      date: new Date("2026-03-01T00:00:00.000Z"),
+      totalMRR: { amount: 1000, currency: "USD" },
+      activeCustomers: 10,
+    });
+  });
+
+  it.each(["9007199254740993", "not-a-number", "", "1.5"])(
+    "rejects an invalid stored money amount %j",
+    async (amount) => {
+      vi.mocked(db.query).mockResolvedValueOnce({
+        rows: [
+          {
+            date: new Date("2026-03-01T00:00:00.000Z"),
+            total_mrr_amount: amount,
+            total_mrr_currency: "USD",
+            activeCustomers: 10,
+          },
+        ],
+      });
+      await expect(
+        store.getSnapshot("tenant-1", new Date("2026-03-01T00:00:00.000Z")),
+      ).rejects.toThrow();
+    },
+  );
+
+  it("rejects an invalid stored snapshot date", async () => {
+    vi.mocked(db.query).mockResolvedValueOnce({
+      rows: [
+        {
+          date: "not-a-date",
+          total_mrr_amount: "1000",
+          total_mrr_currency: "USD",
+          activeCustomers: 10,
+        },
+      ],
+    });
+    await expect(
+      store.getSnapshot("tenant-1", new Date("2026-03-01T00:00:00.000Z")),
+    ).rejects.toThrow();
   });
 });

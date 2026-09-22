@@ -75,7 +75,7 @@ export type MRRMovement = {
  * GRR = max(0, min(100, ((Starting MRR - Churned MRR - Contraction MRR) / Starting MRR) * 100))
  *
  * `RetentionCalculator.calculateGRR` returns `null` when Starting MRR is zero.
- * `TimescaleMetricsStore.getRetentionMetrics` represents that unavailable GRR as 100.
+ * Repository implementations represent that unavailable GRR as 100.
  *
  * ## Net revenue retention formula
  *

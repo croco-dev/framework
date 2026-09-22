@@ -960,10 +960,11 @@ describe("CI verification profile contract", () => {
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/metering-core test:real");
   });
 
-  it("runs Timescale metrics idempotency against a real TimescaleDB container", () => {
-    expect(WORKFLOW).toContain("              - 'packages/metrics-core/src/**'");
-    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/metrics-core...");
-    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/metrics-core test:real");
+  it("runs metrics persistence against real PostgreSQL and TimescaleDB containers", () => {
+    expect(WORKFLOW).toContain("              - 'packages/metrics-core/**'");
+    expect(WORKFLOW).toContain("              - 'packages/warehouse-postgres/**'");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/warehouse-postgres...");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/warehouse-postgres test:real");
   });
 
   it("runs fresh migration status against real PostgreSQL", () => {

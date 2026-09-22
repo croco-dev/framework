@@ -1143,6 +1143,12 @@
       "runtimes": ["browser", "node"],
       "domain": "Astryx UI"
     },
+    "warehouse-postgres": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Metrics"
+    },
     "webhooks-core": {
       "role": "Contracts",
       "subtype": "domain",
@@ -1251,7 +1257,8 @@
         "storage-cloudinary",
         "storage-r2",
         "tasks-qstash",
-        "triggers-qstash"
+        "triggers-qstash",
+        "warehouse-postgres"
       ]
     },
     "Integration": {
@@ -1430,6 +1437,7 @@
         "transports-cloudflare-workers",
         "transports-graphql",
         "triggers-core",
+        "warehouse-postgres",
         "webhooks-core",
         "workflow-core"
       ]
@@ -1799,6 +1807,19 @@
           "tenant propagation",
           "event identity idempotency",
           "dropped metric Problems"
+        ]
+      },
+      "warehouse-postgres": {
+        "domain": "Metrics",
+        "adapter": "PostgreSQL metrics repository",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["database connection supplied by app"],
+        "features": [
+          "legacy metrics persistence",
+          "plain PostgreSQL schema installation",
+          "optional TimescaleDB hypertables",
+          "tenant-scoped event idempotency",
+          "legacy schema reconciliation"
         ]
       },
       "notifications-resend": {

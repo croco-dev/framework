@@ -2625,18 +2625,6 @@
       "owner": "@croco/metrics-core"
     },
     {
-      "path": "packages/metrics-core/src/tests/TimescaleMetricsStore.integration.spec.ts",
-      "lane": "live",
-      "qualifiers": [],
-      "owner": "@croco/metrics-core"
-    },
-    {
-      "path": "packages/metrics-core/src/tests/TimescaleMetricsStore.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/metrics-core"
-    },
-    {
       "path": "packages/migration-runner/src/tests/MigrationCommandE2E.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -4393,6 +4381,18 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/ui-astryx"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PostgresMetricsStore.integration.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PostgresMetricsStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
     },
     {
       "path": "packages/webhooks-core/src/tests/OutboundWebhookRuntime.spec.ts",

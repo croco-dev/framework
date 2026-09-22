@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 778,
+  problemCount: 779,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -23437,6 +23437,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 4,
           column: 1,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "warehouse-postgres/metrics-row-invalid",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#warehouse-postgres-metrics-row-invalid",
+      recovery: {
+        cause: "A persisted PostgreSQL metrics row failed validation or decoding.",
+        userAction: "Do not retry until the invalid persisted metrics row has been corrected.",
+        operatorAction:
+          "Use traces and logs to identify the invalid column, then repair or remove the persisted metrics row.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts",
+          line: 331,
+          column: 9,
+          kind: "problem-factory",
         },
       ],
     },

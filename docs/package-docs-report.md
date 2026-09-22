@@ -6,12 +6,12 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   118 |
+| Public packages                |   119 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
 | Missing generated API docs     |     0 |
 | Missing package test directory |     0 |
-| Extension matrix packages      |    48 |
+| Extension matrix packages      |    49 |
 | Certification records          |     8 |
 | Croco 1.0 spine packages       |    18 |
 
@@ -223,6 +223,7 @@ None.
 | `@croco/tx-core`                       | Contracts      | domain        | Tx                      | unclaimed                                 |
 | `@croco/tx-drizzle`                    | Plugins        | provider      | Tx Drizzle              | unclaimed                                 |
 | `@croco/ui-astryx`                     | Plugins        | presentation  | Astryx UI               | browser, node                             |
+| `@croco/warehouse-postgres`            | Plugins        | provider      | Metrics                 | node, lambda                              |
 | `@croco/webhooks-core`                 | Contracts      | domain        | Webhooks                | unclaimed                                 |
 | `@croco/workflow-core`                 | Contracts      | domain        | Workflow                | unclaimed                                 |
 
@@ -232,7 +233,7 @@ None.
 | ------------ | -------: |
 | Core         |       23 |
 | Domain       |       31 |
-| Provider     |       28 |
+| Provider     |       29 |
 | Integration  |        5 |
 | Protocol     |        8 |
 | Transport    |        2 |
@@ -244,7 +245,7 @@ None.
 | Maturity            | Packages |
 | ------------------- | -------: |
 | 🟢 production-ready |       24 |
-| 🟡 beta             |       78 |
+| 🟡 beta             |       79 |
 | 🔴 alpha/WIP        |       16 |
 | ⚠️ deprecated       |        0 |
 
@@ -254,7 +255,7 @@ Extension matrix metadata is maintained in `docs/package-catalog.json` and rende
 
 | Group        | Packages | Without package tests |
 | ------------ | -------: | --------------------: |
-| Provider     |       28 |                     0 |
+| Provider     |       29 |                     0 |
 | Integration  |        5 |                     0 |
 | Transport    |        2 |                     0 |
 | Host         |        4 |                     0 |
