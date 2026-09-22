@@ -633,6 +633,7 @@ describe("classification, CLI, and repository migration", () => {
       ["packages/example/src/tests/DrizzleMeterRepositoryPostgres.spec.ts", "live"],
       ["packages/example/src/tests/RedisMetering.integration.spec.ts", "live"],
       ["packages/example/src/tests/TimescaleMetricsStore.integration.spec.ts", "live"],
+      ["packages/example/src/tests/PostgresMetricsStore.integration.spec.ts", "live"],
       ["packages/example/src/tests/MigrationStatusPostgres.spec.ts", "live"],
       ["packages/example/src/tests/LiveSmoke.spec.ts", "live"],
       ["packages/testing-resources/src/tests/RealResources.spec.ts", "live"],

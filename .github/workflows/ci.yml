@@ -675,6 +675,8 @@ jobs:
               - 'packages/membership-drizzle/**'
               - 'packages/metering-core/**'
               - 'packages/metering-drizzle/**'
+              - 'packages/metrics-core/**'
+              - 'packages/warehouse-postgres/**'
               - 'packages/migration-runner/**'
               - 'packages/problems-core/**'
               - 'packages/testing/**'
@@ -799,6 +801,7 @@ jobs:
               - 'packages/tx-core/src/**'
               - 'packages/tx-drizzle/src/**'
               - 'packages/ui-astryx/src/**'
+              - 'packages/warehouse-postgres/src/**'
               - 'packages/webhooks-core/src/**'
               - 'packages/workflow-core/src/**'
               - 'packages/*/package.json'
@@ -1529,8 +1532,8 @@ jobs:
           pnpm --filter @croco/testing-resources test:real
           pnpm build --filter=@croco/metering-core...
           pnpm --filter @croco/metering-core test:real
-          pnpm build --filter=@croco/metrics-core...
-          pnpm --filter @croco/metrics-core test:real
+          pnpm build --filter=@croco/warehouse-postgres...
+          pnpm --filter @croco/warehouse-postgres test:real
 
   windows-scaffold:
     needs: changes

@@ -46,7 +46,6 @@ await retention.calculateRetention(10000, movement, 120, 114);
 - `LtvCalculator`, ARPA와 LTV를 계산합니다.
 - `CarryingCapacityCalculator`, 운영 수용 한계를 계산합니다.
 - `SnapshotScheduler`, 메트릭 스냅샷 생성과 저장을 담당합니다.
-- `TimescaleMetricsStore`, TimescaleDB 저장소 구현체입니다.
 
 ### 주요 타입
 
@@ -57,7 +56,7 @@ await retention.calculateRetention(10000, movement, 120, 114);
 
 ### 인터페이스와 문제 타입
 
-- 인터페이스: `MetricsRepository`, `ActiveUserProvider`, `PlanProvider`, `PostgresClient`
+- 인터페이스: `MetricsRepository`, `ActiveUserProvider`, `PlanProvider`
 - 문제 타입: `MixedCurrencyMRRProblem`, `GrossMarginRequiredProblem`, `CarryingCapacitySimulationProblem`, `SnapshotTenantRequiredProblem`
 
 ## 구현 포인트
@@ -65,3 +64,4 @@ await retention.calculateRetention(10000, movement, 120, 114);
 - 지표 입력은 billing, membership, metering 스냅샷과 쉽게 결합되도록 타입 중심으로 설계되었습니다.
 - `metrics-billing` 패키지를 사용하면 billing 이벤트를 metrics 흐름으로 연결할 수 있습니다.
 - 스냅샷 저장소는 `MetricsRepository`를 구현해 교체할 수 있습니다.
+- PostgreSQL과 TimescaleDB 구현은 `@croco/warehouse-postgres/metrics`에서 제공합니다.

@@ -20525,12 +20525,6 @@
               "exportKind": "named",
               "source": "./libs/SnapshotScheduler",
               "declarationKind": "class"
-            },
-            {
-              "name": "TimescaleMetricsStore",
-              "exportKind": "named",
-              "source": "./libs/stores/TimescaleMetricsStore",
-              "declarationKind": "class"
             }
           ],
           "typeExports": [
@@ -20633,11 +20627,6 @@
               "name": "PlanSnapshot",
               "exportKind": "named",
               "source": "./types"
-            },
-            {
-              "name": "PostgresClient",
-              "exportKind": "named",
-              "source": "./libs/stores/TimescaleMetricsStore"
             },
             {
               "name": "RetentionMetrics",
@@ -33713,6 +33702,85 @@
             {
               "conditions": [],
               "target": "./dist/styles.css"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/warehouse-postgres",
+      "relativeDir": "packages/warehouse-postgres",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/warehouse-postgres/src/index.ts",
+          "runtimeExports": [],
+          "typeExports": []
+        },
+        {
+          "exportPath": "./metrics",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/metrics.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/metrics.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/metrics.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/warehouse-postgres/src/metrics.ts",
+          "runtimeExports": [
+            {
+              "name": "installPostgresMetricsSchema",
+              "exportKind": "named",
+              "source": "./metrics/schema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "installTimescaleMetricsSchema",
+              "exportKind": "named",
+              "source": "./metrics/schema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "migrateLegacyMetricsSchema",
+              "exportKind": "named",
+              "source": "./metrics/schema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "PostgresMetricsStore",
+              "exportKind": "named",
+              "source": "./metrics/PostgresMetricsStore",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "MetricsPostgresClient",
+              "exportKind": "named",
+              "source": "./metrics/MetricsPostgresClient"
             }
           ]
         }

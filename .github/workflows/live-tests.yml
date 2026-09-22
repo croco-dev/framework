@@ -115,12 +115,12 @@ jobs:
           --lane live --allow-live --owner @croco/metering-drizzle
           --output ci-reports/package-quality/live-test-lanes/metering-drizzle.json
 
-      - name: Run @croco/metrics-core live tests
+      - name: Run @croco/warehouse-postgres live tests
         continue-on-error: true
         run: >-
           node --experimental-strip-types scripts/test-lane-runner.mts
-          --lane live --allow-live --owner @croco/metrics-core
-          --output ci-reports/package-quality/live-test-lanes/metrics-core.json
+          --lane live --allow-live --owner @croco/warehouse-postgres
+          --output ci-reports/package-quality/live-test-lanes/warehouse-postgres.json
 
       - name: Run @croco/migration-runner live tests
         continue-on-error: true
@@ -209,7 +209,7 @@ jobs:
           --lane-report ci-reports/package-quality/live-test-lanes/membership-drizzle.json
           --lane-report ci-reports/package-quality/live-test-lanes/metering-core.json
           --lane-report ci-reports/package-quality/live-test-lanes/metering-drizzle.json
-          --lane-report ci-reports/package-quality/live-test-lanes/metrics-core.json
+          --lane-report ci-reports/package-quality/live-test-lanes/warehouse-postgres.json
           --lane-report ci-reports/package-quality/live-test-lanes/migration-runner.json
           --lane-report ci-reports/package-quality/live-test-lanes/notifications-resend.json
           --lane-report ci-reports/package-quality/live-test-lanes/search-meilisearch.json

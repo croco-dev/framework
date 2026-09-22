@@ -1,11 +1,11 @@
 {
-  "name": "@croco/metrics-core",
-  "version": "0.1.0",
+  "name": "@croco/warehouse-postgres",
+  "version": "0.0.1",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/croco-dev/framework.git",
-    "directory": "packages/metrics-core"
+    "directory": "packages/warehouse-postgres"
   },
   "files": [
     "dist"
@@ -20,6 +20,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./metrics": {
+      "types": "./dist/metrics.d.ts",
+      "import": "./dist/metrics.mjs",
+      "require": "./dist/metrics.js"
     }
   },
   "publishConfig": {
@@ -30,26 +35,33 @@
         "types": "./dist/index.d.ts",
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
+      },
+      "./metrics": {
+        "types": "./dist/metrics.d.ts",
+        "import": "./dist/metrics.mjs",
+        "require": "./dist/metrics.js"
       }
     },
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
-    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
-    "test": "vitest run",
+    "build": "tsup src/index.ts src/metrics.ts --format esm,cjs --minify --clean --dts",
+    "dev": "tsup src/index.ts src/metrics.ts --format esm,cjs --dts --watch",
+    "test": "vitest run --exclude src/tests/PostgresMetricsStore.integration.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
+    "test:live": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/PostgresMetricsStore.integration.spec.ts",
+    "test:real": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/PostgresMetricsStore.integration.spec.ts",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint .",
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
-    "@croco/events-core": "workspace:*",
-    "@croco/framework-context": "workspace:*",
+    "@croco/metrics-core": "workspace:*",
     "@croco/problems-core": "workspace:*"
   },
   "devDependencies": {
-    "reflect-metadata": "^0.2.2",
+    "@croco/testing-resources": "workspace:*",
+    "pg": "8.22.0",
     "tsup": "^8.4.0",
     "typescript": "^5.7.2",
     "vitest": "4.1.8"

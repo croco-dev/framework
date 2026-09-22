@@ -709,6 +709,12 @@ export const apiDocPackages = [
     moduleName: "ui-astryx/src",
   },
   {
+    packageName: "@croco/warehouse-postgres",
+    directory: "warehouse-postgres",
+    entryPoint: "src/metrics.ts",
+    moduleName: "warehouse-postgres/src/metrics",
+  },
+  {
     packageName: "@croco/webhooks-core",
     directory: "webhooks-core",
     entryPoint: "src/index.ts",

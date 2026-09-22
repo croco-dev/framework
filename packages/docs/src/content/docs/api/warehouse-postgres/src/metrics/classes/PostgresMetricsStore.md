@@ -2,19 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "TimescaleMetricsStore"
+title: "PostgresMetricsStore"
 ---
 
-TimescaleDB 기반 MetricsRepository 구현체
-
-## Description
-
-- TimescaleDB Hypertable에 MRR 변동 이력과 스냅샷 저장
-- recordSnapshot은 upsert (ON CONFLICT UPDATE) 사용
-- getRetentionMetrics은 스냅샷과 변동 이력을 집계하여 계산
-
-**참고**: 실제 구현 시 쿼리 로직을 완성해야 합니다.
-이 파일은 인터페이스와 스켈레톤만 제공합니다.
+PostgreSQL implementation of the metrics repository contract.
 
 ## Extends
 
@@ -24,17 +15,17 @@ TimescaleDB 기반 MetricsRepository 구현체
 
 ### Constructor
 
-> **new TimescaleMetricsStore**(`db`): `TimescaleMetricsStore`
+> **new PostgresMetricsStore**(`db`): `PostgresMetricsStore`
 
 #### Parameters
 
 ##### db
 
-[`PostgresClient`](/api/metrics-core/src/interfaces/postgresclient/)
+[`MetricsPostgresClient`](/api/warehouse-postgres/src/metrics/interfaces/metricspostgresclient/)
 
 #### Returns
 
-`TimescaleMetricsStore`
+`PostgresMetricsStore`
 
 #### Overrides
 
