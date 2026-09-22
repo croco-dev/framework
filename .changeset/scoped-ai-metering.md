@@ -1,5 +1,4 @@
 ---
-"@croco/llm-metering": minor
 "@croco/problems-core": patch
 ---
 

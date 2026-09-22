@@ -8,6 +8,9 @@ import {
 } from "../aiSaas";
 
 export function assertAiSaasSmokeContract(snapshot: AiSaasDemoSnapshot): void {
+  if (snapshot.generation.usage.state !== "known" || snapshot.generation.costUsd === null) {
+    throw new AiSaasSmokeProblem(["deterministic generation usage must be known"]);
+  }
   const expectedIdempotencyKey = buildAiIdempotencyKey(snapshot.tenant.id, snapshot.request.id);
   const failures = [
     snapshot.contract.version !== AI_SAAS_SMOKE_CONTRACT_VERSION
@@ -24,18 +27,16 @@ export function assertAiSaasSmokeContract(snapshot: AiSaasDemoSnapshot): void {
       ? "AI generation did not use the in-memory provider"
       : undefined,
     snapshot.generation.text.length === 0 ? "AI generation returned empty text" : undefined,
-    snapshot.generation.usage.promptTokens <= 0 ? "prompt tokens were not recorded" : undefined,
-    snapshot.generation.usage.completionTokens <= 0
-      ? "completion tokens were not recorded"
-      : undefined,
+    snapshot.generation.usage.inputTokens <= 0 ? "prompt tokens were not recorded" : undefined,
+    snapshot.generation.usage.outputTokens <= 0 ? "completion tokens were not recorded" : undefined,
     snapshot.generation.costUsd <= 0 ? "LLM cost was not recorded" : undefined,
     snapshot.generation.idempotencyKey !== expectedIdempotencyKey
       ? "AI usage did not use the deterministic idempotency key"
       : undefined,
-    snapshot.usage.usage.promptTokens !== snapshot.generation.usage.promptTokens
+    snapshot.usage.usage.promptTokens !== snapshot.generation.usage.inputTokens
       ? "prompt token usage state does not match generation usage"
       : undefined,
-    snapshot.usage.usage.completionTokens !== snapshot.generation.usage.completionTokens
+    snapshot.usage.usage.completionTokens !== snapshot.generation.usage.outputTokens
       ? "completion token usage state does not match generation usage"
       : undefined,
     snapshot.usage.usage.costUsd !== snapshot.generation.costUsd

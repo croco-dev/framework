@@ -317,6 +317,30 @@ Idempotency key 확보 (없으면 생성)
 
 ---
 
+### getMeteringRecordStatus()
+
+> **getMeteringRecordStatus**(`tenantId`, `meterId`, `idempotencyKey`): `Promise`\<[`MeteringRecordStatus`](/api/metering-core/src/type-aliases/meteringrecordstatus/)\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### meterId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+#### Returns
+
+`Promise`\<[`MeteringRecordStatus`](/api/metering-core/src/type-aliases/meteringrecordstatus/)\>
+
+---
+
 ### markMeteringEventsPublishing()
 
 > **markMeteringEventsPublishing**(`tenantId`, `meterId`, `idempotencyKey`, `token`, `delivery`): `Promise`\<`void`\>
@@ -342,6 +366,34 @@ Idempotency key 확보 (없으면 생성)
 ##### delivery
 
 [`PendingMeteringDelivery`](/api/metering-core/src/type-aliases/pendingmeteringdelivery/)
+
+#### Returns
+
+`Promise`\<`void`\>
+
+---
+
+### markMeteringPersistenceStarted()
+
+> **markMeteringPersistenceStarted**(`tenantId`, `meterId`, `idempotencyKey`, `token`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### meterId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+##### token
+
+[`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/)
 
 #### Returns
 

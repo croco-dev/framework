@@ -560,7 +560,7 @@ describe("SaaS golden path demo", () => {
       modelId: "demo-assistant",
       responseText: "Usage is under control.",
       promptQuota: 50,
-      quotaFailureCode: "llm-metering/quota-exceeded",
+      quotaFailureCode: "ai-usage/quota-exceeded",
     });
     expect(snapshot.ai.promptUsage).toBe(snapshot.ai.promptTokens);
     expect(snapshot.ai.totalTokens).toBe(snapshot.ai.promptTokens + snapshot.ai.completionTokens);

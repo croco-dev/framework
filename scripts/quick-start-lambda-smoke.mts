@@ -261,6 +261,47 @@ async function runMeteringReplaySmoke(): Promise<void> {
         "request",
         replayClaim.token,
       );
+      const completedStatus = await manager.getMeteringRecordStatus("tenant", "meter", "request");
+      if (completedStatus !== "completed") {
+        throw new Error("completed metering record reported " + completedStatus);
+      }
+
+      const rejectedClaim = await manager.claimMeteringProcessingOrThrow(
+        "tenant",
+        "meter",
+        "rejected-request",
+      );
+      await manager.markMeteringEventsPublishing(
+        "tenant",
+        "meter",
+        "rejected-request",
+        rejectedClaim.token,
+        {
+          usageRecord: {
+            id: rejectedClaim.operationId,
+            tenantId: "tenant",
+            meterId: "meter",
+            value: 1,
+            timestamp: new Date().toISOString(),
+            idempotencyKey: "rejected-request",
+          },
+          quota: { allowOverQuota: false, exceeded: true, newUsage: 2, quota: 1 },
+        },
+      );
+      await manager.completeMeteringProcessing(
+        "tenant",
+        "meter",
+        "rejected-request",
+        rejectedClaim.token,
+      );
+      const rejectedStatus = await manager.getMeteringRecordStatus(
+        "tenant",
+        "meter",
+        "rejected-request",
+      );
+      if (rejectedStatus !== "rejected") {
+        throw new Error("rejected metering record reported " + rejectedStatus);
+      }
     })().catch((error: unknown) => {
       console.error("quick-start-lambda-smoke: metering replay probe failed", error);
       process.exitCode = 1;

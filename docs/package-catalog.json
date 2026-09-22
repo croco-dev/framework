@@ -801,23 +801,11 @@
       "runtimes": [],
       "domain": "Lifecycle"
     },
-    "llm-core": {
-      "role": "Contracts",
-      "subtype": "domain",
-      "runtimes": [],
-      "domain": "Llm"
-    },
-    "llm-metering": {
+    "ai-usage": {
       "role": "Plugins",
       "subtype": "integration",
       "runtimes": [],
-      "domain": "Llm Metering"
-    },
-    "llm-openai": {
-      "role": "Plugins",
-      "subtype": "provider",
-      "runtimes": ["node", "lambda"],
-      "domain": "LLM"
+      "domain": "AI Usage"
     },
     "membership-core": {
       "role": "Contracts",
@@ -1212,8 +1200,7 @@
         "impersonation-core",
         "invitation-core",
         "lifecycle-core",
-        "llm-core",
-        "llm-metering",
+        "ai-usage",
         "membership-core",
         "metering-core",
         "metrics-core",
@@ -1243,7 +1230,6 @@
         "entitlements-drizzle",
         "execution-drizzle",
         "invitation-drizzle",
-        "llm-openai",
         "membership-drizzle",
         "metering-drizzle",
         "metering-upstash",
@@ -1339,8 +1325,7 @@
         "events-core",
         "framework-context",
         "invitation-core",
-        "llm-core",
-        "llm-metering",
+        "ai-usage",
         "membership-core",
         "metering-core",
         "metrics-core",
@@ -1404,7 +1389,6 @@
         "integrations-posthog",
         "invitation-drizzle",
         "lifecycle-core",
-        "llm-openai",
         "membership-drizzle",
         "metering-drizzle",
         "metrics-billing",
@@ -1736,21 +1720,6 @@
         "runtimes": ["node", "lambda"],
         "requiredEnv": ["database connection supplied by app"],
         "features": ["invitation persistence", "transaction-aware repository"]
-      },
-      "llm-openai": {
-        "domain": "LLM",
-        "adapter": "OpenAI Responses provider",
-        "runtimes": ["node", "lambda"],
-        "requiredEnv": ["OPENAI_API_KEY"],
-        "features": [
-          "Responses text generation",
-          "SSE streaming",
-          "JSON Schema structured output",
-          "function tool calls",
-          "single and batch embeddings",
-          "usage and telemetry mapping",
-          "Problem normalization"
-        ]
       },
       "membership-drizzle": {
         "domain": "Membership",

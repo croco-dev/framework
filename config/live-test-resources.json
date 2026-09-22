@@ -13,7 +13,6 @@
   ],
   "@croco/credits-drizzle": ["CREDITS_POSTGRES_URL"],
   "@croco/execution-drizzle": ["EXECUTION_POSTGRES_URL"],
-  "@croco/llm-openai": ["OPENAI_API_KEY"],
   "@croco/membership-drizzle": ["MEMBERSHIP_POSTGRES_URL"],
   "@croco/migration-runner": ["MIGRATION_POSTGRES_URL"],
   "@croco/notifications-resend": [

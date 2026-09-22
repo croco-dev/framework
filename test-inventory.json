@@ -200,6 +200,42 @@
       "owner": "@croco/admin-react"
     },
     {
+      "path": "packages/ai-usage/src/tests/AiPricingTable.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/ai-usage"
+    },
+    {
+      "path": "packages/ai-usage/src/tests/AiTelemetry.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/ai-usage"
+    },
+    {
+      "path": "packages/ai-usage/src/tests/AiUsageEvents.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/ai-usage"
+    },
+    {
+      "path": "packages/ai-usage/src/tests/AiUsageIngestService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/ai-usage"
+    },
+    {
+      "path": "packages/ai-usage/src/tests/AiUsageProblems.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/ai-usage"
+    },
+    {
+      "path": "packages/ai-usage/src/tests/AiUsageTypes.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/ai-usage"
+    },
+    {
       "path": "packages/analytics-core/src/tests/AnalyticsManager.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -1027,6 +1063,28 @@
       "generated": {
         "sourcePath": "packages/create-croco-app/templates/admin-console/tests/journeys/plan-release.spec.ts",
         "generatedPath": "tests/journeys/plan-release.spec.ts",
+        "commandId": "create-croco-app"
+      }
+    },
+    {
+      "path": "packages/create-croco-app/templates/ai-saas/apps/api-server/src/tests/AiGenerate.spec.ts",
+      "lane": "generated-app",
+      "qualifiers": [],
+      "owner": "create-croco-app",
+      "generated": {
+        "sourcePath": "packages/create-croco-app/templates/ai-saas/apps/api-server/src/tests/AiGenerate.spec.ts",
+        "generatedPath": "apps/api-server/src/tests/AiGenerate.spec.ts",
+        "commandId": "create-croco-app"
+      }
+    },
+    {
+      "path": "packages/create-croco-app/templates/ai-saas/apps/api-server/src/tests/AiReceipts.spec.ts",
+      "lane": "generated-app",
+      "qualifiers": [],
+      "owner": "create-croco-app",
+      "generated": {
+        "sourcePath": "packages/create-croco-app/templates/ai-saas/apps/api-server/src/tests/AiReceipts.spec.ts",
+        "generatedPath": "apps/api-server/src/tests/AiReceipts.spec.ts",
         "commandId": "create-croco-app"
       }
     },
@@ -2119,120 +2177,6 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/lifecycle-core"
-    },
-    {
-      "path": "packages/llm-core/src/tests/AiSdkCompatibility.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/llm-core"
-    },
-    {
-      "path": "packages/llm-core/src/tests/InMemoryLlmModel.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/llm-core"
-    },
-    {
-      "path": "packages/llm-core/src/tests/LlmModel.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/llm-core"
-    },
-    {
-      "path": "packages/llm-core/src/tests/LlmService.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/llm-core"
-    },
-    {
-      "path": "packages/llm-core/src/tests/LlmTypes.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/llm-core"
-    },
-    {
-      "path": "packages/llm-core/src/tests/decorators/Llm.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/llm-core"
-    },
-    {
-      "path": "packages/llm-core/src/tests/events/LlmEvents.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/llm-core"
-    },
-    {
-      "path": "packages/llm-core/src/tests/problems/LlmProblems.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/llm-core"
-    },
-    {
-      "path": "packages/llm-metering/src/tests/LlmMeteringEvents.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/llm-metering"
-    },
-    {
-      "path": "packages/llm-metering/src/tests/LlmMeteringProblems.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/llm-metering"
-    },
-    {
-      "path": "packages/llm-metering/src/tests/LlmMeteringService.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/llm-metering"
-    },
-    {
-      "path": "packages/llm-metering/src/tests/LlmMeteringTypes.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/llm-metering"
-    },
-    {
-      "path": "packages/llm-metering/src/tests/LlmTelemetry.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/llm-metering"
-    },
-    {
-      "path": "packages/llm-metering/src/tests/PricingTable.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/llm-metering"
-    },
-    {
-      "path": "packages/llm-metering/src/tests/decorators/AiMetered.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/llm-metering"
-    },
-    {
-      "path": "packages/llm-openai/src/tests/OpenAiLiveSmoke.spec.ts",
-      "lane": "live",
-      "qualifiers": [],
-      "owner": "@croco/llm-openai"
-    },
-    {
-      "path": "packages/llm-openai/src/tests/OpenAiLlmModel.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/llm-openai"
-    },
-    {
-      "path": "packages/llm-openai/src/tests/OpenAiProblems.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/llm-openai"
-    },
-    {
-      "path": "packages/llm-openai/src/tests/OpenAiSdkTransport.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/llm-openai"
     },
     {
       "path": "packages/membership-core/src/tests/MembershipManager.spec.ts",

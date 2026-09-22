@@ -81,15 +81,6 @@ jobs:
           --lane live --allow-live --owner @croco/execution-drizzle
           --output ci-reports/package-quality/live-test-lanes/execution-drizzle.json
 
-      - name: Run @croco/llm-openai live tests
-        continue-on-error: true
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: >-
-          node --experimental-strip-types scripts/test-lane-runner.mts
-          --lane live --allow-live --owner @croco/llm-openai
-          --output ci-reports/package-quality/live-test-lanes/llm-openai.json
-
       - name: Run @croco/membership-drizzle live tests
         continue-on-error: true
         env:
@@ -205,7 +196,6 @@ jobs:
           --lane-report ci-reports/package-quality/live-test-lanes/billing-polar.json
           --lane-report ci-reports/package-quality/live-test-lanes/credits-drizzle.json
           --lane-report ci-reports/package-quality/live-test-lanes/execution-drizzle.json
-          --lane-report ci-reports/package-quality/live-test-lanes/llm-openai.json
           --lane-report ci-reports/package-quality/live-test-lanes/membership-drizzle.json
           --lane-report ci-reports/package-quality/live-test-lanes/metering-core.json
           --lane-report ci-reports/package-quality/live-test-lanes/metering-drizzle.json

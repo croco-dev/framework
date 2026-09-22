@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 779,
+  problemCount: 784,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -426,16 +426,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts",
-          line: 30,
-          column: 1,
-          kind: "problem-class",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "ai-saas/model-required",
@@ -493,7 +494,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts",
-          line: 61,
+          line: 52,
           column: 1,
           kind: "problem-class",
         },
@@ -523,7 +524,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts",
-          line: 39,
+          line: 30,
           column: 1,
           kind: "problem-class",
         },
@@ -553,7 +554,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts",
-          line: 52,
+          line: 43,
           column: 1,
           kind: "problem-class",
         },
@@ -585,7 +586,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts",
-          line: 74,
+          line: 65,
           column: 1,
           kind: "problem-class",
         },
@@ -649,6 +650,160 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 3,
           column: 1,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "ai-usage/cost-limit-exceeded",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#ai-usage-cost-limit-exceeded",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/ai-usage/src/libs/problems/AiUsageProblems.ts",
+          line: 45,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "ai-usage/pricing-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#ai-usage-pricing-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/ai-usage/src/libs/problems/AiUsageProblems.ts",
+          line: 61,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "ai-usage/pricing-registry-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#ai-usage-pricing-registry-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/ai-usage/src/libs/problems/AiUsageProblems.ts",
+          line: 75,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "ai-usage/quota-exceeded",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#ai-usage-quota-exceeded",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/ai-usage/src/libs/problems/AiUsageProblems.ts",
+          line: 24,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "ai-usage/record-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#ai-usage-record-failed",
+      recovery: {
+        cause:
+          "The provider completed billable work, but the application could not record its usage in the metering ledger.",
+        userAction:
+          "Hand the opaque failure reference to an operator; do not invoke the provider again for the same request.",
+        operatorAction:
+          "Recover the metering dependency, then replay the preserved usage receipt with the same idempotency key without repeating the provider call.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/ai-usage/src/libs/problems/AiUsageProblems.ts",
+          line: 7,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
@@ -6038,16 +6193,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 97,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "engagement-core/audience-already-registered",
@@ -10547,16 +10703,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 88,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "gid-core/duplicate-prefix",
@@ -12588,16 +12745,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-core/src/libs/problems/LlmProblems.ts",
-          line: 26,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "LLM_SERVICE_ERROR",
@@ -12620,16 +12778,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 62,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-core/completion-event-publication-failed",
@@ -12654,16 +12813,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 29,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-core/invalid-llm-prompt",
@@ -12685,16 +12845,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-core/src/libs/problems/LlmProblems.ts",
-          line: 102,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-core/invalid-llm-response",
@@ -12717,16 +12878,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-core/src/libs/problems/LlmProblems.ts",
-          line: 82,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-core/llm-service-not-initialized",
@@ -12749,16 +12911,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-core/src/libs/problems/LlmProblems.ts",
-          line: 92,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-core/operation-aborted",
@@ -12780,16 +12943,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-core/src/libs/problems/LlmProblems.ts",
-          line: 9,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-core/rate-limit-exceeded",
@@ -12810,16 +12974,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-core/src/libs/problems/LlmProblems.ts",
-          line: 60,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-metering/cost-limit-exceeded",
@@ -12840,16 +13005,16 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts",
-          line: 55,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.",
+          migrationNote:
+            "Branch on ai-usage/cost-limit-exceeded after migrating usage handling to @croco/ai-usage.",
+          replacementCode: "ai-usage/cost-limit-exceeded",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-metering/pricing-not-found",
@@ -12871,16 +13036,16 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts",
-          line: 71,
-          column: 1,
-          kind: "problem-class",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.",
+          migrationNote:
+            "Branch on ai-usage/pricing-not-found after migrating usage handling to @croco/ai-usage.",
+          replacementCode: "ai-usage/pricing-not-found",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-metering/pricing-registry-conflict",
@@ -12901,16 +13066,16 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts",
-          line: 85,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.",
+          migrationNote:
+            "Branch on ai-usage/pricing-registry-conflict after migrating usage handling to @croco/ai-usage.",
+          replacementCode: "ai-usage/pricing-registry-conflict",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-metering/quota-exceeded",
@@ -12931,16 +13096,16 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts",
-          line: 34,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.",
+          migrationNote:
+            "Branch on ai-usage/quota-exceeded after migrating usage handling to @croco/ai-usage.",
+          replacementCode: "ai-usage/quota-exceeded",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-metering/record-failed",
@@ -12963,16 +13128,16 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts",
-          line: 17,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction was removed in favor of application-owned SDK calls and SDK-independent usage ingestion.",
+          migrationNote:
+            "Branch on ai-usage/record-failed after migrating usage handling to @croco/ai-usage.",
+          replacementCode: "ai-usage/record-failed",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-metering/service-required",
@@ -12996,16 +13161,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-metering/src/libs/problems/LlmMeteringProblems.ts",
-          line: 5,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-openai/aborted",
@@ -13027,16 +13193,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-openai/src/libs/problems/OpenAiProblems.ts",
-          line: 117,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-openai/authentication-failed",
@@ -13057,16 +13224,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-openai/src/libs/problems/OpenAiProblems.ts",
-          line: 42,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-openai/invalid-response",
@@ -13089,16 +13257,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-openai/src/libs/problems/OpenAiProblems.ts",
-          line: 135,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-openai/missing-config",
@@ -13121,16 +13290,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-openai/src/libs/problems/OpenAiProblems.ts",
-          line: 24,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-openai/rate-limited",
@@ -13151,16 +13321,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-openai/src/libs/problems/OpenAiProblems.ts",
-          line: 57,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-openai/retryable-upstream",
@@ -13183,16 +13354,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-openai/src/libs/problems/OpenAiProblems.ts",
-          line: 72,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-openai/terminal-upstream",
@@ -13215,16 +13387,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-openai/src/libs/problems/OpenAiProblems.ts",
-          line: 87,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "llm-openai/validation-failed",
@@ -13246,16 +13419,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-openai/src/libs/problems/OpenAiProblems.ts",
-          line: 102,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "MEMBERSHIP_CONSTRAINT",
@@ -14683,16 +14857,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 79,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "NESTED_IMPERSONATION_NOT_ALLOWED",
@@ -19901,16 +20076,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 106,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "tasks-core/duplicate-task-registration",
@@ -21526,16 +21702,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-core/src/libs/problems/LlmProblems.ts",
-          line: 38,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "TOOL_EXECUTION_ERROR",
@@ -21558,16 +21735,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/llm-core/src/libs/problems/LlmServiceProblem.ts",
-          line: 115,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "The framework-owned LLM abstraction or its generated example contract was retired.",
+          migrationNote:
+            "Remove branches for this code and handle vendor SDK failures explicitly at the application call boundary.",
+          noReplacementReason:
+            "The retired generic LLM capability has no framework-level equivalent.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "transports-graphql/body-limit-invalid-configuration",

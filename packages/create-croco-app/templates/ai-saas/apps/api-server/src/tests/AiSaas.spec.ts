@@ -43,12 +43,13 @@ describe("AI SaaS generated baseline", () => {
   it("generates deterministic text and records canonical token and cost usage", async () => {
     const snapshot = await runAiSaasDemoFlow(createAiSaasRuntime());
 
+    if (snapshot.generation.usage.state !== "known") throw new Error("Expected known demo usage");
     expect(snapshot.generation.modelId).toBe(DEFAULT_AI_MODEL_ID);
-    expect(snapshot.generation.usage.promptTokens).toBeGreaterThan(0);
-    expect(snapshot.generation.usage.completionTokens).toBeGreaterThan(0);
+    expect(snapshot.generation.usage.inputTokens).toBeGreaterThan(0);
+    expect(snapshot.generation.usage.outputTokens).toBeGreaterThan(0);
     expect(snapshot.generation.costUsd).toBeGreaterThan(0);
-    expect(snapshot.usage.usage.promptTokens).toBe(snapshot.generation.usage.promptTokens);
-    expect(snapshot.usage.usage.completionTokens).toBe(snapshot.generation.usage.completionTokens);
+    expect(snapshot.usage.usage.promptTokens).toBe(snapshot.generation.usage.inputTokens);
+    expect(snapshot.usage.usage.completionTokens).toBe(snapshot.generation.usage.outputTokens);
     expect(snapshot.usage.usage.costUsd).toBe(snapshot.generation.costUsd);
     expect(snapshot.generation.idempotencyKey).toBe(
       buildAiIdempotencyKey(snapshot.tenant.id, snapshot.request.id),
@@ -122,12 +123,8 @@ describe("AI SaaS generated baseline", () => {
       env: expect.arrayContaining(["AI_DEFAULT_MODEL_ID"]),
     });
     expect(getAiProviderProfile("openai")).toMatchObject({
-      status: "documented-seam",
-      env: expect.arrayContaining(["OPENAI_API_KEY"]),
-    });
-    expect(getAiProviderProfile("anthropic")).toMatchObject({
-      status: "documented-seam",
-      env: expect.arrayContaining(["ANTHROPIC_API_KEY"]),
+      status: "supported",
+      packages: expect.arrayContaining(["openai"]),
     });
   });
 

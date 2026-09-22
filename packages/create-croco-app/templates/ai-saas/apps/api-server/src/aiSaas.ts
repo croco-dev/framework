@@ -1,17 +1,17 @@
 import { planVersionRef } from "@croco/billing-core";
 import { Container, Token } from "@croco/framework-context";
-import { InMemoryLlmModel, InMemoryLlmRegistry, LlmService, type LlmUsage } from "@croco/llm-core";
 import {
-  COMPLETION_TOKENS,
-  COST_USD_NANOS,
-  EMBEDDING_TOKENS,
-  LlmMeteringService,
-  PROMPT_TOKENS,
-  type LlmUsageRecord,
-} from "@croco/llm-metering";
+  AI_OUTPUT_TOKENS as COMPLETION_TOKENS,
+  AI_COST_USD_NANOS as COST_USD_NANOS,
+  AI_EMBEDDING_TOKENS as EMBEDDING_TOKENS,
+  AiUsageIngestService,
+  AiPricingTable,
+  AI_INPUT_TOKENS as PROMPT_TOKENS,
+  type AiUsageRecord,
+  type ModelPricing,
+} from "@croco/ai-usage";
 import { Problem } from "@croco/problems-core";
 import {
-  AiModelNotFoundProblem,
   AiModelRequiredProblem,
   AiProviderUnavailableProblem,
   AiQuotaExceededProblem,
@@ -19,11 +19,21 @@ import {
   AiTenantNotFoundProblem,
   AiTenantRequiredProblem,
 } from "./aiProblems";
-import { InMemoryEventBus } from "./inMemoryAdapters";
+import {
+  assertGenerationReady,
+  deterministicGenerate,
+  demoPromptPolicy,
+  MAX_AI_PROMPT_LENGTH,
+  MAX_AI_OUTPUT_LENGTH,
+  type Generate,
+  type Generation,
+  type GenerationUsage,
+  type PromptPolicy,
+} from "./aiGenerate";
 import { createSaasDemoRuntime } from "./saasDemo";
 import type { SaasRuntime } from "./saasDemo";
 
-export const AI_SAAS_SMOKE_CONTRACT_VERSION = "ai-saas-smoke-contract/v1";
+export const AI_SAAS_SMOKE_CONTRACT_VERSION = "ai-saas-smoke-contract/v2";
 export const DEFAULT_AI_MODEL_ID = "demo-deterministic";
 export const DEFAULT_AI_PROVIDER = "in-memory";
 
@@ -31,23 +41,17 @@ export const AI_PROVIDER_PROFILES = {
   "in-memory": {
     name: "in-memory",
     status: "supported",
-    description: "Zero-credential deterministic LLM provider for generated app smoke tests.",
-    packages: ["@croco/llm-core", "@croco/llm-metering"],
-    env: ["AI_PROVIDER_PROFILE", "AI_DEFAULT_MODEL_ID"],
+    description: "Deterministic app-local generation.",
+    packages: ["@croco/ai-usage"],
+    env: ["AI_DEFAULT_MODEL_ID"],
   },
   openai: {
     name: "openai",
-    status: "documented-seam",
-    description: "Adapter seam for an OpenAI-compatible LlmModel implementation.",
-    packages: ["@ai-sdk/openai", "@croco/llm-core", "@croco/llm-metering"],
-    env: ["OPENAI_API_KEY", "OPENAI_BASE_URL", "AI_DEFAULT_MODEL_ID"],
-  },
-  anthropic: {
-    name: "anthropic",
-    status: "documented-seam",
-    description: "Adapter seam for an Anthropic-compatible LlmModel implementation.",
-    packages: ["@ai-sdk/anthropic", "@croco/llm-core", "@croco/llm-metering"],
-    env: ["ANTHROPIC_API_KEY", "AI_DEFAULT_MODEL_ID"],
+    status: "supported",
+    description:
+      "Direct OpenAI Responses SDK 6.44.0 reference; inject tenant credentials and prompt policy.",
+    packages: ["openai", "@croco/ai-usage"],
+    env: [],
   },
 } as const;
 
@@ -98,7 +102,7 @@ export type AiUsageState = {
     monthlyCostBudgetUsd: number;
     remainingTokens: number;
     remainingCostUsd: number;
-    status: "ok" | "over_quota";
+    status: "ok" | "over_quota" | "reconciliation_required";
   };
 };
 
@@ -117,8 +121,8 @@ export type AiInvocationLog = {
     rawResponseStored: boolean;
   };
   latencyMs: number;
-  usage: LlmUsage;
-  costUsd: number;
+  usage: GenerationUsage;
+  costUsd: number | null;
   status: "completed" | "over_quota" | "failed";
   errorCategory: string | null;
   createdAt: string;
@@ -129,6 +133,8 @@ export type AiGenerateTextInput = {
   requestId: string;
   prompt: string;
   modelId?: string;
+  signal?: AbortSignal;
+  deadline?: number;
 };
 
 export type AiGenerateTextResult = {
@@ -137,8 +143,8 @@ export type AiGenerateTextResult = {
   modelId: string;
   provider: string;
   text: string;
-  usage: LlmUsage;
-  costUsd: number;
+  usage: GenerationUsage;
+  costUsd: number | null;
   quota: AiUsageState["quota"];
   invocation: AiInvocationLog;
   idempotencyKey: string;
@@ -147,9 +153,8 @@ export type AiGenerateTextResult = {
 export type AiSaasRuntime = {
   saasRuntime: SaasRuntime;
   providerProfile: ReturnType<typeof getAiProviderProfile>;
-  llmRegistry: InMemoryLlmRegistry;
-  llmService: LlmService;
-  llmMeteringService: LlmMeteringService;
+  receipts: AiReceiptStore;
+  aiUsageService: AiUsageIngestService;
   invocationLog: InMemoryAiInvocationLogStore;
   service: AiSaasService;
 };
@@ -178,8 +183,8 @@ export type AiSaasDemoSnapshot = {
     modelId: string;
     provider: string;
     text: string;
-    usage: LlmUsage;
-    costUsd: number;
+    usage: GenerationUsage;
+    costUsd: number | null;
     idempotencyKey: string;
   };
   usage: AiUsageState;
@@ -217,9 +222,9 @@ export class AiSaasService {
 
   constructor(
     private readonly saasRuntime: SaasRuntime,
-    private readonly llmRegistry: InMemoryLlmRegistry,
-    private readonly llmService: LlmService,
-    private readonly llmMeteringService: LlmMeteringService,
+    private readonly options: AiRuntimeOptions,
+    private readonly receipts: AiReceiptStore,
+    private readonly aiUsageService: AiUsageIngestService,
     private readonly invocationLog: InMemoryAiInvocationLogStore,
   ) {}
 
@@ -231,84 +236,131 @@ export class AiSaasService {
     }
 
     const modelId = normalizeModelId(input.modelId ?? DEFAULT_AI_MODEL_ID);
-    await this.assertModelAvailable(modelId);
+    const key = buildAiIdempotencyKey(tenantId, input.requestId);
+    const previous = await this.receipts.get(key);
+    if (previous) return this.deliver(previous);
+    if (await this.receipts.hasPending(tenantId)) throw new AiProviderUnavailableProblem(modelId);
+    if (
+      !input.requestId.trim() ||
+      input.requestId.length > 128 ||
+      modelId.length > 128 ||
+      !input.prompt.trim() ||
+      input.prompt.length > MAX_AI_PROMPT_LENGTH
+    ) {
+      throw new AiProviderUnavailableProblem(modelId);
+    }
+    const generationInput = {
+      tenantId,
+      modelId,
+      prompt: input.prompt,
+      signal: input.signal ?? new AbortController().signal,
+      deadline: Math.min(input.deadline ?? Date.now() + 30_000, Date.now() + 30_000),
+    };
+    assertGenerationReady(generationInput);
     const plan = await this.resolvePlan(tenantId);
     await this.registerAiMeters(tenantId, plan);
     const before = await this.getUsageState(tenantId, modelId);
-    const costUsdNanos = await this.readUsage(tenantId, COST_USD_NANOS);
-    this.assertPreflightQuota(plan, before, input.prompt.length, costUsdNanos);
+    this.assertPreflightQuota(
+      plan,
+      before,
+      input.prompt.length,
+      await this.readUsage(tenantId, COST_USD_NANOS),
+    );
+    await this.options.promptPolicy(generationInput);
+    assertGenerationReady(generationInput);
     this.assertRateLimit(tenantId, plan);
-
-    const idempotencyKey = buildAiIdempotencyKey(tenantId, input.requestId);
-    const startedAt = Date.now();
-
+    const receipt: AiReceipt = {
+      key,
+      tenantId,
+      requestId: input.requestId,
+      planId: plan.id,
+      modelId,
+      promptLength: input.prompt.length,
+      startedAt: Date.now(),
+      state: "outcome-unknown",
+      usagePending: true,
+      eventPending: true,
+    };
+    if (!(await this.receipts.claim(receipt))) throw new AiProviderUnavailableProblem(modelId);
     try {
-      const result = await this.saasRuntime.tenantManager.run(tenantId, () =>
-        this.llmService.generate({
-          modelId,
-          prompt: input.prompt,
-          metadata: {
-            tenantId,
-            requestId: input.requestId,
-          },
-        }),
+      receipt.generation = await this.saasRuntime.tenantManager.run(tenantId, () =>
+        this.options.generate(generationInput),
       );
-      const usageRecord = await this.llmMeteringService.recordUsage({
-        tenantId,
-        modelId,
-        provider: DEFAULT_AI_PROVIDER,
-        usage: result.usage,
-        idempotencyKey,
-        metadata: {
-          operationType: "generate",
-          requestId: input.requestId,
-        },
-      });
-      const usage = await this.getUsageState(tenantId, modelId);
-      const invocation = this.recordInvocation({
-        tenantId,
-        requestId: input.requestId,
-        modelId,
-        promptLength: input.prompt.length,
-        responseLength: result.text.length,
-        usage: result.usage,
-        costUsd: usageRecord.costUsd,
-        status: usage.quota.status === "over_quota" ? "over_quota" : "completed",
-        errorCategory: null,
-        startedAt,
-      });
-
-      return {
-        tenantId,
-        planId: plan.id,
-        modelId,
-        provider: DEFAULT_AI_PROVIDER,
-        text: result.text,
-        usage: result.usage,
-        costUsd: usageRecord.costUsd,
-        quota: usage.quota,
-        invocation,
-        idempotencyKey,
-      };
-    } catch (error) {
-      this.recordInvocation({
-        tenantId,
-        requestId: input.requestId,
-        modelId,
-        promptLength: input.prompt.length,
-        responseLength: 0,
-        usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0, accuracy: "UNKNOWN" },
-        costUsd: 0,
-        status: "failed",
-        errorCategory: error instanceof Problem ? error.code : "ai-saas/provider-unavailable",
-        startedAt,
-      });
-
-      if (error instanceof Problem) {
-        throw error;
+      if (
+        !receipt.generation.text.trim() ||
+        receipt.generation.text.length > MAX_AI_OUTPUT_LENGTH
+      ) {
+        throw new AiProviderUnavailableProblem(modelId);
       }
+      receipt.state = "provider-succeeded";
+      await this.receipts.save(receipt);
+    } catch (error) {
+      // The pre-call receipt intentionally remains unknown: response loss does not prove zero spend.
       throw new AiProviderUnavailableProblem(modelId, error);
     }
+    return this.deliver(receipt);
+  }
+
+  private async deliver(receipt: AiReceipt): Promise<AiGenerateTextResult> {
+    if (receipt.result) return receipt.result;
+    const generation = receipt.generation;
+    if (
+      receipt.state !== "provider-succeeded" ||
+      !generation ||
+      generation.usage.state === "unknown"
+    ) {
+      throw new AiProviderUnavailableProblem(receipt.modelId);
+    }
+    if (receipt.usagePending) {
+      const recorded = await this.aiUsageService.ingestGenerationUsage({
+        tenantId: receipt.tenantId,
+        modelId: generation.modelId,
+        provider: generation.provider,
+        usage: generation.usage,
+        idempotencyKey: receipt.key,
+      });
+      receipt.costUsd = recorded.costUsd;
+      receipt.usagePending = false;
+      await this.receipts.save(receipt);
+    }
+    if (receipt.eventPending) {
+      await this.options.publishCompletion({
+        idempotencyKey: receipt.key,
+        tenantId: receipt.tenantId,
+        providerResponseId: generation.providerResponseId,
+        providerRequestId: generation.providerRequestId,
+      });
+      receipt.eventPending = false;
+      await this.receipts.save(receipt);
+    }
+    const state = await this.getUsageState(receipt.tenantId, generation.modelId);
+    const invocation = this.recordInvocation({
+      tenantId: receipt.tenantId,
+      requestId: receipt.requestId,
+      modelId: generation.modelId,
+      provider: generation.provider,
+      promptLength: receipt.promptLength,
+      responseLength: generation.text.length,
+      usage: generation.usage,
+      costUsd: receipt.costUsd ?? null,
+      status: state.quota.status === "over_quota" ? "over_quota" : "completed",
+      errorCategory: null,
+      startedAt: receipt.startedAt,
+    });
+    receipt.result = {
+      tenantId: receipt.tenantId,
+      planId: receipt.planId,
+      modelId: generation.modelId,
+      provider: generation.provider,
+      text: generation.text,
+      usage: generation.usage,
+      costUsd: receipt.costUsd ?? null,
+      quota: state.quota,
+      invocation,
+      idempotencyKey: receipt.key,
+    };
+    await this.receipts.save(receipt);
+    return receipt.result;
   }
 
   async getUsageState(
@@ -338,7 +390,7 @@ export class AiSaasService {
       tenantId,
       planId: plan.id,
       modelId,
-      provider: DEFAULT_AI_PROVIDER,
+      provider: this.options.providerProfile,
       usage: {
         promptTokens,
         completionTokens,
@@ -351,8 +403,9 @@ export class AiSaasService {
         monthlyCostBudgetUsd: plan.monthlyCostBudgetUsd,
         remainingTokens,
         remainingCostUsd,
-        status:
-          totalTokens > plan.monthlyTokenBudget || costUsd > plan.monthlyCostBudgetUsd
+        status: (await this.receipts.hasPending(tenantId))
+          ? "reconciliation_required"
+          : totalTokens > plan.monthlyTokenBudget || costUsd > plan.monthlyCostBudgetUsd
             ? "over_quota"
             : "ok",
       },
@@ -376,13 +429,6 @@ export class AiSaasService {
     }
 
     return AI_PLAN_CATALOG[planId];
-  }
-
-  private async assertModelAvailable(modelId: string): Promise<void> {
-    const models = await this.llmRegistry.listModels();
-    if (!models.includes(modelId)) {
-      throw new AiModelNotFoundProblem(modelId);
-    }
   }
 
   private async registerAiMeters(tenantId: string, plan: AiPlan): Promise<void> {
@@ -467,10 +513,11 @@ export class AiSaasService {
     tenantId: string;
     requestId: string;
     modelId: string;
+    provider: string;
     promptLength: number;
     responseLength: number;
-    usage: LlmUsage;
-    costUsd: number;
+    usage: GenerationUsage;
+    costUsd: number | null;
     status: AiInvocationLog["status"];
     errorCategory: string | null;
     startedAt: number;
@@ -479,7 +526,7 @@ export class AiSaasService {
       tenantId: input.tenantId,
       requestId: input.requestId,
       modelId: input.modelId,
-      provider: DEFAULT_AI_PROVIDER,
+      provider: input.provider,
       promptMetadata: {
         length: input.promptLength,
         rawPromptStored: false,
@@ -497,43 +544,87 @@ export class AiSaasService {
   }
 }
 
+export type CompletionIntent = {
+  idempotencyKey: string;
+  tenantId: string;
+  providerResponseId: string;
+  providerRequestId: string | null;
+};
+export type AiRuntimeOptions = {
+  providerProfile: AiProviderProfileName;
+  generate: Generate;
+  promptPolicy: PromptPolicy;
+  pricing: ModelPricing;
+  publishCompletion: (intent: CompletionIntent) => Promise<void>;
+};
+export type AiReceipt = {
+  key: string;
+  tenantId: string;
+  requestId: string;
+  planId: AiPlanId;
+  modelId: string;
+  promptLength: number;
+  startedAt: number;
+  state: "outcome-unknown" | "provider-succeeded";
+  usagePending: boolean;
+  eventPending: boolean;
+  generation?: Generation;
+  costUsd?: number;
+  result?: AiGenerateTextResult;
+};
+export interface AiReceiptStore {
+  get(key: string): Promise<AiReceipt | undefined>;
+  claim(receipt: AiReceipt): Promise<boolean>;
+  save(receipt: AiReceipt): Promise<void>;
+  hasPending(tenantId: string): Promise<boolean>;
+}
+export class InMemoryAiReceiptStore implements AiReceiptStore {
+  private readonly receipts = new Map<string, AiReceipt>();
+  async get(key: string) {
+    return structuredClone(this.receipts.get(key));
+  }
+  async claim(receipt: AiReceipt) {
+    if (
+      this.receipts.has(receipt.key) ||
+      [...this.receipts.values()].some(
+        (current) =>
+          current.tenantId === receipt.tenantId && (current.usagePending || current.eventPending),
+      )
+    )
+      return false;
+    this.receipts.set(receipt.key, structuredClone(receipt));
+    return true;
+  }
+  async save(receipt: AiReceipt) {
+    this.receipts.set(receipt.key, structuredClone(receipt));
+  }
+  async hasPending(tenantId: string) {
+    return [...this.receipts.values()].some(
+      (receipt) => receipt.tenantId === tenantId && (receipt.usagePending || receipt.eventPending),
+    );
+  }
+}
+
 export function createAiSaasRuntime(
   saasRuntime: SaasRuntime = createSaasDemoRuntime(),
+  options: AiRuntimeOptions = {
+    providerProfile: "in-memory",
+    generate: deterministicGenerate,
+    promptPolicy: demoPromptPolicy,
+    pricing: { inputPricePerToken: 0.000001, outputPricePerToken: 0.000002, currency: "USD" },
+    publishCompletion: async () => {},
+  },
+  receipts: AiReceiptStore = new InMemoryAiReceiptStore(),
 ): AiSaasRuntime {
-  const providerProfile = getAiProviderProfile("in-memory");
-  const llmRegistry = new InMemoryLlmRegistry();
-  llmRegistry.registerProvider(
-    DEFAULT_AI_MODEL_ID,
-    () =>
-      new InMemoryLlmModel(DEFAULT_AI_MODEL_ID, {
-        "Draft a short tenant onboarding email.":
-          "Welcome to the deterministic Croco AI SaaS demo.",
-      }),
-  );
-  const eventBus = new InMemoryEventBus();
-  const llmService = new LlmService(llmRegistry, eventBus);
-  const llmMeteringService = new LlmMeteringService({
+  const providerProfile = getAiProviderProfile(options.providerProfile);
+  const aiUsageService = new AiUsageIngestService({
     meteringService: saasRuntime.meteringService,
-    eventBus,
+    defaultPricing: options.pricing,
+    pricingTable: new AiPricingTable(new Map(), { version: "application-pricing" }),
   });
   const invocationLog = new InMemoryAiInvocationLogStore();
-  const service = new AiSaasService(
-    saasRuntime,
-    llmRegistry,
-    llmService,
-    llmMeteringService,
-    invocationLog,
-  );
-
-  return {
-    saasRuntime,
-    providerProfile,
-    llmRegistry,
-    llmService,
-    llmMeteringService,
-    invocationLog,
-    service,
-  };
+  const service = new AiSaasService(saasRuntime, options, receipts, aiUsageService, invocationLog);
+  return { saasRuntime, providerProfile, aiUsageService, receipts, invocationLog, service };
 }
 
 export async function seedAiSaasTenant(runtime: AiSaasRuntime, planId: AiPlanId, slug: string) {
@@ -670,4 +761,4 @@ function isAiPlanId(planId: string | null): planId is AiPlanId {
   return planId !== null && planId in AI_PLAN_CATALOG;
 }
 
-export type AiUsageRecord = LlmUsageRecord;
+export type { AiUsageRecord };

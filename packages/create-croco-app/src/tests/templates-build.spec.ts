@@ -1060,8 +1060,7 @@ function checkSaasStructure() {
       "@croco/framework-context": "workspace:*",
       "@croco/lifecycle-core": "workspace:*",
       "@croco/diagnostics-core": "workspace:*",
-      "@croco/llm-core": "workspace:*",
-      "@croco/llm-metering": "workspace:*",
+      "@croco/ai-usage": "workspace:*",
       "@croco/problems-core": "workspace:*",
       "@croco/protocols-core": "workspace:*",
       "@croco/protocols-rest": "workspace:*",
@@ -1199,8 +1198,8 @@ function checkSaasStructure() {
     /evidence\.shutdownOutcome = await observeRuntimeShutdown\(runtime\)/,
   );
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /EntitlementManager/);
-  checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /LlmService/);
-  checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /LlmMeteringService/);
+  checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /generateAiText/);
+  checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /AiUsageIngestService/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /BillingService/);
   checkFileContains("saas", ["apps", "api-server", "src", "saasDemo.ts"], /SeatLimitChecker/);
   checkFileContains(
@@ -1348,7 +1347,7 @@ function checkSaasStructure() {
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "demo", "failure-drill-smoke.ts"],
-    /llm-metering\/quota-exceeded/,
+    /ai-usage\/quota-exceeded/,
   );
   checkFileContains(
     "saas",
@@ -1481,12 +1480,12 @@ function checkAiSaasStructure() {
       "@croco/billing-polar": "workspace:*",
       "@croco/framework-context": "workspace:*",
       "@croco/lifecycle-core": "workspace:*",
-      "@croco/llm-core": "workspace:*",
-      "@croco/llm-metering": "workspace:*",
+      "@croco/ai-usage": "workspace:*",
       "@croco/metering-core": "workspace:*",
       "@croco/protocols-core": "workspace:*",
       "@croco/telemetry-api": "workspace:*",
       "@croco/tenant-core": "workspace:*",
+      openai: "6.44.0",
     }),
     devDependencies: expect.objectContaining({
       "@croco/testing": "workspace:*",
@@ -1532,13 +1531,13 @@ function checkAiSaasStructure() {
   checkFileContains(
     "ai-saas",
     ["apps", "api-server", "src", "aiSaas.ts"],
-    /const costUsdNanos = await this\.readUsage\(tenantId, COST_USD_NANOS\)/,
+    /await this\.readUsage\(tenantId, COST_USD_NANOS\)/,
   );
   checkFileDoesNotContain("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /\bCOST_USD\b/);
   checkFileContains(
     "ai-saas",
     ["apps", "api-server", "src", "aiSaas.ts"],
-    /assertPreflightQuota\(plan, before, input\.prompt\.length, costUsdNanos\)/,
+    /assertPreflightQuota\([\s\S]*await this\.readUsage\(tenantId, COST_USD_NANOS\)/,
   );
   checkFileContains("ai-saas", ["apps", "api-server", "src", "aiSaas.ts"], /buildAiIdempotencyKey/);
   checkFileContains(
@@ -1546,9 +1545,9 @@ function checkAiSaasStructure() {
     ["apps", "api-server", "src", "demo", "aiSmokeContract.ts"],
     /rawPromptStored/,
   );
-  checkFileContains("ai-saas", ["README.md.hbs"], /OPENAI_API_KEY/);
-  checkFileContains("ai-saas", ["README.md.hbs"], /ANTHROPIC_API_KEY/);
-  checkFileContains("ai-saas", ["README.md.hbs"], /Do not expose provider API keys/);
+  checkFileContains("ai-saas", ["README.md.hbs"], /openai.*6\.44\.0/);
+  checkFileContains("ai-saas", ["README.md.hbs"], /tenant-specific client resolver/);
+  checkFileContains("ai-saas", ["README.md.hbs"], /does not survive process termination/);
 }
 
 describe("GraphQL addon templates", () => {

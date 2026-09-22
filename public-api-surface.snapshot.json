@@ -3104,6 +3104,216 @@
       ]
     },
     {
+      "packageName": "@croco/ai-usage",
+      "relativeDir": "packages/ai-usage",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.js"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.cjs"
+            }
+          ],
+          "sourceEntrypoint": "packages/ai-usage/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "AI_COST_USD_NANOS",
+              "exportKind": "named",
+              "source": "./libs/types",
+              "declarationKind": "const"
+            },
+            {
+              "name": "AI_EMBEDDING_TOKENS",
+              "exportKind": "named",
+              "source": "./libs/types",
+              "declarationKind": "const"
+            },
+            {
+              "name": "AI_INPUT_TOKENS",
+              "exportKind": "named",
+              "source": "./libs/types",
+              "declarationKind": "const"
+            },
+            {
+              "name": "AI_OUTPUT_TOKENS",
+              "exportKind": "named",
+              "source": "./libs/types",
+              "declarationKind": "const"
+            },
+            {
+              "name": "AiCostBudgetExceededEvent",
+              "exportKind": "named",
+              "source": "./libs/events/AiCostBudgetExceededEvent",
+              "declarationKind": "class"
+            },
+            {
+              "name": "AiCostLimitExceededProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/AiUsageProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "AiPricingNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/AiUsageProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "AiPricingRegistryConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/AiUsageProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "AiPricingTable",
+              "exportKind": "named",
+              "source": "./libs/AiPricingTable",
+              "declarationKind": "class"
+            },
+            {
+              "name": "AiTelemetryBridge",
+              "exportKind": "named",
+              "source": "./libs/AiTelemetryBridge",
+              "declarationKind": "class"
+            },
+            {
+              "name": "AiUsageIngestService",
+              "exportKind": "named",
+              "source": "./libs/AiUsageIngestService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "AiUsageQuotaExceededProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/AiUsageProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "AiUsageRecordedEvent",
+              "exportKind": "named",
+              "source": "./libs/events/AiUsageRecordedEvent",
+              "declarationKind": "class"
+            },
+            {
+              "name": "AiUsageRecordFailedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/AiUsageProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "defaultAiPricingTable",
+              "exportKind": "named",
+              "source": "./libs/AiPricingTable",
+              "declarationKind": "const"
+            },
+            {
+              "name": "samplePricingRegistry",
+              "exportKind": "named",
+              "source": "./libs/AiPricingTable",
+              "declarationKind": "const"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "AiCostBudget",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "AiCostRecord",
+              "exportKind": "named",
+              "source": "./libs/AiUsageIngestService"
+            },
+            {
+              "name": "AiEmbeddingUsageRecord",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "AiMeterId",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "AiMeterUsageDelta",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "AiTelemetrySpanAdapter",
+              "exportKind": "named",
+              "source": "./libs/AiTelemetryBridge"
+            },
+            {
+              "name": "AiUsage",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "AiUsageEvent",
+              "exportKind": "named",
+              "source": "./libs/AiUsageIngestService"
+            },
+            {
+              "name": "AiUsageFailurePolicy",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "AiUsageIngestServiceOptions",
+              "exportKind": "named",
+              "source": "./libs/AiUsageIngestService"
+            },
+            {
+              "name": "AiUsageQuotaPolicy",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "AiUsageQuotaPolicyContext",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "AiUsageRecord",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ModelPricing",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "PricingRegistryDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "PricingRegistryEntry",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "UsageAccuracy",
+              "exportKind": "named",
+              "source": "./libs/types"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "packageName": "@croco/analytics-core",
       "relativeDir": "packages/analytics-core",
       "entrypoints": [
@@ -17864,799 +18074,6 @@
       ]
     },
     {
-      "packageName": "@croco/llm-core",
-      "relativeDir": "packages/llm-core",
-      "entrypoints": [
-        {
-          "exportPath": ".",
-          "kind": "code",
-          "targets": [
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
-            },
-            {
-              "conditions": ["import"],
-              "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["require"],
-              "target": "./dist/index.cjs"
-            }
-          ],
-          "sourceEntrypoint": "packages/llm-core/src/index.ts",
-          "runtimeExports": [
-            {
-              "name": "clearLlmService",
-              "exportKind": "named",
-              "source": "./libs/decorators/Llm",
-              "declarationKind": "function"
-            },
-            {
-              "name": "EmbeddingError",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmServiceProblem",
-              "declarationKind": "class"
-            },
-            {
-              "name": "GenerationError",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmServiceProblem",
-              "declarationKind": "class"
-            },
-            {
-              "name": "getLlmMetadata",
-              "exportKind": "named",
-              "source": "./libs/decorators/Llm",
-              "declarationKind": "function"
-            },
-            {
-              "name": "getLlmService",
-              "exportKind": "named",
-              "source": "./libs/decorators/Llm",
-              "declarationKind": "function"
-            },
-            {
-              "name": "InMemoryLlmModel",
-              "exportKind": "named",
-              "source": "./libs/InMemoryLlmModel",
-              "declarationKind": "class"
-            },
-            {
-              "name": "InMemoryLlmRegistry",
-              "exportKind": "named",
-              "source": "./libs/InMemoryLlmRegistry",
-              "declarationKind": "class"
-            },
-            {
-              "name": "InvalidLlmPromptProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "InvalidLlmResponseProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "Llm",
-              "exportKind": "named",
-              "source": "./libs/decorators/Llm",
-              "declarationKind": "function"
-            },
-            {
-              "name": "LlmCompletionEventPublicationProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmServiceProblem",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmGeneratedEvent",
-              "exportKind": "named",
-              "source": "./libs/events/LlmGeneratedEvent",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmModel",
-              "exportKind": "named",
-              "source": "./libs/LlmModel",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmOperationAbortedProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmProviderNotFoundProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmRateLimitProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmRegistry",
-              "exportKind": "named",
-              "source": "./libs/LlmRegistry",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmService",
-              "exportKind": "named",
-              "source": "./libs/LlmService",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmServiceNotInitializedProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmServiceProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmServiceProblem",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmStreamCompletedEvent",
-              "exportKind": "named",
-              "source": "./libs/events/LlmStreamCompletedEvent",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmStructuredOutputProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmServiceProblem",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmTokenLimitExceededProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmToolCalledEvent",
-              "exportKind": "named",
-              "source": "./libs/events/LlmToolCalledEvent",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmToolExecutionProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmServiceProblem",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmUsageRecordedEvent",
-              "exportKind": "named",
-              "source": "./libs/events/LlmUsageRecordedEvent",
-              "declarationKind": "class"
-            },
-            {
-              "name": "ModelNotFoundError",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmServiceProblem",
-              "declarationKind": "class"
-            },
-            {
-              "name": "runWithLlmService",
-              "exportKind": "named",
-              "source": "./libs/decorators/Llm",
-              "declarationKind": "function"
-            },
-            {
-              "name": "setLlmService",
-              "exportKind": "named",
-              "source": "./libs/decorators/Llm",
-              "declarationKind": "function"
-            }
-          ],
-          "typeExports": [
-            {
-              "name": "CancellableRequestOptions",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "EmbedManyParams",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "EmbedManyResult",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "EmbedParams",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "EmbedResult",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "GenerateObjectParams",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "GenerateParams",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "GenerateResult",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "LlmCapabilities",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "LlmCompletion",
-              "exportKind": "named",
-              "source": "./libs/LlmCompletionEvents"
-            },
-            {
-              "name": "LlmCompletionEvent",
-              "exportKind": "named",
-              "source": "./libs/LlmCompletionEvents"
-            },
-            {
-              "name": "LlmCompletionEventDeliveryClaim",
-              "exportKind": "named",
-              "source": "./libs/LlmCompletionEvents"
-            },
-            {
-              "name": "LlmCompletionEventDeliveryState",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmServiceProblem"
-            },
-            {
-              "name": "LlmCompletionEventFailureStage",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmServiceProblem"
-            },
-            {
-              "name": "LlmCompletionEventIntent",
-              "exportKind": "named",
-              "source": "./libs/LlmCompletionEvents"
-            },
-            {
-              "name": "LlmCompletionEventIntentStore",
-              "exportKind": "named",
-              "source": "./libs/LlmCompletionEvents"
-            },
-            {
-              "name": "LlmGenerateCompletion",
-              "exportKind": "named",
-              "source": "./libs/LlmCompletionEvents"
-            },
-            {
-              "name": "LlmInvocationOptions",
-              "exportKind": "named",
-              "source": "./libs/decorators/Llm"
-            },
-            {
-              "name": "LlmMetadata",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "LlmMethodMetadata",
-              "exportKind": "named",
-              "source": "./libs/decorators/Llm"
-            },
-            {
-              "name": "LlmModelConfig",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "LlmOptions",
-              "exportKind": "named",
-              "source": "./libs/decorators/Llm"
-            },
-            {
-              "name": "LlmServiceOptions",
-              "exportKind": "named",
-              "source": "./libs/LlmCompletionEvents"
-            },
-            {
-              "name": "LlmStreamCompletion",
-              "exportKind": "named",
-              "source": "./libs/LlmCompletionEvents"
-            },
-            {
-              "name": "LlmUsage",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "StreamChunk",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "StreamParams",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "ToolCall",
-              "exportKind": "named",
-              "source": "./libs/events/LlmToolCalledEvent"
-            },
-            {
-              "name": "ToolCallParams",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "ToolCallResult",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "ToolDefinition",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "UsageAccuracy",
-              "exportKind": "named",
-              "source": "./libs/types"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "packageName": "@croco/llm-metering",
-      "relativeDir": "packages/llm-metering",
-      "entrypoints": [
-        {
-          "exportPath": ".",
-          "kind": "code",
-          "targets": [
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
-            },
-            {
-              "conditions": ["import"],
-              "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["require"],
-              "target": "./dist/index.cjs"
-            }
-          ],
-          "sourceEntrypoint": "packages/llm-metering/src/index.ts",
-          "runtimeExports": [
-            {
-              "name": "AiMetered",
-              "exportKind": "named",
-              "source": "./libs/decorators/AiMetered",
-              "declarationKind": "function"
-            },
-            {
-              "name": "COMPLETION_TOKENS",
-              "exportKind": "named",
-              "source": "./libs/types",
-              "declarationKind": "const"
-            },
-            {
-              "name": "COST_USD_NANOS",
-              "exportKind": "named",
-              "source": "./libs/types",
-              "declarationKind": "const"
-            },
-            {
-              "name": "COST_USD",
-              "exportKind": "named",
-              "source": "./libs/types",
-              "declarationKind": "const"
-            },
-            {
-              "name": "createMeteredAsyncIterable",
-              "exportKind": "named",
-              "source": "./libs/streamMetering",
-              "declarationKind": "function"
-            },
-            {
-              "name": "defaultPricingTable",
-              "exportKind": "named",
-              "source": "./libs/PricingTable",
-              "declarationKind": "const"
-            },
-            {
-              "name": "EMBEDDING_TOKENS",
-              "exportKind": "named",
-              "source": "./libs/types",
-              "declarationKind": "const"
-            },
-            {
-              "name": "extractUsageFromChunk",
-              "exportKind": "named",
-              "source": "./libs/streamMetering",
-              "declarationKind": "function"
-            },
-            {
-              "name": "getAiMeteredMetadata",
-              "exportKind": "named",
-              "source": "./libs/decorators/AiMetered",
-              "declarationKind": "function"
-            },
-            {
-              "name": "getLlmMeteringService",
-              "exportKind": "named",
-              "source": "./libs/decorators/AiMetered",
-              "declarationKind": "function"
-            },
-            {
-              "name": "isAsyncIterable",
-              "exportKind": "named",
-              "source": "./libs/streamMetering",
-              "declarationKind": "function"
-            },
-            {
-              "name": "LlmCostBudgetExceededEvent",
-              "exportKind": "named",
-              "source": "./libs/events/LlmCostBudgetExceededEvent",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmCostLimitExceededProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmMeteringProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmMeteringRecordFailedProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmMeteringProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmMeteringService",
-              "exportKind": "named",
-              "source": "./libs/LlmMeteringService",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmMeteringServiceRequiredProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmMeteringProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmQuotaExceededProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmMeteringProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LlmUsageRecordedEvent",
-              "exportKind": "named",
-              "source": "./libs/events/LlmUsageRecordedEvent",
-              "declarationKind": "class"
-            },
-            {
-              "name": "PricingNotFoundProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmMeteringProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "PricingRegistryConflictProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/LlmMeteringProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "PricingTable",
-              "exportKind": "named",
-              "source": "./libs/PricingTable",
-              "declarationKind": "class"
-            },
-            {
-              "name": "PROMPT_TOKENS",
-              "exportKind": "named",
-              "source": "./libs/types",
-              "declarationKind": "const"
-            },
-            {
-              "name": "runWithLlmMeteringService",
-              "exportKind": "named",
-              "source": "./libs/decorators/AiMetered",
-              "declarationKind": "function"
-            },
-            {
-              "name": "samplePricingRegistry",
-              "exportKind": "named",
-              "source": "./libs/PricingTable",
-              "declarationKind": "const"
-            },
-            {
-              "name": "setLlmMeteringService",
-              "exportKind": "named",
-              "source": "./libs/decorators/AiMetered",
-              "declarationKind": "function"
-            }
-          ],
-          "typeExports": [
-            {
-              "name": "AiMeteredMetadata",
-              "exportKind": "named",
-              "source": "./libs/decorators/AiMetered"
-            },
-            {
-              "name": "AiMeteredOptions",
-              "exportKind": "named",
-              "source": "./libs/decorators/AiMetered"
-            },
-            {
-              "name": "LlmCostBudget",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "LlmCostRecord",
-              "exportKind": "named",
-              "source": "./libs/LlmMeteringService"
-            },
-            {
-              "name": "LlmEmbeddingUsageRecord",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "LlmMeterId",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "LlmMeteringFailurePolicy",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "LlmMeteringServiceOptions",
-              "exportKind": "named",
-              "source": "./libs/LlmMeteringService"
-            },
-            {
-              "name": "LlmMeterUsageDelta",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "LlmQuotaPolicy",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "LlmQuotaPolicyContext",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "LlmUsageEvent",
-              "exportKind": "named",
-              "source": "./libs/LlmMeteringService"
-            },
-            {
-              "name": "LlmUsageRecord",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "ModelPricing",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "PricingRegistryDefinition",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "PricingRegistryEntry",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "UsageAccuracy",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "UsageWithModelInfo",
-              "exportKind": "named",
-              "source": "./libs/streamMetering"
-            }
-          ]
-        }
-      ]
-    },
-    {
-      "packageName": "@croco/llm-openai",
-      "relativeDir": "packages/llm-openai",
-      "entrypoints": [
-        {
-          "exportPath": ".",
-          "kind": "code",
-          "targets": [
-            {
-              "conditions": ["types"],
-              "target": "./dist/index.d.ts"
-            },
-            {
-              "conditions": ["import"],
-              "target": "./dist/index.js"
-            },
-            {
-              "conditions": ["require"],
-              "target": "./dist/index.cjs"
-            }
-          ],
-          "sourceEntrypoint": "packages/llm-openai/src/index.ts",
-          "runtimeExports": [
-            {
-              "name": "createOpenAiSdkTransport",
-              "exportKind": "named",
-              "source": "./libs/OpenAiSdkTransport",
-              "declarationKind": "function"
-            },
-            {
-              "name": "normalizeOpenAiError",
-              "exportKind": "named",
-              "source": "./libs/problems/OpenAiProblems",
-              "declarationKind": "function"
-            },
-            {
-              "name": "OpenAiAbortProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/OpenAiProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "OpenAiAuthenticationProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/OpenAiProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "OpenAiInvalidResponseProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/OpenAiProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "OpenAiLlmModel",
-              "exportKind": "named",
-              "source": "./libs/OpenAiLlmModel",
-              "declarationKind": "class"
-            },
-            {
-              "name": "OpenAiMissingConfigProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/OpenAiProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "OpenAiRateLimitProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/OpenAiProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "OpenAiRetryableUpstreamProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/OpenAiProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "OpenAiTerminalUpstreamProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/OpenAiProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "OpenAiValidationProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/OpenAiProblems",
-              "declarationKind": "class"
-            }
-          ],
-          "typeExports": [
-            {
-              "name": "OpenAiEmbeddingRequest",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "OpenAiEmbeddingResponse",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "OpenAiEnvironment",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "OpenAiInputMessage",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "OpenAiLlmModelConfig",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "OpenAiRequestOptions",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "OpenAiResponse",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "OpenAiResponseRequest",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "OpenAiSdkTransportOptions",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "OpenAiStreamEvent",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "OpenAiTransport",
-              "exportKind": "named",
-              "source": "./libs/types"
-            },
-            {
-              "name": "OpenAiUsage",
-              "exportKind": "named",
-              "source": "./libs/types"
-            }
-          ]
-        }
-      ]
-    },
-    {
       "packageName": "@croco/membership-core",
       "relativeDir": "packages/membership-core",
       "entrypoints": [
@@ -20039,6 +19456,11 @@
             },
             {
               "name": "MeteringProcessingClaim",
+              "exportKind": "named",
+              "source": "./libs/IdempotencyManager"
+            },
+            {
+              "name": "MeteringRecordStatus",
               "exportKind": "named",
               "source": "./libs/IdempotencyManager"
             },
@@ -29696,12 +29118,6 @@
               "declarationKind": "function"
             },
             {
-              "name": "createLlmProviderConformanceSuite",
-              "exportKind": "named",
-              "source": "./libs/llm-provider-conformance",
-              "declarationKind": "function"
-            },
-            {
               "name": "createOperationalFailureDrillMatrix",
               "exportKind": "named",
               "source": "./libs/operational-failure-drill",
@@ -30739,26 +30155,6 @@
               "name": "LicensedQuantityGatewayConformanceOptions",
               "exportKind": "named",
               "source": "./libs/billing-provider-conformance"
-            },
-            {
-              "name": "LlmProviderConformanceCase",
-              "exportKind": "named",
-              "source": "./libs/llm-provider-conformance"
-            },
-            {
-              "name": "LlmProviderConformanceOptions",
-              "exportKind": "named",
-              "source": "./libs/llm-provider-conformance"
-            },
-            {
-              "name": "LlmProviderConformancePromptSet",
-              "exportKind": "named",
-              "source": "./libs/llm-provider-conformance"
-            },
-            {
-              "name": "LlmProviderConformanceSuite",
-              "exportKind": "named",
-              "source": "./libs/llm-provider-conformance"
             },
             {
               "name": "OpenAPIRouteExpectation",

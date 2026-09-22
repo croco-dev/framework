@@ -1,6 +1,5 @@
 ---
 "@croco/esbuild-plugin": patch
-"@croco/llm-core": patch
 "@croco/protocols-graphql": patch
 "@croco/transports-graphql": patch
 "@croco/ui-astryx": patch

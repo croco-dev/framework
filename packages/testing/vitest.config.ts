@@ -29,7 +29,6 @@ export default defineConfig({
       "@croco/framework-context": resolve(currentDir, "../framework-context/src/index.ts"),
       "@croco/framework-logger": resolve(currentDir, "../framework-logger/src/index.ts"),
       "@croco/health-core": resolve(currentDir, "../health-core/src/index.ts"),
-      "@croco/llm-core": resolve(currentDir, "../llm-core/src/index.ts"),
       "@croco/openapi-spec": resolve(currentDir, "../openapi-spec/src/index.ts"),
       "@croco/problems-core": resolve(currentDir, "../problems-core/src/index.ts"),
       "@croco/protocols-core": resolve(currentDir, "../protocols-core/src/index.ts"),

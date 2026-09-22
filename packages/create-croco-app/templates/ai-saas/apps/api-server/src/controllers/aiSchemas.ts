@@ -2,7 +2,6 @@ import { z } from "zod";
 import { ProblemCategory } from "@croco/problems-core";
 import { defineRouteContract, defineRouteProblem, HttpMethod } from "@croco/protocols-rest";
 import {
-  AiModelNotFoundProblem,
   AiModelRequiredProblem,
   AiProviderUnavailableProblem,
   AiQuotaExceededProblem,
@@ -26,11 +25,6 @@ const modelRequiredProblem = defineRouteProblem(AiModelRequiredProblem, {
   category: ProblemCategory.ValidationError,
   description: "AI generation requires a model id.",
 });
-const modelNotFoundProblem = defineRouteProblem(AiModelNotFoundProblem, {
-  code: "ai-saas/model-not-found",
-  category: ProblemCategory.NotFound,
-  description: "The requested AI model is not registered.",
-});
 const quotaExceededProblem = defineRouteProblem(AiQuotaExceededProblem, {
   code: "ai-saas/quota-exceeded",
   category: ProblemCategory.TooManyRequests,
@@ -50,8 +44,8 @@ const providerUnavailableProblem = defineRouteProblem(AiProviderUnavailableProbl
 export const OPTIONAL_TENANT_ID_HEADER_SCHEMA = z.string().min(1).optional();
 
 export const aiGenerateRequestSchema = z.object({
-  requestId: z.string().min(1),
-  modelId: z.string().min(1).optional(),
+  requestId: z.string().min(1).max(128),
+  modelId: z.string().min(1).max(128).optional(),
   prompt: z.string().min(1).max(4000),
 });
 
@@ -62,7 +56,7 @@ export const aiUsageSchema = z.object({
   completionTokens: z.number(),
   embeddingTokens: z.number(),
   totalTokens: z.number(),
-  costUsd: z.number(),
+  costUsd: z.number().nullable(),
 });
 
 export const aiQuotaSchema = z.object({
@@ -70,7 +64,7 @@ export const aiQuotaSchema = z.object({
   monthlyCostBudgetUsd: z.number(),
   remainingTokens: z.number(),
   remainingCostUsd: z.number(),
-  status: z.enum(["ok", "over_quota"]),
+  status: z.enum(["ok", "over_quota", "reconciliation_required"]),
 });
 
 export const aiInvocationLogSchema = z.object({
@@ -88,13 +82,17 @@ export const aiInvocationLogSchema = z.object({
     rawResponseStored: z.boolean(),
   }),
   latencyMs: z.number(),
-  usage: z.object({
-    promptTokens: z.number(),
-    completionTokens: z.number(),
-    totalTokens: z.number(),
-    accuracy: z.enum(["EXACT", "ESTIMATED", "UNKNOWN"]).optional(),
-  }),
-  costUsd: z.number(),
+  usage: z.discriminatedUnion("state", [
+    z.object({
+      state: z.literal("known"),
+      inputTokens: z.number(),
+      outputTokens: z.number(),
+      totalTokens: z.number(),
+      accuracy: z.enum(["EXACT", "ESTIMATED", "UNKNOWN"]).optional(),
+    }),
+    z.object({ state: z.literal("unknown") }),
+  ]),
+  costUsd: z.number().nullable(),
   status: z.enum(["completed", "over_quota", "failed"]),
   errorCategory: z.string().nullable(),
   createdAt: z.string(),
@@ -115,13 +113,17 @@ export const aiGenerateResponseSchema = z.object({
   modelId: z.string(),
   provider: z.string(),
   text: z.string(),
-  usage: z.object({
-    promptTokens: z.number(),
-    completionTokens: z.number(),
-    totalTokens: z.number(),
-    accuracy: z.enum(["EXACT", "ESTIMATED", "UNKNOWN"]).optional(),
-  }),
-  costUsd: z.number(),
+  usage: z.discriminatedUnion("state", [
+    z.object({
+      state: z.literal("known"),
+      inputTokens: z.number(),
+      outputTokens: z.number(),
+      totalTokens: z.number(),
+      accuracy: z.enum(["EXACT", "ESTIMATED", "UNKNOWN"]).optional(),
+    }),
+    z.object({ state: z.literal("unknown") }),
+  ]),
+  costUsd: z.number().nullable(),
   quota: aiQuotaSchema,
   invocation: aiInvocationLogSchema,
   idempotencyKey: z.string(),
@@ -140,7 +142,6 @@ export const generateAiRoute = defineRouteContract({
     tenantRequiredProblem,
     tenantNotFoundProblem,
     modelRequiredProblem,
-    modelNotFoundProblem,
     quotaExceededProblem,
     rateLimitExceededProblem,
     providerUnavailableProblem,

@@ -86,7 +86,6 @@ test.expectClean();
 | `createAuthProviderConformanceSuite(config)`          | Reusable auth provider cases for token/session auth, webhooks, tenant mapping, readiness, and live-smoke gating.                             |
 | `createStorageProviderConformanceSuite(config)`       | Reusable storage provider contract cases for default no-credential CI.                                                                       |
 | `createProviderConformanceMatrixSuite(config)`        | Validates provider profile manifests for required capabilities, optional unsupported reasons, and method evidence.                           |
-| `createLlmProviderConformanceSuite(config)`           | Reusable LLM provider contract cases for mocked or live provider fixtures.                                                                   |
 | `createBillingProviderConformanceSuite(config)`       | Builds runner-neutral billing gateway and webhook conformance cases for provider packages.                                                   |
 | `createNotificationProviderConformanceSuite(config)`  | Verifies explicit notification provider capability profiles through `@croco/testing/notifications`.                                          |
 | `createUpstashRedisMeteringConformanceSuite(config)`  | Reusable Upstash Redis metering cases for config, usage storage, idempotency, upstream errors, and live-smoke gating.                        |

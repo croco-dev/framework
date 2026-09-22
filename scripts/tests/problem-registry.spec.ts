@@ -458,16 +458,16 @@ describe("problem-registry.mts", () => {
     expect(problem?.recovery.telemetry.attributes).not.toContain("receivedValue");
   });
 
-  it("publishes non-retryable recovery metadata for required LLM metering", () => {
+  it("publishes non-retryable recovery metadata for failed AI usage ingestion", () => {
     const repo = createTempRepo();
     writeFile(
       repo,
-      "packages/llm-metering/src/problems.ts",
+      "packages/ai-usage/src/problems.ts",
       [
         'import { Problem, ProblemCategory } from "@croco/problems-core";',
-        "export class LlmMeteringServiceRequiredProblem extends Problem {",
+        "export class AiUsageRecordFailedProblem extends Problem {",
         "  constructor() {",
-        '    super("llm-metering/service-required", ProblemCategory.InternalServerError);',
+        '    super("ai-usage/record-failed", ProblemCategory.InternalServerError);',
         "  }",
         "}",
         "",
@@ -476,15 +476,15 @@ describe("problem-registry.mts", () => {
 
     expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
     const registry = readRegistry(repo);
-    const problem = registry.problems.find(({ code }) => code === "llm-metering/service-required");
+    const problem = registry.problems.find(({ code }) => code === "ai-usage/record-failed");
 
     expect(problem?.recovery).toEqual({
       cause:
-        "@AiMetered required usage recording, but no scoped or global LlmMeteringService was configured.",
+        "The provider completed billable work, but the application could not record its usage in the metering ledger.",
       userAction:
-        "Do not retry the unchanged operation; ask the service operator to configure LLM metering or explicitly disable it for an intentionally unmetered method.",
+        "Hand the opaque failure reference to an operator; do not invoke the provider again for the same request.",
       operatorAction:
-        'Bind LlmMeteringService at bootstrap with setLlmMeteringService(), bind it per execution with runWithLlmMeteringService(), or set @AiMetered({ metering: "disabled" }) only when skipping usage recording is intentional.',
+        "Recover the metering dependency, then replay the preserved usage receipt with the same idempotency key without repeating the provider call.",
       retryability: "not-retryable",
       redactionPolicy: "operator-only",
       telemetry: {
