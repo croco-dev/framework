@@ -5,6 +5,7 @@ import { relative, resolve } from "node:path";
 
 const projectRoot = resolve(process.argv[2] ?? process.cwd());
 const packageJsonPath = resolve(projectRoot, "package.json");
+const ignoredDirectories = new Set([".git", ".next", ".turbo", "coverage", "dist", "node_modules"]);
 
 try {
   inspectProject();
@@ -23,7 +24,7 @@ function inspectProject() {
     schemaVersion: "croco.skill-inspection/v1",
     projectRoot,
     packageName: stringValue(packageJson.name),
-    crocoDependencies: collectCrocoDependencies(packageJson),
+    crocoDependencies: collectCrocoDependencies(projectRoot),
     verificationScripts: collectVerificationScripts(packageJson),
     manifests: {
       architecture: inspectArchitectureManifest(),
@@ -100,7 +101,11 @@ function inspectSaasProfileManifest() {
       const capability = requiredRecordValue(entry, field);
       return {
         capability: requiredStringValue(capability.capability, `${field}.capability`),
-        packageName: requiredStringValue(capability.packageName, `${field}.packageName`),
+        ...(capability.packageName === undefined
+          ? {}
+          : {
+              packageName: requiredStringValue(capability.packageName, `${field}.packageName`),
+            }),
         provider: requiredStringValue(capability.provider, `${field}.provider`),
         status: requiredStringValue(capability.status, `${field}.status`),
         zeroCredentialState: requiredStringValue(
@@ -117,7 +122,7 @@ function inspectSaasProfileManifest() {
   };
 }
 
-function collectCrocoDependencies(packageJson) {
+function collectCrocoDependencies(root) {
   const dependencyFields = [
     "dependencies",
     "devDependencies",
@@ -126,14 +131,68 @@ function collectCrocoDependencies(packageJson) {
   ];
   const dependencies = {};
 
-  for (const field of dependencyFields) {
-    for (const [name, range] of Object.entries(optionalRecordField(packageJson, field))) {
-      if (name.startsWith("@croco/") && typeof range === "string") dependencies[name] = range;
+  for (const path of findPackageJsonPaths(root)) {
+    const packageJson = readJsonObject(path, relative(root, path));
+    for (const field of dependencyFields) {
+      for (const [name, range] of Object.entries(optionalRecordField(packageJson, field))) {
+        if (name.startsWith("@croco/") && typeof range === "string") {
+          dependencies[name] = sanitizeDependencySpecifier(range);
+        }
+      }
     }
   }
 
   return Object.fromEntries(
     Object.entries(dependencies).sort(([left], [right]) => left.localeCompare(right)),
+  );
+}
+
+function findPackageJsonPaths(root) {
+  const paths = [];
+  const directories = [root];
+
+  while (directories.length > 0) {
+    const current = directories.pop();
+    if (!current) break;
+
+    const entries = readdirSync(current, { withFileTypes: true }).sort((left, right) =>
+      left.name.localeCompare(right.name),
+    );
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        if (!ignoredDirectories.has(entry.name)) directories.push(resolve(current, entry.name));
+      } else if (entry.name === "package.json") {
+        paths.push(resolve(current, entry.name));
+      }
+    }
+  }
+
+  return paths.sort((left, right) => left.localeCompare(right));
+}
+
+function sanitizeDependencySpecifier(specifier) {
+  if (!/^(?:git\+)?https?:\/\//i.test(specifier)) return specifier;
+
+  const url = new URL(specifier);
+  url.username = "";
+  url.password = "";
+  for (const name of new Set(url.searchParams.keys())) {
+    if (isSensitiveQueryParameter(name)) url.searchParams.delete(name);
+  }
+  return url.toString();
+}
+
+function isSensitiveQueryParameter(name) {
+  const normalized = name.toLowerCase().replaceAll(/[^a-z0-9]/g, "");
+  return (
+    normalized === "auth" ||
+    normalized === "authorization" ||
+    normalized === "key" ||
+    normalized === "sig" ||
+    normalized.endsWith("accessid") ||
+    normalized.endsWith("accesskeyid") ||
+    normalized.endsWith("apikey") ||
+    /(?:credential|password|secret|signature|token)$/.test(normalized)
   );
 }
 
@@ -150,14 +209,6 @@ function collectVerificationScripts(packageJson) {
 }
 
 function findCompositionRoots(root) {
-  const ignoredDirectories = new Set([
-    ".git",
-    ".next",
-    ".turbo",
-    "coverage",
-    "dist",
-    "node_modules",
-  ]);
   const roots = [];
   const directories = [root];
 
