@@ -146,8 +146,11 @@ describe("PostgresMetricsStore", () => {
   ] as const)("does not take transaction ownership in the %s", async (_name, helper) => {
     await helper(db);
 
-    const [sql] = vi.mocked(db.query).mock.calls[0] ?? [];
-    expect(sql).not.toMatch(/\b(?:BEGIN|COMMIT)\b/);
+    const sql = vi
+      .mocked(db.query)
+      .mock.calls.map(([statement]) => statement)
+      .join("\n");
+    expect(sql).not.toMatch(/\b(?:BEGIN|START\s+TRANSACTION|COMMIT|ROLLBACK)\b/i);
   });
 
   it("should calculate retention metrics from snapshots and movement history", async () => {

@@ -23447,12 +23447,11 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       title: "Internal Server Error",
       cookbookPath: "/reference/problem-recovery-cookbook/#warehouse-postgres-metrics-row-invalid",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        cause: "A persisted PostgreSQL metrics row failed validation or decoding.",
+        userAction: "Do not retry until the invalid persisted metrics row has been corrected.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
+          "Use traces and logs to identify the invalid column, then repair or remove the persisted metrics row.",
+        retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
           eventName: "croco.problem.error",

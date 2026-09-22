@@ -758,7 +758,7 @@ This cookbook documents 779 public Croco Problem codes. The deterministic JSON r
 | [`tx-drizzle/savepoint-unsupported`](#tx-drizzle-savepoint-unsupported)                                                               | InternalServerError   |    500 | conditional   | operator-only | active     |       1 |
 | [`tx-drizzle/tenant-context-required`](#tx-drizzle-tenant-context-required)                                                           | InternalServerError   |    500 | conditional   | operator-only | active     |       1 |
 | [`UNAUTHORIZED`](#unauthorized)                                                                                                       | Unauthorized          |    401 | not-retryable | safe-message  | active     |       1 |
-| [`warehouse-postgres/metrics-row-invalid`](#warehouse-postgres-metrics-row-invalid)                                                   | InternalServerError   |    500 | conditional   | operator-only | active     |       1 |
+| [`warehouse-postgres/metrics-row-invalid`](#warehouse-postgres-metrics-row-invalid)                                                   | InternalServerError   |    500 | not-retryable | operator-only | active     |       1 |
 | [`WEBHOOK_PROCESSING_FAILED`](#webhook-processing-failed)                                                                             | InternalServerError   |    500 | conditional   | operator-only | active     |       1 |
 | [`WEBHOOK_VALIDATION_FAILED`](#webhook-validation-failed)                                                                             | BadRequest            |    400 | not-retryable | public        | active     |       1 |
 | [`webhooks-core/configuration`](#webhooks-core-configuration)                                                                         | InternalServerError   |    500 | conditional   | operator-only | active     |       1 |
@@ -14223,12 +14223,12 @@ Sources:
 
 - Category: `InternalServerError`
 - HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
+- Retryability: `not-retryable`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Cause: A persisted PostgreSQL metrics row failed validation or decoding.
+- User action: Do not retry until the invalid persisted metrics row has been corrected.
+- Operator action: Use traces and logs to identify the invalid column, then repair or remove the persisted metrics row.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
