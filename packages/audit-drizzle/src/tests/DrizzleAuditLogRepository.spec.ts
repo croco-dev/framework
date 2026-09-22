@@ -8,7 +8,7 @@ import { TxManager } from "@croco/tx-core";
 import { createDrizzleTxAdapter, DrizzleHealthIndicator } from "@croco/tx-drizzle";
 import type { DrizzleDb } from "../libs/DrizzleAuditLogRepository";
 import { DrizzleAuditLogRepository } from "../libs/DrizzleAuditLogRepository";
-import { auditLogsSqlite } from "../libs/schema";
+import { auditLogsPg, auditLogsSqlite } from "../libs/schema";
 
 describe("DrizzleAuditLogRepository", () => {
   let repository!: DrizzleAuditLogRepository;
@@ -506,6 +506,128 @@ describe("DrizzleAuditLogRepository", () => {
 
       const found = await repoWithMockTx.find({ tenantId: "tenant-1" });
       expect(found).toHaveLength(1);
+    });
+  });
+
+  describe("JSON column handling", () => {
+    it("should round-trip PostgreSQL jsonb values without double encoding", async () => {
+      let storedRow: Record<string, unknown> | undefined;
+      const pgDb = {
+        insert: () => ({
+          values: (values: Record<string, unknown>) => ({
+            returning: async () => {
+              storedRow = {
+                id: "01958f46-fba5-7d40-8e26-c099107bd5f1",
+                ...values,
+              };
+              return [storedRow];
+            },
+          }),
+        }),
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              limit: () => ({
+                offset: () => ({
+                  orderBy: async () => (storedRow ? [storedRow] : []),
+                }),
+              }),
+            }),
+          }),
+        }),
+      } as unknown as DrizzleDb;
+      const pgTxManager = {
+        getClient: () => undefined,
+      } as unknown as TxManager<DrizzleDb>;
+      const pgRepository = new DrizzleAuditLogRepository(pgDb, pgTxManager, {
+        table: auditLogsPg,
+        schema: {
+          id: auditLogsPg.id,
+          tenantId: auditLogsPg.tenantId,
+          actorId: auditLogsPg.actorId,
+          action: auditLogsPg.action,
+          resourceType: auditLogsPg.resourceType,
+          resourceId: auditLogsPg.resourceId,
+          payload: auditLogsPg.payload,
+          diff: auditLogsPg.diff,
+          metadata: auditLogsPg.metadata,
+          createdAt: auditLogsPg.createdAt,
+        },
+      });
+      const payload = { email: "user@example.com" };
+      const diff = { email: { before: "old@example.com", after: "user@example.com" } };
+      const metadata = { requestId: "req-1" };
+
+      const created = await pgRepository.create({
+        tenantId: "tenant-1",
+        actorId: "user-1",
+        action: "user.update",
+        resourceType: "User",
+        resourceId: "user-1",
+        payload,
+        diff,
+        metadata,
+      });
+      const found = await pgRepository.find({ tenantId: "tenant-1" });
+
+      expect(storedRow?.payload).toBe(payload);
+      expect(storedRow?.diff).toBe(diff);
+      expect(storedRow?.metadata).toBe(metadata);
+      expect(created.payload).toEqual(payload);
+      expect(created.diff).toEqual(diff);
+      expect(created.metadata).toEqual(metadata);
+      expect(found).toHaveLength(1);
+      expect(found[0]?.payload).toEqual(payload);
+      expect(found[0]?.diff).toEqual(diff);
+      expect(found[0]?.metadata).toEqual(metadata);
+    });
+
+    it("should preserve custom serialization for SQLite text columns", async () => {
+      const serializeJson = vi.fn((value: unknown) => `custom:${JSON.stringify(value)}`);
+      const deserializeJson = vi.fn((value: string) => JSON.parse(value.slice("custom:".length)));
+      const customRepository = new DrizzleAuditLogRepository(db, txManager, {
+        table: auditLogsSqlite,
+        schema: {
+          id: auditLogsSqlite.id,
+          tenantId: auditLogsSqlite.tenantId,
+          actorId: auditLogsSqlite.actorId,
+          action: auditLogsSqlite.action,
+          resourceType: auditLogsSqlite.resourceType,
+          resourceId: auditLogsSqlite.resourceId,
+          payload: auditLogsSqlite.payload,
+          diff: auditLogsSqlite.diff,
+          metadata: auditLogsSqlite.metadata,
+          createdAt: auditLogsSqlite.createdAt,
+        },
+        serializeJson,
+        deserializeJson,
+      });
+      const payload = { email: "user@example.com" };
+      const metadata = { requestId: "req-1" };
+
+      const created = await customRepository.create({
+        tenantId: "tenant-1",
+        actorId: "user-1",
+        action: "user.create",
+        resourceType: "User",
+        resourceId: "user-1",
+        payload,
+        diff: null,
+        metadata,
+      });
+      const persisted = sqlite
+        .prepare("SELECT payload, diff, metadata FROM audit_logs WHERE id = ?")
+        .get(Number(created.id)) as Record<string, unknown>;
+
+      expect(persisted).toEqual({
+        payload: `custom:${JSON.stringify(payload)}`,
+        diff: null,
+        metadata: `custom:${JSON.stringify(metadata)}`,
+      });
+      expect(created.payload).toEqual(payload);
+      expect(created.metadata).toEqual(metadata);
+      expect(serializeJson).toHaveBeenCalledTimes(2);
+      expect(deserializeJson).toHaveBeenCalledTimes(2);
     });
   });
 });
