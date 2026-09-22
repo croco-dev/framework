@@ -61,6 +61,30 @@ Usage Metering 핵심 서비스
 
 ---
 
+### getRecordStatus()
+
+> **getRecordStatus**(`tenantId`, `meterId`, `idempotencyKey`): `Promise`\<[`MeteringRecordStatus`](/api/metering-core/src/type-aliases/meteringrecordstatus/)\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### meterId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+#### Returns
+
+`Promise`\<[`MeteringRecordStatus`](/api/metering-core/src/type-aliases/meteringrecordstatus/)\>
+
+---
+
 ### getUsage()
 
 > **getUsage**(`options`): `Promise`\<`number`\>

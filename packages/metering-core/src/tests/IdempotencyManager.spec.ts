@@ -74,10 +74,11 @@ function createStagedRedis(): {
   let lifecycleValue: string | undefined;
   let state:
     | {
-        status: "PROCESSING" | "PUBLISHING" | "EVENTS_PENDING" | "COMPLETED";
+        status: "PROCESSING" | "PUBLISHING" | "EVENTS_PENDING" | "REJECTED" | "COMPLETED";
         token?: string;
         operationId?: string;
         delivery?: string;
+        persistenceStarted?: boolean;
       }
     | undefined;
 
@@ -91,6 +92,27 @@ function createStagedRedis(): {
       _keys: string[],
       args: Array<string | number>,
     ) => {
+      if (script.includes("METERING_RECORD_STATUS")) {
+        if (state?.status === "COMPLETED") return ["completed"] as unknown as TResult;
+        if (state?.status === "REJECTED") return ["rejected"] as unknown as TResult;
+        if (state?.status === "EVENTS_PENDING") {
+          return ["delivery-pending"] as unknown as TResult;
+        }
+        if (state?.status === "PROCESSING" || state?.status === "PUBLISHING") {
+          if (leaseExpired) {
+            if (state.delivery) return ["delivery-pending"] as unknown as TResult;
+            return [
+              state.persistenceStarted ? "persistence-uncertain" : "retryable",
+            ] as unknown as TResult;
+          }
+          return ["active"] as unknown as TResult;
+        }
+        if (lifecycleValue === String(args[0])) return ["completed"] as unknown as TResult;
+        if (lifecycleValue === String(args[1])) return ["rejected"] as unknown as TResult;
+        if (lifecycleValue?.startsWith(String(args[2]))) return ["active"] as unknown as TResult;
+        return ["missing"] as unknown as TResult;
+      }
+
       if (script.includes("state.status == 'EVENTS_PENDING'")) {
         const token = String(args[0]);
         const operationId = String(args[3]);
@@ -111,6 +133,20 @@ function createStagedRedis(): {
           return [1, state.delivery ?? "", state.operationId] as unknown as TResult;
         }
         return [0, "", ""] as unknown as TResult;
+      }
+
+      if (script.includes("METERING_PERSISTENCE_STARTED")) {
+        if (!state) {
+          return [0, "MISSING"] as unknown as TResult;
+        }
+        if (state.status !== "PROCESSING") {
+          return [0, `STATUS:${state.status}`] as unknown as TResult;
+        }
+        if (state.token !== String(args[0])) {
+          return [0, "TOKEN"] as unknown as TResult;
+        }
+        state.persistenceStarted = true;
+        return [1, "OK"] as unknown as TResult;
       }
 
       if (script.includes("state.delivery = ARGV[2]")) {
@@ -147,7 +183,7 @@ function createStagedRedis(): {
         if (!state) {
           return [0, "MISSING"] as unknown as TResult;
         }
-        if (state.status === "COMPLETED") {
+        if (state.status === "COMPLETED" || state.status === "REJECTED") {
           return [1, "ALREADY_COMPLETED"] as unknown as TResult;
         }
         if (state.status !== "PUBLISHING") {
@@ -162,11 +198,11 @@ function createStagedRedis(): {
         return [1, "OK"] as unknown as TResult;
       }
 
-      if (script.includes('{"status":"COMPLETED"}')) {
+      if (script.includes("COMPLETE_METERING_PROCESSING")) {
         if (!state) {
           return [0, "MISSING"] as unknown as TResult;
         }
-        if (state.status === "COMPLETED") {
+        if (state.status === "COMPLETED" || state.status === "REJECTED") {
           return [1, "ALREADY_COMPLETED"] as unknown as TResult;
         }
         if (state.status !== "PUBLISHING") {
@@ -175,8 +211,15 @@ function createStagedRedis(): {
         if (state.token !== String(args[0])) {
           return [0, "TOKEN"] as unknown as TResult;
         }
-        state = { status: "COMPLETED" };
-        lifecycleValue = String(args[2]);
+        const delivery = state.delivery
+          ? (JSON.parse(state.delivery) as {
+              quota?: { allowOverQuota: boolean; exceeded: boolean };
+            })
+          : undefined;
+        const status =
+          delivery?.quota?.exceeded && !delivery.quota.allowOverQuota ? "REJECTED" : "COMPLETED";
+        state = { status };
+        lifecycleValue = status === "REJECTED" ? String(args[3]) : String(args[2]);
         return [1, "OK"] as unknown as TResult;
       }
 
@@ -522,6 +565,137 @@ describe("IdempotencyManager", () => {
       },
     };
 
+    it("should distinguish retryable processing from pending delivery", async () => {
+      const stagedRedis = createStagedRedis();
+      const stagedManager = new IdempotencyManager(stagedRedis.redis, 60, 1_000);
+
+      await expect(
+        stagedManager.getMeteringRecordStatus("tenant-1", "api_calls", "key-123"),
+      ).resolves.toBe("missing");
+
+      const firstClaim = await stagedManager.claimMeteringProcessingOrThrow(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+      );
+      await expect(
+        stagedManager.getMeteringRecordStatus("tenant-1", "api_calls", "key-123"),
+      ).resolves.toBe("active");
+
+      stagedRedis.expireLease();
+      await expect(
+        stagedManager.getMeteringRecordStatus("tenant-1", "api_calls", "key-123"),
+      ).resolves.toBe("retryable");
+
+      const retryClaim = await stagedManager.claimMeteringProcessingOrThrow(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+      );
+      await stagedManager.markMeteringEventsPublishing(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+        retryClaim.token,
+        delivery,
+      );
+      await stagedManager.releaseMeteringEvents(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+        retryClaim.token,
+      );
+      await expect(
+        stagedManager.getMeteringRecordStatus("tenant-1", "api_calls", "key-123"),
+      ).resolves.toBe("delivery-pending");
+
+      const deliveryRetryClaim = await stagedManager.claimMeteringProcessingOrThrow(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+      );
+      await stagedManager.completeMeteringProcessing(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+        deliveryRetryClaim.token,
+      );
+      await expect(
+        stagedManager.getMeteringRecordStatus("tenant-1", "api_calls", "key-123"),
+      ).resolves.toBe("completed");
+      expect(firstClaim.token).not.toBe(retryClaim.token);
+      expect(deliveryRetryClaim.delivery).toEqual(delivery);
+    });
+
+    it("should preserve a rejected quota outcome separately from successful completion", async () => {
+      const stagedRedis = createStagedRedis();
+      const stagedManager = new IdempotencyManager(stagedRedis.redis, 60, 1_000);
+      const claim = await stagedManager.claimMeteringProcessingOrThrow(
+        "tenant-1",
+        "api_calls",
+        "rejected-key",
+      );
+
+      await stagedManager.markMeteringEventsPublishing(
+        "tenant-1",
+        "api_calls",
+        "rejected-key",
+        claim.token,
+        {
+          ...delivery,
+          usageRecord: { ...delivery.usageRecord, idempotencyKey: "rejected-key" },
+          quota: { allowOverQuota: false, exceeded: true, newUsage: 11, quota: 10 },
+        },
+      );
+      await stagedManager.completeMeteringProcessing(
+        "tenant-1",
+        "api_calls",
+        "rejected-key",
+        claim.token,
+      );
+
+      await expect(
+        stagedManager.getMeteringRecordStatus("tenant-1", "api_calls", "rejected-key"),
+      ).resolves.toBe("rejected");
+      await expect(
+        stagedManager.claimMeteringProcessingOrThrow("tenant-1", "api_calls", "rejected-key"),
+      ).rejects.toThrow(DuplicateRecordProblem);
+    });
+
+    it("should expose uncertain persistence without treating it as a fresh retry", async () => {
+      const stagedRedis = createStagedRedis();
+      const stagedManager = new IdempotencyManager(stagedRedis.redis, 60, 1_000);
+      const claim = await stagedManager.claimMeteringProcessingOrThrow(
+        "tenant-1",
+        "api_calls",
+        "uncertain-key",
+      );
+
+      await stagedManager.markMeteringPersistenceStarted(
+        "tenant-1",
+        "api_calls",
+        "uncertain-key",
+        claim.token,
+      );
+      await stagedManager.releaseMeteringProcessing(
+        "tenant-1",
+        "api_calls",
+        "uncertain-key",
+        claim.token,
+      );
+
+      await expect(
+        stagedManager.getMeteringRecordStatus("tenant-1", "api_calls", "uncertain-key"),
+      ).resolves.toBe("persistence-uncertain");
+      const retryClaim = await stagedManager.claimMeteringProcessingOrThrow(
+        "tenant-1",
+        "api_calls",
+        "uncertain-key",
+      );
+      expect(retryClaim.operationId).toBe(claim.operationId);
+      expect(retryClaim.delivery).toBeUndefined();
+    });
+
     it("should claim a new processing lease", async () => {
       vi.mocked(mockRedis.eval).mockResolvedValue([1, "", "operation-1"]);
 
@@ -545,6 +719,7 @@ describe("IdempotencyManager", () => {
           "IN_PROGRESS:",
           "COMPLETED",
           `IN_PROGRESS:${claim.token}`,
+          "REJECTED",
         ],
       );
     });
@@ -651,6 +826,23 @@ describe("IdempotencyManager", () => {
       );
     });
 
+    it("should mark persistence before writing usage", async () => {
+      vi.mocked(mockRedis.eval).mockResolvedValue([1, "OK"]);
+
+      await manager.markMeteringPersistenceStarted(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+        deliveryClaim,
+      );
+
+      expect(mockRedis.eval).toHaveBeenCalledWith(
+        expect.stringContaining("state.persistenceStarted = true"),
+        ["idem2:delivery:tenant-1:api_calls:key-123"],
+        [deliveryClaim, 30_000, 86_400],
+      );
+    });
+
     it("should reject a stale publisher transition", async () => {
       vi.mocked(mockRedis.eval).mockResolvedValue([0, "TOKEN"]);
 
@@ -693,9 +885,12 @@ describe("IdempotencyManager", () => {
       await manager.completeMeteringProcessing("tenant-1", "api_calls", "key-123", deliveryClaim);
 
       expect(mockRedis.eval).toHaveBeenCalledWith(
-        expect.stringContaining(`'{"status":"COMPLETED"}'`),
+        expect.stringContaining("COMPLETE_METERING_PROCESSING"),
         ["idem2:delivery:tenant-1:api_calls:key-123", "idem2:lifecycle:tenant-1:api_calls:key-123"],
-        [deliveryClaim, 86_400, "COMPLETED"],
+        [deliveryClaim, 86_400, "COMPLETED", "REJECTED"],
+      );
+      expect(vi.mocked(mockRedis.eval).mock.calls[0]?.[0]).toContain(
+        "cjson.decode(state.delivery)",
       );
     });
 

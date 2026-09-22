@@ -285,13 +285,6 @@ export {
   type ProviderNoCredentialScenario,
 } from "./libs/provider-no-credential-conformance";
 export {
-  createLlmProviderConformanceSuite,
-  type LlmProviderConformanceCase,
-  type LlmProviderConformanceOptions,
-  type LlmProviderConformancePromptSet,
-  type LlmProviderConformanceSuite,
-} from "./libs/llm-provider-conformance";
-export {
   createBillingProviderConformanceSuite,
   type BillingGatewayConformanceAssertions,
   type BillingGatewayConformanceFixtures,

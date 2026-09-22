@@ -2088,13 +2088,13 @@ const recoveryMetadataByCode = {
     redactionPolicy: "safe-message",
     severity: "warning",
   }),
-  "llm-core/completion-event-publication-failed": recovery({
+  "ai-usage/record-failed": recovery({
     cause:
-      "The model completed billable work, but its completion event was not durably confirmed afterward.",
+      "The provider completed billable work, but the application could not record its usage in the metering ledger.",
     userAction:
-      "Hand the opaque failure reference to an operator; do not invoke the model again or manually publish the completion event.",
+      "Hand the opaque failure reference to an operator; do not invoke the provider again for the same request.",
     operatorAction:
-      "Use retryCompletionEvent with the in-process Problem or saved intent: published_unconfirmed confirms storage without republishing, delivery_in_progress waits for the active claim, and not_published atomically claims delivery before publishing. Never publish the event manually.",
+      "Recover the metering dependency, then replay the preserved usage receipt with the same idempotency key without repeating the provider call.",
     retryability: "not-retryable",
     redactionPolicy: "operator-only",
     severity: "error",
@@ -2107,17 +2107,6 @@ const recoveryMetadataByCode = {
     operatorAction:
       "Inspect the Problem reconciliationState and stage, call getLifecycleDiagnostics() to confirm reconciliation_required, then call publishPendingEvents() to replay and acknowledge the stored intent.",
     retryability: "conditional",
-    redactionPolicy: "operator-only",
-    severity: "error",
-  }),
-  "llm-metering/service-required": recovery({
-    cause:
-      "@AiMetered required usage recording, but no scoped or global LlmMeteringService was configured.",
-    userAction:
-      "Do not retry the unchanged operation; ask the service operator to configure LLM metering or explicitly disable it for an intentionally unmetered method.",
-    operatorAction:
-      'Bind LlmMeteringService at bootstrap with setLlmMeteringService(), bind it per execution with runWithLlmMeteringService(), or set @AiMetered({ metering: "disabled" }) only when skipping usage recording is intentional.',
-    retryability: "not-retryable",
     redactionPolicy: "operator-only",
     severity: "error",
   }),

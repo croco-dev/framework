@@ -223,7 +223,7 @@ function assertScenarioState(seed: SaasDemoSnapshot, dashboard: DashboardSnapsho
     "pnpm --dir apps/api-server demo:usage-recover",
   );
   assertEquals("AI provider", seed.ai.provider, "in-memory");
-  assertEquals("AI quota failure code", seed.ai.quotaFailureCode, "llm-metering/quota-exceeded");
+  assertEquals("AI quota failure code", seed.ai.quotaFailureCode, "ai-usage/quota-exceeded");
   assertEquals("operations health", seed.operations.healthStatus, "up");
   assertEquals("operations diagnostics", seed.operations.diagnosticsSummary, "all_healthy");
   assertEquals("billing sync job status", seed.jobs.status, "completed");

@@ -539,22 +539,6 @@ describe("package-entrypoint-smoke.mts", () => {
   );
 
   it(
-    "fails when a packed decorated method loses design:type metadata",
-    () => {
-      const root = createTempRoot();
-      writeDecoratorMetadataPackages(root, { missingMemberMetadata: true });
-
-      const result = runScript(root);
-
-      expect(result.status).toBe(1);
-      expect(`${result.stdout}\n${result.stderr}`).toContain(
-        "LlmService.generate design:type expected Function, received missing",
-      );
-    },
-    scriptTestTimeout,
-  );
-
-  it(
     "fails when the packed container injects trailing metadata instead of preserving defaults",
     () => {
       const root = createTempRoot();
@@ -827,7 +811,6 @@ function writeDecoratorMetadataPackages(
     readonly missingAuthMetadata?: boolean;
     readonly requiredAuthOptions?: boolean;
     readonly missingFeatureMetadata?: boolean;
-    readonly missingMemberMetadata?: boolean;
   } = {},
 ): void {
   const dependencyResolution = options.brokenDefaultResolution
@@ -948,28 +931,6 @@ function writeDecoratorMetadataPackages(
       "",
     ].join("\n"),
     packageName: "@croco/metering-core",
-  });
-
-  const memberMetadata = options.missingMemberMetadata
-    ? ""
-    : 'Reflect.defineMetadata("design:type", Function, LlmService.prototype, "generate");';
-  writeImportablePackage(root, "llm-core", {
-    cjsContent: [
-      'require("@croco/framework-context");',
-      "class LlmService { generate() {} }",
-      memberMetadata,
-      "exports.LlmService = LlmService;",
-      "",
-    ].join("\n"),
-    declarationContent: "export declare class LlmService { generate(): void; }\n",
-    dependencies: { "@croco/framework-context": "0.0.0" },
-    esmContent: [
-      'import "@croco/framework-context";',
-      "export class LlmService { generate() {} }",
-      memberMetadata,
-      "",
-    ].join("\n"),
-    packageName: "@croco/llm-core",
   });
 }
 

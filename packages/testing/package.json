@@ -73,7 +73,6 @@
     "@croco/framework-context": "workspace:*",
     "@croco/framework-logger": "workspace:*",
     "@croco/framework-routes": "workspace:*",
-    "@croco/llm-core": "workspace:*",
     "@croco/openapi-spec": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/protocols-core": "workspace:*",

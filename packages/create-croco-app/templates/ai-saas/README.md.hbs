@@ -16,8 +16,8 @@ pnpm ai:smoke
 `pnpm ai:smoke` runs a deterministic end-to-end flow:
 
 - creates a tenant on the `team` plan,
-- generates text through the in-memory LLM provider,
-- records canonical LLM meters (`llm.prompt_tokens`, `llm.completion_tokens`, `llm.cost_usd`),
+- generates text through a deterministic application-owned function,
+- records canonical AI usage meters (`llm.prompt_tokens`, `llm.completion_tokens`, `llm.cost_usd_nanos`),
 - stores a redacted invocation log,
 - verifies deterministic idempotency keys, and
 - proves quota and rate-limit rejection through explicit Problems.
@@ -68,14 +68,15 @@ The generated app registers these budgets against the canonical LLM meters befor
 
 ## Provider Boundary
 
-The default `in-memory` provider uses `@croco/llm-core` and `@croco/llm-metering` only. It is deterministic so typecheck, tests, contract commands, and smoke checks do not require network access.
+The default deterministic app-local `Generate` function runs without credentials. The shipped production reference is `createOpenAIGenerate` in `src/aiGenerate.ts`, using the pinned `openai` **6.44.0** Responses API. Migration replaces framework generation registries with application code; `@croco/ai-usage` only ingests usage and computes costs.
 
-Documented production seams are intentionally server-side:
+Inject a tenant-specific client resolver using `createTenantOpenAIClient` with explicit API key and base URL, and supply an application-approved `PromptPolicy` before enabling live requests. The helper disables ambient organization/project, SDK logs and retries. The demo policy rejects email-like input; it is not a production PII classifier. Requests have a 4,000-character input bound, 512-output-token provider bound, 16,000-character result bound, AbortSignal and deadline. Raw prompts and output are never invocation-log fields.
 
-- OpenAI-compatible adapter: `OPENAI_API_KEY`, optional `OPENAI_BASE_URL`, `AI_DEFAULT_MODEL_ID`
-- Anthropic-compatible adapter: `ANTHROPIC_API_KEY`, `AI_DEFAULT_MODEL_ID`
+Every SDK request uses `store:false` and `maxRetries:0`. Cancellation, connection loss, incomplete results and missing usage do not imply zero cost. An unknown receipt blocks new automatic spending for that tenant until an operator reconciles it. No provider retry occurs automatically.
 
-Do not expose provider API keys to browser code. Add production provider packages and adapter implementations in the API server package only.
+`AiReceiptStore` saves the pre-call unknown outcome, then provider result and pending usage/completion delivery before publication. Reuse the request id to resume delivery without a second generation, including after recreating the service with the same store. Production must inject a durable store with atomic tenant claim and durable save; completion consumers must deduplicate the supplied idempotency key. The default in-memory store is deterministic development storage and does not survive process termination. Results in receipts are sensitive: apply tenant access control, encryption and retention. Application-owned reconciliation must verify provider outcome and update the persisted receipt; do not delete unknown receipts to trigger a retry.
+
+Demo pricing is illustrative. Supply reviewed provider/model pricing to the usage ingestion service for real billing; a successful generation may have billable usage even when later metering or publication fails.
 
 ## Contracts And Demos
 
@@ -97,4 +98,4 @@ Generated OpenAPI/RPC commands run strict ContractGraph schema checks by default
 
 ## Non-goals
 
-This preset does not ship a production LLM provider, vector store, prompt CMS, or frontend AI console. It gives you the tenant, quota, usage, idempotency, eval-log, and provider-seam foundation for building those features inside your application.
+This preset ships a direct OpenAI generation reference, but does not ship a vector store, prompt CMS, or frontend AI console. It gives you the tenant, quota, usage, idempotency, eval-log, and provider-seam foundation for building those features inside your application.

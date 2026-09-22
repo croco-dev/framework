@@ -27,15 +27,6 @@ export class AiModelRequiredProblem extends Problem {
   }
 }
 
-export class AiModelNotFoundProblem extends Problem {
-  readonly code = "ai-saas/model-not-found";
-  readonly category = ProblemCategory.NotFound;
-
-  constructor(modelId: string) {
-    super(undefined, undefined, `AI model ${modelId} is not registered in this app.`);
-  }
-}
-
 export class AiQuotaExceededProblem extends Problem {
   readonly code = "ai-saas/quota-exceeded";
   readonly category = ProblemCategory.TooManyRequests;
@@ -63,11 +54,11 @@ export class AiProviderUnavailableProblem extends Problem {
   readonly category = ProblemCategory.InternalServerError;
 
   constructor(modelId: string, cause?: unknown) {
-    const message =
-      cause instanceof Error
-        ? `AI provider for ${modelId} is unavailable: ${cause.message}`
-        : `AI provider for ${modelId} is unavailable.`;
-    super(undefined, undefined, message);
+    const causeError =
+      cause === undefined ? undefined : cause instanceof Error ? cause : new Error(String(cause));
+    super(undefined, undefined, `AI provider for ${modelId} is unavailable.`, {
+      cause: causeError,
+    });
   }
 }
 

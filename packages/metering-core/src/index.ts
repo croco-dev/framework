@@ -190,6 +190,7 @@ export type {
 export { IdempotencyManager } from "./libs/IdempotencyManager";
 export type {
   IdempotencyClaim,
+  MeteringRecordStatus,
   MeteringProcessingClaim,
   PendingMeteringDelivery,
 } from "./libs/IdempotencyManager";

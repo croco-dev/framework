@@ -367,22 +367,10 @@ export const apiDocPackages = [
     moduleName: "lifecycle-core/src",
   },
   {
-    packageName: "@croco/llm-core",
-    directory: "llm-core",
+    packageName: "@croco/ai-usage",
+    directory: "ai-usage",
     entryPoint: "src/index.ts",
-    moduleName: "llm-core/src",
-  },
-  {
-    packageName: "@croco/llm-openai",
-    directory: "llm-openai",
-    entryPoint: "src/index.ts",
-    moduleName: "llm-openai/src",
-  },
-  {
-    packageName: "@croco/llm-metering",
-    directory: "llm-metering",
-    entryPoint: "src/index.ts",
-    moduleName: "llm-metering/src",
+    moduleName: "ai-usage/src",
   },
   {
     packageName: "@croco/membership-core",

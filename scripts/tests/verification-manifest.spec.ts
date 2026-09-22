@@ -325,7 +325,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("c1b85d052079c459ed81c26f29c677574655bbef54d9fd4c6fccf75d3b10f604");
+    ).toBe("d733978721940a09d0e1ab182e5e6c6223e8d1e86d5a5aa13ca4136ff2d753a5");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -994,7 +994,7 @@ describe("verification manifest", () => {
         ],
         paths,
       ),
-    ).toHaveLength(14);
+    ).toHaveLength(16);
     expect(selectGeneratedTestPathsForSmokeCases(["rest-spa-contracts"], paths)).toEqual([]);
     expect(() => selectGeneratedTestPathsForSmokeCases(["unknown-smoke-case"], paths)).toThrow(
       "Unknown generated smoke case: unknown-smoke-case",
