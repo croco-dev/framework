@@ -53,7 +53,7 @@ const entry = await repository.create({
 const logs = await repository.find({ tenantId: "tenant-1", limit: 10 });
 ```
 
-SQLite에서는 기본 직렬화기를 그대로 쓰고, PostgreSQL JSONB를 사용할 때는 `serializeJson`, `deserializeJson`을 직접 넘길 수 있습니다.
+저장소는 Drizzle JSON/JSONB 컬럼을 감지해 객체를 그대로 전달합니다. SQLite 같은 텍스트 컬럼은 기본적으로 JSON 문자열로 직렬화하며, `serializeJson`과 `deserializeJson`으로 이 동작을 바꿀 수 있습니다.
 
 ## API 레퍼런스
 

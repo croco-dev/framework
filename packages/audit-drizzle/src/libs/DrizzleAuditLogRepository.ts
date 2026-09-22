@@ -122,9 +122,9 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
       action: entry.action,
       resourceType: entry.resourceType,
       resourceId: entry.resourceId,
-      payload: this.serializeJson(entry.payload),
-      diff: entry.diff ? this.serializeJson(entry.diff) : null,
-      metadata: this.serializeJson(entry.metadata),
+      payload: this.encodeJsonColumn(entry.payload, this.schema.payload),
+      diff: entry.diff === null ? null : this.encodeJsonColumn(entry.diff, this.schema.diff),
+      metadata: this.encodeJsonColumn(entry.metadata, this.schema.metadata),
       createdAt: now,
     };
 
@@ -262,6 +262,14 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
     return (results as Record<string, unknown>[]).map((r) => this.mapToEntry(r));
   }
 
+  private encodeJsonColumn(value: unknown, column: AnyColumn): unknown {
+    return DRIZZLE_JSON_COLUMN_TYPES.has(column.columnType) ? value : this.serializeJson(value);
+  }
+
+  private decodeJsonColumn(value: unknown): unknown {
+    return typeof value === "string" ? this.deserializeJson(value) : value;
+  }
+
   private mapToEntry(raw: Record<string, unknown>): AuditLogEntry {
     return {
       id: String(raw.id),
@@ -270,10 +278,23 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
       action: String(raw.action),
       resourceType: String(raw.resourceType),
       resourceId: String(raw.resourceId),
-      payload: this.deserializeJson(String(raw.payload)) as Record<string, unknown>,
-      diff: raw.diff ? (this.deserializeJson(String(raw.diff)) as Record<string, unknown>) : null,
-      metadata: this.deserializeJson(String(raw.metadata)) as Record<string, unknown>,
+      payload: this.decodeJsonColumn(raw.payload) as Record<string, unknown>,
+      diff:
+        raw.diff === null || raw.diff === undefined
+          ? null
+          : (this.decodeJsonColumn(raw.diff) as Record<string, unknown>),
+      metadata: this.decodeJsonColumn(raw.metadata) as Record<string, unknown>,
       createdAt: raw.createdAt instanceof Date ? raw.createdAt : new Date(String(raw.createdAt)),
     };
   }
 }
+
+const DRIZZLE_JSON_COLUMN_TYPES = new Set([
+  "GelJson",
+  "MySqlJson",
+  "PgJson",
+  "PgJsonb",
+  "SingleStoreJson",
+  "SQLiteBlobJson",
+  "SQLiteTextJson",
+]);
