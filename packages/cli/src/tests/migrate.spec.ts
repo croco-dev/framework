@@ -9,7 +9,7 @@ import {
   migrate,
   runMigrateCommand,
 } from "../commands/migrate.js";
-import { createCrocoCommand, normalizeMigrateRootArgs } from "../commands/root.js";
+import { createCrocoCommand, normalizeMigrateRootArgs, runCroco } from "../commands/root.js";
 
 describe("migrate command", () => {
   it("should expose up, down, and status migration subcommands", () => {
@@ -25,6 +25,23 @@ describe("migrate command", () => {
       "down",
       "status",
     ]);
+  });
+
+  it.each([
+    ["separated cwd", ["--cwd", "workspace", "migrate", "status", "--help"]],
+    ["equals-form cwd", ["--cwd=workspace", "migrate", "status", "--help"]],
+  ] as const)("should render migrate status help with a %s", async (_name, argv) => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+
+    const result = await runCroco(argv, {
+      stdout: (message) => stdout.push(message),
+      stderr: (message) => stderr.push(message),
+    });
+
+    expect(result).toEqual({ exitCode: 0 });
+    expect(stdout.join("\n")).toContain("Show migration status");
+    expect(stderr).toEqual([]);
   });
 
   it.each([

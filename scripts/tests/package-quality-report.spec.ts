@@ -924,7 +924,6 @@ describe("package-quality-report.mts", () => {
   it("keeps boundary-check-only isolated from bundle-size enforcement", () => {
     const repo = createTempRepo();
     writeFile(repo, "packages/repository-core/src/index.ts", "export const value = 1;\n");
-    writeFile(repo, "packages/protocols-desktop/src/index.ts", "export const value = 1;\n");
     const scriptPath = join(process.cwd(), "scripts/package-quality-report.mts");
     const result = spawnSync(
       process.execPath,
@@ -1004,36 +1003,6 @@ describe("package-quality-report.mts", () => {
           violations: [
             expect.objectContaining({
               file: "packages/repository-core/src/index.ts",
-              line: 1,
-            }),
-          ],
-        }),
-      ]),
-    );
-  });
-
-  it("flags Electron runtime imports in desktop protocol sources", () => {
-    const repo = createTempRepo();
-    writePackage(repo, "protocols-desktop", "@croco/protocols-desktop", {
-      build: "tsup",
-    });
-    writeFile(
-      repo,
-      "packages/protocols-desktop/src/index.ts",
-      'import { app } from "electron";\nexport const desktop = app;\n',
-    );
-
-    const results = scanDependencyBoundaries(repo);
-
-    expect(results).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: "protocols-desktop-runtime-free",
-          packageName: "@croco/protocols-desktop",
-          status: "fail",
-          violations: [
-            expect.objectContaining({
-              file: "packages/protocols-desktop/src/index.ts",
               line: 1,
             }),
           ],

@@ -26,7 +26,6 @@
 "@croco/customer-health-core": patch
 "@croco/customer-health-drizzle": patch
 "@croco/dataloader-core": patch
-"@croco/desktop-codegen": patch
 "@croco/diagnostics-core": patch
 "@croco/engagement-core": patch
 "@croco/engagement-drizzle": patch
@@ -86,7 +85,6 @@
 "@croco/problems-core": patch
 "@croco/protocol-codegen": patch
 "@croco/protocols-core": patch
-"@croco/protocols-desktop": patch
 "@croco/protocols-graphql": patch
 "@croco/protocols-rest": patch
 "@croco/protocols-trpc": patch

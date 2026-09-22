@@ -394,9 +394,6 @@ function runPackageBinSmoke(
   const internalPeerTarballs = internalPeerPackagesFor(graphPackages).map(
     (packageInfo) => packageInfo.tarballPath,
   );
-  const functionalSmokeTarballs = functionalSmokePackagesFor(packageInfo, graphPackages).map(
-    (packageInfo) => packageInfo.tarballPath,
-  );
 
   run(
     "pnpm",
@@ -406,7 +403,7 @@ function runPackageBinSmoke(
       "--virtual-store-dir",
       "node_modules/.pnpm",
       packageInfo.tarballPath,
-      ...new Set([...internalPeerTarballs, ...functionalSmokeTarballs]),
+      ...internalPeerTarballs,
       "--ignore-scripts",
       "--prefer-offline",
     ],
@@ -491,15 +488,6 @@ function runPackageBinSmoke(
   }
 }
 
-function functionalSmokePackagesFor(
-  packageInfo: PackedPackageInfo,
-  graphPackages: readonly PackedPackageInfo[],
-): PackedPackageInfo[] {
-  const requiredPackageNames: ReadonlySet<string> =
-    packageInfo.packageName === "@croco/cli" ? new Set(["@croco/protocols-desktop"]) : new Set();
-  return graphPackages.filter((graphPackage) => requiredPackageNames.has(graphPackage.packageName));
-}
-
 export function trackSmokeFixture(packageSmokeRoot: string): void {
   run("git", ["init", "--quiet"], packageSmokeRoot, {
     label: "initialize smoke fixture Git repository",
@@ -511,7 +499,7 @@ export function trackSmokeFixture(packageSmokeRoot: string): void {
     label: "configure smoke fixture Git user",
   });
   run("git", ["add", "--", "bin smoke"], packageSmokeRoot, {
-    label: "track generated desktop smoke fixture",
+    label: "track smoke fixture",
   });
   const emptyHooksPath = join(packageSmokeRoot, ".git", "smoke-empty-hooks");
   mkdirSync(emptyHooksPath);
@@ -525,11 +513,11 @@ export function trackSmokeFixture(packageSmokeRoot: string): void {
       "commit",
       "--quiet",
       "-m",
-      "desktop smoke baseline",
+      "smoke baseline",
     ],
     packageSmokeRoot,
     {
-      label: "commit generated desktop smoke fixture",
+      label: "commit smoke fixture",
     },
   );
 }
@@ -952,10 +940,6 @@ function smokeCommandsFor(
     case "croco": {
       const migrationRunnerInstalled =
         typeof packageInfo.sourceManifest.dependencies?.["@croco/migration-runner"] === "string";
-      const desktopWorker = {
-        packageName: "@croco/cli",
-        path: "dist/desktop-config-worker.js",
-      } as const;
       return [
         {
           args: ["doctor", "--json"],
@@ -1017,7 +1001,6 @@ function smokeCommandsFor(
           expectedOutput: "Unknown option: --bogus",
         },
         {
-          allowedChildPackageFile: desktopWorker,
           args: [
             "desktop",
             "generate",
@@ -1028,70 +1011,16 @@ function smokeCommandsFor(
             "--strict",
             "--json",
           ],
-          fixtureFiles: desktopConfigFixtureFiles(),
-          expectedPaths: ["bin smoke/generated desktop/desktop-contract-graph.json"],
-          expectedOutput: "semanticHash",
-        },
-        {
-          allowedChildPackageFile: desktopWorker,
-          args: [
-            "desktop",
-            "check",
-            "--config",
-            "bin smoke/croco desktop.config.ts",
-            "--out-dir",
-            "bin smoke/generated desktop",
-            "--strict",
-            "--json",
+          fixtureFiles: [
+            {
+              path: "bin smoke/croco desktop.config.ts",
+              contents: 'throw new Error("Removed desktop config must not execute");\n',
+            },
           ],
-          assertFixtureUnchanged: true,
-          expectedOutput: "semanticHash",
+          expectedExitCode: 1,
+          expectedOutput: "CROCO_DESKTOP_REMOVED",
           trackFixtureBeforeRun: true,
-        },
-        {
-          allowedChildPackageFile: desktopWorker,
-          args: [
-            "desktop",
-            "check",
-            "--config",
-            "bin smoke/rejected desktop.config.ts",
-            "--out-dir",
-            "bin smoke/generated desktop",
-            "--json",
-          ],
           assertFixtureUnchanged: true,
-          expectedExitCode: 16,
-          expectedOutput: "Code generation from strings disallowed",
-        },
-        {
-          allowedChildPackageFile: desktopWorker,
-          args: [
-            "desktop",
-            "check",
-            "--config",
-            "bin smoke/unsupported desktop subpath.config.ts",
-            "--out-dir",
-            "bin smoke/generated desktop",
-            "--json",
-          ],
-          assertFixtureUnchanged: true,
-          expectedExitCode: 16,
-          expectedOutput: "CROCO_DESKTOP_CONFIG_UNSUPPORTED_PACKAGE",
-        },
-        {
-          allowedChildPackageFile: desktopWorker,
-          args: [
-            "desktop",
-            "diff",
-            "--config",
-            "bin smoke/croco desktop.config.ts",
-            "--baseline",
-            "bin smoke/generated desktop/desktop-contract-graph.json",
-            "--strict",
-            "--json",
-          ],
-          assertFixtureUnchanged: true,
-          expectedOutput: "semanticHash",
         },
       ];
     }
@@ -1152,71 +1081,6 @@ function migrationWrapperFixtureFiles(): readonly SmokeFixtureFile[] {
     {
       path: "bin-smoke/migration-workspace/.keep",
       contents: "",
-    },
-  ];
-}
-
-function desktopConfigFixtureFiles(): readonly SmokeFixtureFile[] {
-  return [
-    {
-      path: "bin smoke/croco desktop.config.ts",
-      contents: `import { desktop } from "@croco/protocols-desktop";
-import { $ZodType } from "zod/v4/core";
-import { smokeWindows } from "./desktop definitions.js";
-
-void $ZodType;
-
-export default {
-  version: "croco.desktop-config.v1",
-  app: desktop.app({
-    contracts: {},
-    windows: smokeWindows,
-  }),
-  problemRegistries: [],
-};
-`,
-    },
-    {
-      path: "bin smoke/desktop definitions.ts",
-      contents: `import { desktop } from "@croco/protocols-desktop";
-
-enum SmokeWindow {
-  Main = "main",
-}
-
-export const smokeWindows = {
-  [SmokeWindow.Main]: desktop.window.local(),
-};
-`,
-    },
-    {
-      path: "bin smoke/rejected desktop.config.ts",
-      contents: `import { desktop } from "@croco/protocols-desktop";
-
-const constructorKey = ["con", "structor"].join("");
-const DynamicFunction = (() => {})[constructorKey] as FunctionConstructor;
-const attackSource = [
-  "const process = globalThis.process;",
-  "const { Worker } = process.getBuiltinModule('node:worker_threads');",
-  "new Worker(\\"require('node:fs').writeFileSync('bin smoke/ambient escape.txt', 'escape')\\", { eval: true, execArgv: [] });",
-  "void fetch('http://127.0.0.1:9/croco-desktop-config');",
-  "process.getBuiltinModule('node:fs').writeFileSync('bin smoke/ambient direct escape.txt', 'escape');",
-].join("\\n");
-
-DynamicFunction(attackSource)();
-
-export default {
-  version: "croco.desktop-config.v1",
-  app: desktop.app({ contracts: {}, windows: {} }),
-};
-`,
-    },
-    {
-      path: "bin smoke/unsupported desktop subpath.config.ts",
-      contents: `import { missing } from "@croco/problems-core/typo";
-
-export default missing;
-`,
     },
   ];
 }

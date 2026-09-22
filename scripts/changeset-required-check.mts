@@ -62,8 +62,9 @@ type NoReleaseJustification = {
 
 type ChangedChangesetMetadata = {
   readonly activePackageNames: ReadonlySet<string>;
+  readonly activeReferencedPackageNames: ReadonlySet<string>;
   readonly consumedPackageNames: ReadonlySet<string>;
-  readonly referencedPackageNames: ReadonlySet<string>;
+  readonly consumedReferencedPackageNames: ReadonlySet<string>;
   readonly invalidFiles: readonly InvalidChangesetFile[];
 };
 
@@ -248,6 +249,36 @@ function readPackages(rootDir: string): PackageInfo[] {
     .sort((left, right) => right.relativeDir.length - left.relativeDir.length);
 }
 
+function readRemovedPackages(
+  options: CheckOptions,
+  changedFiles: readonly string[],
+): PackageInfo[] {
+  return changedFiles
+    .filter(
+      (file) =>
+        file.startsWith("packages/") &&
+        file.endsWith("/package.json") &&
+        !existsSync(join(options.rootDir, file)),
+    )
+    .map((packageJsonFile) => {
+      const pkg = JSON.parse(
+        runGit(options.rootDir, ["show", `${options.baseRef}:${packageJsonFile}`]),
+      ) as Record<string, unknown>;
+      const relativeDir = packageJsonFile.replace(/\/package\.json$/, "");
+
+      if (typeof pkg.name !== "string") {
+        throw new Error(`${relativeDir}/package.json is missing a string name`);
+      }
+
+      return {
+        name: pkg.name,
+        private: pkg.private === true,
+        relativeDir,
+      };
+    })
+    .sort((left, right) => right.relativeDir.length - left.relativeDir.length);
+}
+
 function getOwningPackage(file: string, packages: readonly PackageInfo[]): PackageInfo | null {
   return (
     packages.find((pkg) => file === pkg.relativeDir || file.startsWith(`${pkg.relativeDir}/`)) ??
@@ -290,8 +321,9 @@ function getChangedChangesetMetadata(
   changedFiles: readonly string[],
 ): ChangedChangesetMetadata {
   const activePackageNames = new Set<string>();
+  const activeReferencedPackageNames = new Set<string>();
   const consumedPackageNames = new Set<string>();
-  const referencedPackageNames = new Set<string>();
+  const consumedReferencedPackageNames = new Set<string>();
   const invalidFiles: InvalidChangesetFile[] = [];
 
   for (const file of changedFiles) {
@@ -313,7 +345,9 @@ function getChangedChangesetMetadata(
     try {
       const parsed = parseChangesetPackageNames(content);
       for (const packageName of parsed.referencedPackageNames) {
-        referencedPackageNames.add(packageName);
+        (state === "active" ? activeReferencedPackageNames : consumedReferencedPackageNames).add(
+          packageName,
+        );
       }
       for (const packageName of parsed.releasePackageNames) {
         (state === "active" ? activePackageNames : consumedPackageNames).add(packageName);
@@ -325,8 +359,9 @@ function getChangedChangesetMetadata(
 
   return {
     activePackageNames,
+    activeReferencedPackageNames,
     consumedPackageNames,
-    referencedPackageNames,
+    consumedReferencedPackageNames,
     invalidFiles,
   };
 }
@@ -334,21 +369,32 @@ function getChangedChangesetMetadata(
 function getChangesetCoverage(
   changesets: ChangedChangesetMetadata,
   packages: readonly PackageInfo[],
+  removedPackages: readonly PackageInfo[],
   significantChanges: ReadonlyMap<string, ReleaseSignificantChange>,
 ): ChangesetCoverage {
   const packageByName = new Map(packages.map((pkg) => [pkg.name, pkg] as const));
+  const removedPackageByName = new Map(removedPackages.map((pkg) => [pkg.name, pkg] as const));
   const validPublishableNames = new Set<string>();
-  const privateNames: string[] = [];
-  const unknownNames: string[] = [];
+  const privateNames = new Set<string>();
+  const unknownNames = new Set<string>();
 
-  for (const packageName of [...changesets.referencedPackageNames].sort()) {
+  for (const packageName of [...changesets.activeReferencedPackageNames].sort()) {
     const pkg = packageByName.get(packageName);
     if (!pkg) {
-      unknownNames.push(packageName);
+      unknownNames.add(packageName);
     } else if (pkg.private) {
-      privateNames.push(packageName);
+      privateNames.add(packageName);
     } else if (changesets.activePackageNames.has(packageName)) {
       validPublishableNames.add(packageName);
+    }
+  }
+
+  for (const packageName of [...changesets.consumedReferencedPackageNames].sort()) {
+    const pkg = packageByName.get(packageName) ?? removedPackageByName.get(packageName);
+    if (!pkg) {
+      unknownNames.add(packageName);
+    } else if (pkg.private) {
+      privateNames.add(packageName);
     }
   }
 
@@ -359,8 +405,8 @@ function getChangesetCoverage(
   );
 
   return {
-    privateNames,
-    unknownNames,
+    privateNames: [...privateNames].sort(),
+    unknownNames: [...unknownNames].sort(),
     uncoveredPackages,
   };
 }
@@ -1203,6 +1249,18 @@ function addPublicApiSnapshotChanges(
   }
 }
 
+function removeDeletedPackageChanges(
+  significantChanges: Map<string, ReleaseSignificantChange>,
+  removedPackages: readonly PackageInfo[],
+  consumedPackageNames: ReadonlySet<string>,
+): void {
+  for (const pkg of removedPackages) {
+    if (consumedPackageNames.has(pkg.name)) {
+      significantChanges.delete(pkg.name);
+    }
+  }
+}
+
 function isSnapshotOnlyReleaseChange(
   significantChanges: ReadonlyMap<string, ReleaseSignificantChange>,
 ): boolean {
@@ -1269,10 +1327,21 @@ function main(): void {
     const options = parseArgs(process.argv.slice(2));
     const changedFiles = getChangedFiles(options);
     const packages = readPackages(options.rootDir);
+    const removedPackages = readRemovedPackages(options, changedFiles);
     const significantChanges = getReleaseSignificantChanges(options, changedFiles, packages);
     addPublicApiSnapshotChanges(significantChanges, options, changedFiles);
     const changesets = getChangedChangesetMetadata(options, changedFiles);
-    const coverage = getChangesetCoverage(changesets, packages, significantChanges);
+    removeDeletedPackageChanges(
+      significantChanges,
+      removedPackages,
+      changesets.consumedPackageNames,
+    );
+    const coverage = getChangesetCoverage(
+      changesets,
+      packages,
+      removedPackages,
+      significantChanges,
+    );
 
     if (changesets.invalidFiles.length > 0) {
       log("changeset-required: changed changesets contain invalid metadata.");

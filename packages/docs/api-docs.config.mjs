@@ -175,12 +175,6 @@ export const apiDocPackages = [
     moduleName: "dataloader-core/src",
   },
   {
-    packageName: "@croco/desktop-codegen",
-    directory: "desktop-codegen",
-    entryPoint: "src/index.ts",
-    moduleName: "desktop-codegen/src",
-  },
-  {
     packageName: "@croco/diagnostics-core",
     directory: "diagnostics-core",
     entryPoint: "src/index.ts",
@@ -533,12 +527,6 @@ export const apiDocPackages = [
     directory: "protocols-core",
     entryPoint: "src/index.ts",
     moduleName: "protocols-core/src",
-  },
-  {
-    packageName: "@croco/protocols-desktop",
-    directory: "protocols-desktop",
-    entryPoint: "src/index.ts",
-    moduleName: "protocols-desktop/src",
   },
   {
     packageName: "@croco/protocols-graphql",

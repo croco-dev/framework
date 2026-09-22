@@ -6,7 +6,7 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   120 |
+| Public packages                |   118 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
 | Missing generated API docs     |     0 |
@@ -134,7 +134,6 @@ None.
 | `@croco/customer-health-core`          | Contracts      | domain        | Customer Health         | unclaimed                                 |
 | `@croco/customer-health-drizzle`       | Plugins        | provider      | Customer health         | node, lambda                              |
 | `@croco/dataloader-core`               | Contracts      | domain        | Dataloader              | unclaimed                                 |
-| `@croco/desktop-codegen`               | Tooling        | codegen       | Desktop Codegen         | unclaimed                                 |
 | `@croco/diagnostics-core`              | Kernel         | runtime       | Diagnostics             | unclaimed                                 |
 | `@croco/engagement-core`               | Contracts      | domain        | Engagement              | unclaimed                                 |
 | `@croco/engagement-drizzle`            | Plugins        | provider      | Engagement              | node, lambda                              |
@@ -194,7 +193,6 @@ None.
 | `@croco/problems-core`                 | Kernel         | runtime       | Problems                | unclaimed                                 |
 | `@croco/protocol-codegen`              | Tooling        | codegen       | Protocol Codegen        | unclaimed                                 |
 | `@croco/protocols-core`                | Contracts      | protocol      | Protocols               | unclaimed                                 |
-| `@croco/protocols-desktop`             | Contracts      | protocol      | Protocols Desktop       | unclaimed                                 |
 | `@croco/protocols-graphql`             | Plugins        | protocol      | Protocols Graphql       | unclaimed                                 |
 | `@croco/protocols-rest`                | Contracts      | protocol      | Protocols Rest          | unclaimed                                 |
 | `@croco/protocols-trpc`                | Plugins        | protocol      | Protocols Trpc          | unclaimed                                 |
@@ -236,7 +234,7 @@ None.
 | Domain       |       31 |
 | Provider     |       28 |
 | Integration  |        5 |
-| Protocol     |       10 |
+| Protocol     |        8 |
 | Transport    |        2 |
 | Host         |        4 |
 | Build Target |        1 |
@@ -247,7 +245,7 @@ None.
 | ------------------- | -------: |
 | 🟢 production-ready |       24 |
 | 🟡 beta             |       78 |
-| 🔴 alpha/WIP        |       18 |
+| 🔴 alpha/WIP        |       16 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix

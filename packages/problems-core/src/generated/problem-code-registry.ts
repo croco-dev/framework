@@ -5788,16 +5788,16 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/desktop-codegen/src/libs/generateDesktopPreloadBridges.ts",
-          line: 46,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "Croco desktop contracts and code generation were removed from the supported product scope.",
+          migrationNote: "See docs/release/problem-code-migrations.md#desktop-support-removal.",
+          noReplacementReason:
+            "Croco does not provide a replacement desktop bridge or silently map desktop contracts to web scaffolds.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "desktop-codegen/invalid-renderer-contract-graph",
@@ -5819,16 +5819,16 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/desktop-codegen/src/libs/generateDesktopRendererClients.ts",
-          line: 36,
-          column: 5,
-          kind: "problem-constructor",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "Croco desktop contracts and code generation were removed from the supported product scope.",
+          migrationNote: "See docs/release/problem-code-migrations.md#desktop-support-removal.",
+          noReplacementReason:
+            "Croco does not provide a replacement desktop bridge or silently map desktop contracts to web scaffolds.",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "diagnostics-core/duplicate-provider",

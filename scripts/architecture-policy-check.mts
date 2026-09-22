@@ -184,9 +184,7 @@ function checkPackageCatalogGroupConsistency(options: {
     for (const pkg of packages) {
       const role = roles[pkg.shortName];
       if (!role) continue;
-      const groups = findMatchingArchitecturePackageGroups(options.manifest, pkg).filter(
-        (group) => group !== "desktop-contracts" || pkg.name !== "@croco/protocols-desktop",
-      );
+      const groups = findMatchingArchitecturePackageGroups(options.manifest, pkg);
       const expected = role.role.toLowerCase();
       if (groups.length !== 1 || groups[0] !== expected) {
         violations.push({

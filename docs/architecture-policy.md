@@ -36,11 +36,5 @@ implementations are Plugins. Package names do not infer architectural roles. Mis
 or policy membership that differs from the catalog fails the repository gate; role overrides are
 not supported.
 
-`desktop-contracts` is a secondary browser-safety restriction, not a canonical role. The desktop
-contract remains Contracts (matched by its explicit package path), while the secondary package
-selector activates its stricter runtime and manifest rules. Its manifest dependencies are limited
-to problems-core, protocols-core, vitest, and zod. The engine prefers package selectors over path
-selectors, so the desktop rules remain active alongside the canonical role consistency check.
-
 Host lifecycle, Transport execution, and Build Target artifacts are separate responsibilities;
 roles do not describe request execution order.
