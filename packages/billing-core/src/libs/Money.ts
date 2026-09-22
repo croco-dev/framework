@@ -40,7 +40,7 @@ export class Money {
     const normalizedCurrency = Money.normalizeCurrency(currency);
     const fractionDigits = Money.getFractionDigits(normalizedCurrency);
     const scale = 10 ** fractionDigits;
-    const scaledAmount = Money.applyRounding(amount * scale, roundingMode);
+    const scaledAmount = Money.scaleDecimalToInteger(amount, scale, roundingMode);
     return new Money(scaledAmount, normalizedCurrency);
   }
 
@@ -203,6 +203,31 @@ export class Money {
     return `${sign}${digits.slice(0, decimalIndex)}.${digits.slice(decimalIndex)}`;
   }
 
+  private static scaleDecimalToInteger(
+    decimal: number,
+    scale: number,
+    roundingMode: MoneyRoundingMode,
+  ): number {
+    const safeScale = Money.toSafeInteger(scale);
+
+    if (!Number.isFinite(decimal)) {
+      throw new InvalidMoneyAmountProblem(decimal);
+    }
+
+    const valueText = Money.normalizeDecimalText(decimal);
+    const sign = valueText.startsWith("-") ? BigInt(-1) : BigInt(1);
+    const unsignedText = valueText.replace(/^[+-]/, "");
+    const [integerPart, fractionalPart = ""] = unsignedText.split(".");
+    const digits = `${integerPart}${fractionalPart}`.replace(/^0+(?=\d)/, "") || "0";
+    const numerator = BigInt(safeScale) * BigInt(digits) * sign;
+    const denominator = BigInt(10) ** BigInt(fractionalPart.length);
+    const quotient = numerator / denominator;
+    const remainder = numerator % denominator;
+    const rounded = Money.roundBigQuotient(quotient, remainder, denominator, roundingMode);
+
+    return Money.toSafeInteger(Number(rounded));
+  }
+
   private static simplifyRatio(ratio: DecimalRatio): DecimalRatio {
     const denominatorSign = ratio.denominator < 0 ? -1 : 1;
     const numerator = ratio.numerator * denominatorSign;
@@ -254,16 +279,30 @@ export class Money {
     return absoluteRemainder * 2 >= denominator ? quotient + remainderSign : quotient;
   }
 
-  private static applyRounding(value: number, roundingMode: MoneyRoundingMode): number {
+  private static roundBigQuotient(
+    quotient: bigint,
+    remainder: bigint,
+    denominator: bigint,
+    roundingMode: MoneyRoundingMode,
+  ): bigint {
+    const zero = BigInt(0);
+
+    if (remainder === zero) {
+      return quotient;
+    }
+
+    const remainderSign = remainder > zero ? BigInt(1) : BigInt(-1);
+    const absoluteRemainder = remainder > zero ? remainder : -remainder;
+
     if (roundingMode === "down") {
-      return Math.trunc(value);
+      return quotient;
     }
 
     if (roundingMode === "up") {
-      return value >= 0 ? Math.ceil(value) : Math.floor(value);
+      return quotient + remainderSign;
     }
 
-    return value >= 0 ? Math.round(value) : -Math.round(Math.abs(value));
+    return absoluteRemainder * BigInt(2) >= denominator ? quotient + remainderSign : quotient;
   }
 
   private static toSafeInteger(value: number): number {

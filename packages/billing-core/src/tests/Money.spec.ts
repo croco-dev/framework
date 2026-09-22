@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { Money } from "../libs/Money";
 import {
+  InvalidMoneyAmountProblem,
   InvalidMoneyCurrencyProblem,
   MoneyCurrencyMismatchProblem,
   MoneyDivisionByZeroProblem,
@@ -149,7 +150,40 @@ describe("Money", () => {
 
   it("should create money from decimal amounts", () => {
     expect(Money.fromDecimal(19.99, "usd").toJSON()).toEqual({ amount: 1999, currency: "USD" });
+    expect(Money.fromDecimal(0.3, "USD").amount).toBe(30);
     expect(Money.zero("eur").toJSON()).toEqual({ amount: 0, currency: "EUR" });
+  });
+
+  it("should round exact decimal values to minor units", () => {
+    expect(Money.fromDecimal(1.005, "USD").amount).toBe(101);
+    expect(Money.fromDecimal(2.675, "USD").amount).toBe(268);
+    expect(Money.fromDecimal(-1.005, "USD").amount).toBe(-101);
+  });
+
+  it("should preserve valid amounts whose decimal ratios exceed safe integer intermediates", () => {
+    expect(Money.fromDecimal(0.1 + 0.2, "USD").amount).toBe(30);
+    expect(Money.fromDecimal(1 / 3, "USD").amount).toBe(33);
+    expect(Money.fromDecimal(1e-16, "USD").amount).toBe(0);
+    expect(Money.fromDecimal(1000000000000.01, "USD").amount).toBe(100000000000001);
+    expect(Money.fromDecimal(-0.1 - 0.2, "USD").amount).toBe(-30);
+    expect(Money.fromDecimal(-1 / 3, "USD").amount).toBe(-33);
+  });
+
+  it("should apply decimal rounding modes symmetrically", () => {
+    expect(Money.fromDecimal(1.005, "USD", "down").amount).toBe(100);
+    expect(Money.fromDecimal(1.005, "USD", "up").amount).toBe(101);
+    expect(Money.fromDecimal(-1.005, "USD", "down").amount).toBe(-100);
+    expect(Money.fromDecimal(-1.005, "USD", "up").amount).toBe(-101);
+  });
+
+  it("should reject non-finite or unrepresentable decimal amounts", () => {
+    expect(() => Money.fromDecimal(Number.NaN, "USD")).toThrow(InvalidMoneyAmountProblem);
+    expect(() => Money.fromDecimal(Number.POSITIVE_INFINITY, "USD")).toThrow(
+      InvalidMoneyAmountProblem,
+    );
+    expect(() => Money.fromDecimal(Number.MAX_SAFE_INTEGER, "USD")).toThrow(
+      InvalidMoneyAmountProblem,
+    );
   });
 
   it("should reject currency mismatch and invalid operations", () => {
