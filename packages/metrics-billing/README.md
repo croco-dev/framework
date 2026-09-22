@@ -5,7 +5,7 @@ Billing 도메인 이벤트를 Metrics 계산으로 연결하는 파이프라인
 ## 설치
 
 ```bash
-pnpm add @croco/metrics-billing
+pnpm add @croco/metrics-billing @croco/warehouse-postgres
 ```
 
 ## 개요
