@@ -50,10 +50,10 @@ describe("API documentation pipeline", () => {
   });
 
   it("keeps one canonical, ordered package-model catalog", () => {
-    expect(apiDocPackages).toHaveLength(119);
-    expect(new Set(apiDocPackages.map(({ packageName }) => packageName)).size).toBe(119);
-    expect(new Set(apiDocPackages.map(({ directory }) => directory)).size).toBe(119);
-    expect(new Set(apiDocPackages.map(({ moduleName }) => moduleName)).size).toBe(119);
+    expect(apiDocPackages).toHaveLength(117);
+    expect(new Set(apiDocPackages.map(({ packageName }) => packageName)).size).toBe(117);
+    expect(new Set(apiDocPackages.map(({ directory }) => directory)).size).toBe(117);
+    expect(new Set(apiDocPackages.map(({ moduleName }) => moduleName)).size).toBe(117);
     expect(apiDocModelEntryPoints).toEqual(
       apiDocPackages.map(({ directory }) => `../${directory}/.turbo/docs-api/model.json`),
     );
