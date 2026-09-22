@@ -157,7 +157,7 @@ title: "InMemoryHealthScoreStore"
 
 ### saveTransition()
 
-> **saveTransition**(`score`, `previous`, `eventIntents`): `Promise`\<\{ `committed`: `true`; \} \| \{ `committed`: `false`; `latest`: [`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/) \| `null`; \}\>
+> **saveTransition**(`score`, `previous`, `eventIntents`): `Promise`\<[`HealthTransitionCommitResult`](/api/customer-health-core/src/type-aliases/healthtransitioncommitresult/)\>
 
 #### Parameters
 
@@ -175,7 +175,7 @@ readonly [`HealthTransitionEventIntent`](/api/customer-health-core/src/type-alia
 
 #### Returns
 
-`Promise`\<\{ `committed`: `true`; \} \| \{ `committed`: `false`; `latest`: [`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/) \| `null`; \}\>
+`Promise`\<[`HealthTransitionCommitResult`](/api/customer-health-core/src/type-aliases/healthtransitioncommitresult/)\>
 
 #### Overrides
 

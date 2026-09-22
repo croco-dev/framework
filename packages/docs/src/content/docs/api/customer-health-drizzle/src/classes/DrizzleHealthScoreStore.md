@@ -15,15 +15,19 @@ title: "DrizzleHealthScoreStore"
 
 ### Constructor
 
-> **new DrizzleHealthScoreStore**(`db`): `DrizzleHealthScoreStore`
+> **new DrizzleHealthScoreStore**(`db`, `txManager`): `DrizzleHealthScoreStore`
 
-Drizzle 클라이언트를 받아 저장소를 초기화합니다.
+Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기화합니다.
 
 #### Parameters
 
 ##### db
 
 [`DrizzleHealthClient`](/api/customer-health-drizzle/src/type-aliases/drizzlehealthclient/)
+
+##### txManager
+
+[`TxManager`](/api/tx-core/src/classes/txmanager/)\<[`DrizzleHealthClient`](/api/customer-health-drizzle/src/type-aliases/drizzlehealthclient/)\>
 
 #### Returns
 
@@ -173,7 +177,7 @@ Drizzle 클라이언트를 받아 저장소를 초기화합니다.
 
 ### saveTransition()
 
-> **saveTransition**(`score`, `previous`, `eventIntents`): `Promise`\<\{ `committed`: `true`; \} \| \{ `committed`: `false`; `latest`: [`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/) \| `null`; \}\>
+> **saveTransition**(`score`, `previous`, `eventIntents`): `Promise`\<[`HealthTransitionCommitResult`](/api/customer-health-core/src/type-aliases/healthtransitioncommitresult/)\>
 
 계산된 건강 점수를 저장합니다.
 
@@ -193,7 +197,7 @@ readonly [`HealthTransitionEventIntent`](/api/customer-health-core/src/type-alia
 
 #### Returns
 
-`Promise`\<\{ `committed`: `true`; \} \| \{ `committed`: `false`; `latest`: [`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/) \| `null`; \}\>
+`Promise`\<[`HealthTransitionCommitResult`](/api/customer-health-core/src/type-aliases/healthtransitioncommitresult/)\>
 
 #### Overrides
 

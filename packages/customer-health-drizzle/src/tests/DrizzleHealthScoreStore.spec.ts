@@ -95,11 +95,14 @@ describe("DrizzleHealthScoreStore", () => {
       { transaction: fallbackTransaction } as unknown as DrizzleHealthClient,
       txManager,
     );
+    const score = createScore(85, "healthy", "2026-03-15T10:00:00Z");
 
-    await expect(
-      store.saveTransition(createScore(85, "healthy", "2026-03-15T10:00:00Z"), null, []),
-    ).resolves.toEqual({ committed: true, eventPublicationDeferred: true });
+    await expect(store.saveTransition(score, null, [])).resolves.toEqual({
+      committed: true,
+      eventPublicationDeferred: true,
+    });
 
+    expect(score.transitionVersion).toBeUndefined();
     expect(txClient.execute).toHaveBeenCalledTimes(1);
     expect(txClient.insert).toHaveBeenCalledWith(tenantHealthScores);
     expect(fallbackTransaction).not.toHaveBeenCalled();

@@ -66,7 +66,8 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
     eventIntents: readonly HealthTransitionEventIntent[],
   ): Promise<HealthTransitionCommitResult> {
     const eventPublicationDeferred = this.txManager.isInTransaction();
-    return this.txManager.run(async () => {
+    let transitionVersion: string | undefined;
+    const commit: HealthTransitionCommitResult = await this.txManager.run(async () => {
       const client = this.getClient();
       await client.execute(
         sql`SELECT pg_advisory_xact_lock(hashtextextended(${score.tenantId}, 0))`,
@@ -88,7 +89,7 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
         .values(score)
         .returning({ transitionSequence: tenantHealthScores.transitionSequence });
       const inserted = insertedRows[0];
-      if (inserted) score.transitionVersion = String(inserted.transitionSequence);
+      if (inserted) transitionVersion = String(inserted.transitionSequence);
       if (eventIntents.length > 0) {
         if (!inserted) throw new HealthTransitionSequenceMissingProblem();
         await client.insert(tenantHealthEventIntents).values(
@@ -106,6 +107,10 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
         ? { committed: true, eventPublicationDeferred: true }
         : { committed: true };
     });
+    if (commit.committed && !eventPublicationDeferred && transitionVersion !== undefined) {
+      score.transitionVersion = transitionVersion;
+    }
+    return commit;
   }
 
   async listPendingEventIntents(

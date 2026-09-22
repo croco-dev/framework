@@ -83,10 +83,12 @@ describe.skipIf(connectionString.length === 0)(
           await expect(store.findLatest(score.tenantId)).resolves.toMatchObject({
             tenantId: score.tenantId,
           });
+          expect(score.transitionVersion).toBeUndefined();
           throw rollback;
         }),
       ).rejects.toBe(rollback);
 
+      expect(score.transitionVersion).toBeUndefined();
       await expect(store.findLatest(score.tenantId)).resolves.toBeNull();
     });
 
