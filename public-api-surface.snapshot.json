@@ -28541,12 +28541,27 @@
               "source": "./libs/frontendBridge.js"
             },
             {
+              "name": "FrontendTelemetryRequestLifecycle",
+              "exportKind": "named",
+              "source": "./libs/frontendBridge.js"
+            },
+            {
+              "name": "FrontendTelemetryRequestOutcome",
+              "exportKind": "named",
+              "source": "./libs/frontendBridge.js"
+            },
+            {
               "name": "FrontendTelemetryRouteKind",
               "exportKind": "named",
               "source": "./libs/frontendBridge.js"
             },
             {
               "name": "FrontendTelemetrySink",
+              "exportKind": "named",
+              "source": "./libs/frontendBridge.js"
+            },
+            {
+              "name": "FrontendTelemetrySpanMode",
               "exportKind": "named",
               "source": "./libs/frontendBridge.js"
             },

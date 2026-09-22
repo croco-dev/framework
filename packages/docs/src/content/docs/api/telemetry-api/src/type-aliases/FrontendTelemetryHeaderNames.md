@@ -26,3 +26,9 @@ title: "FrontendTelemetryHeaderNames"
 ### traceparent?
 
 > `readonly` `optional` **traceparent?**: `string`
+
+---
+
+### tracestate?
+
+> `readonly` `optional` **tracestate?**: `string`

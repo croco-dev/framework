@@ -53,6 +53,12 @@ title: "FrontendTelemetryRequestContext"
 
 ---
 
+### requestOrigin?
+
+> `readonly` `optional` **requestOrigin?**: `string`
+
+---
+
 ### routeId
 
 > `readonly` **routeId**: `string`
@@ -68,3 +74,9 @@ title: "FrontendTelemetryRequestContext"
 ### traceparent?
 
 > `readonly` `optional` **traceparent?**: `string`
+
+---
+
+### tracestate?
+
+> `readonly` `optional` **tracestate?**: `string`
