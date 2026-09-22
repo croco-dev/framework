@@ -53,12 +53,12 @@
     "@croco/metering-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/tx-core": "workspace:*",
+    "@croco/tx-drizzle": "workspace:*",
     "drizzle-orm": "catalog:"
   },
   "devDependencies": {
     "@croco/migration-runner": "workspace:*",
     "@croco/testing": "workspace:*",
-    "@croco/tx-drizzle": "workspace:*",
     "@types/better-sqlite3": "^7.6.13",
     "@types/pg": "8.20.0",
     "better-sqlite3": "^11.10.0",

@@ -23,7 +23,7 @@ Drizzle DB와 API 키 스키마를 받아 저장소를 초기화합니다.
 
 ##### db
 
-`DrizzleDb`
+`ApiKeyDatabase`
 
 ##### schema
 

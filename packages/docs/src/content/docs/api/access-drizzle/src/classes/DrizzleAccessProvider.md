@@ -23,7 +23,7 @@ Drizzle 실행 클라이언트를 주입해 접근 제어 저장소를 초기화
 
 ##### db
 
-`DrizzleDb`
+`AccessDatabase`
 
 #### Returns
 

@@ -3,11 +3,10 @@ import { InvalidUsageValueProblem, MeterRepository } from "@croco/metering-core"
 import { ProblemFactory } from "@croco/problems-core";
 
 import type { AnyColumn, SQL, Table } from "drizzle-orm";
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { ILogger } from "@croco/framework-context";
 import type { MeterDefinition, MeterRegistrationOptions, UsageRecord } from "@croco/metering-core";
 import type { TxManager } from "@croco/tx-core";
+import type { DrizzleInsertCapability, DrizzleSelectCapability } from "@croco/tx-drizzle";
 
 import { UsageEnvelopeConfigurationProblem } from "./problems/UsageEnvelopeConfigurationProblem";
 
@@ -20,14 +19,6 @@ const DRIZZLE_JSON_COLUMN_TYPES = new Set([
   "SQLiteBlobJson",
   "SQLiteTextJson",
 ]);
-
-type DrizzleSelect =
-  | BetterSQLite3Database<Record<string, never>>["select"]
-  | NodePgDatabase<Record<string, never>>["select"];
-
-type DrizzleInsert =
-  | BetterSQLite3Database<Record<string, never>>["insert"]
-  | NodePgDatabase<Record<string, never>>["insert"];
 
 type DrizzleQueryResult<T> = PromiseLike<T>;
 
@@ -46,29 +37,35 @@ type DrizzleSelectQuery = {
 };
 
 type DrizzleInsertValuesQuery = {
-  onConflictDoNothing(config?: {
+  onConflictDoNothing: (config?: never) => DrizzleQueryResult<unknown>;
+  returning(): DrizzleQueryResult<unknown[]>;
+};
+
+type DrizzlePostgresInsertValuesQuery = Omit<DrizzleInsertValuesQuery, "onConflictDoNothing"> & {
+  onConflictDoNothing: (config?: {
     target?: AnyColumn | AnyColumn[];
     where?: SQL;
-  }): DrizzleQueryResult<unknown>;
-  returning(): DrizzleQueryResult<unknown[]>;
+  }) => DrizzleQueryResult<unknown>;
 };
 
 type DrizzleInsertQuery = {
   values(values: Record<string, unknown> | Record<string, unknown>[]): DrizzleInsertValuesQuery;
 };
 
-type DrizzleQueryClient = {
-  insert(table: Table): DrizzleInsertQuery;
-  select(): DrizzleSelectQuery;
-};
+type DrizzleMeterQueryClient = DrizzleInsertCapability<(table: Table) => DrizzleInsertQuery> &
+  DrizzleSelectCapability<() => DrizzleSelectQuery>;
+
+function isPostgresInsertValuesQuery(
+  query: DrizzleInsertValuesQuery,
+  schema: UsageRecordTable,
+): query is DrizzlePostgresInsertValuesQuery {
+  return schema.id.columnType.startsWith("Pg");
+}
 
 /**
- * 미터 저장소에서 사용하는 Drizzle SQLite 또는 PostgreSQL 클라이언트 타입입니다.
+ * 미터 저장소에서 사용하는 최소 Drizzle 데이터베이스 계약입니다.
  */
-export type DrizzleDb = {
-  insert: DrizzleInsert;
-  select: DrizzleSelect;
-};
+export type DrizzleMeterDatabase = DrizzleMeterQueryClient;
 
 /**
  * 미터 정의 테이블 컬럼 매핑입니다.
@@ -129,8 +126,8 @@ export class DrizzleMeterRepository extends MeterRepository {
    * DB, 트랜잭션 매니저, 스키마 설정을 받아 저장소를 초기화합니다.
    */
   constructor(
-    private readonly db: DrizzleDb,
-    private readonly txManager: TxManager<DrizzleDb>,
+    private readonly db: DrizzleMeterDatabase,
+    private readonly txManager: TxManager<DrizzleMeterDatabase>,
     config: DrizzleMeterRepositoryConfig,
     private readonly logger?: ILogger,
   ) {
@@ -143,8 +140,8 @@ export class DrizzleMeterRepository extends MeterRepository {
     this.deserializeJson = config.deserializeJson ?? JSON.parse;
   }
 
-  private getClient(): DrizzleQueryClient {
-    return (this.txManager.getClient() ?? this.db) as unknown as DrizzleQueryClient;
+  private getClient(): DrizzleMeterQueryClient {
+    return this.txManager.getClient() ?? this.db;
   }
 
   /**
@@ -289,7 +286,7 @@ export class DrizzleMeterRepository extends MeterRepository {
 
     const insertQuery = client.insert(this.usageRecordTable).values(values);
 
-    if (this.usageRecordSchema.id.columnType.startsWith("Pg")) {
+    if (isPostgresInsertValuesQuery(insertQuery, this.usageRecordSchema)) {
       await insertQuery.onConflictDoNothing({
         target: [
           this.usageRecordSchema.tenantId,

@@ -1,23 +1,27 @@
 import type { AbstractRoleRegistry, RoleDefinition } from "@croco/auth-core";
+import type { DrizzleDeleteCapability, DrizzleInsertCapability } from "@croco/tx-drizzle";
 import type { SQL } from "drizzle-orm";
 import { and, eq } from "drizzle-orm";
 import type { userRoles as userRolesSchema } from "../schema";
 
-interface DrizzleDb {
-  insert: (table: unknown) => {
+type RoleDatabase = DrizzleInsertCapability<
+  (table: unknown) => {
     values: (data: unknown) => {
       onConflictDoNothing: () => Promise<unknown>;
     };
-  };
-  delete: (table: unknown) => {
-    where: (condition: SQL<unknown>) => Promise<unknown>;
-  };
-  query: {
-    userRoles: {
-      findMany: (args: { where?: SQL<unknown> }) => Promise<unknown[]>;
+  }
+> &
+  DrizzleDeleteCapability<
+    (table: unknown) => {
+      where: (condition: SQL<unknown>) => Promise<unknown>;
+    }
+  > & {
+    query: {
+      userRoles: {
+        findMany: (args: { where?: SQL<unknown> }) => Promise<unknown[]>;
+      };
     };
   };
-}
 
 interface UserRoleRow {
   id: string;
@@ -51,7 +55,7 @@ export class DrizzleRoleRegistry implements AbstractRoleRegistry {
    * Drizzle DB와 역할 스키마를 받아 레지스트리를 초기화합니다.
    */
   constructor(
-    private readonly db: DrizzleDb,
+    private readonly db: RoleDatabase,
     private readonly schema: { userRoles: typeof userRolesSchema },
   ) {}
 

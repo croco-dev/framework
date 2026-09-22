@@ -4,7 +4,7 @@
 export type {
   AuditLogTable,
   DrizzleAuditLogRepositoryConfig,
-  DrizzleDb,
+  DrizzleAuditDatabase,
 } from "./libs/DrizzleAuditLogRepository";
 /**
  * Drizzle 기반 감사 로그 저장소 구현체입니다.

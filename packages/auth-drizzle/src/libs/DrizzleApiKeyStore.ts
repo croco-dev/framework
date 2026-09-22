@@ -4,6 +4,13 @@ import {
   ApiKeyRotationConflictProblem,
   ApiKeyStore,
 } from "@croco/auth-core";
+import type {
+  DrizzleDeleteCapability,
+  DrizzleInsertCapability,
+  DrizzleSelectCapability,
+  DrizzleTransactionCapability,
+  DrizzleUpdateCapability,
+} from "@croco/tx-drizzle";
 import type { SQLWrapper } from "drizzle-orm";
 import { and, eq, isNull, lt, or } from "drizzle-orm";
 import type { apiKeyRotations as apiKeyRotationsSchema, apiKeys as apiKeysSchema } from "../schema";
@@ -22,34 +29,40 @@ interface SelectWhereQuery {
   for: (strength: "update") => Promise<unknown[]>;
 }
 
-interface DrizzleClient {
-  select: () => {
+type ApiKeyClient = DrizzleSelectCapability<
+  () => {
     from: (table: unknown) => {
       where: (condition: SQLWrapper) => SelectWhereQuery;
     };
-  };
-  insert: (table: unknown) => {
-    values: (data: unknown) => InsertValuesQuery;
-  };
-  update: (table: unknown) => {
-    set: (data: unknown) => {
-      where: (condition: SQLWrapper) => ReturningQuery & PromiseLike<unknown>;
-    };
-  };
-  delete: (table: unknown) => {
-    where: (condition: SQLWrapper) => Promise<unknown>;
-  };
-}
+  }
+> &
+  DrizzleInsertCapability<
+    (table: unknown) => {
+      values: (data: unknown) => InsertValuesQuery;
+    }
+  > &
+  DrizzleUpdateCapability<
+    (table: unknown) => {
+      set: (data: unknown) => {
+        where: (condition: SQLWrapper) => ReturningQuery & PromiseLike<unknown>;
+      };
+    }
+  > &
+  DrizzleDeleteCapability<
+    (table: unknown) => {
+      where: (condition: SQLWrapper) => Promise<unknown>;
+    }
+  >;
 
-interface DrizzleDb extends DrizzleClient {
-  transaction: <T>(callback: (tx: DrizzleClient) => Promise<T>) => Promise<T>;
-  query: {
-    apiKeys: {
-      findFirst: (args: { where: SQLWrapper }) => Promise<unknown>;
-      findMany: (args: { where: SQLWrapper }) => Promise<unknown[]>;
+type ApiKeyDatabase = ApiKeyClient &
+  DrizzleTransactionCapability<ApiKeyClient> & {
+    query: {
+      apiKeys: {
+        findFirst: (args: { where: SQLWrapper }) => Promise<unknown>;
+        findMany: (args: { where: SQLWrapper }) => Promise<unknown[]>;
+      };
     };
   };
-}
 
 interface ApiKeyRow {
   id: string;
@@ -158,7 +171,7 @@ export class DrizzleApiKeyStore extends ApiKeyStore {
    * Drizzle DB와 API 키 스키마를 받아 저장소를 초기화합니다.
    */
   constructor(
-    private readonly db: DrizzleDb,
+    private readonly db: ApiKeyDatabase,
     schema: {
       apiKeys: typeof apiKeysSchema;
       apiKeyRotations?: typeof apiKeyRotationsSchema;
@@ -481,7 +494,7 @@ export class DrizzleApiKeyStore extends ApiKeyStore {
     });
   }
 
-  private async findKeyWithClient(client: DrizzleClient, id: string): Promise<ApiKey | null> {
+  private async findKeyWithClient(client: ApiKeyClient, id: string): Promise<ApiKey | null> {
     const [row] = await client
       .select()
       .from(this.schema.apiKeys)
@@ -491,7 +504,7 @@ export class DrizzleApiKeyStore extends ApiKeyStore {
   }
 
   private async findRotationWithClient(
-    client: DrizzleClient,
+    client: ApiKeyClient,
     oldKeyId: string,
     tenantId: string,
     idempotencyKey: string,

@@ -2,6 +2,7 @@ import type { AuditLogEntry, AuditQuery } from "@croco/audit-core";
 import { AuditLogRepository } from "@croco/audit-core";
 import { ProblemFactory } from "@croco/problems-core";
 import type { TxManager } from "@croco/tx-core";
+import type { DrizzleInsertCapability, DrizzleSelectCapability } from "@croco/tx-drizzle";
 import {
   type AnyColumn,
   and,
@@ -13,8 +14,6 @@ import {
   type SQL,
   type Table,
 } from "drizzle-orm";
-import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 
 type InsertReturningQuery = {
   returning(): Promise<unknown[]>;
@@ -44,16 +43,13 @@ type SelectFromQuery = {
   from(table: Table): SelectWhereQuery;
 };
 
-type DrizzleQueryClient = {
-  insert(table: Table): InsertValuesQuery;
-  select(): SelectFromQuery;
-};
+type DrizzleAuditQueryClient = DrizzleInsertCapability<(table: Table) => InsertValuesQuery> &
+  DrizzleSelectCapability<() => SelectFromQuery>;
 
 /**
- * 감사 로그 저장소에서 사용하는 기본 Drizzle 클라이언트 타입입니다.
+ * 감사 로그 저장소에서 사용하는 최소 Drizzle 데이터베이스 계약입니다.
  */
-export type DrizzleDb = DrizzleQueryClient &
-  (BetterSQLite3Database<Record<string, never>> | NodePgDatabase<Record<string, never>>);
+export type DrizzleAuditDatabase = DrizzleAuditQueryClient;
 
 /**
  * 감사 로그 테이블 컬럼 매핑 정의입니다.
@@ -94,8 +90,8 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
    * DB, 트랜잭션 매니저, 스키마 설정을 받아 저장소를 초기화합니다.
    */
   constructor(
-    private readonly db: DrizzleDb,
-    private readonly txManager: TxManager<DrizzleDb>,
+    private readonly db: DrizzleAuditDatabase,
+    private readonly txManager: TxManager<DrizzleAuditDatabase>,
     config: DrizzleAuditLogRepositoryConfig,
   ) {
     super();
@@ -105,7 +101,7 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
     this.deserializeJson = config.deserializeJson ?? JSON.parse;
   }
 
-  private getClient(): DrizzleQueryClient {
+  private getClient(): DrizzleAuditQueryClient {
     return this.txManager.getClient() ?? this.db;
   }
 

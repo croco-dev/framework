@@ -23,11 +23,11 @@ DB, 트랜잭션 매니저, 스키마 설정을 받아 저장소를 초기화합
 
 ##### db
 
-[`DrizzleDb`](/api/metering-drizzle/src/type-aliases/drizzledb/)
+`DrizzleMeterQueryClient`
 
 ##### txManager
 
-[`TxManager`](/api/tx-core/src/classes/txmanager/)\<[`DrizzleDb`](/api/metering-drizzle/src/type-aliases/drizzledb/)\>
+[`TxManager`](/api/tx-core/src/classes/txmanager/)\<`DrizzleMeterQueryClient`\>
 
 ##### config
 

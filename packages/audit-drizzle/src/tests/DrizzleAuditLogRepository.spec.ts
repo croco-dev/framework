@@ -6,7 +6,7 @@ import { ProblemFactory } from "@croco/problems-core";
 import { createDrizzleProviderConformanceSuite } from "@croco/testing/drizzle";
 import { TxManager } from "@croco/tx-core";
 import { createDrizzleTxAdapter, DrizzleHealthIndicator } from "@croco/tx-drizzle";
-import type { DrizzleDb } from "../libs/DrizzleAuditLogRepository";
+import type { DrizzleAuditDatabase as DrizzleDb } from "../libs/DrizzleAuditLogRepository";
 import { DrizzleAuditLogRepository } from "../libs/DrizzleAuditLogRepository";
 import { auditLogsSqlite } from "../libs/schema";
 
