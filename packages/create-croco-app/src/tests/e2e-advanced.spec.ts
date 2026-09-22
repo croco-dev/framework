@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { extname, join, relative } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -175,10 +176,34 @@ describe("E2E Advanced: generate()", () => {
     await generate(testDir, options);
 
     expect(existsSync(join(testDir, ".agent", "rules"))).toBe(true);
+    expect(existsSync(join(testDir, ".agents", "skills", "croco", "SKILL.md"))).toBe(true);
+    expect(
+      existsSync(join(testDir, ".agents", "skills", "croco", "references", "package-selection.md")),
+    ).toBe(true);
+    expect(
+      existsSync(
+        join(testDir, ".agents", "skills", "croco", "scripts", "inspect-croco-project.mjs"),
+      ),
+    ).toBe(true);
     expect(existsSync(join(testDir, "AGENTS.md"))).toBe(true);
     expect(existsSync(join(testDir, "docker-compose.yml"))).toBe(true);
     expect(existsSync(join(testDir, "libs", "shared", "provider-mongodb"))).toBe(true);
     expect(existsSync(join(testDir, "libs", "shared", "provider-redis"))).toBe(true);
+
+    const inspection = spawnSync(
+      process.execPath,
+      [
+        join(testDir, ".agents", "skills", "croco", "scripts", "inspect-croco-project.mjs"),
+        testDir,
+      ],
+      { encoding: "utf8" },
+    );
+    expect(inspection.stderr).toBe("");
+    expect(inspection.status).toBe(0);
+    expect(JSON.parse(inspection.stdout)).toMatchObject({
+      schemaVersion: "croco.skill-inspection/v1",
+      projectRoot: testDir,
+    });
   });
 
   it("generates ddd-api with no DBs and no agent-rules", { timeout: 120_000 }, async () => {
@@ -199,6 +224,7 @@ describe("E2E Advanced: generate()", () => {
 
     expect(existsSync(join(testDir, "apps", "api"))).toBe(true);
     expect(existsSync(join(testDir, ".agent"))).toBe(false);
+    expect(existsSync(join(testDir, ".agents"))).toBe(false);
     expect(existsSync(join(testDir, "libs", "shared", "provider-mongodb"))).toBe(false);
     const readme = readFileSync(join(testDir, "README.md"), "utf8");
     expect(readme).toContain("Croco DDD workspace");

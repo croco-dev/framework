@@ -29,7 +29,8 @@ export type GenerationArtifact = {
     | "tenant-model"
     | "tenant-model-schema"
     | "runtime-policy"
-    | "architecture-policy";
+    | "architecture-policy"
+    | "agent-skill";
   readonly path: string;
 };
 
@@ -125,6 +126,10 @@ function createGenerationArtifacts(options: GeneratorOptions): GenerationArtifac
 
   if (options.goal) {
     artifacts.push({ kind: "application-intent", path: "croco.app.json" });
+  }
+
+  if (options.agentRules) {
+    artifacts.push({ kind: "agent-skill", path: ".agents/skills/croco/SKILL.md" });
   }
 
   if (isSaasPreset(options.preset)) {

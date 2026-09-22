@@ -1,20 +1,13 @@
 # AI Agent Rules Index
 
-This project uses structured AI agent rules to maintain code quality and consistency.
+Use the repository Skill at `.agents/skills/croco/SKILL.md` when selecting, adding, replacing, or
+verifying Croco contracts, plugins, profiles, transports, or hosts. It is generated from Croco's
+canonical package metadata and links to executable composition examples.
 
-## Croco Package Roles
-
-Croco's authoritative package roles are defined by `packageRoles` in the framework repository's
-`docs/package-catalog.json`: Kernel, Contracts, Plugins, Application, Profiles, and Tooling.
-Generated app modules and composition roots are Application code. Provider, protocol, transport, host,
-integration, and presentation are Plugin subtypes, not sequential runtime layers. Keep domain,
-runtime support, and maturity separate from role; do not infer role from a package name.
-
-Application code selects Profiles and Plugins. Plugins depend on Contracts and Kernel primitives;
-Contracts and Kernel must not import concrete Plugins. `tx-drizzle` is a provider Plugin and
-`telemetry-api` is Contracts. `presentation-preset` is Profiles; `framework-preset` is build-target
-Tooling. Hosts own environment lifecycle, Transports execute protocols, and Build Targets describe
-artifacts without starting a host or executing a transport.
+Inspect the project before changing composition. Depending on the selected preset, the relevant
+machine-readable inputs include `croco.arch.json`, `croco-runtime-capability.manifest.json`,
+`croco-saas-profile.manifest.json`, and `croco.app.json`. Their absence means that claim is not
+available for this generated project; it does not imply universal runtime or provider support.
 
 ## Rule Files
 

@@ -159,6 +159,9 @@ async function generateProject(
 
   // 이하 단계들은 blank preset에서는 스킵
   if (options.preset === "blank") {
+    if (options.agentRules) {
+      installAgentRules(targetDir, vars);
+    }
     await finalize(targetDir, options, executionOptions);
     return;
   }

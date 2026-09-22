@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "cases": [
+    {
+      "name": "prefer-first-party-billing-plugin",
+      "task": "Add billing to a Node application",
+      "capability": "billing",
+      "runtime": "node",
+      "expected": {
+        "mode": "plugin",
+        "implementation": "polar",
+        "packages": ["billing-polar"]
+      },
+      "expectedVerification": [
+        "pnpm --filter @croco/billing-polar test",
+        "pnpm --filter @croco-example/first-party-plugin-composition... build",
+        "pnpm --filter @croco-example/first-party-plugin-composition test"
+      ]
+    },
+    {
+      "name": "keep-custom-auth-adapter-at-contract-boundary",
+      "task": "Add authentication to a Cloudflare Workers application",
+      "capability": "auth",
+      "runtime": "cloudflare-workers",
+      "expected": {
+        "mode": "application-adapter",
+        "contract": "@croco/auth-core/AuthProvider"
+      },
+      "expectedVerification": ["pnpm --filter @croco/auth-core test"]
+    },
+    {
+      "name": "select-canonical-lambda-runtime",
+      "task": "Add a Lambda HTTP runtime",
+      "capability": "transport-runtime",
+      "runtime": "lambda",
+      "expected": {
+        "mode": "plugin",
+        "implementation": "lambda-http",
+        "packages": ["transports-http", "preset-lambda"]
+      },
+      "expectedVerification": [
+        "pnpm --filter @croco/transports-http test",
+        "pnpm --filter @croco/preset-lambda test",
+        "pnpm create-croco-app:smoke"
+      ]
+    }
+  ]
+}

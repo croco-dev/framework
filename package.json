@@ -13,6 +13,8 @@
     "audit:read-only": "pnpm verify:repo",
     "security:audit-policy": "node --experimental-strip-types scripts/verification-command.mts --id dependency-audit-policy",
     "security:gitleaks-smoke": "node --experimental-strip-types scripts/security-gitleaks-smoke.mts",
+    "skill:check": "node --experimental-strip-types scripts/croco-skill.mts --check",
+    "skill:write": "node --experimental-strip-types scripts/croco-skill.mts --write",
     "check": "pnpm verify:repo",
     "changeset": "changeset",
     "deploy": "turbo deploy",

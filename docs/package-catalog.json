@@ -1,5 +1,113 @@
 {
   "schemaVersion": 1,
+  "agentCapabilities": {
+    "schemaVersion": 1,
+    "capabilities": {
+      "auth": {
+        "contract": "@croco/auth-core/AuthProvider",
+        "implementations": [
+          {
+            "id": "better-auth",
+            "packages": ["auth-better-auth"],
+            "examples": [
+              "examples/first-party-plugin-composition/src/auth.ts",
+              "examples/first-party-plugin-composition/src/productionGoldenPath.ts"
+            ]
+          },
+          {
+            "id": "clerk",
+            "packages": ["auth-clerk"],
+            "examples": [
+              "examples/first-party-plugin-composition/src/auth.ts",
+              "examples/first-party-plugin-composition/src/productionGoldenPath.ts"
+            ]
+          }
+        ]
+      },
+      "billing": {
+        "contract": "@croco/billing-core/BillingGateway",
+        "implementations": [
+          {
+            "id": "polar",
+            "packages": ["billing-polar"],
+            "examples": [
+              "examples/first-party-plugin-composition/src/billing.ts",
+              "examples/first-party-plugin-composition/src/productionGoldenPath.ts"
+            ]
+          }
+        ]
+      },
+      "persistence-transactions": {
+        "contract": "@croco/tx-core/TxManager",
+        "implementations": [
+          {
+            "id": "drizzle",
+            "packages": ["tx-drizzle"],
+            "examples": [
+              "examples/first-party-plugin-composition/src/datastore.ts",
+              "examples/first-party-plugin-composition/src/productionGoldenPath.ts"
+            ]
+          }
+        ]
+      },
+      "tasks": {
+        "contract": "@croco/tasks-core/TaskDispatcher",
+        "implementations": [
+          {
+            "id": "qstash",
+            "packages": ["tasks-qstash"],
+            "examples": [
+              "examples/first-party-plugin-composition/src/tasksTelemetry.ts",
+              "examples/first-party-plugin-composition/src/productionGoldenPath.ts"
+            ]
+          }
+        ]
+      },
+      "telemetry": {
+        "contract": "@croco/telemetry-api/Trace",
+        "implementations": [
+          {
+            "id": "node-otlp",
+            "packages": ["telemetry-sdk-node"],
+            "examples": [
+              "examples/first-party-plugin-composition/src/tasksTelemetry.ts",
+              "examples/first-party-plugin-composition/src/productionGoldenPath.ts"
+            ]
+          }
+        ]
+      },
+      "transport-runtime": {
+        "contract": "@croco/framework-context/RuntimeCompositionManifest",
+        "implementations": [
+          {
+            "id": "node-http",
+            "packages": ["transports-http", "preset-node"],
+            "examples": [
+              "examples/first-party-plugin-composition/src/productionGoldenPath.ts",
+              "packages/create-croco-app/templates/saas/apps/api-server/src/compositionRoot.ts",
+              "packages/create-croco-app/templates/saas/apps/api-server/src/index.ts"
+            ]
+          },
+          {
+            "id": "lambda-http",
+            "packages": ["transports-http", "preset-lambda"],
+            "examples": [
+              "packages/create-croco-app/templates/saas/apps/api-server/src/compositionRoot.ts",
+              "packages/create-croco-app/templates/saas/apps/api-server/src/lambda.ts"
+            ]
+          },
+          {
+            "id": "cloudflare-workers",
+            "packages": ["transports-cloudflare-workers", "preset-cloudflare"],
+            "examples": [
+              "packages/create-croco-app/templates/saas/apps/api-server/src/compositionRoot.ts",
+              "packages/create-croco-app/templates/saas/apps/api-server/src/worker.ts"
+            ]
+          }
+        ]
+      }
+    }
+  },
   "spine": {
     "label": "Croco 1.0 spine",
     "description": "Release-critical package set whose public API, diagnostics, generated artifacts, runtime contracts, and release evidence define the Croco 1.0 compatibility spine.",
