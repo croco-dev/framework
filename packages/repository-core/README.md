@@ -18,8 +18,8 @@ pnpm add @croco/repository-core
 
 Unified repository interface combining read and write operations.
 
-```typescript
-import type { Repository } from "@croco/repository-core";
+```typescript typecheck
+import type { KeyedRepositoryResult, Repository } from "@croco/repository-core";
 
 interface User {
   id: string;
@@ -28,39 +28,65 @@ interface User {
 }
 
 class UserRepository implements Repository<User, string> {
+  private readonly users = new Map<string, User>();
+
   // Read operations
   async findById(id: string): Promise<User | null> {
-    // Fetch from database
+    return this.users.get(id) ?? null;
   }
 
-  async findByIds(ids: readonly string[]): Promise<ReadonlyArray<User>> {
-    // Batch fetch
+  async findByIds(
+    ids: readonly string[],
+  ): Promise<ReadonlyArray<KeyedRepositoryResult<string, User>>> {
+    return [...new Set(ids)].flatMap((id) => {
+      const user = this.users.get(id);
+      return user ? [{ key: id, value: user }] : [];
+    });
   }
 
   // Write operations
   async save(entity: User): Promise<User> {
-    // Insert or update
+    this.users.set(entity.id, entity);
+    return entity;
   }
 
   async deleteById(id: string): Promise<void> {
-    // Delete from database
+    this.users.delete(id);
   }
 }
 ```
+
+`findByIds` returns `KeyedRepositoryResult<ID, T>` entries: `{ key: requestedId, value: entity }`.
+The key lets `@BatchLoad` match results to requested IDs even when a data source returns them out of order.
+Omit missing IDs and return each requested ID at most once.
 
 ### ReadRepository<T, ID>
 
 Read-only operations for querying entities.
 
-```typescript
-import type { ReadRepository } from "@croco/repository-core";
+```typescript typecheck
+import type { KeyedRepositoryResult, ReadRepository } from "@croco/repository-core";
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+}
 
 class UserQueryService implements ReadRepository<User, string> {
+  constructor(private readonly users: ReadonlyMap<string, User>) {}
+
   async findById(id: string): Promise<User | null> {
-    /* ... */
+    return this.users.get(id) ?? null;
   }
-  async findByIds(ids: readonly string[]): Promise<ReadonlyArray<User>> {
-    /* ... */
+
+  async findByIds(
+    ids: readonly string[],
+  ): Promise<ReadonlyArray<KeyedRepositoryResult<string, User>>> {
+    return [...new Set(ids)].flatMap((id) => {
+      const user = this.users.get(id);
+      return user ? [{ key: id, value: user }] : [];
+    });
   }
 }
 ```
@@ -85,33 +111,60 @@ class UserCommandService implements WriteRepository<User, string> {
 ## Batch Loading
 
 The `@BatchLoad` decorator automatically batches multiple `findById` calls into a single `findByIds` call, preventing N+1 queries.
+Install `@croco/dataloader-core` and `@croco/framework-context` alongside `@croco/repository-core` for this example.
 
-```typescript
-import { BatchLoad } from "@croco/repository-core";
-import { BATCH_LOADER_FACTORY_TOKEN, IBatchLoaderFactory } from "@croco/repository-core";
-import { Container } from "@croco/framework-context";
+```typescript typecheck
+import { registerBatchLoaderFactory } from "@croco/dataloader-core";
+import { Context } from "@croco/framework-context";
+import { BatchLoad, type KeyedRepositoryResult, type ReadRepository } from "@croco/repository-core";
+
+interface User {
+  id: string;
+  name: string;
+}
 
 // 1. Register the batch loader factory
-Container.set(BATCH_LOADER_FACTORY_TOKEN, myBatchLoaderFactory);
+registerBatchLoaderFactory();
 
 // 2. Apply the decorator to repository methods
-class UserRepository {
+class UserRepository implements ReadRepository<User, string> {
+  constructor(private readonly users: ReadonlyMap<string, User>) {}
+
   @BatchLoad({ by: "id" })
   async findById(id: string): Promise<User | null> {
-    // Single record fetch
+    return this.users.get(id) ?? null;
   }
 
-  async findByIds(ids: readonly string[]): Promise<ReadonlyArray<User>> {
-    // Batch fetch - called automatically when multiple findByIds are triggered
+  async findByIds(
+    ids: readonly string[],
+  ): Promise<ReadonlyArray<KeyedRepositoryResult<string, User>>> {
+    return [...new Set(ids)].flatMap((id) => {
+      const user = this.users.get(id);
+      return user ? [{ key: id, value: user }] : [];
+    });
   }
 }
 
-// 3. Usage - automatically batched
-const user1 = await userRepository.findById("1");
-const user2 = await userRepository.findById("2");
-const user3 = await userRepository.findById("1"); // Cached, no query
+// 3. Load within one request context
+async function loadUsers() {
+  return Context.run({ requestId: "example" }, async () => {
+    const userRepository = new UserRepository(
+      new Map([
+        ["1", { id: "1", name: "Ada" }],
+        ["2", { id: "2", name: "Lin" }],
+      ]),
+    );
+    const [user1, user2, user3] = await Promise.all([
+      userRepository.findById("1"),
+      userRepository.findById("2"),
+      userRepository.findById("1"),
+    ]);
+    return [user1, user2, user3];
+  });
+}
 
-// Result: Only 1 batch query for ['1', '2'] instead of 3 separate queries
+// findByIds runs once with ['1', '2']; the second lookup of '1' is cached.
+void loadUsers();
 ```
 
 ### Batch Load Options
@@ -202,8 +255,8 @@ class TenantRepository implements Repository<Tenant, UserId> {}
 
 Repository methods return immutable types:
 
-- `findByIds` returns `ReadonlyArray<T>` (not `T[]`)
-- This prevents accidental mutation of cached entities
+- `findByIds` returns `ReadonlyArray<KeyedRepositoryResult<ID, T>>`
+- This prevents accidental mutation of the result list while preserving each entity's requested ID
 
 ## Dependency Injection
 
