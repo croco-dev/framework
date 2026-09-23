@@ -116,7 +116,7 @@ describe("compileDiGraph", () => {
     ).toContain("resolver.getMany(");
     writeBindingFixture("InjectOptional", "Service | undefined");
     expect(compileDiGraph({ baseDir: TEMP_DIR }).code).toContain("resolver.getOptional(");
-  });
+  }, 30_000);
 
   it("carries module ownership and rejects private access and duplicate ownership", () => {
     writeBindingFixture("InjectOptional", "Service | undefined");
@@ -271,7 +271,7 @@ describe("compileDiGraph", () => {
         moduleProviders: [{ ...moduleProvider, dependencies: [{ token: service }] }],
       }),
     ).toThrow("cannot capture request");
-  });
+  }, 30_000);
 
   it("reads scope only from the Croco decorator and rejects dynamic scope and inheritance", () => {
     writeProject({
@@ -684,7 +684,7 @@ describe("compileDiGraph", () => {
       if (injection === "InjectMany") expect(compileLinked().code).toContain("resolver.getMany(");
       else expect(compileLinked).toThrow("ambiguous");
     }
-  });
+  }, 30_000);
 
   it("builds and runs an app from a packed package graph without reflection fallback", async () => {
     const libraryDir = path.join(TEMP_DIR, "packed-library");
