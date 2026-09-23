@@ -119,7 +119,7 @@ if recordedResult then
     if recordedExceeded == '0' and wasRecorded == '0' then
       return redis.error_reply('Invalid stored quota result')
     end
-    if wasRecorded == '1' or not allowOverQuota then
+    if wasRecorded == '1' then
       return { tonumber(recordedExceeded), recordedUsageNumber }
     end
   else
@@ -276,7 +276,7 @@ return { exceeded and 1 or 0, newUsage }
     );
     const score = options.usageRecord.timestamp.getTime();
     const member = this.serializeUsageMember(options.usageRecord);
-    const recordedResult = this.getRecordedQuotaResult(dedupeKey, options.allowOverQuota);
+    const recordedResult = this.getRecordedQuotaResult(dedupeKey);
     if (recordedResult) {
       return recordedResult;
     }
@@ -579,10 +579,7 @@ return { exceeded and 1 or 0, newUsage }
     ]);
   }
 
-  private getRecordedQuotaResult(
-    dedupeKey: string,
-    allowOverQuota: boolean,
-  ): AtomicQuotaCheckResult | undefined {
+  private getRecordedQuotaResult(dedupeKey: string): AtomicQuotaCheckResult | undefined {
     const now = Date.now();
 
     this.pruneRecordedRecordKeysIfNeeded(now);
@@ -593,7 +590,7 @@ return { exceeded and 1 or 0, newUsage }
       return undefined;
     }
 
-    if (recordedResult.expiresAt > now && (recordedResult.recorded || !allowOverQuota)) {
+    if (recordedResult.expiresAt > now && recordedResult.recorded) {
       return {
         exceeded: recordedResult.exceeded,
         newUsage: recordedResult.newUsage,

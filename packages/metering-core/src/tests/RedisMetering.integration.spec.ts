@@ -393,6 +393,58 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     ).resolves.toBe(0);
   });
 
+  it("records a rejected event after a quota increase without allowing overage", async () => {
+    if (!connection) {
+      throw new Error("Redis test resource did not start");
+    }
+
+    const meter = createMeter("quota-increase-retry", 4);
+    meter.billing = "required";
+    meter.aggregation = "COUNT";
+    meter.unit = "request";
+    const redis = createRedisClient(connection);
+    const journal = new RedisBillableUsageJournal(redis);
+    const service = new MeteringService({
+      idempotencyManager: new IdempotencyManager(redis),
+      meterRegistry: {
+        ...createMeterRegistry([meter]),
+        billableUsageJournal: journal,
+      } as unknown as MeterRegistry,
+      usageStorage: new RedisUsageStorage(redis),
+    });
+    const input = {
+      tenantId: meter.tenantId,
+      meterId: meter.meterId,
+      value: 5,
+      idempotencyKey: "quota-increase-retry-key",
+    };
+    const usageQuery = {
+      tenantId: input.tenantId,
+      meterId: input.meterId,
+      period: "billing_cycle" as const,
+    };
+
+    await expect(service.record(input)).rejects.toThrow(QuotaExceededProblem);
+    await expect(service.getUsage(usageQuery)).resolves.toBe(0);
+    await expect(
+      service.getRecordStatus(input.tenantId, input.meterId, input.idempotencyKey),
+    ).resolves.toBe("retryable");
+    await expect(journal.get(input.idempotencyKey)).resolves.toMatchObject({
+      failure: { code: "metering/quota-exceeded" },
+    });
+    await service.record({ ...input, value: 3, idempotencyKey: "quota-increase-other-key" });
+    await expect(service.getUsage(usageQuery)).resolves.toBe(3);
+
+    meter.quota = 10;
+    await expect(service.record(input)).resolves.toMatchObject(input);
+    await expect(service.record(input)).rejects.toThrow(DuplicateRecordProblem);
+    await expect(
+      service.getRecordStatus(input.tenantId, input.meterId, input.idempotencyKey),
+    ).resolves.toBe("completed");
+    expect((await journal.get(input.idempotencyKey))?.failure).toBeUndefined();
+    await expect(service.getUsage(usageQuery)).resolves.toBe(8);
+  });
+
   it("re-evaluates a rejected service retry and records it once after overage is allowed", async () => {
     if (!connection) {
       throw new Error("Redis test resource did not start");
