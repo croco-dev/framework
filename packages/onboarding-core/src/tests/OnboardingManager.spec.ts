@@ -166,6 +166,154 @@ describe("OnboardingManager", () => {
     );
   });
 
+  it("should retain display metadata without treating it as execution policy", async () => {
+    manager.register({
+      id: "display-order",
+      steps: [
+        {
+          id: "later",
+          title: "Later",
+          order: 2,
+          description: "Second on screen",
+          metadata: { icon: "two" },
+        },
+        { id: "earlier", title: "Earlier", order: 1, dependsOn: [] },
+      ],
+    });
+
+    await Context.run(
+      { requestId: "req-display", user: { id: "user-1" }, tenantId: "tenant-1" },
+      async () => {
+        await manager.completeStep("display-order", "later");
+        expect((await manager.getStatus("display-order")).isCompleted).toBe(false);
+        await manager.completeStep("display-order", "earlier");
+        expect((await manager.getStatus("display-order")).isCompleted).toBe(true);
+      },
+    );
+  });
+
+  it("should keep registration policy and analytics independent of later caller mutations", async () => {
+    const dependencies: string[] = [];
+    const firstStep = { id: "first", title: "First", required: true, dependsOn: dependencies };
+    const definition: OnboardingDefinition = {
+      id: "stable-definition",
+      steps: [firstStep, { id: "second", title: "Second", required: true }],
+    };
+    manager.register(definition);
+
+    definition.id = "renamed-definition";
+    firstStep.title = "Changed";
+    firstStep.required = false;
+    dependencies.push("missing");
+
+    await Context.run(
+      { requestId: "req-stable", user: { id: "user-1" }, tenantId: "tenant-1" },
+      async () => {
+        await manager.completeStep("stable-definition", "second");
+        expect((await manager.getStatus("stable-definition")).isCompleted).toBe(false);
+
+        definition.steps.push({ id: "third", title: "Third", required: true });
+        await expect(manager.completeStep("stable-definition", "third")).rejects.toThrow(
+          OnboardingStepNotFoundProblem,
+        );
+        await manager.completeStep("stable-definition", "first");
+        expect(analytics.capture).toHaveBeenCalledWith("onboarding_step_completed", {
+          onboardingId: "stable-definition",
+          stepId: "first",
+          stepTitle: "First",
+        });
+        expect((await manager.getStatus("stable-definition")).isCompleted).toBe(true);
+      },
+    );
+  });
+
+  it("should reject unsupported policy supplied by a step getter", () => {
+    class FeatureGatedStep {
+      id = "gated";
+      title = "Gated";
+
+      get featureFlagKey(): string {
+        return "new-tour";
+      }
+    }
+
+    expect(() => manager.register({ id: "getter-gated", steps: [new FeatureGatedStep()] })).toThrow(
+      expect.objectContaining({
+        code: "onboarding/definition-invalid",
+        extensions: expect.objectContaining({ reason: "unsupported-feature-flag" }),
+      }),
+    );
+  });
+
+  it("should preserve optional completion policy supplied by a step getter", async () => {
+    class OptionalStep {
+      id = "optional";
+      title = "Optional";
+
+      get required(): boolean {
+        return false;
+      }
+    }
+
+    manager.register({
+      id: "getter-optional",
+      steps: [{ id: "required", title: "Required" }, new OptionalStep()],
+    });
+
+    await Context.run(
+      { requestId: "req-getter", user: { id: "user-1" }, tenantId: "tenant-1" },
+      async () => {
+        await manager.completeStep("getter-optional", "required");
+        expect((await manager.getStatus("getter-optional")).isCompleted).toBe(true);
+      },
+    );
+  });
+
+  it.each([
+    {
+      name: "duplicate step ID",
+      steps: [
+        { id: "first", title: "First" },
+        { id: "first", title: "Second" },
+      ],
+      stepId: "first",
+      reason: "duplicate-step-id",
+    },
+    {
+      name: "unknown dependency",
+      steps: [{ id: "first", title: "First", dependsOn: ["missing"] }],
+      stepId: "first",
+      reason: "unknown-step-dependency",
+    },
+    {
+      name: "unsupported dependency",
+      steps: [
+        { id: "first", title: "First" },
+        { id: "second", title: "Second", dependsOn: ["first"] },
+      ],
+      stepId: "second",
+      reason: "unsupported-step-dependency",
+    },
+    {
+      name: "unsupported feature flag",
+      steps: [{ id: "first", title: "First", featureFlagKey: "new-tour" }],
+      stepId: "first",
+      reason: "unsupported-feature-flag",
+    },
+  ])("should reject $name at registration", ({ steps, stepId, reason }) => {
+    expect(() => manager.register({ id: "invalid", steps })).toThrow(
+      expect.objectContaining({
+        code: "onboarding/definition-invalid",
+        category: ProblemCategory.ValidationError,
+        detail: `Invalid step '${stepId}' in onboarding 'invalid': ${reason}`,
+        extensions: expect.objectContaining({ onboardingId: "invalid", stepId, reason }),
+      }),
+    );
+    expect(() =>
+      manager.register({ id: "invalid", steps: [{ id: "valid", title: "Valid" }] }),
+    ).not.toThrow();
+  });
+
   it("should capture event when a step is completed", async () => {
     await Context.run(
       { requestId: "req-1", user: { id: "user-1" }, tenantId: "tenant-1" },
@@ -179,6 +327,30 @@ describe("OnboardingManager", () => {
             stepId: "step-1",
           }),
         );
+      },
+    );
+  });
+
+  it("should emit only the two published event names with their exact payloads", async () => {
+    manager.register({ id: "single-step", steps: [{ id: "finish", title: "Finish" }] });
+
+    await Context.run(
+      { requestId: "req-events", user: { id: "user-1" }, tenantId: "tenant-1" },
+      async () => {
+        await manager.completeStep("single-step", "finish");
+        const state = await manager.getStatus("single-step");
+        expect(analytics.capture).toHaveBeenNthCalledWith(1, "onboarding_completed", {
+          onboardingId: "single-step",
+          completedAt: state.completedAt,
+        });
+        expect(analytics.capture).toHaveBeenNthCalledWith(2, "onboarding_step_completed", {
+          onboardingId: "single-step",
+          stepId: "finish",
+          stepTitle: "Finish",
+        });
+
+        await manager.completeStep("single-step", "finish");
+        expect(analytics.capture).toHaveBeenCalledTimes(2);
       },
     );
   });
@@ -340,6 +512,61 @@ describe("OnboardingManager", () => {
     );
   });
 
+  it.each([
+    { name: "omitted type", candidate: { id: "candidate", title: "Candidate" }, required: true },
+    {
+      name: "required type",
+      candidate: { id: "candidate", title: "Candidate", type: "required" as const },
+      required: true,
+    },
+    {
+      name: "optional type",
+      candidate: { id: "candidate", title: "Candidate", type: "optional" as const },
+      required: false,
+    },
+    {
+      name: "conditional type",
+      candidate: { id: "candidate", title: "Candidate", type: "conditional" as const },
+      required: false,
+    },
+    {
+      name: "explicit false over required type",
+      candidate: {
+        id: "candidate",
+        title: "Candidate",
+        type: "required" as const,
+        required: false,
+      },
+      required: false,
+    },
+    {
+      name: "explicit true over conditional type",
+      candidate: {
+        id: "candidate",
+        title: "Candidate",
+        type: "conditional" as const,
+        required: true,
+      },
+      required: true,
+    },
+  ])("should preserve completion semantics for $name", async ({ name, candidate, required }) => {
+    const definitionId = `semantics-${name}`;
+    manager.register({
+      id: definitionId,
+      steps: [{ id: "gate", title: "Gate" }, candidate],
+    });
+
+    await Context.run(
+      { requestId: "req-semantics", user: { id: "user-semantics" }, tenantId: "tenant-1" },
+      async () => {
+        await manager.completeStep(definitionId, "gate");
+        expect((await manager.getStatus(definitionId)).isCompleted).toBe(!required);
+        await manager.completeStep(definitionId, "candidate");
+        expect((await manager.getStatus(definitionId)).isCompleted).toBe(true);
+      },
+    );
+  });
+
   it("should require a typed optional step when required is explicitly true", async () => {
     manager.register({
       id: "required-override",
@@ -476,9 +703,11 @@ describe("OnboardingManager", () => {
         const status = await throwingManager.getStatus("welcome-tour");
         expect(status.isCompleted).toBe(true);
         expect(status.steps["step-2"]?.completed).toBe(true);
+        await throwingManager.completeStep("welcome-tour", "step-2");
       },
     );
 
+    expect(capture).toHaveBeenCalledTimes(3);
     expect(capture).toHaveBeenCalledWith(
       "onboarding_completed",
       expect.objectContaining({ onboardingId: "welcome-tour" }),

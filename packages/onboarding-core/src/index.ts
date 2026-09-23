@@ -12,11 +12,13 @@ export {
 export {
   DuplicateOnboardingDefinitionProblem,
   OnboardingContextRequiredProblem,
+  OnboardingDefinitionInvalidProblem,
   OnboardingDefinitionNotFoundProblem,
   OnboardingStateSnapshotUnsupportedProblem,
   OnboardingStepCompletionConflictProblem,
   OnboardingStepNotFoundProblem,
 } from "./libs/problems/OnboardingProblems";
+export type { OnboardingDefinitionInvalidReason } from "./libs/problems/OnboardingProblems";
 
 export type {
   OnboardingContext,

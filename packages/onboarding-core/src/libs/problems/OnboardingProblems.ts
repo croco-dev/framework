@@ -19,6 +19,28 @@ export class DuplicateOnboardingDefinitionProblem extends Problem {
   }
 }
 
+export type OnboardingDefinitionInvalidReason =
+  | "duplicate-step-id"
+  | "unknown-step-dependency"
+  | "unsupported-step-dependency"
+  | "unsupported-feature-flag";
+
+export class OnboardingDefinitionInvalidProblem extends Problem {
+  readonly code = "onboarding/definition-invalid";
+  readonly category = ProblemCategory.ValidationError;
+
+  constructor(onboardingId: string, stepId: string, reason: OnboardingDefinitionInvalidReason) {
+    super(
+      undefined,
+      undefined,
+      `Invalid step '${stepId}' in onboarding '${onboardingId}': ${reason}`,
+      {
+        extensions: { onboardingId, stepId, reason },
+      },
+    );
+  }
+}
+
 /**
  * 요청한 온보딩 정의를 찾을 수 없을 때 발생하는 Problem입니다.
  */

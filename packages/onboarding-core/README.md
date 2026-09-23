@@ -118,7 +118,9 @@ constructor(
 #### Methods
 
 - `register(definition: OnboardingDefinition): void` - 온보딩 정의 등록. 같은 ID를 다시 등록하면
-  `DuplicateOnboardingDefinitionProblem`으로 실패하며 기존 정의를 유지합니다.
+  `DuplicateOnboardingDefinitionProblem`으로 실패하며 기존 정의를 유지합니다. 중복 단계 ID,
+  존재하지 않는 단계 참조, 아직 지원하지 않는 의존성 및 feature flag 정책은 등록 시
+  `OnboardingDefinitionInvalidProblem`으로 거부합니다.
 - `getStatus(onboardingId: string): Promise<OnboardingState>` - 온보딩 상태 조회
 - `completeStep(onboardingId: string, stepId: string): Promise<void>` - 단계 완료 처리
 
@@ -133,6 +135,33 @@ constructor(
   `OnboardingStepCompletionConflictProblem`으로 명시적으로 실패합니다.
 - 원자적 저장 성공 후 `onboarding_completed`와 `onboarding_step_completed` 이벤트를 best-effort로 전송합니다.
 - 분석 이벤트 전송이 동기적으로 실패해도 저장된 온보딩 상태는 유지되고 `completeStep()`는 성공으로 처리됩니다.
+
+### 단계 정의와 상태 필드
+
+| 필드                                   | 현재 소비자와 의미                                                                                                                                                                                                                                                  |
+| -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `required`, `type`                     | `OnboardingManager.completeStep()`가 전체 완료에 필요한 단계를 결정합니다. 명시적 `required`가 우선합니다. 둘 다 없거나 `type: "required"`이면 필수, `type: "optional"` 또는 `"conditional"`이면 선택입니다. `conditional` 자체는 feature flag를 평가하지 않습니다. |
+| `order`                                | 단계 표시 순서를 위한 공개 metadata입니다. 저장소와 manager는 정렬하지 않으며 현재 저장소 내 UI 소비자도 없습니다. 호출자가 표시 순서를 정할 때 사용할 수 있습니다.                                                                                                 |
+| `description`, `metadata`              | 단계 표시와 호출자별 추가 정보를 위한 공개 metadata입니다. manager와 저장소는 읽지 않으며 현재 저장소 내 UI 소비자는 없습니다.                                                                                                                                      |
+| `dependsOn`                            | 단계 간 실행 순서는 지원하지 않습니다. 비어 있지 않은 참조는 등록 시 거부하며 존재하지 않는 단계 참조는 별도로 식별합니다.                                                                                                                                          |
+| `featureFlagKey`                       | feature flag 평가기는 연결되어 있지 않습니다. 값이 지정되면 등록 시 거부합니다.                                                                                                                                                                                     |
+| `status`, `startedAt`, `currentStepId` | `OnboardingState`의 저장·조회 필드입니다. `InMemoryOnboardingStore`와 `DrizzleOnboardingStore`가 보존하며 사용자 정의 저장소는 conformance suite로 보존을 검증할 수 있습니다. manager는 이 필드를 계산하거나 전이시키지 않습니다.                                   |
+
+### 분석 이벤트 이관
+
+`OnboardingManager`는 저장 성공 시 `AnalyticsManager.capture(event, properties)`를 호출합니다.
+공개 `OnboardingEvent`는 이 호출의 이름과 properties를 나타냅니다.
+
+| event                       | properties                                                                     |
+| --------------------------- | ------------------------------------------------------------------------------ |
+| `onboarding_step_completed` | `{ onboardingId, stepId, stepTitle }`                                          |
+| `onboarding_completed`      | `{ onboardingId, completedAt }` (`completedAt`은 저장소 결과가 제공할 때 존재) |
+
+이전 `OnboardingEventType`의 `step_completed`는 실제 발행명인 `onboarding_step_completed`로
+바꿔 구독해야 합니다. `step_skipped`와 `onboarding_started`는 이 manager에서 발행된 적이 없으므로
+새 union에 포함되지 않습니다. `tenantId`, `userId`, `timestamp`, `metadata`는 manager의 event
+properties가 아닙니다. 분석 provider가 컨텍스트 값을 별도로 주입할 수는 있습니다. 같은 단계의 재완료나
+분석 전송 실패 뒤 재시도에서 이벤트가 다시 발행되지 않습니다.
 
 ### 타입
 
@@ -183,6 +212,7 @@ interface OnboardingContext {
 ### Error Types
 
 - `DuplicateOnboardingDefinitionProblem` - 이미 등록된 정의 ID를 다시 등록할 때
+- `OnboardingDefinitionInvalidProblem` - 중복 단계 ID, 잘못된 참조 또는 미지원 실행 정책을 등록할 때
 - `OnboardingDefinitionNotFoundProblem` - 정의를 찾을 수 없을 때
 - `OnboardingStepNotFoundProblem` - 단계를 찾을 수 없을 때
 - `OnboardingContextRequiredProblem` - 컨텍스트가 필요할 때
