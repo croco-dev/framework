@@ -14,7 +14,9 @@ describe("createRlsPolicy", () => {
     expect(sql).toContain(
       "\"tenant_id\" = NULLIF(current_setting('app.current_tenant', true), '')::uuid",
     );
-    expect(sql).not.toContain("pg_has_role");
+    expect(sql.slice(sql.indexOf('CREATE POLICY "users_tenant_isolation"'))).not.toContain(
+      "pg_has_role",
+    );
     expect(sql).toContain('WITH CHECK ("tenant_id" = NULLIF(current_setting(');
   });
 
@@ -78,7 +80,9 @@ describe("createRlsPolicy", () => {
       adminRoles: [],
     });
 
-    expect(sql).not.toContain("pg_has_role");
+    expect(sql.slice(sql.indexOf('CREATE POLICY "projects_tenant_isolation"'))).not.toContain(
+      "pg_has_role",
+    );
   });
 
   it("should quote qualified, mixed-case, and reserved identifiers by component", () => {

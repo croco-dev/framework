@@ -224,6 +224,60 @@ describe.skipIf(connectionString.length === 0)("createRlsPolicy PostgreSQL isola
     expect(hiddenBefore).toEqual([]);
   });
 
+  it("rejects an application-owned restrictive-policy collision without changing policies or visibility", async () => {
+    await owner.query(`DROP POLICY "${tableName}_tenant_access" ON "${tableName}"`);
+    await owner.query(`DROP POLICY "${tableName}_tenant_isolation" ON "${tableName}"`);
+    await owner.query(
+      `CREATE POLICY "${tableName}_tenant_isolation" ON "${tableName}" AS RESTRICTIVE FOR ALL USING (true) WITH CHECK (true)`,
+    );
+    await owner.query(
+      `CREATE POLICY unrelated_broad_access ON "${tableName}" AS PERMISSIVE FOR ALL USING (true) WITH CHECK (true)`,
+    );
+    await owner.query(`INSERT INTO "${tableName}" VALUES ('a', 'tenant-a', 'existing')`);
+    const policiesBefore = await owner.query(
+      `SELECT policyname, permissive, roles, cmd, qual, with_check FROM pg_policies WHERE schemaname = current_schema() AND tablename = $1 ORDER BY policyname`,
+      [tableName],
+    );
+    const visibleBefore = await rowsFor(user, "tenant-b");
+
+    await expect(installPolicy()).rejects.toThrow();
+
+    const policiesAfter = await owner.query(
+      `SELECT policyname, permissive, roles, cmd, qual, with_check FROM pg_policies WHERE schemaname = current_schema() AND tablename = $1 ORDER BY policyname`,
+      [tableName],
+    );
+    expect(policiesAfter.rows).toEqual(policiesBefore.rows);
+    expect(await rowsFor(user, "tenant-b")).toEqual(visibleBefore);
+    expect(visibleBefore).toEqual([{ id: "a", tenant_id: "tenant-a" }]);
+  });
+
+  it("preserves an explicitly owned restrictive policy even when its condition matches the legacy helper", async () => {
+    await owner.query(`DROP POLICY "${tableName}_tenant_access" ON "${tableName}"`);
+    await owner.query(`DROP POLICY "${tableName}_tenant_isolation" ON "${tableName}"`);
+    await owner.query(
+      `CREATE POLICY "${tableName}_tenant_isolation" ON "${tableName}" AS RESTRICTIVE FOR ALL USING (tenant_id = current_setting('app.current_tenant', true))`,
+    );
+    await owner.query(
+      `COMMENT ON POLICY "${tableName}_tenant_isolation" ON "${tableName}" IS 'other application'`,
+    );
+    await owner.query(
+      `CREATE POLICY unrelated_broad_access ON "${tableName}" AS PERMISSIVE FOR SELECT USING (true)`,
+    );
+    await owner.query(`INSERT INTO "${tableName}" VALUES ('a', 'tenant-a', 'existing')`);
+    const policiesBefore = await owner.query(
+      `SELECT polname, obj_description(oid, 'pg_policy') AS owner, pg_get_expr(polqual, polrelid) AS using_condition FROM pg_policy WHERE polrelid = '"${tableName}"'::regclass ORDER BY polname`,
+    );
+
+    await expect(installPolicy()).rejects.toThrow();
+
+    const policiesAfter = await owner.query(
+      `SELECT polname, obj_description(oid, 'pg_policy') AS owner, pg_get_expr(polqual, polrelid) AS using_condition FROM pg_policy WHERE polrelid = '"${tableName}"'::regclass ORDER BY polname`,
+    );
+    expect(policiesAfter.rows).toEqual(policiesBefore.rows);
+    expect(await rowsFor(user, "tenant-a")).toEqual([{ id: "a", tenant_id: "tenant-a" }]);
+    expect(await rowsFor(user, "tenant-b")).toEqual([]);
+  });
+
   it("installs policies when the table identifier contains the PL/pgSQL delimiter", async () => {
     const delimiterTableName = `rls$croco_rls$_${suffix}`;
     await owner.query(
@@ -308,6 +362,59 @@ describe.skipIf(connectionString.length === 0)("createRlsPolicy PostgreSQL isola
       client.query(`INSERT INTO "${tableName}" VALUES ('a', 'tenant-a', 'first')`),
     );
     expect(await rowsFor(user, "tenant-b")).toEqual([]);
+  });
+
+  it("upgrades the legacy restrictive-only policy with the old implicit admin role", async () => {
+    await owner.query(`DROP POLICY "${tableName}_tenant_access" ON "${tableName}"`);
+    await owner.query(`DROP POLICY "${tableName}_tenant_isolation" ON "${tableName}"`);
+    await owner.query(
+      `CREATE POLICY "${tableName}_tenant_isolation" ON "${tableName}" AS RESTRICTIVE FOR ALL USING (tenant_id = current_setting('app.current_tenant', true) OR pg_has_role(current_user, 'app_admin', 'member'))`,
+    );
+
+    await installPolicy();
+    await installPolicy();
+    const ownedPolicies = await owner.query<{ polname: string; owner: string }>(
+      `SELECT polname, obj_description(oid, 'pg_policy') AS owner FROM pg_policy WHERE polrelid = '"${tableName}"'::regclass ORDER BY polname`,
+    );
+    expect(ownedPolicies.rows).toEqual([
+      { polname: `${tableName}_tenant_access`, owner: "croco:tx-drizzle:createRlsPolicy:v1" },
+      { polname: `${tableName}_tenant_isolation`, owner: "croco:tx-drizzle:createRlsPolicy:v1" },
+    ]);
+    await withTransaction(user, "tenant-a", (client) =>
+      client.query(`INSERT INTO "${tableName}" VALUES ('a', 'tenant-a', 'upgraded')`),
+    );
+    expect(await rowsFor(user, "tenant-a")).toEqual([{ id: "a", tenant_id: "tenant-a" }]);
+    expect(await rowsFor(user, "tenant-b")).toEqual([]);
+  });
+
+  it("upgrades the legacy restrictive-only policy without admin roles", async () => {
+    await owner.query(`DROP POLICY "${tableName}_tenant_access" ON "${tableName}"`);
+    await owner.query(`DROP POLICY "${tableName}_tenant_isolation" ON "${tableName}"`);
+    await owner.query(
+      `CREATE POLICY "${tableName}_tenant_isolation" ON "${tableName}" AS RESTRICTIVE FOR ALL USING (tenant_id = current_setting('app.current_tenant', true))`,
+    );
+
+    await installPolicy();
+    await withTransaction(user, "tenant-a", (client) =>
+      client.query(`INSERT INTO "${tableName}" VALUES ('a', 'tenant-a', 'upgraded')`),
+    );
+    expect(await rowsFor(user, "tenant-a")).toEqual([{ id: "a", tenant_id: "tenant-a" }]);
+    expect(await rowsFor(user, "tenant-b")).toEqual([]);
+  });
+
+  it("upgrades the legacy restrictive-only policy with a custom admin role", async () => {
+    await owner.query(`DROP POLICY "${tableName}_tenant_access" ON "${tableName}"`);
+    await owner.query(`DROP POLICY "${tableName}_tenant_isolation" ON "${tableName}"`);
+    await owner.query(
+      `CREATE POLICY "${tableName}_tenant_isolation" ON "${tableName}" AS RESTRICTIVE FOR ALL USING (tenant_id = current_setting('app.current_tenant', true) OR pg_has_role(current_user, '${adminRole}', 'member'))`,
+    );
+
+    await installPolicy([adminRole]);
+    await withTransaction(user, "tenant-a", (client) =>
+      client.query(`INSERT INTO "${tableName}" VALUES ('a', 'tenant-a', 'upgraded')`),
+    );
+    expect(await rowsFor(user, "tenant-b")).toEqual([]);
+    expect(await rowsFor(admin, null)).toEqual([{ id: "a", tenant_id: "tenant-a" }]);
   });
 
   it("rolls back tenant writes and does not leak transaction-local tenant context", async () => {

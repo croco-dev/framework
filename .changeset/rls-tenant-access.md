@@ -1,5 +1,5 @@
 ---
-"@croco/tx-drizzle": patch
+"@croco/tx-drizzle": minor
 "@croco/customer-health-drizzle": patch
 ---
 
