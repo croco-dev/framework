@@ -1,5 +1,5 @@
 ---
-'@croco/meta-vite': patch
+"@croco/meta-vite": patch
 ---
 
-- fix(meta-vite): keep packed consumers typecheckable
+- Keep published consumer typechecks reproducible with PostCSS 8.5.28.
