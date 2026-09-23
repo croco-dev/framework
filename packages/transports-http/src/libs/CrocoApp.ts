@@ -535,7 +535,7 @@ export class CrocoApp {
         try {
           console.warn("Diagnostics error recording warning failed", warning);
         } catch {
-          // Keep the original request response even when both warning sinks fail.
+          return;
         }
       };
 
