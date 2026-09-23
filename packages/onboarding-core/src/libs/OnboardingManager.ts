@@ -23,43 +23,63 @@ export class OnboardingManager {
   ) {}
 
   register(definition: OnboardingDefinition): void {
-    if (this.definitions.has(definition.id)) {
-      throw new DuplicateOnboardingDefinitionProblem(definition.id);
+    const registeredDefinition: OnboardingDefinition = {
+      id: definition.id,
+      metadata: definition.metadata && { ...definition.metadata },
+      steps: definition.steps.map((step) => ({
+        id: step.id,
+        title: step.title,
+        description: step.description,
+        required: step.required,
+        type: step.type,
+        order: step.order,
+        featureFlagKey: step.featureFlagKey,
+        dependsOn: step.dependsOn?.slice(),
+        metadata: step.metadata && { ...step.metadata },
+      })),
+    };
+
+    if (this.definitions.has(registeredDefinition.id)) {
+      throw new DuplicateOnboardingDefinitionProblem(registeredDefinition.id);
     }
 
     const stepIds = new Set<string>();
-    for (const step of definition.steps) {
+    for (const step of registeredDefinition.steps) {
       if (stepIds.has(step.id)) {
-        throw new OnboardingDefinitionInvalidProblem(definition.id, step.id, "duplicate-step-id");
+        throw new OnboardingDefinitionInvalidProblem(
+          registeredDefinition.id,
+          step.id,
+          "duplicate-step-id",
+        );
       }
       stepIds.add(step.id);
     }
 
-    for (const step of definition.steps) {
+    for (const step of registeredDefinition.steps) {
       if (step.dependsOn?.some((dependencyId) => !stepIds.has(dependencyId))) {
         throw new OnboardingDefinitionInvalidProblem(
-          definition.id,
+          registeredDefinition.id,
           step.id,
           "unknown-step-dependency",
         );
       }
       if (step.dependsOn?.length) {
         throw new OnboardingDefinitionInvalidProblem(
-          definition.id,
+          registeredDefinition.id,
           step.id,
           "unsupported-step-dependency",
         );
       }
       if (step.featureFlagKey !== undefined) {
         throw new OnboardingDefinitionInvalidProblem(
-          definition.id,
+          registeredDefinition.id,
           step.id,
           "unsupported-feature-flag",
         );
       }
     }
 
-    this.definitions.set(definition.id, definition);
+    this.definitions.set(registeredDefinition.id, registeredDefinition);
   }
 
   async getStatus(onboardingId: string): Promise<OnboardingState> {

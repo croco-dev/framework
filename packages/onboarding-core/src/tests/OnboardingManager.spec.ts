@@ -192,6 +192,83 @@ describe("OnboardingManager", () => {
     );
   });
 
+  it("should keep registration policy and analytics independent of later caller mutations", async () => {
+    const dependencies: string[] = [];
+    const firstStep = { id: "first", title: "First", required: true, dependsOn: dependencies };
+    const definition: OnboardingDefinition = {
+      id: "stable-definition",
+      steps: [firstStep, { id: "second", title: "Second", required: true }],
+    };
+    manager.register(definition);
+
+    definition.id = "renamed-definition";
+    firstStep.title = "Changed";
+    firstStep.required = false;
+    dependencies.push("missing");
+
+    await Context.run(
+      { requestId: "req-stable", user: { id: "user-1" }, tenantId: "tenant-1" },
+      async () => {
+        await manager.completeStep("stable-definition", "second");
+        expect((await manager.getStatus("stable-definition")).isCompleted).toBe(false);
+
+        definition.steps.push({ id: "third", title: "Third", required: true });
+        await expect(manager.completeStep("stable-definition", "third")).rejects.toThrow(
+          OnboardingStepNotFoundProblem,
+        );
+        await manager.completeStep("stable-definition", "first");
+        expect(analytics.capture).toHaveBeenCalledWith("onboarding_step_completed", {
+          onboardingId: "stable-definition",
+          stepId: "first",
+          stepTitle: "First",
+        });
+        expect((await manager.getStatus("stable-definition")).isCompleted).toBe(true);
+      },
+    );
+  });
+
+  it("should reject unsupported policy supplied by a step getter", () => {
+    class FeatureGatedStep {
+      id = "gated";
+      title = "Gated";
+
+      get featureFlagKey(): string {
+        return "new-tour";
+      }
+    }
+
+    expect(() => manager.register({ id: "getter-gated", steps: [new FeatureGatedStep()] })).toThrow(
+      expect.objectContaining({
+        code: "onboarding/definition-invalid",
+        extensions: expect.objectContaining({ reason: "unsupported-feature-flag" }),
+      }),
+    );
+  });
+
+  it("should preserve optional completion policy supplied by a step getter", async () => {
+    class OptionalStep {
+      id = "optional";
+      title = "Optional";
+
+      get required(): boolean {
+        return false;
+      }
+    }
+
+    manager.register({
+      id: "getter-optional",
+      steps: [{ id: "required", title: "Required" }, new OptionalStep()],
+    });
+
+    await Context.run(
+      { requestId: "req-getter", user: { id: "user-1" }, tenantId: "tenant-1" },
+      async () => {
+        await manager.completeStep("getter-optional", "required");
+        expect((await manager.getStatus("getter-optional")).isCompleted).toBe(true);
+      },
+    );
+  });
+
   it.each([
     {
       name: "duplicate step ID",
