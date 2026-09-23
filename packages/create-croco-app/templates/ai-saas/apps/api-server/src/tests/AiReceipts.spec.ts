@@ -265,13 +265,12 @@ describe("AI generation receipt recovery", () => {
         period: "billing_cycle",
       }),
     ).toBeGreaterThan(0);
-    expect(
-      await runtime.saasRuntime.meteringService.getUsage({
-        tenantId: tenant.id,
-        meterId: AI_OUTPUT_TOKENS,
-        period: "billing_cycle",
-      }),
-    ).toBe(0);
+    const outputUsageBeforeRecovery = await runtime.saasRuntime.meteringService.getUsage({
+      tenantId: tenant.id,
+      meterId: AI_OUTPUT_TOKENS,
+      period: "billing_cycle",
+    });
+    expect(outputUsageBeforeRecovery).toBe(0);
     expect(await restartedReceipts.hasPending(tenant.id)).toBe(true);
 
     await restarted.saasRuntime.meterRegistry.register({
@@ -283,12 +282,15 @@ describe("AI generation receipt recovery", () => {
     });
     const recovered = await restarted.service.generateText(request);
     expect(recovered.text).toBe("Welcome to the deterministic Croco AI SaaS demo.");
+    if (recovered.usage.state !== "known") {
+      throw new Error("Recovered generation has unknown usage");
+    }
     const recoveredOutputUsage = await restarted.saasRuntime.meteringService.getUsage({
       tenantId: tenant.id,
       meterId: AI_OUTPUT_TOKENS,
       period: "billing_cycle",
     });
-    expect(recoveredOutputUsage).toBeGreaterThan(1);
+    expect(recoveredOutputUsage - outputUsageBeforeRecovery).toBe(recovered.usage.outputTokens);
     expect(await restartedReceipts.hasPending(tenant.id)).toBe(false);
     expect((await restarted.service.generateText(request)).text).toBe(recovered.text);
     expect(
