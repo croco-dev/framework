@@ -206,6 +206,7 @@ export class PipelineRunner {
   constructor(
     private readonly errorHandler: ErrorHandler,
     private readonly logger?: ILogger,
+    private readonly recordError?: (error: unknown, status: number) => void,
   ) {}
 
   async run(
@@ -220,7 +221,11 @@ export class PipelineRunner {
       return config.validateResult ? config.validateResult(result) : result;
     } catch (error) {
       this.recordPipelineError(error);
-      return await this.runFilters(error, execContext, config.filters);
+      const response = await this.runFilters(error, execContext, config.filters);
+      if (response instanceof Response) {
+        this.recordError?.(error, response.status);
+      }
+      return response;
     }
   }
 

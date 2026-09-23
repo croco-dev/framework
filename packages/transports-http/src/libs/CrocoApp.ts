@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize, resolve, sep } from "node:path";
+import type { DiagnosticsCollector } from "@croco/diagnostics-core";
 import {
   Container,
   type Constructor,
@@ -140,6 +141,7 @@ export class CrocoApp {
   private routeRegistrar: CrocoRouteRegistrar;
   private explicitHeadRouteRegistrar: CrocoRouteRegistrar;
   private lambdaAdapter: CrocoLambdaAdapter;
+  private diagnosticsCollector?: DiagnosticsCollector;
 
   constructor(
     private readonly config: AppConfig,
@@ -164,12 +166,14 @@ export class CrocoApp {
       this.errorHandler,
       this.config.middlewares ?? [],
       this.logger,
+      (error, status) => this.recordDiagnosticsError(error, status),
     );
     this.explicitHeadRouteRegistrar = new CrocoRouteRegistrar(
       this.explicitHeadHono,
       this.errorHandler,
       this.config.middlewares ?? [],
       this.logger,
+      (error, status) => this.recordDiagnosticsError(error, status),
     );
     this.lambdaAdapter = new CrocoLambdaAdapter({
       fetch: (request, env, executionContext) =>
@@ -192,7 +196,9 @@ export class CrocoApp {
 
     const compiler = new RouteCompiler(
       this.logger,
-      new PipelineRunner(this.errorHandler, this.logger),
+      new PipelineRunner(this.errorHandler, this.logger, (error, status) =>
+        this.recordDiagnosticsError(error, status),
+      ),
     );
     this.routes = compiler.compile(this.config.controllers, {
       ...options,
@@ -461,9 +467,10 @@ export class CrocoApp {
 
     const diagnosticsPolicy = resolveDiagnosticsEndpointPolicy(this.config.diagnostics);
     if (diagnosticsPolicy.exposure !== "off") {
-      const collector =
+      this.diagnosticsCollector =
         diagnosticsPolicy.collector ??
         createDefaultDiagnosticsCollector(diagnosticsPolicy.providers ?? []);
+      const collector = this.diagnosticsCollector;
 
       const registerDiagnosticsRoute = (path: string): void => {
         this.hono.get(path, async (c) => {
@@ -504,6 +511,23 @@ export class CrocoApp {
         { "Cache-Control": "no-store" },
       ),
     );
+  }
+
+  private recordDiagnosticsError(error: unknown, status: number): void {
+    if (status < 500 || !this.diagnosticsCollector) {
+      return;
+    }
+
+    try {
+      this.diagnosticsCollector.recordError({
+        timestamp: new Date().toISOString(),
+        component: "http",
+        code: error instanceof Problem ? error.code : "UNHANDLED_ERROR",
+        message: error instanceof Error ? error.message : "An unexpected error occurred",
+      });
+    } catch {
+      // Diagnostics must not replace the request's error response.
+    }
   }
 
   lambdaHandler(options: LambdaHandlerOptions = {}): LambdaHandler {
