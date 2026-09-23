@@ -9,6 +9,7 @@ function createMockContext(method: string, origin?: string): CrocoHttpContext {
   }
 
   const resHeaders: Record<string, string> = {};
+  const responseHeaders = new Headers();
 
   return {
     req: {
@@ -24,8 +25,10 @@ function createMockContext(method: string, origin?: string): CrocoHttpContext {
       headers: resHeaders,
     },
     raw: {
+      res: { headers: responseHeaders },
       header: vi.fn((name: string, value: string) => {
         resHeaders[name] = value;
+        responseHeaders.set(name, value);
       }),
     } as unknown as CrocoHttpContext["raw"],
     param: vi.fn(),
@@ -68,7 +71,11 @@ describe("corsMiddleware", () => {
     await middleware(ctx, next);
 
     expect(next).toHaveBeenCalledOnce();
-    expect(ctx.raw.header).not.toHaveBeenCalled();
+    expect(ctx.raw.header).toHaveBeenCalledWith("Vary", "Origin");
+    expect(ctx.raw.header).not.toHaveBeenCalledWith(
+      "Access-Control-Allow-Origin",
+      expect.any(String),
+    );
   });
 
   it("should not add CORS headers when origin header is missing", async () => {
@@ -79,7 +86,11 @@ describe("corsMiddleware", () => {
     await middleware(ctx, next);
 
     expect(next).toHaveBeenCalledOnce();
-    expect(ctx.raw.header).not.toHaveBeenCalled();
+    expect(ctx.raw.header).toHaveBeenCalledWith("Vary", "Origin");
+    expect(ctx.raw.header).not.toHaveBeenCalledWith(
+      "Access-Control-Allow-Origin",
+      expect.any(String),
+    );
   });
 
   it("should handle preflight OPTIONS request with 204", async () => {
