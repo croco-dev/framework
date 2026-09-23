@@ -1,10 +1,12 @@
 import { spawnSync } from "node:child_process";
+import { createRequire } from "node:module";
 import {
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -20,6 +22,7 @@ const packageDir = resolve(__dirname, "../..");
 const rootDir = resolve(packageDir, "../..");
 const commandTimeoutMs = 180_000;
 const publishedContractTimeoutMs = 360_000;
+const supportedPostcssVersion = "8.5.28";
 
 type BuildTarget = {
   readonly packageName: string;
@@ -169,6 +172,7 @@ describe("published @croco/meta-vite contract", () => {
           "zod@^3.23.8",
         ]);
         expect(installedPackageVersion(rootConsumerRoot, "vite")).toBe("6.4.3");
+        expect(installedVitePostcssVersion(rootConsumerRoot)).toBe(supportedPostcssVersion);
         writeFileSync(
           join(rootConsumerRoot, "index.ts"),
           [
@@ -203,6 +207,7 @@ describe("published @croco/meta-vite contract", () => {
           "zod@^3.23.8",
         ]);
         expect(installedPackageVersion(redisConsumerRoot, "vite")).toBe("6.4.3");
+        expect(installedVitePostcssVersion(redisConsumerRoot)).toBe(supportedPostcssVersion);
         writeFileSync(
           join(redisConsumerRoot, "index.ts"),
           [
@@ -372,6 +377,7 @@ function writeConsumerPackageJson(consumerRoot: string, tarballs: PackageTarball
     "@croco/framework-preset": `file:${tarballs.frameworkPreset}`,
     "@croco/presentation-preset": `file:${tarballs.presentationPreset}`,
     "@croco/problems-core": `file:${tarballs.problemsCore}`,
+    postcss: supportedPostcssVersion,
   });
 }
 
@@ -414,6 +420,17 @@ function installedPackageVersion(consumerRoot: string, packageName: string): str
     readFileSync(join(consumerRoot, "node_modules", packageName, "package.json"), "utf8"),
   ) as { readonly version?: string };
 
+  return manifest.version;
+}
+
+function installedVitePostcssVersion(consumerRoot: string): string | undefined {
+  const viteEntry = realpathSync(
+    join(consumerRoot, "node_modules", "vite", "dist", "node", "index.js"),
+  );
+  const postcssManifest = createRequire(viteEntry).resolve("postcss/package.json");
+  const manifest = JSON.parse(readFileSync(postcssManifest, "utf8")) as {
+    readonly version?: string;
+  };
   return manifest.version;
 }
 
