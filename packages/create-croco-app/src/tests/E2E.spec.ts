@@ -33,7 +33,7 @@ const IMPORT_SPECIFIER_PATTERN =
   /\b(?:import|export)\s+(type\s+)?(?:[^'"]*?\s+from\s+)?["']([^"']+)["']/g;
 const DYNAMIC_IMPORT_SPECIFIER_PATTERN = /\bimport\(\s*["']([^"']+)["']\s*\)/g;
 const GENERATED_API_DI_GRAPH_SCRIPT =
-  "cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
+  "pnpm di:generate && cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
 const GENERATED_SAAS_API_DI_GRAPH_SCRIPT =
   "pnpm di:generate && cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoDiGraphApplication --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
 const WORKSPACE_ROOT = join(process.cwd(), "..", "..");
@@ -1160,9 +1160,9 @@ describe("E2E: generate()", () => {
       expect(rootPackageJson.scripts?.["contract:client"]).toContain("--strict-schemas");
       expect(apiPackageJson.scripts).toMatchObject({
         "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
-        "dev:smoke": "tsx src/dev-smoke.ts",
-        build: "tsup src/index.ts src/lambda.ts --format cjs --clean",
-        test: "vitest run",
+        "dev:smoke": "pnpm di:generate && tsx src/dev-smoke.ts",
+        build: "tsup --config tsup.config.ts",
+        test: "pnpm di:generate && vitest run",
       });
       expect(apiPackageJson.devDependencies?.["cross-env"]).toBe("^10.1.0");
       expect(apiAppSource).toContain("createCrocoDiGraphRoots");
@@ -1348,7 +1348,7 @@ describe("E2E: generate()", () => {
       expect(apiPackageJson.scripts).toMatchObject({
         "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
         "admin:smoke":
-          "tsx src/dev-smoke.ts && tsx src/webhook-smoke.ts && vitest run src/tests/CreditOperations.spec.ts",
+          "pnpm di:generate && tsx src/dev-smoke.ts && tsx src/webhook-smoke.ts && vitest run src/tests/CreditOperations.spec.ts",
       });
       expect(apiPackageJson.devDependencies?.["cross-env"]).toBe("^10.1.0");
       expect(consolePackageJson.dependencies).toMatchObject({
