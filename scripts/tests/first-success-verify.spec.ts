@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
@@ -90,6 +90,60 @@ describe("first-success-verify.mts", () => {
 
     expect(result.status, result.stderr || result.stdout).toBe(0);
     expect(result.stdout).toContain("first-success contract verification PASSED");
+  });
+
+  it("fails when quick-start development bypasses the compiler", () => {
+    const root = createFixture();
+    writeFile(
+      root,
+      "examples/quick-start-lambda/package.json",
+      JSON.stringify({ scripts: { dev: "tsx src/index.ts" } }),
+    );
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout + result.stderr).toContain("A1c");
+  });
+
+  it("fails when the user routes omit the application auth guard", () => {
+    const root = createFixture();
+    const controller = join(root, "examples/quick-start-lambda/src/protocols/UserController.ts");
+    writeFileSync(
+      controller,
+      readFileSync(controller, "utf8").replaceAll("@UseGuards(ApiKeyGuard)", ""),
+    );
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout + result.stderr).toContain("A3c");
+    expect(result.stdout + result.stderr).toContain("A4b");
+  });
+
+  it("fails when the application auth guard bypasses its delegate", () => {
+    const root = createFixture();
+    writeFile(root, "examples/quick-start-lambda/src/integrations/ApiKeyGuard.ts", "return true;");
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout + result.stderr).toContain("B0");
+  });
+
+  it("fails when only the list route omits its auth guard", () => {
+    const root = createFixture();
+    const controller = join(root, "examples/quick-start-lambda/src/protocols/UserController.ts");
+    writeFileSync(
+      controller,
+      readFileSync(controller, "utf8").replace("@UseGuards(ApiKeyGuard)", ""),
+    );
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout + result.stderr).toContain("A3c: list() missing");
+    expect(result.stdout + result.stderr).toContain("A4b — create() has");
   });
 
   it("accepts the authoritative quick-start smoke dispatcher", () => {
@@ -598,7 +652,7 @@ function createFixture(options: FixtureOptions = {}): string {
     JSON.stringify(
       {
         dependencies: { "@croco/ratelimit-core": "workspace:*" },
-        scripts: { dev: "tsx src/index.ts" },
+        scripts: { dev: "tsx scripts/build.ts --watch" },
       },
       null,
       2,
@@ -711,11 +765,11 @@ function createFixture(options: FixtureOptions = {}): string {
     [
       '@Controller("/api/users")',
       "@Get()",
-      "@UseGuards(AuthGuard)",
+      "@UseGuards(ApiKeyGuard)",
       "list() { return []; }",
       "",
       "@Post()",
-      "@UseGuards(AuthGuard)",
+      "@UseGuards(ApiKeyGuard)",
       '@Meter({ meterId: "api_user_create" })',
       '@Metered({ meterId: "api_user_create" })',
       "create() { return {}; }",
@@ -726,6 +780,14 @@ function createFixture(options: FixtureOptions = {}): string {
     root,
     "examples/quick-start-lambda/src/integrations/TestAuthProvider.ts",
     ['"test-key"', "return null", ""].join("\n"),
+  );
+  writeFile(
+    root,
+    "examples/quick-start-lambda/src/integrations/ApiKeyGuard.ts",
+    [
+      "constructor(provider: TestAuthProvider) { this.delegate = new AuthGuard(provider); }",
+      "canActivate(context) { return this.delegate.canActivate(context); }",
+    ].join("\n"),
   );
   writeFile(
     root,

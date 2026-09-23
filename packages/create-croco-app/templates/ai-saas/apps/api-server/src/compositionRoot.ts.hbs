@@ -55,6 +55,7 @@ export function createSaasCompositionRoot(options: CreateSaasCompositionRootOpti
         logger: options.logger,
         shutdownMiddleware: options.shutdownMiddleware,
         additionalControllers: AI_APPLICATION_CONTROLLERS,
+        additionalExports: [AI_SAAS_RUNTIME_TOKEN, AI_SAAS_RUNTIME_STATE_TOKEN],
         additionalProviders: [
           {
             provide: AI_SAAS_RUNTIME_TOKEN,

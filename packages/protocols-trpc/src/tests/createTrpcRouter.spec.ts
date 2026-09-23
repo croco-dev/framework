@@ -509,8 +509,8 @@ describe("createTrpcRouter", () => {
         };
       }
     }
-    Container.register(RequestState, "request");
-    Container.register(ScopedController, "request");
+    const graphId = "protocols-trpc-scoped-controller";
+    installRequestControllerGraph(graphId, RequestState, ScopedController);
 
     try {
       const router = createTrpcRouter([ScopedController]);
@@ -545,8 +545,7 @@ describe("createTrpcRouter", () => {
       expect(first?.stateId).not.toBe(second?.stateId);
       expect(Context.isActive()).toBe(false);
     } finally {
-      Container.remove(ScopedController);
-      Container.remove(RequestState);
+      Container.removeGeneratedGraph(graphId);
     }
   });
 
@@ -593,8 +592,8 @@ describe("createTrpcRouter", () => {
         };
       }
     }
-    Container.register(RequestState, "request");
-    Container.register(BatchedController, "request");
+    const graphId = "protocols-trpc-batched-controller";
+    installRequestControllerGraph(graphId, RequestState, BatchedController);
 
     const serverErrors: unknown[] = [];
     const router = createTrpcRouter([BatchedController]);
@@ -647,8 +646,7 @@ describe("createTrpcRouter", () => {
       expect(Context.isActive()).toBe(false);
     } finally {
       await closeServer(server);
-      Container.remove(BatchedController);
-      Container.remove(RequestState);
+      Container.removeGeneratedGraph(graphId);
     }
   });
 
@@ -740,8 +738,8 @@ describe("createTrpcRouter", () => {
         throw new Error("request failure");
       }
     }
-    Container.register(RequestState, "request");
-    Container.register(FailingScopedController, "request");
+    const graphId = "protocols-trpc-failing-scoped-controller";
+    installRequestControllerGraph(graphId, RequestState, FailingScopedController);
 
     try {
       const router = createTrpcRouter([FailingScopedController]);
@@ -751,8 +749,7 @@ describe("createTrpcRouter", () => {
       expect(observedRequestId).toBe("trpc-failure");
       expect(Context.isActive()).toBe(false);
     } finally {
-      Container.remove(FailingScopedController);
-      Container.remove(RequestState);
+      Container.removeGeneratedGraph(graphId);
     }
   });
 });
@@ -763,6 +760,43 @@ type RequestSnapshot = {
   readonly traceId: string | null;
   readonly usesInjectedState: boolean;
 };
+
+function installRequestControllerGraph<State, Controller>(
+  graphId: string,
+  state: new () => State,
+  controller: new (state: State) => Controller,
+): void {
+  Container.installGeneratedGraph(
+    defineGeneratedDiGraph({
+      version: GENERATED_DI_GRAPH_VERSION,
+      graphId,
+      compilerVersion: "test",
+      inputHash: graphId,
+      providers: [
+        {
+          token: state,
+          tokenId: `${graphId}:state`,
+          debugName: state.name,
+          scope: "request",
+          dependencies: [],
+          factory: () => new state(),
+          sourceLocation: { file: "createTrpcRouter.spec.ts", line: 1, column: 1 },
+        },
+        {
+          token: controller,
+          tokenId: `${graphId}:controller`,
+          debugName: controller.name,
+          kind: "rest-controller",
+          scope: "request",
+          dependencies: [{ token: state, tokenId: `${graphId}:state`, parameterIndex: 0 }],
+          factory: (resolver) => new controller(resolver.get(state)),
+          sourceLocation: { file: "createTrpcRouter.spec.ts", line: 1, column: 1 },
+        },
+      ],
+      roots: [controller],
+    }),
+  );
+}
 
 function createCaller(router: AnyRouter, context: unknown = {}): TrpcCaller {
   return router.createCaller(context) as TrpcCaller;

@@ -31,6 +31,7 @@ import {
   runTestLane,
 } from "../test-lane-runner.mts";
 import { readTestInventory } from "../test-inventory.mts";
+import { assertLaneReportShape } from "../test-evidence-reconcile.mts";
 import type { TestInventory } from "../test-inventory.mts";
 
 const REAL_TURBO_TEST_TIMEOUT_MS = 120_000;
@@ -97,7 +98,7 @@ describe("test lane runner", () => {
     expect(resolveMaxRootVitestWorkers({ CROCO_TEST_WORKERS: "-2" }, 4)).toBe(2);
   });
 
-  it.each(["cold", "warm"])(
+  it.each(["cold", "warm", "failed", "missing-report", "mismatched-task", "failed-build"])(
     "resolves the build graph from a %s cache and restores fast test evidence",
     (cacheState) => {
       const root = mkdtempSync(join(tmpdir(), "croco-fast-lane-build-graph-"));
@@ -107,7 +108,7 @@ describe("test lane runner", () => {
         process.env.TURBO_CACHE_DIR = join(root, ".turbo-cache");
         delete process.env.TURBO_FORCE;
         writeFileSync(join(root, ".gitignore"), "node_modules\n**/dist\n**/.turbo\n.turbo-cache\n");
-        mkdirSync(join(root, "packages/dependency"), { recursive: true });
+        mkdirSync(join(root, "packages/dependency/src/tests"), { recursive: true });
         mkdirSync(join(root, "packages/consumer/src/tests"), { recursive: true });
         symlinkSync(
           resolve(import.meta.dirname, "../../node_modules"),
@@ -148,15 +149,24 @@ describe("test lane runner", () => {
             {
               name: "@fixture/dependency",
               version: "1.0.0",
-              scripts: { build: "node build.mjs" },
+              scripts: {
+                build: "node build.mjs",
+                test: "vitest run src/tests/dependency.spec.ts",
+                "test:evidence":
+                  "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
+              },
             },
             null,
             2,
           )}\n`,
         );
         writeFileSync(
+          join(root, "packages/dependency/src/tests/dependency.spec.ts"),
+          'import { expect, it } from "vitest";\nit("passes independently", () => expect(true).toBe(true));\n',
+        );
+        writeFileSync(
           join(root, "packages/dependency/build.mjs"),
-          'import { mkdirSync, writeFileSync } from "node:fs";\nmkdirSync("dist", { recursive: true });\nwriteFileSync("dist/ready.txt", "ready\\n");\n',
+          `import { mkdirSync, writeFileSync } from "node:fs";\nmkdirSync("dist", { recursive: true });\nwriteFileSync("dist/ready.txt", "ready\\n");\n${cacheState === "failed-build" ? "process.exit(7);\n" : ""}`,
         );
         writeFileSync(
           join(root, "packages/consumer/package.json"),
@@ -169,7 +179,9 @@ describe("test lane runner", () => {
                 build: "node build.mjs",
                 test: "vitest run src/tests/consumer.spec.ts",
                 "test:evidence":
-                  "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
+                  cacheState === "missing-report"
+                    ? "node -e 'process.exit(1)'"
+                    : `pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json${cacheState === "mismatched-task" ? " --no-file-parallelism" : ""}`,
               },
             },
             null,
@@ -182,7 +194,7 @@ describe("test lane runner", () => {
         );
         writeFileSync(
           join(root, "packages/consumer/src/tests/consumer.spec.ts"),
-          'import { existsSync } from "node:fs";\nimport { expect, it } from "vitest";\nit("receives declared build artifacts", () => {\n  expect(existsSync("../dependency/dist/ready.txt")).toBe(true);\n  expect(existsSync("dist/ready.txt")).toBe(true);\n});\n',
+          `import { existsSync } from "node:fs";\nimport { expect, it } from "vitest";\nit("receives declared build artifacts", () => {\n  expect(existsSync("../dependency/dist/ready.txt")).toBe(true);\n  expect(existsSync("dist/ready.txt")).toBe(${cacheState !== "failed" && cacheState !== "mismatched-task"});\n});\n`,
         );
 
         if (cacheState === "warm") {
@@ -206,6 +218,16 @@ describe("test lane runner", () => {
                 qualifiers: [],
                 owner: "@fixture/consumer",
               },
+              ...(cacheState === "failed"
+                ? [
+                    {
+                      path: "packages/dependency/src/tests/dependency.spec.ts",
+                      lane: "fast" as const,
+                      qualifiers: [],
+                      owner: "@fixture/dependency",
+                    },
+                  ]
+                : []),
             ],
           },
           lane: "fast" as const,
@@ -215,6 +237,21 @@ describe("test lane runner", () => {
         const laneSummary = readTurboRunSummary(root, "");
         const buildTasks = laneSummary?.tasks?.filter((task) => task.task === "build");
         expect(buildTasks).toHaveLength(2);
+        if (cacheState === "failed-build") {
+          expect(report.commands[0]).toMatchObject({
+            status: "passed",
+            exitCode: 0,
+            executionState: "reused",
+            executedPaths: ["src/tests/consumer.spec.ts"],
+          });
+          expect(report.status).toBe("failed");
+          expect(report.diagnostics).toContainEqual({
+            code: "TEST_LANE_ORCHESTRATION_FAILED",
+            message: "The fast lane orchestrator exited with code 7.",
+          });
+          expect(() => assertLaneReportShape(report)).not.toThrow();
+          return;
+        }
         for (const task of buildTasks ?? []) {
           expect(task.cache?.status).toBe(cacheState === "warm" ? "HIT" : "MISS");
           if (cacheState === "warm") {
@@ -224,6 +261,34 @@ describe("test lane runner", () => {
           }
         }
 
+        if (["failed", "missing-report", "mismatched-task"].includes(cacheState)) {
+          expect(report.status).toBe("failed");
+          expect(() => assertLaneReportShape(report)).not.toThrow();
+          expect(report.commands[0]).toMatchObject({
+            status: "failed",
+            executionState: "executed",
+            executedPaths: [],
+            exitCode: 1,
+          });
+          if (cacheState === "failed") {
+            expect(report.commands).toHaveLength(2);
+            expect(report.commands[1]).toMatchObject({
+              owner: "@fixture/dependency",
+              status: "passed",
+              exitCode: 0,
+              executedPaths: ["src/tests/dependency.spec.ts"],
+            });
+          }
+          if (cacheState !== "missing-report") {
+            expect(report.diagnostics).toContainEqual(
+              expect.objectContaining({
+                code: "TEST_LANE_COMMAND_FAILURE_DETAIL",
+                message: expect.stringContaining("receives declared build artifacts"),
+              }),
+            );
+          }
+          return;
+        }
         expect(report.status).toBe("passed");
         expect(existsSync(join(root, "packages/dependency/dist/ready.txt"))).toBe(true);
         expect(existsSync(join(root, "packages/consumer/dist/ready.txt"))).toBe(true);
@@ -556,6 +621,7 @@ describe("test lane runner", () => {
       { ...summary.tasks[0], task: "test" },
       { ...summary.tasks[0], command: "pnpm run test" },
       { ...summary.tasks[0], cliArguments: ["--maxWorkers=2"] },
+      { ...summary.tasks[0], execution: { exitCode: 1 } },
     ]) {
       expect(
         readTurboTestTaskEvidence(root, command, "@croco/a", { tasks: [invalidTask] }),

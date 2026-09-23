@@ -1,4 +1,4 @@
-import { Container } from "@croco/framework-context";
+import { Container, RuntimeContainer } from "@croco/framework-context";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CustomerHealthService } from "../libs/CustomerHealthService";
@@ -625,15 +625,33 @@ describe("CustomerHealthService", () => {
     );
   });
 
-  it("should resolve from Container with optional event publisher wiring intact", () => {
+  it("should resolve from Container with optional event publisher wiring intact", async () => {
     Container.set(HealthSignalRegistry.token, mockRegistry as unknown as HealthSignalRegistry);
     Container.set(HealthScoreStore.token, store as unknown as HealthScoreStore);
     Container.set(HealthScoreCalculator, calculator);
-    Container.register(CustomerHealthService, "transient");
+    RuntimeContainer.set({
+      id: CustomerHealthService,
+      scope: "transient",
+      factory: () =>
+        new CustomerHealthService(
+          Container.get(HealthSignalRegistry.token),
+          Container.get(HealthScoreStore.token),
+          Container.get(HealthScoreCalculator),
+          Container.getOptional(CustomerHealthEventPublisher.token),
+        ),
+    });
 
     const resolved = Container.get(CustomerHealthService);
 
     expect(resolved).toBeInstanceOf(CustomerHealthService);
+    expect(Container.get(CustomerHealthService)).not.toBe(resolved);
+    await expect(resolved.publishPendingEvents("tenant-1")).resolves.toBe(0);
+
+    Container.remove(CustomerHealthEventPublisher.token);
+    const withoutPublisher = Container.get(CustomerHealthService);
+    await expect(withoutPublisher.publishPendingEvents("tenant-1")).rejects.toBeInstanceOf(
+      HealthEventPublisherNotConfiguredProblem,
+    );
   });
 
   it("should return latest score from store without recalculating", async () => {

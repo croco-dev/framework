@@ -1,6 +1,12 @@
 import "reflect-metadata";
 import type { AnalyticsManager } from "@croco/analytics-core";
-import { Container, Context, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
+import {
+  Container,
+  Context,
+  RuntimeContainer,
+  type ILogger,
+  LOGGER_TOKEN,
+} from "@croco/framework-context";
 import { PostHogClient } from "@croco/integrations-posthog";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PostHogAnalyticsDiagnosticsProvider } from "../libs/PostHogAnalyticsDiagnosticsProvider";
@@ -152,12 +158,22 @@ describe("PostHog Integration", () => {
   it("should resolve analytics manager through the Croco container", () => {
     Container.set(PostHogClient, postHogClient);
     Container.set(LOGGER_TOKEN, logger);
-    Container.register(PostHogAnalyticsManager, "singleton");
+    RuntimeContainer.set({
+      id: PostHogAnalyticsManager,
+      scope: "singleton",
+      factory: () =>
+        new PostHogAnalyticsManager(
+          Container.get(PostHogClient),
+          Container.getOptional(POSTHOG_ANALYTICS_MANAGER_OPTIONS),
+          Container.getOptional(LOGGER_TOKEN),
+        ),
+    });
     const captureSpy = vi.spyOn(postHogClient.getClient(), "capture");
 
     const resolved = Container.get(PostHogAnalyticsManager);
 
     expect(resolved).toBeInstanceOf(PostHogAnalyticsManager);
+    expect(Container.get(PostHogAnalyticsManager)).toBe(resolved);
     resolved.capture("di-event", { userId: "user-di" });
     expect(captureSpy).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -3,6 +3,7 @@
   "Container.register × 50 components": 10,
   "Container.get singleton (cold)": 5,
   "Container.get singleton (warm)": 0.5,
+  "Container.validate (50 components)": 20,
   "CrocoApp constructor": 30,
   "CrocoApp lambdaHandler (10 controllers)": 50,
   "Lambda cold-start simulation": 80,

@@ -108,10 +108,10 @@ Expected response: `200` with created user. The `api_user_create` meter records 
 
 ## Validate
 
-From the repository root, run the isolated smoke directly:
+From the repository root, run the isolated smoke:
 
 ```bash
-node --experimental-strip-types scripts/quick-start-lambda-smoke.mts
+pnpm quick-start-lambda:smoke
 ```
 
 The smoke installs the example dependency closure, builds and typechecks the generated graph,

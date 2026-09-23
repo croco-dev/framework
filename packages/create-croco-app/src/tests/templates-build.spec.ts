@@ -419,9 +419,10 @@ function checkSpaBeSplitStructure() {
   const apiPackageJson = readJsonTemplate("spa-be-split", "apps", "api-server", "package.json.hbs");
   expect(apiPackageJson).toMatchObject({
     scripts: expect.objectContaining({
-      "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
-      "dev:smoke": "tsx src/dev-smoke.ts",
-      test: "vitest run",
+      "di:graph": `pnpm di:generate && ${GENERATED_API_DI_GRAPH_SCRIPT}`,
+      "di:generate": "tsx scripts/generate-di.ts",
+      "dev:smoke": "pnpm di:generate && tsx src/dev-smoke.ts",
+      test: "pnpm di:generate && vitest run",
     }),
     devDependencies: expect.objectContaining({
       "cross-env": "^10.1.0",
@@ -606,9 +607,10 @@ function checkAdminConsoleStructure() {
       "@croco/webhooks-core": "workspace:*",
     }),
     scripts: expect.objectContaining({
-      "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
+      "di:graph": `pnpm di:generate && ${GENERATED_API_DI_GRAPH_SCRIPT}`,
+      "di:generate": "tsx scripts/generate-di.ts",
       "admin:smoke":
-        "tsx src/dev-smoke.ts && tsx src/webhook-smoke.ts && vitest run src/tests/CreditOperations.spec.ts",
+        "pnpm di:generate && tsx src/dev-smoke.ts && tsx src/webhook-smoke.ts && vitest run src/tests/CreditOperations.spec.ts",
     }),
     devDependencies: expect.objectContaining({
       "cross-env": "^10.1.0",
