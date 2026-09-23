@@ -216,6 +216,7 @@ export class InMemoryBillableUsageJournal implements BillableUsageJournal {
 
   async markDeliverable(eventId: string, now = new Date()): Promise<BillableUsageJournalEntry> {
     const entry = this.requirePending(eventId, "activate-billable-usage");
+    entry.failure = undefined;
     entry.deliverableAt = new Date(now);
     entry.updatedAt = new Date(now);
     return copyEntry(entry);
@@ -227,9 +228,13 @@ export class InMemoryBillableUsageJournal implements BillableUsageJournal {
     now = new Date(),
   ): Promise<BillableUsageJournalEntry> {
     const entry = this.requirePending(eventId, "reject-pending-billable-usage");
-    entry.state = "terminal-failed";
     entry.failure = { ...failure };
     entry.updatedAt = new Date(now);
+    if (failure.code === "metering/quota-exceeded") {
+      entry.deliverableAt = undefined;
+      return copyEntry(entry);
+    }
+    entry.state = "terminal-failed";
     return copyEntry(entry);
   }
 

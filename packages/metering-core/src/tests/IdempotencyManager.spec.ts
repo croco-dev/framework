@@ -78,6 +78,7 @@ function createStagedRedis(): {
         token?: string;
         operationId?: string;
         delivery?: string;
+        rejectedDelivery?: string;
         persistenceStarted?: boolean;
       }
     | undefined;
@@ -119,7 +120,7 @@ function createStagedRedis(): {
         if (!state) {
           state = { status: "PROCESSING", token, operationId };
           lifecycleValue = String(args[6]);
-          return [1, "", operationId] as unknown as TResult;
+          return [1, "", operationId, ""] as unknown as TResult;
         }
         if (
           state.status === "EVENTS_PENDING" ||
@@ -130,9 +131,14 @@ function createStagedRedis(): {
           state.operationId ??= operationId;
           lifecycleValue = String(args[6]);
           leaseExpired = false;
-          return [1, state.delivery ?? "", state.operationId] as unknown as TResult;
+          return [
+            1,
+            state.delivery ?? "",
+            state.operationId,
+            state.rejectedDelivery ?? "",
+          ] as unknown as TResult;
         }
-        return [0, "", ""] as unknown as TResult;
+        return [0, "", "", ""] as unknown as TResult;
       }
 
       if (script.includes("METERING_PERSISTENCE_STARTED")) {
@@ -165,14 +171,24 @@ function createStagedRedis(): {
       }
 
       if (script.includes("state.leaseExpiresAt = 0")) {
+        const releasesQuotaRejection = script.includes("state.delivery = nil");
         if (!state) {
           return [0, "MISSING"] as unknown as TResult;
         }
-        if (state.status !== "PROCESSING") {
+        if (state.status !== (releasesQuotaRejection ? "PUBLISHING" : "PROCESSING")) {
           return [0, `STATUS:${state.status}`] as unknown as TResult;
         }
         if (state.token !== String(args[0])) {
           return [0, "TOKEN"] as unknown as TResult;
+        }
+        if (releasesQuotaRejection) {
+          if (!state.delivery) {
+            return [0, "DELIVERY"] as unknown as TResult;
+          }
+          state.rejectedDelivery = state.delivery;
+          state.status = "PROCESSING";
+          delete state.delivery;
+          delete state.persistenceStarted;
         }
         delete state.token;
         leaseExpired = true;
@@ -697,7 +713,7 @@ describe("IdempotencyManager", () => {
     });
 
     it("should claim a new processing lease", async () => {
-      vi.mocked(mockRedis.eval).mockResolvedValue([1, "", "operation-1"]);
+      vi.mocked(mockRedis.eval).mockResolvedValue([1, "", "operation-1", ""]);
 
       const claim = await manager.claimMeteringProcessingOrThrow(
         "tenant-1",
@@ -725,7 +741,7 @@ describe("IdempotencyManager", () => {
     });
 
     it("should restore a durably pending delivery when claiming its lease", async () => {
-      vi.mocked(mockRedis.eval).mockResolvedValue([1, JSON.stringify(delivery), "operation-1"]);
+      vi.mocked(mockRedis.eval).mockResolvedValue([1, JSON.stringify(delivery), "operation-1", ""]);
 
       const claim = await manager.claimMeteringProcessingOrThrow(
         "tenant-1",
@@ -879,6 +895,68 @@ describe("IdempotencyManager", () => {
       );
     });
 
+    it("should retain rejected input while discarding delivery for policy re-evaluation", async () => {
+      const stagedRedis = createStagedRedis();
+      const stagedManager = new IdempotencyManager(stagedRedis.redis, 60, 1_000);
+      const firstClaim = await stagedManager.claimMeteringProcessingOrThrow(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+      );
+      await stagedManager.markMeteringPersistenceStarted(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+        firstClaim.token,
+      );
+      await stagedManager.markMeteringEventsPublishing(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+        firstClaim.token,
+        delivery,
+      );
+
+      await stagedManager.releaseMeteringQuotaRejection(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+        firstClaim.token,
+      );
+      await expect(
+        stagedManager.getMeteringRecordStatus("tenant-1", "api_calls", "key-123"),
+      ).resolves.toBe("retryable");
+
+      const retryClaim = await stagedManager.claimMeteringProcessingOrThrow(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+      );
+      expect(retryClaim.operationId).toBe(firstClaim.operationId);
+      expect(retryClaim.delivery).toBeUndefined();
+      expect(retryClaim.rejectedInput).toEqual({ value: 1 });
+    });
+
+    it("should release only the current rejected quota claim", async () => {
+      vi.mocked(mockRedis.eval).mockResolvedValue([1, "OK"]);
+
+      await manager.releaseMeteringQuotaRejection(
+        "tenant-1",
+        "api_calls",
+        "key-123",
+        deliveryClaim,
+      );
+
+      expect(mockRedis.eval).toHaveBeenCalledWith(
+        expect.stringContaining("state.delivery = nil"),
+        ["idem2:delivery:tenant-1:api_calls:key-123"],
+        [deliveryClaim, 86_400],
+      );
+      expect(vi.mocked(mockRedis.eval).mock.calls[0]?.[0]).toContain(
+        "state.persistenceStarted = nil",
+      );
+    });
+
     it("should complete only the current publication claim", async () => {
       vi.mocked(mockRedis.eval).mockResolvedValue([1, "OK"]);
 
@@ -896,7 +974,7 @@ describe("IdempotencyManager", () => {
 
     it("should keep active state alive longer than its processing lease", async () => {
       manager = new IdempotencyManager(mockRedis, 1, 30_000);
-      vi.mocked(mockRedis.eval).mockResolvedValue([1, "", "operation-1"]);
+      vi.mocked(mockRedis.eval).mockResolvedValue([1, "", "operation-1", ""]);
 
       await manager.claimMeteringProcessingOrThrow("tenant-1", "api_calls", "key-123");
 
@@ -945,6 +1023,14 @@ describe("IdempotencyManager", () => {
       );
       await expect(
         stagedManager.releaseMeteringEvents("tenant-1", "api_calls", "key-123", firstClaim.token),
+      ).rejects.toThrow(MeteringTransitionProblem);
+      await expect(
+        stagedManager.releaseMeteringQuotaRejection(
+          "tenant-1",
+          "api_calls",
+          "key-123",
+          firstClaim.token,
+        ),
       ).rejects.toThrow(MeteringTransitionProblem);
       await expect(
         stagedManager.completeMeteringProcessing(

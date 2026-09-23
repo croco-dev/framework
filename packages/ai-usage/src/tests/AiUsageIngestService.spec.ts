@@ -165,6 +165,38 @@ describe("AiUsageIngestService", () => {
       );
     });
 
+    it("should enforce quota again for a confirmed retryable meter rejection", async () => {
+      vi.mocked(mockMeteringCore.getRecordStatus)
+        .mockResolvedValueOnce("retryable")
+        .mockResolvedValueOnce("completed")
+        .mockResolvedValueOnce("completed");
+      const quotaFailure = new AiUsageQuotaExceededProblem("llm.prompt_tokens", 101, 100);
+      const quotaPolicy: AiUsageQuotaPolicy = {
+        enforce: vi.fn().mockRejectedValue(quotaFailure),
+      };
+      const guardedMeteringService = new AiUsageIngestService({
+        meteringService: mockMeteringCore,
+        eventBus: mockEventBus,
+        quotaPolicy,
+      });
+
+      await expect(
+        guardedMeteringService.ingestGenerationUsage({
+          tenantId: "tenant-123",
+          modelId: "gpt-4",
+          provider: "openai",
+          usage: { inputTokens: 101, outputTokens: 1, totalTokens: 102 },
+          idempotencyKey: "quota-retry-key",
+        }),
+      ).rejects.toThrow(AiUsageQuotaExceededProblem);
+      expect(quotaPolicy.enforce).toHaveBeenCalledWith(
+        expect.objectContaining({
+          meters: [{ meterId: "llm.prompt_tokens", value: 101, operation: "generate" }],
+        }),
+      );
+      expect(mockMeteringCore.record).not.toHaveBeenCalled();
+    });
+
     it("should resume persisted delivery without applying quota again", async () => {
       vi.mocked(mockMeteringCore.getRecordStatus)
         .mockResolvedValueOnce("delivery-pending")

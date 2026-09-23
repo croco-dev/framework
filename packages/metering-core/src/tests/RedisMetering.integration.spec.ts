@@ -3,11 +3,25 @@ import {
   TestResourceLifecycleProblem,
   type RedisTestConnection,
 } from "@croco/testing-resources";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, assert } from "vitest";
+import type { EventBus } from "@croco/events-core";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  assert,
+  vi,
+} from "vitest";
+import { QuotaExceededEvent } from "../libs/events/QuotaExceededEvent";
+import { UsageRecordedEvent } from "../libs/events/UsageRecordedEvent";
 import { IdempotencyManager } from "../libs/IdempotencyManager";
 import type { IdempotencyClaim, PendingMeteringDelivery } from "../libs/IdempotencyManager";
 import type { BillableUsageClaim, BillableUsageEvent } from "../libs/BillableUsageJournal";
 import { MeteringService } from "../libs/MeteringService";
+import { defineMeter, dimension } from "../libs/MeterRef";
 import type { MeterRegistry } from "../libs/MeterRegistry";
 import { DuplicateRecordProblem } from "../libs/problems/DuplicateRecordProblem";
 import { QuotaExceededProblem } from "../libs/problems/QuotaExceededProblem";
@@ -353,7 +367,7 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     ).resolves.toBe(10);
   });
 
-  it("persists quota rejection as a final rejected status", async () => {
+  it("keeps quota rejection retryable while overage remains disallowed", async () => {
     const service = createService();
     const input = {
       tenantId: "tenant-1",
@@ -365,8 +379,11 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     await expect(service.record(input)).rejects.toThrow(QuotaExceededProblem);
     await expect(
       service.getRecordStatus(input.tenantId, input.meterId, input.idempotencyKey),
-    ).resolves.toBe("rejected");
-    await expect(service.record(input)).rejects.toThrow(DuplicateRecordProblem);
+    ).resolves.toBe("retryable");
+    await expect(service.record(input)).rejects.toThrow(QuotaExceededProblem);
+    await expect(
+      service.getRecordStatus(input.tenantId, input.meterId, input.idempotencyKey),
+    ).resolves.toBe("retryable");
     await expect(
       service.getUsage({
         tenantId: input.tenantId,
@@ -374,6 +391,323 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
         period: "billing_cycle",
       }),
     ).resolves.toBe(0);
+  });
+
+  it("records a rejected event after a quota increase without allowing overage", async () => {
+    if (!connection) {
+      throw new Error("Redis test resource did not start");
+    }
+
+    const meter = createMeter("quota-increase-retry", 4);
+    meter.billing = "required";
+    meter.aggregation = "COUNT";
+    meter.unit = "request";
+    const redis = createRedisClient(connection);
+    const journal = new RedisBillableUsageJournal(redis);
+    const service = new MeteringService({
+      idempotencyManager: new IdempotencyManager(redis),
+      meterRegistry: {
+        ...createMeterRegistry([meter]),
+        billableUsageJournal: journal,
+      } as unknown as MeterRegistry,
+      usageStorage: new RedisUsageStorage(redis),
+    });
+    const input = {
+      tenantId: meter.tenantId,
+      meterId: meter.meterId,
+      value: 5,
+      idempotencyKey: "quota-increase-retry-key",
+    };
+    const usageQuery = {
+      tenantId: input.tenantId,
+      meterId: input.meterId,
+      period: "billing_cycle" as const,
+    };
+
+    await expect(service.record(input)).rejects.toThrow(QuotaExceededProblem);
+    await expect(service.getUsage(usageQuery)).resolves.toBe(0);
+    await expect(
+      service.getRecordStatus(input.tenantId, input.meterId, input.idempotencyKey),
+    ).resolves.toBe("retryable");
+    await expect(journal.get(input.idempotencyKey)).resolves.toMatchObject({
+      failure: { code: "metering/quota-exceeded" },
+    });
+    await service.record({ ...input, value: 3, idempotencyKey: "quota-increase-other-key" });
+    await expect(service.getUsage(usageQuery)).resolves.toBe(3);
+
+    meter.quota = 10;
+    await expect(service.record(input)).resolves.toMatchObject(input);
+    await expect(service.record(input)).rejects.toThrow(DuplicateRecordProblem);
+    await expect(
+      service.getRecordStatus(input.tenantId, input.meterId, input.idempotencyKey),
+    ).resolves.toBe("completed");
+    expect((await journal.get(input.idempotencyKey))?.failure).toBeUndefined();
+    await expect(service.getUsage(usageQuery)).resolves.toBe(8);
+  });
+
+  it("re-evaluates a rejected service retry and records it once after overage is allowed", async () => {
+    if (!connection) {
+      throw new Error("Redis test resource did not start");
+    }
+
+    const meter = createMeter("quota-retry", 4);
+    meter.billing = "required";
+    meter.aggregation = "COUNT";
+    meter.unit = "request";
+    const redis = createRedisClient(connection);
+    const journal = new RedisBillableUsageJournal(redis);
+    const service = new MeteringService({
+      idempotencyManager: new IdempotencyManager(redis),
+      meterRegistry: {
+        ...createMeterRegistry([meter]),
+        billableUsageJournal: journal,
+      } as unknown as MeterRegistry,
+      usageStorage: new RedisUsageStorage(redis),
+    });
+    const input = {
+      tenantId: meter.tenantId,
+      meterId: meter.meterId,
+      value: 5,
+      idempotencyKey: "service-allow-over-quota-retry",
+    };
+    const usageQuery = {
+      tenantId: input.tenantId,
+      meterId: input.meterId,
+      period: "billing_cycle" as const,
+    };
+
+    await expect(service.record(input)).rejects.toThrow(QuotaExceededProblem);
+    await expect(service.record(input)).rejects.toThrow(QuotaExceededProblem);
+    await expect(service.getUsage(usageQuery)).resolves.toBe(0);
+    await expect(journal.get(input.idempotencyKey)).resolves.toMatchObject({
+      state: "pending",
+      failure: { code: "metering/quota-exceeded" },
+    });
+    await expect(journal.getDiagnostics()).resolves.toMatchObject({
+      backlogCount: 1,
+      terminalFailureCount: 0,
+    });
+
+    meter.allowOverQuota = true;
+    await expect(service.record(input)).resolves.toMatchObject(input);
+    await expect(service.record(input)).rejects.toThrow(DuplicateRecordProblem);
+    await expect(
+      service.getRecordStatus(input.tenantId, input.meterId, input.idempotencyKey),
+    ).resolves.toBe("completed");
+    await expect(service.getUsage(usageQuery)).resolves.toBe(input.value);
+    expect((await journal.get(input.idempotencyKey))?.failure).toBeUndefined();
+    await expect(
+      journal.claimNext({ ownerId: "billing-worker", leaseDurationMs: 1_000 }),
+    ).resolves.toMatchObject({ state: "delivering", event: { eventId: input.idempotencyKey } });
+  });
+
+  it("rejects changed input without discarding the original rejected retry", async () => {
+    if (!connection) {
+      throw new Error("Redis test resource did not start");
+    }
+
+    const meter = createMeter("quota-identity", 4);
+    const redis = createRedisClient(connection);
+    const service = new MeteringService({
+      idempotencyManager: new IdempotencyManager(redis),
+      meterRegistry: createMeterRegistry([meter]),
+      usageStorage: new RedisUsageStorage(redis),
+    });
+    const meterRef = defineMeter({
+      key: meter.meterId,
+      aggregation: "COUNT",
+      unit: "request",
+      dimensions: { model: dimension.enum(["first", "second"]) },
+    });
+    const original = {
+      tenantId: meter.tenantId,
+      eventId: "quota-identity-key",
+      value: 5,
+      dimensions: { model: "first" as const },
+      metadata: { source: { region: "east", tier: "basic" } },
+    };
+
+    await expect(service.record(meterRef, original)).rejects.toThrow(QuotaExceededProblem);
+    meter.allowOverQuota = true;
+
+    await expect(service.record(meterRef, { ...original, value: 1 })).rejects.toThrow(
+      DuplicateRecordProblem,
+    );
+    await expect(
+      service.record(meterRef, { ...original, dimensions: { model: "second" } }),
+    ).rejects.toThrow(DuplicateRecordProblem);
+    await expect(
+      service.getRecordStatus(original.tenantId, meter.meterId, original.eventId),
+    ).resolves.toBe("retryable");
+
+    await expect(
+      service.record(meterRef, {
+        ...original,
+        metadata: { source: { tier: "basic", region: "east" } },
+      }),
+    ).resolves.toMatchObject({ value: original.value, dimensions: original.dimensions });
+    await expect(service.record(meterRef, original)).rejects.toThrow(DuplicateRecordProblem);
+    await expect(
+      service.getUsage({
+        tenantId: original.tenantId,
+        meterId: meter.meterId,
+        period: "billing_cycle",
+      }),
+    ).resolves.toBe(original.value);
+  });
+
+  it("preserves safe integers and empty metadata arrays across a rejected retry", async () => {
+    if (!connection) {
+      throw new Error("Redis test resource did not start");
+    }
+
+    const meter = createMeter("quota-serialized-identity", 4);
+    const redis = createRedisClient(connection);
+    const service = new MeteringService({
+      idempotencyManager: new IdempotencyManager(redis),
+      meterRegistry: createMeterRegistry([meter]),
+      usageStorage: new RedisUsageStorage(redis),
+    });
+    const input = {
+      tenantId: meter.tenantId,
+      meterId: meter.meterId,
+      value: Number.MAX_SAFE_INTEGER,
+      idempotencyKey: "quota-serialized-identity-key",
+      metadata: { items: [] },
+    };
+
+    await expect(service.record(input)).rejects.toThrow(QuotaExceededProblem);
+    meter.allowOverQuota = true;
+    await expect(service.record(input)).resolves.toMatchObject({
+      value: input.value,
+      metadata: input.metadata,
+    });
+    await expect(service.record(input)).rejects.toThrow(DuplicateRecordProblem);
+    await expect(
+      service.getUsage({
+        tenantId: input.tenantId,
+        meterId: input.meterId,
+        period: "billing_cycle",
+      }),
+    ).resolves.toBe(input.value);
+  });
+
+  it("re-evaluates quota on the first retry after rejection event publication fails", async () => {
+    if (!connection) {
+      throw new Error("Redis test resource did not start");
+    }
+
+    const meter = createMeter("quota-publish-failure", 4);
+    const redis = createRedisClient(connection);
+    const publish = vi.fn().mockRejectedValueOnce(new Error("quota publication failed"));
+    const eventBus = { publish, subscribe: vi.fn() } as unknown as EventBus;
+    const service = new MeteringService({
+      idempotencyManager: new IdempotencyManager(redis),
+      meterRegistry: createMeterRegistry([meter]),
+      usageStorage: new RedisUsageStorage(redis),
+      eventBus,
+    });
+    const input = {
+      tenantId: meter.tenantId,
+      meterId: meter.meterId,
+      value: 5,
+      idempotencyKey: "quota-publish-failure-key",
+    };
+
+    await expect(service.record(input)).rejects.toThrow("quota publication failed");
+    await expect(
+      service.getRecordStatus(input.tenantId, input.meterId, input.idempotencyKey),
+    ).resolves.toBe("retryable");
+
+    meter.allowOverQuota = true;
+    await expect(service.record(input)).resolves.toMatchObject(input);
+    await expect(service.record(input)).rejects.toThrow(DuplicateRecordProblem);
+    await expect(
+      service.getUsage({
+        tenantId: input.tenantId,
+        meterId: input.meterId,
+        period: "billing_cycle",
+      }),
+    ).resolves.toBe(input.value);
+    expect(publish).toHaveBeenCalledTimes(3);
+    expect(publish.mock.calls[0]?.[0]).toBeInstanceOf(QuotaExceededEvent);
+    expect(publish.mock.calls[1]?.[0]).toBeInstanceOf(QuotaExceededEvent);
+    expect(publish.mock.calls[1]?.[0].eventId).toBe(publish.mock.calls[0]?.[0].eventId);
+    expect(publish.mock.calls[2]?.[0]).toBeInstanceOf(UsageRecordedEvent);
+  });
+
+  it("persists a rejected quota retry when overage becomes allowed", async () => {
+    if (!connection) {
+      throw new Error("Redis test resource did not start");
+    }
+
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+    const usageRecord = createUsageRecord("allow-over-quota-retry");
+    const dedupeKey = "idem2:record:tenant-atomic-record:api_calls:allow-over-quota-retry";
+    const quotaOptions = {
+      tenantId: usageRecord.tenantId,
+      meterId: usageRecord.meterId,
+      value: usageRecord.value,
+      quota: usageRecord.value - 1,
+      usageRecord,
+    };
+
+    await expect(
+      storage.checkAndRecordWithinQuota({ ...quotaOptions, allowOverQuota: false }),
+    ).resolves.toEqual({ exceeded: true, newUsage: usageRecord.value });
+    expect(await connection.client.get(dedupeKey)).toBe(`quota:1:0:${usageRecord.value}`);
+    await expect(
+      storage.getUsage({
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        period: "billing_cycle",
+        startDate: usageRecord.timestamp,
+        endDate: usageRecord.timestamp,
+      }),
+    ).resolves.toBe(0);
+
+    await expect(
+      storage.checkAndRecordWithinQuota({ ...quotaOptions, allowOverQuota: true }),
+    ).resolves.toEqual({ exceeded: true, newUsage: usageRecord.value });
+    expect(await connection.client.get(dedupeKey)).toBe(`quota:1:1:${usageRecord.value}`);
+    await expect(
+      storage.checkAndRecordWithinQuota({ ...quotaOptions, allowOverQuota: true }),
+    ).resolves.toEqual({ exceeded: true, newUsage: usageRecord.value });
+    await expect(
+      storage.getUsage({
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        period: "billing_cycle",
+        startDate: usageRecord.timestamp,
+        endDate: usageRecord.timestamp,
+      }),
+    ).resolves.toBe(usageRecord.value);
+  });
+
+  it("replays a legacy quota result marker without duplicating usage", async () => {
+    if (!connection) {
+      throw new Error("Redis test resource did not start");
+    }
+
+    const usageRecord = createUsageRecord("legacy-quota-result");
+    const usageKey = "usage2:tenant-atomic-record:api_calls:2024-01";
+    const dedupeKey = "idem2:record:tenant-atomic-record:api_calls:legacy-quota-result";
+    await connection.client.set(dedupeKey, `quota:1:${usageRecord.value}`);
+    const storage = new RedisUsageStorage(createRedisClient(connection));
+
+    await expect(
+      storage.checkAndRecordWithinQuota({
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        value: usageRecord.value,
+        quota: usageRecord.value - 1,
+        allowOverQuota: true,
+        usageRecord,
+      }),
+    ).resolves.toEqual({ exceeded: true, newUsage: usageRecord.value });
+
+    expect(await connection.client.get(dedupeKey)).toBe(`quota:1:${usageRecord.value}`);
+    expect(await connection.client.zcard(usageKey)).toBe(0);
   });
 
   it("leaves no dedupe marker after ZADD fails and persists exactly once on retry", async () => {
@@ -540,6 +874,9 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
 
   it.each([
     "quota:2:5",
+    "quota:0:0:5",
+    "quota:1:2:5",
+    "quota:1:0:bad",
     "quota:0:bad",
     "quota:0:5.0",
     "quota:0:5e0",

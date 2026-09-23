@@ -21,6 +21,12 @@ title: "MeteringProcessingClaim"
 
 ---
 
+### rejectedInput?
+
+> `optional` **rejectedInput?**: `Pick`\<[`UsageRecord`](/api/metering-core/src/type-aliases/usagerecord/), `"value"` \| `"eventId"` \| `"dimensions"` \| `"metadata"`\>
+
+---
+
 ### token
 
 > **token**: [`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/)

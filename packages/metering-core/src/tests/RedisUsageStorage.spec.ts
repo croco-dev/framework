@@ -1256,7 +1256,68 @@ describe("RedisUsageStorage", () => {
       expect(mockRedis.zrangebyscore).not.toHaveBeenCalled();
     });
 
-    it("should persist and replay a rejected quota result after process restart", async () => {
+    it("should recheck a cached rejection when overage becomes allowed", async () => {
+      vi.mocked(mockRedis.eval).mockResolvedValue([1, 12]);
+      const usageRecord = createUsageRecord("policy-transition");
+
+      const rejected = await storage.checkAndRecordWithinQuota({
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        value: usageRecord.value,
+        quota: 10,
+        allowOverQuota: false,
+        usageRecord,
+      });
+      const accepted = await storage.checkAndRecordWithinQuota({
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        value: usageRecord.value,
+        quota: 10,
+        allowOverQuota: true,
+        usageRecord,
+      });
+      const replay = await storage.checkAndRecordWithinQuota({
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        value: usageRecord.value,
+        quota: 10,
+        allowOverQuota: true,
+        usageRecord,
+      });
+
+      expect(rejected).toEqual({ exceeded: true, newUsage: 12 });
+      expect(accepted).toEqual(rejected);
+      expect(replay).toEqual(rejected);
+      expect(mockRedis.eval).toHaveBeenCalledTimes(2);
+    });
+
+    it("should recheck a cached rejection when only the quota increases", async () => {
+      vi.mocked(mockRedis.eval).mockResolvedValueOnce([1, 5]).mockResolvedValueOnce([0, 5]);
+      const usageRecord = createUsageRecord("quota-increase");
+      const options = {
+        tenantId: usageRecord.tenantId,
+        meterId: usageRecord.meterId,
+        value: usageRecord.value,
+        allowOverQuota: false,
+        usageRecord,
+      };
+
+      await expect(storage.checkAndRecordWithinQuota({ ...options, quota: 4 })).resolves.toEqual({
+        exceeded: true,
+        newUsage: 5,
+      });
+      await expect(storage.checkAndRecordWithinQuota({ ...options, quota: 10 })).resolves.toEqual({
+        exceeded: false,
+        newUsage: 5,
+      });
+      await expect(storage.checkAndRecordWithinQuota({ ...options, quota: 10 })).resolves.toEqual({
+        exceeded: false,
+        newUsage: 5,
+      });
+      expect(mockRedis.eval).toHaveBeenCalledTimes(2);
+    });
+
+    it("should replay a legacy rejected quota result after process restart", async () => {
       const dedupeValues = new Map<string, string>();
       let usageRecordCount = 0;
       let evalCallCount = 0;

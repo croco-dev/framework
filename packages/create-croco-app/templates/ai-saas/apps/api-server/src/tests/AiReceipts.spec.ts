@@ -209,7 +209,7 @@ describe("AI generation receipt recovery", () => {
     expect((await restarted.service.getUsageState(tenant.id)).usage.totalTokens).toBe(5);
   });
 
-  it("keeps quota-rejected usage failed across receipt replay", async () => {
+  it("keeps quota-rejected usage retryable across receipt replay", async () => {
     const receipts = new SnapshotReceiptStore();
     let runtime!: ReturnType<typeof createAiSaasRuntime>;
     const generate = vi.fn(async (input: Parameters<typeof deterministicGenerate>[0]) => {
@@ -243,13 +243,20 @@ describe("AI generation receipt recovery", () => {
         AI_OUTPUT_TOKENS,
         `${receiptKey}:completion`,
       ),
-    ).resolves.toBe("rejected");
+    ).resolves.toBe("retryable");
 
     const restartedReceipts = new SnapshotReceiptStore(receipts.snapshot());
     const restarted = createAiSaasRuntime(runtime.saasRuntime, options, restartedReceipts);
     await expect(restarted.service.generateText(request)).rejects.toMatchObject({
       code: "ai-usage/record-failed",
     });
+    await expect(
+      restarted.saasRuntime.meteringService.getRecordStatus(
+        tenant.id,
+        AI_OUTPUT_TOKENS,
+        `${receiptKey}:completion`,
+      ),
+    ).resolves.toBe("retryable");
     expect(generate).toHaveBeenCalledTimes(1);
     expect(
       await runtime.saasRuntime.meteringService.getUsage({
@@ -258,14 +265,42 @@ describe("AI generation receipt recovery", () => {
         period: "billing_cycle",
       }),
     ).toBeGreaterThan(0);
+    const outputUsageBeforeRecovery = await runtime.saasRuntime.meteringService.getUsage({
+      tenantId: tenant.id,
+      meterId: AI_OUTPUT_TOKENS,
+      period: "billing_cycle",
+    });
+    expect(outputUsageBeforeRecovery).toBe(0);
+    expect(await restartedReceipts.hasPending(tenant.id)).toBe(true);
+
+    await restarted.saasRuntime.meterRegistry.register({
+      tenantId: tenant.id,
+      meterId: AI_OUTPUT_TOKENS,
+      type: "COUNT",
+      quota: 1,
+      allowOverQuota: true,
+    });
+    const recovered = await restarted.service.generateText(request);
+    expect(recovered.text).toBe("Welcome to the deterministic Croco AI SaaS demo.");
+    if (recovered.usage.state !== "known") {
+      throw new Error("Recovered generation has unknown usage");
+    }
+    const recoveredOutputUsage = await restarted.saasRuntime.meteringService.getUsage({
+      tenantId: tenant.id,
+      meterId: AI_OUTPUT_TOKENS,
+      period: "billing_cycle",
+    });
+    expect(recoveredOutputUsage - outputUsageBeforeRecovery).toBe(recovered.usage.outputTokens);
+    expect(await restartedReceipts.hasPending(tenant.id)).toBe(false);
+    expect((await restarted.service.generateText(request)).text).toBe(recovered.text);
     expect(
-      await runtime.saasRuntime.meteringService.getUsage({
+      await restarted.saasRuntime.meteringService.getUsage({
         tenantId: tenant.id,
         meterId: AI_OUTPUT_TOKENS,
         period: "billing_cycle",
       }),
-    ).toBe(0);
-    expect(await restartedReceipts.hasPending(tenant.id)).toBe(true);
+    ).toBe(recoveredOutputUsage);
+    expect(generate).toHaveBeenCalledTimes(1);
   });
 
   it("recovers when receipt acknowledgement fails after all meter writes", async () => {

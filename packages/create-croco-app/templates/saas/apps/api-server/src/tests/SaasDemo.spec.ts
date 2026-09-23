@@ -23,7 +23,7 @@ import { assertDemoEndpointsEnabled, SaasController } from "../controllers/SaasC
 import { saasDemoSnapshotSchema } from "../controllers/schemas";
 import { renderDemoMemberHtml } from "../html";
 import { generatedSaasProviderProfileManifest } from "../generatedSaasProviderProfile";
-import { InMemoryRedisClient } from "../inMemoryAdapters";
+import { InMemoryRedisClient, InMemoryUsageStorage } from "../inMemoryAdapters";
 import {
   ApplicationBootstrapProblem,
   DemoEndpointDisabledProblem,
@@ -164,6 +164,85 @@ describe("SaaS golden path demo", () => {
     );
     await expect(duplicateClaim).rejects.toThrow(DuplicateRecordProblem);
     await expect(duplicateClaim).rejects.toMatchObject({ code: "metering/duplicate-record" });
+  });
+
+  it("retries quota-rejected metering with the original operation and input", async () => {
+    const manager = new IdempotencyManager(new InMemoryRedisClient());
+    const firstClaim = await manager.claimMeteringProcessingOrThrow(
+      "tenant-1",
+      "api_requests",
+      "request-quota",
+    );
+    const delivery: PendingMeteringDelivery = {
+      usageRecord: {
+        id: firstClaim.operationId,
+        tenantId: "tenant-1",
+        meterId: "api_requests",
+        value: 2,
+        timestamp: new Date().toISOString(),
+        idempotencyKey: "request-quota",
+      },
+      quota: { quota: 1, newUsage: 2, exceeded: true, allowOverQuota: false },
+    };
+
+    await manager.markMeteringEventsPublishing(
+      "tenant-1",
+      "api_requests",
+      "request-quota",
+      firstClaim.token,
+      delivery,
+    );
+    await manager.releaseMeteringQuotaRejection(
+      "tenant-1",
+      "api_requests",
+      "request-quota",
+      firstClaim.token,
+    );
+
+    const retryClaim = await manager.claimMeteringProcessingOrThrow(
+      "tenant-1",
+      "api_requests",
+      "request-quota",
+    );
+    expect(retryClaim.operationId).toBe(firstClaim.operationId);
+    expect(retryClaim.delivery).toBeUndefined();
+    expect(retryClaim.rejectedInput).toMatchObject({ value: 2 });
+  });
+
+  it("records previously rejected usage once after the quota policy changes", async () => {
+    const storage = new InMemoryUsageStorage();
+    const usageRecord = {
+      id: "usage-quota",
+      tenantId: "tenant-1",
+      meterId: "api_requests",
+      value: 2,
+      timestamp: new Date(),
+      idempotencyKey: "request-quota",
+    };
+    const options = {
+      tenantId: usageRecord.tenantId,
+      meterId: usageRecord.meterId,
+      value: usageRecord.value,
+      quota: 1,
+      allowOverQuota: false,
+      usageRecord,
+    };
+
+    await expect(storage.checkAndRecordWithinQuota(options)).resolves.toEqual({
+      exceeded: true,
+      newUsage: 2,
+    });
+    const usageQuery = {
+      tenantId: "tenant-1",
+      meterId: "api_requests",
+      period: "billing_cycle" as const,
+    };
+    await expect(storage.getUsage(usageQuery)).resolves.toBe(0);
+
+    const acceptedOptions = { ...options, allowOverQuota: true };
+    await storage.checkAndRecordWithinQuota(acceptedOptions);
+    await storage.checkAndRecordWithinQuota(acceptedOptions);
+    await expect(storage.getUsage(usageQuery)).resolves.toBe(2);
   });
 
   it("keeps demo checkout sessions distinct and shareable across runtimes", async () => {

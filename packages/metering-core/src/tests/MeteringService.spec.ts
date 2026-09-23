@@ -99,6 +99,7 @@ describe("MeteringService", () => {
       markMeteringEventsPublishing: vi.fn().mockResolvedValue(undefined),
       releaseMeteringProcessing: vi.fn().mockResolvedValue(undefined),
       releaseMeteringEvents: vi.fn().mockResolvedValue(undefined),
+      releaseMeteringQuotaRejection: vi.fn().mockResolvedValue(undefined),
       completeMeteringProcessing: vi.fn().mockResolvedValue(undefined),
       abortMeteringProcessing: vi.fn().mockResolvedValue(undefined),
     } as unknown as IdempotencyManager;
@@ -739,12 +740,13 @@ describe("MeteringService", () => {
         }),
       ).rejects.toThrow(QuotaExceededProblem);
 
-      expect(mockIdempotency.completeMeteringProcessing).toHaveBeenCalledWith(
+      expect(mockIdempotency.releaseMeteringQuotaRejection).toHaveBeenCalledWith(
         "tenant-1",
         "api_calls",
         "generated-key",
         "claim-token",
       );
+      expect(mockIdempotency.completeMeteringProcessing).not.toHaveBeenCalled();
       expect(mockIdempotency.abortMeteringProcessing).not.toHaveBeenCalled();
       expect(mockIdempotency.releaseMeteringEvents).not.toHaveBeenCalled();
     });
@@ -1053,6 +1055,32 @@ describe("MeteringService", () => {
         meteringError,
         cleanupError,
       );
+    });
+
+    it("should preserve quota event publication failure when rejected-claim cleanup also fails", async () => {
+      const meteringError = new Error("quota event bus unavailable");
+      const cleanupError = new Error("idempotency backend unavailable");
+
+      vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(createMeter({ quota: 4 }));
+      vi.mocked(mockStorage.checkAndRecordWithinQuota).mockResolvedValue({
+        exceeded: true,
+        newUsage: 5,
+      });
+      vi.mocked(mockEventBus.publish).mockRejectedValue(meteringError);
+      vi.mocked(mockIdempotency.releaseMeteringQuotaRejection).mockRejectedValue(cleanupError);
+
+      await expectCleanupFailurePreserved(
+        () =>
+          service.record({
+            tenantId: "tenant-1",
+            meterId: "api_calls",
+            value: 5,
+            idempotencyKey: "quota-cleanup-failure",
+          }),
+        meteringError,
+        cleanupError,
+      );
+      expect(mockIdempotency.releaseMeteringQuotaRejection).toHaveBeenCalledTimes(1);
     });
 
     it("should preserve the metering error when every diagnostic sink fails", async () => {
