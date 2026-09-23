@@ -85,6 +85,11 @@ describe("DiagnosticCodes", () => {
     expect(getDiagnosticCodeDefinition("CROCO_DI_004")?.legacyCodes).toEqual([
       "framework-context/di-unknown-provider",
     ]);
+    expect(getDiagnosticCodeDefinition("CROCO_HTTP_DIAGNOSTICS_001")).toMatchObject({
+      category: "runtime",
+      severity: "warning",
+      docs: "docs/troubleshooting/diagnostics.md#croco_http_diagnostics_001",
+    });
     expect(getDiagnosticCodeDefinition("CROCO_CLI_DOCTOR_001")?.legacyCodes).toEqual([
       "doctor/workspace-not-found",
     ]);

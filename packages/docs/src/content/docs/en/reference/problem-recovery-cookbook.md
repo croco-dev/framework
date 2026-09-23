@@ -817,7 +817,7 @@ This cookbook documents 785 public Croco Problem codes. The deterministic JSON r
 
 Sources:
 
-- `packages/transports-http/src/libs/PipelineRunner.ts:234:15` (problem-factory)
+- `packages/transports-http/src/libs/PipelineRunner.ts:239:15` (problem-factory)
 
 <a id="access-core-forbidden"></a>
 
@@ -3973,7 +3973,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:369:12` (problem-factory)
+- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:371:12` (problem-factory)
 
 <a id="croco-http-middleware-002"></a>
 
@@ -3991,7 +3991,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:274:15` (problem-factory)
+- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:276:15` (problem-factory)
 
 <a id="croco-http-security-001"></a>
 
@@ -4009,7 +4009,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:278:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:285:11` (problem-factory)
 
 <a id="croco-http-security-002"></a>
 
@@ -13657,7 +13657,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:320:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:327:11` (problem-factory)
 
 <a id="transports-http-diagnostics-invalid-configuration"></a>
 
@@ -13945,7 +13945,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:88:55` (problem-metadata)
+- `packages/transports-http/src/libs/CrocoApp.ts:90:55` (problem-metadata)
 
 <a id="transports-http-unsupported-media-type"></a>
 
@@ -13981,7 +13981,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:247:15` (problem-factory)
+- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:249:15` (problem-factory)
 
 <a id="triggers-core-duplicate-trigger-metadata"></a>
 

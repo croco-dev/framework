@@ -62,6 +62,22 @@ class InspectorController {
   }
 }
 
+@Controller("/diagnostics-errors")
+class DiagnosticsErrorController {
+  @Get("/server")
+  server() {
+    throw ProblemFactory.internalServerError(
+      "diagnostics/test-server-error",
+      "server failure with private details",
+    );
+  }
+
+  @Get("/client")
+  client() {
+    throw ProblemFactory.badRequest("diagnostics/test-client-error", "invalid request");
+  }
+}
+
 class ThrowingRuntimeInspector extends RuntimeInspector {
   override startRequest(): never {
     throw new Error("inspector start failure");
@@ -97,6 +113,7 @@ describe("Operational endpoints", () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
   it.each([
@@ -169,11 +186,195 @@ describe("Operational endpoints", () => {
   });
 
   it("does not register diagnostics when exposure is off", async () => {
-    const app = createApp({ controllers: [], securityValidation: "off" });
+    const app = createApp({
+      controllers: [DiagnosticsErrorController],
+      securityValidation: "off",
+    });
+
+    const failure = await app.fetch(new Request("http://localhost/diagnostics-errors/server"));
 
     const response = await app.fetch(new Request("http://localhost/health/diagnostics"));
 
+    expect(failure.status).toBe(500);
     expect(response.status).toBe(404);
+  });
+
+  it("records handled server Problems in the default diagnostics collector", async () => {
+    vi.stubEnv("CROCO_DIAGNOSTICS_ENABLED", "true");
+    const app = createApp({
+      controllers: [DiagnosticsErrorController],
+      securityValidation: "off",
+    });
+
+    const failure = await app.fetch(new Request("http://localhost/diagnostics-errors/server"));
+    const clientFailure = await app.fetch(
+      new Request("http://localhost/diagnostics-errors/client"),
+    );
+    const diagnostics = await app.fetch(new Request("http://localhost/diagnostics"));
+
+    expect(failure.status).toBe(500);
+    expect(clientFailure.status).toBe(400);
+    expect(diagnostics.status).toBe(200);
+    await expect(diagnostics.json()).resolves.toMatchObject({
+      recentErrors: [
+        {
+          component: "http",
+          code: "diagnostics/test-server-error",
+          message: "server failure with private details",
+          timestamp: expect.any(String),
+        },
+      ],
+    });
+  });
+
+  it("records errors in an injected collector and preserves diagnostics sanitization", async () => {
+    const collector = new DiagnosticsCollector();
+    const app = createApp({
+      controllers: [DiagnosticsErrorController],
+      securityValidation: "off",
+      diagnostics: { exposure: "private", collector, messageLimit: 20 },
+    });
+
+    const failure = await app.fetch(new Request("http://localhost/diagnostics-errors/server"));
+    const diagnostics = await app.fetch(new Request("http://localhost/diagnostics"));
+
+    expect(failure.status).toBe(500);
+    await expect(collector.getReport()).resolves.toMatchObject({
+      recentErrors: [{ code: "diagnostics/test-server-error" }],
+    });
+    await expect(diagnostics.json()).resolves.toMatchObject({
+      recentErrors: [{ code: "diagnostics/test-server-error", message: "server failure wi..." }],
+    });
+  });
+
+  it("preserves the original error response when diagnostics recording fails", async () => {
+    const collector = new DiagnosticsCollector();
+    const warning = vi.spyOn(Container.get(Logger), "warn");
+    vi.spyOn(collector, "recordError").mockImplementation(() => {
+      throw new Error("diagnostics unavailable");
+    });
+    const app = createApp({
+      controllers: [DiagnosticsErrorController],
+      securityValidation: "off",
+      diagnostics: { exposure: "private", collector },
+    });
+
+    const response = await app.fetch(new Request("http://localhost/diagnostics-errors/server"));
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "diagnostics/test-server-error",
+      detail: "An internal error occurred",
+    });
+    expect(collector.recordError).toHaveBeenCalledOnce();
+    expect(warning).toHaveBeenCalledWith("Diagnostics error recording failed", {
+      code: "CROCO_HTTP_DIAGNOSTICS_001",
+      errorType: "object",
+    });
+  });
+
+  it("preserves the original error response when the diagnostics warning sink also fails", async () => {
+    const collector = new DiagnosticsCollector();
+    vi.spyOn(collector, "recordError").mockImplementation(() => {
+      throw new Error("diagnostics unavailable");
+    });
+    vi.spyOn(Container.get(Logger), "warn").mockImplementation(() => {
+      throw new Error("logger unavailable");
+    });
+    const consoleWarning = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const app = createApp({
+      controllers: [DiagnosticsErrorController],
+      securityValidation: "off",
+      diagnostics: { exposure: "private", collector },
+    });
+
+    const response = await app.fetch(new Request("http://localhost/diagnostics-errors/server"));
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "diagnostics/test-server-error",
+      detail: "An internal error occurred",
+    });
+    expect(consoleWarning).toHaveBeenCalledWith("Diagnostics error recording warning failed", {
+      code: "CROCO_HTTP_DIAGNOSTICS_001",
+      errorType: "object",
+    });
+  });
+
+  it("preserves the original error response when recording throws a value without a string conversion", async () => {
+    const collector = new DiagnosticsCollector();
+    const warning = vi.spyOn(Container.get(Logger), "warn");
+    vi.spyOn(collector, "recordError").mockImplementation(() => {
+      throw Object.create(null);
+    });
+    const app = createApp({
+      controllers: [DiagnosticsErrorController],
+      securityValidation: "off",
+      diagnostics: { exposure: "private", collector },
+    });
+
+    const response = await app.fetch(new Request("http://localhost/diagnostics-errors/server"));
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "diagnostics/test-server-error",
+      detail: "An internal error occurred",
+    });
+    expect(warning).toHaveBeenCalledWith("Diagnostics error recording failed", {
+      code: "CROCO_HTTP_DIAGNOSTICS_001",
+      errorType: "object",
+    });
+  });
+
+  it("records middleware failures only in the app that handled them", async () => {
+    const failingApp = createApp({
+      controllers: [DiagnosticsErrorController],
+      securityValidation: "off",
+      diagnostics: { exposure: "private" },
+      middlewares: [
+        () => {
+          throw ProblemFactory.internalServerError(
+            "diagnostics/middleware-error",
+            "middleware failed",
+          );
+        },
+      ],
+    });
+    const otherApp = createApp({
+      controllers: [],
+      securityValidation: "off",
+      diagnostics: { exposure: "private" },
+    });
+
+    const failure = await failingApp.fetch(
+      new Request("http://localhost/diagnostics-errors/client"),
+    );
+    const failedAppReport = await failingApp.fetch(new Request("http://localhost/diagnostics"));
+    const otherAppReport = await otherApp.fetch(new Request("http://localhost/diagnostics"));
+
+    expect(failure.status).toBe(500);
+    await expect(failedAppReport.json()).resolves.toMatchObject({
+      recentErrors: [{ code: "diagnostics/middleware-error" }],
+    });
+    await expect(otherAppReport.json()).resolves.toMatchObject({ recentErrors: [] });
+  });
+
+  it("records a server Problem handled by a custom exception filter", async () => {
+    const app = createApp({
+      controllers: [DiagnosticsErrorController],
+      securityValidation: "off",
+      diagnostics: { exposure: "private" },
+      globalFilters: [{ catch: () => new Response("filtered", { status: 503 }) }],
+    });
+
+    const failure = await app.fetch(new Request("http://localhost/diagnostics-errors/server"));
+    const diagnostics = await app.fetch(new Request("http://localhost/diagnostics"));
+
+    expect(failure.status).toBe(503);
+    expect(await failure.text()).toBe("filtered");
+    await expect(diagnostics.json()).resolves.toMatchObject({
+      recentErrors: [{ code: "diagnostics/test-server-error" }],
+    });
   });
 
   it("does not register the dev inspector when exposure is off", async () => {

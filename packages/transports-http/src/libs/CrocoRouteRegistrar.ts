@@ -53,6 +53,7 @@ export class CrocoRouteRegistrar {
     private readonly errorHandler: ErrorHandler,
     private readonly globalMiddlewares: MiddlewareFunction[],
     private readonly logger: ILogger,
+    private readonly recordError?: (error: unknown, status: number) => void,
   ) {}
 
   setRuntimeInspector(inspector: RuntimeInspector): void {
@@ -199,6 +200,7 @@ export class CrocoRouteRegistrar {
             ctx,
             this.errorHandler.handleError(error, ctx),
           );
+          this.recordError?.(error, response.status);
           this.finishInspection(inspector, inspection?.id, response, "failed", ctx, error);
           return response;
         }
