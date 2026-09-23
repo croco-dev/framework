@@ -1691,7 +1691,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const bus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
+      const bus = createTestEventBus<TestEvent>({ maxConcurrency: 1 });
       const publishing: EventPublishing<TestEvent> = bus;
       Container.set(BlockingHandler, new BlockingHandler());
       bus.subscribe({ eventName: "TestEvent", handlerClass: BlockingHandler });
@@ -1728,7 +1728,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const bus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
+      const bus = createTestEventBus<TestEvent>({ maxConcurrency: 1 });
       Container.set(BlockingHandler, new BlockingHandler());
       bus.subscribe({ eventName: "TestEvent", handlerClass: BlockingHandler });
 
@@ -1761,7 +1761,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const bus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
+      const bus = createTestEventBus<TestEvent>({ maxConcurrency: 1 });
       Container.set(BlockingHandler, new BlockingHandler());
       bus.subscribe({ eventName: "TestEvent", handlerClass: BlockingHandler });
 
