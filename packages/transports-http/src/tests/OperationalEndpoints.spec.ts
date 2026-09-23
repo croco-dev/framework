@@ -113,6 +113,7 @@ describe("Operational endpoints", () => {
 
   afterEach(() => {
     vi.unstubAllEnvs();
+    vi.restoreAllMocks();
   });
 
   it.each([
@@ -248,6 +249,7 @@ describe("Operational endpoints", () => {
 
   it("preserves the original error response when diagnostics recording fails", async () => {
     const collector = new DiagnosticsCollector();
+    const warning = vi.spyOn(Container.get(Logger), "warn");
     vi.spyOn(collector, "recordError").mockImplementation(() => {
       throw new Error("diagnostics unavailable");
     });
@@ -265,6 +267,38 @@ describe("Operational endpoints", () => {
       detail: "An internal error occurred",
     });
     expect(collector.recordError).toHaveBeenCalledOnce();
+    expect(warning).toHaveBeenCalledWith("Diagnostics error recording failed", {
+      code: "CROCO_HTTP_DIAGNOSTICS_001",
+      error: "diagnostics unavailable",
+    });
+  });
+
+  it("preserves the original error response when the diagnostics warning sink also fails", async () => {
+    const collector = new DiagnosticsCollector();
+    vi.spyOn(collector, "recordError").mockImplementation(() => {
+      throw new Error("diagnostics unavailable");
+    });
+    vi.spyOn(Container.get(Logger), "warn").mockImplementation(() => {
+      throw new Error("logger unavailable");
+    });
+    const consoleWarning = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const app = createApp({
+      controllers: [DiagnosticsErrorController],
+      securityValidation: "off",
+      diagnostics: { exposure: "private", collector },
+    });
+
+    const response = await app.fetch(new Request("http://localhost/diagnostics-errors/server"));
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "diagnostics/test-server-error",
+      detail: "An internal error occurred",
+    });
+    expect(consoleWarning).toHaveBeenCalledWith("Diagnostics error recording warning failed", {
+      code: "CROCO_HTTP_DIAGNOSTICS_001",
+      error: "diagnostics unavailable",
+    });
   });
 
   it("records middleware failures only in the app that handled them", async () => {

@@ -85,6 +85,7 @@ type RequiredSecurityMiddleware = {
 };
 
 const SECURITY_MIDDLEWARE_VALIDATION_CODE = "CROCO_HTTP_SECURITY_001";
+const DIAGNOSTICS_RECORD_FAILURE_CODE = "CROCO_HTTP_DIAGNOSTICS_001";
 const LEGACY_SECURITY_MIDDLEWARE_VALIDATION_CODE = "transports-http/security-middleware-validation";
 const LEGACY_SECURITY_MIDDLEWARE_VALIDATION_PROBLEM = {
   code: LEGACY_SECURITY_MIDDLEWARE_VALIDATION_CODE,
@@ -525,8 +526,28 @@ export class CrocoApp {
         code: error instanceof Problem ? error.code : "UNHANDLED_ERROR",
         message: error instanceof Error ? error.message : "An unexpected error occurred",
       });
-    } catch {
-      // Diagnostics must not replace the request's error response.
+    } catch (recordingError) {
+      const warning = {
+        code: DIAGNOSTICS_RECORD_FAILURE_CODE,
+        error: recordingError instanceof Error ? recordingError.message : String(recordingError),
+      };
+      const fallbackWarning = (): void => {
+        try {
+          console.warn("Diagnostics error recording warning failed", warning);
+        } catch {
+          // Keep the original request response even when both warning sinks fail.
+        }
+      };
+
+      try {
+        const loggingResult: unknown = this.logger.warn(
+          "Diagnostics error recording failed",
+          warning,
+        );
+        void Promise.resolve(loggingResult).catch(fallbackWarning);
+      } catch {
+        fallbackWarning();
+      }
     }
   }
 
