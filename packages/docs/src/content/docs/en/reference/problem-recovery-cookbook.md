@@ -3973,7 +3973,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:369:12` (problem-factory)
+- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:371:12` (problem-factory)
 
 <a id="croco-http-middleware-002"></a>
 
@@ -3991,7 +3991,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:274:15` (problem-factory)
+- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:276:15` (problem-factory)
 
 <a id="croco-http-security-001"></a>
 
@@ -13981,7 +13981,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:247:15` (problem-factory)
+- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:249:15` (problem-factory)
 
 <a id="triggers-core-duplicate-trigger-metadata"></a>
 

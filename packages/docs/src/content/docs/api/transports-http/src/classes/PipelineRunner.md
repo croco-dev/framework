@@ -11,7 +11,7 @@ Guard, Interceptor, Filter 체인을 조합해 컨트롤러 핸들러를 실행�
 
 ### Constructor
 
-> **new PipelineRunner**(`errorHandler`, `logger?`): `PipelineRunner`
+> **new PipelineRunner**(`errorHandler`, `logger?`, `recordError?`): `PipelineRunner`
 
 #### Parameters
 
@@ -22,6 +22,10 @@ Guard, Interceptor, Filter 체인을 조합해 컨트롤러 핸들러를 실행�
 ##### logger?
 
 [`ILogger`](/api/framework-context/src/interfaces/ilogger/)
+
+##### recordError?
+
+(`error`, `status`) => `void`
 
 #### Returns
 
