@@ -21,6 +21,7 @@ import type {
 } from "./MeterRef";
 import type { MeterRegistry } from "./MeterRegistry";
 import { BillableUsageJournalRequiredProblem } from "./problems/BillableUsageJournalRequiredProblem";
+import { DuplicateRecordProblem } from "./problems/DuplicateRecordProblem";
 import { InvalidUsageEnvelopeProblem } from "./problems/InvalidUsageEnvelopeProblem";
 import { QuotaManager } from "./QuotaManager";
 import type { MeterDefinition, RecordOptions, UsageQueryOptions, UsageRecord } from "./types";
@@ -35,6 +36,25 @@ export type MeteringServiceOptions = {
 };
 
 type BillableMeterDescriptor = Pick<MeterRef, "aggregation" | "billing" | "unit">;
+
+function stableStringify(value: unknown): string {
+  return JSON.stringify(value, (_key, nestedValue: unknown) => {
+    if (nestedValue === null || typeof nestedValue !== "object" || Array.isArray(nestedValue)) {
+      return nestedValue;
+    }
+
+    const prototype = Object.getPrototypeOf(nestedValue);
+    if (prototype !== Object.prototype && prototype !== null) {
+      return nestedValue;
+    }
+
+    return Object.fromEntries(
+      Object.entries(nestedValue as Record<string, unknown>).sort(([left], [right]) =>
+        left < right ? -1 : left > right ? 1 : 0,
+      ),
+    );
+  });
+}
 
 /**
  * Usage Metering 핵심 서비스
@@ -138,6 +158,18 @@ export class MeteringService {
     try {
       let delivery = claim.delivery;
       if (!delivery) {
+        if (
+          claim.rejectedInput &&
+          stableStringify(claim.rejectedInput) !==
+            stableStringify({
+              value,
+              eventId: options.eventId,
+              dimensions: options.dimensions,
+              metadata: options.metadata,
+            })
+        ) {
+          throw new DuplicateRecordProblem(idempotencyKey);
+        }
         const meter = await this.meterRegistry.getOrThrow(tenantId, meterId);
         const billingRequired = this.isBillingRequired(meter, billableMeter);
         if (billingRequired && !normalizedEventId) {
@@ -187,7 +219,7 @@ export class MeteringService {
             claim.token,
           ),
         );
-      } else if (!persistenceStarted) {
+      } else if (!persistenceStarted && !claim.rejectedInput) {
         await this.runCleanup(error, () =>
           this.idempotencyManager.abortMeteringProcessing(
             tenantId,
@@ -366,6 +398,43 @@ export class MeteringService {
     const { tenantId, meterId, value, idempotencyKey, metadata } = usageRecord;
     const quota = delivery.quota;
 
+    if (quota?.exceeded && !quota.allowOverQuota) {
+      const releaseRejectedClaim = async (): Promise<void> => {
+        await this.idempotencyManager.releaseMeteringQuotaRejection(
+          tenantId,
+          meterId,
+          idempotencyKey,
+          claim.token,
+        );
+        onClaimSettled();
+      };
+      try {
+        if (this.eventBus) {
+          await this.eventBus.publish(
+            new QuotaExceededEvent(
+              tenantId,
+              meterId,
+              quota.newUsage,
+              quota.quota,
+              idempotencyKey,
+              claim.operationId,
+            ),
+          );
+        }
+      } catch (error) {
+        await this.runCleanup(error, releaseRejectedClaim);
+        throw error;
+      }
+      await releaseRejectedClaim();
+      this.quotaManager.validateOrThrow({
+        meterId,
+        quota: quota.quota,
+        allowOverQuota: quota.allowOverQuota,
+        exceeded: quota.exceeded,
+        newUsage: quota.newUsage,
+      });
+    }
+
     if (quota?.exceeded && this.eventBus) {
       await this.eventBus.publish(
         new QuotaExceededEvent(
@@ -377,23 +446,6 @@ export class MeteringService {
           claim.operationId,
         ),
       );
-    }
-
-    if (quota?.exceeded && !quota.allowOverQuota) {
-      await this.idempotencyManager.releaseMeteringQuotaRejection(
-        tenantId,
-        meterId,
-        idempotencyKey,
-        claim.token,
-      );
-      onClaimSettled();
-      this.quotaManager.validateOrThrow({
-        meterId,
-        quota: quota.quota,
-        allowOverQuota: quota.allowOverQuota,
-        exceeded: quota.exceeded,
-        newUsage: quota.newUsage,
-      });
     }
 
     if (this.eventBus) {

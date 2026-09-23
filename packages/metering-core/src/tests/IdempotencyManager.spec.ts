@@ -78,6 +78,7 @@ function createStagedRedis(): {
         token?: string;
         operationId?: string;
         delivery?: string;
+        rejectedDelivery?: string;
         persistenceStarted?: boolean;
       }
     | undefined;
@@ -119,7 +120,7 @@ function createStagedRedis(): {
         if (!state) {
           state = { status: "PROCESSING", token, operationId };
           lifecycleValue = String(args[6]);
-          return [1, "", operationId] as unknown as TResult;
+          return [1, "", operationId, ""] as unknown as TResult;
         }
         if (
           state.status === "EVENTS_PENDING" ||
@@ -130,9 +131,14 @@ function createStagedRedis(): {
           state.operationId ??= operationId;
           lifecycleValue = String(args[6]);
           leaseExpired = false;
-          return [1, state.delivery ?? "", state.operationId] as unknown as TResult;
+          return [
+            1,
+            state.delivery ?? "",
+            state.operationId,
+            state.rejectedDelivery ?? "",
+          ] as unknown as TResult;
         }
-        return [0, "", ""] as unknown as TResult;
+        return [0, "", "", ""] as unknown as TResult;
       }
 
       if (script.includes("METERING_PERSISTENCE_STARTED")) {
@@ -176,6 +182,10 @@ function createStagedRedis(): {
           return [0, "TOKEN"] as unknown as TResult;
         }
         if (releasesQuotaRejection) {
+          if (!state.delivery) {
+            return [0, "DELIVERY"] as unknown as TResult;
+          }
+          state.rejectedDelivery = state.delivery;
           state.status = "PROCESSING";
           delete state.delivery;
           delete state.persistenceStarted;
@@ -703,7 +713,7 @@ describe("IdempotencyManager", () => {
     });
 
     it("should claim a new processing lease", async () => {
-      vi.mocked(mockRedis.eval).mockResolvedValue([1, "", "operation-1"]);
+      vi.mocked(mockRedis.eval).mockResolvedValue([1, "", "operation-1", ""]);
 
       const claim = await manager.claimMeteringProcessingOrThrow(
         "tenant-1",
@@ -731,7 +741,7 @@ describe("IdempotencyManager", () => {
     });
 
     it("should restore a durably pending delivery when claiming its lease", async () => {
-      vi.mocked(mockRedis.eval).mockResolvedValue([1, JSON.stringify(delivery), "operation-1"]);
+      vi.mocked(mockRedis.eval).mockResolvedValue([1, JSON.stringify(delivery), "operation-1", ""]);
 
       const claim = await manager.claimMeteringProcessingOrThrow(
         "tenant-1",
@@ -885,7 +895,7 @@ describe("IdempotencyManager", () => {
       );
     });
 
-    it("should discard a rejected quota delivery so a retry can re-evaluate policy", async () => {
+    it("should retain rejected input while discarding delivery for policy re-evaluation", async () => {
       const stagedRedis = createStagedRedis();
       const stagedManager = new IdempotencyManager(stagedRedis.redis, 60, 1_000);
       const firstClaim = await stagedManager.claimMeteringProcessingOrThrow(
@@ -924,6 +934,7 @@ describe("IdempotencyManager", () => {
       );
       expect(retryClaim.operationId).toBe(firstClaim.operationId);
       expect(retryClaim.delivery).toBeUndefined();
+      expect(retryClaim.rejectedInput).toEqual({ value: 1 });
     });
 
     it("should release only the current rejected quota claim", async () => {
@@ -963,7 +974,7 @@ describe("IdempotencyManager", () => {
 
     it("should keep active state alive longer than its processing lease", async () => {
       manager = new IdempotencyManager(mockRedis, 1, 30_000);
-      vi.mocked(mockRedis.eval).mockResolvedValue([1, "", "operation-1"]);
+      vi.mocked(mockRedis.eval).mockResolvedValue([1, "", "operation-1", ""]);
 
       await manager.claimMeteringProcessingOrThrow("tenant-1", "api_calls", "key-123");
 
