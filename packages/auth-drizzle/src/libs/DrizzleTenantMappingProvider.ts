@@ -1,4 +1,5 @@
 import type { TenantMappingProvider } from "@croco/auth-core";
+import type { DrizzleDeleteCapability, DrizzleInsertCapability } from "@croco/tx-drizzle";
 import type { SQLWrapper } from "drizzle-orm";
 import { eq } from "drizzle-orm";
 import {
@@ -7,23 +8,26 @@ import {
 } from "./problems/DrizzleTenantMappingProblems";
 import type { tenantMappings as tenantMappingsSchema } from "../schema";
 
-interface DrizzleDb {
-  insert: (table: unknown) => {
+type TenantMappingDatabase = DrizzleInsertCapability<
+  (table: unknown) => {
     values: (data: unknown) => {
       onConflictDoNothing: (config: { target: unknown }) => {
         returning: (selection: { tenantId: unknown }) => Promise<readonly { tenantId: string }[]>;
       };
     };
-  };
-  delete: (table: unknown) => {
-    where: (condition: SQLWrapper) => Promise<unknown>;
-  };
-  query: {
-    tenantMappings: {
-      findFirst: (args: { where: SQLWrapper }) => Promise<unknown>;
+  }
+> &
+  DrizzleDeleteCapability<
+    (table: unknown) => {
+      where: (condition: SQLWrapper) => Promise<unknown>;
+    }
+  > & {
+    query: {
+      tenantMappings: {
+        findFirst: (args: { where: SQLWrapper }) => Promise<unknown>;
+      };
     };
   };
-}
 
 interface TenantMappingRow {
   id: string;
@@ -55,7 +59,7 @@ export class DrizzleTenantMappingProvider implements TenantMappingProvider {
    * Drizzle DB와 테넌트 매핑 스키마를 받아 제공자를 초기화합니다.
    */
   constructor(
-    private readonly db: DrizzleDb,
+    private readonly db: TenantMappingDatabase,
     private readonly schema: { tenantMappings: typeof tenantMappingsSchema },
   ) {}
 

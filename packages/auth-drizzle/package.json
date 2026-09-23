@@ -45,11 +45,11 @@
   "dependencies": {
     "@croco/auth-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
-    "@croco/problems-core": "workspace:*"
+    "@croco/problems-core": "workspace:*",
+    "@croco/tx-drizzle": "workspace:*"
   },
   "devDependencies": {
     "@croco/testing": "workspace:*",
-    "@croco/tx-drizzle": "workspace:*",
     "@types/better-sqlite3": "7.6.13",
     "@types/node": "^22",
     "@types/pg": "^8.15.6",

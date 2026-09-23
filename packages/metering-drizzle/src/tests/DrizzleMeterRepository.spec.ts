@@ -11,13 +11,14 @@ import { createDrizzleTxAdapter, DrizzleHealthIndicator } from "@croco/tx-drizzl
 import Database from "better-sqlite3";
 import type { SQL } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
+import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { drizzle as drizzlePostgres } from "drizzle-orm/node-postgres";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { bigint, jsonb, pgTable, PgDialect, text, timestamp } from "drizzle-orm/pg-core";
 import { SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import {
-  type DrizzleDb,
+  type DrizzleMeterDatabase,
   DrizzleMeterRepository,
   type DrizzleMeterRepositoryConfig,
 } from "../libs/DrizzleMeterRepository";
@@ -73,9 +74,9 @@ const createLegacyRepositoryConfig = () => ({
 type DrizzleOperationName = "delete" | "insert" | "select" | "update";
 
 function createObservedDrizzleClient(
-  db: DrizzleDb,
+  db: DrizzleMeterDatabase,
   observe: (operation: DrizzleOperationName) => void,
-): DrizzleDb {
+): DrizzleMeterDatabase {
   const observedOperations = new Set<PropertyKey>(["delete", "insert", "select", "update"]);
 
   return new Proxy(db as object, {
@@ -94,10 +95,10 @@ function createObservedDrizzleClient(
         return value.apply(target, args);
       };
     },
-  }) as DrizzleDb;
+  }) as DrizzleMeterDatabase;
 }
 
-function createSqliteTransactionHarness(sqlite: Database.Database, db: DrizzleDb) {
+function createSqliteTransactionHarness(sqlite: Database.Database, db: DrizzleMeterDatabase) {
   let active = false;
   const transactionOperations: DrizzleOperationName[] = [];
   const fallbackClient = createObservedDrizzleClient(db, (operation) => {
@@ -114,7 +115,7 @@ function createSqliteTransactionHarness(sqlite: Database.Database, db: DrizzleDb
   const getClient = vi.fn(() => (active ? transactionClient : null));
   const txManagerDouble = {
     getClient,
-  } as unknown as TxManager<DrizzleDb>;
+  } as unknown as TxManager<DrizzleMeterDatabase>;
   const transactionRepository = new DrizzleMeterRepository(
     fallbackClient,
     txManagerDouble,
@@ -148,13 +149,13 @@ function createSqliteTransactionHarness(sqlite: Database.Database, db: DrizzleDb
 describe("DrizzleMeterRepository", () => {
   let repository!: DrizzleMeterRepository;
   let sqlite!: Database.Database;
-  let db!: DrizzleDb;
+  let db!: DrizzleMeterDatabase;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let txManager!: TxManager<any, any>;
 
   beforeEach(() => {
     sqlite = new Database(":memory:");
-    db = drizzle(sqlite) as DrizzleDb;
+    db = drizzle(sqlite);
 
     sqlite.exec(`
       CREATE TABLE meters (
@@ -456,8 +457,14 @@ describe("DrizzleMeterRepository", () => {
   });
 
   describe("save", () => {
+    it("should accept a SQLite client without a database cast", () => {
+      expectTypeOf<
+        BetterSQLite3Database<Record<string, never>>
+      >().toMatchTypeOf<DrizzleMeterDatabase>();
+    });
+
     it("should accept a Node PostgreSQL client without a SQLite cast", () => {
-      expectTypeOf<NodePgDatabase<Record<string, never>>>().toMatchTypeOf<DrizzleDb>();
+      expectTypeOf<NodePgDatabase<Record<string, never>>>().toMatchTypeOf<DrizzleMeterDatabase>();
 
       const createPostgresRepository = (
         pgDb: NodePgDatabase<Record<string, never>>,
@@ -495,10 +502,10 @@ describe("DrizzleMeterRepository", () => {
       });
       const pgDb = {
         insert: vi.fn().mockReturnValue({ values }),
-      } as unknown as DrizzleDb;
+      } as unknown as DrizzleMeterDatabase;
       const pgTxManager = {
         getClient: () => undefined,
-      } as unknown as TxManager<DrizzleDb>;
+      } as unknown as TxManager<DrizzleMeterDatabase>;
       const pgRepository = new DrizzleMeterRepository(pgDb, pgTxManager, {
         meterTable: metersPg,
         meterSchema: metersPg,
@@ -680,7 +687,7 @@ describe("DrizzleMeterRepository", () => {
 
     it("should return empty array when no meters", async () => {
       const sqlite2 = new Database(":memory:");
-      const db2 = drizzle(sqlite2) as DrizzleDb;
+      const db2: DrizzleMeterDatabase = drizzle(sqlite2);
       sqlite2.exec(`
         CREATE TABLE meters (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1009,10 +1016,10 @@ describe("DrizzleMeterRepository", () => {
       const values = vi.fn().mockReturnValue({ onConflictDoNothing });
       const pgDb = {
         insert: vi.fn().mockReturnValue({ values }),
-      } as unknown as DrizzleDb;
+      } as unknown as DrizzleMeterDatabase;
       const pgTxManager = {
         getClient: () => undefined,
-      } as unknown as TxManager<DrizzleDb>;
+      } as unknown as TxManager<DrizzleMeterDatabase>;
       const usageRecordSchema = {
         ...usageRecordsPg,
         metadata: { columnType },
@@ -1369,12 +1376,12 @@ describe("DrizzleMeterRepository", () => {
       const txDb = {
         insert: db.insert.bind(db),
         select: db.select.bind(db),
-      } as DrizzleDb;
+      } as DrizzleMeterDatabase;
 
       const mockTxManager = {
         getClient: () => txDb,
         run: async (fn: () => Promise<void>) => fn(),
-      } as unknown as TxManager<DrizzleDb>;
+      } as unknown as TxManager<DrizzleMeterDatabase>;
 
       const repoWithMockTx = new DrizzleMeterRepository(
         db,

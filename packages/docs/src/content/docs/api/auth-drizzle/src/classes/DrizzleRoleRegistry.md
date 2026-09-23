@@ -23,7 +23,7 @@ Drizzle DB와 역할 스키마를 받아 레지스트리를 초기화합니다.
 
 ##### db
 
-`DrizzleDb`
+`RoleDatabase`
 
 ##### schema
 

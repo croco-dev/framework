@@ -3639,12 +3639,12 @@
               "source": "./libs/DrizzleAuditLogRepository"
             },
             {
-              "name": "DrizzleAuditLogRepositoryConfig",
+              "name": "DrizzleAuditDatabase",
               "exportKind": "named",
               "source": "./libs/DrizzleAuditLogRepository"
             },
             {
-              "name": "DrizzleDb",
+              "name": "DrizzleAuditLogRepositoryConfig",
               "exportKind": "named",
               "source": "./libs/DrizzleAuditLogRepository"
             }
@@ -20252,7 +20252,7 @@
               "declarationKind": "type"
             },
             {
-              "name": "DrizzleDb",
+              "name": "DrizzleMeterDatabase",
               "exportKind": "named",
               "source": "./DrizzleMeterRepository"
             },
@@ -33509,7 +33509,17 @@
               "source": "./libs/types"
             },
             {
+              "name": "DrizzleDeleteCapability",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "DrizzleDeleteFn",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DrizzleExecuteCapability",
               "exportKind": "named",
               "source": "./libs/types"
             },
@@ -33519,12 +33529,27 @@
               "source": "./libs/DrizzleHealthIndicator"
             },
             {
+              "name": "DrizzleInsertCapability",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "DrizzleInsertFn",
               "exportKind": "named",
               "source": "./libs/types"
             },
             {
+              "name": "DrizzleSelectCapability",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
               "name": "DrizzleSelectFn",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DrizzleTransactionCapability",
               "exportKind": "named",
               "source": "./libs/types"
             },
@@ -33542,6 +33567,11 @@
               "name": "DrizzleTxAdapterOptions",
               "exportKind": "named",
               "source": "./libs/DrizzleTxAdapter"
+            },
+            {
+              "name": "DrizzleUpdateCapability",
+              "exportKind": "named",
+              "source": "./libs/types"
             },
             {
               "name": "DrizzleUpdateFn",

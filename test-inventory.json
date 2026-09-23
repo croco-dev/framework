@@ -4323,6 +4323,12 @@
       "owner": "@croco/tx-core"
     },
     {
+      "path": "packages/tx-drizzle/src/tests/DrizzleCapabilities.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/tx-drizzle"
+    },
+    {
       "path": "packages/tx-drizzle/src/tests/DrizzleHealthIndicator.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

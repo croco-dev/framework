@@ -5,33 +5,37 @@ import type {
   SessionProvider,
 } from "@croco/auth-core";
 import { AuthProviderUnavailableProblem } from "@croco/auth-core";
+import type { DrizzleSelectCapability, DrizzleUpdateCapability } from "@croco/tx-drizzle";
 import type { SQL } from "drizzle-orm";
 import { and, count, desc, eq, or } from "drizzle-orm";
 import type { sessions as sessionsSchema } from "../schema";
 
-interface DrizzleDb {
-  select: (fields: { total: SQL<number> }) => {
+type SessionDatabase = DrizzleSelectCapability<
+  (fields: { total: SQL<number> }) => {
     from: (table: typeof sessionsSchema) => {
       where: (condition?: SQL<unknown>) => Promise<{ total: number }[]>;
     };
-  };
-  update: (table: unknown) => {
-    set: (data: unknown) => {
-      where: (condition: SQL<unknown>) => Promise<unknown>;
+  }
+> &
+  DrizzleUpdateCapability<
+    (table: unknown) => {
+      set: (data: unknown) => {
+        where: (condition: SQL<unknown>) => Promise<unknown>;
+      };
+    }
+  > & {
+    query: {
+      sessions: {
+        findFirst: (args: { where: SQL<unknown> }) => Promise<unknown>;
+        findMany: (args: {
+          where?: SQL<unknown>;
+          limit?: number;
+          offset?: number;
+          orderBy?: SQL<unknown>[];
+        }) => Promise<unknown[]>;
+      };
     };
   };
-  query: {
-    sessions: {
-      findFirst: (args: { where: SQL<unknown> }) => Promise<unknown>;
-      findMany: (args: {
-        where?: SQL<unknown>;
-        limit?: number;
-        offset?: number;
-        orderBy?: SQL<unknown>[];
-      }) => Promise<unknown[]>;
-    };
-  };
-}
 
 interface SessionRow {
   id: string;
@@ -101,7 +105,7 @@ export class DrizzleSessionProvider implements SessionProvider {
    * Drizzle DB와 세션 스키마를 받아 제공자를 초기화합니다.
    */
   constructor(
-    private readonly db: DrizzleDb,
+    private readonly db: SessionDatabase,
     private readonly schema: { sessions: typeof sessionsSchema },
   ) {}
 

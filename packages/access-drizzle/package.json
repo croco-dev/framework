@@ -43,12 +43,12 @@
   },
   "dependencies": {
     "@croco/access-core": "workspace:*",
-    "@croco/framework-context": "workspace:*"
+    "@croco/framework-context": "workspace:*",
+    "@croco/tx-drizzle": "workspace:*"
   },
   "devDependencies": {
     "@croco/problems-core": "workspace:*",
     "@croco/testing": "workspace:*",
-    "@croco/tx-drizzle": "workspace:*",
     "@types/better-sqlite3": "7.6.13",
     "@types/node": "^22",
     "better-sqlite3": "^11.0.0",

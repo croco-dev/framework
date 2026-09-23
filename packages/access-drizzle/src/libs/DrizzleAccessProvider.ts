@@ -7,15 +7,14 @@ import type {
   RelationTuple,
   RevokeRequest,
 } from "@croco/access-core";
+import type { DrizzleExecuteCapability } from "@croco/tx-drizzle";
 import { sql } from "drizzle-orm";
-
-interface DrizzleDb {
-  execute: (query: SQLWrapper) => Promise<{ rows: unknown[] }>;
-}
 
 interface SQLWrapper {
   getSQL: () => unknown;
 }
+
+type AccessDatabase = DrizzleExecuteCapability<(query: SQLWrapper) => Promise<{ rows: unknown[] }>>;
 
 interface RelationTupleRow {
   object: string;
@@ -90,7 +89,7 @@ export class DrizzleAccessProvider implements AccessProvider {
   /**
    * Drizzle 실행 클라이언트를 주입해 접근 제어 저장소를 초기화합니다.
    */
-  constructor(private readonly db: DrizzleDb) {}
+  constructor(private readonly db: AccessDatabase) {}
 
   /**
    * 요청한 관계가 직접 또는 재귀 관계를 통해 허용되는지 확인합니다.

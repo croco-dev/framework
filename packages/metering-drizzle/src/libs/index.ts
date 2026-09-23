@@ -9,7 +9,7 @@ export { metersPg, metersSqlite, usageRecordsPg, usageRecordsSqlite } from "./sc
  * 미터 저장소 설정 타입입니다.
  */
 export type {
-  DrizzleDb,
+  DrizzleMeterDatabase,
   DrizzleMeterRepositoryConfig,
   MeterTable,
   UsageRecordTable,

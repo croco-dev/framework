@@ -23,7 +23,7 @@ Drizzle DB와 테넌트 매핑 스키마를 받아 제공자를 초기화합니�
 
 ##### db
 
-`DrizzleDb`
+`TenantMappingDatabase`
 
 ##### schema
 
