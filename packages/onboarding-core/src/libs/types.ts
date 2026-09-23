@@ -60,18 +60,14 @@ export interface OnboardingContext {
   onboardingId: string;
 }
 
-export type OnboardingEventType =
-  | "step_completed"
-  | "step_skipped"
-  | "onboarding_completed"
-  | "onboarding_started";
+export type OnboardingEventType = "onboarding_step_completed" | "onboarding_completed";
 
-export interface OnboardingEvent {
-  type: OnboardingEventType;
-  tenantId: string;
-  userId: string;
-  onboardingId: string;
-  stepId?: string;
-  timestamp: Date;
-  metadata?: Record<string, unknown>;
-}
+export type OnboardingEvent =
+  | {
+      type: "onboarding_step_completed";
+      properties: { onboardingId: string; stepId: string; stepTitle: string };
+    }
+  | {
+      type: "onboarding_completed";
+      properties: { onboardingId: string; completedAt?: Date };
+    };

@@ -20955,6 +20955,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "OnboardingDefinitionInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/OnboardingProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "OnboardingDefinitionNotFoundProblem",
               "exportKind": "named",
               "source": "./libs/problems/OnboardingProblems",
@@ -21011,6 +21017,11 @@
               "name": "OnboardingDefinition",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "OnboardingDefinitionInvalidReason",
+              "exportKind": "named",
+              "source": "./libs/problems/OnboardingProblems"
             },
             {
               "name": "OnboardingEvent",

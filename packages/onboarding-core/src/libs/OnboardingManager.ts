@@ -4,11 +4,12 @@ import { OnboardingStore } from "./OnboardingStore"; // oxlint-disable-line type
 import {
   DuplicateOnboardingDefinitionProblem,
   OnboardingContextRequiredProblem,
+  OnboardingDefinitionInvalidProblem,
   OnboardingDefinitionNotFoundProblem,
   OnboardingStepCompletionConflictProblem,
   OnboardingStepNotFoundProblem,
 } from "./problems/OnboardingProblems";
-import type { OnboardingDefinition, OnboardingState } from "./types";
+import type { OnboardingDefinition, OnboardingEvent, OnboardingState } from "./types";
 
 const STEP_COMPLETION_MAX_ATTEMPTS = 3;
 
@@ -24,6 +25,38 @@ export class OnboardingManager {
   register(definition: OnboardingDefinition): void {
     if (this.definitions.has(definition.id)) {
       throw new DuplicateOnboardingDefinitionProblem(definition.id);
+    }
+
+    const stepIds = new Set<string>();
+    for (const step of definition.steps) {
+      if (stepIds.has(step.id)) {
+        throw new OnboardingDefinitionInvalidProblem(definition.id, step.id, "duplicate-step-id");
+      }
+      stepIds.add(step.id);
+    }
+
+    for (const step of definition.steps) {
+      if (step.dependsOn?.some((dependencyId) => !stepIds.has(dependencyId))) {
+        throw new OnboardingDefinitionInvalidProblem(
+          definition.id,
+          step.id,
+          "unknown-step-dependency",
+        );
+      }
+      if (step.dependsOn?.length) {
+        throw new OnboardingDefinitionInvalidProblem(
+          definition.id,
+          step.id,
+          "unsupported-step-dependency",
+        );
+      }
+      if (step.featureFlagKey !== undefined) {
+        throw new OnboardingDefinitionInvalidProblem(
+          definition.id,
+          step.id,
+          "unsupported-feature-flag",
+        );
+      }
     }
 
     this.definitions.set(definition.id, definition);
@@ -74,16 +107,15 @@ export class OnboardingManager {
       }
 
       if (result.onboardingCompleted) {
-        this.captureAnalytics("onboarding_completed", {
-          onboardingId,
-          completedAt: result.state.completedAt,
+        this.captureAnalytics({
+          type: "onboarding_completed",
+          properties: { onboardingId, completedAt: result.state.completedAt },
         });
       }
 
-      this.captureAnalytics("onboarding_step_completed", {
-        onboardingId,
-        stepId,
-        stepTitle: step.title,
+      this.captureAnalytics({
+        type: "onboarding_step_completed",
+        properties: { onboardingId, stepId, stepTitle: step.title },
       });
       return;
     }
@@ -102,9 +134,9 @@ export class OnboardingManager {
     return { tenantId, userId: user.id };
   }
 
-  private captureAnalytics(event: string, properties: Record<string, unknown>): void {
+  private captureAnalytics(event: OnboardingEvent): void {
     try {
-      this.analytics.capture(event, properties);
+      this.analytics.capture(event.type, event.properties);
     } catch {
       // Analytics delivery is best-effort after persistence.
     }
