@@ -51,6 +51,7 @@ import { CrocoRouteRegistrar } from "../libs/CrocoRouteRegistrar";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
 import { bodyLimitMiddleware, mb } from "../libs/middleware/BodyLimitMiddleware";
+import { compressionMiddleware } from "../libs/middleware/CompressionMiddleware";
 import { corsMiddleware } from "../libs/middleware/CorsMiddleware";
 import { shortCircuit } from "../libs/middleware/MiddlewareShortCircuit";
 import { rateLimitHttpMiddleware } from "../libs/middleware/RateLimitMiddleware";
@@ -637,9 +638,13 @@ describe("CrocoApp", () => {
   });
 
   it("should preserve built-in CORS preflight short-circuits in the app pipeline", async () => {
+    const precedingVary: MiddlewareFunction = async (ctx, next) => {
+      ctx.raw.header("Vary", "Accept-Encoding");
+      return next();
+    };
     const app = createApp({
       controllers: [TestController],
-      middlewares: [corsMiddleware({ origins: ["https://example.com"] })],
+      middlewares: [precedingVary, corsMiddleware({ origins: ["https://example.com"] })],
       securityValidation: "off",
       devInspector: {
         exposure: "private",
@@ -660,6 +665,7 @@ describe("CrocoApp", () => {
     expect(response.status).toBe(204);
     expect(response.headers.get("access-control-allow-origin")).toBe("https://example.com");
     expect(response.headers.get("access-control-max-age")).toBe("86400");
+    expect(response.headers.get("vary")).toBe("Accept-Encoding, Origin");
     expect(snapshot.requests[0]?.timeline).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -668,7 +674,7 @@ describe("CrocoApp", () => {
           name: "corsMiddleware",
           details: expect.objectContaining({
             middleware: "corsMiddleware",
-            middlewareIndex: 1,
+            middlewareIndex: 2,
             reason: "cors-preflight",
             responseStatus: 204,
           }),
@@ -678,6 +684,189 @@ describe("CrocoApp", () => {
     expect(snapshot.requests[0]?.timeline).not.toEqual(
       expect.arrayContaining([expect.objectContaining({ kind: "handler.start" })]),
     );
+
+    const disallowedResponse = await app.fetch(
+      new Request("http://localhost/api/hello", {
+        method: "OPTIONS",
+        headers: { origin: "https://malicious.com" },
+      }),
+    );
+    expect(disallowedResponse.headers.get("vary")).toBe("Accept-Encoding, Origin");
+    expect(disallowedResponse.headers.get("access-control-allow-origin")).toBeNull();
+  });
+
+  it("should vary allowed and disallowed CORS responses without replacing existing Vary values", async () => {
+    const downstreamVary: MiddlewareFunction = async (ctx, next) => {
+      const response = await next();
+      response?.headers.set("Vary", "Accept-Language");
+      ctx.res.headers.vary = "Accept-Language";
+      return response;
+    };
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: [corsMiddleware({ origins: ["https://example.com"] }), downstreamVary],
+    });
+
+    for (const origin of ["https://example.com", "https://malicious.com", undefined]) {
+      const response = await app.fetch(
+        new Request("http://localhost/api/hello", {
+          headers: origin ? { origin } : {},
+        }),
+      );
+
+      expect(response.headers.get("vary")?.split(", ")).toEqual(
+        expect.arrayContaining(["Accept-Language", "Origin"]),
+      );
+      expect(response.headers.get("access-control-allow-origin")).toBe(
+        origin === "https://example.com" ? origin : null,
+      );
+    }
+  });
+
+  it("should preserve a wildcard Vary response", async () => {
+    const downstreamVary: MiddlewareFunction = async (_ctx, next) => {
+      const response = await next();
+      response?.headers.set("Vary", "*");
+      return response;
+    };
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: [corsMiddleware({ origins: ["https://example.com"] }), downstreamVary],
+    });
+
+    const response = await app.fetch(
+      new Request("http://localhost/api/hello", {
+        headers: { origin: "https://example.com" },
+      }),
+    );
+
+    expect(response.headers.get("vary")).toBe("*");
+  });
+
+  it("should retain Origin when compression also varies the response", async () => {
+    for (const middlewares of [
+      [
+        corsMiddleware({ origins: ["https://example.com"] }),
+        compressionMiddleware({ threshold: 1, encodings: ["gzip"] }),
+      ],
+      [
+        compressionMiddleware({ threshold: 1, encodings: ["gzip"] }),
+        corsMiddleware({ origins: ["https://example.com"] }),
+      ],
+    ]) {
+      const app = createApp({ controllers: [TestController], middlewares });
+      const response = await app.fetch(
+        new Request("http://localhost/api/hello", {
+          headers: { origin: "https://example.com", "accept-encoding": "gzip" },
+        }),
+      );
+
+      expect(response.headers.get("vary")?.split(", ")).toEqual(
+        expect.arrayContaining(["Origin", "Accept-Encoding"]),
+      );
+    }
+  });
+
+  it("should vary a thrown Response by Origin", async () => {
+    const throwResponse: MiddlewareFunction = (ctx) => {
+      throw ctx.raw.text("rejected", 200, {
+        Vary: "Accept-Language",
+        "Cache-Control": "public, max-age=60",
+      });
+    };
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: [corsMiddleware({ origins: ["https://example.com"] }), throwResponse],
+    });
+
+    const response = await app.fetch(
+      new Request("http://localhost/api/hello", {
+        headers: { origin: "https://example.com" },
+      }),
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("access-control-allow-origin")).toBe("https://example.com");
+    expect(response.headers.get("cache-control")).toBe("public, max-age=60");
+    expect(response.headers.get("vary")?.split(", ")).toEqual(
+      expect.arrayContaining(["Accept-Language", "Origin"]),
+    );
+  });
+
+  it("should preserve Vary values appended by middleware outside CORS", async () => {
+    const appendVary: MiddlewareFunction = async (_ctx, next) => {
+      const response = await next();
+      response?.headers.append("Vary", "Accept-Language");
+      return response;
+    };
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: [appendVary, corsMiddleware({ origins: ["https://example.com"] })],
+    });
+
+    const response = await app.fetch(
+      new Request("http://localhost/api/hello", {
+        headers: { origin: "https://example.com" },
+      }),
+    );
+
+    expect(response.headers.get("vary")?.split(", ")).toEqual(
+      expect.arrayContaining(["Accept-Language", "Origin"]),
+    );
+  });
+
+  it("should retain Origin when downstream middleware replaces the raw Vary header", async () => {
+    const replaceVary: MiddlewareFunction = async (ctx, next) => {
+      ctx.raw.header("Vary", "Accept-Language");
+      return next();
+    };
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: [corsMiddleware({ origins: ["https://example.com"] }), replaceVary],
+    });
+
+    for (const origin of ["https://example.com", "https://malicious.com"]) {
+      const response = await app.fetch(
+        new Request("http://localhost/api/hello", {
+          headers: { origin },
+        }),
+      );
+
+      expect(response.headers.get("vary")?.split(", ")).toEqual(
+        expect.arrayContaining(["Accept-Language", "Origin"]),
+      );
+    }
+  });
+
+  it("should retain Origin when outer middleware replaces the response and raw Vary header", async () => {
+    const replaceResponse: MiddlewareFunction = async (ctx, next) => {
+      await next();
+      ctx.raw.header("Vary", "Accept-Language");
+      const preflight = ctx.req.method === "OPTIONS";
+      return new Response(preflight ? null : "localized", {
+        status: preflight ? 204 : 200,
+        headers: { Vary: "Accept-Language" },
+      });
+    };
+    const app = createApp({
+      controllers: [TestController],
+      middlewares: [replaceResponse, corsMiddleware({ origins: ["https://example.com"] })],
+    });
+
+    for (const method of ["GET", "OPTIONS"]) {
+      const response = await app.fetch(
+        new Request("http://localhost/api/hello", {
+          method,
+          headers: { origin: "https://example.com" },
+        }),
+      );
+
+      expect(response.status).toBe(method === "OPTIONS" ? 204 : 200);
+      expect(response.headers.get("access-control-allow-origin")).toBe("https://example.com");
+      expect(response.headers.get("vary")?.split(", ")).toEqual(
+        expect.arrayContaining(["Accept-Language", "Origin"]),
+      );
+    }
   });
 
   it("should explicitly short-circuit middleware with a runtime inspection reason", async () => {

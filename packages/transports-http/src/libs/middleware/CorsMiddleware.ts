@@ -1,6 +1,7 @@
 import type { MiddlewareFunction } from "../types";
 import { shortCircuit } from "./MiddlewareShortCircuit";
 import { markSecurityMiddleware } from "./SecurityMiddlewareMarker";
+import { mergeVaryHeader, setVaryHeader } from "./VaryHeader";
 
 export type CorsOptions = {
   origins: string[];
@@ -28,38 +29,52 @@ export const corsMiddleware = (options: CorsOptions): MiddlewareFunction => {
   } = options;
 
   const middleware: MiddlewareFunction = async (ctx, next) => {
-    const requestOrigin = ctx.header("origin");
+    setOriginVary(ctx);
+    try {
+      const requestOrigin = ctx.header("origin");
 
-    if (!requestOrigin || !origins.includes(requestOrigin)) {
+      if (!requestOrigin || !origins.includes(requestOrigin)) {
+        await next();
+        return;
+      }
+
+      const isPreflight = ctx.req.method === "OPTIONS";
+
+      ctx.raw.header("Access-Control-Allow-Origin", requestOrigin);
+      ctx.raw.header("Access-Control-Allow-Methods", methods.join(", "));
+
+      if (allowedHeaders && allowedHeaders.length > 0) {
+        ctx.raw.header("Access-Control-Allow-Headers", allowedHeaders.join(", "));
+      }
+
+      if (exposedHeaders && exposedHeaders.length > 0) {
+        ctx.raw.header("Access-Control-Expose-Headers", exposedHeaders.join(", "));
+      }
+
+      if (credentials) {
+        ctx.raw.header("Access-Control-Allow-Credentials", "true");
+      }
+
+      if (isPreflight) {
+        ctx.raw.header("Access-Control-Max-Age", String(maxAge));
+        ctx.res.status = 204;
+        return shortCircuit("cors-preflight");
+      }
+
       await next();
-      return;
+    } finally {
+      setOriginVary(ctx);
     }
-
-    const isPreflight = ctx.req.method === "OPTIONS";
-
-    ctx.raw.header("Access-Control-Allow-Origin", requestOrigin);
-    ctx.raw.header("Access-Control-Allow-Methods", methods.join(", "));
-
-    if (allowedHeaders && allowedHeaders.length > 0) {
-      ctx.raw.header("Access-Control-Allow-Headers", allowedHeaders.join(", "));
-    }
-
-    if (exposedHeaders && exposedHeaders.length > 0) {
-      ctx.raw.header("Access-Control-Expose-Headers", exposedHeaders.join(", "));
-    }
-
-    if (credentials) {
-      ctx.raw.header("Access-Control-Allow-Credentials", "true");
-    }
-
-    if (isPreflight) {
-      ctx.raw.header("Access-Control-Max-Age", String(maxAge));
-      ctx.res.status = 204;
-      return shortCircuit("cors-preflight");
-    }
-
-    await next();
   };
 
   return markSecurityMiddleware(middleware, "corsMiddleware");
 };
+
+function setOriginVary(ctx: Parameters<MiddlewareFunction>[0]): void {
+  const headers = ctx.raw.res.headers;
+  mergeVaryHeader(headers, ctx.res.headers["vary"] ?? "");
+  setVaryHeader(headers, "Origin");
+  const vary = headers.get("Vary") ?? "Origin";
+  ctx.raw.header("Vary", vary);
+  ctx.res.headers["vary"] = vary;
+}

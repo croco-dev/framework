@@ -22,6 +22,7 @@ import { HttpContext } from "./HttpContext";
 import { isMiddlewareShortCircuit } from "./middleware/MiddlewareShortCircuit";
 import { getSecurityMiddlewareExportName } from "./middleware/SecurityMiddlewareMarker";
 import { parseTraceParent, type TraceParent, telemetryMiddleware } from "./middleware/telemetry";
+import { mergeVaryHeader } from "./middleware/VaryHeader";
 import {
   createRuntimeContext,
   getRuntimeContextInitFromEnv,
@@ -175,7 +176,8 @@ export class CrocoRouteRegistrar {
           return response;
         } catch (error) {
           if (error instanceof Response) {
-            const outcome = error.status >= 400 ? "failed" : "succeeded";
+            const response = this.withContextResponseHeaders(ctx, error);
+            const outcome = response.status >= 400 ? "failed" : "succeeded";
             this.recordInspectionEvent(inspector, {
               kind: "middleware.end",
               outcome,
@@ -185,11 +187,11 @@ export class CrocoRouteRegistrar {
               details: {
                 traceId: ctx.get("traceId"),
                 telemetryDegraded: ctx.get("telemetryDegraded") ?? false,
-                responseStatus: error.status,
+                responseStatus: response.status,
               },
             });
-            this.finishInspection(inspector, inspection?.id, error, outcome, ctx);
-            return error;
+            this.finishInspection(inspector, inspection?.id, response, outcome, ctx);
+            return response;
           }
 
           this.recordRouteError(inspector, error);
@@ -459,12 +461,20 @@ export class CrocoRouteRegistrar {
     let hasContextHeaders = false;
 
     ctx.raw.res.headers.forEach((value, key) => {
-      headers.set(key, value);
+      if (key === "vary") {
+        mergeVaryHeader(headers, value);
+      } else {
+        headers.set(key, value);
+      }
       hasContextHeaders = true;
     });
 
     for (const [key, value] of Object.entries(ctx.res.headers)) {
-      headers.set(key, value);
+      if (key.toLowerCase() === "vary") {
+        mergeVaryHeader(headers, value);
+      } else {
+        headers.set(key, value);
+      }
       hasContextHeaders = true;
     }
 

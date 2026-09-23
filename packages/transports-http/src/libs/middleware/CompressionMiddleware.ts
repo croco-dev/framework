@@ -1,4 +1,5 @@
 import type { MiddlewareFunction } from "../types";
+import { setVaryHeader } from "./VaryHeader";
 
 export type CompressionOptions = {
   threshold?: number;
@@ -46,7 +47,7 @@ export const compressionMiddleware = (options: CompressionOptions = {}): Middlew
 
     ctx.res.status = response.status;
     ctx.res.headers["content-encoding"] = encoding;
-    ctx.res.headers.vary = headers.get("Vary") ?? "Accept-Encoding";
+    ctx.res.headers["vary"] = headers.get("Vary") ?? "Accept-Encoding";
     delete ctx.res.headers["content-length"];
 
     return new Response(toResponseBody(compressed), {
@@ -98,22 +99,6 @@ function selectEncoding(
 function getResponseBody(ctx: Parameters<MiddlewareFunction>[0]): Buffer | null {
   const bufferedBody = readBufferedResponseBody(ctx);
   return bufferedBody ? Buffer.from(bufferedBody) : null;
-}
-
-function setVaryHeader(headers: Headers, value: string): void {
-  const currentValue = headers.get("Vary");
-
-  if (!currentValue) {
-    headers.set("Vary", value);
-    return;
-  }
-
-  const existingValues = currentValue.split(",").map((entry) => entry.trim().toLowerCase());
-  if (existingValues.includes("*") || existingValues.includes(value.toLowerCase())) {
-    return;
-  }
-
-  headers.set("Vary", `${currentValue}, ${value}`);
 }
 
 function toResponseBody(body: Buffer): Uint8Array<ArrayBuffer> {
