@@ -454,3 +454,31 @@ Idempotency key 확보 (없으면 생성)
 #### Returns
 
 `Promise`\<`void`\>
+
+---
+
+### releaseMeteringQuotaRejection()
+
+> **releaseMeteringQuotaRejection**(`tenantId`, `meterId`, `idempotencyKey`, `token`): `Promise`\<`void`\>
+
+#### Parameters
+
+##### tenantId
+
+`string`
+
+##### meterId
+
+`string`
+
+##### idempotencyKey
+
+`string`
+
+##### token
+
+[`IdempotencyClaim`](/api/metering-core/src/type-aliases/idempotencyclaim/)
+
+#### Returns
+
+`Promise`\<`void`\>
