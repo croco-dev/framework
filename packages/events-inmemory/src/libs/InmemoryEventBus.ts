@@ -225,9 +225,9 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
       : undefined;
   }
 
-  async publish(event: TEvent): Promise<void> {
+  async publish(event: TEvent, options?: { signal?: AbortSignal }): Promise<void> {
     try {
-      await this.publishEvent(event);
+      await this.publishEvent(event, options?.signal);
       EventBusConfig.getStats()?.publish(false);
     } catch (error) {
       if (error instanceof EventPublishDroppedProblem) {
@@ -239,7 +239,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
     }
   }
 
-  private async publishEvent(event: TEvent): Promise<void> {
+  private async publishEvent(event: TEvent, signal?: AbortSignal): Promise<void> {
     this.assertIntakeOpen();
     const eventName = event.eventName;
     const traceInfo = getActiveTraceInfo();
@@ -266,7 +266,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
           attributes: this.createPublishSpanAttributes(event, traceInfo, subscribers.length),
         },
         async (publishSpan: Span) =>
-          this.finishPublishSpan(publishSpan, subscribers, baseEvent, eventName),
+          this.finishPublishSpan(publishSpan, subscribers, baseEvent, eventName, signal),
       );
       this.recordInspectionEvent(inspector, {
         kind: "event.publish",
@@ -385,9 +385,10 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
     subscribers: RegisteredSubscriber<TEvent>[],
     baseEvent: TEvent,
     eventName: string,
+    signal?: AbortSignal,
   ): Promise<void> {
     try {
-      await this.executeWithBackpressure(subscribers, baseEvent, eventName);
+      await this.executeWithBackpressure(subscribers, baseEvent, eventName, signal);
       publishSpan.setStatus({ code: SpanStatusCode.OK });
     } catch (error) {
       const normalizedError = this.normalizeError(error);
@@ -412,6 +413,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
     subscribers: RegisteredSubscriber<TEvent>[],
     baseEvent: TEvent,
     eventName: string,
+    signal?: AbortSignal,
   ): Promise<void> {
     const failures: EventPublishFailure[] = [];
     let deliveredCount = 0;
@@ -432,7 +434,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
             throw new BackpressureExceededProblem(this.runningHandlers.size);
           }
           case "block": {
-            await this.waitForSlot();
+            await this.waitForSlot(signal);
             break;
           }
           default:

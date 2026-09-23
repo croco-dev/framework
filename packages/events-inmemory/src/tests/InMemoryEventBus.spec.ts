@@ -1595,26 +1595,100 @@ describe("InMemoryEventBus", () => {
       }
     });
 
-    it("should reject waitForSlot when AbortSignal is aborted", async () => {
+    it("should abort a blocked publish without cancelling an active delivery", async () => {
+      const handlerStarted = createDeferred();
+      const releaseHandler = createDeferred();
+      const handled: string[] = [];
+
+      class BlockingHandler implements EventHandler<TestEvent> {
+        async handle(event: TestEvent): Promise<void> {
+          if (event.message === "first") {
+            handlerStarted.resolve();
+            await releaseHandler.promise;
+          }
+          handled.push(event.message);
+        }
+      }
+
+      const bus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
+      Container.set(BlockingHandler, new BlockingHandler());
+      bus.subscribe({ eventName: "TestEvent", handlerClass: BlockingHandler });
+
+      const firstPublish = bus.publish(new TestEvent("first"));
+      await handlerStarted.promise;
+
       const controller = new AbortController();
-      const abortBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
-      const waitForSlot = abortBus as unknown as {
-        waitForSlot(signal?: AbortSignal): Promise<void>;
-        runningHandlers: Map<string, unknown>;
-      };
-
-      waitForSlot.runningHandlers.set("handler-1", {
-        eventName: "TestEvent",
-        handlerName: "BlockingHandler",
-        startTime: Date.now(),
-      });
-
-      const waitPromise = waitForSlot.waitForSlot(controller.signal);
+      const blockedPublish = bus.publish(new TestEvent("blocked"), { signal: controller.signal });
       controller.abort();
 
-      await expect(waitPromise).rejects.toMatchObject({
+      await expect(blockedPublish).rejects.toMatchObject({
         message: "Backpressure wait aborted",
       });
+      releaseHandler.resolve();
+      await firstPublish;
+      await bus.publish(new TestEvent("next"));
+
+      expect(handled).toEqual(["first", "next"]);
+    });
+
+    it("should reject a blocked publish with a previously aborted signal", async () => {
+      const handlerStarted = createDeferred();
+      const releaseHandler = createDeferred();
+      const handled: string[] = [];
+
+      class BlockingHandler implements EventHandler<TestEvent> {
+        async handle(event: TestEvent): Promise<void> {
+          handlerStarted.resolve();
+          await releaseHandler.promise;
+          handled.push(event.message);
+        }
+      }
+
+      const bus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
+      Container.set(BlockingHandler, new BlockingHandler());
+      bus.subscribe({ eventName: "TestEvent", handlerClass: BlockingHandler });
+
+      const firstPublish = bus.publish(new TestEvent("first"));
+      await handlerStarted.promise;
+
+      const controller = new AbortController();
+      controller.abort();
+      await expect(
+        bus.publish(new TestEvent("blocked"), { signal: controller.signal }),
+      ).rejects.toMatchObject({
+        message: "Backpressure wait aborted",
+      });
+
+      releaseHandler.resolve();
+      await firstPublish;
+      expect(handled).toEqual(["first"]);
+    });
+
+    it("should complete a delivery that started before its publish signal aborted", async () => {
+      const handlerStarted = createDeferred();
+      const releaseHandler = createDeferred();
+      const handled: string[] = [];
+
+      class BlockingHandler implements EventHandler<TestEvent> {
+        async handle(event: TestEvent): Promise<void> {
+          handlerStarted.resolve();
+          await releaseHandler.promise;
+          handled.push(event.message);
+        }
+      }
+
+      const bus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
+      Container.set(BlockingHandler, new BlockingHandler());
+      bus.subscribe({ eventName: "TestEvent", handlerClass: BlockingHandler });
+
+      const controller = new AbortController();
+      const publishing = bus.publish(new TestEvent("delivered"), { signal: controller.signal });
+      await handlerStarted.promise;
+      controller.abort();
+      releaseHandler.resolve();
+
+      await expect(publishing).resolves.toBeUndefined();
+      expect(handled).toEqual(["delivered"]);
     });
 
     it("should wait for an available slot before the default timeout expires", async () => {
