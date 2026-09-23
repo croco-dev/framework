@@ -9,9 +9,10 @@ export const DI_MANIFEST_VERSION = "croco.di-compiler.manifest.v1" as const;
 export const DI_PACKAGE_DESCRIPTOR_VERSION = "croco.di-package-descriptor.v1" as const;
 
 const DEFAULT_SCAN_DIRS = ["src"];
-const DEFAULT_EXCLUDES = [
-  "**/*.test.ts",
-  "**/*.spec.ts",
+export const DEFAULT_DI_SCAN_EXCLUDES = [
+  "**/*.test.*",
+  "**/*.spec.*",
+  "**/*.bench.*",
   "**/__tests__/**",
   "**/fixtures/**",
   "**/benchmarks/**",
@@ -193,7 +194,7 @@ export function collectDiGraphWatchInputs(
 ): { readonly watchFiles: readonly string[]; readonly watchDirs: readonly string[] } {
   const baseDir = path.resolve(options.baseDir ?? process.cwd());
   const scanDirs = options.scanDirs ?? DEFAULT_SCAN_DIRS;
-  const excludes = options.exclude ?? DEFAULT_EXCLUDES;
+  const excludes = options.exclude ?? DEFAULT_DI_SCAN_EXCLUDES;
   const requireFromApplication = createRequire(path.join(baseDir, "package.json"));
   const descriptorFiles = (options.packageDescriptors ?? []).flatMap((descriptor) => {
     try {
@@ -241,7 +242,7 @@ export function collectDiGraphWatchInputs(
 export function compileDiGraph(options: DiCompilerOptions = {}): DiCompilerResult {
   const baseDir = path.resolve(options.baseDir ?? process.cwd());
   const scanDirs = [...(options.scanDirs ?? DEFAULT_SCAN_DIRS)];
-  const excludes = [...(options.exclude ?? DEFAULT_EXCLUDES)];
+  const excludes = [...(options.exclude ?? DEFAULT_DI_SCAN_EXCLUDES)];
   const files = findCandidateFiles(baseDir, scanDirs, excludes);
   const compilerOptions = readCompilerOptions(baseDir, options.tsconfig);
   const moduleReferences = (options.moduleProviders ?? []).flatMap((provider) => [
@@ -1163,18 +1164,19 @@ function getDeclaredScope(
     )
       fail();
     const scopeProperty = options.properties.find(
-      (property): property is ts.PropertyAssignment =>
-        ts.isPropertyAssignment(property) &&
+      (property) =>
+        property.name &&
         ((ts.isIdentifier(property.name) && property.name.text === "scope") ||
           (ts.isStringLiteral(property.name) && property.name.text === "scope")),
     );
-    if (scopeProperty && ts.isStringLiteral(scopeProperty.initializer)) {
-      const scope = scopeProperty.initializer.text;
-      if (scope === "singleton" || scope === "request" || scope === "transient") {
-        return scope;
-      }
+    if (!scopeProperty) continue;
+    if (!ts.isPropertyAssignment(scopeProperty)) return fail();
+    if (!ts.isStringLiteral(scopeProperty.initializer)) return fail();
+    const scope = scopeProperty.initializer.text;
+    if (scope === "singleton" || scope === "request" || scope === "transient") {
+      return scope;
     }
-    if (scopeProperty) fail();
+    fail();
   }
   return "singleton";
 }

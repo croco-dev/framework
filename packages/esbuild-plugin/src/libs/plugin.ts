@@ -3,6 +3,7 @@ import * as path from "node:path";
 import type * as esbuild from "esbuild";
 import * as ts from "typescript";
 import {
+  DEFAULT_DI_SCAN_EXCLUDES,
   DiCompilerError,
   collectDiGraphWatchInputs,
   compileDiGraph,
@@ -69,18 +70,7 @@ function normalizeConfig(config: CrocoPluginConfig | undefined): NormalizedCroco
     reflectMetadata: config?.reflectMetadata ?? true,
     scan: {
       dirs: config?.scan?.dirs ?? ["src"],
-      exclude: config?.scan?.exclude ?? [
-        "**/*.test.ts",
-        "**/*.spec.ts",
-        "**/__tests__/**",
-        "**/fixtures/**",
-        "**/benchmarks/**",
-        "**/scripts/**",
-        "**/.croco/**",
-        "**/generated/**",
-        "**/client/**",
-        "**/node_modules/**",
-      ],
+      exclude: config?.scan?.exclude ?? DEFAULT_DI_SCAN_EXCLUDES,
     },
     di: {
       enabled: config?.di?.enabled ?? true,

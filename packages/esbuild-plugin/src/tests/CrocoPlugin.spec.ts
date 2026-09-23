@@ -99,6 +99,21 @@ describe("crocoPlugin", () => {
     );
   });
 
+  it("does not register decorated test or benchmark modules from default scans", () => {
+    const { entry } = createProject();
+    const decorated = `import { Component } from "@croco/framework-context"; @Component() export class Excluded {}`;
+    fs.writeFileSync(path.join(TEMP_DIR, "src", "Excluded.spec.tsx"), decorated);
+    fs.writeFileSync(path.join(TEMP_DIR, "src", "Excluded.bench.ts"), decorated);
+    const build = createMockBuild(entry);
+    crocoPlugin().setup(build);
+
+    vi.mocked(build.onStart).mock.calls[0]?.[0]();
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(TEMP_DIR, ".croco", "di.manifest.json"), "utf8"),
+    ) as { providers: { exportName: string }[] };
+    expect(manifest.providers.map((provider) => provider.exportName)).toEqual(["Service"]);
+  });
+
   it("regenerates when providers are added, renamed, or removed", () => {
     const { component } = createProject();
     const build = createMockBuild("src/index.ts");

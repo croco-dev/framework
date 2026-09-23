@@ -285,6 +285,14 @@ describe("compileDiGraph", () => {
       expect(() => compileDiGraph({ baseDir: TEMP_DIR })).toThrow("must be static");
     }
     writeProject({
+      "src/Service.ts": `import { Component } from "@croco/framework-context"; @Component({ get scope(): "request" { return "request"; } }) export class Service {}`,
+    });
+    expect(() => compileDiGraph({ baseDir: TEMP_DIR })).toThrowError(
+      expect.objectContaining<Partial<DiCompilerError>>({
+        diagnostics: [expect.objectContaining({ code: "CROCO_DI_COMPILE_002" })],
+      }),
+    );
+    writeProject({
       "src/Service.ts": `import { Component } from "@croco/framework-context"; class Base { constructor(value: string) {} } @Component() export class Service extends Base {}`,
     });
     expect(() => compileDiGraph({ baseDir: TEMP_DIR })).toThrow(
@@ -853,7 +861,7 @@ describe("compileDiGraph", () => {
     expect(app.code).not.toContain("typedi");
   }, 30_000);
 
-  it("excludes tests, fixtures, scripts, generated files, and client code by default", () => {
+  it("excludes tests, benchmarks, fixtures, scripts, generated files, and client code by default", () => {
     const service = `
       import { Component } from "@croco/framework-context";
       @Component()
@@ -862,6 +870,13 @@ describe("compileDiGraph", () => {
     writeProject({
       "src/Included.ts": service,
       "src/Excluded.spec.ts": service,
+      "src/Excluded.test.tsx": service,
+      "src/Excluded.spec.mts": service,
+      "src/Excluded.test.cts": service,
+      "src/Excluded.bench.ts": service,
+      "src/Excluded.bench.tsx": service,
+      "src/Excluded.bench.mts": service,
+      "src/Excluded.bench.cts": service,
       "src/fixtures/Excluded.ts": service,
       "src/scripts/Excluded.ts": service,
       "src/generated/Excluded.ts": service,
