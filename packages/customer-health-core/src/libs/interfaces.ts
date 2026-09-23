@@ -9,6 +9,14 @@ import type {
   TrendPeriod,
 } from "./types";
 
+export type HealthTransitionCommitResult =
+  | {
+      readonly committed: true;
+      /** The transition joined a caller-owned transaction and its events must remain pending. */
+      readonly eventPublicationDeferred?: true;
+    }
+  | { readonly committed: false; readonly latest: TenantHealthScore | null };
+
 export abstract class SignalProvider {
   static readonly token = new Token<SignalProvider>("SignalProvider");
   abstract readonly category: SignalCategory;
@@ -17,14 +25,17 @@ export abstract class SignalProvider {
 
 export abstract class HealthScoreStore {
   static readonly token = new Token<HealthScoreStore>("HealthScoreStore");
+  /**
+   * Persists one optimistic transition and assigns its CAS version to `score`.
+   * A version assigned inside a caller-owned transaction is provisional until that transaction
+   * commits. Discard affected snapshots after rollback or an unknown transaction outcome, then
+   * reload the latest committed score before retrying.
+   */
   abstract saveTransition(
     score: TenantHealthScore,
     previous: TenantHealthScore | null,
     eventIntents: readonly HealthTransitionEventIntent[],
-  ): Promise<
-    | { readonly committed: true }
-    | { readonly committed: false; readonly latest: TenantHealthScore | null }
-  >;
+  ): Promise<HealthTransitionCommitResult>;
   abstract listPendingEventIntents(
     tenantId: string,
     limit?: number,

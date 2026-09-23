@@ -3,6 +3,7 @@ import { cloneTenantHealthScore } from "./healthScoreSnapshot";
 import { HealthScoreStore } from "./interfaces";
 import { cloneHealthTransitionEventIntent } from "./eventIntent";
 import type { HealthTransitionEventIntent } from "./eventIntent";
+import type { HealthTransitionCommitResult } from "./interfaces";
 import type { TenantHealthScore, TrendPeriod } from "./types";
 import { HealthEventIntentConflictProblem } from "./problems/HealthProblems";
 
@@ -16,10 +17,7 @@ export class InMemoryHealthScoreStore extends HealthScoreStore {
     score: TenantHealthScore,
     previous: TenantHealthScore | null,
     eventIntents: readonly HealthTransitionEventIntent[],
-  ): Promise<
-    | { readonly committed: true }
-    | { readonly committed: false; readonly latest: TenantHealthScore | null }
-  > {
+  ): Promise<HealthTransitionCommitResult> {
     const { tenantId } = score;
     const history = this.store.get(tenantId) ?? [];
     const latest = history.at(-1) ?? null;

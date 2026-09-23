@@ -4,6 +4,7 @@ import {
   type HealthTransitionEventIntent,
   type TenantHealthScore,
 } from "@croco/customer-health-core";
+import type { TxManager } from "@croco/tx-core";
 import { describe, expect, it, vi } from "vitest";
 import { DrizzleHealthScoreStore } from "../libs/DrizzleHealthScoreStore";
 import type { DrizzleHealthClient } from "../libs/DrizzleHealthScoreStore";
@@ -11,7 +12,7 @@ import { tenantHealthEventIntents, tenantHealthScores } from "../libs/schema";
 
 describe("DrizzleHealthScoreStore", () => {
   const conformance = createHealthScoreStoreConformanceSuite({
-    createStore: () => new DrizzleHealthScoreStore(createStatefulClient()),
+    createStore: () => createStore(createStatefulClient()),
   });
 
   for (const testCase of conformance.cases) {
@@ -26,7 +27,7 @@ describe("DrizzleHealthScoreStore", () => {
     const transaction = createTransaction([], (table: unknown) => ({
       values: table === tenantHealthScores ? scoreValues : intentValues,
     }));
-    const store = new DrizzleHealthScoreStore({ transaction } as unknown as DrizzleHealthClient);
+    const store = createStore({ transaction } as unknown as DrizzleHealthClient);
     const score = createScore(50, "critical", "2026-03-15T11:00:00Z");
     const statusIntent: HealthTransitionEventIntent = {
       eventId: "event-1",
@@ -78,12 +79,62 @@ describe("DrizzleHealthScoreStore", () => {
     ]);
   });
 
+  it("joins the active transaction for the advisory lock and transition writes", async () => {
+    const returning = vi.fn().mockResolvedValue([{ transitionSequence: BigInt(1) }]);
+    const values = vi.fn().mockReturnValue({ returning });
+    const txClient = createTransactionClient([], vi.fn().mockReturnValue({ values }));
+    const fallbackTransaction = vi.fn(() => {
+      throw new Error("fallback transaction used");
+    });
+    const txManager = {
+      getClient: vi.fn().mockReturnValue(txClient),
+      isInTransaction: vi.fn().mockReturnValue(true),
+      run: vi.fn(async (operation: () => Promise<unknown>) => operation()),
+    } as unknown as TxManager<DrizzleHealthClient>;
+    const store = new DrizzleHealthScoreStore(
+      { transaction: fallbackTransaction } as unknown as DrizzleHealthClient,
+      txManager,
+    );
+    const score = createScore(85, "healthy", "2026-03-15T10:00:00Z");
+
+    await expect(store.saveTransition(score, null, [])).resolves.toEqual({
+      committed: true,
+      eventPublicationDeferred: true,
+    });
+
+    expect(score.transitionVersion).toBe("1");
+    expect(txClient.execute).toHaveBeenCalledTimes(1);
+    expect(txClient.insert).toHaveBeenCalledWith(tenantHealthScores);
+    expect(fallbackTransaction).not.toHaveBeenCalled();
+  });
+
+  it("does not assign a transition version when the transaction fails", async () => {
+    const returning = vi.fn().mockResolvedValue([{ transitionSequence: BigInt(1) }]);
+    const values = vi.fn().mockReturnValue({ returning });
+    const txClient = createTransactionClient([], vi.fn().mockReturnValue({ values }));
+    const transactionFailure = new Error("transaction commit failed");
+    const txManager = {
+      getClient: vi.fn().mockReturnValue(txClient),
+      isInTransaction: vi.fn().mockReturnValue(false),
+      run: vi.fn(async (operation: () => Promise<unknown>) => {
+        await operation();
+        throw transactionFailure;
+      }),
+    } as unknown as TxManager<DrizzleHealthClient>;
+    const store = new DrizzleHealthScoreStore({} as DrizzleHealthClient, txManager);
+    const score = createScore(85, "healthy", "2026-03-15T10:00:00Z");
+
+    await expect(store.saveTransition(score, null, [])).rejects.toBe(transactionFailure);
+
+    expect(score.transitionVersion).toBeUndefined();
+  });
+
   it("does not create an intent insert for a no-event transition", async () => {
     const returning = vi.fn().mockResolvedValue([{ transitionSequence: BigInt(1) }]);
     const values = vi.fn().mockReturnValue({ returning });
     const insert = vi.fn().mockReturnValue({ values });
     const transaction = createTransaction([], insert);
-    const store = new DrizzleHealthScoreStore({ transaction } as unknown as DrizzleHealthClient);
+    const store = createStore({ transaction } as unknown as DrizzleHealthClient);
 
     const result = await store.saveTransition(
       createScore(85, "healthy", "2026-03-15T10:00:00Z"),
@@ -109,7 +160,7 @@ describe("DrizzleHealthScoreStore", () => {
         orderByExpression = value;
       },
     );
-    const store = new DrizzleHealthScoreStore({ transaction } as unknown as DrizzleHealthClient);
+    const store = createStore({ transaction } as unknown as DrizzleHealthClient);
 
     const result = await store.saveTransition(
       createScore(50, "critical", "2026-03-15T12:00:00Z"),
@@ -124,18 +175,23 @@ describe("DrizzleHealthScoreStore", () => {
 
   it("loads pending intents in committed transition and declaration order", async () => {
     const orderBy = vi.fn().mockReturnValue({ limit: vi.fn().mockResolvedValue([]) });
-    const db = {
+    const txClient = {
       select: vi.fn().mockReturnValue({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({ orderBy }),
         }),
       }),
     } as unknown as DrizzleHealthClient;
-    const store = new DrizzleHealthScoreStore(db);
+    const fallbackSelect = vi.fn();
+    const store = createStore(
+      { select: fallbackSelect } as unknown as DrizzleHealthClient,
+      txClient,
+    );
 
     await store.listPendingEventIntents("tenant-1");
 
     expect(orderBy).toHaveBeenCalledTimes(1);
+    expect(fallbackSelect).not.toHaveBeenCalled();
     const ordering = orderBy.mock.calls[0];
     expect(ordering).toHaveLength(2);
     expect(containsQueryChunk(ordering?.[0], tenantHealthEventIntents.transitionSequence)).toBe(
@@ -143,7 +199,48 @@ describe("DrizzleHealthScoreStore", () => {
     );
     expect(containsQueryChunk(ordering?.[1], tenantHealthEventIntents.intentOrder)).toBe(true);
   });
+
+  it("marks event intents through the active transaction client", async () => {
+    const where = vi.fn().mockResolvedValue(undefined);
+    const set = vi.fn().mockReturnValue({ where });
+    const update = vi.fn().mockReturnValue({ set });
+    const fallbackUpdate = vi.fn();
+    const store = createStore(
+      { update: fallbackUpdate } as unknown as DrizzleHealthClient,
+      { update } as unknown as DrizzleHealthClient,
+    );
+
+    await store.markEventIntentPublished("event-1");
+
+    expect(update).toHaveBeenCalledWith(tenantHealthEventIntents);
+    expect(set).toHaveBeenCalledWith({ publishedAt: expect.any(Date) });
+    expect(where).toHaveBeenCalledTimes(1);
+    expect(fallbackUpdate).not.toHaveBeenCalled();
+  });
 });
+
+function createStore(
+  db: DrizzleHealthClient,
+  activeClient: DrizzleHealthClient | null = null,
+): DrizzleHealthScoreStore {
+  const getClient = vi.fn().mockReturnValue(activeClient);
+  const txManager = {
+    getClient,
+    isInTransaction: vi.fn().mockReturnValue(activeClient !== null),
+    run: vi.fn(async (operation: () => Promise<unknown>) => {
+      if (activeClient) return operation();
+      return db.transaction(async (tx) => {
+        getClient.mockReturnValue(tx);
+        try {
+          return await operation();
+        } finally {
+          getClient.mockReturnValue(null);
+        }
+      });
+    }),
+  } as unknown as TxManager<DrizzleHealthClient>;
+  return new DrizzleHealthScoreStore(db, txManager);
+}
 
 function createTransaction(
   latestRows: readonly unknown[],
@@ -151,21 +248,29 @@ function createTransaction(
   onOrderBy?: (value: unknown) => void,
 ) {
   return vi.fn(async (run: (tx: DrizzleHealthClient) => Promise<unknown>) =>
-    run({
-      execute: vi.fn().mockResolvedValue(undefined),
-      select: vi.fn().mockReturnValue({
-        from: vi.fn().mockReturnValue({
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn((value: unknown) => {
-              onOrderBy?.(value);
-              return { limit: vi.fn().mockResolvedValue(latestRows) };
-            }),
+    run(createTransactionClient(latestRows, insert, onOrderBy)),
+  );
+}
+
+function createTransactionClient(
+  latestRows: readonly unknown[],
+  insert: ReturnType<typeof vi.fn> | ((table: unknown) => unknown),
+  onOrderBy?: (value: unknown) => void,
+): DrizzleHealthClient {
+  return {
+    execute: vi.fn().mockResolvedValue(undefined),
+    select: vi.fn().mockReturnValue({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          orderBy: vi.fn((value: unknown) => {
+            onOrderBy?.(value);
+            return { limit: vi.fn().mockResolvedValue(latestRows) };
           }),
         }),
       }),
-      insert,
-    } as unknown as DrizzleHealthClient),
-  );
+    }),
+    insert,
+  } as unknown as DrizzleHealthClient;
 }
 
 function createStatefulClient(): DrizzleHealthClient {

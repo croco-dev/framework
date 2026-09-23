@@ -32,8 +32,9 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/tests/DrizzleHealthScoreStorePostgres.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
+    "test:postgres": "vitest run src/tests/DrizzleHealthScoreStorePostgres.spec.ts",
     "typecheck": "tsc --noEmit",
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
@@ -41,11 +42,14 @@
     "@croco/customer-health-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/tx-core": "workspace:*",
     "@croco/tx-drizzle": "workspace:*"
   },
   "devDependencies": {
     "@croco/testing": "workspace:*",
+    "@types/pg": "8.20.0",
     "drizzle-orm": "catalog:",
+    "pg": "8.22.0",
     "reflect-metadata": "^0.2.2"
   },
   "peerDependencies": {

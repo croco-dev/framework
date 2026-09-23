@@ -1,11 +1,16 @@
 import type {
   HealthSignal,
+  HealthTransitionCommitResult,
   HealthTransitionEventIntent,
   TenantHealthScore,
   TrendPeriod,
 } from "@croco/customer-health-core";
 import { HealthScoreStore } from "@croco/customer-health-core";
 import { Component, Inject, Token } from "@croco/framework-context";
+// Runtime value required for constructor metadata.
+// oxlint-disable-next-line typescript/consistent-type-imports
+import { TxManager } from "@croco/tx-core";
+import type { DrizzleDb } from "@croco/tx-drizzle";
 import { and, asc, desc, eq, gte, isNull, lte, sql } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { tenantHealthEventIntents, tenantHealthScores } from "./schema";
@@ -14,7 +19,7 @@ import { HealthTransitionSequenceMissingProblem } from "./problems/DrizzleHealth
 /**
  * 건강 점수 저장소에서 사용하는 Drizzle 클라이언트 타입입니다.
  */
-export type DrizzleHealthClient = NodePgDatabase<Record<string, never>>;
+export type DrizzleHealthClient = DrizzleDb & NodePgDatabase<Record<string, never>>;
 
 /**
  * 건강 점수 저장소용 Drizzle 클라이언트 주입 토큰입니다.
@@ -43,9 +48,12 @@ type StoredHealthSignal = Omit<HealthSignal, "collectedAt"> & {
 @Component()
 export class DrizzleHealthScoreStore extends HealthScoreStore {
   /**
-   * Drizzle 클라이언트를 받아 저장소를 초기화합니다.
+   * Drizzle 클라이언트와 트랜잭션 매니저를 받아 저장소를 초기화합니다.
    */
-  constructor(@Inject(DRIZZLE_TOKEN) private readonly db: DrizzleHealthClient) {
+  constructor(
+    @Inject(DRIZZLE_TOKEN) private readonly db: DrizzleHealthClient,
+    private readonly txManager: TxManager<DrizzleHealthClient>,
+  ) {
     super();
   }
 
@@ -56,13 +64,15 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
     score: TenantHealthScore,
     previous: TenantHealthScore | null,
     eventIntents: readonly HealthTransitionEventIntent[],
-  ): Promise<
-    | { readonly committed: true }
-    | { readonly committed: false; readonly latest: TenantHealthScore | null }
-  > {
-    return this.db.transaction(async (tx) => {
-      await tx.execute(sql`SELECT pg_advisory_xact_lock(hashtextextended(${score.tenantId}, 0))`);
-      const rows = await tx
+  ): Promise<HealthTransitionCommitResult> {
+    const eventPublicationDeferred = this.txManager.isInTransaction();
+    let transitionVersion: string | undefined;
+    const commit: HealthTransitionCommitResult = await this.txManager.run(async () => {
+      const client = this.getClient();
+      await client.execute(
+        sql`SELECT pg_advisory_xact_lock(hashtextextended(${score.tenantId}, 0))`,
+      );
+      const rows = await client
         .select()
         .from(tenantHealthScores)
         .where(eq(tenantHealthScores.tenantId, score.tenantId))
@@ -74,15 +84,15 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
         return { committed: false, latest };
       }
 
-      const insertedRows = await tx
+      const insertedRows = await client
         .insert(tenantHealthScores)
         .values(score)
         .returning({ transitionSequence: tenantHealthScores.transitionSequence });
       const inserted = insertedRows[0];
-      if (inserted) score.transitionVersion = String(inserted.transitionSequence);
+      if (inserted) transitionVersion = String(inserted.transitionSequence);
       if (eventIntents.length > 0) {
         if (!inserted) throw new HealthTransitionSequenceMissingProblem();
-        await tx.insert(tenantHealthEventIntents).values(
+        await client.insert(tenantHealthEventIntents).values(
           eventIntents.map((intent, intentOrder) => ({
             eventId: intent.eventId,
             tenantId: intent.tenantId,
@@ -93,8 +103,14 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
           })),
         );
       }
-      return { committed: true };
+      return eventPublicationDeferred
+        ? { committed: true, eventPublicationDeferred: true }
+        : { committed: true };
     });
+    if (commit.committed && transitionVersion !== undefined) {
+      score.transitionVersion = transitionVersion;
+    }
+    return commit;
   }
 
   async listPendingEventIntents(
@@ -102,7 +118,7 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
     limit = 100,
   ): Promise<readonly HealthTransitionEventIntent[]> {
     if (!Number.isInteger(limit) || limit <= 0) return [];
-    const rows = await this.db
+    const rows = await this.getClient()
       .select()
       .from(tenantHealthEventIntents)
       .where(
@@ -125,7 +141,7 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
   }
 
   async markEventIntentPublished(eventId: string): Promise<void> {
-    await this.db
+    await this.getClient()
       .update(tenantHealthEventIntents)
       .set({ publishedAt: new Date() })
       .where(
@@ -140,7 +156,7 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
    * 테넌트의 최신 건강 점수를 조회합니다.
    */
   async findLatest(tenantId: string): Promise<TenantHealthScore | null> {
-    const result = await this.db
+    const result = await this.getClient()
       .select()
       .from(tenantHealthScores)
       .where(eq(tenantHealthScores.tenantId, tenantId))
@@ -154,7 +170,7 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
    * 테넌트의 건강 점수 이력을 최신순으로 조회합니다.
    */
   async findHistory(tenantId: string, limit: number): Promise<TenantHealthScore[]> {
-    const results = await this.db
+    const results = await this.getClient()
       .select()
       .from(tenantHealthScores)
       .where(eq(tenantHealthScores.tenantId, tenantId))
@@ -172,7 +188,7 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
     startDate: Date,
     endDate: Date,
   ): Promise<TenantHealthScore[]> {
-    const results = await this.db
+    const results = await this.getClient()
       .select()
       .from(tenantHealthScores)
       .where(
@@ -184,6 +200,10 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
       )
       .orderBy(desc(tenantHealthScores.calculatedAt));
     return (results as TenantHealthScoreRow[]).map((row) => this.mapToTenantHealthScore(row));
+  }
+
+  private getClient(): DrizzleHealthClient {
+    return this.txManager.getClient() ?? this.db;
   }
 
   private mapToTenantHealthScore(row: TenantHealthScoreRow): TenantHealthScore {

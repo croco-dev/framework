@@ -1,9 +1,10 @@
 import { getTableColumns } from "drizzle-orm";
 import { describe, expect, it, vi } from "vitest";
+import type { TenantHealthScore } from "@croco/customer-health-core";
 import { ProblemFactory } from "@croco/problems-core";
 import { createDrizzleProviderConformanceSuite } from "@croco/testing/drizzle";
-import { DrizzleHealthIndicator } from "@croco/tx-drizzle";
-import type { TenantHealthScore } from "@croco/customer-health-core";
+import { TxManager } from "@croco/tx-core";
+import { createDrizzleTxAdapter, DrizzleHealthIndicator } from "@croco/tx-drizzle";
 import { DrizzleHealthScoreStore } from "../libs/DrizzleHealthScoreStore";
 import { tenantHealthEventIntents, tenantHealthScores } from "../libs/schema";
 
@@ -22,6 +23,20 @@ const createHealthScoreRow = (tenantId: string, overallScore: number) => ({
   signals: [],
   trend: "stable",
   previousScore: null,
+  calculatedAt: new Date("2026-01-01T00:00:00.000Z"),
+});
+
+const createHealthScore = (tenantId: string, overallScore: number): TenantHealthScore => ({
+  tenantId,
+  overallScore,
+  status: "healthy",
+  categoryScores: {
+    usage: overallScore,
+    business: overallScore,
+    engagement: overallScore,
+  },
+  signals: [],
+  trend: "stable",
   calculatedAt: new Date("2026-01-01T00:00:00.000Z"),
 });
 
@@ -98,11 +113,12 @@ function createSelectClient(rowsByTenant: ReadonlyMap<string, unknown[]>): Drizz
 
 function createRoundTripClient(): DrizzleHealthClient {
   let storedRows: unknown[] = [];
+  let transactionRows: unknown[] | null = null;
   const select = vi.fn().mockReturnValue({
     from: vi.fn().mockReturnValue({
       where: vi.fn().mockReturnValue({
         orderBy: vi.fn().mockReturnValue({
-          limit: vi.fn(async () => storedRows),
+          limit: vi.fn(async () => transactionRows ?? storedRows),
         }),
       }),
     }),
@@ -112,7 +128,9 @@ function createRoundTripClient(): DrizzleHealthClient {
     select,
     insert: vi.fn().mockReturnValue({
       values: vi.fn((row: unknown) => {
-        storedRows = [{ transitionSequence: BigInt(1), ...(row as object) }];
+        const nextRows = [{ transitionSequence: BigInt(1), ...(row as object) }];
+        if (transactionRows) transactionRows = nextRows;
+        else storedRows = nextRows;
         return {
           returning: vi.fn().mockResolvedValue([{ transitionSequence: BigInt(1) }]),
         };
@@ -121,11 +139,26 @@ function createRoundTripClient(): DrizzleHealthClient {
   };
 
   return {
-    transaction: vi.fn(async (callback: (tx: typeof transactionClient) => unknown) =>
-      callback(transactionClient),
-    ),
+    transaction: vi.fn(async (callback: (tx: typeof transactionClient) => unknown) => {
+      transactionRows = structuredClone(storedRows);
+      try {
+        const result = await callback(transactionClient);
+        storedRows = transactionRows;
+        return result;
+      } finally {
+        transactionRows = null;
+      }
+    }),
     select,
   } as unknown as DrizzleHealthClient;
+}
+
+function createStore(db: DrizzleHealthClient) {
+  const txManager = new TxManager(createDrizzleTxAdapter(db));
+  return {
+    store: new DrizzleHealthScoreStore(db, txManager),
+    txManager,
+  };
 }
 
 describe("customer-health-drizzle provider conformance", () => {
@@ -183,12 +216,43 @@ describe("customer-health-drizzle provider conformance", () => {
       },
       transaction: {
         participation: {
-          supported: false,
-          reason: "DrizzleHealthScoreStore accepts a direct Drizzle client and no TxManager.",
+          supported: true,
+          checks: [
+            {
+              name: "uses the active transaction for the advisory lock and transition write",
+              run: async () => {
+                const db = createRoundTripClient();
+                const { store, txManager } = createStore(db);
+
+                await txManager.run(() =>
+                  store.saveTransition(createHealthScore("tenant-active", 84), null, []),
+                );
+
+                expect(db.transaction).toHaveBeenCalledTimes(1);
+              },
+            },
+          ],
         },
         rollback: {
-          supported: false,
-          reason: "Rollback is owned by the app-level Drizzle transaction boundary.",
+          supported: true,
+          checks: [
+            {
+              name: "rolls back a transition with its caller transaction",
+              run: async () => {
+                const db = createRoundTripClient();
+                const { store, txManager } = createStore(db);
+                const rollback = new Error("rollback");
+
+                await expect(
+                  txManager.run(async () => {
+                    await store.saveTransition(createHealthScore("tenant-rollback", 73), null, []);
+                    throw rollback;
+                  }),
+                ).rejects.toBe(rollback);
+                await expect(store.findLatest("tenant-rollback")).resolves.toBeNull();
+              },
+            },
+          ],
         },
       },
       tenantIsolation: {
@@ -197,7 +261,7 @@ describe("customer-health-drizzle provider conformance", () => {
           {
             name: "loads the latest health score through the tenant-scoped lookup",
             run: async () => {
-              const store = new DrizzleHealthScoreStore(
+              const { store } = createStore(
                 createSelectClient(
                   new Map([
                     ["tenant-a", [createHealthScoreRow("tenant-a", 92)]],
@@ -228,7 +292,7 @@ describe("customer-health-drizzle provider conformance", () => {
                 previousScore: 81.25,
                 calculatedAt: new Date("2026-01-01T00:00:00.000Z"),
               };
-              const store = new DrizzleHealthScoreStore(createRoundTripClient());
+              const { store } = createStore(createRoundTripClient());
 
               await store.saveTransition(score, null, []);
               const reloaded = await store.findLatest("tenant-fractional");
@@ -246,7 +310,7 @@ describe("customer-health-drizzle provider conformance", () => {
             {
               name: "returns null when no tenant health score exists",
               run: async () => {
-                const store = new DrizzleHealthScoreStore(createSelectClient(new Map()));
+                const { store } = createStore(createSelectClient(new Map()));
 
                 await expect(store.findLatest("tenant-missing")).resolves.toBeNull();
               },

@@ -11,6 +11,7 @@ import {
   HealthScoreStore,
   HealthSignalRegistry,
 } from "../libs/interfaces";
+import type { HealthTransitionCommitResult } from "../libs/interfaces";
 import type { HealthScoreProfile, HealthSignal, SignalCategory } from "../libs/types";
 
 class MockSignalProvider implements HealthSignalRegistry {
@@ -31,6 +32,15 @@ class MockSignalProvider implements HealthSignalRegistry {
       category: p.category,
       collect: p.collect,
     }));
+  }
+}
+
+class DeferredPublicationHealthScoreStore extends InMemoryHealthScoreStore {
+  override async saveTransition(
+    ...args: Parameters<InMemoryHealthScoreStore["saveTransition"]>
+  ): Promise<HealthTransitionCommitResult> {
+    const result = await super.saveTransition(...args);
+    return result.committed ? { ...result, eventPublicationDeferred: true } : result;
   }
 }
 
@@ -271,6 +281,32 @@ describe("CustomerHealthService", () => {
       currentScore: 70,
       dropPercentage: expect.closeTo(22.222222, 5),
     });
+  });
+
+  it("keeps joined-transaction events pending until publication runs after commit", async () => {
+    const deferredStore = new DeferredPublicationHealthScoreStore();
+    const profile: HealthScoreProfile = {
+      id: "profile-1",
+      name: "Default Profile",
+      weights: { usage: 1, business: 1, engagement: 1 },
+      thresholds: { healthy: 80, atRisk: 60 },
+    };
+    mockRegistry.addProvider("usage", [healthSignal(90, "2026-03-15T10:00:00Z")]);
+    service = new CustomerHealthService(mockRegistry, deferredStore, calculator);
+    await service.calculateAndStore("tenant-1", profile);
+
+    mockRegistry = new MockSignalProvider();
+    mockRegistry.addProvider("usage", [healthSignal(50, "2026-03-15T11:00:00Z")]);
+    service = new CustomerHealthService(mockRegistry, deferredStore, calculator);
+
+    await service.calculateAndStore("tenant-1", profile);
+
+    expect(mockEventPublisher.publishIdempotently).not.toHaveBeenCalled();
+    await expect(deferredStore.listPendingEventIntents("tenant-1")).resolves.toHaveLength(2);
+
+    await expect(service.publishPendingEvents("tenant-1")).resolves.toBe(2);
+    expect(mockEventPublisher.publishIdempotently).toHaveBeenCalledTimes(2);
+    await expect(deferredStore.listPendingEventIntents("tenant-1")).resolves.toHaveLength(0);
   });
 
   it("should retry the persisted transition without deriving events from the stored score", async () => {

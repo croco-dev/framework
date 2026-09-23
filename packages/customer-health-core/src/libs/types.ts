@@ -56,6 +56,11 @@ export type HealthScoreProfile = {
 
 export type TenantHealthScore = {
   tenantId: string;
+  /**
+   * Optimistic concurrency token assigned by the store. A token obtained inside a caller-owned
+   * transaction is provisional until commit and must not be reused after rollback or an unknown
+   * transaction outcome.
+   */
   transitionVersion?: string;
   overallScore: number;
   status: HealthStatus;

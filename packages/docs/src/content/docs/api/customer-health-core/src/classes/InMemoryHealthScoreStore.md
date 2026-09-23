@@ -157,7 +157,12 @@ title: "InMemoryHealthScoreStore"
 
 ### saveTransition()
 
-> **saveTransition**(`score`, `previous`, `eventIntents`): `Promise`\<\{ `committed`: `true`; \} \| \{ `committed`: `false`; `latest`: [`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/) \| `null`; \}\>
+> **saveTransition**(`score`, `previous`, `eventIntents`): `Promise`\<[`HealthTransitionCommitResult`](/api/customer-health-core/src/type-aliases/healthtransitioncommitresult/)\>
+
+Persists one optimistic transition and assigns its CAS version to `score`.
+A version assigned inside a caller-owned transaction is provisional until that transaction
+commits. Discard affected snapshots after rollback or an unknown transaction outcome, then
+reload the latest committed score before retrying.
 
 #### Parameters
 
@@ -175,7 +180,7 @@ readonly [`HealthTransitionEventIntent`](/api/customer-health-core/src/type-alia
 
 #### Returns
 
-`Promise`\<\{ `committed`: `true`; \} \| \{ `committed`: `false`; `latest`: [`TenantHealthScore`](/api/customer-health-core/src/type-aliases/tenanthealthscore/) \| `null`; \}\>
+`Promise`\<[`HealthTransitionCommitResult`](/api/customer-health-core/src/type-aliases/healthtransitioncommitresult/)\>
 
 #### Overrides
 
