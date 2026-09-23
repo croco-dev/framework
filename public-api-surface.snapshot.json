@@ -11148,6 +11148,11 @@
               "source": "./libs/interfaces/EventPublishing"
             },
             {
+              "name": "EventPublishOptions",
+              "exportKind": "named",
+              "source": "./libs/interfaces/EventPublishing"
+            },
+            {
               "name": "EventSerializer",
               "exportKind": "named",
               "source": "./libs/EventSerializer"

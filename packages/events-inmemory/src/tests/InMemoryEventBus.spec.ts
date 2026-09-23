@@ -5,6 +5,7 @@ import {
   EventBusIntakeClosedProblem,
   EventPublisher,
   EventBusStats,
+  type EventPublishing,
   type HandlerResolver,
   InvalidEventBusDrainTimeoutProblem,
   type EventHandler,
@@ -1611,6 +1612,7 @@ describe("InMemoryEventBus", () => {
       }
 
       const bus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
+      const publishing: EventPublishing<TestEvent> = bus;
       Container.set(BlockingHandler, new BlockingHandler());
       bus.subscribe({ eventName: "TestEvent", handlerClass: BlockingHandler });
 
@@ -1618,7 +1620,9 @@ describe("InMemoryEventBus", () => {
       await handlerStarted.promise;
 
       const controller = new AbortController();
-      const blockedPublish = bus.publish(new TestEvent("blocked"), { signal: controller.signal });
+      const blockedPublish = publishing.publish(new TestEvent("blocked"), {
+        signal: controller.signal,
+      });
       controller.abort();
 
       await expect(blockedPublish).rejects.toMatchObject({

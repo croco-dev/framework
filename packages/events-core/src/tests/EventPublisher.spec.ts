@@ -76,6 +76,16 @@ describe("EventPublisher", () => {
       expect(mockEventBus.publishedEvents[0]).toBe(event);
     });
 
+    it("should forward an abort signal to the configured event bus", async () => {
+      const event = new TestEvent("abortable");
+      const controller = new AbortController();
+      const publish = vi.spyOn(mockEventBus, "publish");
+
+      await publisher.publishNow(event, { signal: controller.signal });
+
+      expect(publish).toHaveBeenCalledWith(event, { signal: controller.signal });
+    });
+
     it("should publish multiple events sequentially", async () => {
       const event1 = new TestEvent("first");
       const event2 = new TestEvent("second");

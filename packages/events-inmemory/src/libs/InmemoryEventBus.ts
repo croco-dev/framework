@@ -10,6 +10,7 @@ import type {
   EventBusShutdownResult,
   EventHandler,
   EventHandlerClass,
+  EventPublishOptions,
   EventSubscription,
   RetryableEventHandler,
 } from "@croco/events-core";
@@ -225,7 +226,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
       : undefined;
   }
 
-  async publish(event: TEvent, options?: { signal?: AbortSignal }): Promise<void> {
+  async publish(event: TEvent, options?: EventPublishOptions): Promise<void> {
     try {
       await this.publishEvent(event, options?.signal);
       EventBusConfig.getStats()?.publish(false);
