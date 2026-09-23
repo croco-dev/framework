@@ -83,13 +83,43 @@ describe.skipIf(connectionString.length === 0)(
           await expect(store.findLatest(score.tenantId)).resolves.toMatchObject({
             tenantId: score.tenantId,
           });
-          expect(score.transitionVersion).toBeUndefined();
+          expect(score.transitionVersion).toBe("1");
           throw rollback;
         }),
       ).rejects.toBe(rollback);
 
-      expect(score.transitionVersion).toBeUndefined();
+      expect(score.transitionVersion).toBe("1");
       await expect(store.findLatest(score.tenantId)).resolves.toBeNull();
+
+      const retry = createScore(score.tenantId, 70, "at_risk", "2026-09-22T01:00:00.000Z");
+      await expect(store.saveTransition(retry, score, [])).resolves.toEqual({
+        committed: false,
+        latest: null,
+      });
+      await expect(store.saveTransition(retry, null, [])).resolves.toEqual({ committed: true });
+    });
+
+    it("keeps ambient transition versions usable through and after commit", async () => {
+      const first = createScore("tenant-chain", 82.5, "healthy", "2026-09-22T00:00:00.000Z");
+      const second = createScore("tenant-chain", 72, "at_risk", "2026-09-22T01:00:00.000Z");
+
+      await txManager.run(async () => {
+        await expect(store.saveTransition(first, null, [])).resolves.toEqual({
+          committed: true,
+          eventPublicationDeferred: true,
+        });
+        await expect(store.saveTransition(second, first, [])).resolves.toEqual({
+          committed: true,
+          eventPublicationDeferred: true,
+        });
+      });
+
+      expect(first.transitionVersion).toBe("1");
+      expect(second.transitionVersion).toBe("2");
+
+      const third = createScore("tenant-chain", 62, "at_risk", "2026-09-22T02:00:00.000Z");
+      await expect(store.saveTransition(third, second, [])).resolves.toEqual({ committed: true });
+      expect(third.transitionVersion).toBe("3");
     });
 
     it("commits a transition in its own transaction outside an ambient transaction", async () => {
@@ -181,14 +211,19 @@ function createSignalRegistry(value: number): HealthSignalRegistry {
   } as HealthSignalRegistry;
 }
 
-function createScore(tenantId: string): TenantHealthScore {
+function createScore(
+  tenantId: string,
+  overallScore = 82.5,
+  status: TenantHealthScore["status"] = "healthy",
+  calculatedAt = "2026-09-22T00:00:00.000Z",
+): TenantHealthScore {
   return {
     tenantId,
-    overallScore: 82.5,
-    status: "healthy",
-    categoryScores: { usage: 82.5, business: 82.5, engagement: 82.5 },
+    overallScore,
+    status,
+    categoryScores: { usage: overallScore, business: overallScore, engagement: overallScore },
     signals: [],
     trend: "stable",
-    calculatedAt: new Date("2026-09-22T00:00:00.000Z"),
+    calculatedAt: new Date(calculatedAt),
   };
 }

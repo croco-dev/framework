@@ -92,6 +92,10 @@ COMMIT;
 이때 이벤트 의도는 커밋 전 외부로 발행하지 않으며, 호출자 커밋 후 `publishPendingEvents` 또는 outbox worker가
 발행해야 합니다.
 
+호출자 트랜잭션 안에서 `saveTransition`이 점수에 부여한 `transitionVersion`은 같은 트랜잭션의 후속 CAS에 사용할
+수 있지만, 호출자 트랜잭션이 커밋되기 전까지는 잠정 값입니다. 트랜잭션이나 savepoint가 롤백되었거나 결과를
+확정할 수 없다면 해당 점수 스냅샷을 버리고 `findLatest`로 커밋된 최신 점수를 다시 읽은 뒤 재시도하세요.
+
 ### 신호 제공자
 
 - `BillingSignalProvider`, 구독 상태를 business 신호로 변환합니다.

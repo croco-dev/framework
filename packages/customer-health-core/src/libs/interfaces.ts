@@ -25,6 +25,12 @@ export abstract class SignalProvider {
 
 export abstract class HealthScoreStore {
   static readonly token = new Token<HealthScoreStore>("HealthScoreStore");
+  /**
+   * Persists one optimistic transition and assigns its CAS version to `score`.
+   * A version assigned inside a caller-owned transaction is provisional until that transaction
+   * commits. Discard affected snapshots after rollback or an unknown transaction outcome, then
+   * reload the latest committed score before retrying.
+   */
   abstract saveTransition(
     score: TenantHealthScore,
     previous: TenantHealthScore | null,

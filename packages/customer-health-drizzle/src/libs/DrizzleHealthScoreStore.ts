@@ -107,7 +107,7 @@ export class DrizzleHealthScoreStore extends HealthScoreStore {
         ? { committed: true, eventPublicationDeferred: true }
         : { committed: true };
     });
-    if (commit.committed && !eventPublicationDeferred && transitionVersion !== undefined) {
+    if (commit.committed && transitionVersion !== undefined) {
       score.transitionVersion = transitionVersion;
     }
     return commit;

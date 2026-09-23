@@ -102,10 +102,31 @@ describe("DrizzleHealthScoreStore", () => {
       eventPublicationDeferred: true,
     });
 
-    expect(score.transitionVersion).toBeUndefined();
+    expect(score.transitionVersion).toBe("1");
     expect(txClient.execute).toHaveBeenCalledTimes(1);
     expect(txClient.insert).toHaveBeenCalledWith(tenantHealthScores);
     expect(fallbackTransaction).not.toHaveBeenCalled();
+  });
+
+  it("does not assign a transition version when the transaction fails", async () => {
+    const returning = vi.fn().mockResolvedValue([{ transitionSequence: BigInt(1) }]);
+    const values = vi.fn().mockReturnValue({ returning });
+    const txClient = createTransactionClient([], vi.fn().mockReturnValue({ values }));
+    const transactionFailure = new Error("transaction commit failed");
+    const txManager = {
+      getClient: vi.fn().mockReturnValue(txClient),
+      isInTransaction: vi.fn().mockReturnValue(false),
+      run: vi.fn(async (operation: () => Promise<unknown>) => {
+        await operation();
+        throw transactionFailure;
+      }),
+    } as unknown as TxManager<DrizzleHealthClient>;
+    const store = new DrizzleHealthScoreStore({} as DrizzleHealthClient, txManager);
+    const score = createScore(85, "healthy", "2026-03-15T10:00:00Z");
+
+    await expect(store.saveTransition(score, null, [])).rejects.toBe(transactionFailure);
+
+    expect(score.transitionVersion).toBeUndefined();
   });
 
   it("does not create an intent insert for a no-event transition", async () => {
