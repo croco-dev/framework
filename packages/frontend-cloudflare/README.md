@@ -55,6 +55,18 @@ const fetch = createSsrHandler({ renderServer });
 export default { fetch };
 ```
 
+`createSsrHandler`는 Cloudflare Worker의 `fetch(request, env, ctx)`에 직접 연결합니다.
+meta-vite의 `CrocoFetchHandler`를 조립할 때는 `createSsrHandlerAsFetchHandler`를 사용합니다.
+두 함수 모두 `CloudflareSsrHandlerOptions`를 받으며, 위의 Worker default export 방식은 그대로 사용할 수 있습니다.
+
+```typescript
+import { createSsrHandlerAsFetchHandler } from "@croco/frontend-cloudflare";
+import type { CloudflareSsrHandlerOptions } from "@croco/frontend-cloudflare";
+
+const options: CloudflareSsrHandlerOptions = { renderServer };
+const handler = createSsrHandlerAsFetchHandler(options);
+```
+
 ## Bindings
 
 `wrangler.toml` 예시:

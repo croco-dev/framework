@@ -1,4 +1,6 @@
 import { createSsrHandler } from "./libs/CloudflareSsrHandler";
+export { createSsrHandlerAsFetchHandler } from "./libs/CloudflareSsrHandler";
+export type { CloudflareSsrHandlerOptions } from "./libs/CloudflareSsrHandler";
 export { SSR_FAILURE_CODES } from "./libs/types";
 
 const fetch = createSsrHandler();

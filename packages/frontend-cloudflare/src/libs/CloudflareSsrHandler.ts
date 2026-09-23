@@ -2,7 +2,7 @@ import type { CrocoFetchHandler, RenderServer, RuntimeContext } from "@croco/met
 import { SSR_FAILURE_CODES } from "./types";
 import type { SsrFailureReport, SsrHandlerOptions, SsrWorkerEnv } from "./types";
 
-type CloudflareSsrHandlerOptions = SsrHandlerOptions & { renderServer?: RenderServer };
+export type CloudflareSsrHandlerOptions = SsrHandlerOptions & { renderServer?: RenderServer };
 
 const DEFAULT_API_BINDING_NAME = "API_WORKER";
 const CORRELATION_HEADERS = ["x-croco-correlation-id", "x-request-id", "cf-ray"] as const;
@@ -30,7 +30,7 @@ export function createSsrHandler(
 
 /**
  * Creates a meta-vite CrocoFetchHandler from SSR options.
- * This is the internal handler used by the Cloudflare Workers exported fetch.
+ * Use this handler when composing a meta-vite CrocoFetchHandler.
  */
 export function createSsrHandlerAsFetchHandler(
   options: CloudflareSsrHandlerOptions = {},
