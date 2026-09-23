@@ -269,7 +269,7 @@ describe("Operational endpoints", () => {
     expect(collector.recordError).toHaveBeenCalledOnce();
     expect(warning).toHaveBeenCalledWith("Diagnostics error recording failed", {
       code: "CROCO_HTTP_DIAGNOSTICS_001",
-      error: "diagnostics unavailable",
+      errorType: "object",
     });
   });
 
@@ -297,7 +297,32 @@ describe("Operational endpoints", () => {
     });
     expect(consoleWarning).toHaveBeenCalledWith("Diagnostics error recording warning failed", {
       code: "CROCO_HTTP_DIAGNOSTICS_001",
-      error: "diagnostics unavailable",
+      errorType: "object",
+    });
+  });
+
+  it("preserves the original error response when recording throws a value without a string conversion", async () => {
+    const collector = new DiagnosticsCollector();
+    const warning = vi.spyOn(Container.get(Logger), "warn");
+    vi.spyOn(collector, "recordError").mockImplementation(() => {
+      throw Object.create(null);
+    });
+    const app = createApp({
+      controllers: [DiagnosticsErrorController],
+      securityValidation: "off",
+      diagnostics: { exposure: "private", collector },
+    });
+
+    const response = await app.fetch(new Request("http://localhost/diagnostics-errors/server"));
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "diagnostics/test-server-error",
+      detail: "An internal error occurred",
+    });
+    expect(warning).toHaveBeenCalledWith("Diagnostics error recording failed", {
+      code: "CROCO_HTTP_DIAGNOSTICS_001",
+      errorType: "object",
     });
   });
 

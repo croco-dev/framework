@@ -529,7 +529,7 @@ export class CrocoApp {
     } catch (recordingError) {
       const warning = {
         code: DIAGNOSTICS_RECORD_FAILURE_CODE,
-        error: recordingError instanceof Error ? recordingError.message : String(recordingError),
+        errorType: typeof recordingError,
       };
       const fallbackWarning = (): void => {
         try {
