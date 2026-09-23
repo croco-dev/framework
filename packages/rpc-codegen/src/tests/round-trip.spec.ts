@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { ProblemCategory } from "@croco/problems-core";
+import { createFrontendTelemetryBridge } from "@croco/telemetry-api";
 import type { RouteIR } from "@croco/protocols-core";
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -712,7 +713,7 @@ describe("rpc-codegen round trip", () => {
           },
         };
 
-        await expect(testCase.invoke({ telemetry })).rejects.toBe(telemetryError);
+        await testCase.invoke({ telemetry });
         expect(events).toEqual(["rpc.request.started", "rpc.request.succeeded"]);
       }
     },
@@ -1051,6 +1052,339 @@ describe("rpc-codegen round trip", () => {
     ]);
   });
 
+  it("connects generated requests to one telemetry lifecycle per network attempt", async () => {
+    const routeIRs: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "getUser",
+        httpMethod: "GET",
+        path: "/users/:id",
+        routeContract: null,
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: {
+          body: null,
+          path: z.object({ id: z.string() }) as any,
+          query: null,
+          headers: null,
+        },
+        outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
+        problemResponses: [
+          {
+            code: "USER_NOT_FOUND",
+            category: ProblemCategory.NotFound,
+            status: 404,
+          },
+        ],
+        domain: "user",
+      },
+    ];
+
+    const files = generateClientFiles(routeIRs, outDir);
+    const userContent = fs.readFileSync(files[0], "utf-8");
+    const userModule = await importGeneratedClient("user-span-lifecycle.ts", userContent);
+    const outcomes: Record<string, unknown>[] = [];
+    const startRequest = vi.fn((context: Record<string, unknown>) => ({
+      headers: {
+        traceparent: "00-00000000000000000000000000000002-0000000000000002-00",
+        tracestate: "vendor=value",
+        "x-croco-correlation-id": "lifecycle-correlation",
+      },
+      propagationHeaderNames: ["traceparent", "tracestate"],
+      traceparent: "00-00000000000000000000000000000002-0000000000000002-00",
+      tracestate: "vendor=value",
+      end: (outcome: Record<string, unknown>) => {
+        outcomes.push(outcome);
+      },
+    }));
+    const telemetry = { startRequest };
+    const networkError = new TypeError("fetch failed");
+    const abortError = new Error("request cancelled");
+    abortError.name = "AbortError";
+    const timeoutError = new Error("request timed out");
+    timeoutError.name = "TimeoutError";
+    const synchronousResultError = new TypeError("synchronous result fetch failure");
+    const synchronousThrowingError = new TypeError("synchronous throwing fetch failure");
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ id: "1", name: "Ada" }))
+      .mockResolvedValueOnce(
+        jsonResponse(
+          {
+            type: "https://errors.example.com/not-found",
+            title: "Not Found",
+            status: 404,
+            code: "USER_NOT_FOUND",
+          },
+          404,
+        ),
+      )
+      .mockRejectedValueOnce(networkError)
+      .mockRejectedValueOnce(abortError)
+      .mockRejectedValueOnce(timeoutError)
+      .mockImplementationOnce(() => {
+        throw synchronousResultError;
+      })
+      .mockImplementationOnce(() => {
+        throw synchronousThrowingError;
+      });
+    const client = userModule.createUserClient({
+      baseUrl: "https://api.example.com/v1/",
+      fetch: fetchMock,
+      telemetry,
+    });
+
+    await expect(
+      client.getUserResult(
+        { path: { id: "1" } },
+        {
+          headers: {
+            traceparent: "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+            tracestate: "request=raw-header",
+            "x-croco-correlation-id": "request-correlation",
+          },
+        },
+      ),
+    ).resolves.toMatchObject({
+      ok: true,
+      data: { id: "1", name: "Ada" },
+    });
+    await expect(client.getUserResult({ path: { id: "missing" } })).resolves.toMatchObject({
+      ok: false,
+      kind: "problem",
+      code: "USER_NOT_FOUND",
+    });
+    await expect(client.getUserResult({ path: { id: "network" } })).resolves.toEqual({
+      ok: false,
+      kind: "external",
+      error: networkError,
+    });
+    await expect(client.getUserResult({ path: { id: "cancelled" } })).resolves.toEqual({
+      ok: false,
+      kind: "external",
+      error: abortError,
+    });
+    await expect(client.getUserResult({ path: { id: "timeout" } })).resolves.toEqual({
+      ok: false,
+      kind: "external",
+      error: timeoutError,
+    });
+    await expect(client.getUserResult({ path: { id: "sync-result" } })).resolves.toEqual({
+      ok: false,
+      kind: "external",
+      error: synchronousResultError,
+    });
+    await expect(client.getUser({ path: { id: "sync-throwing" } })).rejects.toBe(
+      synchronousThrowingError,
+    );
+
+    expect(startRequest).toHaveBeenCalledTimes(7);
+    expect(startRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operationId: "UserController_getUser",
+        requestOrigin: "https://api.example.com",
+      }),
+    );
+    expect(fetchMock).toHaveBeenNthCalledWith(
+      1,
+      "https://api.example.com/v1/users/1",
+      expect.objectContaining({
+        headers: {
+          traceparent: "00-00000000000000000000000000000002-0000000000000002-00",
+          tracestate: "vendor=value",
+          "x-croco-correlation-id": "request-correlation",
+        },
+      }),
+    );
+    expect(outcomes).toEqual([
+      { kind: "succeeded", status: 200 },
+      {
+        kind: "problem",
+        status: 404,
+        problem: {
+          code: "USER_NOT_FOUND",
+          status: 404,
+          category: "NotFound",
+          type: "https://errors.example.com/not-found",
+          title: "Not Found",
+        },
+      },
+      { kind: "external_failure", errorName: "TypeError" },
+      { kind: "cancelled", errorName: "AbortError" },
+      { kind: "external_failure", errorName: "TimeoutError" },
+      { kind: "external_failure", errorName: "TypeError" },
+      { kind: "external_failure", errorName: "TypeError" },
+    ]);
+  });
+
+  it("preserves invalid explicit trace context instead of falling back to bridge defaults", async () => {
+    const routeIRs: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "getUser",
+        httpMethod: "GET",
+        path: "/users/:id",
+        routeContract: null,
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: {
+          body: null,
+          path: z.object({ id: z.string() }) as any,
+          query: null,
+          headers: null,
+        },
+        outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
+        domain: "user",
+      },
+    ];
+    const files = generateClientFiles(routeIRs, outDir);
+    const userModule = await importGeneratedClient(
+      "user-invalid-explicit-trace.ts",
+      fs.readFileSync(files[0], "utf-8"),
+    );
+    const fetchMock = vi.fn(async (_url: string, _init: RequestInit) =>
+      jsonResponse({ id: "1", name: "Ada" }),
+    );
+    const client = userModule.createUserClient({
+      fetch: fetchMock,
+      telemetry: createFrontendTelemetryBridge({
+        traceparent: "00-11111111111111111111111111111111-2222222222222222-01",
+      }),
+    });
+
+    await expect(client.getUser({ path: { id: "1" } }, { traceparent: "" })).resolves.toEqual({
+      id: "1",
+      name: "Ada",
+    });
+
+    const requestInit = fetchMock.mock.calls[0]?.[1];
+    if (!requestInit) {
+      expect.fail("Expected generated client to call fetch.");
+    }
+    expect(new Headers(requestInit.headers).has("traceparent")).toBe(false);
+  });
+
+  it("resolves network-path request origins before applying telemetry origin policy", async () => {
+    const routeIRs: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "getUser",
+        httpMethod: "GET",
+        path: "//untrusted.example/users/:id",
+        routeContract: null,
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: {
+          body: null,
+          path: z.object({ id: z.string() }) as any,
+          query: null,
+          headers: null,
+        },
+        outputSchema: z.object({ id: z.string(), name: z.string() }) as any,
+        domain: "user",
+      },
+    ];
+    const files = generateClientFiles(routeIRs, outDir);
+    const userModule = await importGeneratedClient(
+      "user-network-path-origin.ts",
+      fs.readFileSync(files[0], "utf-8"),
+    );
+    const fetchMock = vi.fn(async (_url: string, _init: RequestInit) =>
+      jsonResponse({ id: "1", name: "Ada" }),
+    );
+    vi.stubGlobal("location", {
+      href: "https://app.example/dashboard",
+      origin: "https://app.example",
+    });
+    const deniedClient = userModule.createUserClient({
+      fetch: fetchMock,
+      telemetry: createFrontendTelemetryBridge({
+        traceparent: "00-11111111111111111111111111111111-2222222222222222-01",
+        allowedOrigins: [],
+      }),
+    });
+    const allowedClient = userModule.createUserClient({
+      fetch: fetchMock,
+      telemetry: createFrontendTelemetryBridge({
+        traceparent: "00-11111111111111111111111111111111-2222222222222222-01",
+        allowedOrigins: ["https://untrusted.example"],
+      }),
+    });
+
+    await deniedClient.getUser({ path: { id: "denied" } });
+    await allowedClient.getUser({ path: { id: "allowed" } });
+    vi.stubGlobal("location", undefined);
+    await deniedClient.getUser({ path: { id: "unresolved" } });
+
+    const deniedInit = fetchMock.mock.calls[0]?.[1];
+    const allowedInit = fetchMock.mock.calls[1]?.[1];
+    const unresolvedInit = fetchMock.mock.calls[2]?.[1];
+    if (!deniedInit || !allowedInit || !unresolvedInit) {
+      expect.fail("Expected all generated clients to call fetch.");
+    }
+    expect(new Headers(deniedInit.headers).has("traceparent")).toBe(false);
+    expect(new Headers(allowedInit.headers).get("traceparent")).toBe(
+      "00-11111111111111111111111111111111-2222222222222222-01",
+    );
+    expect(new Headers(unresolvedInit.headers).has("traceparent")).toBe(false);
+  });
+
+  it("keeps telemetry setup, delivery, and finalization failures out of RPC results", async () => {
+    const routeIRs: RouteIR[] = [
+      {
+        controllerName: "HealthController",
+        methodName: "health",
+        httpMethod: "GET",
+        path: "/health",
+        routeContract: null,
+        params: [],
+        inputSchema: null,
+        inputSchemas: EMPTY_INPUT_SCHEMAS,
+        outputSchema: z.object({ ready: z.boolean() }) as unknown as RouteIR["outputSchema"],
+        domain: "health",
+      },
+    ];
+    const files = generateClientFiles(routeIRs, outDir);
+    const healthContent = fs.readFileSync(files[0], "utf-8");
+    const healthModule = await importGeneratedClient(
+      "health-telemetry-isolation.ts",
+      healthContent,
+    );
+    const telemetryError = new Error("telemetry unavailable");
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse({ ready: true })),
+    );
+
+    await expect(
+      healthModule.healthClient.health({
+        telemetry: {
+          startRequest: () => {
+            throw telemetryError;
+          },
+          createHeaders: () => {
+            throw telemetryError;
+          },
+          record: () => Promise.reject(telemetryError),
+        },
+      }),
+    ).resolves.toEqual({ ready: true });
+
+    await expect(
+      healthModule.healthClient.health({
+        telemetry: {
+          startRequest: () => ({
+            headers: {},
+            end: () => {
+              throw telemetryError;
+            },
+          }),
+        },
+      }),
+    ).resolves.toEqual({ ready: true });
+  });
+
   it("returns generated Result request failures without changing throwing methods", async () => {
     const routeIRs: RouteIR[] = [
       {
@@ -1184,7 +1518,10 @@ describe("rpc-codegen round trip", () => {
           },
         },
       ),
-    ).rejects.toBe(telemetryError);
+    ).resolves.toMatchObject({
+      ok: true,
+      data: { id: "1", name: "Alice" },
+    });
   });
 
   it("returns generated optional Result text-stream failures with the available response", async () => {
@@ -1633,6 +1970,38 @@ async function importGeneratedClient(fileName: string, source: string) {
         input: { readonly name: string },
         options?: unknown,
       ) => Promise<unknown>;
+      readonly getUser: (
+        input: {
+          readonly path: { readonly id: string };
+          readonly query?: Record<string, unknown>;
+        },
+        options?: unknown,
+      ) => Promise<unknown>;
+      readonly getUserResult: (
+        input: {
+          readonly path: { readonly id: string };
+          readonly query?: Record<string, unknown>;
+        },
+        options?: unknown,
+      ) => Promise<
+        | { readonly ok: true; readonly data: unknown; readonly response: Response }
+        | {
+            readonly ok: false;
+            readonly kind: "problem";
+            readonly code: string;
+            readonly category: string;
+            readonly status: number;
+            readonly problem: unknown;
+            readonly declaration: unknown;
+            readonly response: Response;
+          }
+        | {
+            readonly ok: false;
+            readonly kind: "external";
+            readonly error: unknown;
+            readonly response?: Response;
+          }
+      >;
       readonly getCurrentUser: (
         input: { readonly headers: { readonly "x-precedence": string } },
         options?: unknown,
@@ -1696,7 +2065,7 @@ async function importGeneratedClient(fileName: string, source: string) {
       ) => Promise<unknown>;
     };
     readonly healthClient: {
-      readonly health: () => Promise<unknown>;
+      readonly health: (options?: unknown) => Promise<unknown>;
       readonly clear: () => Promise<unknown>;
       readonly fail: () => Promise<unknown>;
       readonly status: () => Promise<unknown>;

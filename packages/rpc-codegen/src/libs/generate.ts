@@ -1947,6 +1947,8 @@ export type RpcTelemetryRequestContext = RpcRouteTelemetryMetadata & {
   readonly interactionId?: string;
   readonly correlationId?: string;
   readonly traceparent?: string;
+  readonly tracestate?: string;
+  readonly requestOrigin?: string;
   readonly attempt?: number;
 };
 
@@ -1960,11 +1962,30 @@ export type RpcTelemetryEvent = RpcTelemetryRequestContext & {
   readonly errorMessage?: string;
 };
 
+export type RpcTelemetryRequestOutcome = {
+  readonly kind: 'succeeded' | 'problem' | 'external_failure' | 'cancelled';
+  readonly status?: number;
+  readonly problem?: RpcTelemetryProblemSummary;
+  readonly errorName?: string;
+};
+
+export type RpcTelemetryRequestLifecycle = {
+  readonly headers: Record<string, string>;
+  readonly propagationHeaderNames?: readonly string[];
+  readonly traceparent?: string;
+  readonly tracestate?: string;
+  readonly run?: <T>(operation: () => Promise<T>) => Promise<T>;
+  readonly end: (outcome: RpcTelemetryRequestOutcome) => void;
+};
+
 export type RpcTelemetryBridge = {
+  readonly startRequest?: (
+    context: RpcTelemetryRequestContext,
+  ) => RpcTelemetryRequestLifecycle;
   readonly createHeaders?: (
     context: RpcTelemetryRequestContext,
   ) => Record<string, string> | undefined;
-  readonly record?: (event: RpcTelemetryEvent) => void;
+  readonly record?: (event: RpcTelemetryEvent) => void | Promise<void>;
 };
 
 export type RpcClientFetch = (url: string, init: RequestInit) => Promise<Response>;
@@ -1979,6 +2000,7 @@ export type RpcClientRequestOptions = {
   readonly interactionId?: string;
   readonly correlationId?: string;
   readonly traceparent?: string;
+  readonly tracestate?: string;
   readonly attempt?: number;
   readonly headers?: HeadersInit;
   readonly request?: RpcClientRequestDefaults;
@@ -1992,6 +2014,7 @@ export type RpcClientConfig = RpcClientRequestOptions & {
 
 export type RpcTelemetryRequestState = RpcTelemetryRequestContext & {
   readonly telemetry: RpcTelemetryBridge;
+  readonly lifecycle?: RpcTelemetryRequestLifecycle;
   readonly startedAt: number;
 };
 
@@ -2017,9 +2040,30 @@ export function createRpcClientRequest(
   config: RpcClientConfig = {},
 ): RpcClientRequest {
   const effectiveOptions: RpcClientRequestOptions = { ...config, ...options };
-  const context = createRpcTelemetryRequestContext(route, routeKind, effectiveOptions);
-  const telemetryHeaders = effectiveOptions.telemetry?.createHeaders?.(context);
-  const headers = mergeRpcHeaders(config.headers, init.headers, telemetryHeaders, options.headers);
+  const requestUrl = config.baseUrl === undefined ? url : joinRpcUrl(config.baseUrl, url);
+  const requestOrigin = getRpcRequestOrigin(requestUrl);
+  const context = createRpcTelemetryRequestContext(
+    route,
+    routeKind,
+    effectiveOptions,
+    requestOrigin,
+  );
+  const lifecycle = startRpcTelemetryRequest(effectiveOptions.telemetry, context);
+  const telemetryHeaders = lifecycle
+    ? lifecycle.headers
+    : createRpcTelemetryHeaders(effectiveOptions.telemetry, context);
+  const propagationHeaders = lifecycle
+    ? selectRpcHeaders(lifecycle.headers, lifecycle.propagationHeaderNames)
+    : undefined;
+  const headers = lifecycle
+    ? mergeRpcHeaders(
+        config.headers,
+        init.headers,
+        telemetryHeaders,
+        options.headers,
+        propagationHeaders,
+      )
+    : mergeRpcHeaders(config.headers, init.headers, telemetryHeaders, options.headers);
   const requestInit: RequestInit = {
     ...config.request,
     ...options.request,
@@ -2029,9 +2073,12 @@ export function createRpcClientRequest(
   };
   const fetchImpl = config.fetch ?? fetch;
   const request = {
-    url: config.baseUrl === undefined ? url : joinRpcUrl(config.baseUrl, url),
+    url: requestUrl,
     init: requestInit,
-    fetch: (requestUrl: string, fetchInit: RequestInit) => fetchImpl(requestUrl, fetchInit),
+    fetch: (requestUrl: string, fetchInit: RequestInit) => Promise.resolve().then(() => {
+      const execute = () => fetchImpl(requestUrl, fetchInit);
+      return lifecycle?.run ? lifecycle.run(execute) : execute();
+    }),
   };
 
   if (!effectiveOptions.telemetry) {
@@ -2040,7 +2087,10 @@ export function createRpcClientRequest(
 
   const telemetry: RpcTelemetryRequestState = {
     ...context,
+    ...(lifecycle?.traceparent ? { traceparent: lifecycle.traceparent } : {}),
+    ...(lifecycle?.tracestate ? { tracestate: lifecycle.tracestate } : {}),
     telemetry: effectiveOptions.telemetry,
+    ...(lifecycle ? { lifecycle } : {}),
     startedAt: nowRpcTelemetry(),
   };
 
@@ -2100,6 +2150,7 @@ function createRpcTelemetryRequestContext(
   route: RpcRouteTelemetryMetadata,
   routeKind: RpcRouteKind,
   options: RpcClientRequestOptions,
+  requestOrigin?: string,
 ): RpcTelemetryRequestContext {
   return {
     routeId: route.routeId,
@@ -2110,9 +2161,47 @@ function createRpcTelemetryRequestContext(
     routeKind,
     ...(options.interactionId ? { interactionId: options.interactionId } : {}),
     ...(options.correlationId ? { correlationId: options.correlationId } : {}),
-    ...(options.traceparent ? { traceparent: options.traceparent } : {}),
+    ...(options.traceparent !== undefined ? { traceparent: options.traceparent } : {}),
+    ...(options.tracestate ? { tracestate: options.tracestate } : {}),
+    ...(requestOrigin ? { requestOrigin } : {}),
     ...(options.attempt ? { attempt: options.attempt } : {}),
   };
+}
+
+function getRpcRequestOrigin(url: string): string | undefined {
+  try {
+    const browserHref = (globalThis as { readonly location?: { readonly href?: string } }).location
+      ?.href;
+    return browserHref ? new URL(url, browserHref).origin : new URL(url).origin;
+  } catch {
+    return url.startsWith('//') ? 'croco-unresolved://network-path' : undefined;
+  }
+}
+
+function startRpcTelemetryRequest(
+  telemetry: RpcTelemetryBridge | undefined,
+  context: RpcTelemetryRequestContext,
+): RpcTelemetryRequestLifecycle | undefined {
+  if (!telemetry?.startRequest) {
+    return undefined;
+  }
+
+  try {
+    return telemetry.startRequest(context);
+  } catch {
+    return undefined;
+  }
+}
+
+function createRpcTelemetryHeaders(
+  telemetry: RpcTelemetryBridge | undefined,
+  context: RpcTelemetryRequestContext,
+): Record<string, string> | undefined {
+  try {
+    return telemetry?.createHeaders?.(context);
+  } catch {
+    return undefined;
+  }
 }
 
 function mergeRpcHeaders(
@@ -2169,6 +2258,22 @@ function mergeRpcHeaders(
   }
 
   return Object.keys(headers).length > 0 ? headers : undefined;
+}
+
+function selectRpcHeaders(
+  headers: Record<string, string>,
+  selectedNames: readonly string[] | undefined,
+): Record<string, string> | undefined {
+  if (!selectedNames || selectedNames.length === 0) {
+    return undefined;
+  }
+
+  const names = new Set(selectedNames.map((name) => name.toLowerCase()));
+  const selected = Object.fromEntries(
+    Object.entries(headers).filter(([name]) => names.has(name.toLowerCase())),
+  );
+
+  return Object.keys(selected).length > 0 ? selected : undefined;
 }
 
 function recordRpcTelemetryResult<Problem extends RpcDeclaredProblem>(
@@ -2268,7 +2373,7 @@ function recordRpcTelemetryEvent(
     ? undefined
     : Math.max(0, nowRpcTelemetry() - telemetry.startedAt);
 
-  telemetry.telemetry.record?.({
+  const event: RpcTelemetryEvent = {
     routeId: telemetry.routeId,
     operationId: telemetry.operationId,
     methodName: telemetry.methodName,
@@ -2278,12 +2383,63 @@ function recordRpcTelemetryEvent(
     ...(telemetry.interactionId ? { interactionId: telemetry.interactionId } : {}),
     ...(telemetry.correlationId ? { correlationId: telemetry.correlationId } : {}),
     ...(telemetry.traceparent ? { traceparent: telemetry.traceparent } : {}),
+    ...(telemetry.tracestate ? { tracestate: telemetry.tracestate } : {}),
     ...(telemetry.attempt ? { attempt: telemetry.attempt } : {}),
     kind,
     timestamp: Date.now(),
     ...(durationMs === undefined ? {} : { durationMs }),
     ...fields,
-  });
+  };
+
+  try {
+    const completion = telemetry.telemetry.record?.(event);
+    if (completion) {
+      void completion.catch(() => undefined);
+    }
+  } catch {
+    // Telemetry sinks must not change the RPC result.
+  } finally {
+    endRpcTelemetryRequest(telemetry, kind, fields);
+  }
+}
+
+function endRpcTelemetryRequest(
+  telemetry: RpcTelemetryRequestState,
+  kind: RpcTelemetryEventKind,
+  fields: Partial<RpcTelemetryEvent>,
+): void {
+  const outcomeKind = getRpcTelemetryOutcomeKind(kind);
+  if (!outcomeKind || !telemetry.lifecycle) {
+    return;
+  }
+
+  try {
+    telemetry.lifecycle.end({
+      kind: outcomeKind,
+      ...(fields.status === undefined ? {} : { status: fields.status }),
+      ...(fields.problem ? { problem: fields.problem } : {}),
+      ...(fields.errorName ? { errorName: fields.errorName } : {}),
+    });
+  } catch {
+    // Instrumentation failures must not change the RPC result.
+  }
+}
+
+function getRpcTelemetryOutcomeKind(
+  kind: RpcTelemetryEventKind,
+): RpcTelemetryRequestOutcome['kind'] | undefined {
+  switch (kind) {
+    case 'rpc.request.succeeded':
+      return 'succeeded';
+    case 'rpc.request.problem':
+      return 'problem';
+    case 'rpc.request.external_failure':
+      return 'external_failure';
+    case 'rpc.request.cancelled':
+      return 'cancelled';
+    default:
+      return undefined;
+  }
 }
 
 function summarizeRpcProblem<Problem extends RpcDeclaredProblem>(

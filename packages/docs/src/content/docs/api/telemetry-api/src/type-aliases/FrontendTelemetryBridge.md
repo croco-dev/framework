@@ -55,6 +55,28 @@ title: "FrontendTelemetryBridge"
 
 ---
 
-### traceparent
+### startRequest
 
-> `readonly` **traceparent**: `string`
+> `readonly` **startRequest**: (`context`) => [`FrontendTelemetryRequestLifecycle`](/api/telemetry-api/src/type-aliases/frontendtelemetryrequestlifecycle/)
+
+#### Parameters
+
+##### context
+
+[`FrontendTelemetryRequestContext`](/api/telemetry-api/src/type-aliases/frontendtelemetryrequestcontext/)
+
+#### Returns
+
+[`FrontendTelemetryRequestLifecycle`](/api/telemetry-api/src/type-aliases/frontendtelemetryrequestlifecycle/)
+
+---
+
+### traceparent?
+
+> `readonly` `optional` **traceparent?**: `string`
+
+---
+
+### tracestate?
+
+> `readonly` `optional` **tracestate?**: `string`

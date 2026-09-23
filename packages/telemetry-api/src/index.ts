@@ -35,8 +35,11 @@ export type {
   FrontendTelemetryHeaderNames,
   FrontendTelemetryProblemSummary,
   FrontendTelemetryRequestContext,
+  FrontendTelemetryRequestLifecycle,
+  FrontendTelemetryRequestOutcome,
   FrontendTelemetryRouteKind,
   FrontendTelemetrySink,
+  FrontendTelemetrySpanMode,
 } from "./libs/frontendBridge.js";
 
 /**

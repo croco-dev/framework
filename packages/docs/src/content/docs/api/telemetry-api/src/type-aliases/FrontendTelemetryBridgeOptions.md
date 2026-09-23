@@ -11,6 +11,12 @@ title: "FrontendTelemetryBridgeOptions"
 
 ## Properties
 
+### allowedOrigins?
+
+> `readonly` `optional` **allowedOrigins?**: readonly `string`[]
+
+---
+
 ### correlationId?
 
 > `readonly` `optional` **correlationId?**: `string`
@@ -35,6 +41,18 @@ title: "FrontendTelemetryBridgeOptions"
 
 ---
 
+### spanMode?
+
+> `readonly` `optional` **spanMode?**: [`FrontendTelemetrySpanMode`](/api/telemetry-api/src/type-aliases/frontendtelemetryspanmode/)
+
+---
+
 ### traceparent?
 
 > `readonly` `optional` **traceparent?**: `string`
+
+---
+
+### tracestate?
+
+> `readonly` `optional` **tracestate?**: `string`

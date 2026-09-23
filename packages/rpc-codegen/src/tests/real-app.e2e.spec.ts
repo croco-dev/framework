@@ -25,14 +25,23 @@ import {
   defineRouteProblem,
   routeProblemResponses,
 } from "@croco/protocols-rest";
+import { createFrontendTelemetryBridge } from "@croco/telemetry-api";
 import {
   createApp,
   ErrorHandler,
   HealthCheckRegistry,
   type CrocoApp,
 } from "@croco/transports-http";
+import { context, propagation, SpanKind, trace } from "@opentelemetry/api";
+import { AsyncLocalStorageContextManager } from "@opentelemetry/context-async-hooks";
+import { W3CTraceContextPropagator } from "@opentelemetry/core";
+import {
+  BasicTracerProvider,
+  InMemorySpanExporter,
+  SimpleSpanProcessor,
+} from "@opentelemetry/sdk-trace-base";
 import ts from "typescript";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { generateClientFilesFromContractGraph } from "../libs/generate";
 
@@ -189,6 +198,16 @@ class UsersController {
 describe("rpc-codegen real app e2e", () => {
   let app!: CrocoApp;
   let requests!: RecordedRequest[];
+  const spanExporter = new InMemorySpanExporter();
+  const tracerProvider = new BasicTracerProvider({
+    spanProcessors: [new SimpleSpanProcessor(spanExporter)],
+  });
+
+  beforeAll(() => {
+    context.setGlobalContextManager(new AsyncLocalStorageContextManager().enable());
+    trace.setGlobalTracerProvider(tracerProvider);
+    propagation.setGlobalPropagator(new W3CTraceContextPropagator());
+  });
 
   beforeEach(() => {
     fs.rmSync(outDir, { recursive: true, force: true });
@@ -210,6 +229,7 @@ describe("rpc-codegen real app e2e", () => {
     Container.set(HealthCheckRegistry, new HealthCheckRegistry());
 
     requests = [];
+    spanExporter.reset();
     app = createApp({ controllers: [UsersController], securityValidation: "off" });
   });
 
@@ -217,6 +237,13 @@ describe("rpc-codegen real app e2e", () => {
     vi.unstubAllGlobals();
     fs.rmSync(outDir, { recursive: true, force: true });
     fs.rmSync(moduleDir, { recursive: true, force: true });
+  });
+
+  afterAll(async () => {
+    context.disable();
+    propagation.disable();
+    trace.disable();
+    await tracerProvider.shutdown();
   });
 
   it("runs the generated RPC client against a real Croco HTTP app", async () => {
@@ -332,6 +359,163 @@ describe("rpc-codegen real app e2e", () => {
         headers: { "x-request-id": "req-problem" },
       },
     });
+  });
+
+  it("exports one connected client and server span for a generated RPC attempt", async () => {
+    const graph = buildContractGraph([UsersController], { strictSchemas: true });
+    assertContractGraphHasNoErrors(graph);
+    const files = generateClientFilesFromContractGraph(graph, outDir);
+    const usersFile = files.find((file) => path.basename(file) === "users.ts");
+    if (!usersFile) {
+      throw new Error("Expected generated users.ts client file.");
+    }
+
+    const usersModule = await importGeneratedUsersClient(
+      "users-real-app-telemetry.mjs",
+      fs.readFileSync(usersFile, "utf-8"),
+    );
+    const fetchMock = createRealAppFetch(app, requests);
+    const telemetry = createFrontendTelemetryBridge({
+      spanMode: "client-span",
+      traceparent: "00-11111111111111111111111111111111-2222222222222222-01",
+      tracestate: "vendor=value",
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      usersModule.usersClient.getUser(
+        {
+          path: { id: "traced" },
+          headers: { "x-request-id": "req-traced" },
+        },
+        { telemetry },
+      ),
+    ).resolves.toMatchObject({ id: "traced", requestId: "req-traced" });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(requests).toHaveLength(1);
+    const requestHeaders = requests[0]?.init.headers;
+    expect(requestHeaders?.tracestate).toBe("vendor=value");
+    expect(requestHeaders?.traceparent).toMatch(
+      /^00-11111111111111111111111111111111-[0-9a-f]{16}-01$/,
+    );
+
+    const spans = spanExporter.getFinishedSpans();
+    const clientSpans = spans.filter((span) => span.kind === SpanKind.CLIENT);
+    const serverSpans = spans.filter((span) => span.kind === SpanKind.SERVER);
+    expect(clientSpans).toHaveLength(1);
+    expect(serverSpans).toHaveLength(1);
+
+    const clientSpan = clientSpans[0];
+    const serverSpan = serverSpans[0];
+    expect(clientSpan?.spanContext().traceId).toBe("11111111111111111111111111111111");
+    expect(clientSpan?.parentSpanContext?.spanId).toBe("2222222222222222");
+    expect(serverSpan?.spanContext().traceId).toBe(clientSpan?.spanContext().traceId);
+    expect(serverSpan?.parentSpanContext?.spanId).toBe(clientSpan?.spanContext().spanId);
+    expect(requestHeaders?.traceparent?.split("-")[2]).toBe(clientSpan?.spanContext().spanId);
+  });
+
+  it("ends an owned client span when configured fetch throws synchronously", async () => {
+    const graph = buildContractGraph([UsersController], { strictSchemas: true });
+    assertContractGraphHasNoErrors(graph);
+    const files = generateClientFilesFromContractGraph(graph, outDir);
+    const usersFile = files.find((file) => path.basename(file) === "users.ts");
+    if (!usersFile) {
+      throw new Error("Expected generated users.ts client file.");
+    }
+
+    const usersModule = await importGeneratedUsersClient(
+      "users-real-app-synchronous-fetch-error.mjs",
+      fs.readFileSync(usersFile, "utf-8"),
+    );
+    const telemetry = createFrontendTelemetryBridge({ spanMode: "client-span" });
+    const fetchError = new TypeError("configured fetch failed synchronously");
+    vi.stubGlobal("fetch", () => {
+      throw fetchError;
+    });
+    const input = {
+      path: { id: "sync-failure" },
+      headers: { "x-request-id": "req-sync-failure" },
+    };
+
+    expect(await getRejectedError(usersModule.usersClient.getUser(input, { telemetry }))).toBe(
+      fetchError,
+    );
+
+    const clientSpans = spanExporter
+      .getFinishedSpans()
+      .filter((span) => span.kind === SpanKind.CLIENT);
+    expect(clientSpans).toHaveLength(1);
+    expect(clientSpans[0]?.attributes["rpc.request.outcome"]).toBe("external_failure");
+  });
+
+  it("delegates span ownership to existing fetch instrumentation without duplicates", async () => {
+    const graph = buildContractGraph([UsersController], { strictSchemas: true });
+    assertContractGraphHasNoErrors(graph);
+    const files = generateClientFilesFromContractGraph(graph, outDir);
+    const usersFile = files.find((file) => path.basename(file) === "users.ts");
+    if (!usersFile) {
+      throw new Error("Expected generated users.ts client file.");
+    }
+
+    const usersModule = await importGeneratedUsersClient(
+      "users-real-app-delegated-telemetry.mjs",
+      fs.readFileSync(usersFile, "utf-8"),
+    );
+    const appFetch = createRealAppFetch(app, requests);
+    const fetchTracer = trace.getTracer("rpc-codegen-fetch-fixture");
+    const activeParents: string[] = [];
+    const instrumentedFetch = vi.fn((url: string, init: RequestInit) =>
+      (() => {
+        activeParents.push(trace.getSpanContext(context.active())?.traceId ?? "missing");
+        return fetchTracer.startActiveSpan("fetch GET", { kind: SpanKind.CLIENT }, async (span) => {
+          const headers = new Headers(init.headers);
+          propagation.inject(context.active(), headers, {
+            set: (carrier, key, value) => carrier.set(key, value),
+          });
+          try {
+            return await appFetch(url, { ...init, headers });
+          } finally {
+            span.end();
+          }
+        });
+      })(),
+    );
+    const telemetry = createFrontendTelemetryBridge({
+      traceparent: "00-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa-bbbbbbbbbbbbbbbb-01",
+      tracestate: "vendor=delegated",
+    });
+    const client = usersModule.usersClient;
+
+    vi.stubGlobal("fetch", instrumentedFetch);
+
+    await expect(
+      client.getUser(
+        {
+          path: { id: "delegated" },
+          headers: { "x-request-id": "req-delegated" },
+        },
+        { telemetry },
+      ),
+    ).resolves.toMatchObject({ id: "delegated", requestId: "req-delegated" });
+
+    expect(instrumentedFetch).toHaveBeenCalledTimes(1);
+    expect(appFetch).toHaveBeenCalledTimes(1);
+    expect(activeParents).toEqual(["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"]);
+    const spans = spanExporter.getFinishedSpans();
+    const clientSpans = spans.filter((span) => span.kind === SpanKind.CLIENT);
+    const serverSpans = spans.filter((span) => span.kind === SpanKind.SERVER);
+    expect(clientSpans).toHaveLength(1);
+    expect(serverSpans).toHaveLength(1);
+
+    const clientSpan = clientSpans[0];
+    const serverSpan = serverSpans[0];
+    expect(clientSpan?.spanContext().traceId).toBe("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    expect(clientSpan?.parentSpanContext?.spanId).toBe("bbbbbbbbbbbbbbbb");
+    expect(serverSpan?.spanContext().traceId).toBe(clientSpan?.spanContext().traceId);
+    expect(serverSpan?.parentSpanContext?.spanId).toBe(clientSpan?.spanContext().spanId);
+    expect(requests[0]?.init.headers?.tracestate).toBe("vendor=delegated");
   });
 });
 

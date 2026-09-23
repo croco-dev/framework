@@ -120,17 +120,25 @@ await userClient.getUser(
 
 Request initialization applies client defaults first and per-request overrides second while route
 method and body fields remain generator-owned. Headers merge case-insensitively in this order:
-client defaults, generated route headers, telemetry headers, then explicit per-request headers.
+client defaults, generated route headers, telemetry headers, then explicit per-request headers. A
+request lifecycle can mark propagation headers as lifecycle-owned; those headers merge last so the
+span owner sends its actual context. Override bridge trace defaults with the request `traceparent`
+and `tracestate` options rather than raw headers.
 
 Generated clients also accept telemetry defaults in the factory or an optional
 `RpcClientRequestOptions` argument per call. Browser apps can pass a provider-neutral telemetry
 bridge from `@croco/telemetry-api` to attach correlation headers and record request lifecycle events.
+Request-local `traceparent` and `tracestate` values take precedence over bridge defaults. The
+generated request passes its absolute origin to the bridge so cross-origin propagation can be
+limited explicitly.
 
 ```typescript
 import { createFrontendTelemetryBridge } from "@croco/telemetry-api";
 import { userClient } from "./generated/rpc";
 
 const telemetry = createFrontendTelemetryBridge({
+  spanMode: "client-span",
+  allowedOrigins: ["https://api.example.com"],
   sink: {
     record: (event) => {
       console.debug(event.kind, event.routeId, event.durationMs);
@@ -143,6 +151,12 @@ const result = await userClient.getUserResult(
   { telemetry, correlationId: telemetry.correlationId },
 );
 ```
+
+Use the default `spanMode: "propagate"` when fetch or HTTP instrumentation already owns the
+network span. The bridge runs the fetch call inside the selected context so that instrumentation
+can inject its own CLIENT span without a duplicate. Use `client-span` only when Croco owns the
+network attempt. Each generated method call is one attempt; caller-supplied `attempt` metadata does
+not create an internal retry loop.
 
 Generated `*Result` methods resolve rejected `fetch` calls, including fetch-stage cancellation, as
 `{ ok: false, kind: "external", error }`. Those failures have no `response`; HTTP-backed external
@@ -158,6 +172,8 @@ Problems, external failures, and cancellations. Non-GET routes also emit `rpc.mu
 events. Event payloads are limited to route metadata, status, latency, correlation ids, and stable
 Problem metadata; request bodies, query values, raw headers, response bodies, credentials, and
 Problem `detail`/`instance` fields are intentionally not emitted.
+Synchronous sink failures, asynchronous sink rejections, and span-finalization failures are
+isolated from the RPC result.
 
 Generated React Query hooks and mutation factories expose the same path through `options.rpc`:
 
