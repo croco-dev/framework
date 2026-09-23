@@ -1257,6 +1257,29 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
       },
     ],
   },
+  {
+    code: "CROCO_HTTP_DIAGNOSTICS_001",
+    category: "runtime",
+    severity: "warning",
+    title: "HTTP error diagnostics could not be recorded",
+    cause:
+      "The HTTP diagnostics collector failed while recording a handled server error. The original HTTP response was preserved, but its error may be absent from recentErrors.",
+    action:
+      "Inspect the configured DiagnosticsCollector and its storage for recording failures, then restore error recording and verify recentErrors on the diagnostics endpoint.",
+    docs: "docs/troubleshooting/diagnostics.md#croco_http_diagnostics_001",
+    searchKeywords: [
+      "CROCO_HTTP_DIAGNOSTICS_001",
+      "DiagnosticsCollector.recordError",
+      "HTTP recentErrors",
+      "diagnostics recording failed",
+    ],
+    fixExamples: [
+      {
+        label: "Verify error recording after restoring the collector",
+        note: "Trigger a handled HTTP 5xx response and confirm that its code appears in the app's diagnostics recentErrors.",
+      },
+    ],
+  },
 ] as const satisfies readonly DiagnosticCodeDefinition[];
 
 const diagnosticCodeDefinitionByCode = new Map<string, DiagnosticCodeDefinition>(

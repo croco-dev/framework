@@ -183,6 +183,7 @@ Search: CROCO_ROUTE_004, missing path param, @Param, route contract
 | `CROCO_HTTP_MIDDLEWARE_001`    | runtime              | error    | HTTP middleware가 pipeline 계약을 완료하지 않음  | `next()`, `Response`, 또는 `shortCircuit(reason)` 반환         |
 | `CROCO_HTTP_MIDDLEWARE_002`    | runtime              | error    | HTTP middleware가 `next()`를 여러 번 호출함      | `next()`를 한 번만 호출하고 반환값 재사용                      |
 | `CROCO_HTTP_FILTER_001`        | runtime              | error    | HTTP exception filter 결과가 계약 밖이거나 throw | 공식 filter result 반환 또는 `undefined`로 다음 filter에 위임  |
+| `CROCO_HTTP_DIAGNOSTICS_001`   | runtime              | warning  | 처리된 HTTP 5xx 에러의 진단 기록에 실패함        | collector와 저장소를 점검하고 `recentErrors` 기록 복구         |
 
 ### CLI diagnostic code migration
 
@@ -361,6 +362,15 @@ filter가 응답을 확정합니다. `undefined`는 실패가 아니라 pass-thr
 기록되고 runner는 원래 route error를 유지한 채 다음 filter 또는 기본 `ErrorHandler`로 진행합니다.
 원래 route error가 `Problem`이면 diagnostic payload와 span attribute에는 minification에 영향받지 않는
 `originalProblemCode`, `originalProblemCategory`, `originalProblemStatus`도 함께 기록됩니다.
+
+### `CROCO_HTTP_DIAGNOSTICS_001`
+
+Cause: HTTP 요청에서 처리된 5xx 에러를 `DiagnosticsCollector.recordError()`에 기록하는 중
+collector가 실패했습니다. 원래 HTTP 응답은 그대로 반환되지만, 해당 에러는 진단 결과의
+`recentErrors`에 남지 않았을 수 있습니다.
+Fix: 애플리케이션에 주입한 collector와 저장소의 기록 실패 원인을 확인하고 복구합니다. 이후
+처리된 HTTP 5xx 응답을 발생시켜 진단 엔드포인트의 `recentErrors`에 에러 코드가 기록되는지
+확인합니다. 진단 엔드포인트를 숨긴 설정이라면 동일한 collector에서 기록 결과를 확인합니다.
 
 ### 변경 정책
 
