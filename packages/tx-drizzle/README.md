@@ -159,11 +159,12 @@ type TxOptions = InferTxOptions<typeof db>;
 
 - 테이블 이름: `table` 또는 `schema.table`
 - 테넌트 컬럼과 관리자 역할: 단일 식별자
-- 테넌트 컬럼 타입: `tenantColumnType: "uuid" | "text"`. 기본값은 기존 동작과 같은 `"uuid"`입니다. `text` 컬럼에 문자열·슬러그 ID를 저장한다면 `"text"`를 지정하여 UUID 캐스팅을 생략합니다. 기존 정책은 이 옵션만 변경해도 갱신되지 않으므로 마이그레이션에서 정책을 다시 생성해야 합니다.
+- 테넌트 컬럼 타입: `tenantColumnType: "uuid" | "text"`. 기본값은 `"uuid"`입니다. `text` 컬럼에 문자열·슬러그 ID를 저장한다면 `"text"`를 지정하여 UUID 캐스팅을 생략합니다.
 - 설정 키: 정확히 `namespace.parameter` 두 부분
 - 각 식별자 부분: `[A-Za-z_][A-Za-z0-9_$]*`, 최대 63 UTF-8 바이트
 - 미리 따옴표 처리된 이름은 허용하지 않습니다. 논리 이름을 전달하면 헬퍼가 PostgreSQL 식별자 인용을 적용합니다.
-- 정책 이름은 테이블의 마지막 부분에 `_tenant_isolation`을 붙여 생성하며, 생성된 이름도 63바이트 제한을 지켜야 합니다.
+- 헬퍼는 테이블 이름에 `_tenant_isolation`을 붙인 restrictive 정책과 `_tenant_access`를 붙인 permissive 정책을 소유합니다. 두 이름 모두 63바이트 제한을 지켜야 합니다.
+- `adminRoles`의 기본값은 빈 배열입니다. 관리자 예외가 필요하면 실제로 등록된 PostgreSQL 역할 이름을 명시하세요.
 
 ```ts
 const policySql = createRlsPolicy({
@@ -177,6 +178,18 @@ const adapter = createRlsTxAdapter(db, tenantProvider, {
   configKey: "app.current_tenant",
 });
 ```
+
+테이블 소유자 권한으로 마이그레이션에서 `policySql` 전체를 한 번 실행하세요. SQL은 단일 `DO` 문 안에서 RLS를 켜고 헬퍼가 소유한 두 정책만 교체합니다. 기존 헬퍼가 만든 restrictive-only 정책도 정책 조건이 일치하면 이관할 수 있고, 재실행해도 정책이 중복되지 않습니다. 기존 설치에서 암묵적인 `app_admin` 예외를 계속 사용하려면 새 SQL 생성 시 `adminRoles: ["app_admin"]`을 명시하세요. 해당 역할을 등록하지 않았다면 기본값을 사용하세요. 기존 정책에 사용자 지정 관리자 역할이 있었다면 이관 시 같은 역할을 전달한 뒤, 역할을 변경할 때 SQL을 다시 실행하세요. 두 정책 이름은 헬퍼 전용으로 예약하고 다른 애플리케이션 정책에는 별도 이름을 사용하세요. 설치된 두 정책에는 헬퍼 소유 표시가 기록됩니다. 같은 이름의 다른 정책이 있으면 설치가 실패하며 기존 정책은 그대로 유지됩니다. `tenantColumnType`, 설정 키, 관리자 역할을 바꿀 때도 새 옵션으로 생성한 SQL을 다시 실행하세요.
+
+```sql
+-- 별도 마이그레이션에서 테이블 소유자로 실행합니다.
+GRANT USAGE ON SCHEMA "Tenant" TO app_user;
+GRANT SELECT, INSERT, UPDATE, DELETE ON "Tenant"."Order" TO app_user;
+```
+
+위 `GRANT`는 예시입니다. 헬퍼는 테이블 권한이나 역할을 생성·부여하지 않습니다. 일반 애플리케이션 역할은 테이블 소유자, superuser, `BYPASSRLS` 역할이 아니어야 정책 검증이 유효합니다. 테이블 소유자에게도 RLS를 적용하려면 별도로 `FORCE ROW LEVEL SECURITY`를 설정하세요. 직접 SQL을 실행할 수 있는 역할이 테넌트 설정 키를 임의로 바꿀 수 있다면 이 정책만으로 그 역할을 격리할 수 없으므로, 테넌트 컨텍스트 설정은 신뢰된 애플리케이션 경계에서 관리해야 합니다.
+
+두 정책 모두 기존 행의 `USING`과 새 행의 `WITH CHECK`에 같은 테넌트 조건을 적용합니다. 일치하는 테넌트의 읽기·쓰기만 허용하고, 누락되거나 빈 테넌트 컨텍스트는 거부합니다. 다른 permissive 정책이 있어도 restrictive 정책의 테넌트 경계는 계속 적용됩니다. 명시한 `adminRoles`의 구성원에게만 테넌트 조건 예외를 적용합니다.
 
 런타임 어댑터는 `set_config(name, value, true)`를 파라미터화하여 현재 트랜잭션 범위에만 테넌트 값을 설정합니다.
 
