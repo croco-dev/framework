@@ -8,8 +8,14 @@ describe("createRlsPolicy", () => {
 
     expect(sql).toContain('ALTER TABLE "users" ENABLE ROW LEVEL SECURITY;');
     expect(sql).toContain('CREATE POLICY "users_tenant_isolation" ON "users"');
-    expect(sql).toContain("\"tenant_id\" = current_setting('app.current_tenant', true)::uuid");
-    expect(sql).toContain("OR pg_has_role(current_user, 'app_admin', 'member')");
+    expect(sql).toContain('CREATE POLICY "users_tenant_access" ON "users"');
+    expect(sql).toContain("AS RESTRICTIVE");
+    expect(sql).toContain("AS PERMISSIVE");
+    expect(sql).toContain(
+      "\"tenant_id\" = NULLIF(current_setting('app.current_tenant', true), '')::uuid",
+    );
+    expect(sql).not.toContain("pg_has_role");
+    expect(sql).toContain('WITH CHECK ("tenant_id" = NULLIF(current_setting(');
   });
 
   it.each(["uuid", "text"] as const)(
@@ -22,9 +28,8 @@ describe("createRlsPolicy", () => {
       });
 
       expect(policySql).toContain(
-        "\"tenant_id\" = current_setting('app.current_tenant', true)" +
-          (tenantColumnType === "uuid" ? "::uuid" : "") +
-          "\n  );",
+        "\"tenant_id\" = NULLIF(current_setting('app.current_tenant', true), '')" +
+          (tenantColumnType === "uuid" ? "::uuid" : ""),
       );
       if (tenantColumnType === "text") {
         expect(policySql).not.toContain("::uuid");
@@ -61,7 +66,7 @@ describe("createRlsPolicy", () => {
     });
 
     expect(sql).toContain(
-      "\"workspace_id\" = current_setting('app.current_workspace', true)::uuid",
+      "\"workspace_id\" = NULLIF(current_setting('app.current_workspace', true), '')::uuid",
     );
     expect(sql).toContain("OR pg_has_role(current_user, 'ops_admin', 'member')");
     expect(sql).toContain("OR pg_has_role(current_user, 'support_admin', 'member')");
@@ -86,7 +91,10 @@ describe("createRlsPolicy", () => {
 
     expect(policySql).toContain('ALTER TABLE "Tenant"."Order" ENABLE ROW LEVEL SECURITY;');
     expect(policySql).toContain('CREATE POLICY "Order_tenant_isolation" ON "Tenant"."Order"');
-    expect(policySql).toContain("\"select\" = current_setting('app.CurrentTenant', true)::uuid");
+    expect(policySql).toContain(
+      "\"select\" = NULLIF(current_setting('app.CurrentTenant', true), '')::uuid",
+    );
+    expect(policySql).toContain('CREATE POLICY "Order_tenant_access" ON "Tenant"."Order"');
     expect(policySql).toContain("pg_has_role(current_user, 'SupportAdmin', 'member')");
   });
 

@@ -4,6 +4,7 @@ import { RlsConfigurationProblem, type RlsConfigurationField } from "./problems/
 const IDENTIFIER_PATTERN = /^[A-Za-z_][A-Za-z0-9_$]*$/;
 const MAX_IDENTIFIER_BYTES = 63;
 const POLICY_SUFFIX = "_tenant_isolation";
+const ACCESS_POLICY_SUFFIX = "_tenant_access";
 
 function utf8ByteLength(value: string): number {
   return new TextEncoder().encode(value).byteLength;
@@ -34,6 +35,7 @@ export type ValidatedRlsPolicyOptions = {
   readonly adminRoles: readonly string[];
   readonly configKey: string;
   readonly policyName: string;
+  readonly accessPolicyName: string;
   readonly tableName: readonly string[];
   readonly tenantColumn: string;
 };
@@ -61,11 +63,15 @@ export function validateRlsPolicyOptions(options: {
   }
 
   const policyName = validateIdentifier(`${finalTableName}${POLICY_SUFFIX}`, "tableName");
+  const accessPolicyName = validateIdentifier(
+    `${finalTableName}${ACCESS_POLICY_SUFFIX}`,
+    "tableName",
+  );
   const tenantColumn = validateIdentifier(options.tenantColumn, "tenantColumn");
   const configKey = validateRlsConfigKey(options.configKey);
   const adminRoles = options.adminRoles.map((role) => validateIdentifier(role, "adminRoles"));
 
-  return { adminRoles, configKey, policyName, tableName, tenantColumn };
+  return { accessPolicyName, adminRoles, configKey, policyName, tableName, tenantColumn };
 }
 
 export function qualifiedIdentifier(components: readonly string[]): SQL {
