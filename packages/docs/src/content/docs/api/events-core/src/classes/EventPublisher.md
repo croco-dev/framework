@@ -99,13 +99,17 @@ title: "EventPublisher"
 
 ### publishNow()
 
-> **publishNow**(`event`): `Promise`\<`void`\>
+> **publishNow**(`event`, `options?`): `Promise`\<`void`\>
 
 #### Parameters
 
 ##### event
 
 [`DomainEvent`](/api/events-core/src/classes/domainevent/)
+
+##### options?
+
+[`EventPublishOptions`](/api/events-core/src/type-aliases/eventpublishoptions/)
 
 #### Returns
 

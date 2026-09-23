@@ -5,6 +5,7 @@ import {
 } from "@croco/framework-context";
 import type { DomainEvent } from "./DomainEvent";
 import { EventBusConfig } from "./EventBusConfig";
+import type { EventPublishOptions } from "./interfaces/EventPublishing";
 import {
   EventAfterCommitOutcomeRequiredProblem,
   EventAfterCommitPublishFailedProblem,
@@ -76,8 +77,8 @@ export class EventPublisher {
     return this.config.getEventBus();
   }
 
-  async publishNow(event: DomainEvent): Promise<void> {
-    await this.eventBus.publish(event);
+  async publishNow(event: DomainEvent, options?: EventPublishOptions): Promise<void> {
+    await this.eventBus.publish(event, options);
   }
 
   publishAfterCommit(event: DomainEvent, onPublished?: () => void): void;

@@ -84,13 +84,17 @@ readonly [`EventBusActiveHandler`](/api/events-core/src/type-aliases/eventbusact
 
 ### publish()
 
-> **publish**(`event`): `Promise`\<`void`\>
+> **publish**(`event`, `options?`): `Promise`\<`void`\>
 
 #### Parameters
 
 ##### event
 
 `TEvent`
+
+##### options?
+
+[`EventPublishOptions`](/api/events-core/src/type-aliases/eventpublishoptions/)
 
 #### Returns
 

@@ -5737,7 +5737,7 @@ Sources:
 
 Sources:
 
-- `packages/events-inmemory/src/libs/InmemoryEventBus.ts:108:1` (problem-class)
+- `packages/events-inmemory/src/libs/InmemoryEventBus.ts:109:1` (problem-class)
 
 <a id="events-inmemory-publish-failed"></a>
 
@@ -5755,7 +5755,7 @@ Sources:
 
 Sources:
 
-- `packages/events-inmemory/src/libs/InmemoryEventBus.ts:91:1` (problem-class)
+- `packages/events-inmemory/src/libs/InmemoryEventBus.ts:92:1` (problem-class)
 
 <a id="events-inmemory-unsupported-dead-letter-value"></a>
 

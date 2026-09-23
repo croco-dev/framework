@@ -43,13 +43,17 @@ Indicates that the bus records its own publish outcomes in EventBusStats.
 
 ### publish()
 
-> **publish**(`event`): `Promise`\<`void`\>
+> **publish**(`event`, `options?`): `Promise`\<`void`\>
 
 #### Parameters
 
 ##### event
 
 `TEvent`
+
+##### options?
+
+[`EventPublishOptions`](/api/events-core/src/type-aliases/eventpublishoptions/)
 
 #### Returns
 

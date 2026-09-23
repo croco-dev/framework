@@ -8530,7 +8530,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          line: 108,
+          line: 109,
           column: 1,
           kind: "problem-class",
         },
@@ -8562,7 +8562,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          line: 91,
+          line: 92,
           column: 1,
           kind: "problem-class",
         },
