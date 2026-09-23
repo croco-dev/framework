@@ -1,6 +1,7 @@
 import type { RenderServer, RuntimeContext } from "@croco/meta-vite";
 import { describe, expect, it, vi } from "vitest";
-import { createSsrHandler, createSsrHandlerAsFetchHandler } from "../libs/CloudflareSsrHandler";
+import { createSsrHandler, createSsrHandlerAsFetchHandler } from "../index";
+import type { CloudflareSsrHandlerOptions } from "../index";
 import { SSR_FAILURE_CODES } from "../libs/types";
 import type { SsrFailureReport, SsrWorkerEnv } from "../libs/types";
 
@@ -418,6 +419,16 @@ describe("createSsrHandler", () => {
 });
 
 describe("createSsrHandlerAsFetchHandler", () => {
+  it("is available through the package entrypoint with its options type", async () => {
+    const options: CloudflareSsrHandlerOptions = {};
+    const response = await createSsrHandlerAsFetchHandler(options)(
+      new Request("https://example.com/dashboard"),
+    );
+
+    expect(response.status).toBe(500);
+    await expect(response.text()).resolves.toBe("No render server configured");
+  });
+
   it("uses RuntimeContext env for service-binding API routing", async () => {
     const apiResponse = Response.json({ ok: true });
     const api = {

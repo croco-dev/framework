@@ -14785,6 +14785,12 @@
               "source": null
             },
             {
+              "name": "createSsrHandlerAsFetchHandler",
+              "exportKind": "named",
+              "source": "./libs/CloudflareSsrHandler",
+              "declarationKind": "function"
+            },
+            {
               "name": "default",
               "exportKind": "named",
               "source": null
@@ -14797,6 +14803,11 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "CloudflareSsrHandlerOptions",
+              "exportKind": "named",
+              "source": "./libs/CloudflareSsrHandler"
+            },
             {
               "name": "SsrFailureBoundary",
               "exportKind": "named",

@@ -13,7 +13,7 @@ Creates a Cloudflare Workers SSR handler using meta-vite's RenderServer.
 
 ### options?
 
-`CloudflareSsrHandlerOptions` = `{}`
+[`CloudflareSsrHandlerOptions`](/api/frontend-cloudflare/src/type-aliases/cloudflaressrhandleroptions/) = `{}`
 
 ## Returns
 
