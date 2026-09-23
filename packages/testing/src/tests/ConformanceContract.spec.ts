@@ -3,7 +3,6 @@ import * as testingEntrypoint from "@croco/testing";
 import {
   createAuthProviderConformanceSuite,
   createBillingProviderConformanceSuite,
-  createLlmProviderConformanceSuite,
   createProviderConformanceMatrixSuite,
   createProviderNoCredentialConformanceSuite,
   createQStashBatchConformanceSuite,
@@ -74,7 +73,6 @@ const PUBLIC_CONFORMANCE_HELPER_EXPORTS = [
   "createContractCaseArbitrary",
   "createDrizzleProviderConformanceSuite",
   "createFileContractFailureSink",
-  "createLlmProviderConformanceSuite",
   "createProviderConformanceMatrixSuite",
   "createProviderNoCredentialConformanceSuite",
   "createQStashBatchConformanceSuite",
@@ -393,60 +391,6 @@ describe("@croco/testing conformance public contract", () => {
       "Contract Drizzle: duplicate error semantics: maps duplicate keys",
       "Contract Drizzle: conflict error semantics: maps write conflicts",
       "Contract Drizzle: retryable failure semantics: marks retryable upstream failures",
-    ]);
-  });
-
-  it("locks LLM provider case names, including optional failure evidence", () => {
-    const suite = createLlmProviderConformanceSuite({
-      providerName: "Contract LLM",
-      modelId: "contract-model",
-      createModel: unexecuted,
-      createFailingModel: unexecuted,
-      prompts: {
-        generate: {
-          prompt: "Generate a conformance response",
-        },
-        stream: {
-          prompt: "Stream a conformance response",
-          minimumChunks: 1,
-        },
-        object: {
-          prompt: "Return a conformance object",
-          schema: {
-            type: "object",
-          },
-        },
-        tool: {
-          prompt: "Call a conformance tool",
-          tools: [
-            {
-              name: "lookup",
-              description: "Look up conformance data.",
-              parameters: {
-                type: "object",
-              },
-            },
-          ],
-        },
-        embed: {
-          text: "one",
-          expectedDimensions: 3,
-        },
-        embedMany: {
-          texts: ["one", "two"],
-          expectedDimensions: 3,
-        },
-      },
-    });
-
-    expect(caseNames(suite)).toEqual([
-      "generates text with model identity and token usage",
-      "streams deltas and final usage without losing abort propagation",
-      "generates structured objects through the provider contract",
-      "returns deterministic tool calls with usage",
-      "embeds one input with stable dimensions and usage",
-      "embeds many inputs with one vector per input and usage",
-      "surfaces provider errors instead of hiding them",
     ]);
   });
 

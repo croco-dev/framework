@@ -7,7 +7,6 @@
 "@croco/credits-drizzle": patch
 "@croco/engagement-core": patch
 "@croco/execution-drizzle": patch
-"@croco/llm-openai": patch
 "@croco/membership-drizzle": patch
 "@croco/meta-vite": patch
 "@croco/metering-core": patch

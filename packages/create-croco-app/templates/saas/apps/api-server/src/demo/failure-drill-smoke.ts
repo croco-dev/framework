@@ -103,7 +103,7 @@ async function main(): Promise<void> {
           telemetry: "saas.llm.quota_exceeded",
         },
         problem: {
-          code: "llm-metering/quota-exceeded",
+          code: "ai-usage/quota-exceeded",
           status: 403,
           title: "Forbidden",
         },

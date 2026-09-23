@@ -193,6 +193,7 @@ function getChangedFiles(options: CheckOptions): string[] {
   const output = runGit(options.rootDir, [
     "diff",
     "--name-only",
+    "--no-renames",
     "--diff-filter=ACMRD",
     `${options.baseRef}...${options.headRef}`,
   ]);

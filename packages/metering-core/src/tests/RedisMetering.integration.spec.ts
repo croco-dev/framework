@@ -5,10 +5,12 @@ import {
 } from "@croco/testing-resources";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, assert } from "vitest";
 import { IdempotencyManager } from "../libs/IdempotencyManager";
+import type { IdempotencyClaim, PendingMeteringDelivery } from "../libs/IdempotencyManager";
 import type { BillableUsageClaim, BillableUsageEvent } from "../libs/BillableUsageJournal";
 import { MeteringService } from "../libs/MeteringService";
 import type { MeterRegistry } from "../libs/MeterRegistry";
 import { DuplicateRecordProblem } from "../libs/problems/DuplicateRecordProblem";
+import { QuotaExceededProblem } from "../libs/problems/QuotaExceededProblem";
 import { RedisProblem } from "../libs/problems/RedisProblem";
 import type { RedisClient } from "../libs/RedisClient";
 import { RedisBillableUsageJournal } from "../libs/RedisBillableUsageJournal";
@@ -292,6 +294,86 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
         period: "billing_cycle",
       }),
     ).resolves.toBe(4);
+  });
+
+  it("replays uncertain persistence without recording quota usage twice", async () => {
+    if (!connection) {
+      throw new Error("Redis test resource did not start");
+    }
+
+    const redis = createRedisClient(connection);
+    class FailingStagingManager extends IdempotencyManager {
+      private failNextStaging = true;
+
+      override async markMeteringEventsPublishing(
+        tenantId: string,
+        meterId: string,
+        idempotencyKey: string,
+        token: IdempotencyClaim,
+        delivery: PendingMeteringDelivery,
+      ): Promise<void> {
+        if (this.failNextStaging) {
+          this.failNextStaging = false;
+          throw new Error("Injected staging failure before Redis commit");
+        }
+        await super.markMeteringEventsPublishing(
+          tenantId,
+          meterId,
+          idempotencyKey,
+          token,
+          delivery,
+        );
+      }
+    }
+
+    const manager = new FailingStagingManager(redis);
+    const service = new MeteringService({
+      idempotencyManager: manager,
+      meterRegistry: createMeterRegistry([createMeter("quota", 10)]),
+      usageStorage: new RedisUsageStorage(redis),
+    });
+    const input = {
+      tenantId: "tenant-1",
+      meterId: "quota",
+      value: 10,
+      idempotencyKey: "uncertain-persistence",
+    };
+
+    await expect(service.record(input)).rejects.toThrow("Injected staging failure");
+    await expect(
+      service.getRecordStatus(input.tenantId, input.meterId, input.idempotencyKey),
+    ).resolves.toBe("persistence-uncertain");
+    await expect(service.record(input)).resolves.toMatchObject(input);
+    await expect(
+      service.getUsage({
+        tenantId: input.tenantId,
+        meterId: input.meterId,
+        period: "billing_cycle",
+      }),
+    ).resolves.toBe(10);
+  });
+
+  it("persists quota rejection as a final rejected status", async () => {
+    const service = createService();
+    const input = {
+      tenantId: "tenant-1",
+      meterId: "quota",
+      value: 11,
+      idempotencyKey: "quota-rejected",
+    };
+
+    await expect(service.record(input)).rejects.toThrow(QuotaExceededProblem);
+    await expect(
+      service.getRecordStatus(input.tenantId, input.meterId, input.idempotencyKey),
+    ).resolves.toBe("rejected");
+    await expect(service.record(input)).rejects.toThrow(DuplicateRecordProblem);
+    await expect(
+      service.getUsage({
+        tenantId: input.tenantId,
+        meterId: input.meterId,
+        period: "billing_cycle",
+      }),
+    ).resolves.toBe(0);
   });
 
   it("leaves no dedupe marker after ZADD fails and persists exactly once on retry", async () => {

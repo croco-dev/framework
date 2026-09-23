@@ -1618,14 +1618,6 @@ function decoratorMetadataContractFor(
     };
   }
 
-  if (packageName === "@croco/llm-core") {
-    return {
-      memberTypes: [{ className: "Function", memberName: "generate" }],
-      serviceClass: "LlmService",
-      servicePackage: "@croco/llm-core",
-    };
-  }
-
   return undefined;
 }
 

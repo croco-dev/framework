@@ -1939,7 +1939,6 @@
             "AuthProviderConformanceOptions.auth/liveSmoke/providerName/readiness/secretSamples/tenantMapping/webhooks",
             "StorageProviderConformanceOptions.createProvider/keyPrefix/providerName/metadata/publicUrl/signedUrl",
             "ProviderConformanceMatrixOptions.profiles",
-            "LlmProviderConformanceOptions.createModel/createFailingModel/modelId/providerName/prompts",
             "BillingGatewayConformanceOptions.createGateway/fixtures/assertions/failureScenarios",
             "BillingWebhookConformanceOptions.createHandler/fixtures/assertions",
             "BillingProviderConformanceOptions.providerName/gateway/webhook",
@@ -1971,10 +1970,6 @@
               "identifier": "ProviderConformanceMatrixOptions"
             },
             {
-              "path": "packages/testing/src/libs/llm-provider-conformance.ts",
-              "identifier": "LlmProviderConformanceOptions"
-            },
-            {
               "path": "packages/testing/src/libs/billing-provider-conformance.ts",
               "identifier": "BillingGatewayConformanceOptions"
             },
@@ -2003,10 +1998,6 @@
             {
               "path": "packages/testing/src/tests/ConformanceContract.spec.ts",
               "identifier": "createStorageProviderConformanceSuite"
-            },
-            {
-              "path": "packages/testing/src/tests/ConformanceContract.spec.ts",
-              "identifier": "createLlmProviderConformanceSuite"
             }
           ]
         },

@@ -6,12 +6,12 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   119 |
+| Public packages                |   117 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
 | Missing generated API docs     |     0 |
 | Missing package test directory |     0 |
-| Extension matrix packages      |    49 |
+| Extension matrix packages      |    48 |
 | Certification records          |     8 |
 | Croco 1.0 spine packages       |    18 |
 
@@ -113,6 +113,7 @@ None.
 | `@croco/admin-generated`               | Tooling        | codegen       | Admin Generated         | unclaimed                                 |
 | `@croco/admin-ops`                     | Contracts      | domain        | Admin Ops               | unclaimed                                 |
 | `@croco/admin-react`                   | Plugins        | presentation  | Admin React             | browser, node                             |
+| `@croco/ai-usage`                      | Plugins        | integration   | AI Usage                | unclaimed                                 |
 | `@croco/analytics-core`                | Contracts      | domain        | Analytics               | unclaimed                                 |
 | `@croco/analytics-posthog`             | Plugins        | integration   | Analytics               | node, lambda                              |
 | `@croco/architecture-policy`           | Tooling        | policy        | Architecture Policy     | unclaimed                                 |
@@ -166,9 +167,6 @@ None.
 | `@croco/invitation-core`               | Contracts      | domain        | Invitation              | unclaimed                                 |
 | `@croco/invitation-drizzle`            | Plugins        | provider      | Invitation              | node, lambda                              |
 | `@croco/lifecycle-core`                | Contracts      | domain        | Lifecycle               | unclaimed                                 |
-| `@croco/llm-core`                      | Contracts      | domain        | Llm                     | unclaimed                                 |
-| `@croco/llm-metering`                  | Plugins        | integration   | Llm Metering            | unclaimed                                 |
-| `@croco/llm-openai`                    | Plugins        | provider      | LLM                     | node, lambda                              |
 | `@croco/membership-core`               | Contracts      | domain        | Membership              | unclaimed                                 |
 | `@croco/membership-drizzle`            | Plugins        | provider      | Membership              | node, lambda                              |
 | `@croco/meta-vite`                     | Tooling        | build-target  | Frontend routing        | node, lambda, cloudflare-workers, browser |
@@ -232,8 +230,8 @@ None.
 | Group        | Packages |
 | ------------ | -------: |
 | Core         |       23 |
-| Domain       |       31 |
-| Provider     |       29 |
+| Domain       |       30 |
+| Provider     |       28 |
 | Integration  |        5 |
 | Protocol     |        8 |
 | Transport    |        2 |
@@ -244,8 +242,8 @@ None.
 
 | Maturity            | Packages |
 | ------------------- | -------: |
-| 🟢 production-ready |       24 |
-| 🟡 beta             |       79 |
+| 🟢 production-ready |       23 |
+| 🟡 beta             |       78 |
 | 🔴 alpha/WIP        |       16 |
 | ⚠️ deprecated       |        0 |
 
@@ -255,7 +253,7 @@ Extension matrix metadata is maintained in `docs/package-catalog.json` and rende
 
 | Group        | Packages | Without package tests |
 | ------------ | -------: | --------------------: |
-| Provider     |       29 |                     0 |
+| Provider     |       28 |                     0 |
 | Integration  |        5 |                     0 |
 | Transport    |        2 |                     0 |
 | Host         |        4 |                     0 |

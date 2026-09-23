@@ -1,140 +1,134 @@
-# LLM Usage Governance
+# AI SDK Calls And Usage Governance
 
-Croco treats LLM usage as a tenant-governed metered resource, not only a model
-call abstraction. The supported control path is:
+Croco does not provide a general-purpose model engine, registry, decorator, or provider facade. Applications call the vendor SDK they choose and define only the feature-specific input, output, failure, cancellation, and usage contract they need.
 
-1. Register a provider-backed `LlmModel` in `@croco/llm-core`.
-2. Pass provider usage into `@croco/llm-metering`.
-3. Use a versioned pricing registry for token and cost calculation.
-4. Enforce tenant quota through `LlmMeteringService` `quotaPolicy` and
-   `@croco/metering-core` meter quotas.
-5. Export usage evidence through `LlmTelemetryBridge` GenAI attributes.
+The maintained AI SaaS preset demonstrates the supported boundary:
 
-## Provider Decision
+1. The application resolves a tenant-scoped SDK client or deterministic test function.
+2. A prompt policy validates tenant scope, request size, and sensitive-data handling before any external call.
+3. The application calls the official SDK directly with an `AbortSignal`, a bounded output size, and SDK retries disabled.
+4. The provider result and usage state are stored before usage ingestion or completion-event delivery.
+5. `@croco/ai-usage` records known token and cost usage through `@croco/metering-core`.
+6. Failed downstream delivery resumes from the stored receipt. It does not invoke the model again.
 
-OpenAI is the first real provider target for a follow-up provider package because the
-official API surface checked on 2026-06-18 covers the required Croco operations.
-The links below are the official documentation paths used for that provider
-decision and are validated by the docs link check:
+## OpenAI Reference Integration
 
-- Text generation uses the Responses API and the official Node SDK
-  (`client.responses.create`, `response.output_text`):
-  https://developers.openai.com/api/docs/guides/text
-- Responses include usage fields for input, output, and total tokens:
-  https://developers.openai.com/api/reference/resources/responses/methods/create
-- Streaming uses `stream=true` over server-sent events:
-  https://developers.openai.com/api/docs/guides/streaming-responses
-- Structured outputs use JSON schema response formats:
-  https://developers.openai.com/api/docs/guides/structured-outputs
-- Function tools are supported through Responses API `tools`:
-  https://developers.openai.com/api/docs/guides/function-calling
-- Embeddings remain a separate endpoint:
-  https://developers.openai.com/api/reference/resources/embeddings/methods/create
+The reference path pins `openai` `6.44.0` and calls `client.responses.create` directly. The application injects the client for the current tenant; it does not use a process-global client or model registry.
 
-This PR intentionally does not ship a partial `@croco/llm-openai` package. The
-provider must normalize Responses events, function-tool outputs, structured output
-schemas, embedding usage, provider errors, and abort behavior against the reusable
-conformance suite before it becomes a publishable package.
+The client is constructed with explicit credentials and context, `logLevel: "off"`, and `maxRetries: 0`. Each call also passes `maxRetries: 0`, `store: false`, and an application-owned cancellation signal. This prevents ambient `OPENAI_*` configuration from selecting another tenant's organization or project and prevents the SDK from retrying a request whose acceptance is unknown.
 
-## Provider Conformance
+The Responses API returns generated text in `response.output_text` and token counts in `response.usage`. The application accepts only `status: "completed"`. Missing usage remains unknown; it is not converted into a zero-token or zero-cost record. The official API contract is documented here:
 
-Future provider packages should import `createLlmProviderConformanceSuite` from
-`@croco/testing` and run it against a deterministic provider test backend or mocked
-transport. The suite covers:
+- https://developers.openai.com/api/reference/typescript/resources/responses/methods/create
+- https://developers.openai.com/api/reference/typescript#request-ids
 
-- `generate`
-- `stream`, including usage and abort behavior
-- `generateObject`
-- `callTool`
-- `embed`
-- `embedMany`
-- provider error propagation
+Provider response IDs and request IDs are diagnostic correlation values. They do not prove idempotency. A connection loss, aborted response body, or other failure after request dispatch can leave provider acceptance and cost unknown. The receipt store records that state and blocks automatic re-inference until an operator or provider reconciliation process resolves it.
 
-Provider tests should also add provider-specific cases for authentication, rate
-limits, retryable errors, and live-smoke gates when credentials are available.
+## Usage Ingestion
 
-## Pricing Registry
-
-Do not rely on built-in prices as current production prices. `samplePricingRegistry`
-is versioned sample data for tests and demos. Applications should inject a current
-registry:
-
-The underlying `meteringService` is supplied by the application from its current
-`@croco/metering-core` storage, quota, and idempotency adapters.
+`@croco/ai-usage` accepts application-supplied usage; it does not execute model calls. Known generation usage is ingested with `AiUsageIngestService.ingestGenerationUsage`:
 
 ```ts no-check
-import { LlmMeteringService, PricingTable } from "@croco/llm-metering";
+import { AiPricingTable, AiUsageIngestService } from "@croco/ai-usage";
 
-const pricingTable = PricingTable.fromRegistry({
-  version: "tenant-pricing-2026-06",
+const pricingTable = AiPricingTable.fromRegistry({
+  version: "tenant-pricing-2026-09",
   source: "internal-price-book",
   entries: [
     {
       provider: "openai",
-      modelId: "current-model-id",
+      modelId: "approved-model-id",
       inputPricePerToken: 0.000001,
       outputPricePerToken: 0.000002,
       currency: "USD",
-      effectiveDate: "2026-06-18",
+      effectiveDate: "2026-09-22",
     },
   ],
 });
 
-const llmMetering = new LlmMeteringService({
+const usageIngest = new AiUsageIngestService({
   meteringService,
   pricingTable,
+  quotaPolicy,
 });
-```
 
-The authoritative pricing source should be checked when the registry is refreshed:
-https://developers.openai.com/api/docs/pricing
-
-## Quota And Failure Policy
-
-`LlmMeteringService` is fail-closed. If quota policy or any meter write fails, the
-LLM usage operation fails with evidence instead of silently dropping usage.
-
-Use `quotaPolicy` when an app needs pre-recording projected quota checks:
-
-This example extends the same application-owned metering service and quota policy boundary.
-
-```ts no-check
-const llmMetering = new LlmMeteringService({
-  meteringService,
-  pricingTable,
-  quotaPolicy: {
-    async enforce(context) {
-      for (const meter of context.meters) {
-        await assertTenantCanSpend(context.tenantId, meter.meterId, meter.value);
-      }
-    },
+await usageIngest.ingestGenerationUsage({
+  tenantId,
+  provider: "openai",
+  modelId: "approved-model-id",
+  usage: {
+    inputTokens: response.usage.input_tokens,
+    outputTokens: response.usage.output_tokens,
+    totalTokens: response.usage.total_tokens,
+    accuracy: "EXACT",
   },
+  idempotencyKey,
 });
 ```
 
-Also register the underlying meters in `@croco/metering-core` so during-recording
-quota remains enforced:
+Pricing data is application-owned and versioned. `samplePricingRegistry` exists only for tests and demos; it is not a current provider price book. Check the authoritative provider source before updating production pricing:
+
+- https://developers.openai.com/api/docs/pricing
+
+The package remains fail-closed for quota policy and meter-write failures. It preserves the existing storage meter IDs so deployed usage ledgers do not require a meter rename:
 
 - `llm.prompt_tokens`
 - `llm.completion_tokens`
 - `llm.embedding_tokens`
-- `llm.cost_usd`
+- `llm.cost_usd_nanos`
 
-The generated SaaS preset includes a zero-credential AI usage example that records
-one in-memory LLM call and proves an over-quota request fails before meter writes.
+`llm.cost_usd_nanos` stores integer nanodollars. Reusing the same ingestion idempotency key preserves the existing `:prompt`, `:completion`, `:tokens`, and `:cost` meter deduplication boundary. The `:tokens` suffix is used for embedding-token records.
 
-## Telemetry
+## Result, Event, And Restart Recovery
 
-`LlmTelemetryBridge` maps usage records onto GenAI-style span attributes:
+The provider result and its usage state must cross a durable application boundary before usage or completion-event publication. A receipt distinguishes these states:
 
-- `gen_ai.system`
-- `gen_ai.request.model`
-- `gen_ai.usage.prompt_tokens`
-- `gen_ai.usage.completion_tokens`
-- `gen_ai.usage.cost_usd`
-- `gen_ai.client.user`
-- `gen_ai.usage.accuracy`
+- provider outcome unknown;
+- provider completed, usage known;
+- provider completed, usage unknown;
+- usage pending or recorded;
+- completion event pending or published.
 
-It also emits an `llm.usage` event with provider, model, and tenant ID. Use
-`@croco/telemetry-sdk-node` at app startup and flush before serverless handler
-return when running in Lambda-style runtimes.
+When metering or event delivery fails after provider completion, retry only the pending downstream step with the same receipt and idempotency key. Completed meter writes are excluded from replay quota checks; active or rejected writes remain explicit failures. Do not reconstruct the prompt and call the provider again. When provider acceptance is unknown, expose that state and require reconciliation; do not report a confirmed failure or zero cost.
+
+Raw prompts and model output may be required in application business state for result recovery, but they must not be copied into default telemetry, usage events, or diagnostic logs. Apply the application's retention, delete, legal-hold, and tenant-scope policy to any durable receipt that stores content.
+
+## Migration From The Retired Facades
+
+The retired source-tree manifests were versioned at `@croco/llm-core@0.0.4`, `@croco/llm-metering@0.0.4`, and `@croco/llm-openai@0.0.1`. Those versions were not all published: the npm registry exposes `@croco/llm-core` and `@croco/llm-metering` through `0.0.2`, while `@croco/llm-openai` has no published release. Do not add a retired package as a new dependency. During a staged migration, keep the exact version already resolved in the application's lockfile until its replacement boundary is deployed.
+
+Migrate consumers in this order:
+
+1. Inventory every imported facade, decorator, provider operation, event, meter, error branch, and test helper.
+2. Add a feature-local SDK function and its deterministic fake. Define cancellation, deadline, output, provider-failure, and unknown-outcome behavior before changing call sites.
+3. Add durable result and usage receipts for provider calls that can cross a process restart. Resume only unfinished meter and event deliveries with their original idempotency keys.
+4. Replace usage and cost recording with `@croco/ai-usage`, keeping the existing `llm.*` meter IDs and suffixes.
+5. Replace provider conformance tests with feature-contract tests against both the deterministic fake and the real SDK connected to a local HTTP fixture.
+6. Remove the retired packages and their problem-code branches only after the application no longer imports them.
+
+| Retired surface                              | Migration                                                                                                              |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `LlmService`, `LlmModel`, `LlmRegistry`      | Define and inject a feature-local SDK execution function.                                                              |
+| `@Llm`, `setLlmService`, `runWithLlmService` | Inject the execution function through the application's composition root.                                              |
+| `@croco/llm-openai`                          | Inject `openai@6.44.0` and call the required SDK resource directly. Unsupported feature operations remain unsupported. |
+| `LlmMeteringService.recordUsage`             | Use `AiUsageIngestService.ingestGenerationUsage`.                                                                      |
+| `LlmMeteringService.recordEmbeddingUsage`    | Use `AiUsageIngestService.ingestEmbeddingUsage`.                                                                       |
+| `@AiMetered` and stream wrappers             | Extract final provider usage in feature code and ingest it explicitly.                                                 |
+| `createLlmProviderConformanceSuite`          | Test the feature contract with both a deterministic fake and the actual vendor SDK against a local HTTP fixture.       |
+| Generic completion events                    | Store a feature-owned result/usage receipt and pending event intent, then resume delivery without re-inference.        |
+
+There is no replacement model registry, agent loop, cross-provider chat protocol, or embedding engine. Applications add only the SDK operations their product feature supports.
+
+## Maintained Consumer Inventory
+
+| Consumer                            | Model-call boundary                                                                                                                               | Usage, retry, and event behavior                                                                                                                                                       |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create-croco-app` `ai-saas` preset | The default path injects a deterministic application function. The production reference injects a tenant-scoped `openai@6.44.0` Responses client. | Stores the provider result and usage receipt before downstream work, retries no SDK calls, resumes incomplete meter writes by status, and republishes only a pending completion event. |
+| `create-croco-app` `saas` preset    | Uses a deterministic application-local `generateAiText` demo and makes no external model call.                                                    | Ingests its explicit token result through `@croco/ai-usage` and keeps entitlement checks and `llm.*` usage meters deterministic.                                                       |
+| `@croco/ai-usage`                   | Does not call a model or choose a provider.                                                                                                       | Prices caller-supplied generation, embedding, and image usage; enforces caller-supplied quota policy; records stable meters; emits usage events and telemetry.                         |
+
+No maintained consumer requires the retired generic registry, decorators, provider facade, streaming wrapper, tool-call loop, structured-output engine, or embedding execution API. Those surfaces are deleted instead of being mirrored behind a replacement abstraction.
+
+## Verification
+
+Default tests use deterministic functions and local HTTP fixtures. They do not require customer prompts, production credentials, or a live provider request. The maintained reference verifies completed responses, missing usage, incomplete results, tenant credential isolation, cancellation during response-body delivery, connection loss, downstream event failure, usage deduplication, and restart recovery.

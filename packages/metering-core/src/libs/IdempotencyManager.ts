@@ -23,6 +23,15 @@ export type MeteringProcessingClaim = {
   token: IdempotencyClaim;
 };
 
+export type MeteringRecordStatus =
+  | "missing"
+  | "active"
+  | "retryable"
+  | "persistence-uncertain"
+  | "delivery-pending"
+  | "rejected"
+  | "completed";
+
 declare const IDEMPOTENCY_CLAIM: unique symbol;
 
 /**
@@ -46,6 +55,7 @@ export class IdempotencyManager {
   private static readonly KEY_NAMESPACE = "idem2";
   private static readonly STATUS_IN_PROGRESS_PREFIX = "IN_PROGRESS:";
   private static readonly STATUS_COMPLETED = "COMPLETED";
+  private static readonly STATUS_REJECTED = "REJECTED";
 
   constructor(
     private readonly redis: RedisClient,
@@ -177,7 +187,7 @@ export class IdempotencyManager {
 
         if not stateJson then
           local legacyStatus = redis.call('GET', KEYS[2])
-          if legacyStatus == ARGV[6] or
+          if legacyStatus == ARGV[6] or legacyStatus == ARGV[8] or
             (legacyStatus and string.sub(legacyStatus, 1, string.len(ARGV[5])) == ARGV[5]) then
             return { 0, '', '' }
           end
@@ -220,6 +230,7 @@ export class IdempotencyManager {
         IdempotencyManager.STATUS_IN_PROGRESS_PREFIX,
         IdempotencyManager.STATUS_COMPLETED,
         this.buildLeaseValue(token),
+        IdempotencyManager.STATUS_REJECTED,
       ],
     );
 
@@ -235,6 +246,99 @@ export class IdempotencyManager {
           ? undefined
           : (JSON.parse(deliveryJson) as PendingMeteringDelivery),
     };
+  }
+
+  async getMeteringRecordStatus(
+    tenantId: string,
+    meterId: string,
+    idempotencyKey: string,
+  ): Promise<MeteringRecordStatus> {
+    const deliveryKey = this.buildDeliveryKey(tenantId, meterId, idempotencyKey);
+    const legacyKey = this.buildKey(tenantId, meterId, idempotencyKey);
+    const [status] = await this.redis.eval<[MeteringRecordStatus]>(
+      `
+        -- METERING_RECORD_STATUS
+        local stateJson = redis.call('GET', KEYS[1])
+        if stateJson then
+          local state = cjson.decode(stateJson)
+          if state.status == 'COMPLETED' then
+            return { 'completed' }
+          end
+          if state.status == 'REJECTED' then
+            return { 'rejected' }
+          end
+          if state.status == 'EVENTS_PENDING' then
+            return { 'delivery-pending' }
+          end
+          if state.status == 'PROCESSING' or state.status == 'PUBLISHING' then
+            local time = redis.call('TIME')
+            local now = tonumber(time[1]) * 1000 + math.floor(tonumber(time[2]) / 1000)
+            if tonumber(state.leaseExpiresAt or 0) <= now then
+              if state.delivery then
+                return { 'delivery-pending' }
+              end
+              return { state.persistenceStarted and 'persistence-uncertain' or 'retryable' }
+            end
+          end
+          return { 'active' }
+        end
+
+        local legacyStatus = redis.call('GET', KEYS[2])
+        if legacyStatus == ARGV[1] then
+          return { 'completed' }
+        end
+        if legacyStatus == ARGV[2] then
+          return { 'rejected' }
+        end
+        if legacyStatus and string.sub(legacyStatus, 1, string.len(ARGV[3])) == ARGV[3] then
+          return { 'active' }
+        end
+        return { 'missing' }
+      `,
+      [deliveryKey, legacyKey],
+      [
+        IdempotencyManager.STATUS_COMPLETED,
+        IdempotencyManager.STATUS_REJECTED,
+        IdempotencyManager.STATUS_IN_PROGRESS_PREFIX,
+      ],
+    );
+    return status;
+  }
+
+  async markMeteringPersistenceStarted(
+    tenantId: string,
+    meterId: string,
+    idempotencyKey: string,
+    token: IdempotencyClaim,
+  ): Promise<void> {
+    const key = this.buildDeliveryKey(tenantId, meterId, idempotencyKey);
+    const [transitioned, reason] = await this.redis.eval<[number, string]>(
+      `
+        -- METERING_PERSISTENCE_STARTED
+        local stateJson = redis.call('GET', KEYS[1])
+        if not stateJson then
+          return { 0, 'MISSING' }
+        end
+
+        local state = cjson.decode(stateJson)
+        if state.status ~= 'PROCESSING' then
+          return { 0, 'STATUS:' .. tostring(state.status) }
+        end
+        if state.token ~= ARGV[1] then
+          return { 0, 'TOKEN' }
+        end
+
+        local time = redis.call('TIME')
+        local now = tonumber(time[1]) * 1000 + math.floor(tonumber(time[2]) / 1000)
+        state.persistenceStarted = true
+        state.leaseExpiresAt = now + tonumber(ARGV[2])
+        redis.call('SET', KEYS[1], cjson.encode(state), 'EX', ARGV[3])
+        return { 1, 'OK' }
+      `,
+      [key],
+      [token, this.processingLeaseMilliseconds, this.activeStateTtlSeconds],
+    );
+    this.requireStagedTransition(transitioned, reason, idempotencyKey, "mark-persistence-started");
   }
 
   async markMeteringEventsPublishing(
@@ -327,7 +431,7 @@ export class IdempotencyManager {
         end
 
         local state = cjson.decode(stateJson)
-        if state.status == 'COMPLETED' then
+        if state.status == 'COMPLETED' or state.status == 'REJECTED' then
           return { 1, 'ALREADY_COMPLETED' }
         end
         if state.status ~= 'PUBLISHING' then
@@ -359,13 +463,14 @@ export class IdempotencyManager {
     const legacyKey = this.buildKey(tenantId, meterId, idempotencyKey);
     const [transitioned, reason] = await this.redis.eval<[number, string]>(
       `
+        -- COMPLETE_METERING_PROCESSING
         local stateJson = redis.call('GET', KEYS[1])
         if not stateJson then
           return { 0, 'MISSING' }
         end
 
         local state = cjson.decode(stateJson)
-        if state.status == 'COMPLETED' then
+        if state.status == 'COMPLETED' or state.status == 'REJECTED' then
           return { 1, 'ALREADY_COMPLETED' }
         end
         if state.status ~= 'PUBLISHING' then
@@ -375,12 +480,24 @@ export class IdempotencyManager {
           return { 0, 'TOKEN' }
         end
 
-        redis.call('SET', KEYS[1], '{"status":"COMPLETED"}', 'EX', ARGV[2])
-        redis.call('SET', KEYS[2], ARGV[3], 'EX', ARGV[2])
+        local finalStatus = 'COMPLETED'
+        local delivery = state.delivery and cjson.decode(state.delivery) or nil
+        if delivery and delivery.quota and
+          delivery.quota.exceeded and not delivery.quota.allowOverQuota then
+          finalStatus = 'REJECTED'
+        end
+        local lifecycleStatus = finalStatus == 'REJECTED' and ARGV[4] or ARGV[3]
+        redis.call('SET', KEYS[1], cjson.encode({ status = finalStatus }), 'EX', ARGV[2])
+        redis.call('SET', KEYS[2], lifecycleStatus, 'EX', ARGV[2])
         return { 1, 'OK' }
       `,
       [key, legacyKey],
-      [token, this.ttlSeconds, IdempotencyManager.STATUS_COMPLETED],
+      [
+        token,
+        this.ttlSeconds,
+        IdempotencyManager.STATUS_COMPLETED,
+        IdempotencyManager.STATUS_REJECTED,
+      ],
     );
     this.requireStagedTransition(transitioned, reason, idempotencyKey, "complete-processing");
   }

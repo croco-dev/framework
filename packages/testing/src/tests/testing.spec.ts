@@ -18,8 +18,6 @@ import { DomainEvent, EventBusConfig, RegisterEventHandler } from "@croco/events
 import type { InMemoryEventBus } from "@croco/events-inmemory";
 import type { TransactionContext } from "@croco/framework-context";
 import { Container, Context, Token, TRANSACTION_CONTEXT_TOKEN } from "@croco/framework-context";
-import type { GenerateParams, GenerateResult } from "@croco/llm-core";
-import { InMemoryLlmModel } from "@croco/llm-core";
 import { Problem, ProblemCategory, ProblemFactory } from "@croco/problems-core";
 import { Controller, Get, Param, Query, REST_PARAMS_KEY } from "@croco/protocols-rest";
 import type {
@@ -43,7 +41,6 @@ import {
   createDrizzleProviderConformanceSuite,
   createEventTestingHarness,
   createFailureDrillCatalog,
-  createLlmProviderConformanceSuite,
   createProviderConformanceMatrixSuite,
   createQStashTaskConformanceSuite,
   createRpcTestFetch,
@@ -76,15 +73,6 @@ class GreetingService {
 
   greet(name: string): string {
     return `${this.prefix}, ${name}`;
-  }
-}
-
-class FailingLlmModel extends InMemoryLlmModel {
-  override async generate(_params: GenerateParams): Promise<GenerateResult> {
-    throw ProblemFactory.internalServerError(
-      "testing/llm-provider-failed",
-      "provider generate failed",
-    );
   }
 }
 
@@ -1757,7 +1745,7 @@ describe("@croco/testing", () => {
               telemetry: "saas.llm.quota_exceeded",
             },
             problem: {
-              code: "llm-metering/quota-exceeded",
+              code: "ai-usage/quota-exceeded",
               status: 403,
               title: "Forbidden",
             },
@@ -1768,7 +1756,7 @@ describe("@croco/testing", () => {
               { kind: "telemetry", name: "saas.llm.quota_exceeded" },
               { kind: "audit", name: "saas.metering.quota_rejected" },
             ],
-            problem: ProblemFactory.forbidden("llm-metering/quota-exceeded", "LLM quota exceeded"),
+            problem: ProblemFactory.forbidden("ai-usage/quota-exceeded", "AI usage quota exceeded"),
             recoveryAction: "Reject the request and direct the tenant to reduce usage or upgrade.",
           }),
         },
@@ -1784,81 +1772,10 @@ describe("@croco/testing", () => {
       const result = await runFailureDrillScenario(scenario);
 
       expect(result).toMatchObject({
-        problem: { code: "llm-metering/quota-exceeded", status: 403 },
+        problem: { code: "ai-usage/quota-exceeded", status: 403 },
         recoveryAction: "Reject the request and direct the tenant to reduce usage or upgrade.",
         scenarioId: "quota-exceeded",
       });
-    });
-  });
-
-  describe("LLM provider conformance", () => {
-    const modelId = "conformance-model";
-    const createModel = () =>
-      new InMemoryLlmModel(modelId, {
-        "croco conformance generate": "governed response",
-        "croco conformance stream": "streaming governed response",
-        "croco conformance object": '{"ok":true,"label":"croco"}',
-        "croco conformance tool": 'lookup:{"topic":"croco"}',
-      });
-
-    it.each(
-      createLlmProviderConformanceSuite({
-        createFailingModel: () => new FailingLlmModel(modelId),
-        createModel,
-        modelId,
-        providerName: "in-memory-llm",
-        prompts: {
-          generate: {
-            prompt: "croco conformance generate",
-            expectedText: "governed response",
-          },
-          stream: {
-            prompt: "croco conformance stream",
-            minimumChunks: 2,
-          },
-          object: {
-            prompt: "croco conformance object",
-            schema: { type: "object" },
-            assertObject: (value) => {
-              expect(value).toEqual({ ok: true, label: "croco" });
-            },
-          },
-          tool: {
-            prompt: "croco conformance tool",
-            tools: [
-              {
-                name: "lookup",
-                description: "Lookup a topic",
-                parameters: {
-                  type: "object",
-                  properties: {
-                    topic: { type: "string" },
-                  },
-                  required: ["topic"],
-                },
-              },
-            ],
-            assertToolResult: (result) => {
-              expect(result.toolCalls).toEqual([
-                {
-                  name: "lookup",
-                  arguments: { topic: "croco" },
-                },
-              ]);
-            },
-          },
-          embed: {
-            text: "croco embedding",
-            expectedDimensions: 1536,
-          },
-          embedMany: {
-            texts: ["croco one", "croco two"],
-            expectedDimensions: 1536,
-          },
-        },
-      }).cases,
-    )("$name", async ({ run }) => {
-      await run();
     });
   });
 

@@ -442,6 +442,88 @@ describe("changeset-required-check.mts", () => {
     );
   });
 
+  it("allows a consumed changeset when a removed package is replaced by a similar package", () => {
+    const repo = createTempRepo();
+    commitFile(
+      repo,
+      ".changeset/remove-public.md",
+      "---\n'@croco/public': major\n---\n\nRemove the public package.\n",
+      "chore: add pending removal changeset",
+    );
+    checkoutBranch(repo, "breaking/replace-public-package");
+    git(repo, ["mv", "packages/public", "packages/replacement"]);
+    writePackageJson(repo, "replacement", {
+      name: "@croco/replacement",
+      version: "0.0.1",
+      publishConfig: {
+        access: "public",
+      },
+      dependencies: {
+        "@croco/dependency": "^0.0.3",
+      },
+    });
+    git(repo, ["rm", ".changeset/remove-public.md"]);
+    writeFile(
+      repo,
+      ".changeset/add-replacement.md",
+      "---\n'@croco/replacement': minor\n---\n\nAdd the replacement package.\n",
+    );
+    writeFile(
+      repo,
+      "public-api-surface.snapshot.json",
+      `${JSON.stringify(
+        {
+          schemaVersion: 2,
+          packages: [
+            {
+              packageName: "@croco/replacement",
+              relativeDir: "packages/replacement",
+              entrypoints: [
+                {
+                  exportPath: ".",
+                  kind: "code",
+                  targets: [{ conditions: ["import"], target: "./dist/index.js" }],
+                  sourceEntrypoint: "packages/replacement/src/index.ts",
+                  runtimeExports: [
+                    {
+                      name: "value",
+                      exportKind: "named",
+                      source: "./index.js",
+                      declarationKind: "const",
+                    },
+                  ],
+                  typeExports: [],
+                },
+              ],
+            },
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+    );
+    git(repo, ["add", "."]);
+    git(repo, ["commit", "-m", "feat: replace public package"]);
+
+    expect(
+      git(repo, [
+        "diff",
+        "--name-status",
+        "trunk...HEAD",
+        "--",
+        "packages/public/package.json",
+        "packages/replacement/package.json",
+      ]),
+    ).toMatch(/^R\d+/);
+
+    const result = runScript(repo);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain(
+      "changeset-required: changed changesets cover all affected publishable packages (passing)",
+    );
+  });
+
   it("requires a consumed changeset for a public package removed in the same change", () => {
     const repo = createTempRepo();
     checkoutBranch(repo, "breaking/remove-public-package-without-changeset");

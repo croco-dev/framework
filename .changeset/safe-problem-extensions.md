@@ -8,8 +8,6 @@
 "@croco/governance-core": patch
 "@croco/idempotency-core": patch
 "@croco/invitation-core": major
-"@croco/llm-metering": patch
-"@croco/llm-openai": major
 "@croco/metering-core": patch
 "@croco/notifications-core": patch
 "@croco/notifications-resend": major

@@ -15,7 +15,6 @@
 "@croco/integrations-posthog": patch
 "@croco/invitation-core": patch
 "@croco/invitation-drizzle": patch
-"@croco/llm-core": patch
 "@croco/membership-core": patch
 "@croco/membership-drizzle": patch
 "@croco/metering-core": patch

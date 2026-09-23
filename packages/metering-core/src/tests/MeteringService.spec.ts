@@ -91,9 +91,11 @@ describe("MeteringService", () => {
       beginProcessingOrThrow: vi.fn().mockResolvedValue(undefined),
       completeProcessing: vi.fn().mockResolvedValue(undefined),
       abortProcessing: vi.fn().mockResolvedValue(undefined),
+      getMeteringRecordStatus: vi.fn().mockResolvedValue("missing"),
       claimMeteringProcessingOrThrow: vi
         .fn()
         .mockResolvedValue({ operationId: "operation-id", token: "claim-token" }),
+      markMeteringPersistenceStarted: vi.fn().mockResolvedValue(undefined),
       markMeteringEventsPublishing: vi.fn().mockResolvedValue(undefined),
       releaseMeteringProcessing: vi.fn().mockResolvedValue(undefined),
       releaseMeteringEvents: vi.fn().mockResolvedValue(undefined),
@@ -140,6 +142,19 @@ describe("MeteringService", () => {
       idempotencyManager: mockIdempotency,
       eventBus: mockEventBus,
     });
+  });
+
+  it("should expose the idempotent record delivery status", async () => {
+    vi.mocked(mockIdempotency.getMeteringRecordStatus).mockResolvedValue("completed");
+
+    await expect(service.getRecordStatus("tenant-1", "api_calls", "key-123")).resolves.toBe(
+      "completed",
+    );
+    expect(mockIdempotency.getMeteringRecordStatus).toHaveBeenCalledWith(
+      "tenant-1",
+      "api_calls",
+      "key-123",
+    );
   });
 
   describe("record", () => {
@@ -566,6 +581,7 @@ describe("MeteringService", () => {
       ).rejects.toThrow("process terminated");
 
       expect(mockStorage.record).toHaveBeenCalledTimes(1);
+      expect(mockIdempotency.markMeteringPersistenceStarted).toHaveBeenCalledTimes(1);
       expect(await persistentJournal.get("event-1")).toMatchObject({ state: "pending" });
       expect((await persistentJournal.getDiagnostics()).backlogCount).toBe(1);
     });
@@ -831,7 +847,7 @@ describe("MeteringService", () => {
       );
     });
 
-    it("should abort in-progress idempotency key when storage fails before completion", async () => {
+    it("should preserve uncertain persistence when storage failure may follow a commit", async () => {
       const meter = createMeter({ quota: undefined });
       const storageError = new Error("storage failure");
 
@@ -842,12 +858,13 @@ describe("MeteringService", () => {
         storageError,
       );
 
-      expect(mockIdempotency.abortMeteringProcessing).toHaveBeenCalledWith(
+      expect(mockIdempotency.releaseMeteringProcessing).toHaveBeenCalledWith(
         "tenant-1",
         "api_calls",
         "generated-key",
         "claim-token",
       );
+      expect(mockIdempotency.abortMeteringProcessing).not.toHaveBeenCalled();
       expect(mockIdempotency.completeMeteringProcessing).not.toHaveBeenCalled();
     });
 
@@ -956,6 +973,7 @@ describe("MeteringService", () => {
       expect(persistedOperations.size).toBe(1);
       expect(recordCallCount).toBe(2);
       expect(mockStorage.record).toHaveBeenCalledTimes(2);
+      expect(mockIdempotency.markMeteringPersistenceStarted).toHaveBeenCalledTimes(2);
       expect(mockEventBus.publish).toHaveBeenCalledTimes(1);
     });
 
@@ -1121,6 +1139,7 @@ describe("MeteringService", () => {
       ).rejects.toThrow("staging unavailable");
 
       expect(checkAndRecordWithinQuota).toHaveBeenCalledTimes(1);
+      expect(mockIdempotency.markMeteringPersistenceStarted).toHaveBeenCalledTimes(1);
       expect(mockIdempotency.abortMeteringProcessing).not.toHaveBeenCalled();
       expect(mockIdempotency.releaseMeteringEvents).not.toHaveBeenCalled();
       expect(mockIdempotency.releaseMeteringProcessing).toHaveBeenCalledTimes(1);
@@ -1137,6 +1156,7 @@ describe("MeteringService", () => {
       expect(persistedOperations.size).toBe(1);
       expect(quotaCallCount).toBe(2);
       expect(checkAndRecordWithinQuota).toHaveBeenCalledTimes(2);
+      expect(mockIdempotency.markMeteringPersistenceStarted).toHaveBeenCalledTimes(2);
       expect(mockEventBus.publish).toHaveBeenCalledTimes(1);
     });
 

@@ -54,9 +54,6 @@
 "@croco/invitation-core": patch
 "@croco/invitation-drizzle": patch
 "@croco/lifecycle-core": patch
-"@croco/llm-core": patch
-"@croco/llm-metering": patch
-"@croco/llm-openai": patch
 "@croco/membership-core": patch
 "@croco/membership-drizzle": patch
 "@croco/meta-vite": patch

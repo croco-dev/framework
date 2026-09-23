@@ -9,6 +9,7 @@ import { QuotaExceededEvent } from "./events/QuotaExceededEvent";
 import { UsageRecordedEvent } from "./events/UsageRecordedEvent";
 import type {
   IdempotencyManager,
+  MeteringRecordStatus,
   MeteringProcessingClaim,
   PendingMeteringDelivery,
 } from "./IdempotencyManager";
@@ -131,7 +132,7 @@ export class MeteringService {
       idempotencyKey,
     );
     let publishingClaimed = claim.delivery !== undefined;
-    let persistenceCompleted = claim.delivery !== undefined;
+    let persistenceStarted = claim.delivery !== undefined;
     let processingCompleted = false;
 
     try {
@@ -145,6 +146,13 @@ export class MeteringService {
             "billing-required meters require a caller-supplied eventId or idempotencyKey",
           );
         }
+        await this.idempotencyManager.markMeteringPersistenceStarted(
+          tenantId,
+          meterId,
+          idempotencyKey,
+          claim.token,
+        );
+        persistenceStarted = true;
         delivery = await this.persistUsage(
           options,
           idempotencyKey,
@@ -153,7 +161,6 @@ export class MeteringService {
           normalizedEventId,
           billableMeter,
         );
-        persistenceCompleted = true;
         await this.idempotencyManager.markMeteringEventsPublishing(
           tenantId,
           meterId,
@@ -180,7 +187,7 @@ export class MeteringService {
             claim.token,
           ),
         );
-      } else if (!persistenceCompleted) {
+      } else if (!persistenceStarted) {
         await this.runCleanup(error, () =>
           this.idempotencyManager.abortMeteringProcessing(
             tenantId,
@@ -239,6 +246,14 @@ export class MeteringService {
     } catch {
       return;
     }
+  }
+
+  async getRecordStatus(
+    tenantId: string,
+    meterId: string,
+    idempotencyKey: string,
+  ): Promise<MeteringRecordStatus> {
+    return this.idempotencyManager.getMeteringRecordStatus(tenantId, meterId, idempotencyKey);
   }
 
   private async persistUsage(

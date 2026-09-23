@@ -302,7 +302,7 @@ export function assertSaasSmokeContract(snapshot: SaasDemoSnapshot): void {
       ? "AI prompt usage did not match the recorded prompt meter"
       : undefined,
     snapshot.ai.promptQuota !== 50 ? "AI prompt quota was not enforced" : undefined,
-    snapshot.ai.quotaFailureCode !== "llm-metering/quota-exceeded"
+    snapshot.ai.quotaFailureCode !== "ai-usage/quota-exceeded"
       ? "AI over-quota failure was not explicit"
       : undefined,
     !snapshot.entitlement.granted ? "entitlement was not granted" : undefined,

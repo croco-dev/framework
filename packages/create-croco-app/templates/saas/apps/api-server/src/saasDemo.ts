@@ -70,13 +70,15 @@ import { HealthCheckService } from "@croco/health-core";
 import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
 import type { IdempotencyStore } from "@croco/idempotency-core";
 import { InMemoryInvitationStore, InvitationManager } from "@croco/invitation-core";
-import { InMemoryLlmModel, InMemoryLlmRegistry, LlmService } from "@croco/llm-core";
 import {
-  COST_USD_NANOS,
-  LlmMeteringService,
-  LlmQuotaExceededProblem,
-  PricingTable,
-} from "@croco/llm-metering";
+  AI_COST_USD_NANOS,
+  AI_INPUT_TOKENS,
+  AI_OUTPUT_TOKENS,
+  AiPricingTable,
+  AiUsageIngestService,
+  AiUsageQuotaExceededProblem,
+  type AiUsage,
+} from "@croco/ai-usage";
 import {
   InMemoryLifecycleActionSink,
   InMemoryLifecycleRunStore,
@@ -129,18 +131,16 @@ const LIFECYCLE_RISK_RULE_ID = "saas-risk-onboarding-follow-up";
 const LIFECYCLE_RISK_ACTION_ID = "create-cs-follow-up";
 const STORAGE_GB_METER_ID = "storage_gb";
 const STORAGE_GB_FEATURE_KEY = "storage.gb";
-const DEMO_LLM_PROVIDER = "in-memory";
-const DEMO_LLM_MODEL_ID = "demo-assistant";
-const DEMO_LLM_PROMPT = "Summarize tenant usage";
-const DEMO_LLM_INPUT_PRICE_PER_TOKEN = 0.000001;
-const DEMO_LLM_OUTPUT_PRICE_PER_TOKEN = 0.000002;
-const DEMO_LLM_PROMPT_TOKENS_QUOTA = 50;
+const DEMO_AI_PROVIDER = "in-memory";
+const DEMO_AI_MODEL_ID = "demo-assistant";
+const DEMO_AI_PROMPT = "Summarize tenant usage";
+const DEMO_AI_INPUT_PRICE_PER_TOKEN = 0.000001;
+const DEMO_AI_OUTPUT_PRICE_PER_TOKEN = 0.000002;
+const DEMO_AI_INPUT_TOKENS_QUOTA = 50;
 const DEMO_MEMBER_SESSION_ID = "session_demo_member";
 const DEMO_SUBSCRIPTION_CURRENT_PERIOD_END = new Date("2030-01-01T00:00:00.000Z");
 const DEMO_BILLING_LAST_SYNCED_AT = new Date("2026-01-01T00:00:00.000Z");
-const PROMPT_TOKENS = "llm.prompt_tokens";
-const COMPLETION_TOKENS = "llm.completion_tokens";
-const DEMO_LLM_COST_QUOTA_USD_NANOS = 1_000_000_000;
+const DEMO_AI_COST_QUOTA_USD_NANOS = 1_000_000_000;
 const ACTIVE_ENTITLEMENT_SUBSCRIPTION_STATUSES = new Set<SubscriptionStatus>([
   "active",
   "trialing",
@@ -477,8 +477,8 @@ export type SaasRuntime = {
   };
   meterRegistry: MeterRegistry;
   meteringService: MeteringService;
-  llmService: LlmService;
-  llmMeteringService: LlmMeteringService;
+  generateAiText(prompt: string): Promise<{ text: string; usage: AiUsage }>;
+  aiUsageIngestService: AiUsageIngestService;
   subscriptionProvider: SubscriptionProvider;
   entitlementManager: EntitlementManager;
   seatLimitChecker: SeatLimitChecker;
@@ -628,24 +628,24 @@ export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
         overagePolicy: "WARN",
       },
       {
-        featureKey: PROMPT_TOKENS,
+        featureKey: AI_INPUT_TOKENS,
         type: "metered",
-        meterId: PROMPT_TOKENS,
-        quota: DEMO_LLM_PROMPT_TOKENS_QUOTA,
+        meterId: AI_INPUT_TOKENS,
+        quota: DEMO_AI_INPUT_TOKENS_QUOTA,
         overagePolicy: "BLOCK",
       },
       {
-        featureKey: COMPLETION_TOKENS,
+        featureKey: AI_OUTPUT_TOKENS,
         type: "metered",
-        meterId: COMPLETION_TOKENS,
+        meterId: AI_OUTPUT_TOKENS,
         quota: 100,
         overagePolicy: "BLOCK",
       },
       {
-        featureKey: COST_USD_NANOS,
+        featureKey: AI_COST_USD_NANOS,
         type: "metered",
-        meterId: COST_USD_NANOS,
-        quota: DEMO_LLM_COST_QUOTA_USD_NANOS,
+        meterId: AI_COST_USD_NANOS,
+        quota: DEMO_AI_COST_QUOTA_USD_NANOS,
         overagePolicy: "BLOCK",
       },
       {
@@ -661,28 +661,28 @@ export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
     new MeterQuotaChecker(usageStorage),
     new RegistryMeterLookup(meterRegistry),
   );
-  const llmRegistry = new InMemoryLlmRegistry();
-  llmRegistry.registerProvider(
-    DEMO_LLM_MODEL_ID,
-    () =>
-      new InMemoryLlmModel(DEMO_LLM_MODEL_ID, {
-        [DEMO_LLM_PROMPT]: "Usage is under control.",
-      }),
-  );
-  const llmService = new LlmService(llmRegistry, new InMemoryEventBus());
-  const llmPricingTable = new PricingTable();
-  llmPricingTable.setPrice(DEMO_LLM_PROVIDER, DEMO_LLM_MODEL_ID, {
-    inputPricePerToken: DEMO_LLM_INPUT_PRICE_PER_TOKEN,
-    outputPricePerToken: DEMO_LLM_OUTPUT_PRICE_PER_TOKEN,
+  const generateAiText = async (prompt: string): Promise<{ text: string; usage: AiUsage }> => ({
+    text: prompt === DEMO_AI_PROMPT ? "Usage is under control." : `Generated: ${prompt}`,
+    usage: {
+      inputTokens: prompt.length,
+      outputTokens: prompt === DEMO_AI_PROMPT ? 4 : Math.max(1, prompt.length),
+      totalTokens: prompt.length + (prompt === DEMO_AI_PROMPT ? 4 : Math.max(1, prompt.length)),
+      accuracy: "ESTIMATED",
+    },
+  });
+  const aiPricingTable = new AiPricingTable();
+  aiPricingTable.setPrice(DEMO_AI_PROVIDER, DEMO_AI_MODEL_ID, {
+    inputPricePerToken: DEMO_AI_INPUT_PRICE_PER_TOKEN,
+    outputPricePerToken: DEMO_AI_OUTPUT_PRICE_PER_TOKEN,
     currency: "USD",
   });
-  const llmQuotaPolicy = {
+  const aiUsageQuotaPolicy = {
     async enforce(context: {
       tenantId: string;
       meters: readonly { meterId: string; value: number }[];
     }): Promise<void> {
       for (const meter of context.meters) {
-        await assertLlmQuotaForEntitlement(
+        await assertAiUsageQuotaForEntitlement(
           entitlementManager,
           meteringService,
           context.tenantId,
@@ -692,12 +692,12 @@ export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
       }
     },
   };
-  const llmMeteringOptions = {
+  const aiUsageIngestOptions = {
     meteringService,
-    pricingTable: llmPricingTable,
-    quotaPolicy: llmQuotaPolicy,
+    pricingTable: aiPricingTable,
+    quotaPolicy: aiUsageQuotaPolicy,
   };
-  const llmMeteringService = new LlmMeteringService(llmMeteringOptions);
+  const aiUsageIngestService = new AiUsageIngestService(aiUsageIngestOptions);
   const membershipStore = new InMemoryMembershipStore();
   const notificationService = new DemoNotificationService();
   const seatLimitChecker = new EntitlementSeatLimitChecker(membershipStore, entitlementManager);
@@ -836,8 +836,8 @@ export function createSaasRuntime(options: SaasRuntimeOptions): SaasRuntime {
     usageBillingReadModel,
     meterRegistry,
     meteringService,
-    llmService,
-    llmMeteringService,
+    generateAiText,
+    aiUsageIngestService,
     subscriptionProvider,
     entitlementManager,
     seatLimitChecker,
@@ -875,7 +875,7 @@ export async function seedDefaultSaasRuntime(): Promise<SaasDemoSnapshot> {
   return runSaasDemoFlow(resetDefaultSaasRuntime());
 }
 
-async function assertLlmQuotaForEntitlement(
+async function assertAiUsageQuotaForEntitlement(
   entitlementManager: EntitlementManager,
   meteringService: MeteringService,
   tenantId: string,
@@ -884,7 +884,7 @@ async function assertLlmQuotaForEntitlement(
 ): Promise<void> {
   const entitlement = await entitlementManager.check(tenantId, meterId);
   if (!entitlement.granted) {
-    throw new LlmQuotaExceededProblem(meterId, entitlement.usage ?? 0, entitlement.quota ?? 0);
+    throw new AiUsageQuotaExceededProblem(meterId, entitlement.usage ?? 0, entitlement.quota ?? 0);
   }
   if (entitlement.quota === undefined) {
     return;
@@ -897,7 +897,7 @@ async function assertLlmQuotaForEntitlement(
   });
   const projectedUsage = currentUsage + requestedUsage;
   if (projectedUsage > entitlement.quota) {
-    throw new LlmQuotaExceededProblem(meterId, projectedUsage, entitlement.quota);
+    throw new AiUsageQuotaExceededProblem(meterId, projectedUsage, entitlement.quota);
   }
 }
 
@@ -1070,38 +1070,35 @@ export async function runSaasDemoFlow(
 
     await runtime.meterRegistry.register({
       tenantId: tenant.id,
-      meterId: PROMPT_TOKENS,
+      meterId: AI_INPUT_TOKENS,
       type: "COUNT",
-      quota: DEMO_LLM_PROMPT_TOKENS_QUOTA,
+      quota: DEMO_AI_INPUT_TOKENS_QUOTA,
       allowOverQuota: false,
-      metadata: { unit: "token", provider: DEMO_LLM_PROVIDER },
+      metadata: { unit: "token", provider: DEMO_AI_PROVIDER },
     });
     await runtime.meterRegistry.register({
       tenantId: tenant.id,
-      meterId: COMPLETION_TOKENS,
+      meterId: AI_OUTPUT_TOKENS,
       type: "COUNT",
       quota: 100,
       allowOverQuota: false,
-      metadata: { unit: "token", provider: DEMO_LLM_PROVIDER },
+      metadata: { unit: "token", provider: DEMO_AI_PROVIDER },
     });
     await runtime.meterRegistry.register({
       tenantId: tenant.id,
-      meterId: COST_USD_NANOS,
+      meterId: AI_COST_USD_NANOS,
       type: "CUSTOM_EVENT",
-      quota: DEMO_LLM_COST_QUOTA_USD_NANOS,
+      quota: DEMO_AI_COST_QUOTA_USD_NANOS,
       allowOverQuota: false,
-      metadata: { unit: "usd_nanos", provider: DEMO_LLM_PROVIDER },
+      metadata: { unit: "usd_nanos", provider: DEMO_AI_PROVIDER },
     });
-    const aiResult = await runtime.llmService.generate({
-      modelId: DEMO_LLM_MODEL_ID,
-      prompt: DEMO_LLM_PROMPT,
-    });
-    const aiUsageRecord = await runtime.llmMeteringService.recordUsage({
+    const aiResult = await runtime.generateAiText(DEMO_AI_PROMPT);
+    const aiUsageRecord = await runtime.aiUsageIngestService.ingestGenerationUsage({
       tenantId: tenant.id,
-      modelId: DEMO_LLM_MODEL_ID,
-      provider: DEMO_LLM_PROVIDER,
+      modelId: DEMO_AI_MODEL_ID,
+      provider: DEMO_AI_PROVIDER,
       usage: aiResult.usage,
-      idempotencyKey: "demo-llm-generate",
+      idempotencyKey: "demo-ai-generate",
       metadata: {
         operationType: "generate",
         source: "demo:ai",
@@ -1109,29 +1106,29 @@ export async function runSaasDemoFlow(
     });
     const aiPromptUsage = await runtime.meteringService.getUsage({
       tenantId: tenant.id,
-      meterId: PROMPT_TOKENS,
+      meterId: AI_INPUT_TOKENS,
       period: "billing_cycle",
     });
     let aiQuotaFailureCode = "none";
     try {
-      await runtime.llmMeteringService.recordUsage({
+      await runtime.aiUsageIngestService.ingestGenerationUsage({
         tenantId: tenant.id,
-        modelId: DEMO_LLM_MODEL_ID,
-        provider: DEMO_LLM_PROVIDER,
+        modelId: DEMO_AI_MODEL_ID,
+        provider: DEMO_AI_PROVIDER,
         usage: {
-          promptTokens: DEMO_LLM_PROMPT_TOKENS_QUOTA,
-          completionTokens: 0,
-          totalTokens: DEMO_LLM_PROMPT_TOKENS_QUOTA,
+          inputTokens: DEMO_AI_INPUT_TOKENS_QUOTA,
+          outputTokens: 0,
+          totalTokens: DEMO_AI_INPUT_TOKENS_QUOTA,
           accuracy: "ESTIMATED",
         },
-        idempotencyKey: "demo-llm-over-quota",
+        idempotencyKey: "demo-ai-over-quota",
         metadata: {
           operationType: "generate",
           source: "demo:ai-quota",
         },
       });
     } catch (error) {
-      if (!(error instanceof LlmQuotaExceededProblem)) {
+      if (!(error instanceof AiUsageQuotaExceededProblem)) {
         throw error;
       }
       aiQuotaFailureCode = error.code;
@@ -1197,12 +1194,12 @@ export async function runSaasDemoFlow(
         provider: aiUsageRecord.provider,
         modelId: aiUsageRecord.modelId,
         responseText: aiResult.text,
-        promptTokens: aiUsageRecord.promptTokens,
-        completionTokens: aiUsageRecord.completionTokens,
-        totalTokens: aiUsageRecord.promptTokens + aiUsageRecord.completionTokens,
+        promptTokens: aiUsageRecord.inputTokens,
+        completionTokens: aiUsageRecord.outputTokens,
+        totalTokens: aiUsageRecord.inputTokens + aiUsageRecord.outputTokens,
         costUsd: aiUsageRecord.costUsd,
         promptUsage: aiPromptUsage,
-        promptQuota: DEMO_LLM_PROMPT_TOKENS_QUOTA,
+        promptQuota: DEMO_AI_INPUT_TOKENS_QUOTA,
         quotaFailureCode: aiQuotaFailureCode,
       },
       entitlement: {

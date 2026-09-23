@@ -361,8 +361,16 @@ export class InMemoryRedisClient implements RedisClient {
   ): Promise<TResult> {
     const key = keys[0];
 
+    if (script.includes("METERING_RECORD_STATUS")) {
+      return this.getMeteringRecordStatus(keys, args) as unknown as TResult;
+    }
+
     if (script.includes("state.status == 'EVENTS_PENDING'")) {
       return this.claimMeteringDelivery(keys, args) as unknown as TResult;
+    }
+
+    if (script.includes("METERING_PERSISTENCE_STARTED")) {
+      return this.markMeteringPersistenceStarted(key, args) as unknown as TResult;
     }
 
     if (script.includes("state.delivery = ARGV[2]")) {
@@ -377,7 +385,7 @@ export class InMemoryRedisClient implements RedisClient {
       return this.releaseMeteringDelivery(key, args) as unknown as TResult;
     }
 
-    if (script.includes('{"status":"COMPLETED"}')) {
+    if (script.includes("COMPLETE_METERING_PROCESSING")) {
       return this.completeMeteringDelivery(keys, args) as unknown as TResult;
     }
 
@@ -411,6 +419,41 @@ export class InMemoryRedisClient implements RedisClient {
     throw new RedisProblem("EVAL", "Unsupported in-memory Redis script");
   }
 
+  private getMeteringRecordStatus(
+    keys: string[],
+    args: Array<string | number>,
+  ): [
+    | "missing"
+    | "active"
+    | "retryable"
+    | "persistence-uncertain"
+    | "delivery-pending"
+    | "rejected"
+    | "completed",
+  ] {
+    const [deliveryKey, legacyKey] = keys;
+    if (deliveryKey === undefined || legacyKey === undefined) {
+      throw new RedisProblem("EVAL", "Metering status lookup requires delivery and lifecycle keys");
+    }
+    const [completedStatus, rejectedStatus, inProgressStatusPrefix] = args;
+    const state = this.readDeliveryState(deliveryKey);
+    if (state?.status === "COMPLETED") return ["completed"];
+    if (state?.status === "REJECTED") return ["rejected"];
+    if (state?.status === "EVENTS_PENDING") return ["delivery-pending"];
+    if (state?.status === "PROCESSING" || state?.status === "PUBLISHING") {
+      if ((state.leaseExpiresAt ?? 0) <= Date.now()) {
+        if (state.delivery) return ["delivery-pending"];
+        return state.persistenceStarted ? ["persistence-uncertain"] : ["retryable"];
+      }
+      return ["active"];
+    }
+    const legacyStatus = this.values.get(legacyKey);
+    if (legacyStatus === String(completedStatus)) return ["completed"];
+    if (legacyStatus === String(rejectedStatus)) return ["rejected"];
+    if (legacyStatus?.startsWith(String(inProgressStatusPrefix))) return ["active"];
+    return ["missing"];
+  }
+
   private claimMeteringDelivery(
     keys: string[],
     args: Array<string | number>,
@@ -424,6 +467,7 @@ export class InMemoryRedisClient implements RedisClient {
       inProgressStatusPrefix,
       completedStatus,
       leaseValue,
+      rejectedStatus,
     ] = args;
     const existingState = this.readDeliveryState(deliveryKey);
     const now = Date.now();
@@ -432,7 +476,8 @@ export class InMemoryRedisClient implements RedisClient {
       const legacyStatus = this.values.get(legacyKey);
       if (
         legacyStatus?.startsWith(String(inProgressStatusPrefix)) ||
-        legacyStatus === String(completedStatus)
+        legacyStatus === String(completedStatus) ||
+        legacyStatus === String(rejectedStatus)
       ) {
         return [0, "", ""];
       }
@@ -468,6 +513,19 @@ export class InMemoryRedisClient implements RedisClient {
     return [1, existingState.delivery ?? "", claimedOperationId];
   }
 
+  private markMeteringPersistenceStarted(key: string, args: Array<string | number>): [number] {
+    const [token, leaseMilliseconds] = args;
+    const state = this.readDeliveryState(key);
+    if (!state || state.status !== "PROCESSING" || state.token !== String(token)) {
+      return [0];
+    }
+
+    state.persistenceStarted = true;
+    state.leaseExpiresAt = Date.now() + Number(leaseMilliseconds);
+    this.values.set(key, JSON.stringify(state));
+    return [1];
+  }
+
   private markMeteringDeliveryPublishing(key: string, args: Array<string | number>): [number] {
     const [token, deliveryJson, leaseMilliseconds] = args;
     const state = this.readDeliveryState(key);
@@ -484,6 +542,9 @@ export class InMemoryRedisClient implements RedisClient {
 
   private releaseMeteringDelivery(key: string, args: Array<string | number>): [number] {
     const state = this.readDeliveryState(key);
+    if (state?.status === "COMPLETED" || state?.status === "REJECTED") {
+      return [1];
+    }
     if (state?.status !== "PUBLISHING" || state.token !== String(args[0])) {
       return [0];
     }
@@ -509,14 +570,27 @@ export class InMemoryRedisClient implements RedisClient {
 
   private completeMeteringDelivery(keys: string[], args: Array<string | number>): [number] {
     const [deliveryKey, legacyKey] = keys;
-    const [token, , completedStatus] = args;
+    const [token, , completedStatus, rejectedStatus] = args;
     const state = this.readDeliveryState(deliveryKey);
+    if (state?.status === "COMPLETED" || state?.status === "REJECTED") {
+      return [1];
+    }
     if (!state || state.status !== "PUBLISHING" || state.token !== String(token)) {
       return [0];
     }
 
-    this.values.set(deliveryKey, JSON.stringify({ status: "COMPLETED" }));
-    this.values.set(legacyKey, String(completedStatus));
+    const delivery = state.delivery
+      ? (JSON.parse(state.delivery) as {
+          quota?: { allowOverQuota: boolean; exceeded: boolean };
+        })
+      : undefined;
+    const status =
+      delivery?.quota?.exceeded && !delivery.quota.allowOverQuota ? "REJECTED" : "COMPLETED";
+    this.values.set(deliveryKey, JSON.stringify({ status }));
+    this.values.set(
+      legacyKey,
+      status === "REJECTED" ? String(rejectedStatus) : String(completedStatus),
+    );
     return [1];
   }
 
@@ -544,11 +618,12 @@ export class InMemoryRedisClient implements RedisClient {
 }
 
 type InMemoryMeteringDeliveryState = {
-  status: "PROCESSING" | "PUBLISHING" | "EVENTS_PENDING" | "COMPLETED";
+  status: "PROCESSING" | "PUBLISHING" | "EVENTS_PENDING" | "REJECTED" | "COMPLETED";
   token?: string;
   leaseExpiresAt?: number;
   operationId?: string;
   delivery?: string;
+  persistenceStarted?: boolean;
 };
 
 export class InMemoryExecutionStore implements ExecutionStore, ExecutionLogStore {

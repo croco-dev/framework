@@ -1565,8 +1565,7 @@ describe("E2E: generate()", () => {
       "@croco/framework-context": externalCrocoRange("@croco/framework-context"),
       "@croco/framework-module": externalCrocoRange("@croco/framework-module"),
       "@croco/diagnostics-core": externalCrocoRange("@croco/diagnostics-core"),
-      "@croco/llm-core": externalCrocoRange("@croco/llm-core"),
-      "@croco/llm-metering": externalCrocoRange("@croco/llm-metering"),
+      "@croco/ai-usage": externalCrocoRange("@croco/ai-usage"),
       "@croco/problems-core": externalCrocoRange("@croco/problems-core"),
       "@croco/protocols-core": externalCrocoRange("@croco/protocols-core"),
       "@croco/ratelimit-core": externalCrocoRange("@croco/ratelimit-core"),
@@ -3221,8 +3220,8 @@ describe("E2E: generate()", () => {
       expect(rootPackageJson.scripts?.["contract:openapi"]).toContain("--strict-schemas");
       expect(apiPackageJson.dependencies).toMatchObject({
         "@croco/billing-polar": externalCrocoRange("@croco/billing-polar"),
-        "@croco/llm-core": externalCrocoRange("@croco/llm-core"),
-        "@croco/llm-metering": externalCrocoRange("@croco/llm-metering"),
+        "@croco/ai-usage": externalCrocoRange("@croco/ai-usage"),
+        openai: "6.44.0",
         "drizzle-orm": getGeneratedAppDependencyRange("drizzle-orm"),
         "@croco/framework-context": externalCrocoRange("@croco/framework-context"),
         "@croco/framework-module": externalCrocoRange("@croco/framework-module"),
