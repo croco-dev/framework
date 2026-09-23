@@ -10,7 +10,11 @@ import type { AuthRequest } from "../libs/interfaces/AuthRequest";
 import type { AuthUser } from "../libs/interfaces/AuthUser";
 import type { RouteExecutionContext } from "../libs/interfaces/Guard";
 import type { ApiKeyPrincipal, UserPrincipal } from "../libs/interfaces/Principal";
-import { ForbiddenProblem, InvalidRouteMetadataTargetProblem } from "../libs/problems/AuthProblems";
+import {
+  ForbiddenProblem,
+  InvalidRouteMetadataTargetProblem,
+  UnauthorizedProblem,
+} from "../libs/problems/AuthProblems";
 import type { RbacEngine } from "../libs/rbac/RbacEngine";
 
 describe("PermissionGuard", () => {
@@ -78,7 +82,7 @@ describe("PermissionGuard", () => {
     expect(permissionGuard.canActivate(context)).toBe(true);
   });
 
-  it("should return false when user is not authenticated but permissions are required", () => {
+  it("should require authentication when permissions are required", () => {
     class TestController {
       protectedMethod() {}
     }
@@ -91,7 +95,7 @@ describe("PermissionGuard", () => {
 
     const context = createMockContext(TestController.prototype, "protectedMethod", undefined);
 
-    expect(permissionGuard.canActivate(context)).toBe(false);
+    expect(() => permissionGuard.canActivate(context)).toThrow(UnauthorizedProblem);
   });
 
   it("should return true when user has all required permissions", () => {

@@ -3889,6 +3889,12 @@
       "owner": "@croco/testing"
     },
     {
+      "path": "packages/testing/src/tests/PermissionGuardHttp.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/testing"
+    },
+    {
       "path": "packages/testing/src/tests/ProviderNoCredentialConformance.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

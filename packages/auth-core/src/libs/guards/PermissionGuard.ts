@@ -4,7 +4,7 @@ import type { AuthRequest } from "../interfaces/AuthRequest";
 import type { AuthUser } from "../interfaces/AuthUser";
 import type { Guard, RouteExecutionContext } from "../interfaces/Guard";
 import type { UserPrincipal } from "../interfaces/Principal";
-import { ForbiddenProblem } from "../problems/AuthProblems";
+import { ForbiddenProblem, UnauthorizedProblem } from "../problems/AuthProblems";
 import { hasPermission } from "../rbac/Permission";
 import type { RbacEngine } from "../rbac/RbacEngine";
 import { requireRouteMetadataTarget } from "./requireRouteMetadataTarget";
@@ -33,7 +33,7 @@ export class PermissionGuard implements Guard<RouteExecutionContext> {
     const authenticatedPrincipal = principal || user;
 
     if (!authenticatedPrincipal) {
-      return false;
+      throw new UnauthorizedProblem();
     }
 
     // ApiKeyPrincipal: roles가 없으므로 permissions 직접 체크
