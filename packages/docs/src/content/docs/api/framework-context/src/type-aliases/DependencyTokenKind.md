@@ -5,4 +5,4 @@ prev: false
 title: "DependencyTokenKind"
 ---
 
-> **DependencyTokenKind** = `"constructor"` \| `"typedi-token"` \| `"string"` \| `"symbol"`
+> **DependencyTokenKind** = `"constructor"` \| `"token"` \| `"string"` \| `"symbol"`

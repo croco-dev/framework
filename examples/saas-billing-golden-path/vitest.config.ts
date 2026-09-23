@@ -11,6 +11,7 @@ const workspacePackages = [
   "framework-config",
   "framework-context",
   "framework-logger",
+  "framework-module",
   "health-core",
   "openapi-spec",
   "problems-core",

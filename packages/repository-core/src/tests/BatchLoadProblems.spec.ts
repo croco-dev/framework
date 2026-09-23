@@ -49,6 +49,9 @@ describe("BatchLoad Problem exports", () => {
       repository.transaction;
     const options: BatchLoadOptions<ScopedRepository> = {
       by: "id",
+      factory: () => {
+        throw new Error("type-only fixture");
+      },
       scope: resolver,
     };
 

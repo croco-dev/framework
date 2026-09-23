@@ -15,8 +15,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Task } from "../libs/decorators/Task";
 import { TaskExecutionTimeoutProblem } from "../libs/problems/TasksProblems";
 import { TaskRegistry } from "../libs/TaskRegistry";
-import { TaskRunner } from "../libs/TaskRunner";
+import { TaskRunner as TaskRunnerBase } from "../libs/TaskRunner";
 import type { TaskExecutionContext } from "../libs/types";
+
+class TaskRunner extends TaskRunnerBase {
+  constructor(...args: ConstructorParameters<typeof TaskRunnerBase>) {
+    super(args[0], args[1], args[2], {
+      serviceResolver: (target) => Container.get(target),
+      ...args[3],
+    });
+  }
+}
 
 class MemoryExecutionStore extends ExecutionStore {
   private readonly executions = new Map<string, Execution>();

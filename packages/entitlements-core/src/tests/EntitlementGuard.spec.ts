@@ -99,7 +99,7 @@ describe("EntitlementGuard", () => {
     mockManager = new MockEntitlementManager();
     auditSink = new MockEntitlementAuditSink();
     Container.set(EntitlementAuditSink.token, auditSink);
-    guard = new EntitlementGuard(mockManager as unknown as EntitlementManager);
+    guard = new EntitlementGuard(mockManager as unknown as EntitlementManager, auditSink);
   });
 
   it("should pass when no metadata is present", async () => {
@@ -868,7 +868,10 @@ describe("EntitlementGuard", () => {
 
   it("should not let audit sink failures override allowed guard decisions", async () => {
     const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {});
-    Container.set(EntitlementAuditSink.token, new FailingEntitlementAuditSink());
+    guard = new EntitlementGuard(
+      mockManager as unknown as EntitlementManager,
+      new FailingEntitlementAuditSink(),
+    );
 
     class TestController {
       @RequireEntitlement({ feature: "reports.export" })
@@ -898,7 +901,10 @@ describe("EntitlementGuard", () => {
 
   it("should not let audit sink failures override denied guard decisions", async () => {
     const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {});
-    Container.set(EntitlementAuditSink.token, new FailingEntitlementAuditSink());
+    guard = new EntitlementGuard(
+      mockManager as unknown as EntitlementManager,
+      new FailingEntitlementAuditSink(),
+    );
 
     class TestController {
       @RequireEntitlement({ feature: "reports.export" })

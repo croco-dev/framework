@@ -2,7 +2,13 @@ import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, describe, expect, it } from "vitest";
-import { Component, Container, Inject, MetadataStorage, Token } from "@croco/framework-context";
+import {
+  Container,
+  GENERATED_DI_GRAPH_VERSION,
+  MetadataStorage,
+  Token,
+  defineGeneratedDiGraph,
+} from "@croco/framework-context";
 import type { DiGraphIo } from "../commands/diGraph.js";
 import { diGraph, parseDiGraphArgs, runDiGraph } from "../commands/diGraph.js";
 
@@ -19,8 +25,27 @@ describe("diGraph", () => {
 
     class UserService {}
 
-    Reflect.defineMetadata("design:paramtypes", [], UserService);
-    Component()(UserService);
+    Container.installGeneratedGraph(
+      defineGeneratedDiGraph({
+        version: GENERATED_DI_GRAPH_VERSION,
+        graphId: "cli-default-manifest",
+        compilerVersion: "test",
+        inputHash: "default-manifest",
+        providers: [
+          {
+            token: UserService,
+            tokenId: "test:UserService",
+            debugName: "UserService",
+            kind: "component",
+            scope: "singleton",
+            dependencies: [],
+            factory: () => new UserService(),
+            sourceLocation: { file: "src/UserService.ts", line: 1, column: 1 },
+          },
+        ],
+        roots: [UserService],
+      }),
+    );
 
     const exitCode = await runDiGraph([], {
       io: createIo(stdout, stderr, writes),
@@ -72,11 +97,31 @@ describe("diGraph", () => {
         io: createIo(stdout, stderr, writes),
         loadModule: async () => ({
           createCrocoApp() {
-            class UserService {}
+            class UserService {
+              constructor(_databaseUrl: string) {}
+            }
 
-            Reflect.defineMetadata("design:paramtypes", [Object], UserService);
-            (Inject(token) as ParameterDecorator)(UserService, undefined, 0);
-            Component()(UserService);
+            Container.installGeneratedGraph(
+              defineGeneratedDiGraph({
+                version: GENERATED_DI_GRAPH_VERSION,
+                graphId: "cli-bootstrap-manifest",
+                compilerVersion: "test",
+                inputHash: "bootstrap-manifest",
+                providers: [
+                  {
+                    token: UserService,
+                    tokenId: "test:UserService",
+                    debugName: "UserService",
+                    kind: "component",
+                    scope: "singleton",
+                    dependencies: [{ token, tokenId: "test:database.url", parameterIndex: 0 }],
+                    factory: (resolver) => new UserService(resolver.get(token)),
+                    sourceLocation: { file: "src/UserService.ts", line: 1, column: 1 },
+                  },
+                ],
+                roots: [UserService],
+              }),
+            );
           },
         }),
       },
@@ -100,6 +145,86 @@ describe("diGraph", () => {
     ]);
   });
 
+  it("uses the bootstrapped application's scoped graph and disposes it", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const writes = new Map<string, string>();
+    class AppController {}
+    let observedRoots: readonly unknown[] | undefined;
+    let disposeCount = 0;
+
+    const exitCode = await runDiGraph(
+      ["--module", "src/app.ts", "--bootstrap", "createCrocoApp", "--roots", "roots"],
+      {
+        io: createIo(stdout, stderr, writes),
+        loadModule: async () => ({
+          roots: () => [AppController],
+          createCrocoApp: () => ({
+            applicationRuntime: {
+              createGraphManifest(options: { readonly roots?: readonly unknown[] }) {
+                observedRoots = options.roots;
+                return {
+                  dependencyGraph: {
+                    version: "croco.di-graph.manifest.v1",
+                    status: "ready",
+                    roots: ["AppController"],
+                    rootIds: ["test:AppController"],
+                    providers: [],
+                    diagnostics: [],
+                  },
+                };
+              },
+            },
+            async disposeApplicationRuntime() {
+              disposeCount += 1;
+            },
+          }),
+        }),
+        loadFrameworkContext: async () => {
+          throw new Error("The global container must not be loaded");
+        },
+      },
+    );
+
+    expect(exitCode).toBe(0);
+    expect(observedRoots).toEqual([AppController]);
+    expect(disposeCount).toBe(1);
+    expect(stderr).toEqual([]);
+    expect(
+      JSON.parse(writes.get("/workspace/app/.croco/build/di-graph.manifest.json") ?? "{}"),
+    ).toMatchObject({
+      status: "ready",
+      roots: ["AppController"],
+    });
+  });
+
+  it("disposes a bootstrapped application when roots are invalid", async () => {
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    let disposeCount = 0;
+    const exitCode = await runDiGraph(
+      ["--module", "src/app.ts", "--bootstrap", "createCrocoApp", "--roots", "missing"],
+      {
+        io: createIo(stdout, stderr, new Map()),
+        loadModule: async () => ({
+          createCrocoApp: () => ({
+            applicationRuntime: { createGraphManifest: () => ({ dependencyGraph: {} }) },
+            async disposeApplicationRuntime() {
+              disposeCount += 1;
+            },
+          }),
+        }),
+      },
+    );
+
+    expect(exitCode).toBe(1);
+    expect(disposeCount).toBe(1);
+    expect(stdout).toEqual([]);
+    expect(stderr).toEqual([
+      "DI graph roots export 'missing' was not found in '/workspace/app/src/app.ts'.",
+    ]);
+  });
+
   it("uses roots exported from the application module", async () => {
     const stdout: string[] = [];
     const stderr: string[] = [];
@@ -108,10 +233,37 @@ describe("diGraph", () => {
     class UserController {}
     class AdminController {}
 
-    Reflect.defineMetadata("design:paramtypes", [], UserController);
-    Reflect.defineMetadata("design:paramtypes", [], AdminController);
-    Component()(UserController);
-    Component()(AdminController);
+    Container.installGeneratedGraph(
+      defineGeneratedDiGraph({
+        version: GENERATED_DI_GRAPH_VERSION,
+        graphId: "cli-exported-roots",
+        compilerVersion: "test",
+        inputHash: "exported-roots",
+        providers: [
+          {
+            token: UserController,
+            tokenId: "test:UserController",
+            debugName: "UserController",
+            kind: "rest-controller",
+            scope: "singleton",
+            dependencies: [],
+            factory: () => new UserController(),
+            sourceLocation: { file: "src/UserController.ts", line: 1, column: 1 },
+          },
+          {
+            token: AdminController,
+            tokenId: "test:AdminController",
+            debugName: "AdminController",
+            kind: "rest-controller",
+            scope: "singleton",
+            dependencies: [],
+            factory: () => new AdminController(),
+            sourceLocation: { file: "src/AdminController.ts", line: 1, column: 1 },
+          },
+        ],
+        roots: [UserController, AdminController],
+      }),
+    );
 
     const exitCode = await runDiGraph(
       [

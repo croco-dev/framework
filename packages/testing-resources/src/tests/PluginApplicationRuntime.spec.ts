@@ -11,7 +11,7 @@ import {
   TELEMETRY_RUNTIME_TOKEN,
   TelemetryRuntime,
 } from "@croco/telemetry-sdk-node";
-import { TxManager, TxManagerRegistry } from "@croco/tx-core";
+import { TxManager } from "@croco/tx-core";
 import { drizzleTransaction } from "@croco/tx-drizzle";
 import type { DrizzleDb } from "@croco/tx-drizzle";
 import {
@@ -45,7 +45,6 @@ describe("plugin ApplicationRuntime integration", () => {
         operation({ execute }),
     );
     const db = { transaction } as unknown as DrizzleDb;
-    const globalTxRegister = vi.spyOn(TxManagerRegistry, "register");
     const runtime = createApplicationRuntime(
       defineCrocoApplication({
         name: "representative-plugin-application",
@@ -95,7 +94,6 @@ describe("plugin ApplicationRuntime integration", () => {
       securityValidation: "off",
     });
     expect(runtime.get(TELEMETRY_RUNTIME_TOKEN)).toBe(TelemetryRuntime.getInstance());
-    expect(globalTxRegister).not.toHaveBeenCalled();
 
     const diagnostics = runtime.getContributions<DiagnosticsProvider>(
       MODULE_CONTRIBUTION_KINDS.diagnosticsProvider,

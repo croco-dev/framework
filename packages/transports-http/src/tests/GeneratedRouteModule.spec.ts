@@ -9,6 +9,10 @@ import { Hono } from "hono";
 import { describe, expect, it } from "vitest";
 import { createApp as createCrocoApp } from "../libs/CrocoApp";
 import { GeneratedRouteController } from "./fixtures/GeneratedRouteController";
+import {
+  GeneratedCatchAllController,
+  GeneratedRootCatchAllController,
+} from "./fixtures/GeneratedCatchAllController";
 
 describe("generated route module", () => {
   it("invokes DI-resolved controllers and preserves Problem handling in Hono", async () => {
@@ -140,12 +144,17 @@ describe("generated route module", () => {
     try {
       const moduleUrl = new URL("./fixtures/GeneratedCatchAllController.ts", import.meta.url).href;
       await compileRoutes({ controllerPaths: [moduleUrl], outputDir });
+      Container.set(GeneratedCatchAllController, new GeneratedCatchAllController());
+      Container.set(GeneratedRootCatchAllController, new GeneratedRootCatchAllController());
 
       const generated = await import(
         `${new URL(`file://${join(outputDir, ".croco", "build", "routes.mjs")}`).href}?${Date.now()}`
       );
       const app = new Hono();
-      generated.registerRoutes(app);
+      generated.registerRoutes(app, {
+        GeneratedCatchAllController,
+        GeneratedRootCatchAllController,
+      });
 
       const prefixedResponse = await app.request(
         "http://localhost/generated/assets/icons/logo.svg",

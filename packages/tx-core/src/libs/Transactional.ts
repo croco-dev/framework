@@ -1,7 +1,7 @@
 import { recordEvent, withSpan } from "@croco/telemetry-api";
 import { TxPropagationError } from "./errors";
 import { TransactionDecoratorProblem } from "./problems/TransactionProblems";
-import { TxManagerRegistry } from "./TxManagerRegistry";
+import type { TxManager } from "./TxManager";
 import type { Propagation, TransactionalOptions } from "./types";
 
 type AsyncMethod = (...args: unknown[]) => Promise<unknown>;
@@ -9,11 +9,11 @@ type AsyncMethod = (...args: unknown[]) => Promise<unknown>;
 /**
  * 메서드 실행에 트랜잭션 전파 규칙과 타임아웃을 적용하는 데코레이터입니다.
  */
-export function Transactional<TOptions = unknown>(
+export function Transactional<TReceiver, TOptions = unknown>(
+  resolveManager: (receiver: TReceiver) => TxManager<unknown, TOptions>,
   options?: TransactionalOptions<TOptions>,
 ): MethodDecorator {
   const propagation: Propagation = options?.propagation ?? "REQUIRED";
-  const managerKey = options?.managerKey;
   const nesting = options?.nesting;
   const txOptions = options?.options;
   const timeout = options?.timeout;
@@ -29,8 +29,8 @@ export function Transactional<TOptions = unknown>(
       throw new TransactionDecoratorProblem();
     }
 
-    descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
-      const txManager = TxManagerRegistry.get(managerKey);
+    descriptor.value = async function (this: TReceiver, ...args: unknown[]): Promise<unknown> {
+      const txManager = resolveManager(this);
       const isInTx = txManager.isInTransaction();
       const methodName = String(propertyKey);
 
@@ -39,16 +39,16 @@ export function Transactional<TOptions = unknown>(
           case "REQUIRED":
             return txManager.run(() => originalMethod.apply(this, args), {
               nesting: nesting ?? "join",
-              options: txOptions,
-              timeout,
+              ...(txOptions !== undefined && { options: txOptions }),
+              ...(timeout !== undefined && { timeout }),
             });
 
           case "REQUIRES_NEW":
             return txManager.suspend(() =>
               txManager.run(() => originalMethod.apply(this, args), {
                 nesting: "join",
-                options: txOptions,
-                timeout,
+                ...(txOptions !== undefined && { options: txOptions }),
+                ...(timeout !== undefined && { timeout }),
               }),
             );
 

@@ -1,8 +1,9 @@
 import "reflect-metadata";
 import {
-  Component,
   Context as FrameworkContext,
   Container,
+  GENERATED_DI_GRAPH_VERSION,
+  defineGeneratedDiGraph,
   type DependencyGraphProvider,
 } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
@@ -153,13 +154,6 @@ class DiLifecycleController {
   }
 }
 
-Reflect.defineMetadata("design:paramtypes", [], HttpSingletonLifecycleProvider);
-Reflect.defineMetadata("design:paramtypes", [], HttpRequestScopedLifecycleProvider);
-Reflect.defineMetadata(
-  "design:paramtypes",
-  [HttpSingletonLifecycleProvider, HttpRequestScopedLifecycleProvider],
-  DiLifecycleController,
-);
 const DiLifecycleControllerToken = DiLifecycleController as unknown as Constructor;
 
 class ResponseEnvelopeInterceptor implements Interceptor<ExecutionContext> {
@@ -335,9 +329,62 @@ describe("Framework integration", () => {
     Container.set(Logger, logger);
     Container.set(ErrorHandler, new ErrorHandler(logger));
     Container.set(HealthCheckRegistry, new HealthCheckRegistry());
-    Component({ scope: "singleton" })(HttpSingletonLifecycleProvider);
-    Component({ scope: "request" })(HttpRequestScopedLifecycleProvider);
-    Component({ scope: "request" })(DiLifecycleController);
+    Container.installGeneratedGraph(
+      defineGeneratedDiGraph({
+        version: GENERATED_DI_GRAPH_VERSION,
+        graphId: "transports-http-framework-integration",
+        compilerVersion: "test",
+        inputHash: "framework-integration",
+        providers: [
+          {
+            token: HttpSingletonLifecycleProvider,
+            tokenId: "test:HttpSingletonLifecycleProvider",
+            debugName: "HttpSingletonLifecycleProvider",
+            kind: "component",
+            scope: "singleton",
+            sourceLocation: { file: "FrameworkIntegration.spec.ts", line: 1, column: 1 },
+            dependencies: [],
+            factory: () => new HttpSingletonLifecycleProvider(),
+          },
+          {
+            token: HttpRequestScopedLifecycleProvider,
+            tokenId: "test:HttpRequestScopedLifecycleProvider",
+            debugName: "HttpRequestScopedLifecycleProvider",
+            kind: "component",
+            scope: "request",
+            sourceLocation: { file: "FrameworkIntegration.spec.ts", line: 1, column: 1 },
+            dependencies: [],
+            factory: () => new HttpRequestScopedLifecycleProvider(),
+          },
+          {
+            token: DiLifecycleController,
+            tokenId: "test:DiLifecycleController",
+            debugName: "DiLifecycleController",
+            kind: "rest-controller",
+            scope: "request",
+            sourceLocation: { file: "FrameworkIntegration.spec.ts", line: 1, column: 1 },
+            dependencies: [
+              {
+                token: HttpSingletonLifecycleProvider,
+                tokenId: "test:HttpSingletonLifecycleProvider",
+                parameterIndex: 0,
+              },
+              {
+                token: HttpRequestScopedLifecycleProvider,
+                tokenId: "test:HttpRequestScopedLifecycleProvider",
+                parameterIndex: 1,
+              },
+            ],
+            factory: (resolver) =>
+              new DiLifecycleController(
+                resolver.get(HttpSingletonLifecycleProvider),
+                resolver.get(HttpRequestScopedLifecycleProvider),
+              ),
+          },
+        ],
+        roots: [DiLifecycleController],
+      }),
+    );
 
     app = createApp({
       controllers: [FrameworkIntegrationController, DiLifecycleControllerToken],
@@ -650,14 +697,44 @@ describe("Framework integration", () => {
       constructor(readonly requestScopedProvider: InvalidRequestScopedProvider) {}
     }
 
-    Reflect.defineMetadata("design:paramtypes", [], InvalidRequestScopedProvider);
-    Reflect.defineMetadata(
-      "design:paramtypes",
-      [InvalidRequestScopedProvider],
-      InvalidSingletonProvider,
+    Container.installGeneratedGraph(
+      defineGeneratedDiGraph({
+        version: GENERATED_DI_GRAPH_VERSION,
+        graphId: "transports-http-invalid-scope-integration",
+        compilerVersion: "test",
+        inputHash: "invalid-scope-integration",
+        providers: [
+          {
+            token: InvalidRequestScopedProvider,
+            tokenId: "test:InvalidRequestScopedProvider",
+            debugName: "InvalidRequestScopedProvider",
+            kind: "component",
+            scope: "request",
+            sourceLocation: { file: "FrameworkIntegration.spec.ts", line: 1, column: 1 },
+            dependencies: [],
+            factory: () => new InvalidRequestScopedProvider(),
+          },
+          {
+            token: InvalidSingletonProvider,
+            tokenId: "test:InvalidSingletonProvider",
+            debugName: "InvalidSingletonProvider",
+            kind: "component",
+            scope: "singleton",
+            sourceLocation: { file: "FrameworkIntegration.spec.ts", line: 1, column: 1 },
+            dependencies: [
+              {
+                token: InvalidRequestScopedProvider,
+                tokenId: "test:InvalidRequestScopedProvider",
+                parameterIndex: 0,
+              },
+            ],
+            factory: (resolver) =>
+              new InvalidSingletonProvider(resolver.get(InvalidRequestScopedProvider)),
+          },
+        ],
+        roots: [InvalidSingletonProvider],
+      }),
     );
-    Component({ scope: "request" })(InvalidRequestScopedProvider);
-    Component({ scope: "singleton" })(InvalidSingletonProvider);
 
     const manifest = Container.createDependencyGraphManifest({
       roots: [InvalidSingletonProvider],

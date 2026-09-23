@@ -1,4 +1,4 @@
-import type { RuntimePlatform } from "@croco/framework-context";
+import type { GeneratedDiGraph, RuntimePlatform } from "@croco/framework-context";
 import type { ModuleOptions, ModuleProviderDefinition } from "./types";
 
 export type CrocoPluginMaturity = "alpha" | "beta" | "production" | "deprecated";
@@ -53,12 +53,14 @@ export type CrocoApplicationDefinition = {
   readonly name: string;
   readonly imports: readonly CrocoApplicationImport[];
   readonly providerReplacements: readonly ApplicationProviderReplacement[];
+  readonly generatedGraph?: GeneratedDiGraph;
 };
 
 export type DefineCrocoApplicationOptions = {
   readonly name?: string;
   readonly imports: readonly CrocoApplicationImport[];
   readonly providerReplacements?: readonly ApplicationProviderReplacement[];
+  readonly generatedGraph?: GeneratedDiGraph;
 };
 
 export function defineCrocoPlugin(plugin: Omit<CrocoPlugin, "kind">): CrocoPlugin {
@@ -84,6 +86,7 @@ export function defineCrocoApplication(
         }),
       ),
     ),
+    ...(options.generatedGraph ? { generatedGraph: options.generatedGraph } : {}),
   });
 }
 

@@ -2,12 +2,15 @@ import "reflect-metadata";
 import type { ILogger } from "@croco/framework-context";
 import { Container, Context, LOGGER_TOKEN } from "@croco/framework-context";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Auditable } from "../libs/Auditable";
+import { Auditable as createAuditable } from "../libs/Auditable";
+import { Auditable } from "./auditTestDependencies";
 import type { AuditLogRepository } from "../libs/AuditLogRepository";
 import { AUDIT_LOG_REPOSITORY_TOKEN } from "../libs/AuditLogRepositoryToken";
 import { AUDIT_METADATA_KEY } from "../libs/constants";
 import { AuditableDecoratorProblem } from "../libs/problems/AuditableDecoratorProblem";
-import type { AuditableOptions, AuditLogEntry } from "../libs/types";
+import type { AuditableOptions as ExplicitAuditableOptions, AuditLogEntry } from "../libs/types";
+
+type AuditableOptions = Omit<ExplicitAuditableOptions, "dependencies">;
 
 type RequestContextStub = {
   requestId: string;
@@ -26,6 +29,72 @@ function createPersistedEntry(entry: Omit<AuditLogEntry, "id" | "createdAt">): A
 }
 
 describe("@Auditable", () => {
+  it("uses each service instance's injected dependencies without consulting a global container", async () => {
+    const globalLookup = vi.spyOn(Container, "getMany").mockImplementation(() => {
+      throw new Error("global lookup is forbidden");
+    });
+    const firstCreate = vi.fn(async (entry: Omit<AuditLogEntry, "id" | "createdAt">) =>
+      createPersistedEntry(entry),
+    );
+    const secondCreate = vi.fn(async (entry: Omit<AuditLogEntry, "id" | "createdAt">) =>
+      createPersistedEntry(entry),
+    );
+    const logger: ILogger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+      fatal: vi.fn(),
+      child() {
+        return this;
+      },
+    };
+    class Service {
+      constructor(
+        readonly repository: AuditLogRepository,
+        readonly logger: ILogger,
+      ) {}
+
+      @createAuditable({
+        action: "project.update",
+        resourceType: "Project",
+        throwOnFailure: true,
+        dependencies: (service: Service) => service,
+      })
+      async update(id: string): Promise<string> {
+        return id;
+      }
+    }
+    await new Service({ create: firstCreate, find: vi.fn() }, logger).update("first");
+    await new Service({ create: secondCreate, find: vi.fn() }, logger).update("second");
+    expect(firstCreate).toHaveBeenCalledWith(expect.objectContaining({ resourceId: "first" }));
+    expect(secondCreate).toHaveBeenCalledWith(expect.objectContaining({ resourceId: "second" }));
+    expect(globalLookup).not.toHaveBeenCalled();
+  });
+
+  it.each(["repository", "logger"])(
+    "rejects an incomplete explicit %s dependency before business execution",
+    async (missing) => {
+      const business = vi.fn();
+      const dependencies = {
+        repository: missing === "repository" ? undefined : { create: vi.fn(), find: vi.fn() },
+        logger: missing === "logger" ? undefined : { warn: vi.fn() },
+      } as unknown as ReturnType<ExplicitAuditableOptions["dependencies"]>;
+      class Service {
+        @createAuditable({
+          action: "project.update",
+          resourceType: "Project",
+          dependencies: () => dependencies,
+        })
+        update(): void {
+          business();
+        }
+      }
+      await expect(new Service().update()).rejects.toThrow(AuditableDecoratorProblem);
+      expect(business).not.toHaveBeenCalled();
+    },
+  );
+
   beforeEach(() => {
     Container.reset();
   });
@@ -817,14 +886,14 @@ describe("@Auditable", () => {
           }
         }
 
-        await expect(new TestService().update()).rejects.toThrow(AuditableDecoratorProblem);
+        await expect(new TestService().update()).rejects.toThrow();
         expect(business).not.toHaveBeenCalled();
         expect(create).not.toHaveBeenCalled();
       },
     );
 
     it.each([true, false, undefined])(
-      "should respect throwOnFailure=%s when dependency resolution throws",
+      "should reject before business execution when dependencies throw, regardless of throwOnFailure=%s",
       async (throwOnFailure) => {
         vi.spyOn(Container, "getMany").mockImplementation(() => {
           throw new Error("dependency factory failed");
@@ -839,18 +908,13 @@ describe("@Auditable", () => {
         }
 
         const result = new TestService().update();
-        if (throwOnFailure) {
-          await expect(result).rejects.toThrow(AuditableDecoratorProblem);
-          expect(business).not.toHaveBeenCalled();
-        } else {
-          await expect(result).resolves.toBe("updated");
-          expect(business).toHaveBeenCalledTimes(1);
-        }
+        await expect(result).rejects.toThrow("dependency factory failed");
+        expect(business).not.toHaveBeenCalled();
       },
     );
   });
 
-  it("should execute decorated method when audit dependencies are missing", async () => {
+  it("should reject when required audit dependencies are missing", async () => {
     vi.spyOn(Context, "get").mockReturnValue({
       requestId: "req-missing-audit",
       tenantId: "tenant-missing-audit",
@@ -871,9 +935,7 @@ describe("@Auditable", () => {
 
     const service = new TestService();
 
-    await expect(service.update("project-missing-audit", { name: "still-runs" })).resolves.toBe(
-      "updated:project-missing-audit:still-runs",
-    );
+    await expect(service.update("project-missing-audit", { name: "blocked" })).rejects.toThrow();
   });
 
   describe("audit log write failure", () => {

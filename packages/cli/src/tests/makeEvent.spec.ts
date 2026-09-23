@@ -29,7 +29,7 @@ describe("generateEvent", () => {
     await expect(generateEvent("123User", { cwd })).rejects.toThrow("Invalid name: 123User");
   });
 
-  it("should generate an event and listener that typecheck against events-core", async () => {
+  it("should generate an event and component listener that typecheck", async () => {
     const cwd = await createWorkspace();
 
     try {
@@ -91,7 +91,8 @@ async function createWorkspace(options: { apiServerManifest?: string } = {}): Pr
   await fs.writeFile(path.join(cwd, "pnpm-workspace.yaml"), "packages: []\n");
   await fs.writeFile(
     path.join(cwd, "apps", "api-server", "package.json"),
-    options.apiServerManifest ?? apiServerManifest(["@croco/events-core"]),
+    options.apiServerManifest ??
+      apiServerManifest(["@croco/events-core", "@croco/framework-context"]),
   );
 
   return cwd;

@@ -1,78 +1,38 @@
-import {
-  Inject as TypeDIInject,
-  InjectMany as TypeDIInjectMany,
-  Token as TypeDIToken,
-} from "typedi";
-import type { InjectionTokenIdentifier } from "../InjectionMetadata";
-import type { Constructor } from "../types";
 import { registerInjectionMetadata } from "../InjectionMetadata";
+import { Token } from "../Token";
+import type { Constructor } from "../types";
 
-type InjectIdentifier = string | TypeDIToken<unknown> | ((type?: never) => Constructor<unknown>);
+type InjectIdentifier = string | symbol | Token<unknown> | ((type?: never) => Constructor<unknown>);
 
-type TypeDIInjectFn = (
-  typeOrIdentifier?: InjectIdentifier,
-) => ParameterDecorator | PropertyDecorator;
-
-function createInjectionResolver(
+function isStaticInjectionToken(
   typeOrIdentifier: InjectIdentifier | undefined,
-  target: object,
-  propertyKey: string | symbol | undefined,
-  parameterIndex: number | undefined,
-): () => InjectionTokenIdentifier | undefined {
-  if (typeof typeOrIdentifier === "string" || typeOrIdentifier instanceof TypeDIToken) {
-    return () => typeOrIdentifier;
+): typeOrIdentifier is string | symbol | Token<unknown> {
+  if (
+    typeof typeOrIdentifier === "string" ||
+    typeof typeOrIdentifier === "symbol" ||
+    typeOrIdentifier instanceof Token
+  ) {
+    return true;
   }
-
-  if (typeof typeOrIdentifier === "function") {
-    return () => typeOrIdentifier() as InjectionTokenIdentifier;
-  }
-
-  if (typeof parameterIndex === "number") {
-    return () => {
-      const paramTypes = (
-        propertyKey === undefined
-          ? Reflect.getMetadata("design:paramtypes", target)
-          : Reflect.getMetadata("design:paramtypes", target, propertyKey)
-      ) as InjectionTokenIdentifier[] | undefined;
-      return paramTypes?.[parameterIndex];
-    };
-  }
-
-  if (propertyKey !== undefined) {
-    return () =>
-      Reflect.getMetadata("design:type", target, propertyKey) as
-        | InjectionTokenIdentifier
-        | undefined;
-  }
-
-  return () => undefined;
+  return false;
 }
 
 export function Inject(): Function;
 export function Inject(typeFn: (type?: never) => Constructor<unknown>): Function;
 export function Inject(serviceName?: string): Function;
-export function Inject(token: TypeDIToken<unknown>): Function;
+export function Inject(token: Token<unknown> | symbol): Function;
 export function Inject(
   typeOrIdentifier?: InjectIdentifier,
 ): ParameterDecorator | PropertyDecorator {
-  const typediInject = TypeDIInject as TypeDIInjectFn;
-  const typediDecorator = typediInject(typeOrIdentifier);
-
   return (
     target: object,
     propertyKey: string | symbol | undefined,
     parameterIndex?: number,
   ): void => {
-    if (typeof parameterIndex === "number") {
-      (typediDecorator as ParameterDecorator)(target, propertyKey, parameterIndex);
-    } else if (propertyKey !== undefined) {
-      (typediDecorator as PropertyDecorator)(target, propertyKey);
-    }
-
     registerInjectionMetadata(target, {
-      index: parameterIndex,
-      propertyKey,
-      resolveToken: createInjectionResolver(typeOrIdentifier, target, propertyKey, parameterIndex),
+      ...(parameterIndex === undefined ? {} : { index: parameterIndex }),
+      ...(propertyKey === undefined ? {} : { propertyKey }),
+      ...(isStaticInjectionToken(typeOrIdentifier) ? { token: typeOrIdentifier } : {}),
     });
   };
 }
@@ -80,28 +40,41 @@ export function Inject(
 export function InjectMany(): Function;
 export function InjectMany(typeFn: (type?: never) => Constructor<unknown>): Function;
 export function InjectMany(serviceName?: string): Function;
-export function InjectMany(token: TypeDIToken<unknown>): Function;
+export function InjectMany(token: Token<unknown> | symbol): Function;
 export function InjectMany(
   typeOrIdentifier?: InjectIdentifier,
 ): ParameterDecorator | PropertyDecorator {
-  const typediInjectMany = TypeDIInjectMany as TypeDIInjectFn;
-  const typediDecorator = typediInjectMany(typeOrIdentifier);
-
   return (
     target: object,
     propertyKey: string | symbol | undefined,
     parameterIndex?: number,
   ): void => {
-    if (typeof parameterIndex === "number") {
-      (typediDecorator as ParameterDecorator)(target, propertyKey, parameterIndex);
-    } else if (propertyKey !== undefined) {
-      (typediDecorator as PropertyDecorator)(target, propertyKey);
-    }
-
     registerInjectionMetadata(target, {
-      index: parameterIndex,
-      propertyKey,
-      resolveToken: createInjectionResolver(typeOrIdentifier, target, propertyKey, parameterIndex),
+      ...(parameterIndex === undefined ? {} : { index: parameterIndex }),
+      many: true,
+      ...(propertyKey === undefined ? {} : { propertyKey }),
+      ...(isStaticInjectionToken(typeOrIdentifier) ? { token: typeOrIdentifier } : {}),
+    });
+  };
+}
+
+export function InjectOptional(): Function;
+export function InjectOptional(typeFn: (type?: never) => Constructor<unknown>): Function;
+export function InjectOptional(serviceName?: string): Function;
+export function InjectOptional(token: Token<unknown> | symbol): Function;
+export function InjectOptional(
+  typeOrIdentifier?: InjectIdentifier,
+): ParameterDecorator | PropertyDecorator {
+  return (
+    target: object,
+    propertyKey: string | symbol | undefined,
+    parameterIndex?: number,
+  ): void => {
+    registerInjectionMetadata(target, {
+      ...(parameterIndex === undefined ? {} : { index: parameterIndex }),
+      optional: true,
+      ...(propertyKey === undefined ? {} : { propertyKey }),
+      ...(isStaticInjectionToken(typeOrIdentifier) ? { token: typeOrIdentifier } : {}),
     });
   };
 }

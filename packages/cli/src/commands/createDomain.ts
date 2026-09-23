@@ -187,9 +187,9 @@ export class ${className}Controller {
 }
 
 function serviceTemplate(className: string): string {
-  return `import { Service } from "typedi";
+  return `import { Component } from "@croco/framework-context";
 
-@Service()
+@Component()
 export class ${className}Service {
   // Business logic methods
 }

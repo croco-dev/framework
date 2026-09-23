@@ -34,20 +34,23 @@ export class ContainerScopeMismatchProblem extends Problem {
 
   constructor(
     singleton: string,
-    requestScoped: string,
+    dependency: string,
     path: readonly string[],
     trace: DependencyResolutionTrace,
+    dependencyScope: "request" | "transient" = "request",
   ) {
     super(
       "framework-context/di-scope-mismatch",
       ProblemCategory.InternalServerError,
-      `Singleton-scoped component ${singleton} cannot depend on request-scoped component ${requestScoped}. Resolution path: ${path.join(" -> ")}.`,
+      `Singleton-scoped component ${singleton} cannot depend on ${dependencyScope}-scoped component ${dependency}. Resolution path: ${path.join(" -> ")}.`,
       {
         extensions: {
           reason: "scope-mismatch",
           resolution: trace,
           singleton,
-          requestScoped,
+          ...(dependencyScope === "request"
+            ? { requestScoped: dependency }
+            : { transientScoped: dependency }),
           path,
         },
       },

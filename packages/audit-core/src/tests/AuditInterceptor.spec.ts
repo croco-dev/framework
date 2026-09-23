@@ -3,7 +3,7 @@ import type { ILogger } from "@croco/framework-context";
 import { Container, Context, LOGGER_TOKEN } from "@croco/framework-context";
 import * as telemetry from "@croco/telemetry-api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { Auditable } from "../libs/Auditable";
+import { Auditable } from "./auditTestDependencies";
 import { AuditInterceptor } from "../libs/AuditInterceptor";
 import type { AuditLogRepository } from "../libs/AuditLogRepository";
 import { AUDIT_LOG_REPOSITORY_TOKEN } from "../libs/AuditLogRepositoryToken";
@@ -96,6 +96,7 @@ function createActiveImpersonationContext(requestId: string): RequestContextStub
 describe("AuditInterceptor", () => {
   let interceptor!: AuditInterceptor;
   let repository!: AuditLogRepository;
+  let injectedLogger!: ILogger;
   let createSpy!: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
@@ -107,7 +108,8 @@ describe("AuditInterceptor", () => {
       create: createSpy,
       find: vi.fn(),
     } as unknown as AuditLogRepository;
-    interceptor = new AuditInterceptor(repository);
+    injectedLogger = createLogger();
+    interceptor = new AuditInterceptor(repository, injectedLogger);
   });
 
   afterEach(() => {
@@ -121,7 +123,7 @@ describe("AuditInterceptor", () => {
     trustedProxyHops: number = 0,
     httpContext?: unknown,
   ): Promise<void> {
-    interceptor = new AuditInterceptor(repository, { trustedProxyHops });
+    interceptor = new AuditInterceptor(repository, injectedLogger, { trustedProxyHops });
 
     class ClientIpController {
       read() {}
@@ -326,7 +328,7 @@ describe("AuditInterceptor", () => {
     const auditWriteError = new Error("repository unavailable");
     const telemetryError = new Error("telemetry unavailable");
     const logger = createLogger();
-    Container.set(LOGGER_TOKEN, logger);
+    interceptor = new AuditInterceptor(repository, logger);
     createSpy.mockRejectedValueOnce(auditWriteError);
     const recordErrorSpy = vi.spyOn(telemetry, "recordError").mockImplementation(() => {
       throw telemetryError;
@@ -364,10 +366,9 @@ describe("AuditInterceptor", () => {
     });
   });
 
-  it("should report audit persistence failures without a logger or active span", async () => {
+  it("should report audit persistence failures through its injected logger without an active span", async () => {
     const auditWriteError = new Error("repository unavailable");
     createSpy.mockRejectedValueOnce(auditWriteError);
-    const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
     vi.spyOn(Context, "get").mockReturnValue({
       requestId: "req-standalone-audit-failure",
       tenantId: "tenant-standalone-audit-failure",
@@ -390,9 +391,12 @@ describe("AuditInterceptor", () => {
       ok: true,
     });
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith("[AuditInterceptor] Failed to write audit log", {
-      error: "repository unavailable",
-    });
+    expect(injectedLogger.warn).toHaveBeenCalledWith(
+      "[AuditInterceptor] Failed to write audit log",
+      {
+        error: "repository unavailable",
+      },
+    );
   });
 
   it("should sanitize successful payloads and HTTP metadata before persistence", async () => {
@@ -558,7 +562,7 @@ describe("AuditInterceptor", () => {
     const auditWriteError = new Error("repository unavailable");
     const telemetryError = new Error("telemetry unavailable");
     const logger = createLogger();
-    Container.set(LOGGER_TOKEN, logger);
+    interceptor = new AuditInterceptor(repository, logger);
     createSpy.mockRejectedValueOnce(auditWriteError);
     const recordErrorSpy = vi.spyOn(telemetry, "recordError").mockImplementation(() => {
       throw telemetryError;
@@ -797,7 +801,7 @@ describe("AuditInterceptor", () => {
     );
   });
 
-  it("should use interceptor coverage when @Auditable dependencies are missing", async () => {
+  it("should reject and audit missing @Auditable dependencies", async () => {
     vi.spyOn(Context, "get").mockReturnValue({
       requestId: "req-decorated-fallback",
       tenantId: "tenant-fallback",
@@ -824,7 +828,7 @@ describe("AuditInterceptor", () => {
       interceptor.intercept(context, {
         handle: vi.fn(() => controller.update()),
       } as CallHandler),
-    ).resolves.toEqual({ updated: true });
+    ).rejects.toThrow("provider is not registered");
 
     expect(createSpy).toHaveBeenCalledTimes(1);
     expect(createSpy).toHaveBeenCalledWith(
@@ -836,7 +840,7 @@ describe("AuditInterceptor", () => {
     );
   });
 
-  it("should use interceptor failure coverage when @Auditable dependencies are missing", async () => {
+  it("should fail on missing dependencies before entering a failing business handler", async () => {
     vi.spyOn(Context, "get").mockReturnValue({
       requestId: "req-decorated-failure-fallback",
       tenantId: "tenant-fallback",
@@ -863,18 +867,18 @@ describe("AuditInterceptor", () => {
       interceptor.intercept(context, {
         handle: vi.fn(() => controller.archive()),
       } as CallHandler),
-    ).rejects.toThrow("archive failed");
+    ).rejects.toThrow("provider is not registered");
 
     expect(createSpy).toHaveBeenCalledTimes(1);
     expect(createSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         action: "TestController.archive",
-        payload: { error: "archive failed" },
+        payload: { error: expect.stringContaining("provider is not registered") },
       }),
     );
   });
 
-  it("should use interceptor coverage when a lazy decorator dependency cannot resolve", async () => {
+  it("should preserve dependency failure and record the failed handler through the interceptor", async () => {
     Container.registerLazy(AUDIT_LOG_REPOSITORY_TOKEN, () => {
       throw new Error("decorator repository unavailable");
     });
@@ -905,7 +909,7 @@ describe("AuditInterceptor", () => {
       interceptor.intercept(context, {
         handle: vi.fn(() => controller.restore()),
       } as CallHandler),
-    ).resolves.toEqual({ restored: true });
+    ).rejects.toThrow("decorator repository unavailable");
 
     expect(createSpy).toHaveBeenCalledTimes(1);
     expect(createSpy).toHaveBeenCalledWith(
@@ -1047,7 +1051,7 @@ describe("AuditInterceptor", () => {
     }
 
     const controller = new TestController();
-    const nestedInterceptor = new AuditInterceptor(repository);
+    const nestedInterceptor = new AuditInterceptor(repository, injectedLogger);
     const context = createExecutionContext({
       controller: TestController,
       handler: "read",
@@ -1106,7 +1110,7 @@ describe("AuditInterceptor", () => {
       }
 
       const controller = new TestController();
-      const nestedInterceptor = new AuditInterceptor(repository);
+      const nestedInterceptor = new AuditInterceptor(repository, injectedLogger);
       const context = createExecutionContext({
         controller: TestController,
         handler: "process",
@@ -1185,6 +1189,8 @@ describe("AuditInterceptor", () => {
   });
 
   it("should preserve audit coverage for distinct nested decorated handlers", async () => {
+    Container.set(AUDIT_LOG_REPOSITORY_TOKEN, repository);
+    Container.set(LOGGER_TOKEN, createLogger());
     vi.spyOn(Context, "get").mockReturnValue({
       requestId: "req-distinct-nested-decorated",
       tenantId: "tenant-distinct-nested",
@@ -1203,7 +1209,7 @@ describe("AuditInterceptor", () => {
     }
 
     const innerController = new InnerController();
-    const innerInterceptor = new AuditInterceptor(repository);
+    const innerInterceptor = new AuditInterceptor(repository, injectedLogger);
     const innerContext = createExecutionContext({
       controller: InnerController,
       handler: "read",
@@ -1215,8 +1221,6 @@ describe("AuditInterceptor", () => {
     class OuterController {
       @Auditable({ action: "outer.run", resourceType: "OuterProject" })
       async run(): Promise<unknown> {
-        Container.set(AUDIT_LOG_REPOSITORY_TOKEN, repository);
-        Container.set(LOGGER_TOKEN, createLogger());
         return innerInterceptor.intercept(innerContext, {
           handle: vi.fn(() => innerController.read()),
         });
@@ -1241,7 +1245,7 @@ describe("AuditInterceptor", () => {
     expect(createSpy).toHaveBeenCalledTimes(2);
     expect(createSpy.mock.calls.map(([entry]) => entry.action)).toEqual([
       "inner.read",
-      "OuterController.run",
+      "outer.run",
     ]);
   });
 
@@ -1413,9 +1417,9 @@ describe("AuditInterceptor", () => {
   it.each([-1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1])(
     "should reject invalid trusted proxy hop counts (%s)",
     (trustedProxyHops) => {
-      expect(() => new AuditInterceptor(repository, { trustedProxyHops })).toThrowError(
-        AuditClientIpConfigurationProblem,
-      );
+      expect(
+        () => new AuditInterceptor(repository, injectedLogger, { trustedProxyHops }),
+      ).toThrowError(AuditClientIpConfigurationProblem);
     },
   );
 });

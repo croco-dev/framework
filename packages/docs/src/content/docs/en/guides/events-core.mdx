@@ -95,6 +95,7 @@ Configure the global `EventBus` instance.
 ```typescript typecheck
 import {
   DomainEvent,
+  DefaultHandlerResolver,
   EventBusConfig,
   RegisterEventHandler,
   type EventHandler,
@@ -118,12 +119,12 @@ class UserCreatedHandler implements EventHandler<UserCreatedEvent> {
   }
 }
 
-const config = EventBusConfig.getInstance();
+const config = new EventBusConfig();
 config.setEventBus(new InMemoryEventBus());
 
 // Register handlers
 async function startEventBus(): Promise<void> {
-  await config.start({ handlers: [UserCreatedHandler] });
+  await config.start({ handlers: [UserCreatedHandler], resolver: new DefaultHandlerResolver() });
 }
 
 void startEventBus();

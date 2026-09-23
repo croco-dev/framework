@@ -15,13 +15,17 @@ HTTP 요청 흐름을 감사 로그로 기록하는 인터셉터입니다.
 
 ### Constructor
 
-> **new AuditInterceptor**(`repository`, `options?`): `AuditInterceptor`
+> **new AuditInterceptor**(`repository`, `logger`, `options?`): `AuditInterceptor`
 
 #### Parameters
 
 ##### repository
 
 [`AuditLogRepository`](/api/audit-core/src/classes/auditlogrepository/)
+
+##### logger
+
+[`ILogger`](/api/framework-context/src/interfaces/ilogger/)
 
 ##### options?
 

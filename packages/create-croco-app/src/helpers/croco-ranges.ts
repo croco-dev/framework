@@ -14,6 +14,7 @@ const EXTERNAL_CROCO_PACKAGE_RANGES = {
   "@croco/diagnostics-core": "^0.0.4",
   "@croco/engagement-core": "^0.1.0",
   "@croco/entitlements-core": "^0.0.4",
+  "@croco/esbuild-plugin": "^0.0.4",
   "@croco/execution-core": "^0.0.4",
   "@croco/events-core": "^0.0.4",
   "@croco/events-inmemory": "^0.0.4",

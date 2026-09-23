@@ -1606,6 +1606,7 @@ function decoratorMetadataContractFor(
 
   if (packageName === "@croco/metering-core") {
     return {
+      constructorArity: 1,
       defaults: { cacheTtlMs: 60_000 },
       injections: { repository: 0 },
       metadataTypes: [
@@ -1647,10 +1648,9 @@ function runDecoratorMetadataSmoke(
     join(smokeRoot, "decorator-metadata.cjs"),
     [
       `const contract = ${contractJson};`,
-      'const { Container } = require("@croco/framework-context");',
       "const serviceModule = require(contract.servicePackage);",
       "const metadataModules = Object.fromEntries([...(contract.metadataTypes ?? []), ...(contract.memberTypes ?? [])].filter((type) => type.packageName).map((type) => [type.packageName, require(type.packageName)]));",
-      'verifyDecoratorMetadata("cjs", Container, serviceModule, metadataModules, contract);',
+      'verifyDecoratorMetadata("cjs", serviceModule, metadataModules, contract);',
       decoratorMetadataVerificationSource(),
       "",
     ].join("\n"),
@@ -1659,41 +1659,30 @@ function runDecoratorMetadataSmoke(
     join(smokeRoot, "decorator-metadata.mjs"),
     [
       `const contract = ${contractJson};`,
-      'const { Container } = await import("@croco/framework-context");',
       "const serviceModule = await import(contract.servicePackage);",
       "const metadataModules = Object.fromEntries(await Promise.all([...(contract.metadataTypes ?? []), ...(contract.memberTypes ?? [])].filter((type) => type.packageName).map(async (type) => [type.packageName, await import(type.packageName)])));",
-      'verifyDecoratorMetadata("esm", Container, serviceModule, metadataModules, contract);',
+      'verifyDecoratorMetadata("esm", serviceModule, metadataModules, contract);',
       decoratorMetadataVerificationSource(),
       "",
     ].join("\n"),
   );
 
   run("node", [join(smokeRoot, "decorator-metadata.cjs")], smokeRoot, {
-    label: `${contract.servicePackage}: cjs decorator metadata and implicit DI`,
+    label: `${contract.servicePackage}: cjs decorator ABI and direct construction`,
   });
-  console.log(`cjs decorator metadata and implicit DI ok ${contract.servicePackage}`);
+  console.log(`cjs decorator ABI and direct construction ok ${contract.servicePackage}`);
   run("node", [join(smokeRoot, "decorator-metadata.mjs")], smokeRoot, {
-    label: `${contract.servicePackage}: esm decorator metadata and implicit DI`,
+    label: `${contract.servicePackage}: esm decorator ABI and direct construction`,
   });
-  console.log(`esm decorator metadata and implicit DI ok ${contract.servicePackage}`);
+  console.log(`esm decorator ABI and direct construction ok ${contract.servicePackage}`);
 }
 
 function decoratorMetadataVerificationSource(): string {
   return [
-    "function verifyDecoratorMetadata(format, Container, serviceModule, metadataModules, contract) {",
+    "function verifyDecoratorMetadata(format, serviceModule, metadataModules, contract) {",
     "  const Service = serviceModule[contract.serviceClass];",
     "  const resolveType = (type) => type.packageName ? metadataModules[type.packageName][type.className] : globalThis[type.className];",
     "  const expectedParamTypes = contract.metadataTypes?.map(resolveType);",
-    "  if (expectedParamTypes) {",
-    '    const paramTypes = Reflect.getMetadata?.("design:paramtypes", Service);',
-    "    const requiredParamTypeCount = contract.metadataTypes.findIndex((type) => type.optional);",
-    "    const minimumParamTypeCount = requiredParamTypeCount === -1 ? expectedParamTypes.length : requiredParamTypeCount;",
-    "    if (!Array.isArray(paramTypes) || paramTypes.length < minimumParamTypeCount || paramTypes.length > expectedParamTypes.length || paramTypes.some((value, index) => value !== expectedParamTypes[index])) {",
-    '      const actual = Array.isArray(paramTypes) ? paramTypes.map((value) => value?.name ?? typeof value).join(", ") : "missing";',
-    '      const expected = contract.metadataTypes.map((type) => `${type.className}${type.optional ? "?" : ""}`).join(", ");',
-    "      throw new Error(`[${format}] ${contract.serviceClass} design:paramtypes expected [${expected}], received [${actual}]`);",
-    "    }",
-    "  }",
     "  for (const memberType of contract.memberTypes ?? []) {",
     '    const designType = Reflect.getMetadata?.("design:type", Service.prototype, memberType.memberName);',
     "    const expectedType = resolveType(memberType);",
@@ -1707,16 +1696,12 @@ function decoratorMetadataVerificationSource(): string {
     "  if (contract.constructorArity !== undefined && Service.length !== contract.constructorArity) {",
     "    throw new Error(`[${format}] ${contract.serviceClass} expected constructor arity ${contract.constructorArity}, received ${Service.length}`);",
     "  }",
-    "  const injectedValues = Object.fromEntries(Object.entries(contract.injections ?? {}).map(([field, metadataIndex]) => {",
-    "    const Dependency = expectedParamTypes[metadataIndex];",
-    "    const dependency = Object.create(Dependency.prototype);",
-    "    Container.set(Dependency, dependency);",
-    "    return [field, dependency];",
-    "  }));",
-    "  const service = Container.get(Service);",
+    "  const dependencies = expectedParamTypes.slice(0, Service.length).map((Dependency) => Object.create(Dependency.prototype));",
+    "  const injectedValues = Object.fromEntries(Object.entries(contract.injections ?? {}).map(([field, metadataIndex]) => [field, dependencies[metadataIndex]]));",
+    "  const service = Reflect.construct(Service, dependencies);",
     "  for (const [field, dependency] of Object.entries(injectedValues)) {",
     "    if (service[field] !== dependency) {",
-    "      throw new Error(`[${format}] Container.get(${contract.serviceClass}) did not inject the registered ${expectedParamTypes[contract.injections[field]].name}`);",
+    "      throw new Error(`[${format}] direct ${contract.serviceClass} construction did not retain ${expectedParamTypes[contract.injections[field]].name}`);",
     "    }",
     "  }",
     "  for (const [field, expected] of Object.entries(contract.defaults ?? {})) {",
@@ -1724,8 +1709,7 @@ function decoratorMetadataVerificationSource(): string {
     "      throw new Error(`[${format}] Container.get(${contract.serviceClass}) expected default ${field}=${expected}, received ${String(service[field])}`);",
     "    }",
     "  }",
-    "  Container.reset();",
-    "  console.log(`${format} decorator metadata and implicit DI ok ${contract.servicePackage}`);",
+    "  console.log(`${format} decorator ABI and direct construction ok ${contract.servicePackage}`);",
     "}",
   ].join("\n");
 }

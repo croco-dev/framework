@@ -11,9 +11,9 @@ import {
   ExecutionStore,
   type ListExecutionsOptions,
 } from "@croco/execution-core";
-import { Component, Container, MetadataStorage } from "@croco/framework-context";
+import { Component, MetadataStorage } from "@croco/framework-context";
 import { Problem, ProblemCategory } from "@croco/problems-core";
-import { Task, TaskRegistry, taskRef } from "@croco/tasks-core";
+import { Task, TaskRegistry, TaskRunner, taskRef } from "@croco/tasks-core";
 import { Cron, OnWebhook } from "@croco/triggers-core";
 import type { SpanOptions as OtelSpanOptions, Span, Tracer } from "@opentelemetry/api";
 import { trace } from "@opentelemetry/api";
@@ -273,14 +273,69 @@ function createMockTracer(mockSpan: Span): Tracer {
 describe("workflow-core", () => {
   let store!: InMemoryExecutionStore;
   let manager!: ExecutionManagerImpl;
+  const instances = new Map<object, object>();
+
+  function createWorkflowRunner(
+    executionManager: ExecutionManager,
+    registry: WorkflowRegistry,
+    services: ReadonlyMap<object, object> = instances,
+  ) {
+    const taskRunner = new TaskRunner(executionManager, registry.taskRegistry, undefined, {
+      serviceResolver: (target) => {
+        const instance = services.get(target);
+        if (!instance) {
+          throw new TestWorkflowProblem(`Missing test task instance: ${target.name}`);
+        }
+        return instance;
+      },
+    });
+    return new WorkflowRunner(executionManager, registry, taskRunner);
+  }
 
   beforeEach(() => {
     vi.restoreAllMocks();
-    Container.reset();
+    instances.clear();
     MetadataStorage.clear();
     TaskRegistry.getInstance().reset();
     store = new InMemoryExecutionStore();
     manager = new ExecutionManagerImpl(store);
+  });
+
+  it("resolves workflow tasks through the supplied application runner", async () => {
+    @Component()
+    class ApplicationTasks {
+      constructor(private readonly application: string) {}
+
+      @Task({ name: "application.identity" })
+      identity() {
+        return this.application;
+      }
+    }
+
+    @Component()
+    class ApplicationWorkflows {
+      @Workflow({ name: "application.workflow", steps: ["application.identity"] })
+      run() {}
+    }
+
+    const registry = WorkflowRegistry.fromMetadata();
+    expect(registry.get("application.workflow")?.target.constructor).toBe(ApplicationWorkflows);
+    const first = createWorkflowRunner(
+      manager,
+      registry,
+      new Map([[ApplicationTasks, new ApplicationTasks("first")]]),
+    );
+    const second = createWorkflowRunner(
+      manager,
+      registry,
+      new Map([[ApplicationTasks, new ApplicationTasks("second")]]),
+    );
+
+    expect((await first.execute("application.workflow", {})).steps[0]?.result).toBe("first");
+    expect((await second.execute("application.workflow", {})).steps[0]?.result).toBe("second");
+    await expect(
+      new WorkflowRunner(manager, registry).execute("application.workflow", {}),
+    ).rejects.toMatchObject({ code: "tasks-core/task-runner-di-failure" });
   });
 
   it("collects workflow definitions with cron and webhook trigger metadata", () => {
@@ -317,8 +372,8 @@ describe("workflow-core", () => {
       static staticSync(): void {}
     }
 
-    Container.set(BillingTasks, new BillingTasks());
-    Container.set(BillingWorkflows, new BillingWorkflows());
+    instances.set(BillingTasks, new BillingTasks());
+    instances.set(BillingWorkflows, new BillingWorkflows());
     const registry = WorkflowRegistry.fromMetadata();
 
     const scheduled = registry.get("billing-sync");
@@ -376,10 +431,10 @@ describe("workflow-core", () => {
       synchronize(): void {}
     }
 
-    Container.set(TypedBillingTasks, new TypedBillingTasks());
-    Container.set(TypedBillingWorkflows, new TypedBillingWorkflows());
+    instances.set(TypedBillingTasks, new TypedBillingTasks());
+    instances.set(TypedBillingWorkflows, new TypedBillingWorkflows());
     const registry = WorkflowRegistry.fromMetadata();
-    const runner = new WorkflowRunner(manager, registry);
+    const runner = createWorkflowRunner(manager, registry);
 
     expect(registry.get(definition.name)?.steps).toEqual([
       { name: "billing.typed-fetch", task: "billing.typed-fetch" },
@@ -489,15 +544,15 @@ describe("workflow-core", () => {
       synchronize(): void {}
     }
 
-    Container.set(TypedRetryTasks, new TypedRetryTasks());
-    Container.set(TypedRetryWorkflows, new TypedRetryWorkflows());
-    const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+    instances.set(TypedRetryTasks, new TypedRetryTasks());
+    instances.set(TypedRetryWorkflows, new TypedRetryWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
     await expect(runner.execute(definition, { subscriptionId: "sub_123" })).rejects.toThrow(
       "typed sync retryable outage",
     );
 
-    Container.reset();
+    instances.clear();
     MetadataStorage.clear();
     TaskRegistry.getInstance().reset();
     const redeployedFetch = vi.fn();
@@ -544,9 +599,9 @@ describe("workflow-core", () => {
       c(): void {}
     }
 
-    Container.set(MinifiedTasks, new MinifiedTasks());
-    Container.set(MinifiedWorkflows, new MinifiedWorkflows());
-    const redeployedRunner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+    instances.set(MinifiedTasks, new MinifiedTasks());
+    instances.set(MinifiedWorkflows, new MinifiedWorkflows());
+    const redeployedRunner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
     const retried = await redeployedRunner.execute(redeployedDefinition, {
       subscriptionId: "sub_123",
     });
@@ -641,10 +696,10 @@ describe("workflow-core", () => {
       run(): void {}
     }
 
-    Container.set(StructuralTasks, new StructuralTasks());
-    Container.set(StructuralWorkflows, new StructuralWorkflows());
+    instances.set(StructuralTasks, new StructuralTasks());
+    instances.set(StructuralWorkflows, new StructuralWorkflows());
     const originalRegistry = WorkflowRegistry.fromMetadata();
-    const originalRunner = new WorkflowRunner(manager, originalRegistry);
+    const originalRunner = createWorkflowRunner(manager, originalRegistry);
     await expect(originalRunner.execute(original, 1)).rejects.toThrow("structural retry outage");
     const [execution] = await manager.list({ type: "workflow" });
     const priorChildren = await manager.list({ parentId: execution.id });
@@ -689,7 +744,7 @@ describe("workflow-core", () => {
       @Workflow(changed)
       run(): void {}
     }
-    Container.set(RedeployedStructuralWorkflows, new RedeployedStructuralWorkflows());
+    instances.set(RedeployedStructuralWorkflows, new RedeployedStructuralWorkflows());
     const freshTasks = new TaskRegistry(
       originalRegistry.taskRegistry.getAll().map((task) =>
         change === "task options" && task.name === "structural.sync"
@@ -704,7 +759,7 @@ describe("workflow-core", () => {
       ),
     );
     const freshRegistry = WorkflowRegistry.fromMetadata({ taskRegistry: freshTasks });
-    const freshRunner = new WorkflowRunner(manager, freshRegistry);
+    const freshRunner = createWorkflowRunner(manager, freshRegistry);
     if (change === "legacy v1 fingerprint") {
       await store.update(execution.id, {
         metadata: {
@@ -754,8 +809,8 @@ describe("workflow-core", () => {
       synchronize(): void {}
     }
 
-    Container.set(RegisteredBillingTasks, new RegisteredBillingTasks());
-    Container.set(MismatchedBillingWorkflows, new MismatchedBillingWorkflows());
+    instances.set(RegisteredBillingTasks, new RegisteredBillingTasks());
+    instances.set(MismatchedBillingWorkflows, new MismatchedBillingWorkflows());
 
     expect(() => WorkflowRegistry.fromMetadata()).toThrow(
       "task reference 'billing.registered' does not match the registered handler",
@@ -802,9 +857,9 @@ describe("workflow-core", () => {
       scheduledSync(): void {}
     }
 
-    Container.set(BillingTasks, new BillingTasks());
-    Container.set(BillingWorkflows, new BillingWorkflows());
-    const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+    instances.set(BillingTasks, new BillingTasks());
+    instances.set(BillingWorkflows, new BillingWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
     const result = await runner.execute("billing-sync", {
       subscriptionId: "sub_123",
@@ -880,9 +935,9 @@ describe("workflow-core", () => {
       repeat(): void {}
     }
 
-    Container.set(RepeatedStepTasks, new RepeatedStepTasks());
-    Container.set(RepeatedStepWorkflows, new RepeatedStepWorkflows());
-    const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+    instances.set(RepeatedStepTasks, new RepeatedStepTasks());
+    instances.set(RepeatedStepWorkflows, new RepeatedStepWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
     const result = await runner.execute("billing-repeat-steps", {});
     const childExecutions = await manager.list({
@@ -941,9 +996,9 @@ describe("workflow-core", () => {
       webhook(): void {}
     }
 
-    Container.set(WebhookTasks, new WebhookTasks());
-    Container.set(WebhookWorkflows, new WebhookWorkflows());
-    const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+    instances.set(WebhookTasks, new WebhookTasks());
+    instances.set(WebhookWorkflows, new WebhookWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
     const first = await runner.execute("billing-webhook", {
       subscriptionId: "sub_123",
@@ -993,8 +1048,8 @@ describe("workflow-core", () => {
         webhook(): void {}
       }
 
-      Container.set(WebhookTasks, new WebhookTasks());
-      Container.set(WebhookWorkflows, new WebhookWorkflows());
+      instances.set(WebhookTasks, new WebhookTasks());
+      instances.set(WebhookWorkflows, new WebhookWorkflows());
 
       const existingExecution: Execution = {
         id: "workflow-existing",
@@ -1029,7 +1084,7 @@ describe("workflow-core", () => {
         checkpoint: vi.fn(),
         timeout: vi.fn(),
       } as unknown as ExecutionManager;
-      const runner = new WorkflowRunner(executionManager, WorkflowRegistry.fromMetadata());
+      const runner = createWorkflowRunner(executionManager, WorkflowRegistry.fromMetadata());
 
       const mockSpan = createMockSpan();
       vi.spyOn(trace, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
@@ -1090,9 +1145,9 @@ describe("workflow-core", () => {
       webhook(): void {}
     }
 
-    Container.set(WebhookTasks, new WebhookTasks());
-    Container.set(WebhookWorkflows, new WebhookWorkflows());
-    const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+    instances.set(WebhookTasks, new WebhookTasks());
+    instances.set(WebhookWorkflows, new WebhookWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
     const first = runner.execute("billing-slow-webhook", {
       subscriptionId: "sub_123",
@@ -1158,9 +1213,9 @@ describe("workflow-core", () => {
       webhook(): void {}
     }
 
-    Container.set(WebhookTasks, new WebhookTasks());
-    Container.set(WebhookWorkflows, new WebhookWorkflows());
-    const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+    instances.set(WebhookTasks, new WebhookTasks());
+    instances.set(WebhookWorkflows, new WebhookWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
     await expect(
       runner.execute("billing-retry-webhook", { subscriptionId: "sub_123" }),
@@ -1298,9 +1353,9 @@ describe("workflow-core", () => {
       webhook(): void {}
     }
 
-    Container.set(MultiStepBillingTasks, new MultiStepBillingTasks());
-    Container.set(MultiStepBillingWorkflows, new MultiStepBillingWorkflows());
-    const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+    instances.set(MultiStepBillingTasks, new MultiStepBillingTasks());
+    instances.set(MultiStepBillingWorkflows, new MultiStepBillingWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
     await expect(
       runner.execute("billing-retry-entitlements", {
@@ -1405,8 +1460,8 @@ describe("workflow-core", () => {
       webhook(): void {}
     }
 
-    Container.set(WebhookTasks, new WebhookTasks());
-    Container.set(WebhookWorkflows, new WebhookWorkflows());
+    instances.set(WebhookTasks, new WebhookTasks());
+    instances.set(WebhookWorkflows, new WebhookWorkflows());
 
     const existingExecution: Execution = {
       id: "workflow-existing",
@@ -1433,7 +1488,7 @@ describe("workflow-core", () => {
       checkpoint: vi.fn(),
       timeout: vi.fn(),
     } as unknown as ExecutionManager;
-    const runner = new WorkflowRunner(executionManager, WorkflowRegistry.fromMetadata());
+    const runner = createWorkflowRunner(executionManager, WorkflowRegistry.fromMetadata());
 
     await expect(
       runner.execute("billing-retry-collision", {
@@ -1478,9 +1533,9 @@ describe("workflow-core", () => {
       workflowB(): void {}
     }
 
-    Container.set(CrossTasks, new CrossTasks());
-    Container.set(CrossWorkflows, new CrossWorkflows());
-    const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+    instances.set(CrossTasks, new CrossTasks());
+    instances.set(CrossWorkflows, new CrossWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
     const first = await runner.execute("cross-workflow-a", { id: "same" });
     const second = await runner.execute("cross-workflow-b", { id: "same" });
@@ -1513,9 +1568,9 @@ describe("workflow-core", () => {
       run(): void {}
     }
 
-    Container.set(TelemetryTasks, new TelemetryTasks());
-    Container.set(TelemetryWorkflows, new TelemetryWorkflows());
-    const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+    instances.set(TelemetryTasks, new TelemetryTasks());
+    instances.set(TelemetryWorkflows, new TelemetryWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
     await runner.execute("billing-telemetry", { subscriptionId: "sub_123" });
 
@@ -1597,8 +1652,8 @@ describe("workflow-core", () => {
         run(): void {}
       }
 
-      Container.set(LogFailureTasks, new LogFailureTasks());
-      Container.set(LogFailureWorkflows, new LogFailureWorkflows());
+      instances.set(LogFailureTasks, new LogFailureTasks());
+      instances.set(LogFailureWorkflows, new LogFailureWorkflows());
       const recordLog = manager.recordLog.bind(manager);
       vi.spyOn(manager, "recordLog").mockImplementation(async (executionId, params) => {
         if (params.message === failedLogMessage) {
@@ -1607,7 +1662,7 @@ describe("workflow-core", () => {
 
         return recordLog(executionId, params);
       });
-      const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+      const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
       const executionPromise = runner.execute("billing-log-failure", {});
       if (workflowShouldFail) {
@@ -1675,8 +1730,8 @@ describe("workflow-core", () => {
         run(): void {}
       }
 
-      Container.set(FailureRecordTasks, new FailureRecordTasks());
-      Container.set(FailureRecordWorkflows, new FailureRecordWorkflows());
+      instances.set(FailureRecordTasks, new FailureRecordTasks());
+      instances.set(FailureRecordWorkflows, new FailureRecordWorkflows());
       const fail = manager.fail.bind(manager);
       vi.spyOn(manager, "fail").mockImplementation(async (executionId, error) => {
         const execution = await store.findById(executionId);
@@ -1686,7 +1741,7 @@ describe("workflow-core", () => {
 
         return fail(executionId, error);
       });
-      const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+      const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
       await expect(runner.execute("billing-failure-record", {})).rejects.toBe(workflowFailure);
 
@@ -1729,9 +1784,9 @@ describe("workflow-core", () => {
       run(): void {}
     }
 
-    Container.set(FailingTasks, new FailingTasks());
-    Container.set(FailingWorkflows, new FailingWorkflows());
-    const runner = new WorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+    instances.set(FailingTasks, new FailingTasks());
+    instances.set(FailingWorkflows, new FailingWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
     await expect(runner.execute("billing-failure", {})).rejects.toThrow(
       "billing provider unavailable",
@@ -1801,10 +1856,10 @@ describe("workflow-core", () => {
       fail(): void {}
     }
 
-    Container.set(DiagnosticsTasks, new DiagnosticsTasks());
-    Container.set(DiagnosticsWorkflows, new DiagnosticsWorkflows());
+    instances.set(DiagnosticsTasks, new DiagnosticsTasks());
+    instances.set(DiagnosticsWorkflows, new DiagnosticsWorkflows());
     const registry = WorkflowRegistry.fromMetadata();
-    const runner = new WorkflowRunner(manager, registry);
+    const runner = createWorkflowRunner(manager, registry);
 
     await runner.execute("billing-inspect", { subscriptionId: "sub_123" });
     await expect(runner.execute("billing-inspect-failure", {})).rejects.toThrow(

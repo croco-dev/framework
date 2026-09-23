@@ -4,7 +4,7 @@ import {
   type PolicyDecisionResult,
   type PolicyDecisionTraceSink,
 } from "@croco/access-core";
-import { Component, Container, Inject } from "@croco/framework-context";
+import { Component, Inject, InjectOptional } from "@croco/framework-context";
 import type { PlanVersionRef } from "@croco/billing-core";
 import { featureKey, getLegacyPlanId, legacyPlanVersionRef } from "./EntitlementDefinition";
 import type { FeatureReference } from "./EntitlementDefinition";
@@ -36,6 +36,8 @@ export class EntitlementManager {
     @Inject(EntitlementQuotaChecker.token) private readonly quotaChecker: EntitlementQuotaChecker,
     @Inject(EntitlementMeterLookup.token) private readonly meterLookup: EntitlementMeterLookup,
     private readonly options: EntitlementManagerOptions = {},
+    @InjectOptional(EntitlementEventPublisher.token)
+    private readonly eventPublisher?: EntitlementEventPublisher,
   ) {}
 
   async check(
@@ -303,7 +305,7 @@ export class EntitlementManager {
   private async publishEvent(
     event: EntitlementQuotaExceededEvent | EntitlementOverageAllowedEvent,
   ): Promise<void> {
-    const publisher = Container.getOptional(EntitlementEventPublisher.token);
+    const publisher = this.eventPublisher;
     if (!publisher) {
       return;
     }

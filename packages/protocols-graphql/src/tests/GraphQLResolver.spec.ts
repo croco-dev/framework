@@ -1,7 +1,11 @@
 import "reflect-metadata";
-import { MetadataStorage } from "@croco/framework-context";
+import {
+  Container,
+  GENERATED_DI_GRAPH_VERSION,
+  MetadataStorage,
+  defineGeneratedDiGraph,
+} from "@croco/framework-context";
 import { beforeEach, describe, expect, it } from "vitest";
-import { RESOLVERS_KEY } from "../libs/constants";
 import { GraphQLResolver } from "../libs/decorators";
 import {
   getAllResolvers,
@@ -13,6 +17,7 @@ import { ResolverRegistry, resolverRegistry } from "../libs/metadata/ResolverReg
 
 describe("MetadataReader.getAllResolvers", () => {
   beforeEach(() => {
+    Container.reset();
     resolverRegistry.clear();
     MetadataStorage.clear();
   });
@@ -23,12 +28,32 @@ describe("MetadataReader.getAllResolvers", () => {
     expect(resolvers.length).toBe(0);
   });
 
-  it("should return all registered resolvers", () => {
+  it("should return resolvers from the installed generated graph", () => {
     @GraphQLResolver()
     class FirstResolver {}
 
     @GraphQLResolver()
     class SecondResolver {}
+
+    Container.installGeneratedGraph(
+      defineGeneratedDiGraph({
+        version: GENERATED_DI_GRAPH_VERSION,
+        graphId: "graphql-test",
+        compilerVersion: "test",
+        inputHash: "test",
+        roots: [FirstResolver, SecondResolver],
+        providers: [FirstResolver, SecondResolver].map((resolver) => ({
+          token: resolver,
+          tokenId: `app:${resolver.name}`,
+          debugName: resolver.name,
+          kind: "graphql-resolver" as const,
+          scope: "singleton" as const,
+          dependencies: [],
+          factory: () => new resolver(),
+          sourceLocation: { file: `src/${resolver.name}.ts` },
+        })),
+      }),
+    );
 
     const resolvers = getAllResolvers();
     expect(resolvers.length).toBe(2);
@@ -36,19 +61,11 @@ describe("MetadataReader.getAllResolvers", () => {
     expect(resolvers).toContain(SecondResolver);
   });
 
-  it("should not leak resolver list mutation across consumers (e.g. multiple servers)", () => {
+  it("should not discover a decorated resolver before its generated graph is installed", () => {
     @GraphQLResolver()
     class ResolverA {}
 
-    const serverAResolvers = getAllResolvers();
-
-    class NotRegisteredResolver {}
-
-    serverAResolvers.push(NotRegisteredResolver);
-
-    const serverBResolvers = getAllResolvers();
-    expect(serverBResolvers).toContain(ResolverA);
-    expect(serverBResolvers).not.toContain(NotRegisteredResolver);
+    expect(getAllResolvers()).not.toContain(ResolverA);
   });
 
   it("should allow isolated resolver registries", () => {
@@ -64,6 +81,7 @@ describe("MetadataReader.getAllResolvers", () => {
 
 describe("GraphQLResolver decorator", () => {
   beforeEach(() => {
+    Container.reset();
     resolverRegistry.clear();
     MetadataStorage.clear();
   });
@@ -76,7 +94,6 @@ describe("GraphQLResolver decorator", () => {
     expect(meta).not.toBeUndefined();
     expect(meta?.target).toBe(TestResolver);
     expect(meta?.scope).toBe("singleton");
-    expect(MetadataStorage.get<boolean>(RESOLVERS_KEY, TestResolver)).toBe(true);
     expect(getAllResolversFromRegistry(resolverRegistry)).toHaveLength(0);
   });
 
@@ -93,6 +110,7 @@ describe("GraphQLResolver decorator", () => {
 
 describe("MetadataReader.isResolver", () => {
   beforeEach(() => {
+    Container.reset();
     resolverRegistry.clear();
     MetadataStorage.clear();
   });

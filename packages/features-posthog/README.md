@@ -20,23 +20,28 @@ pnpm add @croco/integrations-posthog
 
 ### 기본 설정
 
-PostHogFeatureManager를 DI 컨테이너에 등록합니다.
+애플리케이션 모듈에서 FeatureManager 구현체를 명시적으로 제공합니다.
 
 ```typescript
-import { Container } from "@croco/framework-context";
+import { defineCrocoModule } from "@croco/framework-module";
+import { FeatureManager } from "@croco/features-core";
 import { PostHogFeatureManager } from "@croco/features-posthog";
 import { PostHogClient } from "@croco/integrations-posthog";
 
 const posthogClient = new PostHogClient({
-  apiKey: process.env.POSTHOG_API_KEY!,
+  apiKey: process.env.POSTHOG_API_KEY ?? "",
   host: "https://app.posthog.com",
 });
 
-Container.register(PostHogFeatureManager, {
-  scope: "singleton",
-  useFactory: () => new PostHogFeatureManager(posthogClient),
+export const featuresModule = defineCrocoModule({
+  name: "features",
+  providers: [{ provide: FeatureManager, useValue: new PostHogFeatureManager(posthogClient) }],
+  exports: [FeatureManager],
+  shutdown: () => posthogClient.shutdown(),
 });
 ```
+
+`featuresModule`을 애플리케이션 runtime의 `modules`에 포함하고, 소비 모듈의 `imports`에도 추가합니다.
 
 ### 서비스에서 사용
 

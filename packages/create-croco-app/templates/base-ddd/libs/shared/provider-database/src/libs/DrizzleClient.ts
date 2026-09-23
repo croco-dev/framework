@@ -1,9 +1,9 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { Service } from "typedi";
+import { Component } from "@croco/framework-context";
 import type { DrizzleDB } from "./types.js";
 
-@Service()
+@Component()
 export class DrizzleClient {
   private dbInstance: DrizzleDB | null = null;
 

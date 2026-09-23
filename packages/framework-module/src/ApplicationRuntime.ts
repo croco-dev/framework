@@ -3,6 +3,8 @@ import {
   type ContainerScope,
   type Constructor,
   type DependencyGraphManifest,
+  type GeneratedDiGraph,
+  type GeneratedModuleProviderDeclaration,
   type TokenIdentifier,
 } from "@croco/framework-context";
 import {
@@ -40,6 +42,7 @@ import type {
 
 export type ApplicationRuntimeOptions = {
   readonly modules?: readonly ModuleOptions[];
+  readonly generatedGraph?: GeneratedDiGraph;
 };
 
 export type ApplicationRuntimeGraphManifest = {
@@ -83,6 +86,9 @@ export class ApplicationRuntime implements AsyncDisposable {
   >();
   private readonly graphLeafProviders = new Set<TokenIdentifier<unknown>>();
   private readonly graphRoots = new Set<TokenIdentifier<unknown>>();
+  private readonly generatedProviders: GeneratedDiGraph["providers"];
+  private readonly generatedModuleProviders: readonly GeneratedModuleProviderDeclaration[];
+  private readonly registeredModules: ModuleOptions[] = [];
   private disposal: Promise<void> | undefined;
   private initialization: Promise<void> | undefined;
   private shutdownOperation: Promise<void> | undefined;
@@ -91,7 +97,10 @@ export class ApplicationRuntime implements AsyncDisposable {
   private readonly plugins: readonly CrocoPluginMetadata[];
   private readonly providerReplacements: readonly ApplicationProviderReplacement[];
 
-  constructor(options: ApplicationRuntimeOptions | CrocoApplicationDefinition = {}) {
+  constructor(
+    options: ApplicationRuntimeOptions | CrocoApplicationDefinition = {},
+    generatedGraphOverride?: GeneratedDiGraph,
+  ) {
     const application = isCrocoApplicationDefinition(options) ? options : undefined;
     const modules = application
       ? resolveApplicationModules(application)
@@ -102,11 +111,23 @@ export class ApplicationRuntime implements AsyncDisposable {
       : [];
     assertUniqueSinglePluginCapabilities(this.plugins);
     this.providerReplacements = application?.providerReplacements ?? [];
+    const generatedGraph =
+      generatedGraphOverride ??
+      application?.generatedGraph ??
+      (application ? undefined : (options as ApplicationRuntimeOptions).generatedGraph);
+    this.generatedProviders = generatedGraph?.providers ?? [];
+    this.generatedModuleProviders = generatedGraph?.moduleProviders ?? [];
     if (modules.length > 0) {
       createModuleGraphManifest(modules);
     }
 
     this.containerScope = Container.createScope();
+    if (generatedGraph) {
+      this.containerScope.run(() => Container.installGeneratedGraph(generatedGraph));
+      for (const root of generatedGraph.roots) {
+        this.graphRoots.add(root);
+      }
+    }
     this.scopeId = this.containerScope.id;
     this.moduleRuntime = createModuleRuntimeForContainer(this.scopeId, this.providerReplacements);
 
@@ -121,6 +142,7 @@ export class ApplicationRuntime implements AsyncDisposable {
   use(module: ModuleOptions): void {
     this.assertAccessible();
     this.moduleRuntime.use(module);
+    this.registeredModules.push(module);
     this.collectGraphRoots(module, new Set());
   }
 
@@ -158,6 +180,7 @@ export class ApplicationRuntime implements AsyncDisposable {
     options: ModuleLifecycleExecutionOptions,
   ): Promise<void> {
     try {
+      this.validateGeneratedModuleProviders();
       await this.containerScope.runWithRollback(() => this.moduleRuntime.initialize(options));
       if (this.state === "disposing" || this.state === "disposed") {
         throw new ModuleRuntimeDisposedProblem();
@@ -434,6 +457,70 @@ export class ApplicationRuntime implements AsyncDisposable {
     }
   }
 
+  private validateGeneratedModuleProviders(): void {
+    if (this.generatedModuleProviders.length === 0) {
+      return;
+    }
+
+    const modules = new Map<string, ModuleOptions>();
+    const visit = (module: ModuleOptions): void => {
+      if (modules.has(module.name)) {
+        return;
+      }
+      modules.set(module.name, module);
+      for (const imported of module.imports ?? []) {
+        visit(imported);
+      }
+    };
+    for (const module of this.registeredModules) {
+      visit(module);
+    }
+
+    for (const declaration of this.generatedModuleProviders) {
+      const owner = modules.get(declaration.moduleName);
+      const provider = owner?.providers?.find(
+        (candidate) => getProviderToken(candidate) === declaration.token,
+      );
+      if (declaration.scope !== "singleton" || !provider) {
+        throw new InvalidModuleDefinitionProblem(
+          `Generated DI module provider '${declaration.tokenId}' must be a singleton declared by module '${declaration.moduleName}'.`,
+          {
+            tokenId: declaration.tokenId,
+            moduleName: declaration.moduleName,
+            sourceLocation: declaration.sourceLocation,
+          },
+        );
+      }
+
+      const replacement = this.providerReplacements.find(
+        (candidate) =>
+          Container.toServiceIdentifier(candidate.provider.provide) ===
+          Container.toServiceIdentifier(declaration.token),
+      );
+      const effectiveProvider = replacement?.provider ?? provider;
+      const implementation = isProviderDefinition(effectiveProvider)
+        ? "useClass" in effectiveProvider
+          ? effectiveProvider.useClass
+          : undefined
+        : declaration.token;
+      const incompatible = this.generatedProviders.find(
+        (candidate) => candidate.token === implementation && candidate.scope !== "singleton",
+      );
+      if (incompatible) {
+        throw new InvalidModuleDefinitionProblem(
+          `Generated DI module provider '${declaration.tokenId}' cannot use ${incompatible.scope} provider '${incompatible.tokenId}' as a singleton.`,
+          {
+            tokenId: declaration.tokenId,
+            moduleName: declaration.moduleName,
+            sourceLocation: declaration.sourceLocation,
+            implementationTokenId: incompatible.tokenId,
+            implementationScope: incompatible.scope,
+          },
+        );
+      }
+    }
+  }
+
   private collectGraphProvider(provider: NonNullable<ModuleOptions["providers"]>[number]): void {
     const token = getProviderToken(provider) as TokenIdentifier<unknown>;
     this.graphRoots.add(token);
@@ -591,6 +678,7 @@ function assertUniqueSinglePluginCapabilities(plugins: readonly CrocoPluginMetad
 
 export function createApplicationRuntime(
   options: ApplicationRuntimeOptions | CrocoApplicationDefinition = {},
+  generatedGraph?: GeneratedDiGraph,
 ): ApplicationRuntime {
-  return new ApplicationRuntime(options);
+  return new ApplicationRuntime(options, generatedGraph);
 }

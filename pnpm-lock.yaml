@@ -193,9 +193,15 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../../packages/framework-context
+      '@croco/framework-module':
+        specifier: workspace:*
+        version: link:../../packages/framework-module
       '@croco/metering-core':
         specifier: workspace:*
         version: link:../../packages/metering-core
+      '@croco/preset-node':
+        specifier: workspace:*
+        version: link:../../packages/preset-node
       '@croco/protocols-rest':
         specifier: workspace:*
         version: link:../../packages/protocols-rest
@@ -212,9 +218,15 @@ importers:
         specifier: ^0.2.2
         version: 0.2.2
     devDependencies:
+      '@croco/esbuild-plugin':
+        specifier: workspace:*
+        version: link:../../packages/esbuild-plugin
       '@types/node':
         specifier: ^22
         version: 22.19.3
+      esbuild:
+        specifier: ^0.20.2
+        version: 0.20.2
       tsx:
         specifier: ^4.19.0
         version: 4.21.0
@@ -236,6 +248,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../../packages/framework-context
+      '@croco/framework-module':
+        specifier: workspace:*
+        version: link:../../packages/framework-module
       '@croco/membership-core':
         specifier: workspace:*
         version: link:../../packages/membership-core
@@ -994,9 +1009,6 @@ importers:
       tsup:
         specifier: ^8.3.5
         version: 8.5.1(patch_hash=ce9dbc714c187cea78868f1e68c1a0e5097ddbceb7e976a564d94f2291b5bcb9)(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.18)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.9.0)
-      typedi:
-        specifier: 0.10.0
-        version: 0.10.0
       vitest:
         specifier: ^4.1.8
         version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@22.19.3)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@22.19.3)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
@@ -1893,9 +1905,6 @@ importers:
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
-      typedi:
-        specifier: 0.10.0
-        version: 0.10.0
       zod:
         specifier: 4.3.6
         version: 4.3.6
@@ -1911,9 +1920,6 @@ importers:
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
-      typedi:
-        specifier: 0.10.0
-        version: 0.10.0
     devDependencies:
       zod:
         specifier: 4.3.6
@@ -1958,9 +1964,6 @@ importers:
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
-      typedi:
-        specifier: 0.10.0
-        version: 0.10.0
     devDependencies:
       tsup:
         specifier: 8.5.1
@@ -2775,9 +2778,6 @@ importers:
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
-      typedi:
-        specifier: 0.10.0
-        version: 0.10.0
       vitest:
         specifier: 4.1.8
         version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@26.1.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@26.1.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
@@ -2928,9 +2928,6 @@ importers:
         specifier: ^3.23.8
         version: 3.25.76
     devDependencies:
-      typedi:
-        specifier: 0.10.0
-        version: 0.10.0
       vitest:
         specifier: 4.1.8
         version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@26.1.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@26.1.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
@@ -2955,9 +2952,6 @@ importers:
       type-graphql:
         specifier: ^2.0.0-rc.3
         version: 2.0.0-rc.3(class-validator@0.14.4)(graphql-scalars@1.25.0(graphql@16.12.0))(graphql@16.12.0)
-      typedi:
-        specifier: 0.10.0
-        version: 0.10.0
 
   packages/protocols-rest:
     dependencies:
@@ -10995,9 +10989,6 @@ packages:
     peerDependenciesMeta:
       class-validator:
         optional: true
-
-  typedi@0.10.0:
-    resolution: {integrity: sha512-v3UJF8xm68BBj6AF4oQML3ikrfK2c9EmZUyLOfShpJuItAqVBHWP/KtpGinkSsIiP6EZyyb6Z3NXyW9dgS9X1w==}
 
   typedoc-plugin-coverage@4.0.3:
     resolution: {integrity: sha512-baim3wyMkqpX7rBzL/6iZ7wzKJuSr9ffP16RHOsdTUNoHUZeXLIZHSUBtUhXmNHaUNRgfqdmKLBwyggbJjGdeQ==}
@@ -19345,8 +19336,6 @@ snapshots:
       tslib: 2.8.1
     optionalDependencies:
       class-validator: 0.14.4
-
-  typedi@0.10.0: {}
 
   typedoc-plugin-coverage@4.0.3(typedoc@0.28.19(typescript@6.0.3)):
     dependencies:

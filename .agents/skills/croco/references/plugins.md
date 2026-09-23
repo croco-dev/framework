@@ -15,7 +15,9 @@ Check each selected implementation for:
 
 ## Compose explicitly
 
-Call the package-owned plugin factory and place the returned plugin in `defineCrocoApplication({ imports: [...] })`, directly or through the selected Profile. Keep app-specific providers and controllers in an application-owned `defineCrocoModule()`.
+Call the package-owned plugin factory and place the returned plugin in `defineCrocoApplication({ imports: [...] })`, directly or through the selected Profile. For decorated application services and controllers, enable `crocoPlugin()` in the server build and pass its `generatedDiGraph` to `createApplicationRuntime()`. The compiler discovers classes under the app's scan root and emits their factories; do not repeat them in hand-written provider/controller lists or bootstrap imports. See [compile-time DI](https://github.com/croco-dev/framework/blob/trunk/docs/architecture/compile-time-di.md) for scan, binding, and migration boundaries.
+
+Use `defineCrocoModule()` or compiler `di.modules` when ownership, visibility, external SDK factories, or explicit overrides actually require a boundary. Keep runtime secrets and configuration in that application-owned boundary rather than generated source.
 
 Do not use legacy direct/global composition for new work when a canonical plugin or module exists. In particular, avoid direct `Container.set()`, package-specific global setters, raw HTTP controller or middleware arrays, and direct telemetry singleton initialization as composition mechanisms.
 

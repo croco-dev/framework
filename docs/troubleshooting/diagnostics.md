@@ -167,23 +167,23 @@ Search: CROCO_ROUTE_004, missing path param, @Param, route contract
 
 초기 표준 코드 예시:
 
-| Code                           | Category             | Severity | Cause 요약                                       | Recovery action 요약                                           |
-| ------------------------------ | -------------------- | -------- | ------------------------------------------------ | -------------------------------------------------------------- |
-| `CROCO_DI_001`                 | dependency-injection | error    | 등록되지 않은 provider를 resolve함               | provider 등록, module export, optional lookup                  |
-| `CROCO_DI_002`                 | dependency-injection | error    | provider dependency cycle이 있음                 | cycle 분리, lazy boundary 추가, registration graph 재검토      |
-| `CROCO_DI_003`                 | dependency-injection | error    | singleton이 request/transient provider에 의존함  | scope 승격/분리 또는 request boundary 안으로 이동              |
-| `CROCO_DI_004`                 | dependency-injection | error    | TypeDI fallback provider를 manifest로 설명 못함  | 명시 provider 등록 또는 fallback dependency 제거               |
-| `CROCO_ROUTE_004`              | routing              | error    | path parameter와 controller metadata 불일치      | `@Param` 추가 또는 path token rename                           |
-| `CROCO_RUNTIME_CAPABILITY_001` | runtime              | error    | 선택 runtime이 필요한 capability를 지원하지 않음 | runtime 변경, requirement 제거, supported adapter로 이동       |
-| `CROCO_BUILD_002`              | build-time           | error    | generated artifact가 source와 drift됨            | package-specific write command 실행 후 diff 검토               |
-| `CROCO_BUILD_003`              | build-time           | error    | controller source에 TypeScript 오류가 있음       | controller type error 수정 후 contract 재실행                  |
-| `CROCO_BUILD_004`              | build-time           | error    | application tsconfig를 읽거나 해석할 수 없음     | config 경로/내용 수정 또는 `--tsconfig`로 유효한 config 지정   |
-| `CROCO_HTTP_SECURITY_001`      | runtime              | error    | HTTP bootstrap에 필수 security middleware가 없음 | security headers, CORS, body limit, rate limit middleware 등록 |
-| `CROCO_HTTP_SECURITY_002`      | runtime              | error    | 지원하지 않는 security capability를 선언함       | supported capability literal로 수정                            |
-| `CROCO_HTTP_MIDDLEWARE_001`    | runtime              | error    | HTTP middleware가 pipeline 계약을 완료하지 않음  | `next()`, `Response`, 또는 `shortCircuit(reason)` 반환         |
-| `CROCO_HTTP_MIDDLEWARE_002`    | runtime              | error    | HTTP middleware가 `next()`를 여러 번 호출함      | `next()`를 한 번만 호출하고 반환값 재사용                      |
-| `CROCO_HTTP_FILTER_001`        | runtime              | error    | HTTP exception filter 결과가 계약 밖이거나 throw | 공식 filter result 반환 또는 `undefined`로 다음 filter에 위임  |
-| `CROCO_HTTP_DIAGNOSTICS_001`   | runtime              | warning  | 처리된 HTTP 5xx 에러의 진단 기록에 실패함        | collector와 저장소를 점검하고 `recentErrors` 기록 복구         |
+| Code                           | Category             | Severity | Cause 요약                                         | Recovery action 요약                                           |
+| ------------------------------ | -------------------- | -------- | -------------------------------------------------- | -------------------------------------------------------------- |
+| `CROCO_DI_001`                 | dependency-injection | error    | 등록되지 않은 provider를 resolve함                 | provider 등록, module export, optional lookup                  |
+| `CROCO_DI_002`                 | dependency-injection | error    | provider dependency cycle이 있음                   | cycle 분리, lazy boundary 추가, registration graph 재검토      |
+| `CROCO_DI_003`                 | dependency-injection | error    | singleton이 request/transient provider에 의존함    | scope 승격/분리 또는 request boundary 안으로 이동              |
+| `CROCO_DI_004`                 | dependency-injection | error    | 동적으로 계산된 provider를 정적으로 생성할 수 없음 | 구체 타입, 정적 토큰 또는 package descriptor 사용              |
+| `CROCO_ROUTE_004`              | routing              | error    | path parameter와 controller metadata 불일치        | `@Param` 추가 또는 path token rename                           |
+| `CROCO_RUNTIME_CAPABILITY_001` | runtime              | error    | 선택 runtime이 필요한 capability를 지원하지 않음   | runtime 변경, requirement 제거, supported adapter로 이동       |
+| `CROCO_BUILD_002`              | build-time           | error    | generated artifact가 source와 drift됨              | package-specific write command 실행 후 diff 검토               |
+| `CROCO_BUILD_003`              | build-time           | error    | controller source에 TypeScript 오류가 있음         | controller type error 수정 후 contract 재실행                  |
+| `CROCO_BUILD_004`              | build-time           | error    | application tsconfig를 읽거나 해석할 수 없음       | config 경로/내용 수정 또는 `--tsconfig`로 유효한 config 지정   |
+| `CROCO_HTTP_SECURITY_001`      | runtime              | error    | HTTP bootstrap에 필수 security middleware가 없음   | security headers, CORS, body limit, rate limit middleware 등록 |
+| `CROCO_HTTP_SECURITY_002`      | runtime              | error    | 지원하지 않는 security capability를 선언함         | supported capability literal로 수정                            |
+| `CROCO_HTTP_MIDDLEWARE_001`    | runtime              | error    | HTTP middleware가 pipeline 계약을 완료하지 않음    | `next()`, `Response`, 또는 `shortCircuit(reason)` 반환         |
+| `CROCO_HTTP_MIDDLEWARE_002`    | runtime              | error    | HTTP middleware가 `next()`를 여러 번 호출함        | `next()`를 한 번만 호출하고 반환값 재사용                      |
+| `CROCO_HTTP_FILTER_001`        | runtime              | error    | HTTP exception filter 결과가 계약 밖이거나 throw   | 공식 filter result 반환 또는 `undefined`로 다음 filter에 위임  |
+| `CROCO_HTTP_DIAGNOSTICS_001`   | runtime              | warning  | 처리된 HTTP 5xx 에러의 진단 기록에 실패함          | collector와 저장소를 점검하고 `recentErrors` 기록 복구         |
 
 ### CLI diagnostic code migration
 
@@ -226,7 +226,7 @@ ERROR CROCO_CLI_DOCTOR_005
 | `CROCO_DI_001`                                      | `framework-context/di-missing-provider`    | DI graph manifest   | provider 등록 누락                                                                      |
 | `CROCO_DI_002`                                      | `framework-context/di-circular-dependency` | DI graph manifest   | provider dependency cycle                                                               |
 | `CROCO_DI_003`                                      | `framework-context/di-scope-mismatch`      | DI graph manifest   | singleton-to-request/transient 의존성                                                   |
-| `CROCO_DI_004`                                      | `framework-context/di-unknown-provider`    | DI graph manifest   | TypeDI fallback provider 불명                                                           |
+| `CROCO_DI_004`                                      | `framework-context/di-unknown-provider`    | DI graph manifest   | 정적으로 해석할 수 없는 동적 provider                                                   |
 | `CROCO_CLI_DI_CHECK_001`                            | `cli/di-manifest-invalid`                  | `croco di check`    | DI/module manifest를 읽을 수 없음                                                       |
 | `CROCO_CLI_DI_CHECK_002`                            | `cli/di-manifest-failed`                   | `croco di check`    | failed manifest에 diagnostics가 없음                                                    |
 | `CROCO_CLI_DI_CHECK_003`                            | `cli/di-diagnostic-unknown`                | `croco di check`    | manifest diagnostic code가 없음                                                         |
@@ -243,7 +243,7 @@ ERROR CROCO_CLI_DOCTOR_005
 ### `CROCO_DI_001`
 
 Cause: DI container가 active scope에서 등록되지 않은 provider token을 resolve하려고 했습니다.
-Fix: provider를 resolve 전에 등록하고, module boundary를 넘는 provider는 owning module에서 export합니다. 선택 dependency는 명시적인 optional lookup 경로로만 처리합니다.
+Fix: concrete provider를 server scan root에 두거나 선택한 package descriptor를 link합니다. 명시 token은 owning application module의 provider binding으로 연결합니다.
 
 ### `CROCO_DI_002`
 
@@ -257,8 +257,8 @@ Fix: singleton provider를 더 짧은 scope로 낮추거나, request-scoped depe
 
 ### `CROCO_DI_004`
 
-Cause: graph 생성 중 TypeDI fallback provider를 발견했지만 Croco registration metadata가 없어 manifest dependency/source/scope를 안정적으로 설명할 수 없습니다.
-Fix: `Container.register()` 또는 Croco decorator로 provider를 명시 등록하고, fallback이 필요한 외부 object는 tokenized adapter로 감쌉니다.
+Cause: graph 생성 중 token 또는 factory가 동적으로 계산되어 compiler가 provider identity, dependency, source, scope를 안정적으로 설명할 수 없습니다.
+Fix: 구체 class type 또는 정적으로 참조 가능한 `@Inject(TOKEN)`을 사용합니다. 외부 object는 선택한 module/plugin의 명시 factory와 versioned descriptor로 연결합니다.
 
 ### DI graph local recovery
 

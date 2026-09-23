@@ -6,6 +6,8 @@ import {
   Component,
   Container,
   Context as FrameworkContext,
+  GENERATED_DI_GRAPH_VERSION,
+  defineGeneratedDiGraph,
   type ILogger,
   LOGGER_TOKEN,
   type RuntimeInspectorSnapshot,
@@ -1609,6 +1611,44 @@ describe("CrocoApp", () => {
     await expect(response.json()).resolves.toEqual({ registered: true });
   });
 
+  it("should discover generated REST controllers without an explicit controller list", async () => {
+    @Controller("/generated-controller")
+    class GeneratedController {
+      @Get()
+      get() {
+        return { discovered: true };
+      }
+    }
+
+    Container.installGeneratedGraph(
+      defineGeneratedDiGraph({
+        version: GENERATED_DI_GRAPH_VERSION,
+        graphId: "transports-http-generated-controller",
+        compilerVersion: "test",
+        inputHash: "generated-controller",
+        providers: [
+          {
+            token: GeneratedController,
+            tokenId: "test:GeneratedController",
+            debugName: "GeneratedController",
+            kind: "rest-controller",
+            scope: "singleton",
+            dependencies: [],
+            factory: () => new GeneratedController(),
+            sourceLocation: { file: "CrocoApp.spec.ts", line: 1, column: 1 },
+          },
+        ],
+        roots: [GeneratedController],
+      }),
+    );
+
+    const app = createApp({ controllers: [], diValidation: "enforce" });
+    const response = await app.fetch(new Request("http://localhost/generated-controller"));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ discovered: true });
+  });
+
   it("should fail bootstrap for circular DI graphs when diValidation is enforce", () => {
     class ServiceA {
       constructor(_service: ServiceB) {}
@@ -1618,10 +1658,37 @@ describe("CrocoApp", () => {
       constructor(_service: ServiceA) {}
     }
 
-    Reflect.defineMetadata("design:paramtypes", [ServiceB], ServiceA);
-    Reflect.defineMetadata("design:paramtypes", [ServiceA], ServiceB);
-    Component({ scope: "singleton" })(ServiceA);
-    Component({ scope: "singleton" })(ServiceB);
+    Container.installGeneratedGraph(
+      defineGeneratedDiGraph({
+        version: GENERATED_DI_GRAPH_VERSION,
+        graphId: "transports-http-circular-di",
+        compilerVersion: "test",
+        inputHash: "circular-di",
+        providers: [
+          {
+            token: ServiceA,
+            tokenId: "test:ServiceA",
+            debugName: "ServiceA",
+            kind: "component",
+            scope: "singleton",
+            sourceLocation: { file: "CrocoApp.spec.ts", line: 1, column: 1 },
+            dependencies: [{ token: ServiceB, tokenId: "test:ServiceB", parameterIndex: 0 }],
+            factory: (resolver) => new ServiceA(resolver.get(ServiceB)),
+          },
+          {
+            token: ServiceB,
+            tokenId: "test:ServiceB",
+            debugName: "ServiceB",
+            kind: "component",
+            scope: "singleton",
+            sourceLocation: { file: "CrocoApp.spec.ts", line: 1, column: 1 },
+            dependencies: [{ token: ServiceA, tokenId: "test:ServiceA", parameterIndex: 0 }],
+            factory: (resolver) => new ServiceB(resolver.get(ServiceA)),
+          },
+        ],
+        roots: [ServiceA],
+      }),
+    );
 
     const app = createApp({
       controllers: [],
@@ -1638,10 +1705,43 @@ describe("CrocoApp", () => {
       constructor(_repository: RequestRepository) {}
     }
 
-    Reflect.defineMetadata("design:paramtypes", [], RequestRepository);
-    Reflect.defineMetadata("design:paramtypes", [RequestRepository], UserService);
-    Component({ scope: "request" })(RequestRepository);
-    Component({ scope: "singleton" })(UserService);
+    Container.installGeneratedGraph(
+      defineGeneratedDiGraph({
+        version: GENERATED_DI_GRAPH_VERSION,
+        graphId: "transports-http-scope-mismatch",
+        compilerVersion: "test",
+        inputHash: "scope-mismatch",
+        providers: [
+          {
+            token: RequestRepository,
+            tokenId: "test:RequestRepository",
+            debugName: "RequestRepository",
+            kind: "component",
+            scope: "request",
+            sourceLocation: { file: "CrocoApp.spec.ts", line: 1, column: 1 },
+            dependencies: [],
+            factory: () => new RequestRepository(),
+          },
+          {
+            token: UserService,
+            tokenId: "test:UserService",
+            debugName: "UserService",
+            kind: "component",
+            scope: "singleton",
+            sourceLocation: { file: "CrocoApp.spec.ts", line: 1, column: 1 },
+            dependencies: [
+              {
+                token: RequestRepository,
+                tokenId: "test:RequestRepository",
+                parameterIndex: 0,
+              },
+            ],
+            factory: (resolver) => new UserService(resolver.get(RequestRepository)),
+          },
+        ],
+        roots: [UserService],
+      }),
+    );
 
     const app = createApp({
       controllers: [],

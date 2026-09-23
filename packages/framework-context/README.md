@@ -5,26 +5,31 @@ Croco의 기반 계층입니다. DI 컨테이너, 요청 컨텍스트, 메타데
 ## 설치
 
 ```bash
-pnpm add @croco/framework-context reflect-metadata typedi
+pnpm add @croco/framework-context reflect-metadata
 ```
 
 ## 사용법
 
-### 컴포넌트 등록과 조회
+### 생성된 컴포넌트 그래프 실행
 
 ```typescript
 import "reflect-metadata";
-import { Component, Container } from "@croco/framework-context";
+import { Component } from "@croco/framework-context";
 
 @Component()
-class UserService {
+export class UserService {
   getName() {
     return "croco";
   }
 }
-
-const service = Container.get(UserService);
 ```
+
+`@Component`와 `@Inject`는 import 시점에 전역 container를 변경하지 않는 marker입니다.
+`@croco/esbuild-plugin`이 앱의 `src`를 정적으로 분석해 실제 `new UserService(...)` factory와
+dependency manifest를 `.croco/di.generated.ts`에 생성합니다. 생성된 graph는 server entry에서 설치되고
+`ApplicationRuntime`의 앱별 scope가 singleton, request, transient 인스턴스와 정리를 소유합니다.
+일반 비즈니스 코드에서 `Container.get()`을 직접 호출하지 마세요. 외부 SDK 값이나 테스트 override는
+module/application composition에서 명시적으로 제공하고, 서비스는 생성자 주입을 사용합니다.
 
 Independent application runtimes can isolate registrations and singleton instances with
 `Container.createScope()`. Every `Container` operation performed inside `scope.run()` is bound to
@@ -51,10 +56,10 @@ Nested rollback calls join the active transaction, so an outer failure restores 
 entire nested operation. Concurrent rollback calls on the same scope are serialized in invocation
 order and cannot observe or retain another failed attempt's state.
 
-Provider adapters that write directly to TypeDI can use
-`Container.toTypeDIServiceIdentifier(token)` to share the same identifier as the
-Croco container. Strings, TypeDI tokens, and constructors are returned unchanged;
-symbols map to one stable TypeDI token until `Container.reset()` clears both the
+Provider adapters that write directly to Croco runtime can use
+`Container.toServiceIdentifier(token)` to share the same identifier as the
+Croco container. Strings, Croco runtime tokens, and constructors are returned unchanged;
+symbols map to one stable Croco runtime token until `Container.reset()` clears both the
 container registrations and symbol mapping.
 
 ### 요청 컨텍스트 실행
@@ -101,8 +106,8 @@ timeout은 유한한 양수여야 하며, 잘못된 값은 manager 상태가 변
 
 ## API 레퍼런스
 
-- `Container`, `ContainerScope`: 의존성 등록, 조회, 초기화, 비동기 런타임 격리 및 TypeDI provider 식별자 변환
-- `Component`: 클래스를 singleton, request, transient scope로 등록
+- `Container`, `ContainerScope`: 의존성 등록, 조회, 초기화, 비동기 런타임 격리 및 runtime provider 식별자 변환
+- `Component`: compile-time scanner가 발견할 클래스와 singleton, request, transient scope를 선언
 - `Context`: AsyncLocalStorage 기반 요청 컨텍스트 실행과 조회
 - `MetadataStorage`: 데코레이터 메타데이터 저장과 조회
 - `MiddlewareChain`: onion 패턴 미들웨어 실행
@@ -149,18 +154,22 @@ sub-surface 단위로 소유자, breaking-change 정책, generated app/doctor �
 `compatibilityGroup`을 검사합니다. 새 public export는 source와 export name 기준으로 아래 그룹 중 하나에
 명시적으로 분류되어야 하며, 기존 export가 다른 그룹으로 이동하면 public API drift로 실패합니다.
 
-| Group                                          | Scope                                                                                                           | Breaking-change policy                                                                                                                   | Coverage                                                                                            |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| DI and dependency graph (`di`)                 | `Container`, `Component`, `Inject`, TypeDI tokens, dependency graph diagnostics, logger token, metadata storage | Rename/removal, scope semantics, diagnostic code, or dependency graph manifest changes are breaking for DI consumers and generated apps. | `public-api:check`, create-croco-app generator DI imports, `croco doctor` DI diagnostics            |
-| Request and runtime context (`context`)        | `Context`, request/runtime/transaction context types, lifecycle hooks, transaction context token                | Field removals or semantic changes require migration notes and versioned compatibility review.                                           | `public-api:check`, generated app request context imports, doctor/project-map runtime context reads |
-| Runtime policy (`runtime-policy`)              | Policy tables, policy targets/kinds, policy execution plans, policy capability Problems                         | Policy table shape, policy constants, diagnostic behavior, and execution-plan semantics are release-blocking compatibility changes.      | `public-api:check`, `croco runtime-policy check`, `croco project-map` policy validation             |
-| Runtime capability (`runtime-capability`)      | Runtime platforms, capability matrix, capability manifests, capability diagnostics                              | Capability/platform names, manifest versions, diagnostic codes, and support matrix semantics must be additive or versioned.              | `public-api:check`, `croco runtime-policy check`, generated app smoke workspace build               |
-| Runtime inspector (`runtime-inspector`)        | Inspector lifecycle, timeline records, event input/output shapes, inspector token                               | Inspector record, timeline, and event-shape changes must preserve additive compatibility or document a versioned diagnostic migration.   | `public-api:check`, generated app smoke workspace build, doctor/project-map runtime diagnostics     |
-| Middleware and request pipeline (`middleware`) | `MiddlewareChain`, middleware/guard types, request pipeline graph, pipeline Problems                            | Callable shape, node/phase constants, and failure propagation changes require a documented migration path.                               | `public-api:check`, generated app request pipeline usage                                            |
-| Shutdown lifecycle (`shutdown`)                | `ShutdownManager`, `OnShutdown`, shutdown hook type, shutdown Problems                                          | Hook signatures, timeout/configuration Problem behavior, and signal listener semantics are breaking without migration guidance.          | `public-api:check`, generated app smoke workspace build                                             |
+| Group                                          | Scope                                                                                                                  | Breaking-change policy                                                                                                                   | Coverage                                                                                            |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| DI and dependency graph (`di`)                 | `Container`, `Component`, `Inject`, Croco runtime tokens, dependency graph diagnostics, logger token, metadata storage | Rename/removal, scope semantics, diagnostic code, or dependency graph manifest changes are breaking for DI consumers and generated apps. | `public-api:check`, create-croco-app generator DI imports, `croco doctor` DI diagnostics            |
+| Request and runtime context (`context`)        | `Context`, request/runtime/transaction context types, lifecycle hooks, transaction context token                       | Field removals or semantic changes require migration notes and versioned compatibility review.                                           | `public-api:check`, generated app request context imports, doctor/project-map runtime context reads |
+| Runtime policy (`runtime-policy`)              | Policy tables, policy targets/kinds, policy execution plans, policy capability Problems                                | Policy table shape, policy constants, diagnostic behavior, and execution-plan semantics are release-blocking compatibility changes.      | `public-api:check`, `croco runtime-policy check`, `croco project-map` policy validation             |
+| Runtime capability (`runtime-capability`)      | Runtime platforms, capability matrix, capability manifests, capability diagnostics                                     | Capability/platform names, manifest versions, diagnostic codes, and support matrix semantics must be additive or versioned.              | `public-api:check`, `croco runtime-policy check`, generated app smoke workspace build               |
+| Runtime inspector (`runtime-inspector`)        | Inspector lifecycle, timeline records, event input/output shapes, inspector token                                      | Inspector record, timeline, and event-shape changes must preserve additive compatibility or document a versioned diagnostic migration.   | `public-api:check`, generated app smoke workspace build, doctor/project-map runtime diagnostics     |
+| Middleware and request pipeline (`middleware`) | `MiddlewareChain`, middleware/guard types, request pipeline graph, pipeline Problems                                   | Callable shape, node/phase constants, and failure propagation changes require a documented migration path.                               | `public-api:check`, generated app request pipeline usage                                            |
+| Shutdown lifecycle (`shutdown`)                | `ShutdownManager`, `OnShutdown`, shutdown hook type, shutdown Problems                                                 | Hook signatures, timeout/configuration Problem behavior, and signal listener semantics are breaking without migration guidance.          | `public-api:check`, generated app smoke workspace build                                             |
 
 ## Scope
 
 - `singleton`: 애플리케이션 전체에서 하나의 인스턴스
 - `request`: `Context.run()` 범위마다 하나의 인스턴스
 - `transient`: 조회할 때마다 새 인스턴스
+
+`singleton` 생성자에서 `request` 또는 `transient` provider를 직접 주입할 수 없습니다. 두 scope 모두
+singleton보다 먼저 정리될 수 있으므로 DI 컴파일러와 런타임이 scope mismatch로 거부합니다. 요청마다 새
+인스턴스가 필요하면 소비자도 `request` 또는 `transient`로 선언하세요.

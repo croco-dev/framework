@@ -4,7 +4,6 @@ import { extname, join, normalize, resolve, sep } from "node:path";
 import type { DiagnosticsCollector } from "@croco/diagnostics-core";
 import {
   Container,
-  type Constructor,
   getDeclaredComponentScope,
   type ILogger,
   LOGGER_TOKEN,
@@ -20,6 +19,7 @@ import {
   getInterceptors,
   getParamsMeta,
   getPipes,
+  type Constructor,
 } from "@croco/protocols-rest";
 import type { Http2Bindings, HttpBindings } from "@hono/node-server";
 import { type Context, Hono } from "hono";
@@ -150,6 +150,13 @@ export class CrocoApp {
     private readonly errorHandler: ErrorHandler,
     private readonly healthCheckRegistry: HealthCheckRegistry,
   ) {
+    const generatedControllers = Container.getGeneratedProviderTokens(
+      "rest-controller",
+    ) as readonly Constructor[];
+    this.config = {
+      ...config,
+      controllers: [...new Set([...config.controllers, ...generatedControllers])],
+    };
     this.hono = new Hono();
     this.honoFetch = this.hono.fetch.bind(this.hono) as Hono["fetch"];
     this.hono.fetch = ((request, env, executionContext) =>
@@ -206,10 +213,14 @@ export class CrocoApp {
       container:
         options.container ??
         createRouteCompileContainer({ allowImplicitConstruction: diValidationMode !== "enforce" }),
-      globalGuards: this.config.globalGuards,
-      globalInterceptors: this.config.globalInterceptors,
-      globalFilters: this.config.globalFilters,
-      globalPipes: this.config.globalPipes,
+      ...(this.config.globalGuards === undefined ? {} : { globalGuards: this.config.globalGuards }),
+      ...(this.config.globalInterceptors === undefined
+        ? {}
+        : { globalInterceptors: this.config.globalInterceptors }),
+      ...(this.config.globalFilters === undefined
+        ? {}
+        : { globalFilters: this.config.globalFilters }),
+      ...(this.config.globalPipes === undefined ? {} : { globalPipes: this.config.globalPipes }),
     });
 
     const explicitHeadRoutes = this.routes.filter((route) => route.method.toUpperCase() === "HEAD");
@@ -340,13 +351,13 @@ export class CrocoApp {
       return this.config.diValidation;
     }
 
-    const envMode = process.env.CROCO_HTTP_DI_VALIDATION;
+    const envMode = process.env["CROCO_HTTP_DI_VALIDATION"];
 
     if (envMode === "off" || envMode === "warn" || envMode === "enforce") {
       return envMode;
     }
 
-    return process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test"
+    return process.env["NODE_ENV"] === "development" || process.env["NODE_ENV"] === "test"
       ? "warn"
       : "enforce";
   }
@@ -441,7 +452,7 @@ export class CrocoApp {
       return this.config.securityValidation;
     }
 
-    const envMode = process.env.CROCO_HTTP_SECURITY_VALIDATION;
+    const envMode = process.env["CROCO_HTTP_SECURITY_VALIDATION"];
 
     if (envMode === "off" || envMode === "warn" || envMode === "enforce") {
       return envMode;

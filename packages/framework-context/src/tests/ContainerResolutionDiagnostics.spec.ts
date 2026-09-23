@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it } from "vitest";
 import "reflect-metadata";
 import {
   CircularDependencyProblem,
-  Component,
   Container,
   ContainerDiagnosticsProvider,
   ContainerResolutionProblem,
@@ -12,6 +11,8 @@ import {
   MetadataStorage,
   Token,
 } from "../index";
+import { Component } from "./registerTestComponent";
+import { registerInjectionMetadata } from "../libs/InjectionMetadata";
 
 describe("Container resolution diagnostics", () => {
   beforeEach(() => {
@@ -41,7 +42,7 @@ describe("Container resolution diagnostics", () => {
         steps: [
           {
             token: "Token<database.url>",
-            tokenKind: "typedi-token",
+            tokenKind: "token",
             provider: "missing",
             status: "missing",
             path: ["Token<database.url>"],
@@ -63,8 +64,9 @@ describe("Container resolution diagnostics", () => {
 
     Reflect.defineMetadata("design:paramtypes", [], Repository);
     Reflect.defineMetadata("design:paramtypes", [Repository], UserService);
+    registerInjectionMetadata(UserService, { index: 0, token: Repository });
     Component({ scope: "transient" })(Repository);
-    Component()(UserService);
+    Component({ scope: "transient" })(UserService);
 
     const trace = Container.getResolutionTrace(UserService);
 
@@ -76,7 +78,7 @@ describe("Container resolution diagnostics", () => {
           token: "UserService",
           tokenKind: "constructor",
           provider: "component",
-          scope: "singleton",
+          scope: "transient",
           status: "selected",
           path: ["UserService"],
         },
@@ -105,6 +107,7 @@ describe("Container resolution diagnostics", () => {
 
     Reflect.defineMetadata("design:paramtypes", [], RequestRepository);
     Reflect.defineMetadata("design:paramtypes", [RequestRepository], UserService);
+    registerInjectionMetadata(UserService, { index: 0, token: RequestRepository });
     Component({ scope: "request" })(RequestRepository);
     Component()(UserService);
 
@@ -127,14 +130,15 @@ describe("Container resolution diagnostics", () => {
     throw new Error("Expected Container.get to throw");
   });
 
-  it("fails when @Inject resolves a request-scoped dependency for a singleton", () => {
+  it("fails when explicit class metadata resolves a request-scoped dependency for a singleton", () => {
     class RequestRepository {}
 
     class UserService {
-      constructor(@Inject(() => RequestRepository) readonly repository: unknown) {}
+      constructor(readonly repository: unknown) {}
     }
 
     Reflect.defineMetadata("design:paramtypes", [Object], UserService);
+    registerInjectionMetadata(UserService, { index: 0, token: RequestRepository });
     Component({ scope: "request" })(RequestRepository);
     Component()(UserService);
 
@@ -184,7 +188,7 @@ describe("Container resolution diagnostics", () => {
         },
         {
           token: "Token<handler.config>",
-          tokenKind: "typedi-token",
+          tokenKind: "token",
           provider: "registered-value",
           status: "selected",
           dependencyOf: "ConfigConsumer",
@@ -207,6 +211,8 @@ describe("Container resolution diagnostics", () => {
 
     Reflect.defineMetadata("design:paramtypes", [ServiceB], ServiceA);
     Reflect.defineMetadata("design:paramtypes", [ServiceA], ServiceB);
+    registerInjectionMetadata(ServiceA, { index: 0, token: ServiceB });
+    registerInjectionMetadata(ServiceB, { index: 0, token: ServiceA });
     Component({ scope: "transient" })(ServiceA);
     Component({ scope: "transient" })(ServiceB);
 

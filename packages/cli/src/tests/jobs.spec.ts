@@ -9,7 +9,6 @@ import {
   type ExecutionStore,
   type ListExecutionsOptions,
 } from "@croco/execution-core";
-import { Container } from "typedi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { JobsCommandClient, JobsStatusFetch } from "../commands/jobs.js";
 import {
@@ -135,7 +134,6 @@ class TestExecutionStore implements ExecutionStore, ExecutionLogStore {
 
 describe("jobs command", () => {
   beforeEach(() => {
-    Container.reset();
     vi.restoreAllMocks();
   });
 

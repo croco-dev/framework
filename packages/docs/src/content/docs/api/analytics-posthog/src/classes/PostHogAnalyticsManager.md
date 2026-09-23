@@ -15,13 +15,21 @@ Croco Context 정보를 활용해 PostHog 이벤트와 그룹 정보를 전송�
 
 ### Constructor
 
-> **new PostHogAnalyticsManager**(`posthogClient`): `PostHogAnalyticsManager`
+> **new PostHogAnalyticsManager**(`posthogClient`, `options?`, `logger?`): `PostHogAnalyticsManager`
 
 #### Parameters
 
 ##### posthogClient
 
 [`PostHogClient`](/api/integrations-posthog/src/classes/posthogclient/)
+
+##### options?
+
+[`PostHogAnalyticsManagerOptions`](/api/analytics-posthog/src/type-aliases/posthoganalyticsmanageroptions/) = `{}`
+
+##### logger?
+
+`Pick`\<[`ILogger`](/api/framework-context/src/interfaces/ilogger/), `"info"` \| `"warn"`\> = `console`
 
 #### Returns
 

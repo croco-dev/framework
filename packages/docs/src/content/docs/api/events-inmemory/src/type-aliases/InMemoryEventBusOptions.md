@@ -41,8 +41,32 @@ Enables handler retry exhaustion and replay through the configured storage adapt
 
 ---
 
+### handlerResolver?
+
+> `optional` **handlerResolver?**: [`HandlerResolver`](/api/events-core/src/interfaces/handlerresolver/)
+
+Resolves class-only subscriptions through the owning application's DI graph.
+
+---
+
+### logger?
+
+> `optional` **logger?**: `Pick`\<[`ILogger`](/api/framework-context/src/interfaces/ilogger/), `"error"`\>
+
+Receives handler failures.
+
+---
+
 ### maxConcurrency?
 
 > `optional` **maxConcurrency?**: `number`
 
 Positive safe integer. Defaults to 100.
+
+---
+
+### runtimeInspector?
+
+> `optional` **runtimeInspector?**: [`RuntimeInspectorRecorder`](/api/framework-context/src/interfaces/runtimeinspectorrecorder/)
+
+Records events outside a request-provided inspector.

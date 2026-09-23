@@ -5,7 +5,7 @@ prev: false
 title: "createTrpcRouter"
 ---
 
-> **createTrpcRouter**(`controllers`, `options?`): `AnyRouter`
+> **createTrpcRouter**(`controllers?`, `options?`): `AnyRouter`
 
 Creates a tRPC router whose procedures run Croco guards before input parsing, then interceptors around handlers.
 
@@ -16,9 +16,9 @@ runtime inspector.
 
 ## Parameters
 
-### controllers
+### controllers?
 
-`Function`[]
+readonly `Function`[] = `...`
 
 ### options?
 

@@ -5,7 +5,7 @@ prev: false
 title: "TokenIdentifier"
 ---
 
-> **TokenIdentifier**\<`T`\> = [`Constructor`](/api/framework-context/src/type-aliases/constructor/)\<`T`\> \| [`Token`](/api/framework-context/src/classes/token/)\<`T`\> \| `string` \| `symbol`
+> **TokenIdentifier**\<`T`\> = `CrocoTokenIdentifier`\<`T`\>
 
 ## Type Parameters
 

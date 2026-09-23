@@ -15,6 +15,7 @@
     "@croco/events-core": "workspace:*",
     "@croco/events-inmemory": "workspace:*",
     "@croco/framework-context": "workspace:*",
+    "@croco/framework-module": "workspace:*",
     "@croco/membership-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/protocols-rest": "workspace:*",

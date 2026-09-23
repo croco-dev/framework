@@ -23,9 +23,9 @@ pnpm add @croco/workflow-core
 
 ```typescript
 import { Component } from "@croco/framework-context";
-import { Task, taskRef } from "@croco/tasks-core";
+import { Task, TaskRunner, taskRef } from "@croco/tasks-core";
 import { OnWebhook } from "@croco/triggers-core";
-import { defineWorkflow, Workflow, WorkflowRunner } from "@croco/workflow-core";
+import { defineWorkflow, Workflow, WorkflowRegistry, WorkflowRunner } from "@croco/workflow-core";
 
 type BillingPayload = {
   subscriptionId: string;
@@ -62,7 +62,11 @@ class BillingWorkflows {
   billingWebhook() {}
 }
 
-const runner = new WorkflowRunner(executionManager);
+const registry = WorkflowRegistry.fromMetadata();
+const taskRunner = new TaskRunner(executionManager, registry.taskRegistry, undefined, {
+  serviceResolver: (target) => applicationRuntime.get(target),
+});
+const runner = new WorkflowRunner(executionManager, registry, taskRunner);
 const result = await runner.execute(billingWorkflow, { subscriptionId: "sub_123" });
 
 if (!result.reused) {
@@ -74,6 +78,12 @@ if (!result.reused) {
 `defineWorkflow()` checks each input resolver against the referenced task payload. It also preserves
 the ordered step results, so `previousResults` and a non-reused `WorkflowRunner.execute()` result are
 inferred from the definition.
+
+Pass the application's `TaskRunner` as the third constructor argument when steps target classes.
+Its `serviceResolver` resolves task instances from the initialized application runtime and preserves
+that application's dependency graph and scopes. Without a resolver, class task execution fails with
+`TaskRunnerDIFailureProblem`; it does not resolve services from a global container. Object-backed
+task targets can use the default runner without a resolver.
 
 ### Migrating string definitions
 

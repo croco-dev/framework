@@ -5,7 +5,7 @@ prev: false
 title: "InMemoryEventBus"
 ---
 
-TypeDI와 OpenTelemetry를 사용하는 인메모리 EventBus 구현체입니다.
+명시적인 handler resolver와 OpenTelemetry를 사용하는 인메모리 EventBus 구현체입니다.
 
 ## Type Parameters
 

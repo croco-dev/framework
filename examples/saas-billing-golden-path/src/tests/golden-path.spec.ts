@@ -1,6 +1,5 @@
 import "reflect-metadata";
 import { createTestingHarness, type CrocoTestingApp } from "@croco/testing";
-import { TxManagerRegistry } from "@croco/tx-core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createGoldenPathRuntime, type GoldenPathRuntime } from "../app/bootstrap";
 
@@ -13,9 +12,52 @@ describe("SaaS billing golden path", () => {
     testing = createTestingHarness(runtime.app);
   });
 
-  afterEach(() => {
-    runtime.eventBusConfig.clear();
-    TxManagerRegistry.clear();
+  afterEach(async () => {
+    await runtime.dispose();
+  });
+
+  it("isolates simultaneously active application providers and event projections", async () => {
+    const other = await createGoldenPathRuntime();
+    try {
+      const otherTesting = createTestingHarness(other.app);
+      const [first, second] = await Promise.all([
+        testing.post("/api/checkouts", {
+          json: { customerId: "first", paymentToken: "tok_live", planId: "starter", seats: 1 },
+        }),
+        otherTesting.post("/api/checkouts", {
+          json: { customerId: "second", paymentToken: "tok_live", planId: "growth", seats: 2 },
+        }),
+      ]);
+      expect([first.status, second.status]).toEqual([200, 200]);
+      expect(runtime.repository.list()).toMatchObject([{ id: "ord_0001", customerId: "first" }]);
+      expect(other.repository.list()).toMatchObject([{ id: "ord_0001", customerId: "second" }]);
+      expect(runtime.auditLog.list()).toMatchObject([
+        { message: "Order ord_0001 was paid by first." },
+      ]);
+      expect(other.auditLog.list()).toMatchObject([
+        { message: "Order ord_0001 was paid by second." },
+      ]);
+    } finally {
+      await other.dispose();
+    }
+    expect((await testing.get("/api/orders/ord_0001")).status).toBe(200);
+  });
+
+  it("retains its application scope when the local Node server receives a request", async () => {
+    const server = await runtime.applicationRuntime.run(() => runtime.app.listen(0));
+    try {
+      const address = server.address();
+      expect(address).not.toBeNull();
+      if (address === null || typeof address === "string")
+        throw new TypeError("Expected TCP address");
+      const response = await fetch(`http://127.0.0.1:${address.port}/api/orders/missing`);
+      expect(response.status).toBe(404);
+      expect(await response.json()).toMatchObject({ code: "golden-path/order-not-found" });
+    } finally {
+      await new Promise<void>((resolve, reject) =>
+        server.close((error) => (error ? reject(error) : resolve())),
+      );
+    }
   });
 
   it("checks out an order, retries transient payment failure, and records the after-commit audit event", async () => {

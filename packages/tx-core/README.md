@@ -73,13 +73,23 @@ if (outcome.afterCommit.status === "failed") {
 ### `@Transactional` 데코레이터 사용
 
 ```typescript
-import { Transactional } from "@croco/tx-core";
+import { Transactional, TxManager } from "@croco/tx-core";
 
 class OrderService {
-  @Transactional({ propagation: "REQUIRES_NEW", timeout: 10000 })
+  constructor(readonly txManager: TxManager) {}
+
+  @Transactional((service: OrderService) => service.txManager, {
+    propagation: "REQUIRES_NEW",
+    timeout: 10000,
+  })
   async placeOrder(): Promise<void> {}
 }
 ```
+
+매니저는 생성자로 주입하고 데코레이터의 첫 번째 인자에서 수신 객체의 매니저를 선택합니다.
+이름별 매니저가 필요하면 애플리케이션이 소유한 `new TxManagerRegistry()`를 주입한 뒤
+`(service: OrderService) => service.registry.get("billing")`처럼 선택합니다.
+레지스트리는 전역 Container에 매니저를 등록하지 않습니다.
 
 ## API 레퍼런스
 

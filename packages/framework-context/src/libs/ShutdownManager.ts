@@ -7,9 +7,20 @@ import {
   ShutdownHookRegistrationClosedProblem,
   ShutdownTimeoutProblem,
 } from "./problems/ShutdownProblems";
-import type { ShutdownHook } from "./types";
+import type { Constructor, ShutdownHook } from "./types";
 
 const DEFAULT_TIMEOUT_MS = 30_000;
+
+/** @internal */
+export const SHUTDOWN_HOOK_OWNER = Symbol.for("@croco/framework-context/shutdown-hook/owner");
+
+type DecoratedShutdownHook = ShutdownHook & {
+  readonly [SHUTDOWN_HOOK_OWNER]: Constructor;
+};
+
+function getHookOwner(hook: ShutdownHook): Constructor | undefined {
+  return (hook as Partial<DecoratedShutdownHook>)[SHUTDOWN_HOOK_OWNER];
+}
 
 type ShutdownLifecycleState = "accepting-hooks" | "shutting-down" | "shut-down";
 
@@ -27,12 +38,14 @@ export class ShutdownManager {
   private static instance: ShutdownManager | undefined;
   private static readonly scopedInstances = new Map<string, ShutdownManager>();
   private hooks: ShutdownHook[] = [];
+  private inheritedHookCount = 0;
   private lifecycleState: ShutdownLifecycleState = "accepting-hooks";
   private timeoutMs: number;
   private timeoutConfigured: boolean;
   private listenersRegistered = false;
   private shutdownPromise: Promise<void> | undefined;
   private signalShutdownPromise: Promise<void> | undefined;
+  private readonly runInScope = Container.captureCurrentScopeRunner();
 
   private constructor(timeoutMs?: number) {
     const resolvedTimeoutMs = timeoutMs ?? DEFAULT_TIMEOUT_MS;
@@ -55,7 +68,8 @@ export class ShutdownManager {
       const root = ShutdownManager.instance;
       const manager = new ShutdownManager(timeoutMs ?? root?.timeoutMs);
       manager.timeoutConfigured = timeoutMs !== undefined || (root?.timeoutConfigured ?? false);
-      manager.hooks = root ? [...root.hooks] : [];
+      manager.hooks = root?.hooks.filter((hook) => getHookOwner(hook) !== undefined) ?? [];
+      manager.inheritedHookCount = manager.hooks.length;
       ShutdownManager.scopedInstances.set(scopeId, manager);
       return manager;
     }
@@ -170,12 +184,30 @@ export class ShutdownManager {
       rejectShutdown = reject;
     });
     this.shutdownPromise = shutdownPromise;
-    void this.executeShutdown(options).then(resolveShutdown, rejectShutdown);
+    try {
+      const execution = this.runInScope(() => this.executeShutdown(options));
+      void execution.then(resolveShutdown, rejectShutdown);
+    } catch (error) {
+      rejectShutdown(error);
+    }
     return shutdownPromise;
   }
 
   private async executeShutdown(options: ShutdownOptions): Promise<void> {
-    const reversedHooks = [...this.hooks].reverse();
+    const scopeId = Container.getActiveScopeId();
+    const selectedHooks = this.hooks.filter((hook, index) => {
+      const owner = getHookOwner(hook);
+      if (owner !== undefined) {
+        return (
+          Container.has(owner) ||
+          (scopeId
+            ? Container.hasScopedComponent(owner)
+            : Container.getComponentMetadata(owner) !== undefined)
+        );
+      }
+      return index >= this.inheritedHookCount;
+    });
+    const reversedHooks = selectedHooks.reverse();
     const controller = new AbortController();
     const failures: Error[] = [];
     const hookExecution = (async (): Promise<void> => {

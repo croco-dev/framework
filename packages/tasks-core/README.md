@@ -65,6 +65,15 @@ const synchronizeTask = taskRef(BillingTasks, "synchronize", "billing.synchroniz
 
 ### 타입 안전한 `TaskRunner` 실행
 
+클래스 task target은 해당 application의 generated graph에 연결된 resolver를 명시해야 합니다.
+resolver가 없으면 `TaskRunnerDIFailureProblem`으로 실패합니다. 인스턴스 target은 그대로 실행합니다.
+
+```typescript
+const runner = new TaskRunner(executionManager, registry, logger, {
+  serviceResolver: (target) => applicationRuntime.get(target),
+});
+```
+
 `TASK_DISPATCHER_TOKEN`은 외부 실행 서비스로 작업을 전달하는 `TaskDispatcher` 구현을 application graph에
 등록하기 위한 안정적인 typed composition slot입니다.
 

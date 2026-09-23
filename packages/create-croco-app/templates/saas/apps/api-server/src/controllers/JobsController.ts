@@ -1,4 +1,5 @@
 import type { ExecutionStatus } from "@croco/execution-core";
+import { Inject } from "@croco/framework-context";
 import {
   Body,
   Controller,
@@ -12,7 +13,7 @@ import {
   type RouteQueryParam,
   routeProblemResponses,
 } from "@croco/protocols-rest";
-import { getSaasRuntimeState } from "../saasDemo";
+import { SAAS_RUNTIME_STATE_TOKEN, type SaasRuntimeState } from "../saasDemo";
 import {
   cancelJobRoute,
   jobLogsRoute,
@@ -68,6 +69,11 @@ async function parseOptionalJobsInteger(
 
 @Controller("/ops/jobs")
 export class JobsController {
+  constructor(
+    @Inject(SAAS_RUNTIME_STATE_TOKEN)
+    private readonly runtimeState: SaasRuntimeState,
+  ) {}
+
   @Get(listJobsRoute)
   @ProblemResponses(...routeProblemResponses(listJobsRoute))
   async list(
@@ -77,7 +83,7 @@ export class JobsController {
     @Query(listJobsRoute, "limit") limit?: RouteQueryParam<typeof listJobsRoute, "limit">,
     @Query(listJobsRoute, "offset") offset?: RouteQueryParam<typeof listJobsRoute, "offset">,
   ) {
-    return getSaasRuntimeState().current.jobs.list({
+    return this.runtimeState.current.jobs.list({
       status: await parseOptionalJobStatus(status),
       type: type && type.length > 0 ? type : undefined,
       replayOf: replayOf && replayOf.length > 0 ? replayOf : undefined,
@@ -89,13 +95,13 @@ export class JobsController {
   @Get(showJobRoute)
   @ProblemResponses(...routeProblemResponses(showJobRoute))
   async show(@Param(showJobRoute, "id") id: RouteParam<typeof showJobRoute, "id">) {
-    return getSaasRuntimeState().current.jobs.show(id);
+    return this.runtimeState.current.jobs.show(id);
   }
 
   @Get(jobLogsRoute)
   @ProblemResponses(...routeProblemResponses(jobLogsRoute))
   async logs(@Param(jobLogsRoute, "id") id: RouteParam<typeof jobLogsRoute, "id">) {
-    return getSaasRuntimeState().current.jobs.logs(id);
+    return this.runtimeState.current.jobs.logs(id);
   }
 
   @Post(cancelJobRoute)
@@ -104,7 +110,7 @@ export class JobsController {
     @Param(cancelJobRoute, "id") id: RouteParam<typeof cancelJobRoute, "id">,
     @Body(cancelJobRoute) body: RouteBody<typeof cancelJobRoute>,
   ) {
-    return getSaasRuntimeState().current.jobs.cancel(id, { reason: body.reason });
+    return this.runtimeState.current.jobs.cancel(id, { reason: body.reason });
   }
 
   @Post(replayJobRoute)
@@ -113,6 +119,6 @@ export class JobsController {
     @Param(replayJobRoute, "id") id: RouteParam<typeof replayJobRoute, "id">,
     @Body(replayJobRoute) body: RouteBody<typeof replayJobRoute>,
   ) {
-    return getSaasRuntimeState().current.jobs.replay(id, { reason: body.reason });
+    return this.runtimeState.current.jobs.replay(id, { reason: body.reason });
   }
 }

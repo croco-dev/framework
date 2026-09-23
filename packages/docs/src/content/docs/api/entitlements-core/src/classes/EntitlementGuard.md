@@ -15,13 +15,17 @@ title: "EntitlementGuard"
 
 ### Constructor
 
-> **new EntitlementGuard**(`entitlementManager`): `EntitlementGuard`
+> **new EntitlementGuard**(`entitlementManager`, `auditSink?`): `EntitlementGuard`
 
 #### Parameters
 
 ##### entitlementManager
 
 [`EntitlementManager`](/api/entitlements-core/src/classes/entitlementmanager/)
+
+##### auditSink?
+
+[`EntitlementAuditSink`](/api/entitlements-core/src/classes/entitlementauditsink/)
 
 #### Returns
 

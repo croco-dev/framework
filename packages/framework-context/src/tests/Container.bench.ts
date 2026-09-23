@@ -52,10 +52,6 @@ class TestService48 {}
 class TestService49 {}
 class TestService50 {}
 
-class DepServiceA {
-  constructor(public dep: TestService1) {}
-}
-
 const serviceClasses = [
   TestService1,
   TestService2,
@@ -131,21 +127,6 @@ describe("Container.register × 50 components", () => {
       }
     },
     { iterations: 50, warmupIterations: 10 },
-  );
-});
-
-describe("Container.validate (50 components)", () => {
-  bench(
-    "Container.validate (50 components)",
-    () => {
-      Container.reset();
-      for (const ServiceClass of serviceClasses) {
-        Container.register(ServiceClass, "singleton");
-      }
-      Container.register(DepServiceA, "singleton");
-      Container.validate();
-    },
-    { iterations: 50, warmupIterations: 5 },
   );
 });
 

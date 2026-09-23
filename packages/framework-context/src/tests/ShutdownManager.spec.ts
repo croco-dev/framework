@@ -2,6 +2,7 @@ import { ProblemCategory } from "@croco/problems-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Container } from "../libs/Container";
 import { OnShutdown } from "../libs/decorators/OnShutdown";
+import { GENERATED_DI_GRAPH_VERSION, defineGeneratedDiGraph } from "../libs/GeneratedGraph";
 import { type ILogger, LOGGER_TOKEN } from "../libs/ILogger";
 import {
   InvalidShutdownTimeoutProblem,
@@ -11,7 +12,7 @@ import {
   ShutdownTimeoutProblem,
 } from "../libs/problems/ShutdownProblems";
 import { ShutdownManager } from "../libs/ShutdownManager";
-import type { ShutdownHook } from "../libs/types";
+import type { Constructor, ShutdownHook } from "../libs/types";
 
 function createMockLogger(overrides: Partial<ILogger> = {}): ILogger {
   const logger: ILogger = {
@@ -43,6 +44,223 @@ describe("ShutdownManager", () => {
   });
 
   describe("getInstance", () => {
+    it("runs only owned decorated hooks for disjoint generated applications", async () => {
+      const firstCalls = vi.fn();
+      const secondCalls = vi.fn();
+      const explicitCalls = vi.fn();
+      const rootComponentCalls = vi.fn();
+      const scopedManualCalls = vi.fn();
+      const rootManualCalls = vi.fn();
+
+      @OnShutdown()
+      class FirstService implements ShutdownHook {
+        onShutdown(): void {
+          firstCalls();
+        }
+      }
+
+      @OnShutdown()
+      class SecondService implements ShutdownHook {
+        onShutdown(): void {
+          secondCalls();
+        }
+      }
+
+      @OnShutdown()
+      class ExplicitService implements ShutdownHook {
+        onShutdown(): void {
+          explicitCalls();
+        }
+      }
+
+      @OnShutdown()
+      class RootComponent implements ShutdownHook {
+        onShutdown(): void {
+          rootComponentCalls();
+        }
+      }
+
+      const rootManager = ShutdownManager.getInstance();
+      rootManager.register({ onShutdown: rootManualCalls });
+      Container.register(RootComponent, "singleton");
+      const firstScope = Container.createScope();
+      const secondScope = Container.createScope();
+      const emptyScope = Container.createScope();
+
+      const graphFor = (graphId: string, token?: Constructor) =>
+        defineGeneratedDiGraph({
+          version: GENERATED_DI_GRAPH_VERSION,
+          graphId,
+          compilerVersion: "test",
+          inputHash: graphId,
+          roots: token ? [token] : [],
+          providers: token
+            ? [
+                {
+                  token,
+                  tokenId: `${graphId}:service`,
+                  debugName: token.name,
+                  scope: "singleton",
+                  dependencies: [],
+                  factory: () => new token(),
+                  sourceLocation: { file: "ShutdownManager.spec.ts", line: 1 },
+                },
+              ]
+            : [],
+        });
+
+      const firstManager = firstScope.run(() => ShutdownManager.getInstance());
+      const secondManager = secondScope.run(() => ShutdownManager.getInstance());
+      const emptyManager = emptyScope.run(() => ShutdownManager.getInstance());
+      emptyManager.register({ onShutdown: scopedManualCalls });
+
+      try {
+        await firstScope.run(async () => {
+          Container.installGeneratedGraph(graphFor("first", FirstService));
+          Container.register(ExplicitService, "singleton");
+          await firstManager.shutdown({ throwOnHookError: true });
+        });
+        await secondScope.run(async () => {
+          Container.installGeneratedGraph(graphFor("second", SecondService));
+          await secondManager.shutdown({ throwOnHookError: true });
+        });
+        await emptyScope.run(async () => {
+          Container.installGeneratedGraph(graphFor("empty"));
+          await emptyManager.shutdown({ throwOnHookError: true });
+        });
+
+        expect(firstCalls).toHaveBeenCalledTimes(1);
+        expect(secondCalls).toHaveBeenCalledTimes(1);
+        expect(explicitCalls).toHaveBeenCalledTimes(1);
+        expect(scopedManualCalls).toHaveBeenCalledTimes(1);
+        expect(rootManualCalls).not.toHaveBeenCalled();
+        expect(rootComponentCalls).not.toHaveBeenCalled();
+
+        await firstScope.run(() => rootManager.shutdown({ throwOnHookError: true }));
+        expect(rootManualCalls).toHaveBeenCalledTimes(1);
+        expect(rootComponentCalls).toHaveBeenCalledTimes(1);
+        expect(firstCalls).toHaveBeenCalledTimes(1);
+        expect(secondCalls).toHaveBeenCalledTimes(1);
+      } finally {
+        firstScope.dispose();
+        secondScope.dispose();
+        emptyScope.dispose();
+      }
+    });
+
+    it("runs shutdown hooks in their owning scope across app callbacks and process signals", async () => {
+      const firstCalls = vi.fn();
+      const secondCalls = vi.fn();
+
+      @OnShutdown()
+      class FirstService implements ShutdownHook {
+        onShutdown(): void {
+          firstCalls();
+        }
+      }
+
+      @OnShutdown()
+      class SecondService implements ShutdownHook {
+        onShutdown(): void {
+          secondCalls();
+        }
+      }
+
+      const graphFor = (graphId: string, token: Constructor) =>
+        defineGeneratedDiGraph({
+          version: GENERATED_DI_GRAPH_VERSION,
+          graphId,
+          compilerVersion: "test",
+          inputHash: graphId,
+          roots: [token],
+          providers: [
+            {
+              token,
+              tokenId: `${graphId}:service`,
+              debugName: token.name,
+              scope: "singleton",
+              dependencies: [],
+              factory: () => new token(),
+              sourceLocation: { file: "ShutdownManager.spec.ts", line: 1 },
+            },
+          ],
+        });
+
+      const firstScope = Container.createScope();
+      const secondScope = Container.createScope();
+      try {
+        const firstManager = firstScope.run(() => {
+          Container.installGeneratedGraph(graphFor("first-signal", FirstService));
+          return ShutdownManager.getInstance();
+        });
+        secondScope.run(() => {
+          Container.installGeneratedGraph(graphFor("second-signal", SecondService));
+          ShutdownManager.getInstance().listen();
+        });
+
+        await secondScope.run(() => firstManager.shutdown({ throwOnHookError: true }));
+        expect(firstCalls).toHaveBeenCalledTimes(1);
+        expect(secondCalls).not.toHaveBeenCalled();
+
+        process.emit("SIGTERM");
+        await vi.waitFor(() => expect(secondCalls).toHaveBeenCalledTimes(1), { timeout: 5_000 });
+        expect(firstCalls).toHaveBeenCalledTimes(1);
+      } finally {
+        firstScope.dispose();
+        secondScope.dispose();
+      }
+    });
+
+    it("preserves selected generated hook failures", async () => {
+      const hookFailure = new Error("owned hook failed");
+
+      @OnShutdown()
+      class FailingService implements ShutdownHook {
+        onShutdown(): never {
+          throw hookFailure;
+        }
+      }
+
+      const scope = Container.createScope();
+      try {
+        await scope.run(async () => {
+          const manager = ShutdownManager.getInstance();
+          Container.installGeneratedGraph(
+            defineGeneratedDiGraph({
+              version: GENERATED_DI_GRAPH_VERSION,
+              graphId: "failing-hook",
+              compilerVersion: "test",
+              inputHash: "failing-hook",
+              roots: [FailingService],
+              providers: [
+                {
+                  token: FailingService,
+                  tokenId: "failing-hook:service",
+                  debugName: "FailingService",
+                  scope: "singleton",
+                  dependencies: [],
+                  factory: () => new FailingService(),
+                  sourceLocation: { file: "ShutdownManager.spec.ts", line: 1 },
+                },
+              ],
+            }),
+          );
+
+          await expect(manager.shutdown({ throwOnHookError: true })).rejects.toThrowError(
+            expect.objectContaining({
+              code: "framework-context/shutdown-hook-execution-failed",
+              extensions: {
+                failureCount: 1,
+                failures: [{ message: hookFailure.message, name: "Error" }],
+              },
+            }),
+          );
+        });
+      } finally {
+        scope.dispose();
+      }
+    });
+
     it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 0, -1])(
       "should reject invalid root timeout %s before creating the singleton",
       (timeoutMs) => {

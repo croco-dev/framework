@@ -1,7 +1,8 @@
 import "reflect-metadata";
-import { Container as TypeDIContainer } from "typedi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Component, Container, Inject, MetadataStorage, Token } from "../index";
+import { Container, Inject, MetadataStorage, Token } from "../index";
+import { registerInjectionMetadata } from "../libs/InjectionMetadata";
+import { Component } from "./registerTestComponent";
 
 describe("Dependency graph manifest", () => {
   beforeEach(() => {
@@ -78,6 +79,8 @@ describe("Dependency graph manifest", () => {
 
     Reflect.defineMetadata("design:paramtypes", [ServiceB], ServiceA);
     Reflect.defineMetadata("design:paramtypes", [ServiceA], ServiceB);
+    registerInjectionMetadata(ServiceA, { index: 0, token: ServiceB });
+    registerInjectionMetadata(ServiceB, { index: 0, token: ServiceA });
     Component({ scope: "transient" })(ServiceA);
     Component({ scope: "transient" })(ServiceB);
 
@@ -104,6 +107,7 @@ describe("Dependency graph manifest", () => {
 
     Reflect.defineMetadata("design:paramtypes", [], RequestRepository);
     Reflect.defineMetadata("design:paramtypes", [RequestRepository], UserService);
+    registerInjectionMetadata(UserService, { index: 0, token: RequestRepository });
     Component({ scope: "request" })(RequestRepository);
     Component()(UserService);
 
@@ -121,7 +125,7 @@ describe("Dependency graph manifest", () => {
     );
   });
 
-  it("marks TypeDI fallback providers as explicit unknown capability", () => {
+  it("reports ungenerated constructor dependencies as missing providers", () => {
     class Repository {}
 
     class UserService {
@@ -129,6 +133,7 @@ describe("Dependency graph manifest", () => {
     }
 
     Reflect.defineMetadata("design:paramtypes", [Repository], UserService);
+    registerInjectionMetadata(UserService, { index: 0, token: Repository });
     Component()(UserService);
 
     const manifest = Container.createDependencyGraphManifest({ roots: [UserService] });
@@ -137,19 +142,19 @@ describe("Dependency graph manifest", () => {
     expect(manifest.providers).toContainEqual(
       expect.objectContaining({
         token: "Repository",
-        provider: "typedi",
+        provider: "missing",
       }),
     );
     expect(manifest.diagnostics).toContainEqual(
       expect.objectContaining({
-        code: "CROCO_DI_004",
-        legacyCode: "framework-context/di-unknown-provider",
+        code: "CROCO_DI_001",
+        legacyCode: "framework-context/di-missing-provider",
         token: "Repository",
       }),
     );
   });
 
-  it("fails explicitly when a TypeDI injection handler cannot be inspected", () => {
+  it("resolves explicit Croco injection metadata without runtime handlers", () => {
     class Repository {}
 
     class UserService {
@@ -157,60 +162,35 @@ describe("Dependency graph manifest", () => {
     }
 
     Reflect.defineMetadata("design:paramtypes", [Repository], UserService);
-    TypeDIContainer.registerHandler({
-      object: UserService,
-      index: 0,
-      value: () => {
-        throw new Error("handler runtime failure");
-      },
-    });
+    registerInjectionMetadata(UserService, { index: 0, token: Repository });
     Component()(Repository);
     Component()(UserService);
 
     const manifest = Container.createDependencyGraphManifest({ roots: [UserService] });
 
-    expect(manifest.status).toBe("failed");
-    expect(manifest.diagnostics).toContainEqual(
-      expect.objectContaining({
-        code: "CROCO_DI_005",
-        legacyCode: "framework-context/di-injection-handler-uninspectable",
-        token: "UserService",
-      }),
-    );
-    expect(() => Container.get(UserService)).toThrow("handler runtime failure");
+    expect(manifest.status).toBe("ready");
+    expect(manifest.diagnostics).toEqual([]);
+    expect(Container.get(UserService).repository).toBeInstanceOf(Repository);
   });
 
-  it("does not execute TypeDI injection handlers while inspecting the graph", () => {
+  it("keeps explicit token injection deterministic across manifest reads", () => {
+    const repositoryToken = new Token<Repository>("repository");
     class Repository {}
 
     class UserService {
       constructor(readonly repository: Repository) {}
     }
 
-    let handlerCalls = 0;
     Reflect.defineMetadata("design:paramtypes", [Repository], UserService);
-    TypeDIContainer.registerHandler({
-      object: UserService,
-      index: 0,
-      value: (container) => {
-        handlerCalls += 1;
-        return container.get(Repository);
-      },
-    });
-    Component()(Repository);
+    Inject(repositoryToken)(UserService, undefined, 0);
+    Container.set(repositoryToken, new Repository());
     Component()(UserService);
 
-    const manifest = Container.createDependencyGraphManifest({ roots: [UserService] });
+    const first = Container.createDependencyGraphManifest({ roots: [UserService] });
+    const second = Container.createDependencyGraphManifest({ roots: [UserService] });
 
-    expect(handlerCalls).toBe(0);
-    expect(manifest.status).toBe("failed");
-    expect(manifest.diagnostics).toContainEqual(
-      expect.objectContaining({
-        code: "CROCO_DI_005",
-        legacyCode: "framework-context/di-injection-handler-uninspectable",
-        token: "UserService",
-      }),
-    );
+    expect(first).toEqual(second);
+    expect(first.status).toBe("ready");
   });
 
   it("emits deterministic root, provider, dependency, and diagnostic ordering", () => {
@@ -237,6 +217,8 @@ describe("Dependency graph manifest", () => {
     Reflect.defineMetadata("design:paramtypes", [], SecondSharedService);
     Reflect.defineMetadata("design:paramtypes", [FirstSharedService, Object], ARoot);
     Reflect.defineMetadata("design:paramtypes", [SecondSharedService, Object], ZRoot);
+    registerInjectionMetadata(ARoot, { index: 0, token: FirstSharedService });
+    registerInjectionMetadata(ZRoot, { index: 0, token: SecondSharedService });
     injectConstructorToken(ARoot, 1, firstConfigToken);
     injectConstructorToken(ZRoot, 1, secondConfigToken);
     Component({ scope: "transient" })(FirstSharedService);
@@ -283,6 +265,8 @@ describe("Dependency graph manifest", () => {
     Reflect.defineMetadata("design:paramtypes", [], SecondSharedService);
     Reflect.defineMetadata("design:paramtypes", [FirstSharedService], FirstRoot);
     Reflect.defineMetadata("design:paramtypes", [SecondSharedService], SecondRoot);
+    registerInjectionMetadata(FirstRoot, { index: 0, token: FirstSharedService });
+    registerInjectionMetadata(SecondRoot, { index: 0, token: SecondSharedService });
     Component({ scope: "transient" })(FirstSharedService);
     Component({ scope: "transient" })(SecondSharedService);
     Component({ scope: "transient" })(FirstRoot);

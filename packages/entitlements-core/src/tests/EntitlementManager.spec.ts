@@ -100,6 +100,8 @@ describe("EntitlementManager", () => {
       new StaticSubscriptionProvider("pro"),
       quotaChecker,
       meterLookup,
+      {},
+      eventPublisher,
     );
   });
 
@@ -152,6 +154,8 @@ describe("EntitlementManager", () => {
       }),
       quotaChecker,
       meterLookup,
+      {},
+      eventPublisher,
     );
     quotaChecker.setQuotaStatus({
       usage: 11,
@@ -194,6 +198,8 @@ describe("EntitlementManager", () => {
       }),
       quotaChecker,
       meterLookup,
+      {},
+      eventPublisher,
     );
 
     await expect(manager.check("tenant-1", "storage")).rejects.toMatchObject({
@@ -280,7 +286,14 @@ describe("EntitlementManager", () => {
     const subscriptionProvider: SubscriptionProvider = {
       getCurrentPlanId: vi.fn().mockResolvedValue(null),
     };
-    manager = new EntitlementManager(registry, subscriptionProvider, quotaChecker, meterLookup);
+    manager = new EntitlementManager(
+      registry,
+      subscriptionProvider,
+      quotaChecker,
+      meterLookup,
+      {},
+      eventPublisher,
+    );
 
     const result = await manager.check("tenant-1", "advanced_support");
 

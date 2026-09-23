@@ -31,6 +31,7 @@ const handler = new QStashTriggerHandler({
   receiver,
   deliveryIdentityVerifier: createQStashApiDeliveryIdentityVerifier(client),
   executionManager,
+  serviceResolver: (target) => applicationRuntime.get(target),
   executionTimeout: 60_000,
 });
 

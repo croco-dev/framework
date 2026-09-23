@@ -69,7 +69,7 @@ async function createWorkspace(options: { consoleWeb?: boolean } = {}): Promise<
       "@croco/protocols-rest",
       "@croco/repository-core",
       "@croco/transports-http",
-      "typedi",
+      "@croco/framework-context",
     ]),
   );
   await fs.writeFile(

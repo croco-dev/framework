@@ -1,5 +1,19 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
+/** Class-only event subscriptions require an explicitly configured resolver. */
+export class MissingEventHandlerResolverProblem extends Problem {
+  readonly code = "events-inmemory/missing-handler-resolver";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(readonly handlerName: string) {
+    super(
+      undefined,
+      undefined,
+      `Provide handlerResolver or a handler instance for '${handlerName}'`,
+    );
+  }
+}
+
 /** Largest concurrency value that preserves exact integer scheduling semantics. */
 export const MAX_EVENT_BUS_CONCURRENCY = Number.MAX_SAFE_INTEGER;
 /** Largest backpressure timeout that Node.js timers accept without clamping. */

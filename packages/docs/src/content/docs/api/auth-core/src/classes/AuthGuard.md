@@ -15,7 +15,13 @@ title: "AuthGuard"
 
 ### Constructor
 
-> **new AuthGuard**(): `AuthGuard`
+> **new AuthGuard**(`authProvider?`): `AuthGuard`
+
+#### Parameters
+
+##### authProvider?
+
+[`AuthProvider`](/api/auth-core/src/interfaces/authprovider/)\<`unknown`\>
 
 #### Returns
 

@@ -1,11 +1,11 @@
 # @croco/events-inmemory
 
-`@croco/events-core`용 인메모리 이벤트 버스 구현체입니다. TypeDI와 통합되며, 동시 실행 수를 제한하고 백프레셔를 제어할 수 있습니다.
+`@croco/events-core`용 인메모리 이벤트 버스 구현체입니다. 명시적인 handler resolver와 통합되며, 동시 실행 수를 제한하고 백프레셔를 제어할 수 있습니다.
 
 ## 설치
 
 ```bash
-pnpm add @croco/events-inmemory @croco/events-core typedi reflect-metadata
+pnpm add @croco/events-inmemory @croco/events-core reflect-metadata
 ```
 
 ## 사용법
@@ -34,6 +34,12 @@ export async function shutdownEventBus(): Promise<void> {
 `shutdownEventBus`는 애플리케이션 종료 hook 또는 명시적인 종료 경로에서 호출합니다. 종료 전까지는 같은 `eventBus`로
 이벤트를 계속 발행할 수 있습니다.
 
+클래스만 구독할 때는 `handlerResolver: { resolve: handlerClass => applicationRuntime.get(handlerClass) }`로
+해당 애플리케이션의 resolver를 전달하세요. 이미 생성한 인스턴스는 구독의 `handler`에 직접 전달할 수 있습니다.
+둘 다 없으면 발행은 `MissingEventHandlerResolverProblem`을 포함한 실패를 반환합니다. 전역 Container에서
+핸들러를 조회하지 않습니다. `logger`와 `runtimeInspector`도 버스 옵션으로 명시하며, 요청에 설정된 inspector는
+해당 요청 동안 우선합니다. logger를 생략해도 핸들러 실패는 발행 결과와 trace에 남습니다.
+
 ### 실패 재시도와 DLQ 재생
 
 ```typescript
@@ -55,6 +61,7 @@ const eventBus = new InMemoryEventBus({ deadLetterQueue });
 eventBus.subscribe({
   eventName: "user.created",
   handlerClass: UserCreatedHandler,
+  handler: new UserCreatedHandler(),
   handlerId: "users.created.v1",
 });
 

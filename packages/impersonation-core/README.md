@@ -90,21 +90,21 @@ await lifecycleEventPublisher.publishIdempotently(event);
 ### BlockDuringImpersonation 데코레이터
 
 사칭 중 `blockedActions`에 등록된 작업만 차단합니다. 작업 식별자는 데코레이터가 붙은 메서드 이름이며 정확히 일치해야
-합니다. 설정은 `IMPERSONATION_CONFIG_TOKEN`으로 등록해야 하며, 설정이 없거나 식별자에 공백이 있거나 중복되면
+합니다. 생성자에서 주입받은 설정을 데코레이터의 접근자에 전달합니다. 설정이 없거나 식별자에 공백이 있거나 중복되면
 `IMPERSONATION_CONFIGURATION_INVALID`로 실패합니다.
 
 ```typescript
-import { Container } from "@croco/framework-context";
-import { BlockDuringImpersonation, IMPERSONATION_CONFIG_TOKEN } from "@croco/impersonation-core";
-
-Container.set(IMPERSONATION_CONFIG_TOKEN, {
-  maxDurationMs: 30 * 60 * 1000,
-  requireReason: true,
-  blockedActions: ["deleteUser"],
-});
+import { Inject } from "@croco/framework-context";
+import {
+  BlockDuringImpersonation,
+  IMPERSONATION_CONFIG_TOKEN,
+  type ImpersonationConfig,
+} from "@croco/impersonation-core";
 
 class UserService {
-  @BlockDuringImpersonation()
+  constructor(@Inject(IMPERSONATION_CONFIG_TOKEN) readonly config: ImpersonationConfig) {}
+
+  @BlockDuringImpersonation<UserService>((service) => service.config)
   async deleteUser(userId: string) {
     // blockedActions에 deleteUser가 있으므로 사칭 중에는 실행 불가
   }
@@ -222,10 +222,9 @@ actor별 세션과 시작 event intent를 원자적으로 저장합니다. 같�
 
 ```typescript
 import "reflect-metadata";
-import { Container, type RequestContext } from "@croco/framework-context";
+import type { RequestContext } from "@croco/framework-context";
 import {
   AuthProvider,
-  IMPERSONATION_CONFIG_TOKEN,
   ImpersonationEndedEvent,
   ImpersonationLifecycleEventPublisher,
   ImpersonationService,
@@ -256,7 +255,6 @@ const config = {
   blockedActions: ["deleteUser", "updatePassword"],
 };
 
-Container.set(IMPERSONATION_CONFIG_TOKEN, config);
 class MyLifecycleEventPublisher extends ImpersonationLifecycleEventPublisher {
   private readonly publishedEventIds = new Set<string>();
 

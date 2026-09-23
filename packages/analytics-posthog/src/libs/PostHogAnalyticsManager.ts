@@ -1,6 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { AnalyticsManager } from "@croco/analytics-core";
-import { Component, Container, Context, LOGGER_TOKEN, Token } from "@croco/framework-context";
+import {
+  Component,
+  Context,
+  Inject,
+  InjectOptional,
+  LOGGER_TOKEN,
+  Token,
+} from "@croco/framework-context";
 import type { ILogger } from "@croco/framework-context";
 import { PostHogClient } from "@croco/integrations-posthog";
 import {
@@ -23,11 +30,14 @@ export const POSTHOG_ANALYTICS_MANAGER_OPTIONS = new Token<PostHogAnalyticsManag
  */
 @Component()
 export class PostHogAnalyticsManager extends AnalyticsManager {
-  private readonly options: PostHogAnalyticsManagerOptions;
-
-  constructor(private readonly posthogClient: PostHogClient) {
+  constructor(
+    @Inject(() => PostHogClient) private readonly posthogClient: PostHogClient,
+    @InjectOptional(POSTHOG_ANALYTICS_MANAGER_OPTIONS)
+    private readonly options: PostHogAnalyticsManagerOptions = {},
+    @InjectOptional(LOGGER_TOKEN)
+    private readonly logger: Pick<ILogger, "info" | "warn"> = console,
+  ) {
     super();
-    this.options = Container.getOptional(POSTHOG_ANALYTICS_MANAGER_OPTIONS) ?? {};
   }
 
   capture(event: string, properties?: Record<string, unknown>): void {
@@ -157,12 +167,9 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
   }
 
   private getLogger(): Pick<ILogger, "info" | "warn"> {
-    return Container.getOptional(LOGGER_TOKEN) ?? console;
+    return this.logger;
   }
 }
-
-// Source-mode test execution bypasses tsup/SWC, so preserve the DI edge explicitly there.
-Reflect.defineMetadata("design:paramtypes", [PostHogClient], PostHogAnalyticsManager);
 
 type SafePostHogErrorLogMetadata = {
   readonly errorName?: string;

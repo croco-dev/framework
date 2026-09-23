@@ -1,8 +1,16 @@
-import { Container, Inject, Service, Token } from "typedi";
-import type { ContainerInstance } from "typedi";
+import {
+  Component as Service,
+  GENERATED_DI_GRAPH_VERSION,
+  Inject,
+  RuntimeContainer as Container,
+  Token,
+  defineGeneratedDiGraph,
+} from "@croco/framework-context";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
+  createApplicationRuntime,
   createModuleRuntime,
+  InvalidModuleDefinitionProblem,
   ModuleDiagnosticsProvider,
   ModuleLifecycleProblem,
   ModuleProviderUnavailableProblem,
@@ -151,6 +159,7 @@ describe("ModuleRuntime", () => {
       constructor(readonly dependency: UnknownDependency) {}
     }
     Reflect.defineMetadata("design:paramtypes", [UnknownDependency], RuntimeService);
+    Inject(() => UnknownDependency)(RuntimeService, undefined, 0);
 
     const runtime = createModuleRuntime();
     runtime.use({ name: "app", providers: [RuntimeService] });
@@ -159,33 +168,299 @@ describe("ModuleRuntime", () => {
       status: "failed",
       diagnostics: [
         {
-          code: "framework-module/provider-not-visible",
+          code: "framework-module/provider-injection-uninspectable",
           moduleName: "app",
-          token: "UnknownDependency",
-          path: ["app", "RuntimeService", "UnknownDependency"],
+          token: "RuntimeService",
+          path: ["app", "RuntimeService", "parameter:0"],
         },
       ],
     });
     await expect(runtime.initialize()).rejects.toMatchObject({
-      cause: expect.any(ModuleProviderVisibilityProblem),
+      cause: expect.any(InvalidModuleDefinitionProblem),
     });
     await runtime.dispose();
   });
 
-  it("keeps constructor and property injection inside the runtime container", async () => {
+  it("checks generated dependencies against module exports, including useClass aliases", async () => {
+    class Secret {}
+    class Consumer {
+      constructor(readonly secret: Secret) {}
+    }
+    const alias = new Token<Consumer>("consumer-alias");
+    const generatedGraph = defineGeneratedDiGraph({
+      version: GENERATED_DI_GRAPH_VERSION,
+      graphId: "module-visibility",
+      compilerVersion: "test",
+      inputHash: "module-visibility",
+      roots: [Consumer],
+      providers: [
+        {
+          token: Secret,
+          tokenId: "app:Secret",
+          debugName: "Secret",
+          scope: "singleton",
+          dependencies: [],
+          factory: () => new Secret(),
+          sourceLocation: { file: "src/Secret.ts", line: 1, column: 1 },
+        },
+        {
+          token: Consumer,
+          tokenId: "app:Consumer",
+          debugName: "Consumer",
+          scope: "singleton",
+          dependencies: [{ token: Secret, tokenId: "app:Secret", parameterIndex: 0 }],
+          factory: (resolver) => new Consumer(resolver.get(Secret)),
+          sourceLocation: { file: "src/Consumer.ts", line: 1, column: 1 },
+        },
+      ],
+    });
+    const secrets = { name: "secrets", providers: [Secret] };
+
+    for (const provider of [Consumer, { provide: alias, useClass: Consumer }]) {
+      const runtime = createApplicationRuntime({
+        generatedGraph,
+        modules: [secrets, { name: "consumers", providers: [provider] }],
+      });
+
+      expect(runtime.createGraphManifest().moduleGraph.diagnostics).toContainEqual(
+        expect.objectContaining({
+          code: "framework-module/provider-not-visible",
+          moduleName: "consumers",
+          token: "Secret",
+          path: ["consumers", "Consumer", "Secret"],
+        }),
+      );
+      await expect(runtime.initialize()).rejects.toMatchObject({
+        cause: expect.any(ModuleProviderVisibilityProblem),
+      });
+      await runtime.dispose();
+    }
+
+    const exportedSecrets = { ...secrets, exports: [Secret] };
+    let resolved: Consumer | undefined;
+    const runtime = createApplicationRuntime({
+      generatedGraph,
+      modules: [
+        exportedSecrets,
+        {
+          name: "consumers",
+          imports: [exportedSecrets],
+          providers: [Consumer, { provide: alias, useClass: Consumer }],
+          setup: (context) => {
+            resolved = context.get(alias);
+          },
+        },
+      ],
+    });
+
+    expect(runtime.createGraphManifest().moduleGraph.status).toBe("ready");
+    await runtime.initialize();
+    expect(resolved?.secret).toBeInstanceOf(Secret);
+    expect(runtime.get(alias)).toBe(resolved);
+    await runtime.dispose();
+  });
+
+  it("accepts absent optional generated edges but still rejects known private ones", async () => {
+    const optionalToken = new Token<string>("optional-config");
+    class Consumer {
+      constructor(readonly config: string | undefined) {}
+    }
+    const generatedGraph = defineGeneratedDiGraph({
+      version: GENERATED_DI_GRAPH_VERSION,
+      graphId: "optional-module-dependency",
+      compilerVersion: "test",
+      inputHash: "optional-module-dependency",
+      roots: [Consumer],
+      providers: [
+        {
+          token: Consumer,
+          tokenId: "app:Consumer",
+          debugName: "Consumer",
+          scope: "singleton",
+          dependencies: [{ token: optionalToken, tokenId: "app:optional", optional: true }],
+          factory: (resolver) => new Consumer(resolver.getOptional(optionalToken)),
+          sourceLocation: { file: "src/Consumer.ts", line: 1, column: 1 },
+        },
+      ],
+    });
+    const absent = createApplicationRuntime({
+      generatedGraph,
+      modules: [{ name: "consumers", providers: [Consumer] }],
+    });
+
+    expect(absent.createGraphManifest().moduleGraph.status).toBe("ready");
+    await absent.initialize();
+    expect(absent.get(Consumer).config).toBeUndefined();
+    await absent.dispose();
+
+    const privateToken = {
+      name: "secrets",
+      providers: [{ provide: optionalToken, useValue: "secret" }],
+    };
+    const privateDependency = createApplicationRuntime({
+      generatedGraph,
+      modules: [privateToken, { name: "consumers", providers: [Consumer] }],
+    });
+
+    expect(privateDependency.createGraphManifest().moduleGraph.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "framework-module/provider-not-visible",
+        moduleName: "consumers",
+        token: "optional-config",
+      }),
+    );
+    await expect(privateDependency.initialize()).rejects.toMatchObject({
+      cause: expect.any(ModuleProviderVisibilityProblem),
+    });
+    await privateDependency.dispose();
+  });
+
+  it("rejects app-owned generated providers that depend on private module providers", async () => {
+    class Secret {}
+    class Consumer {
+      constructor(readonly secret: Secret) {}
+    }
+    const generatedGraph = defineGeneratedDiGraph({
+      version: GENERATED_DI_GRAPH_VERSION,
+      graphId: "application-private-dependency",
+      compilerVersion: "test",
+      inputHash: "application-private-dependency",
+      roots: [Consumer],
+      providers: [
+        {
+          token: Secret,
+          tokenId: "app:Secret",
+          debugName: "Secret",
+          scope: "singleton",
+          dependencies: [],
+          factory: () => new Secret(),
+          sourceLocation: { file: "src/Secret.ts", line: 1, column: 1 },
+        },
+        {
+          token: Consumer,
+          tokenId: "app:Consumer",
+          debugName: "Consumer",
+          scope: "singleton",
+          dependencies: [{ token: Secret, tokenId: "app:Secret" }],
+          factory: (resolver) => new Consumer(resolver.get(Secret)),
+          sourceLocation: { file: "src/Consumer.ts", line: 1, column: 1 },
+        },
+      ],
+    });
+    const secrets = { name: "secrets", providers: [Secret] };
+    const privateDependency = createApplicationRuntime({ generatedGraph, modules: [secrets] });
+
+    expect(privateDependency.createGraphManifest().moduleGraph.diagnostics).toContainEqual(
+      expect.objectContaining({
+        code: "framework-module/provider-not-visible",
+        moduleName: "<application>",
+        token: "Secret",
+        path: ["<application>", "Consumer", "Secret"],
+      }),
+    );
+    await expect(privateDependency.initialize()).rejects.toBeInstanceOf(
+      ModuleProviderVisibilityProblem,
+    );
+    await privateDependency.dispose();
+
+    const exportedSecrets = { ...secrets, exports: [Secret] };
+    const exportedDependency = createApplicationRuntime({
+      generatedGraph,
+      modules: [exportedSecrets],
+    });
+
+    expect(exportedDependency.createGraphManifest().moduleGraph.status).toBe("ready");
+    await exportedDependency.initialize();
+    expect(exportedDependency.get(Consumer).secret).toBeInstanceOf(Secret);
+    await exportedDependency.dispose();
+  });
+
+  it("keeps useClass implementations private even when their alias is exported", async () => {
+    class Secret {}
+    class Consumer {
+      constructor(readonly secret: Secret) {}
+    }
+    const alias = new Token<Secret>("secret-alias");
+    const generatedGraph = defineGeneratedDiGraph({
+      version: GENERATED_DI_GRAPH_VERSION,
+      graphId: "private-implementation-alias",
+      compilerVersion: "test",
+      inputHash: "private-implementation-alias",
+      roots: [Consumer],
+      providers: [
+        {
+          token: Secret,
+          tokenId: "app:Secret",
+          debugName: "Secret",
+          scope: "singleton",
+          dependencies: [],
+          factory: () => new Secret(),
+          sourceLocation: { file: "src/Secret.ts", line: 1, column: 1 },
+        },
+        {
+          token: Consumer,
+          tokenId: "app:Consumer",
+          debugName: "Consumer",
+          scope: "singleton",
+          dependencies: [{ token: Secret, tokenId: "app:Secret" }],
+          factory: (resolver) => new Consumer(resolver.get(Secret)),
+          sourceLocation: { file: "src/Consumer.ts", line: 1, column: 1 },
+        },
+      ],
+    });
+
+    for (const exports of [[], [alias]]) {
+      const runtime = createApplicationRuntime({
+        generatedGraph,
+        modules: [
+          {
+            name: "secrets",
+            providers: [{ provide: alias, useClass: Secret }],
+            exports,
+          },
+        ],
+      });
+
+      expect(runtime.createGraphManifest().moduleGraph.diagnostics).toContainEqual(
+        expect.objectContaining({
+          code: "framework-module/provider-not-visible",
+          moduleName: "<application>",
+          token: "Secret",
+          path: ["<application>", "Consumer", "Secret"],
+        }),
+      );
+      await expect(runtime.initialize()).rejects.toBeInstanceOf(ModuleProviderVisibilityProblem);
+      await runtime.dispose();
+    }
+
+    const local = createApplicationRuntime({
+      generatedGraph,
+      modules: [
+        {
+          name: "secrets",
+          providers: [{ provide: alias, useClass: Secret }, Consumer],
+        },
+      ],
+    });
+
+    expect(local.createGraphManifest().moduleGraph.status).toBe("ready");
+    await local.initialize();
+    expect(local.get(Consumer).secret).toBeInstanceOf(Secret);
+    await local.dispose();
+  });
+
+  it("keeps explicit factories inside the runtime container", async () => {
     const constructorToken = new Token<string>("constructor-config");
     const propertyToken = new Token<string>("property-config");
     Container.set({ id: constructorToken, value: "global-constructor", global: true });
     Container.set({ id: propertyToken, value: "global-property", global: true });
 
-    @Service()
     class RuntimeService {
-      @Inject(propertyToken)
-      readonly propertyConfig: string | undefined;
-
-      constructor(@Inject(constructorToken) readonly constructorConfig: string) {}
+      constructor(
+        readonly constructorConfig: string,
+        readonly propertyConfig: string,
+      ) {}
     }
-    Reflect.defineMetadata("design:paramtypes", [String], RuntimeService);
 
     const runtime = createModuleRuntime();
     runtime.use({
@@ -193,7 +468,11 @@ describe("ModuleRuntime", () => {
       providers: [
         { provide: constructorToken, useValue: "runtime-constructor" },
         { provide: propertyToken, useValue: "runtime-property" },
-        RuntimeService,
+        {
+          provide: RuntimeService,
+          useFactory: (context) =>
+            new RuntimeService(context.get(constructorToken), context.get(propertyToken)),
+        },
       ],
     });
 
@@ -213,21 +492,28 @@ describe("ModuleRuntime", () => {
 
     Container.set({ id: RuntimeDependency, type: GlobalDependency, global: true });
 
-    @Service()
     class ReflectedService {
       constructor(readonly dependency: RuntimeDependency) {}
     }
-    Reflect.defineMetadata("design:paramtypes", [RuntimeDependency], ReflectedService);
 
     runtime.reset();
-    runtime.use({ name: "reflected", providers: [RuntimeDependency, ReflectedService] });
+    runtime.use({
+      name: "reflected",
+      providers: [
+        RuntimeDependency,
+        {
+          provide: ReflectedService,
+          useFactory: (context) => new ReflectedService(context.get(RuntimeDependency)),
+        },
+      ],
+    });
     const reflectedContext = await runtime.initialize();
     expect(reflectedContext.get(ReflectedService).dependency).toBeInstanceOf(RuntimeDependency);
     expect(reflectedContext.get(ReflectedService).dependency.source).toBe("runtime");
     await runtime.dispose();
   });
 
-  it("does not cache partially initialized services after property injection fails", async () => {
+  it("rejects uncompiled property injection before provider registration", async () => {
     const missingPropertyToken = new Token<string>("missing-property-config");
 
     @Service()
@@ -242,29 +528,30 @@ describe("ModuleRuntime", () => {
       providers: [missingPropertyToken, IncompleteService],
     });
 
-    const context = await runtime.initialize();
-    expect(() => context.get(IncompleteService)).toThrow(ModuleProviderUnavailableProblem);
-    expect(() => context.get(IncompleteService)).toThrow(ModuleProviderUnavailableProblem);
+    await expect(runtime.initialize()).rejects.toMatchObject({
+      cause: expect.any(InvalidModuleDefinitionProblem),
+    });
     await runtime.dispose();
   });
 
-  it("does not expose the process-global container through class construction", async () => {
+  it("rejects constructor parameters without a generated edge or explicit factory", async () => {
     const globalToken = new Token<string>("imperative-global-config");
     Container.set({ id: globalToken, value: "global", global: true });
 
     class ImperativeService {
       readonly config: string;
 
-      constructor(container?: ContainerInstance) {
-        this.config = container?.get(globalToken) ?? "missing";
+      constructor(config: string) {
+        this.config = config;
       }
     }
 
     const runtime = createModuleRuntime();
     runtime.use({ name: "app", providers: [ImperativeService] });
 
-    const context = await runtime.initialize();
-    expect(() => context.get(ImperativeService)).toThrow(ModuleProviderUnavailableProblem);
+    await expect(runtime.initialize()).rejects.toMatchObject({
+      cause: expect.any(InvalidModuleDefinitionProblem),
+    });
     await runtime.dispose();
   });
 

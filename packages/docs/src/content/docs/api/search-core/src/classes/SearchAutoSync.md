@@ -15,13 +15,21 @@ title: "SearchAutoSync"
 
 ### Constructor
 
-> **new SearchAutoSync**(`failedEventPublisher?`): `SearchAutoSync`
+> **new SearchAutoSync**(`failedEventPublisher?`, `searchEngine`, `logger?`): `SearchAutoSync`
 
 #### Parameters
 
 ##### failedEventPublisher?
 
 [`SearchSyncFailedEventPublisher`](/api/search-core/src/type-aliases/searchsyncfailedeventpublisher/) \| `undefined`
+
+##### searchEngine
+
+[`SearchEngine`](/api/search-core/src/classes/searchengine/)
+
+##### logger?
+
+[`ILogger`](/api/framework-context/src/interfaces/ilogger/)
 
 #### Returns
 

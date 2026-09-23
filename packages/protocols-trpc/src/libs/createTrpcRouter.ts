@@ -119,7 +119,7 @@ class TrpcDuplicateProcedureProblem extends Problem {
  * runtime inspector.
  */
 export function createTrpcRouter(
-  controllers: Function[],
+  controllers: readonly Function[] = Container.getGeneratedProviderTokens("rest-controller"),
   options: TrpcRouterOptions = {},
 ): AnyRouter {
   const domains: Record<string, TRPCCreateRouterOptions> = {};

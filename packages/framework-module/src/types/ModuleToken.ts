@@ -1,4 +1,4 @@
-import type { Token } from "typedi";
+import type { Token } from "@croco/framework-context";
 
 export type Constructor<T = unknown> = new (...args: never[]) => T;
 

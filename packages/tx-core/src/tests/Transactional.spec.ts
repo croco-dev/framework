@@ -1,4 +1,4 @@
-import { Container, TRANSACTION_CONTEXT_TOKEN } from "@croco/framework-context";
+import { Container } from "@croco/framework-context";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DuplicateTxManagerRegistrationProblem,
@@ -26,94 +26,100 @@ function createMockAdapter(
 }
 
 describe("TxManagerRegistry", () => {
+  const registry = new TxManagerRegistry();
+  it("isolates named managers between application-owned registries", () => {
+    const first = new TxManagerRegistry();
+    const second = new TxManagerRegistry();
+    const manager = new TxManager(createMockAdapter());
+    first.register(manager, "billing");
+    expect(first.get("billing")).toBe(manager);
+    expect(second.has("billing")).toBe(false);
+    expect(() => second.get("billing")).toThrow(TxManagerNotRegisteredError);
+    second.clear();
+    expect(first.get("billing")).toBe(manager);
+  });
   let mockAdapter!: TxAdapter<{ id: string }>;
   let txManager!: TxManager<{ id: string }>;
 
   beforeEach(() => {
     Container.reset();
-    TxManagerRegistry.clear();
+    registry.clear();
     mockAdapter = createMockAdapter();
     txManager = new TxManager(mockAdapter);
   });
 
   afterEach(() => {
     Container.reset();
-    TxManagerRegistry.clear();
+    registry.clear();
   });
 
   describe("register", () => {
     it("should register manager with default key", () => {
-      TxManagerRegistry.register(txManager);
-      expect(TxManagerRegistry.has()).toBe(true);
+      registry.register(txManager);
+      expect(registry.has()).toBe(true);
     });
 
     it("should register manager with custom key", () => {
-      TxManagerRegistry.register(txManager, "custom-key");
-      expect(TxManagerRegistry.has("custom-key")).toBe(true);
+      registry.register(txManager, "custom-key");
+      expect(registry.has("custom-key")).toBe(true);
     });
 
     it("should allow multiple managers with different keys", () => {
       const txManager2 = new TxManager(createMockAdapter());
-      TxManagerRegistry.register(txManager, "key1");
-      TxManagerRegistry.register(txManager2, "key2");
+      registry.register(txManager, "key1");
+      registry.register(txManager2, "key2");
 
-      expect(TxManagerRegistry.get("key1")).toBe(txManager);
-      expect(TxManagerRegistry.get("key2")).toBe(txManager2);
+      expect(registry.get("key1")).toBe(txManager);
+      expect(registry.get("key2")).toBe(txManager2);
     });
 
     it("should fail fast when the default manager is registered twice", () => {
       const txManager2 = new TxManager(createMockAdapter());
 
-      TxManagerRegistry.register(txManager);
+      registry.register(txManager);
 
-      expect(() => TxManagerRegistry.register(txManager2)).toThrow(
-        DuplicateTxManagerRegistrationProblem,
-      );
-      expect(TxManagerRegistry.get()).toBe(txManager);
-      expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).toBe(txManager);
+      expect(() => registry.register(txManager2)).toThrow(DuplicateTxManagerRegistrationProblem);
+      expect(registry.get()).toBe(txManager);
     });
 
     it("should fail fast when the same custom key is registered twice", () => {
       const txManager2 = new TxManager(createMockAdapter());
 
-      TxManagerRegistry.register(txManager, "custom-key");
+      registry.register(txManager, "custom-key");
 
-      expect(() => TxManagerRegistry.register(txManager2, "custom-key")).toThrow(
+      expect(() => registry.register(txManager2, "custom-key")).toThrow(
         DuplicateTxManagerRegistrationProblem,
       );
-      expect(TxManagerRegistry.get("custom-key")).toBe(txManager);
+      expect(registry.get("custom-key")).toBe(txManager);
     });
 
     it("should keep existing bindings unchanged when duplicate default registration fails", () => {
       const txManager2 = new TxManager(createMockAdapter());
 
-      TxManagerRegistry.register(txManager);
+      registry.register(txManager);
 
-      expect(() => TxManagerRegistry.register(txManager2)).toThrow(
-        DuplicateTxManagerRegistrationProblem,
-      );
-      expect(TxManagerRegistry.has()).toBe(true);
-      expect(TxManagerRegistry.get()).toBe(txManager);
-      expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).toBe(txManager);
+      expect(() => registry.register(txManager2)).toThrow(DuplicateTxManagerRegistrationProblem);
+      expect(registry.has()).toBe(true);
+      expect(registry.get()).toBe(txManager);
     });
   });
 
   describe("get", () => {
     it("should return registered manager with default key", () => {
-      TxManagerRegistry.register(txManager);
-      const result = TxManagerRegistry.get();
+      registry.register(txManager);
+      const result = registry.get();
       expect(result).toBe(txManager);
     });
 
     it("should return registered manager with custom key", () => {
-      TxManagerRegistry.register(txManager, "custom-key");
-      const result = TxManagerRegistry.get("custom-key");
+      registry.register(txManager, "custom-key");
+      const result = registry.get("custom-key");
       expect(result).toBe(txManager);
     });
 
     it("should throw TxManagerNotRegisteredError when manager not registered", () => {
-      expect(() => TxManagerRegistry.get("nonexistent")).toThrow(TxManagerNotRegisteredError);
-      expect(() => TxManagerRegistry.get("nonexistent")).toThrow(
+      expect(() => registry.get("nonexistent")).toThrow(TxManagerNotRegisteredError);
+      expect(() => registry.get("nonexistent")).toThrow(
         "TxManager not registered for key: nonexistent",
       );
     });
@@ -121,87 +127,96 @@ describe("TxManagerRegistry", () => {
 
   describe("has", () => {
     it("should return false when no manager registered", () => {
-      expect(TxManagerRegistry.has()).toBe(false);
+      expect(registry.has()).toBe(false);
     });
 
     it("should return true when manager registered with default key", () => {
-      TxManagerRegistry.register(txManager);
-      expect(TxManagerRegistry.has()).toBe(true);
+      registry.register(txManager);
+      expect(registry.has()).toBe(true);
     });
 
     it("should return true when manager registered with custom key", () => {
-      TxManagerRegistry.register(txManager, "custom-key");
-      expect(TxManagerRegistry.has("custom-key")).toBe(true);
+      registry.register(txManager, "custom-key");
+      expect(registry.has("custom-key")).toBe(true);
     });
 
     it("should return false for unregistered key", () => {
-      TxManagerRegistry.register(txManager, "key1");
-      expect(TxManagerRegistry.has("key2")).toBe(false);
+      registry.register(txManager, "key1");
+      expect(registry.has("key2")).toBe(false);
     });
   });
 
   describe("clear", () => {
     it("should remove all registered managers", () => {
-      TxManagerRegistry.register(txManager, "key1");
-      TxManagerRegistry.register(new TxManager(createMockAdapter()), "key2");
+      registry.register(txManager, "key1");
+      registry.register(new TxManager(createMockAdapter()), "key2");
 
-      TxManagerRegistry.clear();
+      registry.clear();
 
-      expect(TxManagerRegistry.has("key1")).toBe(false);
-      expect(TxManagerRegistry.has("key2")).toBe(false);
+      expect(registry.has("key1")).toBe(false);
+      expect(registry.has("key2")).toBe(false);
     });
 
     it("should allow re-registering after clear", () => {
-      TxManagerRegistry.register(txManager);
-      TxManagerRegistry.clear();
-      expect(TxManagerRegistry.has()).toBe(false);
+      registry.register(txManager);
+      registry.clear();
+      expect(registry.has()).toBe(false);
 
-      TxManagerRegistry.register(txManager);
-      expect(TxManagerRegistry.has()).toBe(true);
+      registry.register(txManager);
+      expect(registry.has()).toBe(true);
     });
 
     it("should allow re-registering the same key after clear", () => {
       const txManager2 = new TxManager(createMockAdapter());
 
-      TxManagerRegistry.register(txManager, "custom-key");
-      TxManagerRegistry.clear();
+      registry.register(txManager, "custom-key");
+      registry.clear();
 
-      TxManagerRegistry.register(txManager2, "custom-key");
+      registry.register(txManager2, "custom-key");
 
-      expect(TxManagerRegistry.get("custom-key")).toBe(txManager2);
-    });
-
-    it("should remove transaction context token from Container on clear", () => {
-      TxManagerRegistry.register(txManager);
-
-      expect(Container.get(TRANSACTION_CONTEXT_TOKEN as never)).toBe(txManager);
-
-      TxManagerRegistry.clear();
-
-      expect(() => Container.get(TRANSACTION_CONTEXT_TOKEN as never)).toThrow();
+      expect(registry.get("custom-key")).toBe(txManager2);
     });
   });
 });
 
 describe("@Transactional decorator", () => {
+  const registry = new TxManagerRegistry();
   let txManager!: TxManager<{ id: string }>;
   let mockAdapter!: TxAdapter<{ id: string }>;
 
+  it("uses the manager injected into each receiver without cross-application state", async () => {
+    class Service {
+      constructor(readonly manager: TxManager<{ id: string }>) {}
+
+      @Transactional((service: Service) => service.manager)
+      async execute() {
+        return this.manager.getClient();
+      }
+    }
+    const firstAdapter = createMockAdapter();
+    const secondAdapter = createMockAdapter();
+    const first = new Service(new TxManager(firstAdapter));
+    const second = new Service(new TxManager(secondAdapter));
+    await Promise.all([first.execute(), second.execute()]);
+    expect(firstAdapter.transaction).toHaveBeenCalledTimes(1);
+    expect(secondAdapter.transaction).toHaveBeenCalledTimes(1);
+  });
+
   beforeEach(() => {
-    TxManagerRegistry.clear();
+    registry.clear();
     mockAdapter = createMockAdapter();
     txManager = new TxManager(mockAdapter);
-    TxManagerRegistry.register(txManager);
+    registry.register(txManager);
   });
 
   afterEach(() => {
-    TxManagerRegistry.clear();
+    registry.clear();
   });
 
   describe("REQUIRED propagation", () => {
     it("should create new transaction when not in transaction", async () => {
       class TestService {
-        @Transactional({ propagation: "REQUIRED" })
+        @Transactional(() => txManager, { propagation: "REQUIRED" })
         async execute() {
           return "result";
         }
@@ -216,12 +231,12 @@ describe("@Transactional decorator", () => {
 
     it("should join existing transaction when in transaction", async () => {
       class TestService {
-        @Transactional({ propagation: "REQUIRED" })
+        @Transactional(() => txManager, { propagation: "REQUIRED" })
         async outer() {
           return await this.inner();
         }
 
-        @Transactional({ propagation: "REQUIRED" })
+        @Transactional(() => txManager, { propagation: "REQUIRED" })
         async inner() {
           return "nested-result";
         }
@@ -236,7 +251,7 @@ describe("@Transactional decorator", () => {
 
     it("should use default propagation (REQUIRED) when not specified", async () => {
       class TestService {
-        @Transactional()
+        @Transactional(() => txManager)
         async execute() {
           return "result";
         }
@@ -253,7 +268,7 @@ describe("@Transactional decorator", () => {
   describe("REQUIRES_NEW propagation", () => {
     it("should suspend existing transaction and create new one", async () => {
       class TestService {
-        @Transactional({ propagation: "REQUIRED" })
+        @Transactional(() => txManager, { propagation: "REQUIRED" })
         async outer() {
           const outerClientId = txManager.getClient()?.id;
           await this.inner();
@@ -261,7 +276,7 @@ describe("@Transactional decorator", () => {
           return { outerClientId, afterInnerClientId };
         }
 
-        @Transactional({ propagation: "REQUIRES_NEW" })
+        @Transactional(() => txManager, { propagation: "REQUIRES_NEW" })
         async inner() {
           const innerClientId = txManager.getClient()?.id;
           return { innerClientId };
@@ -276,7 +291,7 @@ describe("@Transactional decorator", () => {
 
     it("should create new transaction even when not in existing transaction", async () => {
       class TestService {
-        @Transactional({ propagation: "REQUIRES_NEW" })
+        @Transactional(() => txManager, { propagation: "REQUIRES_NEW" })
         async execute() {
           return "result";
         }
@@ -293,12 +308,12 @@ describe("@Transactional decorator", () => {
   describe("MANDATORY propagation", () => {
     it("should execute normally when in existing transaction", async () => {
       class TestService {
-        @Transactional({ propagation: "REQUIRED" })
+        @Transactional(() => txManager, { propagation: "REQUIRED" })
         async outer() {
           return await this.inner();
         }
 
-        @Transactional({ propagation: "MANDATORY" })
+        @Transactional(() => txManager, { propagation: "MANDATORY" })
         async inner() {
           return "mandatory-result";
         }
@@ -313,7 +328,7 @@ describe("@Transactional decorator", () => {
 
     it("should throw TxPropagationError when not in transaction", async () => {
       class TestService {
-        @Transactional({ propagation: "MANDATORY" })
+        @Transactional(() => txManager, { propagation: "MANDATORY" })
         async execute() {
           return "result";
         }
@@ -332,7 +347,7 @@ describe("@Transactional decorator", () => {
   describe("NEVER propagation", () => {
     it("should execute normally when not in transaction", async () => {
       class TestService {
-        @Transactional({ propagation: "NEVER" })
+        @Transactional(() => txManager, { propagation: "NEVER" })
         async execute() {
           return "never-result";
         }
@@ -347,12 +362,12 @@ describe("@Transactional decorator", () => {
 
     it("should throw TxPropagationError when in transaction", async () => {
       class TestService {
-        @Transactional({ propagation: "REQUIRED" })
+        @Transactional(() => txManager, { propagation: "REQUIRED" })
         async outer() {
           return await this.inner();
         }
 
-        @Transactional({ propagation: "NEVER" })
+        @Transactional(() => txManager, { propagation: "NEVER" })
         async inner() {
           return "result";
         }
@@ -371,15 +386,15 @@ describe("@Transactional decorator", () => {
     it("should use different TxManager with custom key", async () => {
       const customAdapter = createMockAdapter();
       const customTxManager = new TxManager(customAdapter);
-      TxManagerRegistry.register(customTxManager, "custom-key");
+      registry.register(customTxManager, "custom-key");
 
       class TestService {
-        @Transactional({ managerKey: "custom-key" })
+        @Transactional(() => registry.get("custom-key"))
         async withCustomManager() {
           return "custom-result";
         }
 
-        @Transactional()
+        @Transactional(() => txManager)
         async withDefaultManager() {
           return "default-result";
         }
@@ -397,7 +412,7 @@ describe("@Transactional decorator", () => {
   describe("error propagation", () => {
     it("should propagate errors from decorated method", async () => {
       class TestService {
-        @Transactional({ propagation: "REQUIRED" })
+        @Transactional(() => txManager, { propagation: "REQUIRED" })
         async executeWithError() {
           throw new Error("Method error");
         }
@@ -411,12 +426,12 @@ describe("@Transactional decorator", () => {
 
     it("should propagate errors through nested transactions", async () => {
       class TestService {
-        @Transactional({ propagation: "REQUIRED" })
+        @Transactional(() => txManager, { propagation: "REQUIRED" })
         async outer() {
           await this.inner();
         }
 
-        @Transactional({ propagation: "REQUIRED" })
+        @Transactional(() => txManager, { propagation: "REQUIRED" })
         async inner() {
           throw new Error("Inner error");
         }
@@ -431,7 +446,7 @@ describe("@Transactional decorator", () => {
     it("should reject decorated afterCommit registration before its outcome can be discarded", async () => {
       const hook = vi.fn();
       class TestService {
-        @Transactional({ propagation: "REQUIRED" })
+        @Transactional(() => txManager, { propagation: "REQUIRED" })
         async execute() {
           txManager.onAfterCommit(hook);
           return "result";
@@ -451,7 +466,7 @@ describe("@Transactional decorator", () => {
   describe("custom options", () => {
     it("should pass custom options to txManager.run", async () => {
       class TestService {
-        @Transactional({
+        @Transactional(() => txManager, {
           nesting: "savepoint",
           options: { timeout: 1000 },
         })
@@ -471,7 +486,7 @@ describe("@Transactional decorator", () => {
   describe("edge cases", () => {
     it("should handle method with multiple arguments", async () => {
       class TestService {
-        @Transactional()
+        @Transactional(() => txManager)
         async sum(a: number, b: number, c: number) {
           return a + b + c;
         }
@@ -486,7 +501,7 @@ describe("@Transactional decorator", () => {
 
     it("should handle method returning promise", async () => {
       class TestService {
-        @Transactional()
+        @Transactional(() => txManager)
         async asyncOperation() {
           return Promise.resolve("async-result");
         }
@@ -501,7 +516,7 @@ describe("@Transactional decorator", () => {
 
     it("should handle method returning undefined", async () => {
       class TestService {
-        @Transactional()
+        @Transactional(() => txManager)
         async voidOperation() {}
       }
 

@@ -14,6 +14,12 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/saas-billing-golden-path/src/tests/injected-transaction-boundary.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/saas-billing-golden-path/src/tests/membership-quantity.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -1537,6 +1543,18 @@
       "owner": "@croco/esbuild-plugin"
     },
     {
+      "path": "packages/esbuild-plugin/src/tests/DiCompiler.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/esbuild-plugin"
+    },
+    {
+      "path": "packages/esbuild-plugin/src/tests/PublishedGraphConsumer.spec.ts",
+      "lane": "published",
+      "qualifiers": [],
+      "owner": "@croco/esbuild-plugin"
+    },
+    {
       "path": "packages/events-core/src/tests/BehavioralEvidence.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -1796,6 +1814,12 @@
     },
     {
       "path": "packages/framework-context/src/tests/FrameworkContext.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/framework-context"
+    },
+    {
+      "path": "packages/framework-context/src/tests/GeneratedDiGraph.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/framework-context"
@@ -4304,6 +4328,12 @@
     },
     {
       "path": "packages/tx-drizzle/src/tests/DrizzleTxAdapter.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/tx-drizzle"
+    },
+    {
+      "path": "packages/tx-drizzle/src/tests/ExplicitTransactionBoundary.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/tx-drizzle"

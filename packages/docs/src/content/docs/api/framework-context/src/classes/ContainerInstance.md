@@ -5,20 +5,29 @@ prev: false
 title: "ContainerInstance"
 ---
 
-TypeDI can have multiple containers.
-One container is ContainerInstance.
+Croco runtime 컨테이너 인스턴스 타입입니다.
+
+## Example
+
+```typescript
+import { ContainerInstance } from "@croco/framework-context";
+
+function setup(container: ContainerInstance) {
+  container.set("key", value);
+}
+```
 
 ## Constructors
 
 ### Constructor
 
-> **new ContainerInstance**(`id`): `ContainerInstance`
+> **new ContainerInstance**(`id?`): `ContainerInstance`
 
 #### Parameters
 
-##### id
+##### id?
 
-`string`
+`string` = `"default"`
 
 #### Returns
 
@@ -28,126 +37,53 @@ One container is ContainerInstance.
 
 ### id
 
-> `readonly` **id**: `string`
+> `readonly` **id**: `string` = `"default"`
 
-Container instance id.
+---
+
+### services
+
+> `readonly` **services**: [`ServiceMetadata`](/api/framework-context/src/type-aliases/servicemetadata/)\<`unknown`\>[] = `[]`
 
 ## Methods
 
+### destroyServiceInstance()
+
+> **destroyServiceInstance**(`service`, `disposedValues?`): `void`
+
+#### Parameters
+
+##### service
+
+[`ServiceMetadata`](/api/framework-context/src/type-aliases/servicemetadata/)\<`unknown`\>
+
+##### disposedValues?
+
+`Set`\<`unknown`\>
+
+#### Returns
+
+`void`
+
+---
+
 ### get()
 
-#### Call Signature
+> **get**\<`T`\>(`identifier`): `T`
 
-> **get**\<`T`\>(`type`): `T`
+#### Type Parameters
 
-Retrieves the service with given name or type from the service container.
-Optionally, parameters can be passed in case if instance is initialized in the container for the first time.
-
-##### Type Parameters
-
-###### T
+##### T
 
 `T`
 
-##### Parameters
+#### Parameters
 
-###### type
+##### identifier
 
-`Constructable`\<`T`\>
+[`ServiceIdentifier`](/api/framework-context/src/type-aliases/serviceidentifier/)\<`T`\>
 
-##### Returns
-
-`T`
-
-#### Call Signature
-
-> **get**\<`T`\>(`type`): `T`
-
-Retrieves the service with given name or type from the service container.
-Optionally, parameters can be passed in case if instance is initialized in the container for the first time.
-
-##### Type Parameters
-
-###### T
-
-`T`
-
-##### Parameters
-
-###### type
-
-`AbstractConstructable`\<`T`\>
-
-##### Returns
-
-`T`
-
-#### Call Signature
-
-> **get**\<`T`\>(`id`): `T`
-
-Retrieves the service with given name or type from the service container.
-Optionally, parameters can be passed in case if instance is initialized in the container for the first time.
-
-##### Type Parameters
-
-###### T
-
-`T`
-
-##### Parameters
-
-###### id
-
-`string`
-
-##### Returns
-
-`T`
-
-#### Call Signature
-
-> **get**\<`T`\>(`id`): `T`
-
-Retrieves the service with given name or type from the service container.
-Optionally, parameters can be passed in case if instance is initialized in the container for the first time.
-
-##### Type Parameters
-
-###### T
-
-`T`
-
-##### Parameters
-
-###### id
-
-[`Token`](/api/framework-context/src/classes/token/)\<`T`\>
-
-##### Returns
-
-`T`
-
-#### Call Signature
-
-> **get**\<`T`\>(`id`): `T`
-
-Retrieves the service with given name or type from the service container.
-Optionally, parameters can be passed in case if instance is initialized in the container for the first time.
-
-##### Type Parameters
-
-###### T
-
-`T`
-
-##### Parameters
-
-###### id
-
-`ServiceIdentifier`\<`T`\>
-
-##### Returns
+#### Returns
 
 `T`
 
@@ -155,191 +91,65 @@ Optionally, parameters can be passed in case if instance is initialized in the c
 
 ### getMany()
 
-#### Call Signature
+> **getMany**\<`T`\>(`identifier`): `T`[]
 
-> **getMany**\<`T`\>(`type`): `T`[]
+#### Type Parameters
 
-Gets all instances registered in the container of the given service identifier.
-Used when service defined with multiple: true flag.
-
-##### Type Parameters
-
-###### T
+##### T
 
 `T`
 
-##### Parameters
+#### Parameters
 
-###### type
+##### identifier
 
-`Constructable`\<`T`\>
+[`ServiceIdentifier`](/api/framework-context/src/type-aliases/serviceidentifier/)\<`T`\>
 
-##### Returns
-
-`T`[]
-
-#### Call Signature
-
-> **getMany**\<`T`\>(`type`): `T`[]
-
-Gets all instances registered in the container of the given service identifier.
-Used when service defined with multiple: true flag.
-
-##### Type Parameters
-
-###### T
-
-`T`
-
-##### Parameters
-
-###### type
-
-`AbstractConstructable`\<`T`\>
-
-##### Returns
-
-`T`[]
-
-#### Call Signature
-
-> **getMany**\<`T`\>(`id`): `T`[]
-
-Gets all instances registered in the container of the given service identifier.
-Used when service defined with multiple: true flag.
-
-##### Type Parameters
-
-###### T
-
-`T`
-
-##### Parameters
-
-###### id
-
-`string`
-
-##### Returns
-
-`T`[]
-
-#### Call Signature
-
-> **getMany**\<`T`\>(`id`): `T`[]
-
-Gets all instances registered in the container of the given service identifier.
-Used when service defined with multiple: true flag.
-
-##### Type Parameters
-
-###### T
-
-`T`
-
-##### Parameters
-
-###### id
-
-[`Token`](/api/framework-context/src/classes/token/)\<`T`\>
-
-##### Returns
-
-`T`[]
-
-#### Call Signature
-
-> **getMany**\<`T`\>(`id`): `T`[]
-
-Gets all instances registered in the container of the given service identifier.
-Used when service defined with multiple: true flag.
-
-##### Type Parameters
-
-###### T
-
-`T`
-
-##### Parameters
-
-###### id
-
-`ServiceIdentifier`\<`T`\>
-
-##### Returns
+#### Returns
 
 `T`[]
 
 ---
 
+### getServiceValue()
+
+> **getServiceValue**\<`T`\>(`service`): `T`
+
+#### Type Parameters
+
+##### T
+
+`T`
+
+#### Parameters
+
+##### service
+
+[`ServiceMetadata`](/api/framework-context/src/type-aliases/servicemetadata/)\<`T`\>
+
+#### Returns
+
+`T`
+
+---
+
 ### has()
 
-#### Call Signature
+> **has**\<`T`\>(`identifier`): `boolean`
 
-> **has**\<`T`\>(`type`): `boolean`
+#### Type Parameters
 
-Checks if the service with given name or type is registered service container.
-Optionally, parameters can be passed in case if instance is initialized in the container for the first time.
-
-##### Type Parameters
-
-###### T
+##### T
 
 `T`
 
-##### Parameters
+#### Parameters
 
-###### type
+##### identifier
 
-`Constructable`\<`T`\>
+[`ServiceIdentifier`](/api/framework-context/src/type-aliases/serviceidentifier/)\<`T`\>
 
-##### Returns
-
-`boolean`
-
-#### Call Signature
-
-> **has**\<`T`\>(`id`): `boolean`
-
-Checks if the service with given name or type is registered service container.
-Optionally, parameters can be passed in case if instance is initialized in the container for the first time.
-
-##### Type Parameters
-
-###### T
-
-`T`
-
-##### Parameters
-
-###### id
-
-`string`
-
-##### Returns
-
-`boolean`
-
-#### Call Signature
-
-> **has**\<`T`\>(`id`): `boolean`
-
-Checks if the service with given name or type is registered service container.
-Optionally, parameters can be passed in case if instance is initialized in the container for the first time.
-
-##### Type Parameters
-
-###### T
-
-`T`
-
-##### Parameters
-
-###### id
-
-[`Token`](/api/framework-context/src/classes/token/)\<`T`\>
-
-##### Returns
+#### Returns
 
 `boolean`
 
@@ -347,15 +157,19 @@ Optionally, parameters can be passed in case if instance is initialized in the c
 
 ### remove()
 
-> **remove**(`identifierOrIdentifierArray`): `this`
+> **remove**\<`T`\>(`identifier`): `this`
 
-Removes services with a given service identifiers.
+#### Type Parameters
+
+##### T
+
+`T`
 
 #### Parameters
 
-##### identifierOrIdentifierArray
+##### identifier
 
-`ServiceIdentifier` \| `ServiceIdentifier`[]
+[`ServiceIdentifier`](/api/framework-context/src/type-aliases/serviceidentifier/)\<`T`\>
 
 #### Returns
 
@@ -365,17 +179,19 @@ Removes services with a given service identifiers.
 
 ### reset()
 
-> **reset**(`options?`): `this`
-
-Completely resets the container by removing all previously registered services from it.
+> **reset**(`_options?`, `disposedValues?`): `this`
 
 #### Parameters
 
-##### options?
+##### \_options?
 
-###### strategy
+###### strategy?
 
-`"resetValue"` \| `"resetServices"`
+`"resetServices"`
+
+##### disposedValues?
+
+`Set`\<`unknown`\> = `...`
 
 #### Returns
 
@@ -387,195 +203,43 @@ Completely resets the container by removing all previously registered services f
 
 #### Call Signature
 
-> **set**\<`T`\>(`service`): `this`
-
-Sets a value for the given type or service name in the container.
+> **set**\<`T`\>(`options`): `this`
 
 ##### Type Parameters
 
 ###### T
-
-`T` = `unknown`
-
-##### Parameters
-
-###### service
-
-`ServiceMetadata`\<`T`\>
-
-##### Returns
-
-`this`
-
-#### Call Signature
-
-> **set**\<`T`\>(`type`, `instance`): `this`
-
-Sets a value for the given type or service name in the container.
-
-##### Type Parameters
-
-###### T
-
-`T` = `unknown`
-
-##### Parameters
-
-###### type
-
-`Constructable`\<`T`\>
-
-###### instance
 
 `T`
 
+##### Parameters
+
+###### options
+
+[`ServiceOptions`](/api/framework-context/src/type-aliases/serviceoptions/)\<`T`\>
+
 ##### Returns
 
 `this`
 
 #### Call Signature
 
-> **set**\<`T`\>(`type`, `instance`): `this`
-
-Sets a value for the given type or service name in the container.
+> **set**\<`T`\>(`identifier`, `value`): `this`
 
 ##### Type Parameters
 
 ###### T
-
-`T` = `unknown`
-
-##### Parameters
-
-###### type
-
-`AbstractConstructable`\<`T`\>
-
-###### instance
 
 `T`
 
-##### Returns
-
-`this`
-
-#### Call Signature
-
-> **set**\<`T`\>(`name`, `instance`): `this`
-
-Sets a value for the given type or service name in the container.
-
-##### Type Parameters
-
-###### T
-
-`T` = `unknown`
-
 ##### Parameters
 
-###### name
+###### identifier
 
-`string`
+[`ServiceIdentifier`](/api/framework-context/src/type-aliases/serviceidentifier/)\<`T`\>
 
-###### instance
+###### value
 
 `T`
-
-##### Returns
-
-`this`
-
-#### Call Signature
-
-> **set**\<`T`\>(`token`, `instance`): `this`
-
-Sets a value for the given type or service name in the container.
-
-##### Type Parameters
-
-###### T
-
-`T` = `unknown`
-
-##### Parameters
-
-###### token
-
-[`Token`](/api/framework-context/src/classes/token/)\<`T`\>
-
-###### instance
-
-`T`
-
-##### Returns
-
-`this`
-
-#### Call Signature
-
-> **set**\<`T`\>(`token`, `instance`): `this`
-
-Sets a value for the given type or service name in the container.
-
-##### Type Parameters
-
-###### T
-
-`T` = `unknown`
-
-##### Parameters
-
-###### token
-
-`ServiceIdentifier`
-
-###### instance
-
-`T`
-
-##### Returns
-
-`this`
-
-#### Call Signature
-
-> **set**\<`T`\>(`metadata`): `this`
-
-Sets a value for the given type or service name in the container.
-
-##### Type Parameters
-
-###### T
-
-`T` = `unknown`
-
-##### Parameters
-
-###### metadata
-
-`ServiceOptions`\<`T`\>
-
-##### Returns
-
-`this`
-
-#### Call Signature
-
-> **set**\<`T`\>(`metadataArray`): `this`
-
-Sets a value for the given type or service name in the container.
-
-##### Type Parameters
-
-###### T
-
-`T` = `unknown`
-
-##### Parameters
-
-###### metadataArray
-
-`ServiceOptions`\<`T`\>[]
 
 ##### Returns
 

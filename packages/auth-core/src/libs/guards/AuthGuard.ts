@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { Container, Token } from "@croco/framework-context";
+import { InjectOptional, Token } from "@croco/framework-context";
 import { AUTH_PUBLIC_KEY } from "../constants";
 import type { AuthProvider } from "../interfaces/AuthProvider";
 import type { AuthRequest } from "../interfaces/AuthRequest";
@@ -25,6 +25,8 @@ function isPublicRoute(controllerTarget: object, handler: string | symbol): bool
 }
 
 export class AuthGuard implements Guard<RouteExecutionContext> {
+  constructor(@InjectOptional(AUTH_PROVIDER_TOKEN) private readonly authProvider?: AuthProvider) {}
+
   async canActivate(context: RouteExecutionContext): Promise<boolean> {
     const target = requireRouteMetadataTarget(context.getClass());
     const handler = context.getHandler();
@@ -40,7 +42,7 @@ export class AuthGuard implements Guard<RouteExecutionContext> {
       throw new UnauthorizedProblem("API key required");
     }
 
-    const authProvider = Container.getOptional(AUTH_PROVIDER_TOKEN);
+    const authProvider = this.authProvider;
 
     if (!authProvider) {
       throw new UnauthorizedProblem();

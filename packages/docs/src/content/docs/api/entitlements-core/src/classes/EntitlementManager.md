@@ -11,7 +11,7 @@ title: "EntitlementManager"
 
 ### Constructor
 
-> **new EntitlementManager**(`registry`, `subscriptionProvider`, `quotaChecker`, `meterLookup`, `options?`): `EntitlementManager`
+> **new EntitlementManager**(`registry`, `subscriptionProvider`, `quotaChecker`, `meterLookup`, `options?`, `eventPublisher?`): `EntitlementManager`
 
 #### Parameters
 
@@ -34,6 +34,10 @@ title: "EntitlementManager"
 ##### options?
 
 [`EntitlementManagerOptions`](/api/entitlements-core/src/type-aliases/entitlementmanageroptions/) = `{}`
+
+##### eventPublisher?
+
+[`EntitlementEventPublisher`](/api/entitlements-core/src/classes/entitlementeventpublisher/)
 
 #### Returns
 

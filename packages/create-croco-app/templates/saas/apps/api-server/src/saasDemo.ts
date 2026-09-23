@@ -97,7 +97,7 @@ import {
 } from "@croco/membership-core";
 import { IdempotencyManager, MeteringService, MeterRegistry } from "@croco/metering-core";
 import { NotificationService } from "@croco/notifications-core";
-import { Container, Token } from "@croco/framework-context";
+import { Token } from "@croco/framework-context";
 import { TenantManager } from "@croco/tenant-core";
 import { TxManager } from "@croco/tx-core";
 import { z } from "zod";
@@ -451,7 +451,11 @@ function createDemoEventPublisher(): EventPublisher {
   EventBusConfig.setInstance(eventBusConfig);
   EventBusConfig.setStats(new EventBusStats());
   eventBusConfig.setEventBus(eventBus);
-  eventBusConfig.subscribe({ eventName: "*", handlerClass: DemoEventHandler });
+  eventBusConfig.subscribe({
+    eventName: "*",
+    handlerClass: DemoEventHandler,
+    handler: new DemoEventHandler(),
+  });
   return new EventPublisher(eventBusConfig);
 }
 
@@ -496,10 +500,6 @@ export type SaasRuntime = {
 };
 
 export const SAAS_RUNTIME_STATE_TOKEN = new Token<SaasRuntimeState>("SaasRuntimeState");
-
-export function getSaasRuntimeState(): SaasRuntimeState {
-  return Container.get(SAAS_RUNTIME_STATE_TOKEN);
-}
 
 export type SaasRuntimeStateOptions = {
   readonly create: () => SaasRuntime;

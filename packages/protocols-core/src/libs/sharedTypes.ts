@@ -24,7 +24,7 @@ export enum ParamType {
   RAW = "raw",
 }
 
-export type Constructor<T = unknown> = new (...args: unknown[]) => T;
+export type Constructor<T = unknown> = new (...args: never[]) => T;
 
 export interface ControllerMetadata {
   path: string;

@@ -1,32 +1,15 @@
-export type AuditLogEntry = {
-  id: string;
-  tenantId: string;
-  actorId: string;
-  action: string;
-  resourceType: string;
-  resourceId: string;
-  payload: Record<string, unknown>;
-  diff: Record<string, unknown> | null;
-  metadata: Record<string, unknown>;
-  createdAt: Date;
-  sequence?: number;
-  parentHash?: string;
-  integrityHash?: string;
-};
+import type { ILogger } from "@croco/framework-context";
+import type { AuditLogRepository } from "./AuditLogRepository";
+export type { AuditLogEntry, AuditQuery } from "./AuditLogRepository";
 
-export type AuditableOptions = {
+export type AuditableOptions<T = unknown> = {
+  dependencies: (instance: T) => { repository: AuditLogRepository; logger: ILogger };
   action: string;
   resourceType: string;
   resourceIdIndex?: number;
   payloadIndex?: number;
   includeResult?: boolean;
   throwOnFailure?: boolean;
-};
-
-export type AuditQuery = {
-  tenantId: string;
-  limit?: number;
-  offset?: number;
 };
 
 export type AuditPayload = {

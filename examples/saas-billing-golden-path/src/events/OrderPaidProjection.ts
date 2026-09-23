@@ -1,10 +1,9 @@
-import { Container } from "@croco/framework-context";
 import type { EventHandler } from "@croco/events-core";
-import { AUDIT_LOG_TOKEN, type InMemoryAuditLog } from "../integrations/InMemoryAuditLog";
+import type { InMemoryAuditLog } from "../integrations/InMemoryAuditLog";
 import type { OrderPaidEvent } from "./OrderPaidEvent";
 
 export class OrderPaidProjection implements EventHandler<OrderPaidEvent> {
-  private readonly auditLog = Container.get<InMemoryAuditLog>(AUDIT_LOG_TOKEN);
+  constructor(private readonly auditLog: InMemoryAuditLog) {}
 
   handle(event: OrderPaidEvent): void {
     this.auditLog.append({

@@ -1,5 +1,5 @@
-import { Container, Context } from "@croco/framework-context";
-import { BATCH_LOADER_FACTORY_TOKEN, type IBatchLoaderFactory } from "../IBatchLoaderFactory";
+import { Context } from "@croco/framework-context";
+import type { IBatchLoaderFactory } from "../IBatchLoaderFactory";
 import {
   BatchLoadDuplicateResultKeyProblem,
   BatchLoaderFactoryNotRegisteredProblem,
@@ -60,6 +60,8 @@ export type BatchLoadScopeResolver<TRepository extends object = object> = (
 ) => BatchLoadScope;
 
 export type BatchLoadOptions<TRepository extends object = object> = {
+  /** Returns the factory injected into this repository by its application. */
+  factory: (repository: TRepository) => IBatchLoaderFactory;
   /**
    * The field name to use as the key for mapping results.
    * This is required to ensure the order of results matches the order of keys.
@@ -167,17 +169,21 @@ function getEffectiveLoaderName(
   })}`;
 }
 
-function getBatchLoaderFactory(): IBatchLoaderFactory {
-  if (!Container.has(BATCH_LOADER_FACTORY_TOKEN)) {
-    throw new BatchLoaderFactoryNotRegisteredProblem();
-  }
-
+function getBatchLoaderFactory<TRepository extends object>(
+  repository: TRepository,
+  resolveFactory: (repository: TRepository) => IBatchLoaderFactory,
+): IBatchLoaderFactory {
+  let factory: IBatchLoaderFactory;
   try {
-    return Container.get(BATCH_LOADER_FACTORY_TOKEN);
+    factory = resolveFactory(repository);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     throw new BatchLoaderFactoryResolutionProblem(message);
   }
+  if (!factory || typeof factory.create !== "function") {
+    throw new BatchLoaderFactoryNotRegisteredProblem();
+  }
+  return factory;
 }
 
 export function BatchLoad<TRepository extends object = object>(
@@ -202,7 +208,7 @@ export function BatchLoad<TRepository extends object = object>(
         definitionIdentity,
         scopeIdentity,
       );
-      const batchLoaderFactory = getBatchLoaderFactory();
+      const batchLoaderFactory = getBatchLoaderFactory(this, options.factory);
       const batchFn = async (keys: ReadonlyArray<unknown>) => {
         // 1. Try to use findByIds if it exists (Optimization)
         if (typeof this.findByIds === "function") {

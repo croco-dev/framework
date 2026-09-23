@@ -147,6 +147,11 @@ class ApiController {
 - `@Metered`, 메서드 호출 시 사용량을 자동 기록합니다.
 - `setMeteringService`, 데코레이터가 사용할 전역 서비스를 등록합니다.
 
+`@Metered({ meter, logger })`의 logger는 명시적으로 전달합니다. 전역 DI 컨테이너에서
+logger를 조회하지 않습니다. local meter 기록 실패는 logger가 있을 때 보고 후 원본 결과를
+반환하며, logger가 없거나 보고가 실패하면 호출을 실패시킵니다. billing-required meter의
+기록 실패는 logger 유무와 관계없이 전파됩니다.
+
 ### 주요 타입
 
 - `RecordOptions`, 사용량 기록 입력입니다.

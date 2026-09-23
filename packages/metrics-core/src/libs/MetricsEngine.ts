@@ -32,7 +32,7 @@ import type { SnapshotInput, SnapshotScheduler } from "./SnapshotScheduler";
  * - Customer Value (LTV, ARPA)
  *
  * All calculations are delegated to specialized Calculator classes.
- * This service is designed for dependency injection via TypeDI Container.
+ * This service is designed for constructor injection through an application runtime.
  */
 export class MetricsEngine {
   constructor(

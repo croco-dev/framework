@@ -244,7 +244,7 @@ async function createWorkspace(): Promise<string> {
       "@croco/repository-core",
       "@croco/tenant-core",
       "@croco/transports-http",
-      "typedi",
+      "@croco/framework-context",
       "zod",
     ]),
   );
@@ -415,10 +415,6 @@ declare module '@croco/meta-vite' {
   };
 
   export function defineRoute(route: PageRouteDefinition): PageRouteDefinition;
-}
-
-declare module 'typedi' {
-  export function Service(): ClassDecorator;
 }
 
 declare module 'zod' {

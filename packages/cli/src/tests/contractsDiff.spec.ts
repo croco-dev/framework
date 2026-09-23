@@ -1,5 +1,4 @@
 import { renderUsage } from "citty";
-import { Container } from "typedi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
@@ -12,9 +11,7 @@ import {
 import { contractsDiff, runContractsDiff } from "../commands/contractsDiff.js";
 
 describe("contractsDiff", () => {
-  beforeEach(() => {
-    Container.reset();
-  });
+  beforeEach(() => {});
 
   it("should describe both current input modes in executable help", async () => {
     const usage = await renderUsage(contractsDiff);

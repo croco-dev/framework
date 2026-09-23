@@ -34,6 +34,15 @@ type DependencyGraphContainer = {
   }) => DependencyGraphManifest;
 };
 
+type AppScopedDiGraph = {
+  readonly applicationRuntime: {
+    readonly createGraphManifest: (options?: {
+      readonly roots?: readonly TokenIdentifier<unknown>[];
+    }) => { readonly dependencyGraph: DependencyGraphManifest };
+  };
+  readonly disposeApplicationRuntime: () => Promise<void>;
+};
+
 type DiGraphFrameworkContext = {
   readonly Container?: DependencyGraphContainer;
   readonly default?: {
@@ -145,23 +154,36 @@ export async function runDiGraph(
     return 1;
   }
 
-  const manifest = prepared.container.createDependencyGraphManifest(
-    prepared.roots ? { roots: prepared.roots } : {},
-  );
-  const manifestJson = `${JSON.stringify(manifest, null, 2)}\n`;
-  const writePath = parsed.options.write ?? (parsed.options.json ? null : DEFAULT_MANIFEST_PATH);
+  let exitCode = 1;
+  try {
+    const manifest = prepared.container.createDependencyGraphManifest(
+      prepared.roots ? { roots: prepared.roots } : {},
+    );
+    const manifestJson = `${JSON.stringify(manifest, null, 2)}\n`;
+    const writePath = parsed.options.write ?? (parsed.options.json ? null : DEFAULT_MANIFEST_PATH);
 
-  if (writePath) {
-    writeOutputFile(writePath, manifestJson, io);
+    if (writePath) {
+      writeOutputFile(writePath, manifestJson, io);
+    }
+
+    if (parsed.options.json) {
+      io.stdout(manifestJson.trimEnd());
+    } else {
+      reportDiGraphManifest(manifest, writePath, io);
+    }
+
+    exitCode = manifest.status === "ready" ? 0 : 1;
+  } finally {
+    if (prepared.cleanup) {
+      try {
+        await prepared.cleanup();
+      } catch (error) {
+        io.stderr(`DI graph bootstrap cleanup failed: ${formatUnknownError(error)}`);
+        exitCode = 1;
+      }
+    }
   }
-
-  if (parsed.options.json) {
-    io.stdout(manifestJson.trimEnd());
-  } else {
-    reportDiGraphManifest(manifest, writePath, io);
-  }
-
-  return manifest.status === "ready" ? 0 : 1;
+  return exitCode;
 }
 
 export function parseDiGraphArgs(args: readonly string[]): DiGraphParseResult {
@@ -171,6 +193,7 @@ export function parseDiGraphArgs(args: readonly string[]): DiGraphParseResult {
 
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
+    if (arg === undefined) break;
 
     const assignment = parseFlagAssignment(arg);
     if (assignment && VALUE_FLAGS.has(assignment.flag)) {
@@ -244,6 +267,7 @@ async function prepareDiGraph(
       readonly kind: "ready";
       readonly container: DependencyGraphContainer;
       readonly roots?: readonly TokenIdentifier<unknown>[];
+      readonly cleanup?: () => Promise<void>;
     }
   | { readonly kind: "error"; readonly message: string }
 > {
@@ -274,8 +298,9 @@ async function prepareDiGraph(
     };
   }
 
+  let bootstrapResult: unknown;
   try {
-    await bootstrapExport();
+    bootstrapResult = await bootstrapExport();
   } catch (error) {
     return {
       kind: "error",
@@ -283,7 +308,22 @@ async function prepareDiGraph(
     };
   }
 
-  return prepareModuleDiGraph(options, resolvedModule, loadedModule, io, loadFrameworkContext);
+  const prepared = await prepareModuleDiGraph(
+    options,
+    resolvedModule,
+    loadedModule,
+    io,
+    loadFrameworkContext,
+    bootstrapResult,
+  );
+  if (prepared.kind === "error" && isAppScopedDiGraph(bootstrapResult)) {
+    try {
+      await bootstrapResult.disposeApplicationRuntime();
+    } catch (error) {
+      io.stderr(`DI graph bootstrap cleanup failed: ${formatUnknownError(error)}`);
+    }
+  }
+  return prepared;
 }
 
 async function prepareModuleDiGraph(
@@ -292,17 +332,31 @@ async function prepareModuleDiGraph(
   loadedModule: Record<string, unknown>,
   io: DiGraphIo,
   loadFrameworkContext?: DiGraphFrameworkContextLoader,
+  bootstrapResult?: unknown,
 ): Promise<
   | {
       readonly kind: "ready";
       readonly container: DependencyGraphContainer;
       readonly roots?: readonly TokenIdentifier<unknown>[];
+      readonly cleanup?: () => Promise<void>;
     }
   | { readonly kind: "error"; readonly message: string }
 > {
   const rootsResult = await readDiGraphRoots(options, resolvedModule, loadedModule);
   if (rootsResult.kind === "error") {
     return rootsResult;
+  }
+
+  if (isAppScopedDiGraph(bootstrapResult)) {
+    return {
+      kind: "ready",
+      ...(rootsResult.roots ? { roots: rootsResult.roots } : {}),
+      container: {
+        createDependencyGraphManifest: (options) =>
+          bootstrapResult.applicationRuntime.createGraphManifest(options).dependencyGraph,
+      },
+      cleanup: () => bootstrapResult.disposeApplicationRuntime(),
+    };
   }
 
   const containerResult = await readDiGraphContainer(
@@ -315,7 +369,20 @@ async function prepareModuleDiGraph(
     return containerResult;
   }
 
-  return { kind: "ready", roots: rootsResult.roots, container: containerResult.container };
+  return {
+    kind: "ready",
+    ...(rootsResult.roots ? { roots: rootsResult.roots } : {}),
+    container: containerResult.container,
+  };
+}
+
+function isAppScopedDiGraph(value: unknown): value is AppScopedDiGraph {
+  if (typeof value !== "object" || value === null) return false;
+  const app = value as Partial<AppScopedDiGraph>;
+  return (
+    typeof app.applicationRuntime?.createGraphManifest === "function" &&
+    typeof app.disposeApplicationRuntime === "function"
+  );
 }
 
 async function readDiGraphContainer(
@@ -556,7 +623,7 @@ function readPackageImportEntry(packageJson: Record<string, unknown> | null): st
     return null;
   }
 
-  const exportsField = packageJson.exports;
+  const exportsField = packageJson["exports"];
   if (typeof exportsField === "string") {
     return exportsField;
   }

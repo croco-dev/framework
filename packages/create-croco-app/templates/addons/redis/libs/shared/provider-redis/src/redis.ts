@@ -1,7 +1,7 @@
 import Redis from "ioredis";
-import { Service } from "typedi";
+import { Component } from "@croco/framework-context";
 
-@Service()
+@Component()
 export class RedisProvider {
   private client: Redis | null = null;
 

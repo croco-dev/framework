@@ -190,6 +190,7 @@ class OrderPlacedHandler implements EventHandler<OrderPlacedEvent> {
 ```typescript typecheck
 import { Component } from "@croco/framework-context";
 import { Transactional } from "@croco/tx-core";
+import type { TxManager } from "@croco/tx-core";
 
 type CreateOrderDto = {
   orderId: string;
@@ -197,7 +198,9 @@ type CreateOrderDto = {
 
 @Component()
 class OrderService {
-  @Transactional()
+  constructor(readonly txManager: TxManager<unknown>) {}
+
+  @Transactional<OrderService>((service) => service.txManager)
   async placeOrder(dto: CreateOrderDto): Promise<CreateOrderDto> {
     // 여러 리포지토리가 동일한 트랜잭션 내에서 동작합니다.
     return dto;

@@ -1,5 +1,5 @@
 import { planVersionRef } from "@croco/billing-core";
-import { Container, Token } from "@croco/framework-context";
+import { Token } from "@croco/framework-context";
 import {
   AI_OUTPUT_TOKENS as COMPLETION_TOKENS,
   AI_COST_USD_NANOS as COST_USD_NANOS,
@@ -161,9 +161,19 @@ export type AiSaasRuntime = {
 
 export const AI_SAAS_RUNTIME_TOKEN = new Token<AiSaasRuntime>("AiSaasRuntime");
 
-export function getAiSaasRuntime(): AiSaasRuntime {
-  return Container.get(AI_SAAS_RUNTIME_TOKEN);
+export class AiSaasRuntimeState {
+  constructor(private runtime: AiSaasRuntime) {}
+
+  get current(): AiSaasRuntime {
+    return this.runtime;
+  }
+
+  update(runtime: AiSaasRuntime): void {
+    this.runtime = runtime;
+  }
 }
+
+export const AI_SAAS_RUNTIME_STATE_TOKEN = new Token<AiSaasRuntimeState>("AiSaasRuntimeState");
 
 export type AiSaasDemoSnapshot = {
   contract: {

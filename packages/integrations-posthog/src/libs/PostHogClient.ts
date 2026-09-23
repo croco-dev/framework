@@ -1,4 +1,10 @@
-import { Component, Inject } from "@croco/framework-context";
+import {
+  Component,
+  Inject,
+  InjectOptional,
+  LOGGER_TOKEN,
+  type ILogger,
+} from "@croco/framework-context";
 import { PostHog } from "posthog-node";
 
 import {
@@ -14,11 +20,14 @@ export type { PostHogConfig } from "./PostHogConfig";
 export class PostHogClient {
   private client: PostHog;
 
-  constructor(@Inject(POSTHOG_CONFIG_TOKEN) config: PostHogConfig) {
+  constructor(
+    @Inject(POSTHOG_CONFIG_TOKEN) config: PostHogConfig,
+    @InjectOptional(LOGGER_TOKEN) logger?: ILogger,
+  ) {
     const validConfig = validatePostHogConfig(config);
 
     if (!config.host) {
-      warnAboutEnvironmentHost();
+      warnAboutEnvironmentHost(logger);
     }
 
     this.client = new PostHog(validConfig.apiKey, {

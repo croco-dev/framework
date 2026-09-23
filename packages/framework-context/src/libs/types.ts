@@ -4,14 +4,9 @@ export type Scope = "singleton" | "request" | "transient";
 
 export type Constructor<T = unknown> = new (...args: never[]) => T;
 
-export type DependencyTokenKind = "constructor" | "typedi-token" | "string" | "symbol";
+export type DependencyTokenKind = "constructor" | "token" | "string" | "symbol";
 
-export type DependencyProviderKind =
-  | "component"
-  | "registered-value"
-  | "lazy"
-  | "typedi"
-  | "missing";
+export type DependencyProviderKind = "component" | "registered-value" | "lazy" | "missing";
 
 export type DependencyResolutionStepStatus =
   | "selected"
@@ -73,15 +68,17 @@ export type DependencyGraphLegacyDiagnosticCode =
   | "framework-context/di-unknown-provider"
   | "framework-context/di-injection-handler-uninspectable";
 
-export type TypeDIInjectionInspection =
+export type InjectionInspection =
   | {
       readonly parameterIndex?: number;
+      readonly optional: boolean;
       readonly site: string;
       readonly status: "resolved";
       readonly token: unknown;
     }
   | {
       readonly parameterIndex?: number;
+      readonly optional: boolean;
       readonly site: string;
       readonly status: "uninspectable";
     };

@@ -111,7 +111,7 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
     cause:
       "The DI container was asked to resolve a token that has no registered provider in the active container scope.",
     action:
-      "Register the provider before resolution, export it from the owning module, or inject an optional dependency only through an explicit optional lookup path.",
+      "Add a scanned concrete provider, link its package descriptor, or bind the explicit token in the owning application module.",
     docs: "docs/troubleshooting/diagnostics.md#croco_di_001",
     searchKeywords: [
       "CROCO_DI_001",
@@ -122,9 +122,10 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
     ],
     fixExamples: [
       {
-        label: "Register the provider before resolving it",
-        before: "Container.get(PaymentGateway);",
-        after: "Container.set(PaymentGateway, gateway);\nContainer.get(PaymentGateway);",
+        label: "Declare the dependency for generated wiring",
+        before: "const gateway = Container.get(PaymentGateway);",
+        after:
+          "@Component()\nclass CheckoutService {\n  constructor(private readonly gateway: PaymentGateway) {}\n}",
       },
     ],
     legacyCodes: ["framework-context/di-missing-provider"],
@@ -185,16 +186,16 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
     code: "CROCO_DI_004",
     category: "dependency-injection",
     severity: "error",
-    title: "Provider falls back to unverifiable TypeDI metadata",
+    title: "Provider cannot be statically generated",
     cause:
-      "A dependency is visible only through TypeDI fallback metadata, so Croco cannot prove the provider registration, scope, or construction path at build time.",
+      "A dependency token or factory is computed dynamically, so Croco cannot prove the provider identity, scope, or construction path at build time.",
     action:
-      "Annotate the provider with Croco component metadata, register the token explicitly, or move the dependency behind a generated manifest-backed provider.",
+      "Use a concrete class type, a statically referenced @Inject token, or an explicit package component descriptor that the DI compiler can link.",
     docs: "docs/troubleshooting/diagnostics.md#croco_di_004",
     searchKeywords: [
       "CROCO_DI_004",
       "framework-context/di-unknown-provider",
-      "TypeDI fallback",
+      "dynamic DI token",
       "unknown provider",
       "unverifiable provider",
     ],

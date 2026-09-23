@@ -34,3 +34,19 @@ title: "TaskRunnerRuntime"
 #### Returns
 
 () => `void`
+
+---
+
+### serviceResolver?
+
+> `readonly` `optional` **serviceResolver?**: (`target`) => `object`
+
+#### Parameters
+
+##### target
+
+[`Constructor`](/api/framework-context/src/type-aliases/constructor/)\<`object`\>
+
+#### Returns
+
+`object`

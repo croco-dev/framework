@@ -15,7 +15,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### Constructor
 
-> **new ContainerScopeMismatchProblem**(`singleton`, `requestScoped`, `path`, `trace`): `ContainerScopeMismatchProblem`
+> **new ContainerScopeMismatchProblem**(`singleton`, `dependency`, `path`, `trace`, `dependencyScope?`): `ContainerScopeMismatchProblem`
 
 #### Parameters
 
@@ -23,7 +23,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 `string`
 
-##### requestScoped
+##### dependency
 
 `string`
 
@@ -34,6 +34,10 @@ readonly `string`[]
 ##### trace
 
 [`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/)
+
+##### dependencyScope?
+
+`"request"` \| `"transient"`
 
 #### Returns
 

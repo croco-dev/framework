@@ -8,7 +8,7 @@ export class BatchLoaderFactoryNotRegisteredProblem extends Problem {
     super(
       undefined,
       undefined,
-      "BatchLoad requires an IBatchLoaderFactory to be registered with BATCH_LOADER_FACTORY_TOKEN",
+      "BatchLoad requires its factory accessor to return an injected IBatchLoaderFactory",
     );
   }
 }

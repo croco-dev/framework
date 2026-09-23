@@ -338,8 +338,12 @@ describe("SendNotificationTask", () => {
         methodName: "handle",
       };
       taskRegistry.register("send-notification", SendNotificationTask, "handle", metadata);
-      Container.set(SendNotificationTask, task);
-      const runner = new TaskRunner(executionManager, taskRegistry);
+      const runner = new TaskRunner(executionManager, taskRegistry, undefined, {
+        serviceResolver: (target) => {
+          expect(target).toBe(SendNotificationTask);
+          return task;
+        },
+      });
 
       await expect(runner.execute("send-notification", payload)).rejects.toBe(providerProblem);
 

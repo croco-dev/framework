@@ -165,7 +165,10 @@ describe("EventBusConfig", () => {
     }
 
     config.setEventBus(mockEventBus);
-    await config.start({ handlers: [DecoratorTestHandler] });
+    await config.start({
+      handlers: [DecoratorTestHandler],
+      resolver: new DefaultHandlerResolver(),
+    });
 
     expect(subscriptions).toHaveLength(1);
     expect(subscriptions[0]?.eventName).toBe("TestEvent");
@@ -189,7 +192,7 @@ describe("EventBusConfig", () => {
     }
 
     config.setEventBus(mockEventBus);
-    await config.start({ handlers: [StartTestHandler] });
+    await config.start({ handlers: [StartTestHandler], resolver: new DefaultHandlerResolver() });
 
     const anotherEventSubscription = subscriptions.find((s) => s.eventName === "AnotherTestEvent");
     expect(anotherEventSubscription).not.toBeUndefined();
@@ -260,7 +263,7 @@ describe("HandlerResolver", () => {
       expect(resolveCount).toBeGreaterThanOrEqual(1);
     });
 
-    it("should use DefaultHandlerResolver when no resolver provided", async () => {
+    it("should use DefaultHandlerResolver when explicitly provided", async () => {
       const subscriptions: { handler?: EventHandler<DomainEvent> }[] = [];
       const mockEventBus = {
         publish: async () => {},
@@ -274,7 +277,7 @@ describe("HandlerResolver", () => {
       const config = EventBusConfig.getInstance();
       config.setEventBus(mockEventBus);
       config.subscribe({ eventName: "TestEvent", handlerClass: ResolverTestHandler });
-      await config.start({ handlers: [] });
+      await config.start({ handlers: [], resolver: new DefaultHandlerResolver() });
 
       const resolverTestHandlerSubscription = subscriptions.find(
         (sub) => sub.handler instanceof ResolverTestHandler,

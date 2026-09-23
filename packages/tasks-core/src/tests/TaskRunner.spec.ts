@@ -1,6 +1,11 @@
 import type { Execution, ExecutionAttemptManager, ExecutionManager } from "@croco/execution-core";
 import type { ILogger } from "@croco/framework-context";
-import { Component, Container, MetadataStorage } from "@croco/framework-context";
+import {
+  Component,
+  Container,
+  defineGeneratedDiGraph,
+  MetadataStorage,
+} from "@croco/framework-context";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import * as telemetry from "@croco/telemetry-api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -13,8 +18,17 @@ import {
 } from "../libs/problems/TasksProblems";
 import { taskRef } from "../libs/taskRef";
 import { TaskRegistry } from "../libs/TaskRegistry";
-import { TaskRunner } from "../libs/TaskRunner";
+import { TaskRunner as TaskRunnerBase } from "../libs/TaskRunner";
 import type { TaskExecutionContext, TaskMetadata } from "../libs/types";
+
+class TaskRunner extends TaskRunnerBase {
+  constructor(...args: ConstructorParameters<typeof TaskRunnerBase>) {
+    super(args[0], args[1], args[2], {
+      serviceResolver: (target) => Container.get(target),
+      ...args[3],
+    });
+  }
+}
 
 function execution(overrides: Partial<Execution> = {}): Execution {
   return {
@@ -162,6 +176,91 @@ describe("TaskRunner", () => {
     });
     expect(mockExecutionManager.start).toHaveBeenCalledWith("exec-123");
     expect(mockExecutionManager.complete).toHaveBeenCalledWith("exec-123", "processed: test");
+  });
+
+  it("requires an explicit resolver for class targets even when globally registered", async () => {
+    const runner = new TaskRunnerBase(mockExecutionManager, registry);
+    await expect(runner.execute("test-task", { data: "test" })).rejects.toThrow(
+      TaskRunnerDIFailureProblem,
+    );
+    expect(mockExecutionManager.complete).not.toHaveBeenCalled();
+  });
+
+  it("should execute a task handler resolved from a generated graph", async () => {
+    @Component()
+    class TaskMultiplier {
+      multiply(value: number): number {
+        return value * 3;
+      }
+    }
+
+    @Component()
+    class GeneratedTaskHandler {
+      constructor(private readonly multiplier: TaskMultiplier) {}
+
+      @Task({ name: "generated-task" })
+      async handle(payload: { value: number }): Promise<number> {
+        return this.multiplier.multiply(payload.value);
+      }
+    }
+    Container.installGeneratedGraph(
+      defineGeneratedDiGraph({
+        version: "croco.generated-di-graph.v1",
+        graphId: "tasks-core.generated-handler",
+        compilerVersion: "test",
+        inputHash: "tasks-core.generated-handler.v1",
+        providers: [
+          {
+            token: TaskMultiplier,
+            tokenId: "tasks-core:TaskMultiplier",
+            debugName: "TaskMultiplier",
+            kind: "component",
+            scope: "singleton",
+            dependencies: [],
+            factory: () => new TaskMultiplier(),
+            sourceLocation: { file: "src/tests/TaskRunner.spec.ts" },
+          },
+          {
+            token: GeneratedTaskHandler,
+            tokenId: "tasks-core:GeneratedTaskHandler",
+            debugName: "GeneratedTaskHandler",
+            kind: "component",
+            scope: "singleton",
+            dependencies: [
+              {
+                token: TaskMultiplier,
+                tokenId: "tasks-core:TaskMultiplier",
+                parameterIndex: 0,
+              },
+            ],
+            factory: (resolver) => new GeneratedTaskHandler(resolver.get(TaskMultiplier)),
+            sourceLocation: { file: "src/tests/TaskRunner.spec.ts" },
+          },
+        ],
+        roots: [GeneratedTaskHandler],
+      }),
+    );
+    registry.collectFromMetadata();
+
+    const firstScope = Container.createScope();
+    const secondScope = Container.createScope();
+    Container.reset();
+    try {
+      const runner = new TaskRunnerBase(mockExecutionManager, registry, undefined, {
+        serviceResolver: (target) => firstScope.run(() => Container.get(target)),
+      });
+      const otherRunner = new TaskRunnerBase(mockExecutionManager, registry, undefined, {
+        serviceResolver: (target) => secondScope.run(() => Container.get(target)),
+      });
+      await expect(runner.execute("generated-task", { value: 4 })).resolves.toBe(12);
+      await expect(otherRunner.execute("generated-task", { value: 5 })).resolves.toBe(15);
+      expect(firstScope.run(() => Container.get(GeneratedTaskHandler))).not.toBe(
+        secondScope.run(() => Container.get(GeneratedTaskHandler)),
+      );
+    } finally {
+      firstScope.dispose();
+      secondScope.dispose();
+    }
   });
 
   it("should not classify a completion persistence failure as a task failure", async () => {

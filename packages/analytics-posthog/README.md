@@ -95,20 +95,36 @@ try {
 ## Disabled mode
 
 테스트, 로컬 개발, 임시 운영 차단처럼 이벤트 전송을 명시적으로 꺼야 할 때 세 번째
-생성자 인자 대신 `POSTHOG_ANALYTICS_MANAGER_OPTIONS` 토큰을 등록합니다. 이 모드에서는
+생성자의 options 인자나 명시적인 모듈 provider로 설정합니다. 이 모드에서는
 `capture`, `identify`, `group`, `flush`가 PostHog SDK를 호출하지 않고 `info` 로그에
 skipped operation evidence를 남깁니다.
 
 ```typescript
-import {
-  POSTHOG_ANALYTICS_MANAGER_OPTIONS,
-  PostHogAnalyticsManager,
-} from "@croco/analytics-posthog";
-import { Container } from "@croco/framework-context";
+import { PostHogAnalyticsManager } from "@croco/analytics-posthog";
+import { AnalyticsManager } from "@croco/analytics-core";
+import { defineCrocoModule } from "@croco/framework-module";
+import { PostHogClient } from "@croco/integrations-posthog";
 
-Container.set(POSTHOG_ANALYTICS_MANAGER_OPTIONS, { enabled: false });
-const analytics = Container.get(PostHogAnalyticsManager);
+const posthog = new PostHogClient({
+  apiKey: process.env.POSTHOG_API_KEY ?? "",
+  host: process.env.POSTHOG_HOST,
+});
+export const analyticsModule = defineCrocoModule({
+  name: "analytics",
+  providers: [
+    {
+      provide: AnalyticsManager,
+      useValue: new PostHogAnalyticsManager(posthog, { enabled: false }),
+    },
+  ],
+  exports: [AnalyticsManager],
+  shutdown: () => posthog.shutdown(),
+});
 ```
+
+`analyticsModule`을 애플리케이션 runtime에 조합하고 소비 모듈에서 import합니다. 생성된 DI를
+사용할 때는 `POSTHOG_ANALYTICS_MANAGER_OPTIONS`를 명시적인 module provider로 선언하고
+`{ enabled: false }` 값을 제공합니다.
 
 ## Diagnostics / Readiness
 

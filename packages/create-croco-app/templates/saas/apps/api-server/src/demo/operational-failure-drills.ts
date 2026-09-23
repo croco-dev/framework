@@ -250,9 +250,9 @@ function createMissingDiProviderScenario(): OperationalFailureDrillScenario {
       class MissingProviderDrill {
         constructor(readonly value: string) {}
       }
-      Reflect.defineMetadata("design:paramtypes", [Object], MissingProviderDrill);
       (Inject(token) as ParameterDecorator)(MissingProviderDrill, undefined, 0);
       Component({ scope: "transient" })(MissingProviderDrill);
+      Container.register(MissingProviderDrill, "transient");
 
       try {
         const diagnostic = requireGraphDiagnostic(
@@ -312,14 +312,15 @@ function createDiScopeMismatchScenario(): OperationalFailureDrillScenario {
       class FailureDrillSingleton {
         constructor(readonly dependency: FailureDrillRequestDependency) {}
       }
-      Reflect.defineMetadata("design:paramtypes", [], FailureDrillRequestDependency);
-      Reflect.defineMetadata(
-        "design:paramtypes",
-        [FailureDrillRequestDependency],
+      (Inject(() => FailureDrillRequestDependency) as ParameterDecorator)(
         FailureDrillSingleton,
+        undefined,
+        0,
       );
       Component({ scope: "request" })(FailureDrillRequestDependency);
       Component()(FailureDrillSingleton);
+      Container.register(FailureDrillRequestDependency, "request");
+      Container.register(FailureDrillSingleton, "singleton");
 
       try {
         const diagnostic = requireGraphDiagnostic(

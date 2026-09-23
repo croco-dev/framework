@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { Container, Context, LOGGER_TOKEN } from "@croco/framework-context";
+import { Context, type ILogger } from "@croco/framework-context";
 import { recordError } from "@croco/telemetry-api";
 import type { AuditLogRepository } from "./AuditLogRepository";
 import {
@@ -85,7 +85,7 @@ function getErrorMessage(error: unknown): string {
   }
 }
 
-function safelyReportAuditWriteFailure(error: unknown): void {
+function safelyReportAuditWriteFailure(error: unknown, logger: ILogger): void {
   safelyRecordError(error);
 
   const message = "[AuditInterceptor] Failed to write audit log";
@@ -93,17 +93,7 @@ function safelyReportAuditWriteFailure(error: unknown): void {
     error: sanitizeAuditValue(getErrorMessage(error)),
   };
   try {
-    const logger = Container.getOptional(LOGGER_TOKEN);
-    if (logger) {
-      logger.warn(message, metadata);
-      return;
-    }
-  } catch (loggerError) {
-    metadata["loggerError"] = sanitizeAuditValue(getErrorMessage(loggerError));
-  }
-
-  try {
-    console.error(message, metadata);
+    logger.warn(message, metadata);
   } catch {
     return;
   }
@@ -368,6 +358,7 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
 
   constructor(
     private readonly repository: AuditLogRepository,
+    private readonly logger: ILogger,
     options: AuditInterceptorOptions = {},
   ) {
     const trustedProxyHops = options.trustedProxyHops ?? 0;
@@ -443,7 +434,7 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
         }
       } catch (auditWriteError) {
         attachAuditWriteCause(error, auditWriteError);
-        safelyReportAuditWriteFailure(auditWriteError);
+        safelyReportAuditWriteFailure(auditWriteError, this.logger);
       }
 
       throw error;
@@ -468,7 +459,7 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
         markAuditWrite(coordination.target, coordination.propertyKey);
       }
     } catch (auditWriteError) {
-      safelyReportAuditWriteFailure(auditWriteError);
+      safelyReportAuditWriteFailure(auditWriteError, this.logger);
     }
 
     return result;

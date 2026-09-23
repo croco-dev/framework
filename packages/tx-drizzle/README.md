@@ -5,7 +5,7 @@ Drizzle ORM용 `@croco/tx-core` 트랜잭션 어댑터입니다. Drizzle의 `db.
 ## 설치
 
 ```bash
-pnpm add @croco/framework-module @croco/tx-drizzle @croco/tx-core drizzle-orm typedi
+pnpm add @croco/framework-context @croco/framework-module @croco/tx-drizzle @croco/tx-core drizzle-orm
 ```
 
 ## 사용법
@@ -13,7 +13,7 @@ pnpm add @croco/framework-module @croco/tx-drizzle @croco/tx-core drizzle-orm ty
 ### Application plugin
 
 `drizzleTransaction`은 애플리케이션의 격리된 모듈 컨테이너에 `TxManager`를 등록하고 Drizzle 상태 확인을
-`diagnostics.provider` contribution으로 제공합니다. 이 경로는 전역 `TxManagerRegistry`를 사용하지 않습니다.
+`diagnostics.provider` contribution으로 제공합니다.
 
 ```ts
 import { createApplicationRuntime, defineCrocoApplication } from "@croco/framework-module";
@@ -43,75 +43,36 @@ const diagnostics = runtime.getContributions("diagnostics.provider");
 await runtime.dispose();
 ```
 
-기존 `TxManagerRegistry`와 `Container.set` 경로는 호환성을 위해 유지되지만 새 애플리케이션 구성에는 plugin
-factory를 사용하세요. plugin factory의 `db`, transaction 설정, diagnostics 이름은 명시적 입력이며 ambient
-package discovery를 사용하지 않습니다. 애플리케이션이 데이터베이스 리소스를 소유하면 `shutdown`으로 정리
-함수를 등록하고 `ApplicationRuntime.dispose()`가 완료될 때까지 기다리세요.
+plugin factory의 `db`, transaction 설정, diagnostics 이름은 명시적 입력이며 ambient package discovery를
+사용하지 않습니다. 애플리케이션이 데이터베이스 리소스를 소유하면 `shutdown`으로 정리 함수를 등록하고
+`ApplicationRuntime.dispose()`가 완료될 때까지 기다리세요.
 
-### 1. Drizzle DB 생성 및 어댑터 연결
-
-```ts
-import "reflect-metadata";
-import { Container } from "typedi";
-import { TxManager } from "@croco/tx-core";
-import { createDrizzleTxAdapter } from "@croco/tx-drizzle";
-import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const db = drizzle(pool);
-
-const adapter = createDrizzleTxAdapter(db);
-const txManager = new TxManager(adapter, { defaultNesting: "join" });
-
-Container.set(TxManager, txManager);
-```
-
-### 2. TxManager 등록
+### 서비스에서 @Transactional 사용
 
 ```ts
-import 'reflect-metadata';
-import { Container } from 'typedi';
-import { TxManager } from '@croco/tx-core';
-import { createDrizzleTxAdapter } from '@croco/tx-drizzle';
-import { drizzle } from 'drizzle-orm/node-postgres';
-import { Pool } from 'pg';
-
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const db = drizzle(pool);
-
-const adapter = createDrizzleTxAdapter(db);
-const txManager = new TxManager(adapter, { defaultNesting: 'join' });
-
-Container.set(TxManager, txManager);
-      const adapter = createDrizzleTxAdapter(db);
-      const txManager = new TxManager(adapter, { defaultNesting: 'join' });
-      Container.set(TxManager, txManager);
-    },
-  ],
-});
-```
-
-### 3. 서비스에서 @Transactional 사용
-
-```ts
-import { Service } from "typedi";
+import { Component } from "@croco/framework-context";
 import { Transactional, TxManager } from "@croco/tx-core";
 
-@Service()
-class UserService {
-  constructor(private readonly txManager: TxManager<typeof db>) {}
+type UserWriter = {
+  create(name: string): Promise<void>;
+  update(id: string, name: string): Promise<void>;
+};
 
-  @Transactional()
+@Component()
+class UserService {
+  constructor(
+    readonly txManager: TxManager,
+    private readonly users: UserWriter,
+  ) {}
+
+  @Transactional<UserService>((service) => service.txManager)
   async createUser(name: string) {
-    const client = this.txManager.getClient()!;
-    await client.insert(users).values({ name });
+    await this.users.create(name);
   }
 
-  @Transactional({ nesting: "savepoint" })
+  @Transactional<UserService>((service) => service.txManager, { nesting: "savepoint" })
   async updateUserWithSavepoint(id: string, name: string) {
-    const client = this.txManager.getClient()!;
-    await client.update(users).set({ name }).where(eq(users.id, id));
+    await this.users.update(id, name);
   }
 }
 ```
@@ -193,7 +154,7 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON "Tenant"."Order" TO app_user;
 
 런타임 어댑터는 `set_config(name, value, true)`를 파라미터화하여 현재 트랜잭션 범위에만 테넌트 값을 설정합니다.
 
-`debug: true`는 RLS 설정 직전에 진단 로그를 기록합니다. `logger`를 직접 주입할 수 있으며, 생략하면 프레임워크 컨테이너에서 `Logger`를 해석합니다. 디버그가 요청된 상태에서 로거를 해석할 수 없거나 로그 기록이 실패하면 `RlsDebugLoggingProblem`으로 명시적으로 실패합니다. `debug`가 꺼져 있으면 로거가 없어도 트랜잭션 동작은 바뀌지 않습니다.
+`debug: true`는 RLS 설정 직전에 진단 로그를 기록하며 `logger` 주입이 필수입니다. 로거가 없거나 로그 기록이 실패하면 `RlsDebugLoggingProblem`으로 명시적으로 실패합니다. `debug`가 꺼져 있으면 로거가 없어도 트랜잭션 동작은 바뀌지 않습니다.
 
 ```ts
 const adapter = createRlsTxAdapter(db, tenantProvider, {

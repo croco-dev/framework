@@ -1,5 +1,5 @@
 /**
- * 타입 안전한 서비스 식별자를 생성하는 TypeDI Token 클래스입니다.
+ * 타입 안전한 서비스 식별자를 생성하는 Croco Token 클래스입니다.
  *
  * @param name - `new Token(name)` 생성자에 전달하는 디버깅용 이름입니다.
  * @returns 의존성 식별에 사용할 `Token<T>` 클래스 참조를 반환합니다.
@@ -12,12 +12,12 @@
  * ```
  */
 // biome-ignore assist/source/organizeImports: keep export split for per-symbol TSDoc
-export { Token } from "typedi";
+export { Token } from "./libs/Token";
 
 /**
- * 클래스 프로퍼티 또는 생성자 파라미터에 의존성을 주입하는 TypeDI 데코레이터입니다.
+ * 컴파일러가 클래스 프로퍼티 또는 생성자 파라미터의 의존성 연결을 생성하도록 표시하는 데코레이터입니다.
  *
- * @param token - 선택적 주입 식별자입니다. 생략하면 타입 메타데이터를 사용합니다.
+ * @param token - 선택적 주입 식별자입니다. 생략하면 DI compiler가 선언 타입 symbol을 해석합니다.
  * @returns 프로퍼티 또는 파라미터 데코레이터 함수를 반환합니다.
  *
  * @example
@@ -32,12 +32,12 @@ export { Token } from "typedi";
  * }
  * ```
  */
-export { Inject } from "./libs/decorators/Inject";
+export { Inject, InjectOptional } from "./libs/decorators/Inject";
 
 /**
- * 같은 식별자로 등록된 모든 서비스를 클래스 프로퍼티 또는 생성자 파라미터에 주입하는 TypeDI 데코레이터입니다.
+ * DI compiler가 같은 식별자의 모든 provider를 주입하도록 표시하는 데코레이터입니다.
  *
- * @param token - 선택적 다중 주입 식별자입니다. 생략하면 타입 메타데이터를 사용합니다.
+ * @param token - 선택적 다중 주입 식별자입니다. 생략하면 DI compiler가 선언 타입 symbol을 해석합니다.
  * @returns 프로퍼티 또는 파라미터 데코레이터 함수를 반환합니다.
  */
 export { InjectMany } from "./libs/decorators/Inject";
@@ -53,13 +53,23 @@ export { InjectMany } from "./libs/decorators/Inject";
  * import { Component, Container } from '@croco/framework-context';
  *
  * @Component()
- * class UserService {}
+ * export class UserService {}
  *
+ * // crocoPlugin()이 generated graph를 ApplicationRuntime에 연결한 뒤
  * const service = Container.get(UserService);
  * ```
  */
 export { Container, ContainerScope } from "./libs/Container";
 export type { ContainerValidationOptions, TokenIdentifier } from "./libs/Container";
+export { defineGeneratedDiGraph, GENERATED_DI_GRAPH_VERSION } from "./libs/GeneratedGraph";
+export type {
+  GeneratedDiGraph,
+  GeneratedProviderDefinition,
+  GeneratedModuleProviderDeclaration,
+  GeneratedProviderDependency,
+  GeneratedProviderKind,
+  GeneratedProviderResolver,
+} from "./libs/GeneratedGraph";
 
 export { ContainerDiagnosticsProvider } from "./libs/diagnostics/ContainerDiagnosticsProvider";
 export {
@@ -73,7 +83,7 @@ export { RuntimeInspectorConfigurationProblem } from "./libs/problems/RuntimeIns
 export type { RuntimeInspectorNumericOption } from "./libs/problems/RuntimeInspectorProblems";
 
 /**
- * TypeDI 컨테이너 인스턴스 타입입니다.
+ * Croco runtime 컨테이너 인스턴스 타입입니다.
  *
  * @returns 개별 컨테이너 인스턴스의 타입 정의를 반환합니다.
  *
@@ -86,7 +96,18 @@ export type { RuntimeInspectorNumericOption } from "./libs/problems/RuntimeInspe
  * }
  * ```
  */
-export { ContainerInstance } from "typedi";
+export {
+  CannotInstantiateValueError,
+  ContainerInstance,
+  RuntimeContainer,
+  ServiceNotFoundError,
+} from "./libs/RuntimeContainer";
+export type {
+  Constructable,
+  ServiceIdentifier,
+  ServiceMetadata,
+  ServiceOptions,
+} from "./libs/RuntimeContainer";
 
 /**
  * 요청 단위 컨텍스트를 실행하고 조회하는 AsyncLocalStorage 기반 유틸리티 클래스입니다.
@@ -367,7 +388,7 @@ export type {
   DependencyResolutionTraceStatus,
   DependencySourceLocation,
   DependencyTokenKind,
-  TypeDIInjectionInspection,
+  InjectionInspection,
 } from "./libs/types";
 
 /**

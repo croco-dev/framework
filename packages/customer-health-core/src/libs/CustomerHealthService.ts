@@ -1,4 +1,4 @@
-import { Component, Container, Inject } from "@croco/framework-context";
+import { Component, Inject, InjectOptional } from "@croco/framework-context";
 import { createHealthTransitionEventIntents } from "./eventIntent";
 import type { HealthTransitionEventIntent } from "./eventIntent";
 import { HealthScoreDroppedEvent, HealthStatusChangedEvent } from "./events";
@@ -19,6 +19,8 @@ export class CustomerHealthService {
     @Inject(HealthSignalRegistry.token) private readonly signalRegistry: HealthSignalRegistry,
     @Inject(HealthScoreStore.token) private readonly store: HealthScoreStore,
     @Inject(() => HealthScoreCalculator) private readonly calculator: HealthScoreCalculator,
+    @InjectOptional(CustomerHealthEventPublisher.token)
+    private readonly eventPublisher?: CustomerHealthEventPublisher,
   ) {}
 
   async calculateAndStore(
@@ -134,9 +136,7 @@ export class CustomerHealthService {
   }
 
   private getEventPublisher(): CustomerHealthEventPublisher | null {
-    return Container.has(CustomerHealthEventPublisher.token)
-      ? Container.get(CustomerHealthEventPublisher.token)
-      : null;
+    return this.eventPublisher ?? null;
   }
 
   private restoreEvent(intent: HealthTransitionEventIntent) {

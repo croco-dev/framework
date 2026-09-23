@@ -1,3 +1,4 @@
+import { createTestEventBus } from "./createTestEventBus";
 import {
   DomainEvent,
   EventBusConfig,
@@ -17,7 +18,6 @@ import { assert, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DeadLetterQueueNotConfiguredProblem,
   InMemoryDeadLetterQueue,
-  InMemoryEventBus,
   InvalidDeadLetterPolicyProblem,
   InvalidDeadLetterQueueLimitProblem,
   InvalidDeadLetterHandlerIdentityProblem,
@@ -62,7 +62,7 @@ function controlledReplay(strategy: "block" | "drop" | "error" = "block") {
       }
     }
   }
-  const bus = new InMemoryEventBus<DeadLetterTestEvent>({
+  const bus = createTestEventBus<DeadLetterTestEvent>({
     deadLetterQueue: queue,
     deadLetterPolicy: { maxRetries: 0 },
     maxConcurrency: 1,
@@ -401,7 +401,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
     const resolvedHandler: EventHandler<DeadLetterTestEvent> = {
       handle: vi.fn(),
     };
-    const bus = new InMemoryEventBus<DeadLetterTestEvent>({ deadLetterQueue: queue });
+    const bus = createTestEventBus<DeadLetterTestEvent>({ deadLetterQueue: queue });
     bus.subscribe({
       eventName: DeadLetterTestEvent.eventName,
       handlerClass: ContainerHandler,
@@ -431,7 +431,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
       }
     }
     const queue = new InMemoryDeadLetterQueue();
-    const bus = new InMemoryEventBus<CollectionEvent>({
+    const bus = createTestEventBus<CollectionEvent>({
       deadLetterQueue: queue,
       deadLetterPolicy: { maxRetries: 1, retryDelayMs: 0 },
     });
@@ -469,7 +469,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
       }
     }
     const queue = new InMemoryDeadLetterQueue();
-    const bus = new InMemoryEventBus<CyclicEvent>({
+    const bus = createTestEventBus<CyclicEvent>({
       deadLetterQueue: queue,
       deadLetterPolicy: { maxRetries: 1, retryDelayMs: 0 },
     });
@@ -516,9 +516,9 @@ describe("InMemoryEventBus dead-letter execution", () => {
       }
     }
     Container.set(CustomHandler, new CustomHandler());
-    const legacy = new InMemoryEventBus<CustomEvent>();
+    const legacy = createTestEventBus<CustomEvent>();
     const queue = new InMemoryDeadLetterQueue();
-    const withDlq = new InMemoryEventBus<CustomEvent>({ deadLetterQueue: queue });
+    const withDlq = createTestEventBus<CustomEvent>({ deadLetterQueue: queue });
     const subscription = {
       eventName: CustomEvent.eventName,
       handlerClass: CustomHandler,
@@ -540,7 +540,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
       handle = vi.fn();
     }
     const queue = new InMemoryDeadLetterQueue();
-    const bus = new InMemoryEventBus<DeadLetterTestEvent>({
+    const bus = createTestEventBus<DeadLetterTestEvent>({
       deadLetterQueue: queue,
       deadLetterPolicy: { maxRetries: 0, retentionDays: 2 },
     });
@@ -598,7 +598,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
       }
     }
     const queue = new InMemoryDeadLetterQueue();
-    const bus = new InMemoryEventBus<DeadLetterTestEvent>({
+    const bus = createTestEventBus<DeadLetterTestEvent>({
       deadLetterQueue: queue,
       deadLetterPolicy: { maxRetries: 0 },
     });
@@ -652,7 +652,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
     class UnavailableLegacyHandler implements EventHandler<DeadLetterTestEvent> {
       handle = vi.fn();
     }
-    const bus = new InMemoryEventBus<DeadLetterTestEvent>();
+    const bus = createTestEventBus<DeadLetterTestEvent>();
     bus.subscribe({
       eventName: DeadLetterTestEvent.eventName,
       handlerClass: UnavailableLegacyHandler,
@@ -787,7 +787,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
     });
     const storageError = new Error("storage unavailable");
     const enqueue = vi.spyOn(queue, "enqueue").mockRejectedValue(storageError);
-    const bus = new InMemoryEventBus<DeadLetterTestEvent>({ deadLetterQueue: queue });
+    const bus = createTestEventBus<DeadLetterTestEvent>({ deadLetterQueue: queue });
     Container.set(AvailableHandler, new AvailableHandler());
     bus.subscribe({
       eventName: DeadLetterTestEvent.eventName,
@@ -827,7 +827,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
     await queue.enqueue(original);
     const storageError = new Error("storage unavailable");
     const enqueue = vi.spyOn(queue, "enqueue").mockRejectedValueOnce(storageError);
-    const bus = new InMemoryEventBus<DeadLetterTestEvent>({
+    const bus = createTestEventBus<DeadLetterTestEvent>({
       deadLetterQueue: queue,
       deadLetterPolicy: { maxRetries: 1, retryDelayMs: 0 },
     });
@@ -853,18 +853,17 @@ describe("InMemoryEventBus dead-letter execution", () => {
   });
 
   it("rejects dead-letter policy without storage and invalid bounded values", async () => {
-    expect(() => new InMemoryEventBus({ deadLetterPolicy: { maxRetries: 1 } })).toThrow(
+    expect(() => createTestEventBus({ deadLetterPolicy: { maxRetries: 1 } })).toThrow(
       DeadLetterQueueNotConfiguredProblem,
     );
-    expect(
-      () =>
-        new InMemoryEventBus({
-          deadLetterQueue: new InMemoryDeadLetterQueue(),
-          deadLetterPolicy: { maxRetries: -1 },
-        }),
+    expect(() =>
+      createTestEventBus({
+        deadLetterQueue: new InMemoryDeadLetterQueue(),
+        deadLetterPolicy: { maxRetries: -1 },
+      }),
     ).toThrow(InvalidDeadLetterPolicyProblem);
 
-    const eventBus = new InMemoryEventBus();
+    const eventBus = createTestEventBus();
     await expect(eventBus.replayDeadLetters()).rejects.toBeInstanceOf(
       DeadLetterQueueNotConfiguredProblem,
     );
@@ -880,7 +879,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
     class RenamedHandler implements EventHandler<DeadLetterTestEvent> {
       handle = vi.fn();
     }
-    const oldBus = new InMemoryEventBus<DeadLetterTestEvent>({
+    const oldBus = createTestEventBus<DeadLetterTestEvent>({
       deadLetterQueue: queue,
       deadLetterPolicy: { maxRetries: 0 },
     });
@@ -895,7 +894,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
     expect((await queue.peek())[0]?.handlerId).toBe("orders.projector.v1");
     const recovered = new RenamedHandler();
     Container.set(RenamedHandler, recovered);
-    const newBus = new InMemoryEventBus<DeadLetterTestEvent>({ deadLetterQueue: queue });
+    const newBus = createTestEventBus<DeadLetterTestEvent>({ deadLetterQueue: queue });
     newBus.subscribe({
       eventName: DeadLetterTestEvent.eventName,
       handlerClass: RenamedHandler,
@@ -921,7 +920,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
     }
     const handler = new SharedHandler();
     Container.set(SharedHandler, handler);
-    const bus = new InMemoryEventBus<DeadLetterTestEvent>({
+    const bus = createTestEventBus<DeadLetterTestEvent>({
       deadLetterQueue: new InMemoryDeadLetterQueue(),
     });
     bus.subscribe({
@@ -952,7 +951,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
     const second = new Second();
     Container.set(First, first);
     Container.set(Second, second);
-    const bus = new InMemoryEventBus<DeadLetterTestEvent>({
+    const bus = createTestEventBus<DeadLetterTestEvent>({
       deadLetterQueue: new InMemoryDeadLetterQueue(),
     });
     bus.subscribe({
@@ -979,7 +978,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
     Object.defineProperty(UnnamedHandler, "name", { value: "" });
     const handler = new UnnamedHandler();
     Container.set(UnnamedHandler, handler);
-    const bus = new InMemoryEventBus<DeadLetterTestEvent>({
+    const bus = createTestEventBus<DeadLetterTestEvent>({
       deadLetterQueue: new InMemoryDeadLetterQueue(),
     });
     bus.subscribe({
@@ -1002,7 +1001,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
     const Second = class SecondHandler implements EventHandler<DeadLetterTestEvent> {
       handle = secondHandle;
     };
-    const bus = new InMemoryEventBus<DeadLetterTestEvent>({
+    const bus = createTestEventBus<DeadLetterTestEvent>({
       deadLetterQueue: new InMemoryDeadLetterQueue(),
     });
     Container.set(First, new First());
@@ -1029,7 +1028,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
       const Second = class SharedName implements EventHandler<DeadLetterTestEvent> {
         handle = vi.fn();
       };
-      const bus = new InMemoryEventBus<DeadLetterTestEvent>({
+      const bus = createTestEventBus<DeadLetterTestEvent>({
         deadLetterQueue: new InMemoryDeadLetterQueue(),
       });
       const subscription = {
@@ -1058,7 +1057,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
         handle = vi.fn();
       }
       const handler = new UnnamedHandler();
-      const bus = new InMemoryEventBus<DeadLetterTestEvent>({
+      const bus = createTestEventBus<DeadLetterTestEvent>({
         deadLetterQueue: new InMemoryDeadLetterQueue(),
       });
       Container.set(UnnamedHandler, handler);
@@ -1080,7 +1079,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
       handle = vi.fn();
     }
     const handler = new SharedHandler();
-    const bus = new InMemoryEventBus<DeadLetterTestEvent>({
+    const bus = createTestEventBus<DeadLetterTestEvent>({
       deadLetterQueue: new InMemoryDeadLetterQueue(),
     });
     Container.set(SharedHandler, handler);
@@ -1113,7 +1112,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
     const second = new Second();
     Container.set(First, first);
     Container.set(Second, second);
-    const bus = new InMemoryEventBus<DeadLetterTestEvent>();
+    const bus = createTestEventBus<DeadLetterTestEvent>();
     bus.subscribe({ eventName: DeadLetterTestEvent.eventName, handlerClass: First });
     bus.subscribe({ eventName: DeadLetterTestEvent.eventName, handlerClass: Second });
 
@@ -1132,7 +1131,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
       }
       const handler = new CountedHandler();
       Container.set(CountedHandler, handler);
-      const bus = new InMemoryEventBus<DeadLetterTestEvent>({
+      const bus = createTestEventBus<DeadLetterTestEvent>({
         deadLetterQueue: queue,
         deadLetterPolicy: { maxRetries: 0 },
       });
@@ -1184,7 +1183,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
     }
 
     const handler = new FailingHandler();
-    const eventBus = new InMemoryEventBus<DeadLetterTestEvent>({ deadLetterQueue: queue });
+    const eventBus = createTestEventBus<DeadLetterTestEvent>({ deadLetterQueue: queue });
     Container.set(FailingHandler, handler);
     eventBus.subscribe({
       eventName: DeadLetterTestEvent.eventName,
@@ -1259,7 +1258,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
 
     const recovering = new RecoveringHandler();
     const peer = new SuccessfulPeerHandler();
-    const eventBus = new InMemoryEventBus<DeadLetterTestEvent>({ deadLetterQueue: queue });
+    const eventBus = createTestEventBus<DeadLetterTestEvent>({ deadLetterQueue: queue });
     Container.set(RecoveringHandler, recovering);
     Container.set(SuccessfulPeerHandler, peer);
     eventBus.subscribe({
@@ -1321,7 +1320,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
     }
 
     const handler = new AlwaysFailingHandler();
-    const eventBus = new InMemoryEventBus<DeadLetterTestEvent>({ deadLetterQueue: queue });
+    const eventBus = createTestEventBus<DeadLetterTestEvent>({ deadLetterQueue: queue });
     Container.set(AlwaysFailingHandler, handler);
     eventBus.subscribe({
       eventName: DeadLetterTestEvent.eventName,
@@ -1355,7 +1354,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
     }
 
     const handler = new PlainFailingHandler();
-    const eventBus = new InMemoryEventBus<DeadLetterTestEvent>({
+    const eventBus = createTestEventBus<DeadLetterTestEvent>({
       deadLetterQueue: queue,
       deadLetterPolicy: { maxRetries: 1, retryDelayMs: 0 },
     });
@@ -1387,7 +1386,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
       }
     }
 
-    const eventBus = new InMemoryEventBus<DeadLetterTestEvent>({ deadLetterQueue: queue });
+    const eventBus = createTestEventBus<DeadLetterTestEvent>({ deadLetterQueue: queue });
     Container.set(RemovedHandler, new RemovedHandler());
     const subscription = {
       eventName: DeadLetterTestEvent.eventName,
@@ -1427,7 +1426,7 @@ describe("InMemoryEventBus dead-letter execution", () => {
     }
 
     const handler = new RetryableFailingHandler();
-    const eventBus = new InMemoryEventBus<DeadLetterTestEvent>();
+    const eventBus = createTestEventBus<DeadLetterTestEvent>();
     Container.set(RetryableFailingHandler, handler);
     eventBus.subscribe({
       eventName: DeadLetterTestEvent.eventName,

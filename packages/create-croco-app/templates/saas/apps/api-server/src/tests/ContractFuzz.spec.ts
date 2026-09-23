@@ -1,8 +1,8 @@
-import { Container as TypeDIContainer } from "typedi";
 import {
   Context as FrameworkContext,
   createRuntimeCapabilityManifest,
   LOGGER_TOKEN,
+  RuntimeContainer,
 } from "@croco/framework-context";
 import type { RuntimeCapabilityManifest, RuntimeContext } from "@croco/framework-context";
 import { buildContractGraph } from "@croco/protocols-core";
@@ -45,7 +45,7 @@ type RuntimeEvidence = {
   waitUntilWorkCompleted: boolean;
 };
 
-type TypeDIContainerRegistry = {
+type RuntimeContainerRegistry = {
   readonly instances: readonly { readonly id: string }[];
 };
 
@@ -74,8 +74,8 @@ describe("generated contract verification", () => {
     });
     const nodeScopeId = nodeApp.applicationRuntime.scopeId;
     const lambdaScopeId = lambdaApp.applicationRuntime.scopeId;
-    const nodeScope = TypeDIContainer.of(nodeScopeId);
-    const lambdaScope = TypeDIContainer.of(lambdaScopeId);
+    const nodeScope = RuntimeContainer.of(nodeScopeId);
+    const lambdaScope = RuntimeContainer.of(lambdaScopeId);
 
     expect(nodeScope.has(LOGGER_TOKEN)).toBe(true);
     expect(lambdaScope.has(LOGGER_TOKEN)).toBe(true);
@@ -180,14 +180,14 @@ describe("generated contract verification", () => {
     );
     expect(nodeScope.has(LOGGER_TOKEN)).toBe(false);
     expect(lambdaScope.has(LOGGER_TOKEN)).toBe(false);
-    const activeScopeIds = getTypeDIContainerScopeIds();
+    const activeScopeIds = getRuntimeContainerScopeIds();
     expect(activeScopeIds).not.toContain(nodeScopeId);
     expect(activeScopeIds).not.toContain(lambdaScopeId);
   });
 });
 
-function getTypeDIContainerScopeIds(): readonly string[] {
-  const registry = TypeDIContainer as unknown as TypeDIContainerRegistry;
+function getRuntimeContainerScopeIds(): readonly string[] {
+  const registry = RuntimeContainer as unknown as RuntimeContainerRegistry;
   return registry.instances.map((instance) => instance.id);
 }
 

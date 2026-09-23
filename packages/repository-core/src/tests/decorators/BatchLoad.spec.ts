@@ -1,4 +1,4 @@
-import { Container, Context } from "@croco/framework-context";
+import { Context } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BatchLoad, type BatchLoadScope } from "../../libs/decorators/BatchLoad";
 import type {
@@ -6,16 +6,18 @@ import type {
   BatchLoaderLike,
   IBatchLoaderFactory,
 } from "../../libs/IBatchLoaderFactory";
-import { BATCH_LOADER_FACTORY_TOKEN } from "../../libs/IBatchLoaderFactory";
 import {
   BatchLoadDuplicateResultKeyProblem,
   BatchLoaderFactoryNotRegisteredProblem,
+  BatchLoaderFactoryResolutionProblem,
   BatchLoadResultIdentityMismatchProblem,
   BatchLoaderScopeCollisionProblem,
   BatchLoadUnexpectedResultKeyProblem,
   BatchLoadUnkeyedResultProblem,
 } from "../../libs/problems/BatchLoadProblems";
 import type { KeyedRepositoryResult } from "../../libs/ReadRepository";
+
+let factory: TestBatchLoaderFactory;
 
 type Entity = {
   id: string;
@@ -123,7 +125,7 @@ class TestRepository {
     return ids.map((id) => ({ key: id, value: { id, value: `value-${id}` } }));
   });
 
-  @BatchLoad({ by: "id" })
+  @BatchLoad({ factory: () => factory, by: "id" })
   async findById(id: string) {
     return this.originalFindById(id);
   }
@@ -136,7 +138,7 @@ class TestRepository {
 class FallbackRepository {
   callCount = 0;
 
-  @BatchLoad({ by: "id" })
+  @BatchLoad({ factory: () => factory, by: "id" })
   async findById(id: string) {
     this.callCount += 1;
     return { id, value: `value-${id}` };
@@ -157,7 +159,7 @@ class StoreRepository {
 
   constructor(private readonly store: ReadonlyMap<string, string>) {}
 
-  @BatchLoad({ by: "id" })
+  @BatchLoad({ factory: () => factory, by: "id" })
   async findById(id: string): Promise<Entity | null> {
     const value = this.store.get(id);
     return value === undefined ? null : { id, value };
@@ -182,6 +184,7 @@ class ScopedStoreRepository {
   ) {}
 
   @BatchLoad<ScopedStoreRepository>({
+    factory: () => factory,
     by: "id",
     scope: (repository) => repository.scopeToken,
   })
@@ -209,6 +212,7 @@ class ExplicitlyNamedScopedRepository {
   ) {}
 
   @BatchLoad<ExplicitlyNamedScopedRepository>({
+    factory: () => factory,
     by: "id",
     name: "shared-store",
     scope: (repository) => repository.scopeToken,
@@ -236,6 +240,7 @@ class TransactionScopedRepository {
   constructor(public currentScope: BatchLoadScope) {}
 
   @BatchLoad<TransactionScopedRepository>({
+    factory: () => factory,
     by: "id",
     scope: (repository) => repository.currentScope,
   })
@@ -249,6 +254,7 @@ const SHARED_DEFINITION_SCOPE = Symbol("shared-definition-scope");
 
 class FirstExplicitDefinition {
   @BatchLoad({
+    factory: () => factory,
     by: "id",
     name: "definition-alias",
     scope: () => SHARED_DEFINITION_SCOPE,
@@ -260,6 +266,7 @@ class FirstExplicitDefinition {
 
 class SecondExplicitDefinition {
   @BatchLoad({
+    factory: () => factory,
     by: "id",
     name: "definition-alias",
     scope: () => SHARED_DEFINITION_SCOPE,
@@ -273,7 +280,7 @@ const IDENTICAL_DISPLAY_SCOPE = Symbol("identical-display-scope");
 
 function createFirstIdenticalRepository() {
   class IdenticalRepository {
-    @BatchLoad({ by: "id", scope: () => IDENTICAL_DISPLAY_SCOPE })
+    @BatchLoad({ factory: () => factory, by: "id", scope: () => IDENTICAL_DISPLAY_SCOPE })
     async findById(id: string): Promise<Entity> {
       return { id, value: "first-definition" };
     }
@@ -284,7 +291,7 @@ function createFirstIdenticalRepository() {
 
 function createSecondIdenticalRepository() {
   class IdenticalRepository {
-    @BatchLoad({ by: "id", scope: () => IDENTICAL_DISPLAY_SCOPE })
+    @BatchLoad({ factory: () => factory, by: "id", scope: () => IDENTICAL_DISPLAY_SCOPE })
     async findById(id: string): Promise<Entity> {
       return { id, value: "second-definition" };
     }
@@ -297,12 +304,47 @@ const FirstIdenticalRepository = createFirstIdenticalRepository();
 const SecondIdenticalRepository = createSecondIdenticalRepository();
 
 describe("BatchLoad Decorator", () => {
-  let factory!: TestBatchLoaderFactory;
-
   beforeEach(() => {
-    Container.reset();
     factory = new TestBatchLoaderFactory();
-    Container.set(BATCH_LOADER_FACTORY_TOKEN, factory);
+  });
+
+  it("uses each repository's injected factory", async () => {
+    class Repository {
+      constructor(readonly factory: IBatchLoaderFactory) {}
+
+      @BatchLoad<Repository>({ by: "id", factory: (repository) => repository.factory })
+      async findById(id: string) {
+        return { id };
+      }
+    }
+
+    const first = new TestBatchLoaderFactory();
+    const second = new TestBatchLoaderFactory();
+    const firstCreate = vi.spyOn(first, "create");
+    const secondCreate = vi.spyOn(second, "create");
+    await Context.run({ requestId: "receiver-factories" }, async () => {
+      await new Repository(first).findById("1");
+      await new Repository(second).findById("2");
+    });
+    expect(firstCreate).toHaveBeenCalledOnce();
+    expect(secondCreate).toHaveBeenCalledOnce();
+  });
+
+  it("preserves factory accessor failure as an explicit Problem", async () => {
+    class Repository {
+      @BatchLoad({
+        by: "id",
+        factory: () => {
+          throw new Error("factory unavailable");
+        },
+      })
+      async findById(id: string) {
+        return { id };
+      }
+    }
+    await expect(new Repository().findById("1")).rejects.toBeInstanceOf(
+      BatchLoaderFactoryResolutionProblem,
+    );
   });
 
   it("should batch multiple calls into a single findByIds call", async () => {
@@ -622,7 +664,7 @@ describe("BatchLoad Decorator", () => {
   });
 
   it("should throw an explicit Problem when batch loader factory is not registered", async () => {
-    const hasSpy = vi.spyOn(Container, "has").mockReturnValue(false);
+    factory = undefined as unknown as TestBatchLoaderFactory;
 
     await Context.run({ requestId: "test-5" }, async () => {
       const repository = new TestRepository();
@@ -631,7 +673,5 @@ describe("BatchLoad Decorator", () => {
         BatchLoaderFactoryNotRegisteredProblem,
       );
     });
-
-    hasSpy.mockRestore();
   });
 });

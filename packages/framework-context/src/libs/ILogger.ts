@@ -1,4 +1,4 @@
-import { Token } from "typedi";
+import { Token } from "./Token";
 
 export interface ILogger {
   debug(message: string, context?: Record<string, unknown>): void;

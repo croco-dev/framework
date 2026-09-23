@@ -6,7 +6,7 @@ import { Function as SstFunction, StaticSite } from "sst/aws";
  * 주의: 이 recipe는 선택사항입니다. SST가 필수가 아닌
  * Node 단일 컨테이너 배포(T4 static serving)로 시작하는 것을 권장합니다.
  *
- * esbuild가 @croco/reflect-metadata + TypeDI decorators와
+ * esbuild가 Croco decorator metadata와 generated DI graph를
  * 충돌할 수 있습니다. 충돌 시 esbuild plugins 옵션에 decorators
  * 지원 플러그인을 추가하세요.
  */

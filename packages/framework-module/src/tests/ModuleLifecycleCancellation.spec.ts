@@ -1,4 +1,4 @@
-import { Container } from "typedi";
+import { RuntimeContainer as Container } from "@croco/framework-context";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createModuleRuntime,

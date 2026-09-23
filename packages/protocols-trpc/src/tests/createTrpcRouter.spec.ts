@@ -1,6 +1,13 @@
 import "reflect-metadata";
 import type { AddressInfo } from "node:net";
-import { Component, Container, Context, Inject } from "@croco/framework-context";
+import {
+  Component,
+  Container,
+  Context,
+  GENERATED_DI_GRAPH_VERSION,
+  Inject,
+  defineGeneratedDiGraph,
+} from "@croco/framework-context";
 import { ProblemCategory } from "@croco/problems-core";
 import type { RouteIR } from "@croco/protocols-core";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
@@ -53,6 +60,7 @@ describe("createTrpcRouter", () => {
 
   afterEach(() => {
     mocked.extractRouteIR = undefined;
+    Container.reset();
   });
 
   it("should expose GET routes as queries", async () => {
@@ -69,6 +77,41 @@ describe("createTrpcRouter", () => {
 
     expect(getProcedureType(router, "user", "listUsers")).toBe("query");
     await expect(caller.user.listUsers()).resolves.toEqual({ users: ["Ada"] });
+  });
+
+  it("should discover controllers from the generated application graph", async () => {
+    @Controller("/generated")
+    class GeneratedController {
+      @Get("/")
+      get(): string {
+        return "generated";
+      }
+    }
+    Container.installGeneratedGraph(
+      defineGeneratedDiGraph({
+        version: GENERATED_DI_GRAPH_VERSION,
+        graphId: "protocols-trpc-generated-controller",
+        compilerVersion: "test",
+        inputHash: "generated-controller",
+        providers: [
+          {
+            token: GeneratedController,
+            tokenId: "test:GeneratedController",
+            debugName: "GeneratedController",
+            kind: "rest-controller",
+            scope: "singleton",
+            dependencies: [],
+            factory: () => new GeneratedController(),
+            sourceLocation: { file: "createTrpcRouter.spec.ts", line: 1, column: 1 },
+          },
+        ],
+        roots: [GeneratedController],
+      }),
+    );
+
+    const caller = createCaller(createTrpcRouter());
+
+    await expect(caller.generated.get()).resolves.toBe("generated");
   });
 
   it("should expose POST routes as mutations", async () => {
@@ -466,6 +509,8 @@ describe("createTrpcRouter", () => {
         };
       }
     }
+    Container.register(RequestState, "request");
+    Container.register(ScopedController, "request");
 
     try {
       const router = createTrpcRouter([ScopedController]);
@@ -548,6 +593,8 @@ describe("createTrpcRouter", () => {
         };
       }
     }
+    Container.register(RequestState, "request");
+    Container.register(BatchedController, "request");
 
     const serverErrors: unknown[] = [];
     const router = createTrpcRouter([BatchedController]);
@@ -693,6 +740,8 @@ describe("createTrpcRouter", () => {
         throw new Error("request failure");
       }
     }
+    Container.register(RequestState, "request");
+    Container.register(FailingScopedController, "request");
 
     try {
       const router = createTrpcRouter([FailingScopedController]);

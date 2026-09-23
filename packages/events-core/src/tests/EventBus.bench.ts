@@ -115,7 +115,10 @@ describe("EventBus benchmarks", () => {
 
         config.setEventBus(mockBus);
 
-        await config.start({ handlers: predefinedHandlers });
+        await config.start({
+          handlers: predefinedHandlers,
+          resolver: new DefaultHandlerResolver(),
+        });
       },
       { iterations: 50, warmupIterations: 5 },
     );
@@ -132,7 +135,7 @@ describe("EventBus benchmarks", () => {
         const mockBus = new MockEventBus();
 
         config.setEventBus(mockBus);
-        await config.start({ handlers: [BenchHandler] });
+        await config.start({ handlers: [BenchHandler], resolver: new DefaultHandlerResolver() });
 
         const publisher = new EventPublisher(config);
         await publisher.publishNow(new BenchEvent("test-data"));

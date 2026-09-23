@@ -1,7 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import "reflect-metadata";
 import type { ILogger } from "@croco/framework-context";
-import { Container, LOGGER_TOKEN } from "@croco/framework-context";
 import type { MeteringService } from "../MeteringService";
 import type { CountMeterRef, MeterRecordInput } from "../MeterRef";
 import { InvalidUsageEnvelopeProblem } from "../problems/InvalidUsageEnvelopeProblem";
@@ -10,6 +9,8 @@ export const METERED_METADATA_KEY = Symbol.for("croco:metering:metered");
 
 /** 문자열 meter ID를 사용하는 기존 `@Metered` 데코레이터 옵션입니다. */
 export type MeteredOptions = {
+  /** Explicit reporter for non-billable recording failures. Without one, failures propagate. */
+  logger?: ILogger;
   meterId: string;
   billing?: "local" | "required";
   valueExtractor?: (args: unknown[], result: unknown) => number;
@@ -37,6 +38,8 @@ type MeteredEventExtractor<Meter extends CountMeterRef> =
 
 /** 타입이 지정된 count meter 계약을 사용하는 `@Metered` 데코레이터 옵션입니다. */
 export type MeteredRefOptions<Meter extends CountMeterRef> = {
+  /** Explicit reporter for non-billable recording failures. Without one, failures propagate. */
+  logger?: ILogger;
   meter: Meter;
   metadataExtractor?: (args: unknown[], result: unknown) => Record<string, unknown> | undefined;
 } & MeteredDimensionsExtractor<Meter> &
@@ -239,19 +242,11 @@ export function Metered(
             });
           }
         } catch (error) {
-          if (billingRequired) {
+          if (billingRequired || !options.logger) {
             throw error;
           }
 
-          // 계량 실패해도 원본 결과는 반환 (fail-safe)
-          try {
-            const logger = Container.get(LOGGER_TOKEN) as ILogger;
-            logger.error(`Metering failed for ${String(propertyKey)}:`, error as Error);
-          } catch {
-            // Logger DI is unavailable; fallback to console.error so the error is not lost.
-            // eslint-disable-next-line no-console
-            console.error(`Metering failed for ${String(propertyKey)}:`, error);
-          }
+          await options.logger.error(`Metering failed for ${String(propertyKey)}:`, error as Error);
         }
       }
 

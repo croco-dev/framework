@@ -1,10 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AuditErrorHandler, fireAndForgetWithRetry } from "../libs/AuditErrorHandler";
 
-vi.mock("@croco/framework-context", () => ({
-  Container: { get: () => ({ error: vi.fn() }) },
-  LOGGER_TOKEN: Symbol("logger"),
-}));
 vi.mock("@croco/telemetry-api", () => ({ recordError: vi.fn() }));
 
 function deferred<T>() {
@@ -18,6 +14,21 @@ function deferred<T>() {
 }
 
 describe("AuditErrorHandler", () => {
+  it("reports exhausted retries through the explicitly supplied logger", async () => {
+    const logger = { error: vi.fn() };
+    const error = new Error("write failed");
+    const handler = new AuditErrorHandler({ maxRetries: 1, logger });
+
+    await handler.executeWithRetry(async () => {
+      throw error;
+    }, "test");
+
+    expect(logger.error).toHaveBeenCalledWith(
+      "[AuditErrorHandler] Audit operation failed after retries",
+      { context: "test", attempts: 1, error: "write failed" },
+    );
+  });
+
   beforeEach(() => {
     vi.useFakeTimers();
     vi.spyOn(Math, "random").mockReturnValue(0);

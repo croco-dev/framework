@@ -9,11 +9,13 @@ updates.
 
 Croco 1.x continues to use the legacy decorator ABI. Applications that use Croco decorators must enable
 `experimentalDecorators` and `emitDecoratorMetadata`, load `reflect-metadata` before decorated classes, and use a
-compiler pipeline that preserves parameter decorators and `design:paramtypes`/`design:type` metadata. This is not a
-migration to standard ECMAScript decorators.
+compiler pipeline that preserves decorator metadata used by routes, GraphQL schemas, tracing, and other non-DI
+features. Dependency injection is compiled from TypeScript symbols into explicit factories and does not consume
+`design:paramtypes` or `design:type` at runtime. This is not a migration to standard ECMAScript decorators.
 
 The workspace base configuration keeps both legacy options enabled. Package builds and packed ESM/CJS consumer
-smokes verify the emitted metadata and implicit DI behavior.
+smokes verify non-DI decorator metadata, while DI consumer smokes verify generated graph installation and explicit
+factory resolution.
 
 ## Configuration contract
 

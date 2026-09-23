@@ -9,6 +9,12 @@ title: "ApplicationRuntimeOptions"
 
 ## Properties
 
+### generatedGraph?
+
+> `readonly` `optional` **generatedGraph?**: [`GeneratedDiGraph`](/api/framework-context/src/type-aliases/generateddigraph/)
+
+---
+
 ### modules?
 
 > `readonly` `optional` **modules?**: readonly [`ModuleOptions`](/api/framework-module/src/type-aliases/moduleoptions/)[]

@@ -1,8 +1,12 @@
-import { registerBatchLoaderFactory } from "@croco/dataloader-core";
-import { Container, Context } from "@croco/framework-context";
-import { BatchLoad, type KeyedRepositoryResult } from "@croco/repository-core";
-import { Transactional, type TxAdapter, TxManager, TxManagerRegistry } from "@croco/tx-core";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { BatchLoaderFactory } from "@croco/dataloader-core";
+import { Context } from "@croco/framework-context";
+import {
+  BatchLoad,
+  type IBatchLoaderFactory,
+  type KeyedRepositoryResult,
+} from "@croco/repository-core";
+import { Transactional, type TxAdapter, TxManager } from "@croco/tx-core";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AbstractDrizzleRepository } from "../libs/AbstractDrizzleRepository";
 import type { DrizzleDb } from "../libs/types";
 
@@ -22,7 +26,18 @@ type MockDb = DrizzleDb<TxClient> & {
 class IntegrationRepository extends AbstractDrizzleRepository<UserEntity, string, MockDb> {
   readonly batchCalls: Array<{ ids: string[]; txId: string }> = [];
 
-  @BatchLoad({ by: "id" })
+  constructor(
+    db: MockDb,
+    txManager: TxManager<TxClient>,
+    readonly batchLoaderFactory: IBatchLoaderFactory,
+  ) {
+    super(db, txManager);
+  }
+
+  @BatchLoad<IntegrationRepository>({
+    by: "id",
+    factory: (repository) => repository.batchLoaderFactory,
+  })
   async findById(id: string): Promise<UserEntity | null> {
     return { id, txId: this.getClientId() };
   }
@@ -59,9 +74,12 @@ class IntegrationRepository extends AbstractDrizzleRepository<UserEntity, string
 }
 
 class IntegrationService {
-  constructor(private readonly repository: IntegrationRepository) {}
+  constructor(
+    private readonly repository: IntegrationRepository,
+    readonly txManager: TxManager<TxClient>,
+  ) {}
 
-  @Transactional()
+  @Transactional<IntegrationService, unknown>((service) => service.txManager)
   async loadUsers(ids: string[]): Promise<Array<UserEntity | null>> {
     return Promise.all(ids.map((id) => this.repository.findById(id)));
   }
@@ -73,10 +91,6 @@ describe("Repository + BatchLoad + Transaction integration", () => {
   let service!: IntegrationService;
 
   beforeEach(() => {
-    Container.reset();
-    TxManagerRegistry.clear();
-    registerBatchLoaderFactory();
-
     let txCounter = 0;
     const transaction = async <T>(fn: (client: TxClient) => Promise<T>): Promise<T> => {
       txCounter += 1;
@@ -94,7 +108,6 @@ describe("Repository + BatchLoad + Transaction integration", () => {
     };
 
     const txManager = new TxManager(adapter);
-    TxManagerRegistry.register(txManager);
 
     const dbTransaction = async <T>(fn: (client: TxClient) => Promise<T>): Promise<T> =>
       fn({ txId: "db-client" });
@@ -104,12 +117,8 @@ describe("Repository + BatchLoad + Transaction integration", () => {
       transaction: vi.fn(dbTransaction) as typeof dbTransaction,
     };
 
-    repository = new IntegrationRepository(db, txManager);
-    service = new IntegrationService(repository);
-  });
-
-  afterEach(() => {
-    Container.reset();
+    repository = new IntegrationRepository(db, txManager, new BatchLoaderFactory());
+    service = new IntegrationService(repository, txManager);
   });
 
   it("should batch concurrent calls through transactional chain", async () => {

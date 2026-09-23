@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import type { AuthRequest, AuthUser } from "@croco/auth-core";
 import type { Guard } from "@croco/framework-context";
-import { Container, Context } from "@croco/framework-context";
+import { Context, InjectOptional } from "@croco/framework-context";
 import { recordEvent } from "@croco/telemetry-api";
 import type { EntitlementManager } from "./EntitlementManager";
 import type { EntitlementRequirement } from "./EntitlementRequirement";
@@ -113,7 +113,10 @@ type EntitlementGuardResourceResolution =
     };
 
 export class EntitlementGuard implements Guard<RouteExecutionContext> {
-  constructor(private readonly entitlementManager: EntitlementManager) {}
+  constructor(
+    private readonly entitlementManager: EntitlementManager,
+    @InjectOptional(EntitlementAuditSink.token) private readonly auditSink?: EntitlementAuditSink,
+  ) {}
 
   async canActivate(context: RouteExecutionContext): Promise<boolean> {
     const target = context.getClass();
@@ -385,7 +388,7 @@ export class EntitlementGuard implements Guard<RouteExecutionContext> {
   }
 
   private async recordAuditEvent(event: EntitlementGuardAuditEvent): Promise<void> {
-    const auditSink = Container.getOptional(EntitlementAuditSink.token);
+    const auditSink = this.auditSink;
 
     if (!auditSink) {
       return;

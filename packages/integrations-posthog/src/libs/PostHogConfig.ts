@@ -1,4 +1,4 @@
-import { Container, LOGGER_TOKEN, Token } from "@croco/framework-context";
+import { Token, type ILogger } from "@croco/framework-context";
 
 import { PostHogConfigProblem } from "./problems/PostHogProblems";
 
@@ -11,25 +11,26 @@ export interface PostHogConfig {
 export const POSTHOG_CONFIG_TOKEN = new Token<Readonly<PostHogConfig>>("PostHogConfig");
 
 /**
- * PostHog 설정을 검증하고 환경 기반 host를 정규화한 뒤 Croco DI에 등록합니다.
+ * 명시적인 애플리케이션 provider에 전달할 PostHog 설정을 검증하고 동결합니다.
  *
- * @param config - 등록할 PostHog API key와 선택적 HTTP(S) host입니다.
- * @returns 컨테이너에 등록된 동결 설정입니다.
+ * @param config - PostHog API key와 선택적 HTTP(S) host입니다.
+ * @returns 검증된 host를 포함하는 동결 설정입니다.
  */
-export function registerPostHogConfig(config: PostHogConfig): Readonly<PostHogConfig> {
+export function createPostHogConfig(
+  config: PostHogConfig,
+  logger?: ILogger,
+): Readonly<Required<PostHogConfig>> {
   const validConfig = validatePostHogConfig(config);
 
   if (!config.host) {
-    warnAboutEnvironmentHost();
+    warnAboutEnvironmentHost(logger);
   }
 
-  const registeredConfig = Object.freeze(validConfig);
-  Container.set(POSTHOG_CONFIG_TOKEN, registeredConfig);
-  return registeredConfig;
+  return Object.freeze(validConfig);
 }
 
-export function warnAboutEnvironmentHost(): void {
-  Container.getOptional(LOGGER_TOKEN)?.warn(
+export function warnAboutEnvironmentHost(logger?: ILogger): void {
+  logger?.warn(
     "[PostHogClient] POSTHOG_HOST env var is used for PostHog host. " +
       "Set host explicitly in config to confirm data residency compliance.",
   );

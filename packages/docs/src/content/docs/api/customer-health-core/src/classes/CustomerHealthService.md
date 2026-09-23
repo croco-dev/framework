@@ -9,7 +9,7 @@ title: "CustomerHealthService"
 
 ### Constructor
 
-> **new CustomerHealthService**(`signalRegistry`, `store`, `calculator`): `CustomerHealthService`
+> **new CustomerHealthService**(`signalRegistry`, `store`, `calculator`, `eventPublisher?`): `CustomerHealthService`
 
 #### Parameters
 
@@ -24,6 +24,10 @@ title: "CustomerHealthService"
 ##### calculator
 
 [`HealthScoreCalculator`](/api/customer-health-core/src/classes/healthscorecalculator/)
+
+##### eventPublisher?
+
+[`CustomerHealthEventPublisher`](/api/customer-health-core/src/classes/customerhealtheventpublisher/)
 
 #### Returns
 
