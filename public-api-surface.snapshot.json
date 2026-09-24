@@ -20114,6 +20114,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidUserCarryingCapacityMetricProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/MetricsProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "LtvCalculator",
               "exportKind": "named",
               "source": "./libs/LtvCalculator",

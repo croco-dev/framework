@@ -5,6 +5,7 @@ import {
   CarryingCapacitySimulationProblem,
   CarryingCapacityTenantRequiredProblem,
   InvalidCarryingCapacityConfigProblem,
+  InvalidUserCarryingCapacityMetricProblem,
 } from "./problems/MetricsProblems";
 
 /**
@@ -70,6 +71,7 @@ export class CarryingCapacityCalculator {
    *
    * @param config - Configuration for calculation
    * @returns User CC result, or null if churn rate is 0 (infinite capacity)
+   * @throws InvalidUserCarryingCapacityMetricProblem when NRR is non-finite or non-positive, or the calculated rate or capacity is non-finite
    */
   async calculateUserCC(config: UserCCConfig): Promise<CCResult | null> {
     const { lookbackDays, tenantId } = config;
@@ -94,13 +96,24 @@ export class CarryingCapacityCalculator {
       granularity: "day",
     });
 
+    if (!Number.isFinite(retention.nrr) || retention.nrr <= 0) {
+      throw new InvalidUserCarryingCapacityMetricProblem("nrr", retention.nrr);
+    }
+
     const dailyChurnRate = -Math.log(retention.nrr / 100) / 30;
+
+    if (!Number.isFinite(dailyChurnRate)) {
+      throw new InvalidUserCarryingCapacityMetricProblem("dailyChurnRate", dailyChurnRate);
+    }
 
     if (dailyChurnRate <= 0) {
       return null;
     }
 
     const capacity = dailyInflow / dailyChurnRate;
+    if (!Number.isFinite(capacity)) {
+      throw new InvalidUserCarryingCapacityMetricProblem("capacity", capacity);
+    }
     const current = await this.userProvider.getDailyActiveUsers(now, tenantId);
 
     return this.buildCCResult(capacity, current, dailyInflow, dailyChurnRate);

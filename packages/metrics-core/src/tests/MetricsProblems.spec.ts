@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   CarryingCapacitySimulationProblem,
   InvalidCarryingCapacityConfigProblem,
+  InvalidUserCarryingCapacityMetricProblem,
   InvalidRetentionMovementProblem,
   RetentionMetricsUnavailableProblem,
 } from "../libs/problems/MetricsProblems";
@@ -51,5 +52,17 @@ describe("MetricsProblems", () => {
     expect(problem.detail).toBe(
       "Retention movement 'churned' amount must be a finite non-negative number: NaN",
     );
+  });
+
+  it("InvalidUserCarryingCapacityMetricProblem identifies the invalid metric", () => {
+    const problem = new InvalidUserCarryingCapacityMetricProblem("nrr", -50);
+
+    expect(problem.code).toBe("metrics-core/invalid-user-carrying-capacity-metric");
+    expect(problem.category).toBe(ProblemCategory.ValidationError);
+    expect(problem.extensions).toMatchObject({
+      field: "nrr",
+      receivedValue: "-50",
+      retryable: false,
+    });
   });
 });
