@@ -866,6 +866,7 @@ function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
             let parent = node.parent;
             while (parent && !ts.isConstructorDeclaration(parent)) {
               if (
+                ts.isFunctionLike(parent) ||
                 ts.isIfStatement(parent) ||
                 ts.isConditionalExpression(parent) ||
                 ts.isSwitchStatement(parent) ||
@@ -907,22 +908,27 @@ function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
               const mutatesObject =
                 ts.isPropertyAccessExpression(child.left) ||
                 ts.isElementAccessExpression(child.left);
-              const target = mutatesObject ? child.left.expression : child.left;
-              if (ts.isIdentifier(target)) {
+              const target = mutatesObject ? unwrapExpression(child.left.expression) : child.left;
+              if (target && ts.isIdentifier(target)) {
                 mutatedAliases.add(target.text);
                 if (mutatesObject) {
                   markObjectMutation(target.text);
                 } else {
                   const source = unwrapExpression(child.right);
+                  const isLogicalAssignment =
+                    child.operatorToken.kind === ts.SyntaxKind.BarBarEqualsToken ||
+                    child.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandEqualsToken ||
+                    child.operatorToken.kind === ts.SyntaxKind.QuestionQuestionEqualsToken;
                   const updatedIds =
-                    child.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+                    (child.operatorToken.kind === ts.SyntaxKind.EqualsToken ||
+                      isLogicalAssignment) &&
                     source &&
                     ts.isIdentifier(source)
                       ? getObjectIds(source.text)
                       : new Set([++nextObjectId]);
                   objectIds.set(
                     target.text,
-                    isConditionalRebinding(child)
+                    isLogicalAssignment || isConditionalRebinding(child)
                       ? new Set([...getObjectIds(target.text), ...updatedIds])
                       : updatedIds,
                   );
@@ -931,11 +937,12 @@ function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
             }
             if (ts.isDeleteExpression(child)) {
               const target = child.expression;
-              if (
-                (ts.isPropertyAccessExpression(target) || ts.isElementAccessExpression(target)) &&
-                ts.isIdentifier(target.expression)
-              ) {
-                markObjectMutation(target.expression.text);
+              const object =
+                ts.isPropertyAccessExpression(target) || ts.isElementAccessExpression(target)
+                  ? unwrapExpression(target.expression)
+                  : undefined;
+              if (object && ts.isIdentifier(object)) {
+                markObjectMutation(object.text);
               }
             }
             if (
@@ -2429,7 +2436,8 @@ function unwrapExpression(node: ts.Node | undefined): ts.Expression | undefined 
   while (
     ts.isAsExpression(expression) ||
     ts.isSatisfiesExpression(expression) ||
-    ts.isParenthesizedExpression(expression)
+    ts.isParenthesizedExpression(expression) ||
+    ts.isNonNullExpression(expression)
   ) {
     expression = expression.expression;
   }
