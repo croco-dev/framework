@@ -141,6 +141,106 @@ describe("validateConfig", () => {
       );
     });
 
+    it("should not call a supplied value missing after a top-level transform renames it", () => {
+      const schema = z
+        .object({ RAW_PORT: z.string() })
+        .transform(({ RAW_PORT }) => ({ PORT: RAW_PORT }))
+        .pipe(z.object({ PORT: z.coerce.number() }));
+
+      expect(() => validateConfig(schema, { RAW_PORT: "abc" })).toThrow(
+        "PORT: invalid_type: Expected number",
+      );
+    });
+
+    it("should not infer a missing piped field from the pre-transform input", () => {
+      const schema = z
+        .object({ RAW_PORT: z.string().optional() })
+        .transform(({ RAW_PORT }) => ({ PORT: RAW_PORT ?? "abc" }))
+        .pipe(z.object({ PORT: z.coerce.number() }));
+
+      expect(() => validateConfig(schema, {})).toThrow("PORT: invalid_type: Expected number");
+    });
+
+    it("should classify piped output against its stage through a schema wrapper", () => {
+      const schema = z
+        .object({ RAW_PORT: z.string() })
+        .transform(({ RAW_PORT }) => ({ PORT: RAW_PORT }))
+        .pipe(z.object({ PORT: z.coerce.number() }))
+        .optional();
+
+      expect(() => validateConfig(schema, { RAW_PORT: "abc" })).toThrow(
+        "PORT: invalid_type: Expected number",
+      );
+    });
+
+    it("should not call a defaulted piped value missing", () => {
+      const schema = z
+        .object({ PORT: z.string().default("abc") })
+        .pipe(z.object({ PORT: z.coerce.number() }));
+
+      expect(() => validateConfig(schema, {})).toThrow("PORT: invalid_type: Expected number");
+    });
+
+    it("should report an input-stage missing value before a pipe runs", () => {
+      const schema = z.object({ PORT: z.string() }).pipe(z.object({ PORT: z.coerce.number() }));
+
+      expect(() => validateConfig(schema, {})).toThrow("PORT: Missing required");
+    });
+
+    it("should report an input-stage missing coerced value before a pipe runs", () => {
+      const schema = z.object({ PORT: z.coerce.number() }).pipe(z.object({ PORT: z.number() }));
+
+      expect(() => validateConfig(schema, {})).toThrow("PORT: Missing required");
+    });
+
+    it("should retain transformed issue provenance through an intersection", () => {
+      const transformedPort = z
+        .object({ RAW_PORT: z.string() })
+        .transform(({ RAW_PORT }) => ({ PORT: RAW_PORT }))
+        .pipe(z.object({ PORT: z.coerce.number() }));
+      const schema = z.intersection(transformedPort, z.object({ MODE: z.string().optional() }));
+
+      expect(() => validateConfig(schema, { RAW_PORT: "abc" })).toThrow(
+        "<root>: invalid_type: Expected number",
+      );
+    });
+
+    it("should report a missing field when its schema overrides the error message", () => {
+      const schema = z.object({ PORT: z.string({ error: "Port is required" }) });
+
+      expect(() => validateConfig(schema, {})).toThrow("PORT: Missing required");
+    });
+
+    it("should report a missing nested object", () => {
+      const schema = z.object({ DATABASE: z.object({ URL: z.string() }) });
+
+      expect(() => validateConfig(schema, {})).toThrow("DATABASE: Missing required");
+    });
+
+    it("should report a missing field before its transform or pipe runs", () => {
+      const schema = z.object({
+        PORT: z.coerce.number().pipe(z.number().positive()),
+      });
+
+      expect(() => validateConfig(schema, {})).toThrow("PORT: Missing required");
+    });
+
+    it("should not confuse a reused output validator with an optional input validator", () => {
+      const port = z.coerce.number();
+      const schema = z
+        .object({ PORT: port.optional() })
+        .transform(() => ({ PORT: "abc" }))
+        .pipe(z.object({ PORT: port }));
+
+      expect(() => validateConfig(schema, {})).toThrow("PORT: invalid_type: Expected number");
+    });
+
+    it("should report a missing field behind a lazy schema", () => {
+      const schema = z.object({ PORT: z.lazy(() => z.coerce.number()) });
+
+      expect(() => validateConfig(schema, {})).toThrow("PORT: Missing required");
+    });
+
     it("should exclude custom issue paths and type labels derived from input", () => {
       const schema = z.object({
         TOKEN: z.string().superRefine((value, context) => {
