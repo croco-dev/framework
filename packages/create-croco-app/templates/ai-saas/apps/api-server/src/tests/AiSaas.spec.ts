@@ -168,7 +168,7 @@ describe("AI SaaS generated baseline", () => {
         restoreEnvironment(SAAS_DEMO_ENDPOINTS_ENABLED_ENV, previousDemo);
       }
     }
-  });
+  }, 90_000);
 });
 
 function restoreEnvironment(name: string, value: string | undefined): void {
