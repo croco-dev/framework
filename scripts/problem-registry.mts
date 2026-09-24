@@ -139,6 +139,18 @@ type ProblemConstructorForwarder = {
   readonly categoryArgumentIndex?: number;
 };
 
+type ProblemCauseAllowlistEntry = {
+  readonly code: "problem-cause-not-forwarded";
+  readonly file: string;
+  readonly className: string;
+  readonly parameter: string;
+  readonly owner: string;
+  readonly reason: string;
+  readonly expiresOn: string;
+};
+
+const PROBLEM_CAUSE_ALLOWLIST_PATH = "scripts/problem-cause-allowlist.json";
+
 const registryPath = join("docs", "problem-code-registry.json");
 const generatedRegistrySourcePath = join(
   "packages",
@@ -232,6 +244,7 @@ export function runProblemRegistryCheck(
         registry,
       ),
       ...getProblemRedactionDiagnostics(absoluteRootDir),
+      ...getProblemCauseDiagnostics(absoluteRootDir),
     ];
     const syncDiagnostics =
       preflightDiagnostics.length === 0
@@ -800,6 +813,603 @@ function getProblemRedactionDiagnostics(rootDir: string): readonly string[] {
   return getSourceFiles(rootDir).flatMap((file) =>
     getProblemRedactionDiagnosticsForFile(rootDir, file),
   );
+}
+
+function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
+  const violations = getSourceFiles(rootDir).flatMap((file) => {
+    const sourceFile = ts.createSourceFile(
+      file,
+      readFileSync(file, "utf-8"),
+      ts.ScriptTarget.Latest,
+      true,
+      file.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+    );
+    const found: {
+      entry: Pick<ProblemCauseAllowlistEntry, "file" | "className" | "parameter">;
+      diagnostic: string;
+    }[] = [];
+
+    function visit(node: ts.Node): void {
+      if (
+        (ts.isClassDeclaration(node) || ts.isClassExpression(node)) &&
+        node.name &&
+        isProblemSubclass(node)
+      ) {
+        const constructor = node.members.find(
+          (member): member is ts.ConstructorDeclaration =>
+            ts.isConstructorDeclaration(member) && member.body !== undefined,
+        );
+        if (constructor) {
+          const superCalls: ts.CallExpression[] = [];
+          const aliases = new Map<string, ts.Expression>();
+          const mutatedAliases = new Set<string>();
+          function collectSuperCalls(child: ts.Node): void {
+            if (ts.isClassDeclaration(child) || ts.isClassExpression(child)) {
+              return;
+            }
+            if (
+              ts.isBinaryExpression(child) &&
+              child.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+              child.operatorToken.kind <= ts.SyntaxKind.LastAssignment
+            ) {
+              const target =
+                ts.isPropertyAccessExpression(child.left) ||
+                ts.isElementAccessExpression(child.left)
+                  ? child.left.expression
+                  : child.left;
+              if (ts.isIdentifier(target)) {
+                mutatedAliases.add(target.text);
+              }
+            }
+            if (
+              ts.isCallExpression(child) &&
+              child.expression.kind === ts.SyntaxKind.SuperKeyword
+            ) {
+              superCalls.push(child);
+            }
+            ts.forEachChild(child, collectSuperCalls);
+          }
+          for (const statement of constructor.body?.statements ?? []) {
+            if (
+              ts.isVariableStatement(statement) &&
+              (statement.declarationList.flags & ts.NodeFlags.Const) !== 0
+            ) {
+              for (const declaration of statement.declarationList.declarations) {
+                if (ts.isIdentifier(declaration.name) && declaration.initializer) {
+                  aliases.set(declaration.name.text, declaration.initializer);
+                }
+              }
+            }
+            collectSuperCalls(statement);
+          }
+          for (const name of mutatedAliases) {
+            aliases.delete(name);
+          }
+
+          if (superCalls.length === 0) {
+            return;
+          }
+          for (const parameter of constructor.parameters) {
+            if (!ts.isIdentifier(parameter.name) || !parameter.type) {
+              continue;
+            }
+            const kind = getErrorParameterKind(parameter);
+            if (!kind) {
+              continue;
+            }
+            const parameterName = parameter.name.text;
+            if (
+              superCalls.every((call) =>
+                forwardsProblemCause(call.arguments[3], parameterName, kind, aliases),
+              )
+            ) {
+              continue;
+            }
+            const location = sourceFile.getLineAndCharacterOfPosition(
+              parameter.getStart(sourceFile),
+            );
+            const relativeFile = toPosixPath(relative(rootDir, file));
+            found.push({
+              entry: {
+                file: relativeFile,
+                className: node.name.text,
+                parameter: parameter.name.text,
+              },
+              diagnostic: `problem-cause-not-forwarded at ${relativeFile}:${location.line + 1}:${location.character + 1}: ${node.name.text} must forward '${parameter.name.text}' through super() options.cause.`,
+            });
+          }
+        }
+      }
+      ts.forEachChild(node, visit);
+    }
+
+    visit(sourceFile);
+    return found;
+  });
+  const { entries, diagnostics } = readProblemCauseAllowlist(rootDir);
+  const used = new Set<ProblemCauseAllowlistEntry>();
+
+  for (const violation of violations) {
+    const allowed = entries.find(
+      (entry) =>
+        entry.file === violation.entry.file &&
+        entry.className === violation.entry.className &&
+        entry.parameter === violation.entry.parameter,
+    );
+    if (allowed) {
+      used.add(allowed);
+    } else {
+      diagnostics.push(violation.diagnostic);
+    }
+  }
+
+  for (const entry of entries) {
+    if (!used.has(entry)) {
+      diagnostics.push(
+        `${PROBLEM_CAUSE_ALLOWLIST_PATH}: unused exception for ${entry.file} ${entry.className}.${entry.parameter}.`,
+      );
+    }
+  }
+
+  return diagnostics;
+}
+
+function isProblemSubclass(node: ts.ClassDeclaration | ts.ClassExpression): boolean {
+  return (
+    node.heritageClauses?.some(
+      (clause) =>
+        clause.token === ts.SyntaxKind.ExtendsKeyword &&
+        clause.types.some((type) =>
+          getExpressionTerminalName(type.expression)?.endsWith("Problem"),
+        ),
+    ) ?? false
+  );
+}
+
+function getErrorParameterKind(parameter: ts.ParameterDeclaration): "error" | "mixed" | null {
+  const type = parameter.type;
+  if (!type) {
+    return null;
+  }
+  const isError = (node: ts.TypeNode): boolean =>
+    ts.isTypeReferenceNode(node) &&
+    ts.isIdentifier(node.typeName) &&
+    node.typeName.text === "Error";
+
+  if (isError(type)) {
+    return "error";
+  }
+  if (ts.isUnionTypeNode(type) && type.types.some(isError)) {
+    return type.types.every(
+      (member) =>
+        isError(member) ||
+        member.kind === ts.SyntaxKind.UndefinedKeyword ||
+        member.kind === ts.SyntaxKind.NullKeyword ||
+        (ts.isLiteralTypeNode(member) && member.literal.kind === ts.SyntaxKind.NullKeyword),
+    )
+      ? "error"
+      : "mixed";
+  }
+  return type.kind === ts.SyntaxKind.UnknownKeyword &&
+    /^(?:error|cause|lastError|originalError)$/iu.test(parameter.name.getText())
+    ? "mixed"
+    : null;
+}
+
+function forwardsProblemCause(
+  expression: ts.Expression | undefined,
+  parameter: string,
+  kind: "error" | "mixed",
+  aliases: ReadonlyMap<string, ts.Expression>,
+  guarded = false,
+  visited = new Set<string>(),
+): boolean {
+  if (!expression) {
+    return false;
+  }
+  if (
+    ts.isParenthesizedExpression(expression) ||
+    ts.isAsExpression(expression) ||
+    ts.isSatisfiesExpression(expression)
+  ) {
+    return forwardsProblemCause(expression.expression, parameter, kind, aliases, guarded, visited);
+  }
+  if (
+    ts.isIdentifier(expression) &&
+    aliases.has(expression.text) &&
+    !visited.has(expression.text)
+  ) {
+    visited.add(expression.text);
+    return forwardsProblemCause(
+      aliases.get(expression.text),
+      parameter,
+      kind,
+      aliases,
+      guarded,
+      visited,
+    );
+  }
+  if (ts.isConditionalExpression(expression)) {
+    const branch = getCauseConditionBranch(expression.condition, parameter);
+    const trueForwarded = forwardsProblemCause(
+      expression.whenTrue,
+      parameter,
+      kind,
+      aliases,
+      guarded || isErrorGuard(expression.condition, parameter),
+      new Set(visited),
+    );
+    const falseForwarded = forwardsProblemCause(
+      expression.whenFalse,
+      parameter,
+      kind,
+      aliases,
+      guarded,
+      new Set(visited),
+    );
+    return branch === "true"
+      ? trueForwarded
+      : branch === "false"
+        ? falseForwarded
+        : trueForwarded && falseForwarded;
+  }
+  if (
+    ts.isBinaryExpression(expression) &&
+    expression.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken
+  ) {
+    return (
+      getCauseConditionBranch(expression.left, parameter) === "true" &&
+      forwardsProblemCause(
+        expression.right,
+        parameter,
+        kind,
+        aliases,
+        guarded || isErrorGuard(expression.left, parameter),
+        visited,
+      )
+    );
+  }
+  if (!ts.isObjectLiteralExpression(expression)) {
+    return false;
+  }
+
+  let forwarded = false;
+  for (const property of expression.properties) {
+    if (ts.isSpreadAssignment(property)) {
+      const spreadForwarded = forwardsProblemCause(
+        property.expression,
+        parameter,
+        kind,
+        aliases,
+        guarded,
+        new Set(visited),
+      );
+      if (spreadForwarded) {
+        forwarded = true;
+      } else if (!isCauseFreeSpread(property.expression, aliases)) {
+        forwarded = false;
+      }
+      continue;
+    }
+    if (ts.isShorthandPropertyAssignment(property)) {
+      if (property.name.text === "cause") {
+        forwarded = forwardsCauseValue(
+          property.name,
+          parameter,
+          kind,
+          aliases,
+          guarded,
+          new Set(visited),
+        );
+      }
+      continue;
+    }
+    if (!ts.isPropertyAssignment(property) || getPropertyName(property.name) !== "cause") {
+      continue;
+    }
+    forwarded = forwardsCauseValue(
+      property.initializer,
+      parameter,
+      kind,
+      aliases,
+      guarded,
+      new Set(visited),
+    );
+  }
+  return forwarded;
+}
+
+function isCauseFreeSpread(
+  expression: ts.Expression,
+  aliases: ReadonlyMap<string, ts.Expression>,
+  visited = new Set<string>(),
+): boolean {
+  if (ts.isIdentifier(expression)) {
+    if (expression.text === "undefined") {
+      return true;
+    }
+    const alias = aliases.get(expression.text);
+    if (!alias || visited.has(expression.text)) {
+      return false;
+    }
+    visited.add(expression.text);
+    return isCauseFreeSpread(alias, aliases, visited);
+  }
+  if (
+    ts.isParenthesizedExpression(expression) ||
+    ts.isAsExpression(expression) ||
+    ts.isSatisfiesExpression(expression)
+  ) {
+    return isCauseFreeSpread(expression.expression, aliases, visited);
+  }
+  if (ts.isConditionalExpression(expression)) {
+    return (
+      isCauseFreeSpread(expression.whenTrue, aliases, new Set(visited)) &&
+      isCauseFreeSpread(expression.whenFalse, aliases, new Set(visited))
+    );
+  }
+  if (
+    ts.isCallExpression(expression) &&
+    ts.isIdentifier(expression.expression) &&
+    !aliases.has(expression.expression.text)
+  ) {
+    const helperName = expression.expression.text;
+    return expression.getSourceFile().statements.some((statement) => {
+      if (
+        !ts.isFunctionDeclaration(statement) ||
+        statement.name?.text !== helperName ||
+        !statement.body ||
+        statement.body.statements.length !== 1
+      ) {
+        return false;
+      }
+      const [returnStatement] = statement.body.statements;
+      return (
+        returnStatement &&
+        ts.isReturnStatement(returnStatement) &&
+        returnStatement.expression !== undefined &&
+        isCauseFreeSpread(returnStatement.expression, new Map())
+      );
+    });
+  }
+  if (ts.isObjectLiteralExpression(expression)) {
+    return expression.properties.every((property) =>
+      ts.isSpreadAssignment(property)
+        ? isCauseFreeSpread(property.expression, aliases, new Set(visited))
+        : getPropertyName(property.name) !== "cause",
+    );
+  }
+  return (
+    expression.kind === ts.SyntaxKind.UndefinedKeyword ||
+    expression.kind === ts.SyntaxKind.FalseKeyword
+  );
+}
+
+function forwardsCauseValue(
+  expression: ts.Expression,
+  parameter: string,
+  kind: "error" | "mixed",
+  aliases: ReadonlyMap<string, ts.Expression>,
+  guarded: boolean,
+  visited: Set<string>,
+): boolean {
+  if (
+    ts.isParenthesizedExpression(expression) ||
+    ts.isAsExpression(expression) ||
+    ts.isSatisfiesExpression(expression)
+  ) {
+    return forwardsCauseValue(expression.expression, parameter, kind, aliases, guarded, visited);
+  }
+  if (ts.isIdentifier(expression)) {
+    if (expression.text === parameter) {
+      return kind === "error" || guarded;
+    }
+    const alias = aliases.get(expression.text);
+    if (alias && !visited.has(expression.text)) {
+      visited.add(expression.text);
+      return forwardsCauseValue(alias, parameter, kind, aliases, guarded, visited);
+    }
+    return false;
+  }
+  if (ts.isConditionalExpression(expression)) {
+    const branch = getCauseConditionBranch(expression.condition, parameter);
+    const trueForwarded = forwardsCauseValue(
+      expression.whenTrue,
+      parameter,
+      kind,
+      aliases,
+      guarded || isErrorGuard(expression.condition, parameter),
+      new Set(visited),
+    );
+    const falseForwarded = forwardsCauseValue(
+      expression.whenFalse,
+      parameter,
+      kind,
+      aliases,
+      guarded,
+      new Set(visited),
+    );
+    return branch === "true"
+      ? trueForwarded
+      : branch === "false"
+        ? falseForwarded
+        : trueForwarded && falseForwarded;
+  }
+  if (
+    ts.isBinaryExpression(expression) &&
+    expression.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken
+  ) {
+    return (
+      getCauseConditionBranch(expression.left, parameter) === "true" &&
+      forwardsCauseValue(
+        expression.right,
+        parameter,
+        kind,
+        aliases,
+        guarded || isErrorGuard(expression.left, parameter),
+        visited,
+      )
+    );
+  }
+  if (
+    ts.isCallExpression(expression) &&
+    ts.isIdentifier(expression.expression) &&
+    expression.expression.text === "toError" &&
+    expression.arguments.length === 1 &&
+    ts.isIdentifier(expression.arguments[0]) &&
+    expression.arguments[0].text === parameter &&
+    !aliases.has("toError")
+  ) {
+    return expression.getSourceFile().statements.some((statement) => {
+      if (
+        !ts.isFunctionDeclaration(statement) ||
+        statement.name?.text !== "toError" ||
+        !statement.body ||
+        statement.parameters.length !== 1 ||
+        !ts.isIdentifier(statement.parameters[0]?.name)
+      ) {
+        return false;
+      }
+      const input = statement.parameters[0].name.text;
+      const [returnStatement] = statement.body.statements;
+      return (
+        statement.body.statements.length === 1 &&
+        returnStatement &&
+        ts.isReturnStatement(returnStatement) &&
+        returnStatement.expression &&
+        ts.isConditionalExpression(returnStatement.expression) &&
+        isErrorGuard(returnStatement.expression.condition, input) &&
+        ts.isIdentifier(returnStatement.expression.whenTrue) &&
+        returnStatement.expression.whenTrue.text === input
+      );
+    });
+  }
+  return false;
+}
+
+function isErrorGuard(expression: ts.Expression, parameter: string): boolean {
+  if (
+    ts.isBinaryExpression(expression) &&
+    expression.operatorToken.kind === ts.SyntaxKind.InstanceOfKeyword &&
+    ts.isIdentifier(expression.left) &&
+    expression.left.text === parameter &&
+    ts.isIdentifier(expression.right) &&
+    expression.right.text === "Error"
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function getCauseConditionBranch(
+  expression: ts.Expression,
+  parameter: string,
+): "true" | "false" | null {
+  if (expression.kind === ts.SyntaxKind.TrueKeyword) {
+    return "true";
+  }
+  if (expression.kind === ts.SyntaxKind.FalseKeyword) {
+    return "false";
+  }
+  if (ts.isIdentifier(expression) && expression.text === parameter) {
+    return "true";
+  }
+  if (
+    ts.isPrefixUnaryExpression(expression) &&
+    expression.operator === ts.SyntaxKind.ExclamationToken &&
+    ts.isIdentifier(expression.operand) &&
+    expression.operand.text === parameter
+  ) {
+    return "false";
+  }
+  if (isErrorGuard(expression, parameter)) {
+    return "true";
+  }
+  if (ts.isBinaryExpression(expression)) {
+    const isParameter = (node: ts.Expression): boolean =>
+      ts.isIdentifier(node) && node.text === parameter;
+    const isEmpty = (node: ts.Expression): boolean =>
+      (ts.isIdentifier(node) && node.text === "undefined") ||
+      node.kind === ts.SyntaxKind.NullKeyword;
+    if (
+      (isParameter(expression.left) && isEmpty(expression.right)) ||
+      (isEmpty(expression.left) && isParameter(expression.right))
+    ) {
+      switch (expression.operatorToken.kind) {
+        case ts.SyntaxKind.EqualsEqualsToken:
+        case ts.SyntaxKind.EqualsEqualsEqualsToken:
+          return "false";
+        case ts.SyntaxKind.ExclamationEqualsToken:
+        case ts.SyntaxKind.ExclamationEqualsEqualsToken:
+          return "true";
+      }
+    }
+  }
+  return null;
+}
+
+function readProblemCauseAllowlist(rootDir: string): {
+  entries: ProblemCauseAllowlistEntry[];
+  diagnostics: string[];
+} {
+  const path = join(rootDir, PROBLEM_CAUSE_ALLOWLIST_PATH);
+  if (!existsSync(path)) {
+    return { entries: [], diagnostics: [] };
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(path, "utf-8")) as unknown;
+  } catch {
+    return { entries: [], diagnostics: [`${PROBLEM_CAUSE_ALLOWLIST_PATH}: invalid JSON.`] };
+  }
+  if (
+    !parsed ||
+    typeof parsed !== "object" ||
+    !("entries" in parsed) ||
+    !Array.isArray(parsed.entries) ||
+    !("schemaVersion" in parsed) ||
+    parsed.schemaVersion !== 1 ||
+    !("baselineEntryCount" in parsed) ||
+    !Number.isInteger(parsed.baselineEntryCount) ||
+    parsed.baselineEntryCount !== parsed.entries.length
+  ) {
+    return {
+      entries: [],
+      diagnostics: [
+        `${PROBLEM_CAUSE_ALLOWLIST_PATH}: expected schemaVersion 1 and matching baselineEntryCount and entries array.`,
+      ],
+    };
+  }
+  const entries: ProblemCauseAllowlistEntry[] = [];
+  const diagnostics: string[] = [];
+  for (const [index, value] of parsed.entries.entries()) {
+    if (!value || typeof value !== "object") {
+      diagnostics.push(`${PROBLEM_CAUSE_ALLOWLIST_PATH}: invalid entry ${index}.`);
+      continue;
+    }
+    const entry = value as Record<string, unknown>;
+    if (
+      entry.code !== "problem-cause-not-forwarded" ||
+      ![entry.file, entry.className, entry.parameter, entry.owner, entry.reason].every(
+        (field) => typeof field === "string" && field.trim().length > 0,
+      ) ||
+      typeof entry.expiresOn !== "string" ||
+      !/^\d{4}-\d{2}-\d{2}$/u.test(entry.expiresOn) ||
+      !Number.isFinite(Date.parse(entry.expiresOn)) ||
+      new Date(entry.expiresOn).toISOString().slice(0, 10) !== entry.expiresOn ||
+      typeof entry.file !== "string" ||
+      !entry.file.startsWith("packages/") ||
+      !existsSync(join(rootDir, entry.file)) ||
+      entry.expiresOn < new Date().toISOString().slice(0, 10)
+    ) {
+      diagnostics.push(
+        `${PROBLEM_CAUSE_ALLOWLIST_PATH}: entry ${index} requires code, file, className, parameter, owner, reason, and unexpired expiresOn.`,
+      );
+      continue;
+    }
+    entries.push(entry as ProblemCauseAllowlistEntry);
+  }
+  return { entries, diagnostics };
 }
 
 function getProblemRedactionDiagnosticsForFile(rootDir: string, file: string): readonly string[] {

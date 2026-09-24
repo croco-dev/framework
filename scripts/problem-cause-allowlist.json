@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "baselineEntryCount": 9,
+  "entries": [
+    {
+      "code": "problem-cause-not-forwarded",
+      "file": "packages/auth-better-auth/src/libs/problems/BetterAuthAuthenticationProblem.ts",
+      "className": "BetterAuthAuthenticationProblem",
+      "parameter": "error",
+      "owner": "framework-error-handling",
+      "reason": "Existing upstream error is reduced to redacted status and message evidence; forwarding behavior is deferred to the auth adapter's own fix.",
+      "expiresOn": "2026-10-24"
+    },
+    {
+      "code": "problem-cause-not-forwarded",
+      "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
+      "className": "ClerkTokenVerificationProblem",
+      "parameter": "error",
+      "owner": "framework-error-handling",
+      "reason": "Existing Clerk verification failure does not retain the upstream error; a package-specific fix must review sensitive cause handling.",
+      "expiresOn": "2026-10-24"
+    },
+    {
+      "code": "problem-cause-not-forwarded",
+      "file": "packages/auth-clerk/src/libs/problems/ClerkProblems.ts",
+      "className": "ClerkTokenVerificationUpstreamProblem",
+      "parameter": "error",
+      "owner": "framework-error-handling",
+      "reason": "Existing Clerk upstream failure does not retain the upstream error; a package-specific fix must review sensitive cause handling.",
+      "expiresOn": "2026-10-24"
+    },
+    {
+      "code": "problem-cause-not-forwarded",
+      "file": "packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts",
+      "className": "QStashBatchPublishProblem",
+      "parameter": "error",
+      "owner": "framework-error-handling",
+      "reason": "Existing QStash batch failure records classified and redacted evidence without retaining the upstream Error; adapter repair is separate.",
+      "expiresOn": "2026-10-24"
+    },
+    {
+      "code": "problem-cause-not-forwarded",
+      "file": "packages/events-core/src/libs/problems/EventsProblems.ts",
+      "className": "EventAfterCommitPublishFailedProblem",
+      "parameter": "observerError",
+      "owner": "framework-error-handling",
+      "reason": "The primary cause is forwarded; this optional second failure remains available as the observerError field rather than replacing the primary Error.cause.",
+      "expiresOn": "2026-12-24"
+    },
+    {
+      "code": "problem-cause-not-forwarded",
+      "file": "packages/metering-core/src/libs/problems/RedisProblem.ts",
+      "className": "RedisProblem",
+      "parameter": "originalError",
+      "owner": "framework-error-handling",
+      "reason": "Existing Error-or-string input only contributes originalMessage; the metering package must preserve Error.cause in an Error-narrowed branch.",
+      "expiresOn": "2026-10-24"
+    },
+    {
+      "code": "problem-cause-not-forwarded",
+      "file": "packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts",
+      "className": "UpstashMeteringUpstreamProblem",
+      "parameter": "error",
+      "owner": "framework-error-handling",
+      "reason": "Existing Upstash metering failure records classified and redacted evidence without retaining the upstream Error; adapter repair is separate.",
+      "expiresOn": "2026-10-24"
+    },
+    {
+      "code": "problem-cause-not-forwarded",
+      "file": "packages/ratelimit-upstash/src/libs/problems/RateLimitUpstashProblems.ts",
+      "className": "UpstashRateLimitUpstreamProblem",
+      "parameter": "error",
+      "owner": "framework-error-handling",
+      "reason": "Existing Upstash rate-limit failure records classified and redacted evidence without retaining the upstream Error; adapter repair is separate.",
+      "expiresOn": "2026-10-24"
+    },
+    {
+      "code": "problem-cause-not-forwarded",
+      "file": "packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts",
+      "className": "QStashTaskPublishProblem",
+      "parameter": "error",
+      "owner": "framework-error-handling",
+      "reason": "Existing QStash task failure records classified and redacted evidence without retaining the upstream Error; adapter repair is separate.",
+      "expiresOn": "2026-10-24"
+    }
+  ]
+}

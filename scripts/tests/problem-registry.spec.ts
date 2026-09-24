@@ -26,6 +26,261 @@ describe("problem-registry.mts", () => {
     }
   });
 
+  it("rejects Problem constructors that drop Error and Error-union causes", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class AlphaProblem extends Problem {",
+        "  constructor(cause: Error) {",
+        '    super("alpha/failed", ProblemCategory.InternalServerError, cause.message);',
+        "  }",
+        "}",
+        "export class UnionProblem extends Problem {",
+        "  constructor(originalError: Error | string) {",
+        '    super("alpha/union", ProblemCategory.InternalServerError, String(originalError));',
+        "  }",
+        "}",
+        "export class UnknownProblem extends Problem {",
+        "  constructor(error: unknown) {",
+        '    super("alpha/unknown", ProblemCategory.InternalServerError, String(error));',
+        "  }",
+        "}",
+      ].join("\n"),
+    );
+
+    const result = runProblemRegistryCheck(repo, "write");
+
+    expect(result.status).toBe("fail");
+    expect(result.diagnostics).toContainEqual(
+      expect.stringContaining("problem-cause-not-forwarded at packages/alpha/src/problems.ts:3:"),
+    );
+    expect(result.diagnostics).toContainEqual(
+      expect.stringContaining("problem-cause-not-forwarded at packages/alpha/src/problems.ts:8:"),
+    );
+    expect(result.diagnostics).toContainEqual(
+      expect.stringContaining("problem-cause-not-forwarded at packages/alpha/src/problems.ts:13:"),
+    );
+  }, 30_000);
+
+  it("accepts direct, guarded, aliased, spread, and Error-union cause forwarding", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        'import type { ProblemOptions } from "@croco/problems-core";',
+        "export class DirectProblem extends Problem {",
+        "  constructor(cause: Error) {",
+        '    super("alpha/direct", ProblemCategory.InternalServerError, "failed", { cause });',
+        "  }",
+        "}",
+        "export class GuardedProblem extends Problem {",
+        "  constructor(error: unknown) {",
+        '    super("alpha/guarded", ProblemCategory.InternalServerError, "failed", error instanceof Error ? { cause: error } : undefined);',
+        "  }",
+        "}",
+        "export class UnionProblem extends Problem {",
+        "  constructor(originalError: Error | string) {",
+        '    super("alpha/union", ProblemCategory.InternalServerError, "failed", { cause: originalError instanceof Error ? originalError : undefined });',
+        "  }",
+        "}",
+        "export class NormalizedAliasProblem extends Problem {",
+        "  constructor(error: unknown) {",
+        "    const causeError = error instanceof Error ? error : new Error(String(error));",
+        '    super("alpha/normalized", ProblemCategory.InternalServerError, "failed", { cause: causeError });',
+        "  }",
+        "}",
+        "export class OptionsAliasProblem extends Problem {",
+        "  constructor(cause?: Error) {",
+        "    const options = cause ? ({ cause } satisfies ProblemOptions) : undefined;",
+        '    super("alpha/options", ProblemCategory.InternalServerError, "failed", options);',
+        "  }",
+        "}",
+        "export class SpreadProblem extends Problem {",
+        "  constructor(cause: Error) {",
+        "    const options = { cause };",
+        '    super("alpha/spread", ProblemCategory.InternalServerError, "failed", { ...options });',
+        "  }",
+        "}",
+        "export class OptionalCauseProblem extends Problem {",
+        "  constructor(cause?: Error) {",
+        '    super("alpha/optional-cause", ProblemCategory.InternalServerError, "failed", cause !== undefined ? { cause } : undefined);',
+        "  }",
+        "}",
+      ].join("\n"),
+    );
+
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+  }, 30_000);
+
+  it("rejects cause forwarding hidden by overloads, overwritten options, unrelated branches, and mutable aliases", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        'import type { ProblemOptions } from "@croco/problems-core";',
+        "export class OverloadedProblem extends Problem {",
+        "  constructor(cause: Error);",
+        "  constructor(cause: Error) {",
+        '    super("alpha/overloaded", ProblemCategory.InternalServerError, cause.message);',
+        "  }",
+        "}",
+        "export class OverwrittenSpreadProblem extends Problem {",
+        "  constructor(cause: Error) {",
+        '    super("alpha/overwritten", ProblemCategory.InternalServerError, "failed", { cause, ...{ cause: undefined } });',
+        "  }",
+        "}",
+        "export class FalseConditionalProblem extends Problem {",
+        "  constructor(cause: Error) {",
+        '    super("alpha/false-branch", ProblemCategory.InternalServerError, "failed", false ? { cause } : undefined);',
+        "  }",
+        "}",
+        "export class UnrelatedConditionalProblem extends Problem {",
+        "  constructor(cause: Error, flag: boolean) {",
+        '    super("alpha/unrelated-branch", ProblemCategory.InternalServerError, "failed", flag ? { cause } : undefined);',
+        "  }",
+        "}",
+        "export class ReassignedAliasProblem extends Problem {",
+        "  constructor(cause: Error) {",
+        "    let options: ProblemOptions = { cause };",
+        "    options = {};",
+        '    super("alpha/reassigned", ProblemCategory.InternalServerError, "failed", options);',
+        "  }",
+        "}",
+        "function toError(_error: unknown): Error { return new Error('unrelated'); }",
+        "export class BogusHelperProblem extends Problem {",
+        "  constructor(error: unknown) {",
+        '    super("alpha/bogus-helper", ProblemCategory.InternalServerError, "failed", { cause: toError(error) });',
+        "  }",
+        "}",
+        "export class ConjunctiveGuardProblem extends Problem {",
+        "  constructor(error: unknown, flag: boolean) {",
+        '    super("alpha/conjunctive-guard", ProblemCategory.InternalServerError, "failed", flag && error instanceof Error ? { cause: error } : undefined);',
+        "  }",
+        "}",
+        "export class MutatedConstOptionsProblem extends Problem {",
+        "  constructor(cause: Error) {",
+        "    const options: ProblemOptions = { cause };",
+        "    options['cause'] = undefined;",
+        '    super("alpha/mutated-const-options", ProblemCategory.InternalServerError, "failed", options);',
+        "  }",
+        "}",
+        "function extras(options: { cause?: Error }) { return options; }",
+        "export class HelperSpreadProblem extends Problem {",
+        "  constructor(cause: Error) {",
+        "    const options = { extensions: {} };",
+        '    super("alpha/helper-spread", ProblemCategory.InternalServerError, "failed", { cause, ...extras({ cause: undefined }) });',
+        "  }",
+        "}",
+      ].join("\n"),
+    );
+
+    const result = runProblemRegistryCheck(repo, "write");
+
+    expect(result.status).toBe("fail");
+    for (const className of [
+      "OverloadedProblem",
+      "OverwrittenSpreadProblem",
+      "FalseConditionalProblem",
+      "UnrelatedConditionalProblem",
+      "ReassignedAliasProblem",
+      "BogusHelperProblem",
+      "ConjunctiveGuardProblem",
+      "MutatedConstOptionsProblem",
+      "HelperSpreadProblem",
+    ]) {
+      expect(result.diagnostics).toContainEqual(
+        expect.stringContaining(`${className} must forward`),
+      );
+    }
+  }, 30_000);
+
+  it("accepts a cause property that overrides an earlier spread", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/alpha/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class FinalCauseProblem extends Problem {",
+        "  constructor(cause: Error) {",
+        '    super("alpha/final-cause", ProblemCategory.InternalServerError, "failed", { ...{ cause: undefined }, cause });',
+        "  }",
+        "}",
+      ].join("\n"),
+    );
+
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+  }, 30_000);
+
+  it("accepts an owned, reasoned, unexpired cause exception", () => {
+    const repo = createTempRepo();
+    writeCauseViolation(repo);
+    writeCauseAllowlist(repo, [causeAllowlistEntry()]);
+
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+  }, 30_000);
+
+  it.each(["owner", "reason", "expiresOn"])(
+    "rejects a cause exception without %s",
+    (field) => {
+      const repo = createTempRepo();
+      writeCauseViolation(repo);
+      const entry = causeAllowlistEntry();
+      delete entry[field];
+      writeCauseAllowlist(repo, [entry]);
+
+      const result = runProblemRegistryCheck(repo, "write");
+
+      expect(result.status).toBe("fail");
+      expect(result.diagnostics).toContainEqual(
+        expect.stringContaining("scripts/problem-cause-allowlist.json"),
+      );
+    },
+    30_000,
+  );
+
+  it("rejects an expired cause exception", () => {
+    const repo = createTempRepo();
+    writeCauseViolation(repo);
+    writeCauseAllowlist(repo, [causeAllowlistEntry({ expiresOn: "2000-01-01" })]);
+
+    const result = runProblemRegistryCheck(repo, "write");
+
+    expect(result.status).toBe("fail");
+    expect(result.diagnostics).toContainEqual(
+      expect.stringContaining("scripts/problem-cause-allowlist.json"),
+    );
+  }, 30_000);
+
+  it("rejects an unused cause exception", () => {
+    const repo = createTempRepo();
+    writeFile(repo, "packages/alpha/src/problems.ts", "");
+    writeCauseAllowlist(repo, [causeAllowlistEntry()]);
+
+    const result = runProblemRegistryCheck(repo, "write");
+
+    expect(result.status).toBe("fail");
+    expect(result.diagnostics).toContainEqual(expect.stringContaining("unused exception"));
+  }, 30_000);
+
+  it("rejects a cause exception added without increasing the baseline count", () => {
+    const repo = createTempRepo();
+    writeCauseViolation(repo);
+    writeCauseAllowlist(repo, [causeAllowlistEntry()], 0);
+
+    const result = runProblemRegistryCheck(repo, "write");
+
+    expect(result.status).toBe("fail");
+    expect(result.diagnostics).toContainEqual(expect.stringContaining("baselineEntryCount"));
+  }, 30_000);
+
   it("discovers Problem codes and writes deterministic registry and cookbook artifacts", () => {
     const repo = createTempRepo();
     writeFile(
@@ -1421,6 +1676,46 @@ function writeFile(repo: string, path: string, content: string): void {
   const absolutePath = join(repo, path);
   mkdirSync(dirname(absolutePath), { recursive: true });
   writeFileSync(absolutePath, content);
+}
+
+function writeCauseViolation(repo: string): void {
+  writeFile(
+    repo,
+    "packages/alpha/src/problems.ts",
+    [
+      'import { Problem, ProblemCategory } from "@croco/problems-core";',
+      "export class AlphaProblem extends Problem {",
+      "  constructor(cause: Error) {",
+      '    super("alpha/failed", ProblemCategory.InternalServerError, cause.message);',
+      "  }",
+      "}",
+    ].join("\n"),
+  );
+}
+
+function causeAllowlistEntry(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    code: "problem-cause-not-forwarded",
+    file: "packages/alpha/src/problems.ts",
+    className: "AlphaProblem",
+    parameter: "cause",
+    owner: "alpha-maintainers",
+    reason: "The cause must remain detached for this fixture.",
+    expiresOn: "2999-12-31",
+    ...overrides,
+  };
+}
+
+function writeCauseAllowlist(
+  repo: string,
+  entries: readonly Record<string, unknown>[],
+  baselineEntryCount = entries.length,
+): void {
+  writeFile(
+    repo,
+    "scripts/problem-cause-allowlist.json",
+    `${JSON.stringify({ schemaVersion: 1, baselineEntryCount, entries }, null, 2)}\n`,
+  );
 }
 
 function writeProblemFactories(repo: string, path: string, codes: readonly string[]): void {
