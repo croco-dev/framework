@@ -536,7 +536,7 @@ function collectOpenAPICoveredRoutes(
           "request.path": hasOpenAPIParameters(operation, "path") ? "present" : "absent",
           "request.query": hasOpenAPIParameters(operation, "query") ? "present" : "absent",
           "request.headers": hasOpenAPIParameters(operation, "header") ? "present" : "absent",
-          response: hasOpenAPIJsonSuccessResponse(operation, routesById.get(operation.summary))
+          response: hasOpenAPIJsonSuccessResponse(operation, routesById.get(operation["summary"]))
             ? "present"
             : "absent",
           problems: openAPIProblemsFingerprint(operation),

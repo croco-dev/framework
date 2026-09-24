@@ -461,6 +461,22 @@ function validateRoute(
 }
 
 function validateSuccessStatus(route: ContractGraphRoute): ContractDiagnostic[] {
+  if (
+    route.successStatus !== undefined &&
+    (!Number.isInteger(route.successStatus) ||
+      route.successStatus < 200 ||
+      route.successStatus > 299)
+  ) {
+    return [
+      createRouteDiagnostic(
+        route,
+        "contract-route-invalid-success-status",
+        "error",
+        `Success status ${route.successStatus} must be an integer between 200 and 299.`,
+      ),
+    ];
+  }
+
   if ((route.successStatus !== 204 && route.successStatus !== 205) || !route.outputSchema) {
     return [];
   }

@@ -653,6 +653,25 @@ describe("emitOpenAPI", () => {
     expect(responses?.[200]).toBeUndefined();
   });
 
+  it("should reject a non-success status before it can replace a Problem response", () => {
+    @Controller("/orders")
+    class OrdersController {
+      @Post("/")
+      createOrder(): void {}
+    }
+
+    const metadata = Reflect.getMetadata(REST_ROUTES_KEY, OrdersController) as RouteMetadata[];
+    const route = metadata[0];
+    if (!route) throw new TypeError("Expected order route metadata.");
+    route.statusCode = 404;
+
+    expect(() =>
+      emitOpenAPI([OrdersController], {
+        problemResponses: [{ status: 404, description: "Order not found" }],
+      }),
+    ).toThrow(/contract-route-invalid-success-status/);
+  });
+
   it("should keep a declared bodyless success status and reject a body on 204 or 205", () => {
     @Controller("/orders")
     class OrdersController {
