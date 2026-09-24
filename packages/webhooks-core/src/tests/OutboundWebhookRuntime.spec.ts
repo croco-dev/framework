@@ -486,6 +486,27 @@ describe("OutboundWebhookRuntime", () => {
     );
   });
 
+  it("doubles the default delay after each retryable delivery failure", async () => {
+    const store = new InMemoryOutboundWebhookStore();
+    const transport = new FakeOutboundWebhookTransport([
+      { kind: "http", status: 500 },
+      { kind: "http", status: 500 },
+      { kind: "http", status: 500 },
+    ]);
+    let now = new Date(START);
+    const runtime = createRuntime({ store, transport, now: () => new Date(now) });
+    const deliveryId = (await runtime.publish(EVENT)).deliveries[0]?.id ?? "";
+
+    for (const delay of [60_000, 120_000, 240_000]) {
+      const retrying = await runtime.dispatch(EVENT.tenantId, deliveryId);
+      expect(retrying.status).toBe("retrying");
+      expect(retrying.nextAttemptAt?.getTime()).toBe(now.getTime() + delay);
+      now = new Date(now.getTime() + delay);
+    }
+
+    expect(transport.requests).toHaveLength(3);
+  });
+
   it.each([
     [{ kind: "http", status: 200 }, "delivered"],
     [{ kind: "http", status: 202 }, "accepted"],

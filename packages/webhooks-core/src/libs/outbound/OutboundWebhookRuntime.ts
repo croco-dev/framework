@@ -31,7 +31,7 @@ const DEFAULT_RETRY_POLICY: OutboundWebhookRetryPolicy = {
   maxAttempts: 8,
   backoff: {
     getDelay(attempt): number {
-      return Math.min(60_000 * 2 ** Math.max(0, attempt - 1), 86_400_000);
+      return Math.min(60_000 * 2 ** attempt, 86_400_000);
     },
   },
 };
