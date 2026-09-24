@@ -41,6 +41,27 @@ export class InvalidCarryingCapacityConfigProblem extends Problem {
   }
 }
 
+export class InvalidUserCarryingCapacityMetricProblem extends Problem {
+  readonly code = "metrics-core/invalid-user-carrying-capacity-metric";
+  readonly category = ProblemCategory.ValidationError;
+  readonly field: "nrr" | "dailyChurnRate" | "capacity";
+  readonly receivedValue: string;
+
+  constructor(field: "nrr" | "dailyChurnRate" | "capacity", value: number) {
+    const receivedValue = String(value);
+    super(
+      "metrics-core/invalid-user-carrying-capacity-metric",
+      ProblemCategory.ValidationError,
+      `User carrying capacity requires finite positive NRR and finite churn rate and capacity; '${field}' was ${receivedValue}.`,
+      {
+        extensions: { field, receivedValue, retryable: false },
+      },
+    );
+    this.field = field;
+    this.receivedValue = receivedValue;
+  }
+}
+
 export class RetentionMetricsUnavailableProblem extends Problem {
   readonly code = "metrics-core/retention-metrics-unavailable";
   readonly category = ProblemCategory.NotImplemented;

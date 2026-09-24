@@ -100,6 +100,10 @@ Capacity = Daily New Users / Daily Churn Rate
 
 Daily Churn Rate = (1 - (NRR / 100)) ^ (1/30) (derived from monthly NRR)
 
+#### Throws
+
+InvalidUserCarryingCapacityMetricProblem when NRR is non-finite or non-positive, or the calculated rate or capacity is non-finite
+
 ---
 
 ### simulate()

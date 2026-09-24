@@ -61,6 +61,7 @@ export {
   CarryingCapacityTenantRequiredProblem,
   GrossMarginRequiredProblem,
   InvalidCarryingCapacityConfigProblem,
+  InvalidUserCarryingCapacityMetricProblem,
   InvalidRetentionMovementProblem,
   MixedCurrencyMRRProblem,
   RetentionMetricsUnavailableProblem,

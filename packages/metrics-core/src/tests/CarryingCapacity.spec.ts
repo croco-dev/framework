@@ -85,6 +85,53 @@ describe("CarryingCapacityCalculator", () => {
       expect(result).toBeNull();
     });
 
+    it.each([0, -50, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+      "should reject NRR %s before calculating user capacity",
+      async (nrr) => {
+        vi.spyOn(mockUserProvider, "getNewUsersCount").mockResolvedValue(1000);
+        vi.spyOn(mockMetricsRepository, "getRetentionMetrics").mockResolvedValue({
+          logoChurn: 0,
+          revenueChurn: 0,
+          grr: 0,
+          nrr,
+        });
+
+        await expect(
+          calculator.calculateUserCC({ lookbackDays: 30, tenantId: TENANT_ID }),
+        ).rejects.toMatchObject({ code: "metrics-core/invalid-user-carrying-capacity-metric" });
+        expect(mockUserProvider.getDailyActiveUsers).not.toHaveBeenCalled();
+      },
+    );
+
+    it("should reject a non-finite churn rate caused by underflow", async () => {
+      vi.spyOn(mockUserProvider, "getNewUsersCount").mockResolvedValue(1000);
+      vi.spyOn(mockMetricsRepository, "getRetentionMetrics").mockResolvedValue({
+        logoChurn: 0,
+        revenueChurn: 0,
+        grr: 0,
+        nrr: Number.MIN_VALUE,
+      });
+
+      await expect(
+        calculator.calculateUserCC({ lookbackDays: 30, tenantId: TENANT_ID }),
+      ).rejects.toMatchObject({ code: "metrics-core/invalid-user-carrying-capacity-metric" });
+    });
+
+    it("should reject capacity overflow before building a result", async () => {
+      vi.spyOn(mockUserProvider, "getNewUsersCount").mockResolvedValue(Number.MAX_VALUE);
+      vi.spyOn(mockMetricsRepository, "getRetentionMetrics").mockResolvedValue({
+        logoChurn: 2,
+        revenueChurn: 2,
+        grr: 98,
+        nrr: 98,
+      });
+
+      await expect(
+        calculator.calculateUserCC({ lookbackDays: 2, tenantId: TENANT_ID }),
+      ).rejects.toMatchObject({ code: "metrics-core/invalid-user-carrying-capacity-metric" });
+      expect(mockUserProvider.getDailyActiveUsers).not.toHaveBeenCalled();
+    });
+
     it("should aggregate new users over lookback period", async () => {
       vi.spyOn(mockUserProvider, "getNewUsersCount").mockResolvedValue(500);
       vi.spyOn(mockUserProvider, "getDailyActiveUsers").mockResolvedValue(5000);
