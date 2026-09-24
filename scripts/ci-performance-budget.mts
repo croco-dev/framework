@@ -278,10 +278,8 @@ export function findCiPerformanceBudgetViolations(
 ): readonly string[] {
   const violations: string[] = [];
   const validate = jobSection(input.workflow, "validate", "changes");
-  const changes = jobSection(input.workflow, "changes", "ecosystem-advisory");
   const ecosystemAdvisory = jobSection(input.workflow, "ecosystem-advisory", "real-resource-tests");
-  const realResources = jobSection(input.workflow, "real-resource-tests", "windows-scaffold");
-  const windowsScaffold = jobSection(input.workflow, "windows-scaffold", "docs-sync-check");
+  const realResources = jobSection(input.workflow, "real-resource-tests", "docs-sync-check");
   const jobs = workflowJobs(input.workflow);
   const byId = new Map(input.ordinaryPullRequestManifest.map((command) => [command.id, command]));
   const maintenanceById = new Map(
@@ -301,15 +299,6 @@ export function findCiPerformanceBudgetViolations(
     if (workflowJobCondition(jobs, job) !== expectedCondition) {
       violations.push(`${job} cacheable CI experiment must stay off automatic change runs`);
     }
-  }
-  if (changes.includes("- 'packages/**'"))
-    violations.push("Windows scaffold must not be triggered by every package change");
-  if (
-    !windowsScaffold.includes(
-      "if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.windows-scaffold == 'true'",
-    )
-  ) {
-    violations.push("Windows scaffold must retain targeted change and full manual coverage");
   }
   if (
     !realResources.includes(

@@ -93,6 +93,13 @@ const SECRET_SCAN = (() => {
   return VALIDATE_JOB.slice(start, end);
 })();
 
+it("does not schedule native Windows scaffold verification", () => {
+  expect((WORKFLOW_JOBS as Readonly<Record<string, unknown>>)["windows-scaffold"]).toBeUndefined();
+  expect(WORKFLOW).not.toContain("windows_scaffold:");
+  expect(WORKFLOW).not.toContain("windows-scaffold: ${{ steps.filter.outputs.windows_scaffold }}");
+  expect(WORKFLOW).not.toContain("windows-latest");
+});
+
 function workflowStep(name: string): string {
   const start = VALIDATE_JOB.indexOf(`      - name: ${name}`);
   if (start === -1) throw new Error(`ci.yml validate job does not declare the ${name} step`);
@@ -766,11 +773,7 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain(
       "ecosystem-advisory:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch' && needs.changes.outputs.profile != 'repo'\n    continue-on-error: true\n    runs-on: ubuntu-latest\n    timeout-minutes: 30\n    permissions:\n      actions: read\n      contents: read",
     );
-    const ecosystemAdvisoryStart = WORKFLOW.indexOf("  ecosystem-advisory:");
-    const ecosystemAdvisory = WORKFLOW.slice(
-      ecosystemAdvisoryStart,
-      WORKFLOW.indexOf("  windows-scaffold:", ecosystemAdvisoryStart),
-    );
+    const ecosystemAdvisory = workflowJob("ecosystem-advisory");
     expect(ecosystemAdvisory).toContain("persist-credentials: false");
   });
 
@@ -1209,22 +1212,13 @@ describe("CI verification profile contract", () => {
   it("runs independent CI surfaces in parallel and restores content-addressed Turbo state", () => {
     expect(WORKFLOW).toContain("docs-sync-check:\n    needs: changes");
     expect(WORKFLOW).not.toContain("docs-sync-check:\n    needs: [validate, changes]");
-    expect(WORKFLOW).toContain(
-      "windows-scaffold:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.windows-scaffold == 'true'",
-    );
     expect(WORKFLOW).toContain("actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9");
     expect(WORKFLOW).toContain("path: .turbo");
-    expect(WORKFLOW).toContain(
-      "pnpm --filter @croco/meta-vite exec vitest run src/tests/published-contract.spec.ts",
-    );
-    expect(WORKFLOW).toContain('node (Join-Path $packageDir "dist/bin.js") $targetDir');
-    expect(WORKFLOW).not.toContain('node (Join-Path $packageDir "dist/index.js") $targetDir');
     expect(WORKFLOW).not.toContain("pnpm turbo run build --filter=create-croco-app... --force");
   });
 
-  it("keeps heavyweight platform and real-resource suites off unrelated pull requests", () => {
+  it("keeps real-resource suites off unrelated pull requests", () => {
     expect(WORKFLOW).not.toContain("              - 'packages/**'");
-    expect(WORKFLOW).toContain("              - 'packages/create-croco-app/**'");
     expect(WORKFLOW).toContain("real-resource-tests:\n    needs: changes");
     expect(WORKFLOW).toContain(
       "real-resource-tests:\n    needs: changes\n    if: github.event_name == 'workflow_dispatch' || needs.changes.outputs.real-resources == 'true'",

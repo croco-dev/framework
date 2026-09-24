@@ -44,10 +44,10 @@ const requiredPackageArtifacts = [
 
 describe("published create-croco-app CLI", () => {
   it(
-    "prints the package manifest version from the installed package",
+    "runs the installed package and generates an app from paths containing spaces",
     () => {
-      const packRoot = mkdtempSync(join(tmpdir(), "croco-create-app-pack-"));
-      const consumerRoot = mkdtempSync(join(tmpdir(), "croco-create-app-consumer-"));
+      const packRoot = mkdtempSync(join(tmpdir(), "croco create app pack-"));
+      const consumerRoot = mkdtempSync(join(tmpdir(), "croco create app consumer-"));
 
       try {
         ensureBuilt();
@@ -92,6 +92,31 @@ describe("published create-croco-app CLI", () => {
         const version = run("pnpm", ["exec", "create-croco-app", "--version"], consumerRoot);
 
         expect(version.stdout.trim()).toBe(packageVersion);
+        const targetDir = join(consumerRoot, "generated apps", "blank-app");
+        const generation = run(
+          "pnpm",
+          [
+            "exec",
+            "create-croco-app",
+            targetDir,
+            "--preset",
+            "blank",
+            "--scope",
+            "@test",
+            "--no-install",
+            "--no-git",
+            "--json",
+          ],
+          consumerRoot,
+        );
+        expect(JSON.parse(generation.stdout)).toMatchObject({ ok: true, targetDir });
+        expect(JSON.parse(readFileSync(join(targetDir, "package.json"), "utf8"))).toMatchObject({
+          name: "blank-app",
+          scripts: { build: "turbo build", typecheck: "turbo typecheck" },
+          devDependencies: { turbo: expect.any(String), typescript: expect.any(String) },
+        });
+        expect(existsSync(join(targetDir, "tsconfig.json"))).toBe(true);
+        expect(existsSync(join(targetDir, "pnpm-workspace.yaml"))).toBe(true);
         verifyProgrammaticImport(consumerRoot);
         verifyProgrammaticGeneration(consumerRoot);
         verifyProgrammaticGeneratorTypes(consumerRoot);

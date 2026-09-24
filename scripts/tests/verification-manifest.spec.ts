@@ -1204,6 +1204,14 @@ describe("verification manifest", () => {
       applicable: true,
       command: expect.arrayContaining(["--lane", "integration", "--owner", "create-croco-app"]),
     });
+    expect(generatorChange.find(({ id }) => id === "published-test-lane")).toMatchObject({
+      applicable: true,
+      command: expect.arrayContaining(["--lane", "published", "--owner", "create-croco-app"]),
+    });
+    expect(generatorChange.find(({ id }) => id === "generated-app-smoke")).toMatchObject({
+      applicable: true,
+      command: expect.arrayContaining(["--tier", "spine-blocking"]),
+    });
     expect(generatorChange.find(({ id }) => id === "cli-packed-e2e")).toMatchObject({
       applicable: true,
       command: expect.arrayContaining(["src/tests/integration/CliCommandIntegration.spec.ts"]),

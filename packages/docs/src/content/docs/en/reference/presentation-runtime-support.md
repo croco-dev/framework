@@ -9,6 +9,17 @@ Presentation maturity is evidence-based. A package can have package tests and st
 when runtime-specific smoke, deployment output validation, diagnostics, or documented recovery
 paths are incomplete.
 
+## Development environment support
+
+Native Windows CLI/scaffold development environments are currently outside Croco's official
+support and verification scope. Windows developers can use a Linux toolchain inside WSL2;
+see [Microsoft's WSL development environment guide](https://learn.microsoft.com/ko-kr/windows/wsl/setup/environment).
+Croco has not verified WSL2 itself; passing Linux CI does not certify WSL2. Support for Windows
+users accessing web applications through a browser is unchanged.
+
+The runtime matrix below describes deployment capabilities. It does not extend CLI/scaffold
+development environment support.
+
 ## Runtime Matrix
 
 | Capability        | Node                                                                                                                     | Lambda                                                                                                                                                           | Cloudflare Workers                                                                                                                           |
