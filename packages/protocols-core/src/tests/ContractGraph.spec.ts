@@ -59,6 +59,41 @@ describe("buildContractGraph", () => {
     vi.restoreAllMocks();
   });
 
+  it.each([204, 205])("rejects response schemas for bodyless success status %i", (status) => {
+    @Controller("/orders")
+    class OrdersController {
+      @Post("/")
+      @ResponseSchema(z.object({ id: z.string() }))
+      createOrder(): void {}
+    }
+
+    const metadata = Reflect.getMetadata(REST_ROUTES_KEY, OrdersController) as RouteMetadata[];
+    const route = metadata[0];
+    if (!route) throw new TypeError("Expected order route metadata.");
+    route.statusCode = status;
+
+    expect(buildContractGraph([OrdersController]).diagnostics).toContainEqual(
+      expect.objectContaining({ code: "contract-route-body-forbidden-status", severity: "error" }),
+    );
+  });
+
+  it.each([199, 300, 404, 200.5, Number.NaN])("rejects invalid success status %s", (status) => {
+    @Controller("/orders")
+    class OrdersController {
+      @Post("/")
+      createOrder(): void {}
+    }
+
+    const metadata = Reflect.getMetadata(REST_ROUTES_KEY, OrdersController) as RouteMetadata[];
+    const route = metadata[0];
+    if (!route) throw new TypeError("Expected order route metadata.");
+    route.statusCode = status;
+
+    expect(buildContractGraph([OrdersController]).diagnostics).toContainEqual(
+      expect.objectContaining({ code: "contract-route-invalid-success-status", severity: "error" }),
+    );
+  });
+
   it("should build stable controller, route id, operation id, and schema graph nodes", () => {
     const createUserSchema = z.object({ name: z.string() });
 

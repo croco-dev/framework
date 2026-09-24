@@ -25,7 +25,9 @@ import {
   ProblemResponse,
   Query,
   RequestValidationProblem,
+  REST_ROUTES_KEY,
   ResponseSchema,
+  type RouteMetadata,
   type RouteBody,
   type RouteMethodReturn,
 } from "@croco/protocols-rest";
@@ -623,6 +625,79 @@ describe("emitOpenAPI", () => {
     });
   });
 
+  it("should emit a declared 201 JSON success without an inferred 200", () => {
+    const createdSchema = z.object({ id: z.string() });
+
+    @Controller("/orders")
+    class OrdersController {
+      @Post("/")
+      @ResponseSchema(createdSchema)
+      createOrder(): z.infer<typeof createdSchema> {
+        return { id: "order-1" };
+      }
+    }
+
+    const metadata = Reflect.getMetadata(REST_ROUTES_KEY, OrdersController) as RouteMetadata[];
+    const route = metadata[0];
+    if (!route) throw new TypeError("Expected order route metadata.");
+    route.statusCode = 201;
+
+    const responses = emitOpenAPI([OrdersController]).paths?.["/orders"]?.post?.responses;
+
+    expect(responses?.[201]).toMatchObject({
+      content: { "application/json": { schema: { properties: { id: { type: "string" } } } } },
+    });
+    expect(responses?.[200]).toBeUndefined();
+  });
+
+  it("should reject a non-success status before it can replace a Problem response", () => {
+    @Controller("/orders")
+    class OrdersController {
+      @Post("/")
+      createOrder(): void {}
+    }
+
+    const metadata = Reflect.getMetadata(REST_ROUTES_KEY, OrdersController) as RouteMetadata[];
+    const route = metadata[0];
+    if (!route) throw new TypeError("Expected order route metadata.");
+    route.statusCode = 404;
+
+    expect(() =>
+      emitOpenAPI([OrdersController], {
+        problemResponses: [{ status: 404, description: "Order not found" }],
+      }),
+    ).toThrow(/contract-route-invalid-success-status/);
+  });
+
+  it("should keep a declared bodyless success status and reject a body on 204 or 205", () => {
+    @Controller("/orders")
+    class OrdersController {
+      @Post("/accepted")
+      acceptOrder(): void {}
+
+      @Post("/invalid")
+      @ResponseSchema(z.object({ id: z.string() }))
+      invalidOrder(): void {}
+    }
+
+    const metadata = Reflect.getMetadata(REST_ROUTES_KEY, OrdersController) as RouteMetadata[];
+    const accepted = metadata.find((route) => route.methodName === "acceptOrder");
+    const invalid = metadata.find((route) => route.methodName === "invalidOrder");
+    if (!accepted || !invalid) throw new TypeError("Expected order route metadata.");
+    accepted.statusCode = 202;
+    invalid.statusCode = 204;
+
+    expect(() => emitOpenAPI([OrdersController])).toThrow(/contract-route-body-forbidden-status/);
+
+    invalid.statusCode = 205;
+    expect(() => emitOpenAPI([OrdersController])).toThrow(/contract-route-body-forbidden-status/);
+
+    invalid.statusCode = 201;
+    const responses = emitOpenAPI([OrdersController]).paths?.["/orders/accepted"]?.post?.responses;
+    expect(responses?.[202]).toEqual({ description: "No content" });
+    expect(responses?.[204]).toBeUndefined();
+  });
+
   it("should emit request and response contracts from one route schema object", () => {
     const createUserRoute = defineRouteSchema({
       request: {
@@ -840,7 +915,7 @@ describe("emitOpenAPI", () => {
       },
     });
     expect(responses?.[429]).toEqual({ description: "Too many requests" });
-    expect(responses?.[200]).toBeUndefined();
+    expect(responses?.[200]).toEqual({ description: "Inherited success response" });
     expect(responses?.[204]).toEqual({ description: "No content" });
   });
 

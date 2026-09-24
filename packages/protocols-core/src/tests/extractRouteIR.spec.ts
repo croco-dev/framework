@@ -58,6 +58,7 @@ describe("extractRouteIR", () => {
       outputSchema: null,
     });
     expect(routes[0]?.params).toEqual([{ index: 0, kind: "path", name: "id", schema: null }]);
+    expect(routes[0]?.successStatus).toBeUndefined();
   });
 
   it("should extract a POST route with body schema as input schema", () => {

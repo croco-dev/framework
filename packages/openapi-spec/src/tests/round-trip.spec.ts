@@ -16,12 +16,14 @@ import {
   Post,
   ProblemResponse,
   Query,
+  REST_ROUTES_KEY,
   ResponseSchema,
 } from "@croco/protocols-rest";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { createApp } from "../../../transports-http/src/libs/CrocoApp";
 import { emitOpenAPI } from "../libs/emitOpenAPI";
+import type { RouteMetadata } from "@croco/protocols-rest";
 
 type User = {
   readonly id: number;
@@ -52,6 +54,13 @@ type RoundTripResponse = z.infer<typeof roundTripResponseSchema>;
 type GeneratedUsersClient = {
   readonly userControllerListUsers: (options?: RequestInit) => Promise<{
     readonly data: User[];
+    readonly status: number;
+  }>;
+};
+
+type GeneratedCreatedClient = {
+  readonly createdControllerCreateWidget: (options?: RequestInit) => Promise<{
+    readonly data: { readonly id: string };
     readonly status: number;
   }>;
 };
@@ -123,6 +132,87 @@ describe("OpenAPI round trip", () => {
       } finally {
         globalThis.fetch = originalFetch;
         await closeServer(server.instance);
+        rmSync(tempDirectory, { force: true, recursive: true });
+      }
+    },
+  );
+
+  it(
+    "should preserve an explicit 201 response through extraction, OpenAPI, client generation, and HTTP transport",
+    { timeout: 30000 },
+    async () => {
+      @Controller("/created")
+      class CreatedController {
+        @Post("/widgets")
+        @ResponseSchema(z.object({ id: z.string() }))
+        createWidget(): { id: string } {
+          return { id: "widget-1" };
+        }
+      }
+
+      const metadata = Reflect.getMetadata(REST_ROUTES_KEY, CreatedController) as RouteMetadata[];
+      const createRoute = metadata.find((route) => route.methodName === "createWidget");
+      if (!createRoute) {
+        throw new TypeError("Expected metadata for CreatedController.createWidget.");
+      }
+      createRoute.statusCode = 201;
+
+      const routes = extractRouteIR(CreatedController);
+      const spec = emitOpenAPI([CreatedController]);
+      const operation = readOperation(spec, "post", "/created/widgets");
+      const app = createApp({
+        controllers: [CreatedController],
+        diValidation: "off",
+        securityValidation: "off",
+      });
+      const tempDirectory = mkdtempSync(join(tmpdir(), "openapi-created-roundtrip-"));
+      const specPath = join(tempDirectory, "openapi.json");
+      const clientPath = join(tempDirectory, "client.ts");
+      const originalFetch = globalThis.fetch;
+
+      try {
+        expect(routes).toHaveLength(1);
+        expect(routes[0]?.successStatus).toBe(201);
+        expect(operation.responses?.[200]).toBeUndefined();
+        expect(operation.responses?.[201]).toMatchObject({
+          content: {
+            "application/json": {
+              schema: expect.objectContaining({
+                properties: expect.objectContaining({
+                  id: expect.objectContaining({ type: "string" }),
+                }),
+              }),
+            },
+          },
+        });
+
+        writeFileSync(specPath, JSON.stringify(spec, null, 2));
+        runOrval(specPath, clientPath);
+        expect(readFileSync(clientPath, "utf8")).toContain(
+          "data: CreatedControllerCreateWidget201",
+        );
+
+        globalThis.fetch = (input, init) => {
+          if (typeof input !== "string" || !input.startsWith("/")) {
+            return originalFetch(input, init);
+          }
+          return app.fetch(new Request(`http://localhost${input}`, init));
+        };
+        const client = (await import(pathToFileURL(clientPath).href)) as GeneratedCreatedClient;
+        const response = await client.createdControllerCreateWidget();
+
+        expect(response.status).toBe(201);
+        expect(response.data).toEqual({ id: "widget-1" });
+        assertRuntimeResponseMatchesOpenAPI(
+          spec,
+          operation,
+          "/created/widgets",
+          response.status,
+          "application/json",
+          response.data,
+        );
+      } finally {
+        globalThis.fetch = originalFetch;
         rmSync(tempDirectory, { force: true, recursive: true });
       }
     },

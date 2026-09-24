@@ -448,6 +448,7 @@ function validateRoute(
   diagnostics.push(...validatePathParams(route));
   diagnostics.push(...validateNamedParams(route));
   diagnostics.push(...validateBodyParams(route));
+  diagnostics.push(...validateSuccessStatus(route));
   diagnostics.push(...validateRouteContract(route));
   diagnostics.push(...validateBindingContractSchemas(route));
   diagnostics.push(...validateStrictSchemas(route, options));
@@ -457,6 +458,37 @@ function validateRoute(
   diagnostics.push(...validateStrictProblemResponses(route, options));
 
   return diagnostics;
+}
+
+function validateSuccessStatus(route: ContractGraphRoute): ContractDiagnostic[] {
+  if (
+    route.successStatus !== undefined &&
+    (!Number.isInteger(route.successStatus) ||
+      route.successStatus < 200 ||
+      route.successStatus > 299)
+  ) {
+    return [
+      createRouteDiagnostic(
+        route,
+        "contract-route-invalid-success-status",
+        "error",
+        `Success status ${route.successStatus} must be an integer between 200 and 299.`,
+      ),
+    ];
+  }
+
+  if ((route.successStatus !== 204 && route.successStatus !== 205) || !route.outputSchema) {
+    return [];
+  }
+
+  return [
+    createRouteDiagnostic(
+      route,
+      "contract-route-body-forbidden-status",
+      "error",
+      `Success status ${route.successStatus} cannot have a response schema because HTTP forbids a response body.`,
+    ),
+  ];
 }
 
 function validateStrictSchemas(
