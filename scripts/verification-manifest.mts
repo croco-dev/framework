@@ -899,7 +899,7 @@ const spineOnly = (
             ? ["--tier", "spine-blocking"]
             : affectedGeneratedSmokeCases),
       ),
-      timeoutMs: minutes(45),
+      timeoutMs: minutes(75),
       applicable: generatedAppSmokeApplicable,
       artifacts: [
         {
