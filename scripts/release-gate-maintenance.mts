@@ -187,6 +187,7 @@ export const RELEASE_GATE_POLICY_INPUT_PATHS = [
   "config/live-test-resources.json",
   "croco.arch.json",
   "docs/doc-examples-baseline.json",
+  "docs/doc-examples-coverage-baseline.json",
   "docs/package-catalog.json",
   "docs/package-docs-baseline.json",
   "docs/problem-code-registry.json",

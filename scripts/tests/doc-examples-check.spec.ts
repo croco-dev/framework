@@ -69,6 +69,25 @@ describe("doc-examples-check.mts", () => {
   );
 
   it(
+    "resolves extensionless imports in workspace package source",
+    () => {
+      const root = createTempRoot();
+      writeFileSync(
+        join(root, "packages", "alpha", "src", "index.ts"),
+        'export { value } from "./value";\n',
+      );
+      writeFileSync(
+        join(root, "packages", "alpha", "src", "value.ts"),
+        "export const value = 1;\n",
+      );
+      writeValidDocs(root);
+
+      expect(runScript(root, "--check").status).toBe(0);
+    },
+    scriptTestTimeout,
+  );
+
+  it(
     "requires untypechecked TypeScript fences to be explicitly marked or recorded",
     () => {
       const root = createTempRoot();
@@ -99,6 +118,90 @@ describe("doc-examples-check.mts", () => {
       expect(writeResult.status).toBe(0);
       expect(passingCheck.status).toBe(0);
       expect(baseline).toContain("Legacy authored docs block");
+    },
+    scriptTestTimeout,
+  );
+
+  it(
+    "checks unmarked fences in public package READMEs and skips private packages",
+    () => {
+      const root = createTempRoot();
+      writeValidDocs(root);
+      writeFileSync(
+        join(root, "packages", "alpha", "README.md"),
+        "```typescript\nconst missing = 1;\n```\n",
+      );
+      writePackage(root, "private-tool", { name: "@croco/private-tool", private: true });
+      writeFileSync(
+        join(root, "packages", "private-tool", "README.md"),
+        "```typescript\nconst ignored = 1;\n```\n",
+      );
+
+      const result = runScript(root, "--check");
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain("packages/alpha/README.md:1");
+      expect(result.stdout).not.toContain("packages/private-tool/README.md");
+    },
+    scriptTestTimeout,
+  );
+
+  it(
+    "requires a reason for every spine package without a checked import",
+    () => {
+      const root = createTempRoot();
+      writeValidDocs(root);
+      writePackage(root, "beta", { name: "@croco/beta" });
+      writeJson(join(root, "docs", "package-catalog.json"), {
+        spine: { packages: ["alpha", "beta"] },
+      });
+
+      const missing = runScript(root, "--check");
+      expect(missing.status).toBe(1);
+      expect(missing.stdout).toContain("@croco/beta has no typechecked documentation import");
+
+      writeJson(join(root, "docs", "doc-examples-coverage-baseline.json"), {
+        schemaVersion: 1,
+        uncoveredPackages: { beta: "Its current README uses generated runtime context." },
+      });
+      expect(runScript(root, "--check").status).toBe(0);
+
+      writeJson(join(root, "docs", "doc-examples-coverage-baseline.json"), {
+        schemaVersion: 1,
+        uncoveredPackages: { beta: "  " },
+      });
+      const emptyReason = runScript(root, "--check");
+      expect(emptyReason.status).toBe(1);
+      expect(emptyReason.stdout).toContain("beta must include a reason");
+    },
+    scriptTestTimeout,
+  );
+
+  it(
+    "counts checked imports from unscoped package entrypoints and rejects stale reasons",
+    () => {
+      const root = createTempRoot();
+      writePackage(root, "generator", { name: "create-croco-app" });
+      writeJson(join(root, "docs", "package-catalog.json"), {
+        spine: { packages: ["alpha", "generator"] },
+      });
+      writeDocs(root, [
+        "```ts typecheck",
+        'import { value } from "@croco/alpha";',
+        'import { greet } from "create-croco-app";',
+        "void value;",
+        'void greet("docs");',
+        "```",
+      ]);
+      expect(runScript(root, "--check").status).toBe(0);
+
+      writeJson(join(root, "docs", "doc-examples-coverage-baseline.json"), {
+        schemaVersion: 1,
+        uncoveredPackages: { generator: "Old exception." },
+      });
+      const stale = runScript(root, "--check");
+      expect(stale.status).toBe(1);
+      expect(stale.stdout).toContain("generator is already covered by a typechecked import");
     },
     scriptTestTimeout,
   );
@@ -414,6 +517,13 @@ function createTempRoot(): string {
   tempRoots.push(root);
   writePackage(root, "alpha", {
     name: "@croco/alpha",
+  });
+  writeJson(join(root, "docs", "package-catalog.json"), {
+    spine: { packages: ["alpha"] },
+  });
+  writeJson(join(root, "docs", "doc-examples-coverage-baseline.json"), {
+    schemaVersion: 1,
+    uncoveredPackages: {},
   });
 
   return root;

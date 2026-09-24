@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "uncoveredPackages": {
+    "protocols-core": "README examples depend on an application controller and undeclared contract types.",
+    "openapi-spec": "README example requires a contract graph supplied by the application.",
+    "rpc-codegen": "README examples require an application graph, action registry, or generated client files.",
+    "tx-drizzle": "README examples require a live Drizzle database and application schema symbols.",
+    "events-tx": "README examples require an application-owned store, transaction manager, and event types.",
+    "testing": "README examples require an application bootstrap, controller, or test-runner context.",
+    "create-croco-app": "README programmatic examples use published subpath entrypoints unavailable to the source-based docs checker."
+  }
+}
