@@ -593,11 +593,14 @@ function collectPublicPackageReadmes(rootDir: string): string[] {
       }
 
       const manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as unknown;
+      if (isRecord(manifest) && manifest.private === true) {
+        return [];
+      }
       if (!isRecord(manifest) || typeof manifest.name !== "string") {
         throw new Error(`${normalizeRelativePath(rootDir, manifestPath)} must have a package name`);
       }
 
-      return manifest.private === true ? [] : [readmePath];
+      return [readmePath];
     });
 }
 

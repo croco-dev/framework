@@ -147,6 +147,25 @@ describe("doc-examples-check.mts", () => {
   );
 
   it(
+    "skips private package READMEs without a package name",
+    () => {
+      const root = createTempRoot();
+      writeValidDocs(root);
+      writePackage(root, "private-tool", { private: true });
+      writeFileSync(
+        join(root, "packages", "private-tool", "README.md"),
+        "```typescript\nconst ignored = 1;\n```\n",
+      );
+
+      const result = runScript(root, "--check");
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toContain("checked 1 TypeScript documentation example");
+    },
+    scriptTestTimeout,
+  );
+
+  it(
     "requires a reason for every spine package without a checked import",
     () => {
       const root = createTempRoot();
