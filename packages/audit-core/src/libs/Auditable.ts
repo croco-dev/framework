@@ -1,7 +1,6 @@
-import { Container, Context, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
+import { Context, type ILogger } from "@croco/framework-context";
 import { recordError } from "@croco/telemetry-api";
 import type { AuditLogRepository } from "./AuditLogRepository";
-import { AUDIT_LOG_REPOSITORY_TOKEN } from "./AuditLogRepositoryToken";
 import { hasAuditCoordination, markAuditWrite } from "./auditCoordination";
 import { AUDIT_METADATA_KEY } from "./constants";
 import { resolveImpersonationContext } from "./impersonationState";
@@ -120,20 +119,6 @@ function safelyWarn(logger: ILogger, message: string, metadata: Record<string, u
   }
 }
 
-function resolveAuditWriteDependencies(): AuditWriteDependencies | undefined {
-  try {
-    const [repository, logger] = Container.getMany([AUDIT_LOG_REPOSITORY_TOKEN, LOGGER_TOKEN]) as [
-      AuditLogRepository,
-      ILogger,
-    ];
-
-    return { repository, logger };
-  } catch (error) {
-    safelyRecordError(error);
-    return undefined;
-  }
-}
-
 async function writeAuditLog(
   config: AuditWriteConfig,
   payload: Record<string, unknown>,
@@ -209,8 +194,8 @@ function resolveParameterIndex(
   return index;
 }
 
-function rejectLegacyParameterSelectors(options: AuditableOptions): void {
-  const legacyOptions = options as AuditableOptions & {
+function rejectLegacyParameterSelectors<T>(options: AuditableOptions<T>): void {
+  const legacyOptions = options as AuditableOptions<T> & {
     resourceIdParam?: unknown;
     payloadParam?: unknown;
   };
@@ -222,7 +207,7 @@ function rejectLegacyParameterSelectors(options: AuditableOptions): void {
   }
 }
 
-export function Auditable(options: AuditableOptions): MethodDecorator {
+export function Auditable<T>(options: AuditableOptions<T>): MethodDecorator {
   rejectLegacyParameterSelectors(options);
 
   return (
@@ -259,12 +244,12 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
       propertyKey,
     );
 
-    descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
+    descriptor.value = async function (this: T, ...args: unknown[]): Promise<unknown> {
       const context = Context.get();
-      const dependencies = resolveAuditWriteDependencies();
-      if (!dependencies && options.throwOnFailure) {
+      const dependencies = options.dependencies(this);
+      if (!dependencies?.repository || !dependencies.logger) {
         throw new AuditableDecoratorProblem(
-          "@Auditable could not resolve audit write dependencies",
+          "@Auditable requires explicitly injected repository and logger dependencies",
         );
       }
 
@@ -307,15 +292,13 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
         result = await originalMethod.apply(this, args);
       } catch (error) {
         const payload = buildAuditPayload(args, payloadInput, null, getErrorMessage(error), false);
-        if (dependencies) {
-          await writeDecoratorAuditLog(
-            auditConfig,
-            payload,
-            dependencies,
-            interceptorMetadataTarget,
-            propertyKey,
-          );
-        }
+        await writeDecoratorAuditLog(
+          auditConfig,
+          payload,
+          dependencies,
+          interceptorMetadataTarget,
+          propertyKey,
+        );
 
         throw error;
       }
@@ -327,15 +310,13 @@ export function Auditable(options: AuditableOptions): MethodDecorator {
         null,
         options.includeResult ?? false,
       );
-      if (dependencies) {
-        await writeDecoratorAuditLog(
-          auditConfig,
-          payload,
-          dependencies,
-          interceptorMetadataTarget,
-          propertyKey,
-        );
-      }
+      await writeDecoratorAuditLog(
+        auditConfig,
+        payload,
+        dependencies,
+        interceptorMetadataTarget,
+        propertyKey,
+      );
 
       return result;
     };

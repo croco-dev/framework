@@ -1216,10 +1216,13 @@ describe("EngagementService", () => {
       methodName: "handle",
     };
     taskRegistry.register("send-notification", SendNotificationTask, "handle", metadata);
-    Container.set(SendNotificationTask, task);
-
     const executionManager = createIdempotentExecutionManager();
-    const taskRunner = new TaskRunner(executionManager as never, taskRegistry);
+    const taskRunner = new TaskRunner(executionManager as never, taskRegistry, undefined, {
+      serviceResolver: (target) => {
+        expect(target).toBe(SendNotificationTask);
+        return task;
+      },
+    });
     const notificationService = new NotificationService(taskRunner, providerRegistry as never);
     notificationService.registerProvider(provider, true);
     const engagement = new EngagementService(directory, createRenderer(), notificationService);

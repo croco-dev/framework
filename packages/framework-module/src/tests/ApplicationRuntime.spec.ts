@@ -1,9 +1,18 @@
-import { Container, Inject, Token } from "typedi";
-import type { ServiceMetadata } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
-import { Container as FrameworkContainer, Inject as CrocoInject } from "@croco/framework-context";
+import {
+  Container as FrameworkContainer,
+  GENERATED_DI_GRAPH_VERSION,
+  Inject,
+  Inject as CrocoInject,
+  RuntimeContainer as Container,
+  Token,
+  defineGeneratedDiGraph,
+} from "@croco/framework-context";
+import type { ServiceMetadata } from "@croco/framework-context";
 import {
   createApplicationRuntime,
+  defineCrocoApplication,
+  InvalidModuleDefinitionProblem,
   ModuleLifecycleCancelledProblem,
   ModuleLifecycleProblem,
   ModuleRuntimeDisposedProblem,
@@ -15,6 +24,455 @@ describe("ApplicationRuntime", () => {
   beforeEach(() => {
     Container.reset();
     FrameworkContainer.reset();
+  });
+
+  it("isolates generated singleton instances and disposes them with each runtime", async () => {
+    let disposals = 0;
+    class GeneratedService {
+      [Symbol.dispose](): void {
+        disposals += 1;
+      }
+    }
+    const generatedGraph = defineGeneratedDiGraph({
+      version: GENERATED_DI_GRAPH_VERSION,
+      graphId: "application-runtime-test",
+      compilerVersion: "test",
+      inputHash: "test-input",
+      roots: [GeneratedService],
+      providers: [
+        {
+          token: GeneratedService,
+          tokenId: "app:GeneratedService",
+          debugName: "GeneratedService",
+          scope: "singleton",
+          dependencies: [],
+          factory: () => new GeneratedService(),
+          sourceLocation: { file: "src/GeneratedService.ts", line: 1, column: 1 },
+        },
+      ],
+    });
+    const first = createApplicationRuntime({ generatedGraph });
+    const second = createApplicationRuntime({ generatedGraph });
+
+    const firstService = first.get(GeneratedService);
+    expect(first.get(GeneratedService)).toBe(firstService);
+    expect(second.get(GeneratedService)).not.toBe(firstService);
+
+    await Promise.all([first.dispose(), second.dispose()]);
+    expect(disposals).toBe(2);
+  });
+
+  it("uses generated factories for classes declared by an application module", async () => {
+    class Dependency {}
+    class Service {
+      constructor(readonly dependency: Dependency) {}
+    }
+    let callbackCalls = 0;
+    Inject(() => {
+      callbackCalls += 1;
+      return Dependency;
+    })(Service, undefined, 0);
+    const SERVICE_ALIAS = new Token<Service>("service.alias");
+    let serviceFromModule: Service | undefined;
+    const generatedGraph = defineGeneratedDiGraph({
+      version: GENERATED_DI_GRAPH_VERSION,
+      graphId: "module-class-factory",
+      compilerVersion: "test",
+      inputHash: "module-class-factory",
+      roots: [Service],
+      providers: [
+        {
+          token: Dependency,
+          tokenId: "app:Dependency",
+          debugName: "Dependency",
+          scope: "singleton",
+          dependencies: [],
+          factory: () => new Dependency(),
+          sourceLocation: { file: "src/Dependency.ts", line: 1, column: 1 },
+        },
+        {
+          token: Service,
+          tokenId: "app:Service",
+          debugName: "Service",
+          scope: "singleton",
+          dependencies: [{ token: Dependency, tokenId: "app:Dependency", parameterIndex: 0 }],
+          factory: (resolver) => new Service(resolver.get(Dependency)),
+          sourceLocation: { file: "src/Service.ts", line: 1, column: 1 },
+        },
+      ],
+    });
+    const runtime = createApplicationRuntime({
+      generatedGraph,
+      modules: [
+        {
+          name: "app",
+          providers: [Dependency, Service, { provide: SERVICE_ALIAS, useClass: Service }],
+          setup: (context) => {
+            serviceFromModule = context.get(Service);
+            expect(context.get(SERVICE_ALIAS)).toBe(serviceFromModule);
+          },
+        },
+      ],
+    });
+
+    expect(runtime.createGraphManifest().status).toBe("ready");
+    expect(callbackCalls).toBe(0);
+    await runtime.initialize();
+    expect(runtime.get(Service).dependency).toBe(runtime.get(Dependency));
+    expect(runtime.get(Service)).toBe(serviceFromModule);
+    expect(runtime.get(SERVICE_ALIAS)).toBe(serviceFromModule);
+    expect(runtime.createGraphManifest().status).toBe("ready");
+    expect(callbackCalls).toBe(0);
+    await runtime.dispose();
+  });
+
+  it("rejects uncompiled class providers without evaluating injection callbacks", async () => {
+    class Dependency {}
+    let callbackCalls = 0;
+    class Service {
+      constructor(
+        @Inject(() => {
+          callbackCalls += 1;
+          return Dependency;
+        })
+        readonly dependency: Dependency,
+      ) {}
+    }
+
+    for (const provider of [
+      Service,
+      { provide: new Token<Service>("service"), useClass: Service },
+    ]) {
+      const runtime = createApplicationRuntime({
+        modules: [{ name: "app", providers: [Dependency, provider] }],
+      });
+
+      await expect(runtime.initialize()).rejects.toMatchObject({
+        cause: expect.any(InvalidModuleDefinitionProblem),
+      });
+      expect(callbackCalls).toBe(0);
+      await runtime.dispose();
+    }
+  });
+
+  it("uses a generated factory or explicit module factory without evaluating injection callbacks", async () => {
+    class Dependency {}
+    let callbackCalls = 0;
+    class Service {
+      constructor(
+        @Inject(() => {
+          callbackCalls += 1;
+          return Dependency;
+        })
+        readonly dependency: Dependency,
+      ) {}
+    }
+    const generatedGraph = defineGeneratedDiGraph({
+      version: GENERATED_DI_GRAPH_VERSION,
+      graphId: "compiled-injection-callback",
+      compilerVersion: "test",
+      inputHash: "compiled-injection-callback",
+      roots: [Service],
+      providers: [
+        {
+          token: Service,
+          tokenId: "app:Service",
+          debugName: "Service",
+          scope: "singleton",
+          dependencies: [],
+          factory: () => new Service(new Dependency()),
+          sourceLocation: { file: "src/Service.ts", line: 1, column: 1 },
+        },
+      ],
+    });
+    const compiled = createApplicationRuntime({
+      generatedGraph,
+      modules: [{ name: "compiled", providers: [Service] }],
+    });
+    await compiled.initialize();
+    expect(compiled.get(Service).dependency).toBeInstanceOf(Dependency);
+    await compiled.dispose();
+
+    const explicit = createApplicationRuntime({
+      modules: [
+        {
+          name: "explicit",
+          providers: [
+            Dependency,
+            { provide: Service, useFactory: (context) => new Service(context.get(Dependency)) },
+          ],
+        },
+      ],
+    });
+    await explicit.initialize();
+    expect(explicit.get(Service).dependency).toBeInstanceOf(Dependency);
+    expect(callbackCalls).toBe(0);
+    await explicit.dispose();
+  });
+
+  it("resolves declared module providers from each application and rejects missing owners", async () => {
+    const valueToken = new Token<string>("module-value");
+    class GeneratedService {
+      constructor(readonly value: string) {}
+    }
+    const generatedGraph = defineGeneratedDiGraph({
+      version: GENERATED_DI_GRAPH_VERSION,
+      graphId: "module-provider-bridge",
+      compilerVersion: "test",
+      inputHash: "module-provider-bridge",
+      moduleProviders: [
+        {
+          token: valueToken,
+          tokenId: "app:tokens#VALUE",
+          moduleName: "app",
+          scope: "singleton",
+          sourceLocation: { file: "src/tokens.ts", line: 1, column: 1 },
+        },
+      ],
+      providers: [
+        {
+          token: GeneratedService,
+          tokenId: "app:GeneratedService",
+          debugName: "GeneratedService",
+          scope: "singleton",
+          dependencies: [{ token: valueToken, tokenId: "app:tokens#VALUE", parameterIndex: 0 }],
+          factory: (resolver) => new GeneratedService(resolver.get(valueToken)),
+          sourceLocation: { file: "src/GeneratedService.ts", line: 1, column: 1 },
+        },
+      ],
+      roots: [GeneratedService],
+    });
+    const first = createApplicationRuntime({
+      generatedGraph,
+      modules: [
+        {
+          name: "app",
+          providers: [{ provide: valueToken, useValue: "first" }],
+          exports: [valueToken],
+        },
+      ],
+    });
+    const second = createApplicationRuntime({
+      generatedGraph,
+      modules: [
+        {
+          name: "app",
+          providers: [{ provide: valueToken, useValue: "second" }],
+          exports: [valueToken],
+        },
+      ],
+    });
+    const invalid = createApplicationRuntime({
+      generatedGraph,
+      modules: [{ name: "app", providers: [GeneratedService] }],
+    });
+
+    await Promise.all([first.initialize(), second.initialize()]);
+    expect(first.get(GeneratedService).value).toBe("first");
+    expect(second.get(GeneratedService).value).toBe("second");
+    await expect(invalid.initialize()).rejects.toThrow("app:tokens#VALUE");
+    await Promise.all([first.dispose(), second.dispose(), invalid.dispose()]);
+  });
+
+  it.each(["request", "transient"] as const)(
+    "rejects a singleton module alias to a generated %s provider before setup",
+    async (scope) => {
+      class ScopedService {}
+      const alias = new Token<ScopedService>("module.scoped-alias");
+      let setupCalled = false;
+      const generatedGraph = defineGeneratedDiGraph({
+        version: GENERATED_DI_GRAPH_VERSION,
+        graphId: `module-${scope}-alias`,
+        compilerVersion: "test",
+        inputHash: `module-${scope}-alias`,
+        moduleProviders: [
+          {
+            token: alias,
+            tokenId: "app:SCOPED_ALIAS",
+            moduleName: "app",
+            scope: "singleton",
+            sourceLocation: { file: "src/app.ts", line: 1, column: 1 },
+          },
+        ],
+        providers: [
+          {
+            token: ScopedService,
+            tokenId: "app:ScopedService",
+            debugName: "ScopedService",
+            scope,
+            dependencies: [],
+            factory: () => new ScopedService(),
+            sourceLocation: { file: "src/ScopedService.ts", line: 1, column: 1 },
+          },
+        ],
+        roots: [],
+      });
+      const runtime = createApplicationRuntime({
+        generatedGraph,
+        modules: [
+          {
+            name: "app",
+            providers: [{ provide: alias, useClass: ScopedService }],
+            setup: () => {
+              setupCalled = true;
+            },
+          },
+        ],
+      });
+
+      await expect(runtime.initialize()).rejects.toThrow(InvalidModuleDefinitionProblem);
+      await expect(runtime.initialize()).rejects.toThrow(
+        `cannot use ${scope} provider 'app:ScopedService' as a singleton`,
+      );
+      expect(setupCalled).toBe(false);
+      await runtime.dispose();
+    },
+  );
+
+  it("validates the effective application replacement for a generated module provider", async () => {
+    class ScopedService {}
+    const alias = new Token<ScopedService>("module.replaced-alias");
+    let setupCalled = false;
+    const generatedGraph = defineGeneratedDiGraph({
+      version: GENERATED_DI_GRAPH_VERSION,
+      graphId: "module-replaced-alias",
+      compilerVersion: "test",
+      inputHash: "module-replaced-alias",
+      moduleProviders: [
+        {
+          token: alias,
+          tokenId: "app:REPLACED_ALIAS",
+          moduleName: "app",
+          scope: "singleton",
+          sourceLocation: { file: "src/app.ts", line: 1, column: 1 },
+        },
+      ],
+      providers: [
+        {
+          token: ScopedService,
+          tokenId: "app:ScopedService",
+          debugName: "ScopedService",
+          scope: "request",
+          dependencies: [],
+          factory: () => new ScopedService(),
+          sourceLocation: { file: "src/ScopedService.ts", line: 1, column: 1 },
+        },
+      ],
+      roots: [],
+    });
+    const application = defineCrocoApplication({
+      imports: [
+        {
+          name: "app",
+          providers: [{ provide: alias, useValue: new ScopedService() }],
+          setup: () => {
+            setupCalled = true;
+          },
+        },
+      ],
+      providerReplacements: [
+        {
+          provider: { provide: alias, useClass: ScopedService },
+          replaces: ["app"],
+        },
+      ],
+    });
+    const runtime = createApplicationRuntime(application, generatedGraph);
+
+    await expect(runtime.initialize()).rejects.toThrow(
+      "cannot use request provider 'app:ScopedService' as a singleton",
+    );
+    expect(setupCalled).toBe(false);
+    await runtime.dispose();
+  });
+
+  it("applies a module override only to its generated application graph", async () => {
+    class GeneratedService {
+      constructor(readonly value: string) {}
+    }
+    const generatedGraph = defineGeneratedDiGraph({
+      version: GENERATED_DI_GRAPH_VERSION,
+      graphId: "application-runtime-override-test",
+      compilerVersion: "test",
+      inputHash: "test-input",
+      roots: [GeneratedService],
+      providers: [
+        {
+          token: GeneratedService,
+          tokenId: "app:GeneratedService",
+          debugName: "GeneratedService",
+          scope: "singleton",
+          dependencies: [],
+          factory: () => new GeneratedService("generated"),
+          sourceLocation: { file: "src/GeneratedService.ts", line: 1, column: 1 },
+        },
+      ],
+    });
+    const overridden = createApplicationRuntime({
+      generatedGraph,
+      modules: [
+        {
+          name: "test-override",
+          providers: [{ provide: GeneratedService, useValue: new GeneratedService("override") }],
+        },
+      ],
+    });
+    const untouched = createApplicationRuntime({ generatedGraph });
+
+    await Promise.all([overridden.initialize(), untouched.initialize()]);
+    expect(overridden.get(GeneratedService).value).toBe("override");
+    expect(untouched.get(GeneratedService).value).toBe("generated");
+    await Promise.all([overridden.dispose(), untouched.dispose()]);
+  });
+
+  it("cleans generated singletons created by a failed initialization attempt", async () => {
+    let attempts = 0;
+    let disposals = 0;
+    class GeneratedService {
+      [Symbol.dispose](): void {
+        disposals += 1;
+      }
+    }
+    const generatedGraph = defineGeneratedDiGraph({
+      version: GENERATED_DI_GRAPH_VERSION,
+      graphId: "application-runtime-rollback-test",
+      compilerVersion: "test",
+      inputHash: "test-input",
+      roots: [GeneratedService],
+      providers: [
+        {
+          token: GeneratedService,
+          tokenId: "app:GeneratedService",
+          debugName: "GeneratedService",
+          scope: "singleton",
+          dependencies: [],
+          factory: () => new GeneratedService(),
+          sourceLocation: { file: "src/GeneratedService.ts", line: 1, column: 1 },
+        },
+      ],
+    });
+    const runtime = createApplicationRuntime({
+      generatedGraph,
+      modules: [
+        {
+          name: "failing-bootstrap",
+          setup: () => {
+            attempts += 1;
+            FrameworkContainer.get(GeneratedService);
+            if (attempts === 1) {
+              throw new Error("bootstrap failed");
+            }
+          },
+        },
+      ],
+    });
+
+    await expect(runtime.initialize()).rejects.toThrow("bootstrap failed");
+    expect(disposals).toBe(1);
+    await runtime.initialize();
+    expect(runtime.get(GeneratedService)).toBeInstanceOf(GeneratedService);
+    await runtime.dispose();
+    expect(disposals).toBe(2);
   });
 
   it("isolates identical module names and provider tokens across runtimes", async () => {
@@ -37,7 +495,7 @@ describe("ApplicationRuntime", () => {
     await Promise.all([first.dispose(), second.dispose()]);
   });
 
-  it("does not allocate a TypeDI scope when constructor module validation fails", () => {
+  it("does not allocate a runtime scope when constructor module validation fails", () => {
     const instancesBefore = [
       ...(Container as unknown as { instances: readonly { id: string }[] }).instances,
     ];
@@ -597,23 +1055,23 @@ describe("ApplicationRuntime", () => {
     await runtime.dispose();
   });
 
-  it("emits constructor edges for class and token-bound class providers", async () => {
+  it("emits declarative constructor edges before initialization", async () => {
     class Repository {}
+    const repositoryToken = new Token<Repository>("repository");
     const configToken = new Token<string>("config");
     class Service {
       constructor(
-        readonly repository: Repository,
+        @CrocoInject(repositoryToken) readonly repository: Repository,
         @CrocoInject(configToken) readonly config: string,
       ) {}
     }
     const serviceToken = new Token<Service>("service");
-    Reflect.defineMetadata("design:paramtypes", [Repository, String], Service);
     const runtime = createApplicationRuntime({
       modules: [
         {
           name: "app",
           providers: [
-            Repository,
+            { provide: repositoryToken, useClass: Repository },
             Service,
             { provide: configToken, useValue: "configured" },
             { provide: serviceToken, useClass: Service },
@@ -621,8 +1079,6 @@ describe("ApplicationRuntime", () => {
         },
       ],
     });
-    await runtime.initialize();
-
     const manifest = runtime.createGraphManifest();
     const serviceProviders = manifest.dependencyGraph.providers.filter(
       (provider) => provider.token === "Service" || provider.token === "Token<service>",
@@ -632,33 +1088,37 @@ describe("ApplicationRuntime", () => {
     expect(serviceProviders).toHaveLength(2);
     expect(serviceProviders).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ dependencies: ["Repository", "Token<config>"] }),
-        expect.objectContaining({ dependencies: ["Repository", "Token<config>"] }),
+        expect.objectContaining({ dependencies: ["Token<config>", "Token<repository>"] }),
+        expect.objectContaining({ dependencies: ["Token<config>", "Token<repository>"] }),
       ]),
     );
 
     await runtime.dispose();
   });
 
-  it("reports missing and circular dependencies without TypeDI fallback", async () => {
+  it("reports missing and circular dependencies without runtime fallback", async () => {
     class MissingDependency {}
+    const missingToken = new Token<MissingDependency>("missing");
     class MissingConsumer {
-      constructor(readonly dependency: MissingDependency) {}
+      constructor(@Inject(missingToken) readonly dependency: MissingDependency) {}
     }
+    const leftToken = new Token<CircularLeft>("circular-left");
+    const rightToken = new Token<CircularRight>("circular-right");
     class CircularLeft {
-      constructor(readonly right: CircularRight) {}
+      constructor(@Inject(rightToken) readonly right: CircularRight) {}
     }
     class CircularRight {
-      constructor(readonly left: CircularLeft) {}
+      constructor(@Inject(leftToken) readonly left: CircularLeft) {}
     }
-    Reflect.defineMetadata("design:paramtypes", [MissingDependency], MissingConsumer);
-    Reflect.defineMetadata("design:paramtypes", [CircularRight], CircularLeft);
-    Reflect.defineMetadata("design:paramtypes", [CircularLeft], CircularRight);
     const runtime = createApplicationRuntime({
       modules: [
         {
           name: "app",
-          providers: [MissingConsumer, CircularLeft, CircularRight],
+          providers: [
+            MissingConsumer,
+            { provide: leftToken, useClass: CircularLeft },
+            { provide: rightToken, useClass: CircularRight },
+          ],
         },
       ],
     });
@@ -676,7 +1136,7 @@ describe("ApplicationRuntime", () => {
     await runtime.dispose();
   });
 
-  it("reports uninspectable TypeDI handlers without throwing from graph creation", async () => {
+  it("reports uninspectable runtime handlers without throwing from graph creation", async () => {
     class Dependency {}
     class Service {
       constructor(readonly dependency: Dependency) {}
@@ -742,7 +1202,7 @@ describe("ApplicationRuntime", () => {
     expect(() => runtime.run(() => undefined)).toThrow("has already been disposed");
   });
 
-  it("releases its TypeDI scope after persistent rollback and disposal cleanup failures", async () => {
+  it("releases its runtime scope after persistent rollback and disposal cleanup failures", async () => {
     const token = new Token<object>("failing-provider-cleanup");
     const baseline = {};
     const runtime = createApplicationRuntime({

@@ -11,13 +11,17 @@ title: "EventPublisher"
 
 ### Constructor
 
-> **new EventPublisher**(`config`): `EventPublisher`
+> **new EventPublisher**(`config`, `transactionContext?`): `EventPublisher`
 
 #### Parameters
 
 ##### config
 
 [`EventBusConfig`](/api/events-core/src/classes/eventbusconfig/)
+
+##### transactionContext?
+
+[`TransactionContext`](/api/framework-context/src/interfaces/transactioncontext/)
 
 #### Returns
 

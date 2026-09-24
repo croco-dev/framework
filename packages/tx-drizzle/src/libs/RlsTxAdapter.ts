@@ -1,5 +1,4 @@
-import { Container, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
-import { Logger } from "@croco/framework-logger";
+import type { ILogger } from "@croco/framework-context";
 import type { TxAdapter } from "@croco/tx-core";
 import { sql } from "drizzle-orm";
 import { createDrizzleTxAdapter } from "./DrizzleTxAdapter";
@@ -29,8 +28,7 @@ export interface RlsOptions {
    */
   debug?: boolean;
   /**
-   * Logger used for RLS diagnostics. When omitted, the framework logger is resolved from the container.
-   * Debug-enabled adapters fail during creation if neither source provides a usable logger.
+   * Logger used for RLS diagnostics. Debug-enabled adapters require a logger.
    */
   logger?: RlsLogger;
 }
@@ -70,21 +68,6 @@ function isRlsLogger(value: unknown): value is RlsLogger {
 function resolveLogger(options: RlsOptions): RlsLogger | null {
   if (isRlsLogger(options.logger)) {
     return options.logger;
-  }
-
-  let logger: unknown;
-  try {
-    logger = Container.getOptional(LOGGER_TOKEN) ?? Container.get(Logger);
-  } catch (cause) {
-    if (options.debug) {
-      throw new RlsDebugLoggingProblem("initialization", cause);
-    }
-
-    return null;
-  }
-
-  if (isRlsLogger(logger)) {
-    return logger;
   }
 
   if (options.debug) {
@@ -154,8 +137,11 @@ export function createRlsTxAdapter<TDb extends DrizzleDb>(
           }
 
           if (options.debug) {
+            if (!logger) {
+              throw new RlsDebugLoggingProblem("initialization", undefined);
+            }
             try {
-              await logger?.info(`[RlsTxAdapter] Setting ${configKey} = '${tenantId}'`);
+              await logger.info(`[RlsTxAdapter] Setting ${configKey} = '${tenantId}'`);
             } catch (cause) {
               throw new RlsDebugLoggingProblem("write", cause);
             }

@@ -9,6 +9,7 @@ import {
   type ModuleContext,
   type ModuleOptions,
   type ModuleProvider,
+  type ModuleToken,
 } from "@croco/framework-module";
 import type { Constructor as RestControllerConstructor } from "@croco/protocols-rest";
 import {
@@ -52,6 +53,7 @@ export type SaasApplicationModuleOptions = {
   readonly additionalControllers?: readonly RestControllerConstructor[];
   readonly additionalMiddlewares?: readonly MiddlewareFunction[];
   readonly additionalProviders?: readonly ModuleProvider[];
+  readonly additionalExports?: readonly ModuleToken<unknown>[];
   readonly hostPlatform?: "node" | "lambda" | "cloudflare-workers";
   readonly onRuntimeReset?: (ctx: ModuleContext, runtime: SaasRuntime) => void;
 };
@@ -89,7 +91,12 @@ export function createSaasApplicationModule(options: SaasApplicationModuleOption
       },
       ...(options.additionalProviders ?? []),
     ],
-    exports: [LOGGER_TOKEN, SAAS_RUNTIME_STATE_TOKEN, EntitlementManager],
+    exports: [
+      LOGGER_TOKEN,
+      SAAS_RUNTIME_STATE_TOKEN,
+      EntitlementManager,
+      ...(options.additionalExports ?? []),
+    ],
     controllers,
     contributions: [
       ...controllers.map((controller, order) => ({

@@ -1,8 +1,4 @@
-import {
-  Container,
-  TRANSACTION_CONTEXT_TOKEN,
-  type TransactionContext,
-} from "@croco/framework-context";
+import type { TransactionContext } from "@croco/framework-context";
 import type { DomainEvent } from "./DomainEvent";
 import { EventBusConfig } from "./EventBusConfig";
 import type { EventPublishOptions } from "./interfaces/EventPublishing";
@@ -10,7 +6,6 @@ import {
   EventAfterCommitOutcomeRequiredProblem,
   EventAfterCommitPublishFailedProblem,
   EventAfterCommitRequiresActiveTransactionProblem,
-  EventTransactionContextUnavailableProblem,
 } from "./problems/EventsProblems";
 
 export type PublishResult<T extends DomainEvent> = {
@@ -58,20 +53,10 @@ function toError(error: unknown): Error {
  * 현재 EventBus 설정을 사용해 이벤트를 즉시 발행하거나 커밋 후 발행으로 예약합니다.
  */
 export class EventPublisher {
-  constructor(private readonly config: EventBusConfig) {}
-
-  private tryGetTransactionContext(): TransactionContext | null {
-    if (!Container.has(TRANSACTION_CONTEXT_TOKEN)) {
-      return null;
-    }
-
-    try {
-      return Container.get<TransactionContext>(TRANSACTION_CONTEXT_TOKEN);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new EventTransactionContextUnavailableProblem(message);
-    }
-  }
+  constructor(
+    private readonly config: EventBusConfig,
+    private readonly transactionContext?: TransactionContext,
+  ) {}
 
   private get eventBus() {
     return this.config.getEventBus();
@@ -87,7 +72,7 @@ export class EventPublisher {
     event: DomainEvent,
     onPublishedOrOptions?: (() => void) | PublishAfterCommitOptions,
   ): void {
-    const txContext = this.tryGetTransactionContext();
+    const txContext = this.transactionContext;
     if (!txContext?.isInTransaction()) {
       throw new EventAfterCommitRequiresActiveTransactionProblem();
     }

@@ -100,6 +100,8 @@ describe("API server", () => {
   });
 
   it("requires credentials for a protected route", async () => {
+    Container.register(ProtectedRouteGuard, "singleton");
+    Container.register(ProtectedSmokeController, "singleton");
     const app = createCrocoApp({ extraControllers: [ProtectedSmokeController] });
 
     const denied = await app.fetch(new Request("http://localhost/protected-smoke"));

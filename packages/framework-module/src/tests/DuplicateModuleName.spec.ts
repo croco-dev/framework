@@ -1,4 +1,4 @@
-import { Container } from "typedi";
+import { RuntimeContainer as Container } from "@croco/framework-context";
 import { beforeEach, describe, expect, it } from "vitest";
 import { CrocoModule, defineCrocoModule, ModuleDuplicateNameProblem } from "../index";
 

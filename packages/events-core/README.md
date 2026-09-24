@@ -35,15 +35,24 @@ class UserCreatedHandler implements EventHandler<UserCreatedEvent> {
 ### 이벤트 버스 구성과 발행
 
 ```typescript
-import { EventBusConfig, EventPublisher } from "@croco/events-core";
+import { DefaultHandlerResolver, EventBusConfig, EventPublisher } from "@croco/events-core";
 import { InMemoryEventBus } from "@croco/events-inmemory";
 
 const config = EventBusConfig.getInstance();
 config.setEventBus(new InMemoryEventBus());
-await config.start({ handlers: [UserCreatedHandler] });
+await config.start({ handlers: [UserCreatedHandler], resolver: new DefaultHandlerResolver() });
 
-await new EventPublisher().publish(new UserCreatedEvent("user-1"));
+await new EventPublisher(config).publishNow(new UserCreatedEvent("user-1"));
 ```
+
+`start()`는 핸들러를 암묵적으로 생성하지 않습니다. 생성자 의존성이 없는 예제에서는
+`DefaultHandlerResolver`를 명시적으로 선택할 수 있습니다. 주입이 필요한 핸들러는 애플리케이션의
+생성된 DI 그래프를 사용하는 resolver 또는 `subscribe({ ..., handler })`의 인스턴스를 전달합니다.
+둘 다 없으면 `EventHandlerResolverRequiredProblem`으로 실패합니다.
+
+커밋 후 발행이 필요하면 `new EventPublisher(config, txManager)`처럼 해당 애플리케이션의
+`TransactionContext`를 생성자에 전달합니다. 전역 Container에서 트랜잭션 매니저를 조회하지 않으며,
+주입된 컨텍스트에 활성 트랜잭션이 없으면 `publishAfterCommit()`은 명시적으로 실패합니다.
 
 `publishAfterCommit(event, options)`는 커밋 뒤 발행이 성공하면 `onPublished`를, 실패하면
 `onError`를 호출합니다. 실패 콜백과 after-commit 결과에는 원인을 보존한

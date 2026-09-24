@@ -89,7 +89,7 @@ Creates a single source file under `apps/api-server/src/`:
 - `croco make repository User` creates a class implementing `Repository<UserEntity, string>`
 - `croco make entity User` creates a plain entity class with `id`, `createdAt`, `updatedAt`
 - `croco make event OrderShipped` creates a `DomainEvent` subclass
-- `croco make listener SendEmail` creates an event handler registered via `@RegisterEventHandler`
+- `croco make listener SendEmail` creates an event handler registered via `@Component` and `@RegisterEventHandler`
 
 ### create — Project Files
 
@@ -245,7 +245,7 @@ Local recovery workflow for DI graph failures:
 
 1. Run `pnpm di:verify` in a generated app, or export `createCrocoDiGraphRoots()` from the app module and run `croco di graph --module apps/api-server/src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write .croco/build/di-graph.manifest.json` in a custom workspace.
 2. Run `croco di check .croco/build/di-graph.manifest.json` and inspect the first `CROCO_DI_*` diagnostic.
-3. Fix `CROCO_DI_001` missing providers, `CROCO_DI_002` cycles, `CROCO_DI_003` scope mismatches, or `CROCO_DI_004` unresolved TypeDI fallbacks at the reported token/path.
+3. Fix `CROCO_DI_001` missing providers, `CROCO_DI_002` cycles, `CROCO_DI_003` scope mismatches, or `CROCO_DI_004` dynamically computed providers at the reported token/path.
 4. Re-run `pnpm di:verify`, or refresh/check the project-map bundle before `croco doctor --json`, so doctor confirms the committed manifest and bootstrap state.
 
 ### jobs — Background Job Operations

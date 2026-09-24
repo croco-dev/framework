@@ -5,8 +5,9 @@ import { createGoldenPathRuntime, startLocalServer } from "./app/bootstrap";
 const runtime = createGoldenPathRuntime();
 
 export async function handler(event: LambdaEvent, context: LambdaContext): Promise<LambdaResponse> {
-  const { app, flushTelemetry } = await runtime;
-  return await app.lambdaHandler({ flush: flushTelemetry })(event, context);
+  const { app, applicationRuntime, flushTelemetry } = await runtime;
+  const callback = applicationRuntime.run(() => app.lambdaHandler({ flush: flushTelemetry }));
+  return await applicationRuntime.bindHostCallback(callback)(event, context);
 }
 
 const isLambdaRuntime =
@@ -15,7 +16,7 @@ const isLambdaRuntime =
   process.env.AWS_EXECUTION_ENV?.includes("AWS_Lambda") === true;
 
 if (process.env.NODE_ENV !== "production" && !isLambdaRuntime) {
-  void runtime.then(({ app }) => {
-    startLocalServer(app);
+  void runtime.then((application) => {
+    startLocalServer(application);
   });
 }

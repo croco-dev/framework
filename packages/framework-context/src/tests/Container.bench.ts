@@ -1,5 +1,6 @@
 import { bench, describe } from "vitest";
 import { Container } from "../libs/Container";
+import { registerInjectionMetadata } from "../libs/InjectionMetadata";
 
 class TestService1 {}
 class TestService2 {}
@@ -55,6 +56,8 @@ class TestService50 {}
 class DepServiceA {
   constructor(public dep: TestService1) {}
 }
+
+registerInjectionMetadata(DepServiceA, { index: 0, token: TestService1 });
 
 const serviceClasses = [
   TestService1,
@@ -143,7 +146,7 @@ describe("Container.validate (50 components)", () => {
         Container.register(ServiceClass, "singleton");
       }
       Container.register(DepServiceA, "singleton");
-      Container.validate();
+      Container.validate({ force: true });
     },
     { iterations: 50, warmupIterations: 5 },
   );

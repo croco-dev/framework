@@ -163,7 +163,6 @@ const DEFAULT_TEST_RUNTIME_CAPABILITIES: RuntimeCapabilities = {
   trace: false,
   waitUntil: true,
 };
-const IGNORED_PARAM_TYPES = new Set<unknown>([Object, String, Number, Boolean, Array]);
 let testingRequestContextCounter = 0;
 
 class TestingTransactionContextNotActiveProblem extends Problem {
@@ -174,6 +173,15 @@ class TestingTransactionContextNotActiveProblem extends Problem {
       "Testing transaction context is not active. Use runInTransaction() or createTestingTransactionContext({ inTransaction: true }).",
       { type: "https://docs.croco.dev/problems/testing/transaction-context-not-active" },
     );
+  }
+}
+
+class TestingProviderConfigurationError extends Error {
+  readonly code = "CROCO_TESTING_PROVIDER_CONFIGURATION";
+
+  constructor(message: string) {
+    super(message);
+    this.name = "TestingProviderConfigurationError";
   }
 }
 
@@ -403,7 +411,11 @@ export function createTestingApp(options: TestingAppOptions): CrocoTestingApp {
   } = options;
 
   if (resetContainer) {
-    resetCrocoTestingContext({ logger, providers, transactionContext });
+    resetCrocoTestingContext({
+      ...(logger === undefined ? {} : { logger }),
+      providers,
+      ...(transactionContext === undefined ? {} : { transactionContext }),
+    });
   } else {
     seedCrocoTestingDefaults(logger);
     registerTestingProviders(providers);
@@ -492,7 +504,7 @@ export class CrocoEventTestingHarness<TEvent extends DomainEvent = DomainEvent> 
   }
 
   publishAfterCommit(event: TEvent): void {
-    new EventPublisher(this.config).publishAfterCommit(event);
+    new EventPublisher(this.config, this.transactionContext ?? undefined).publishAfterCommit(event);
   }
 
   flushAfterCommitHooks(): Promise<void> {
@@ -523,7 +535,7 @@ export async function createEventTestingHarness<TEvent extends DomainEvent = Dom
 
   if (resetContainer) {
     resetCrocoTestingContext({
-      logger,
+      ...(logger === undefined ? {} : { logger }),
       providers,
       transactionContext: transactionContext ?? false,
     });
@@ -716,32 +728,35 @@ function registerConstructor<T>(
   }
 
   constructing.add(constructor);
-  const paramTypes = getConstructorParamTypes(constructor);
-  const dependencies = paramTypes.map((dependency) =>
-    registerConstructor(dependency, constructing),
-  );
-  const instance = Reflect.construct(constructor, dependencies) as T;
-  Container.set(constructor, instance);
-  constructing.delete(constructor);
+  try {
+    for (const inspection of Container.inspectInjections(constructor)) {
+      if (inspection.status !== "resolved") {
+        continue;
+      }
+      const dependency = inspection.token;
+      if (typeof dependency === "function") {
+        registerConstructor(dependency as TestingConstructor, constructing);
+        continue;
+      }
+      if (!Container.has(dependency as TestingToken)) {
+        throw new TestingProviderConfigurationError(
+          `Testing provider ${getConstructorName(constructor)} requires token ${String(dependency)}. Register it with useValue or useFactory.`,
+        );
+      }
+    }
 
-  return instance;
+    Container.register(constructor, "singleton");
+    return Container.get(constructor);
+  } catch (error) {
+    Container.remove(constructor);
+    throw error;
+  } finally {
+    constructing.delete(constructor);
+  }
 }
 
 function getConstructorName(constructor: TestingConstructor): string {
   return (constructor as { readonly name?: string }).name ?? "anonymous";
-}
-
-function getConstructorParamTypes<T>(constructor: TestingConstructor<T>): TestingConstructor[] {
-  const paramTypes = Reflect.getMetadata("design:paramtypes", constructor) as unknown;
-
-  if (!Array.isArray(paramTypes)) {
-    return [];
-  }
-
-  return paramTypes.filter(
-    (value): value is TestingConstructor =>
-      typeof value === "function" && !IGNORED_PARAM_TYPES.has(value),
-  );
 }
 
 export function createTestingRequest(
@@ -809,12 +824,12 @@ function isProblemDetails(value: unknown): value is ProblemDetails {
   }
 
   return (
-    typeof value.type === "string" &&
-    typeof value.title === "string" &&
-    typeof value.status === "number" &&
-    typeof value.code === "string" &&
-    (value.detail === undefined || typeof value.detail === "string") &&
-    (value.instance === undefined || typeof value.instance === "string")
+    typeof value["type"] === "string" &&
+    typeof value["title"] === "string" &&
+    typeof value["status"] === "number" &&
+    typeof value["code"] === "string" &&
+    (value["detail"] === undefined || typeof value["detail"] === "string") &&
+    (value["instance"] === undefined || typeof value["instance"] === "string")
   );
 }
 
@@ -875,5 +890,5 @@ function createTestingRuntimeContext(
 }
 
 function isRequestContext(value: unknown): value is RequestContext {
-  return isRecord(value) && typeof value.requestId === "string";
+  return isRecord(value) && typeof value["requestId"] === "string";
 }

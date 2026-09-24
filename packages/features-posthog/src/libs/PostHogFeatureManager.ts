@@ -1,8 +1,6 @@
-// Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
-/* oxlint-disable typescript/consistent-type-imports */
 import { FeatureManager } from "@croco/features-core";
 import { Component, Context } from "@croco/framework-context";
-import { PostHogClient } from "@croco/integrations-posthog";
+import type { PostHogClient } from "@croco/integrations-posthog";
 
 type PostHogProperties = Record<string, string>;
 

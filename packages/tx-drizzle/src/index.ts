@@ -13,7 +13,7 @@
  * @example
  * ```typescript
  * import 'reflect-metadata';
- * import { Container } from 'typedi';
+ * import { Container } from '@croco/framework-context';
  * import { TxManager } from '@croco/tx-core';
  * import { createDrizzleTxAdapter } from '@croco/tx-drizzle';
  * import { drizzle } from 'drizzle-orm/node-postgres';

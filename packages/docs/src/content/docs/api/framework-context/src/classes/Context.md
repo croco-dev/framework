@@ -43,11 +43,11 @@ Get active trace ID from request context propagation
 
 ### getCache()
 
-> `static` **getCache**(): `Map`\<`string` \| [`Constructor`](/api/framework-context/src/type-aliases/constructor/), `unknown`\> \| `undefined`
+> `static` **getCache**(): `Map`\<`unknown`, `unknown`\> \| `undefined`
 
 #### Returns
 
-`Map`\<`string` \| [`Constructor`](/api/framework-context/src/type-aliases/constructor/), `unknown`\> \| `undefined`
+`Map`\<`unknown`, `unknown`\> \| `undefined`
 
 ---
 

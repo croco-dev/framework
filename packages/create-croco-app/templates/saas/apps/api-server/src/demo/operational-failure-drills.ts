@@ -3,7 +3,12 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { createServer, type Server } from "node:http";
 import type { AddressInfo } from "node:net";
 import { basename, dirname, join, resolve } from "node:path";
-import { Component, Container, Inject, Token } from "@croco/framework-context";
+import {
+  Container,
+  GENERATED_DI_GRAPH_VERSION,
+  Token,
+  defineGeneratedDiGraph,
+} from "@croco/framework-context";
 import { Problem, type ProblemDetails } from "@croco/problems-core";
 import { AuthGuard, type ExecutionContext } from "@croco/protocols-rest";
 import { withSpan } from "@croco/telemetry-api";
@@ -250,28 +255,49 @@ function createMissingDiProviderScenario(): OperationalFailureDrillScenario {
       class MissingProviderDrill {
         constructor(readonly value: string) {}
       }
-      Reflect.defineMetadata("design:paramtypes", [Object], MissingProviderDrill);
-      (Inject(token) as ParameterDecorator)(MissingProviderDrill, undefined, 0);
-      Component({ scope: "transient" })(MissingProviderDrill);
-
+      const scope = Container.createScope();
       try {
-        const diagnostic = requireGraphDiagnostic(
-          Container.createDependencyGraphManifest({
-            roots: [MissingProviderDrill],
-          }),
-          "CROCO_DI_001",
-        );
-        const problem = captureProblem(() => Container.get(MissingProviderDrill));
-        return {
-          kind: "problem",
-          problem,
-          diagnostics: [toOperationalDiagnostic(diagnostic)],
-          provenance,
-          recoveryAction: DI_PROVIDER_RECOVERY,
-        };
+        return scope.run((): OperationalFailureDrillProblemOutcome => {
+          Container.installGeneratedGraph(
+            defineGeneratedDiGraph({
+              version: GENERATED_DI_GRAPH_VERSION,
+              graphId: "failure-drill.missing-provider",
+              compilerVersion: "failure-drill",
+              inputHash: "missing-provider",
+              roots: [MissingProviderDrill],
+              providers: [
+                {
+                  token: MissingProviderDrill,
+                  tokenId: "failure-drill:missing-consumer",
+                  debugName: "MissingProviderDrill",
+                  scope: "transient",
+                  dependencies: [
+                    { token, tokenId: "failure-drill:missing-token", parameterIndex: 0 },
+                  ],
+                  factory: (resolver) => new MissingProviderDrill(resolver.get(token)),
+                  sourceLocation: { file: "failure-drill/missing-provider.ts", line: 1, column: 1 },
+                },
+              ],
+            }),
+          );
+          const diagnostic = requireGraphDiagnostic(
+            Container.createDependencyGraphManifest({
+              roots: [MissingProviderDrill],
+            }),
+            "CROCO_DI_001",
+          );
+          const problem = captureProblem(() => Container.get(MissingProviderDrill));
+          return {
+            kind: "problem",
+            problem,
+            diagnostics: [toOperationalDiagnostic(diagnostic)],
+            provenance,
+            recoveryAction: DI_PROVIDER_RECOVERY,
+          };
+        });
       } finally {
-        Container.remove(MissingProviderDrill);
-        Container.remove(token);
+        scope.run(() => Container.removeGeneratedGraph("failure-drill.missing-provider"));
+        scope.dispose();
       }
     },
   };
@@ -312,33 +338,63 @@ function createDiScopeMismatchScenario(): OperationalFailureDrillScenario {
       class FailureDrillSingleton {
         constructor(readonly dependency: FailureDrillRequestDependency) {}
       }
-      Reflect.defineMetadata("design:paramtypes", [], FailureDrillRequestDependency);
-      Reflect.defineMetadata(
-        "design:paramtypes",
-        [FailureDrillRequestDependency],
-        FailureDrillSingleton,
-      );
-      Component({ scope: "request" })(FailureDrillRequestDependency);
-      Component()(FailureDrillSingleton);
-
+      const scope = Container.createScope();
       try {
-        const diagnostic = requireGraphDiagnostic(
-          Container.createDependencyGraphManifest({
-            roots: [FailureDrillSingleton],
-          }),
-          "CROCO_DI_003",
-        );
-        const problem = captureProblem(() => Container.get(FailureDrillSingleton));
-        return {
-          kind: "problem",
-          problem,
-          diagnostics: [toOperationalDiagnostic(diagnostic)],
-          provenance,
-          recoveryAction: DI_SCOPE_RECOVERY,
-        };
+        return scope.run((): OperationalFailureDrillProblemOutcome => {
+          Container.installGeneratedGraph(
+            defineGeneratedDiGraph({
+              version: GENERATED_DI_GRAPH_VERSION,
+              graphId: "failure-drill.scope-mismatch",
+              compilerVersion: "failure-drill",
+              inputHash: "singleton-captures-request",
+              roots: [FailureDrillSingleton],
+              providers: [
+                {
+                  token: FailureDrillRequestDependency,
+                  tokenId: "failure-drill:request",
+                  debugName: "FailureDrillRequestDependency",
+                  scope: "request",
+                  dependencies: [],
+                  factory: () => new FailureDrillRequestDependency(),
+                  sourceLocation: { file: "failure-drill/scope-mismatch.ts", line: 1, column: 1 },
+                },
+                {
+                  token: FailureDrillSingleton,
+                  tokenId: "failure-drill:singleton",
+                  debugName: "FailureDrillSingleton",
+                  scope: "singleton",
+                  dependencies: [
+                    {
+                      token: FailureDrillRequestDependency,
+                      tokenId: "failure-drill:request",
+                      parameterIndex: 0,
+                    },
+                  ],
+                  factory: (resolver) =>
+                    new FailureDrillSingleton(resolver.get(FailureDrillRequestDependency)),
+                  sourceLocation: { file: "failure-drill/scope-mismatch.ts", line: 2, column: 1 },
+                },
+              ],
+            }),
+          );
+          const diagnostic = requireGraphDiagnostic(
+            Container.createDependencyGraphManifest({
+              roots: [FailureDrillSingleton],
+            }),
+            "CROCO_DI_003",
+          );
+          const problem = captureProblem(() => Container.get(FailureDrillSingleton));
+          return {
+            kind: "problem",
+            problem,
+            diagnostics: [toOperationalDiagnostic(diagnostic)],
+            provenance,
+            recoveryAction: DI_SCOPE_RECOVERY,
+          };
+        });
       } finally {
-        Container.remove(FailureDrillSingleton);
-        Container.remove(FailureDrillRequestDependency);
+        scope.run(() => Container.removeGeneratedGraph("failure-drill.scope-mismatch"));
+        scope.dispose();
       }
     },
   };

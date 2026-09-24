@@ -1,7 +1,7 @@
 import { type Db, MongoClient } from "mongodb";
-import { Service } from "typedi";
+import { Component } from "@croco/framework-context";
 
-@Service()
+@Component()
 export class MongoDbProvider {
   private client: MongoClient | null = null;
   private db: Db | null = null;

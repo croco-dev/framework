@@ -39,5 +39,4 @@ false;
 
 > `optional` **logger?**: [`RlsLogger`](/api/tx-drizzle/src/type-aliases/rlslogger/)
 
-Logger used for RLS diagnostics. When omitted, the framework logger is resolved from the container.
-Debug-enabled adapters fail during creation if neither source provides a usable logger.
+Logger used for RLS diagnostics. Debug-enabled adapters require a logger.

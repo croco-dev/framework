@@ -1,13 +1,14 @@
-import { Container } from "@croco/framework-context";
 import { Body, Controller, Get, Param, Post } from "@croco/protocols-rest";
-import { CheckoutService } from "../domain/CheckoutService";
+import type { CheckoutService } from "../domain/CheckoutService";
 import type { CheckoutRequest } from "../domain/types";
-import { AUDIT_LOG_TOKEN, type InMemoryAuditLog } from "../integrations/InMemoryAuditLog";
+import type { InMemoryAuditLog } from "../integrations/InMemoryAuditLog";
 
 @Controller("/api")
 export class BillingController {
-  private readonly auditLog = Container.get<InMemoryAuditLog>(AUDIT_LOG_TOKEN);
-  private readonly checkoutService = Container.get(CheckoutService);
+  constructor(
+    private readonly auditLog: InMemoryAuditLog,
+    private readonly checkoutService: CheckoutService,
+  ) {}
 
   @Post("/checkouts")
   checkout(@Body() body: CheckoutRequest) {

@@ -1,11 +1,11 @@
-import { Container, TRANSACTION_CONTEXT_TOKEN } from "@croco/framework-context";
 import { DuplicateTxManagerRegistrationProblem, TxManagerNotRegisteredError } from "./errors";
 import type { TxManager } from "./TxManager";
 import { DEFAULT_TX_MANAGER_KEY, type TxManagerKey } from "./types";
 
 type TxManagerInstance = TxManager<unknown, unknown>;
 
-class TxManagerRegistryClass {
+/** 애플리케이션이 소유하는 키 기반 트랜잭션 매니저 레지스트리입니다. */
+export class TxManagerRegistry {
   private readonly managers = new Map<TxManagerKey, TxManagerInstance>();
 
   register(manager: TxManagerInstance, key?: TxManagerKey): void {
@@ -16,10 +16,6 @@ class TxManagerRegistryClass {
     }
 
     this.managers.set(managerKey, manager);
-
-    if (managerKey === DEFAULT_TX_MANAGER_KEY) {
-      Container.set(TRANSACTION_CONTEXT_TOKEN, manager);
-    }
   }
 
   get<TClient = unknown, TOptions = unknown>(key?: TxManagerKey): TxManager<TClient, TOptions> {
@@ -40,11 +36,5 @@ class TxManagerRegistryClass {
 
   clear(): void {
     this.managers.clear();
-    Container.remove(TRANSACTION_CONTEXT_TOKEN);
   }
 }
-
-/**
- * 키 기반으로 여러 트랜잭션 매니저를 등록하고 조회하는 레지스트리 인스턴스입니다.
- */
-export const TxManagerRegistry = new TxManagerRegistryClass();

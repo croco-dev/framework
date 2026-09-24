@@ -25,6 +25,24 @@ Example: 'id'
 
 ---
 
+### factory
+
+> **factory**: (`repository`) => [`IBatchLoaderFactory`](/api/repository-core/src/interfaces/ibatchloaderfactory/)
+
+Returns the factory injected into this repository by its application.
+
+#### Parameters
+
+##### repository
+
+`TRepository`
+
+#### Returns
+
+[`IBatchLoaderFactory`](/api/repository-core/src/interfaces/ibatchloaderfactory/)
+
+---
+
 ### name?
 
 > `optional` **name?**: `string`

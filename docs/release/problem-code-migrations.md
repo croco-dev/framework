@@ -1,5 +1,12 @@
 # Problem Code Migrations
 
+## Explicit event transaction context
+
+`events-core/transaction-context-unavailable` is deprecated. `EventPublisher` now receives its
+transaction context explicitly. Pass the application-owned transaction manager as the second
+constructor argument when publishing after commit. If no active transaction is available,
+`events-core/after-commit-requires-active-transaction` is reported instead.
+
 ## Desktop support removal
 
 `desktop-codegen/invalid-contract-graph` and

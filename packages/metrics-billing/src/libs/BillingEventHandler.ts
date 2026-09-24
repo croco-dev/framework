@@ -1,7 +1,5 @@
-// Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
-/* oxlint-disable typescript/consistent-type-imports */
 import {
-  BillingStore,
+  type BillingStore,
   OrderPaidEvent,
   PlanChangedEvent,
   type PlanRegistry,
@@ -10,7 +8,7 @@ import {
   SubscriptionCanceledEvent,
 } from "@croco/billing-core";
 import { type DomainEvent, type EventHandler, RegisterEventHandler } from "@croco/events-core";
-import { MetricsRepository, type Money, type PlanProvider } from "@croco/metrics-core";
+import type { MetricsRepository, Money, PlanProvider } from "@croco/metrics-core";
 import type { MRRMovement } from "@croco/metrics-core";
 import { MrrCalculator } from "@croco/metrics-core";
 import {

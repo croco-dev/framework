@@ -29,8 +29,9 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/tests/PublishedGraphConsumer.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
+    "test:published": "vitest run src/tests/PublishedGraphConsumer.spec.ts",
     "typecheck": "node ../../node_modules/typescript/bin/tsc --noEmit",
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },

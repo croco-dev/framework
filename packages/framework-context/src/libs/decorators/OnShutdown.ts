@@ -1,7 +1,7 @@
 import "reflect-metadata";
 import { Container } from "../Container";
 import { OnShutdownDecoratorProblem } from "../problems/ShutdownProblems";
-import { ShutdownManager } from "../ShutdownManager";
+import { SHUTDOWN_HOOK_OWNER, ShutdownManager } from "../ShutdownManager";
 import type { Constructor, ShutdownHook } from "../types";
 
 const ON_SHUTDOWN_METHOD_KEY = Symbol.for("@croco/framework-context/on-shutdown/method");
@@ -77,7 +77,8 @@ function registerConstructor(target: Constructor): void {
     return;
   }
 
-  const hook: ShutdownHook = {
+  const hook = {
+    [SHUTDOWN_HOOK_OWNER]: target,
     onShutdown: async (signal?: AbortSignal): Promise<void> => {
       const instance = Container.get(target);
       const declaration = Reflect.getMetadata(ON_SHUTDOWN_METHOD_KEY, target) as

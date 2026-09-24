@@ -1,3 +1,4 @@
+import { Inject } from "@croco/framework-context";
 import {
   Body,
   Controller,
@@ -14,17 +15,22 @@ import {
   generateAiRoute,
   OPTIONAL_TENANT_ID_HEADER_SCHEMA,
 } from "./aiSchemas";
-import { getAiSaasRuntime } from "../aiSaas";
+import { AI_SAAS_RUNTIME_STATE_TOKEN, type AiSaasRuntimeState } from "../aiSaas";
 
 @Controller("/ai")
 export class AiController {
+  constructor(
+    @Inject(AI_SAAS_RUNTIME_STATE_TOKEN)
+    private readonly runtimeState: AiSaasRuntimeState,
+  ) {}
+
   @Post(generateAiRoute)
   @ProblemResponses(...routeProblemResponses(generateAiRoute))
   async generate(
     @Header("x-tenant-id", OPTIONAL_TENANT_ID_HEADER_SCHEMA) tenantId: string | undefined,
     @Body(generateAiRoute) body: RouteBody<typeof generateAiRoute>,
   ) {
-    return getAiSaasRuntime().service.generateText({
+    return this.runtimeState.current.service.generateText({
       tenantId,
       requestId: body.requestId,
       prompt: body.prompt,
@@ -37,7 +43,7 @@ export class AiController {
   async usage(
     @Header("x-tenant-id", OPTIONAL_TENANT_ID_HEADER_SCHEMA) tenantId: string | undefined,
   ) {
-    return getAiSaasRuntime().service.getUsageState(tenantId);
+    return this.runtimeState.current.service.getUsageState(tenantId);
   }
 
   @Get(aiInvocationsRoute)
@@ -45,6 +51,6 @@ export class AiController {
   async invocations(
     @Header("x-tenant-id", OPTIONAL_TENANT_ID_HEADER_SCHEMA) tenantId: string | undefined,
   ) {
-    return getAiSaasRuntime().service.listInvocationLogs(tenantId);
+    return this.runtimeState.current.service.listInvocationLogs(tenantId);
   }
 }

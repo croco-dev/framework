@@ -35,6 +35,7 @@ await scheduler.sync({ mode: "dry-run" });
 await scheduler.sync({ mode: "apply" });
 await scheduler.sync({ mode: "apply-with-orphan-cleanup" });
 
+// applicationRuntime owns the generated DI graph for this application.
 const handler = new QStashTriggerHandler({
   receiver: new Receiver({
     currentSigningKey: process.env.QSTASH_CURRENT_SIGNING_KEY,
@@ -42,6 +43,7 @@ const handler = new QStashTriggerHandler({
   }),
   deliveryIdentityVerifier: createQStashApiDeliveryIdentityVerifier(client),
   executionManager,
+  serviceResolver: (target) => applicationRuntime.get(target),
   executionTimeout: 60_000,
   maxAttempts: 3,
 });

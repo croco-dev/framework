@@ -12,5 +12,5 @@ Dependency injection token for IBatchLoaderFactory.
 Register your implementation in the DI container:
 
 ```typescript
-Container.set(BATCH_LOADER_FACTORY_TOKEN, new MyBatchLoaderFactory());
+constructor(@Inject(BATCH_LOADER_FACTORY_TOKEN) readonly batchLoaderFactory: IBatchLoaderFactory) {}
 ```

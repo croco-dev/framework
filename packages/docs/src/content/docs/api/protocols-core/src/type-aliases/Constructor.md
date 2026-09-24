@@ -17,7 +17,7 @@ title: "Constructor"
 
 ### args
 
-...`unknown`[]
+...`never`[]
 
 ## Returns
 

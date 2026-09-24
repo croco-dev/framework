@@ -1,4 +1,4 @@
-import { Container, Token } from "typedi";
+import { RuntimeContainer as Container, Token } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CrocoModule,
@@ -6,7 +6,7 @@ import {
   ModuleLifecycleProblem,
   ModuleRegistrationConflictProblem,
 } from "../index";
-import type { ServiceMetadata } from "typedi";
+import type { ServiceMetadata } from "@croco/framework-context";
 import type { ModuleOptions } from "../types";
 
 describe("module initialization rollback", () => {

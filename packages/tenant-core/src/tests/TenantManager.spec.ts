@@ -163,6 +163,7 @@ describe("TenantManager", () => {
       }
 
       Component({ scope: "request" })(RequestService);
+      Container.register(RequestService, "request");
       const nowSpy = vi.spyOn(Date, "now").mockReturnValueOnce(1_000).mockReturnValue(2_000);
 
       try {
@@ -193,6 +194,7 @@ describe("TenantManager", () => {
       }
 
       Component({ scope: "request" })(RequestService);
+      Container.register(RequestService, "request");
       const nowSpy = vi.spyOn(Date, "now").mockReturnValueOnce(1_000).mockReturnValue(2_000);
 
       try {

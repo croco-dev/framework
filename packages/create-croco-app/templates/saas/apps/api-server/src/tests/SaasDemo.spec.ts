@@ -1,4 +1,3 @@
-import { Container } from "typedi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { CheckoutResult } from "@croco/billing-core";
@@ -54,7 +53,6 @@ const executableProfileTest = generatedSaasProviderProfileManifest.composition.e
 
 describe("SaaS golden path demo", () => {
   beforeEach(() => {
-    Container.reset();
     CrocoContainer.reset();
   });
 
@@ -872,11 +870,8 @@ describe("SaaS golden path demo", () => {
       process.env.NODE_ENV = "development";
       process.env[SAAS_DEMO_ENDPOINTS_ENABLED_ENV] = "true";
 
-      CrocoContainer.set(
-        SAAS_RUNTIME_STATE_TOKEN,
-        new SaasRuntimeState({ create: createSaasDemoRuntime }),
-      );
-      const controller = new SaasController();
+      const runtimeState = new SaasRuntimeState({ create: createSaasDemoRuntime });
+      const controller = new SaasController(runtimeState);
       const first = await controller.seedDemo();
       const second = await controller.seedDemo();
 
@@ -913,14 +908,12 @@ describe("SaaS golden path demo", () => {
 
   it("exposes the billing sync job through operations controller", async () => {
     const seeded = await seedDefaultSaasRuntime();
-    CrocoContainer.set(
-      SAAS_RUNTIME_STATE_TOKEN,
+    const controller = new JobsController(
       new SaasRuntimeState({
         create: createSaasDemoRuntime,
         initial: defaultSaasRuntime,
       }),
     );
-    const controller = new JobsController();
 
     const listReport = (await controller.list(undefined, "billing-sync")) as {
       summary: string;

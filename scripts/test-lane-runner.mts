@@ -69,6 +69,7 @@ export type TestLaneReport = {
 
 export type TestLaneCommandRunner = (command: TestLaneCommand) => {
   readonly exitCode: number;
+  readonly orchestrationExitCode?: number;
   readonly durationMs: number;
   readonly totalTests?: number;
   readonly skippedTests?: number;
@@ -553,10 +554,12 @@ export function readTurboTestTaskEvidence(
   summary: TurboRunSummary | undefined,
 ):
   | {
+      readonly exitCode: number;
       readonly executedPaths: readonly string[];
       readonly skippedFiles: readonly TestLaneSkippedFile[];
       readonly executionState: "executed" | "reused";
       readonly cacheHash: string;
+      readonly failureDetails: readonly string[];
     }
   | undefined {
   const task = summary?.tasks?.find(
@@ -564,7 +567,8 @@ export function readTurboTestTaskEvidence(
   );
   const reportPath = evidencePath(rootDir, command);
   if (
-    task?.execution?.exitCode !== 0 ||
+    typeof task?.execution?.exitCode !== "number" ||
+    (task.execution.exitCode !== 0 && task.cache?.status === "HIT") ||
     typeof task.hash !== "string" ||
     task.hash.length === 0 ||
     task.command !==
@@ -584,8 +588,13 @@ export function readTurboTestTaskEvidence(
   if (!evidence) return undefined;
   return {
     ...evidence,
+    exitCode: task.execution.exitCode,
     executionState: task.cache?.status === "HIT" ? "reused" : "executed",
     cacheHash: task.hash,
+    failureDetails:
+      task.execution.exitCode === 0
+        ? []
+        : readVitestFailureDetails(reportPath, resolve(rootDir, command.cwd)),
   };
 }
 
@@ -660,10 +669,12 @@ function defaultRunner(
     const packageEvidence = new Map<
       string,
       {
+        readonly exitCode: number;
         readonly executedPaths: readonly string[];
         readonly skippedFiles: readonly TestLaneSkippedFile[];
         readonly executionState: "executed" | "reused";
         readonly cacheHash?: string;
+        readonly failureDetails: readonly string[];
       }
     >();
     const rootResults = new Map<
@@ -734,7 +745,20 @@ function defaultRunner(
         ? (rootResults.get(command.owner) ?? packageResult)
         : {
             ...packageResult,
-            ...(packageEvidence.get(command.cwd) ?? { executedPaths: [], skippedFiles: [] }),
+            orchestrationExitCode: packageResult.exitCode,
+            ...(packageEvidence.get(command.cwd) ?? {
+              exitCode: 1,
+              executedPaths: [],
+              skippedFiles: [],
+              executionState: "executed" as const,
+              failureDetails:
+                packageResult.exitCode !== 0 && existsSync(evidencePath(rootDir, command))
+                  ? readVitestFailureDetails(
+                      evidencePath(rootDir, command),
+                      resolve(rootDir, command.cwd),
+                    )
+                  : [],
+            }),
           };
     };
   }
@@ -930,11 +954,15 @@ export function runTestLane(options: {
     defaultRunner(rootDir, options.lane, plan, resolveScript, liveResourceRequirements);
   const commandFailureDetails: { readonly owner: string; readonly details: readonly string[] }[] =
     [];
+  const orchestrationFailures = new Set<number>();
   const commands =
     diagnostics.length > 0
       ? []
       : plan.map((command): TestLaneCommandResult => {
-          const { failureDetails = [], ...result } = runner(command);
+          const { failureDetails = [], orchestrationExitCode, ...result } = runner(command);
+          if (orchestrationExitCode !== undefined && orchestrationExitCode !== 0) {
+            orchestrationFailures.add(orchestrationExitCode);
+          }
           if (failureDetails.length > 0) {
             commandFailureDetails.push({
               owner: command.owner,
@@ -964,6 +992,12 @@ export function runTestLane(options: {
             status: result.exitCode === 0 && complete ? "passed" : "failed",
           };
         });
+  for (const exitCode of orchestrationFailures) {
+    diagnostics.push({
+      code: "TEST_LANE_ORCHESTRATION_FAILED",
+      message: `The ${options.lane} lane orchestrator exited with code ${exitCode}.`,
+    });
+  }
   if (commands.some(({ status }) => status === "failed")) {
     diagnostics.push({
       code: "TEST_LANE_EXECUTION_FAILED",

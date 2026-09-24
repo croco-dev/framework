@@ -1,20 +1,25 @@
-import { Container as TypeDIContainer, Token } from "typedi";
-import type { ServiceMetadata } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
-import { Component, Container, InjectMany } from "../index";
+import {
+  Container,
+  InjectMany,
+  RuntimeContainer as RuntimeContainerBackend,
+  Token,
+} from "../index";
+import type { ServiceMetadata } from "../index";
+import { Component } from "./registerTestComponent";
 
 describe("ContainerScope", () => {
   beforeEach(() => {
     Container.reset();
-    TypeDIContainer.reset();
+    RuntimeContainerBackend.reset();
   });
 
-  it("resolves provider adapters registered directly in the local TypeDI container", () => {
+  it("resolves provider adapters registered directly in the local runtime container", () => {
     const token = new Token<string>("adapter-value");
     const scope = Container.createScope();
 
     scope.run(() => {
-      TypeDIContainer.of(scope.id).set(token, "scoped");
+      RuntimeContainerBackend.of(scope.id).set(token, "scoped");
       expect(Container.has(token)).toBe(true);
       expect(Container.get(token)).toBe("scoped");
     });
@@ -31,11 +36,11 @@ describe("ContainerScope", () => {
     const firstScope = Container.createScope();
     const secondScope = Container.createScope();
 
-    TypeDIContainer.set({ id: token, value: "global", multiple: true });
+    RuntimeContainerBackend.set({ id: token, value: "global", multiple: true });
 
     const resolveInScope = (scope: typeof firstScope, values: readonly string[]) =>
       scope.run(() => {
-        const container = TypeDIContainer.of(scope.id);
+        const container = RuntimeContainerBackend.of(scope.id);
         for (const value of values) {
           container.set({ id: token, value, multiple: true });
         }
@@ -51,7 +56,7 @@ describe("ContainerScope", () => {
 
     expect(resolveInScope(firstScope, ["first-a", "first-b"])).toEqual(["first-a", "first-b"]);
     expect(resolveInScope(secondScope, ["second-a", "second-b"])).toEqual(["second-a", "second-b"]);
-    expect(TypeDIContainer.getMany(token)).toEqual(["global"]);
+    expect(RuntimeContainerBackend.getMany(token)).toEqual(["global"]);
 
     firstScope.dispose();
     secondScope.dispose();
@@ -86,7 +91,7 @@ describe("ContainerScope", () => {
   it("restores metadata and reports cleanup failures when provider destruction fails", async () => {
     const attemptToken = new Token<object>("attempt-with-failing-cleanup");
     const scope = Container.createScope();
-    const container = TypeDIContainer.of(scope.id) as unknown as {
+    const container = RuntimeContainerBackend.of(scope.id) as unknown as {
       destroyServiceInstance: (service: ServiceMetadata<unknown>) => void;
     };
     const destroyServiceInstance = container.destroyServiceInstance.bind(container);
@@ -119,7 +124,7 @@ describe("ContainerScope", () => {
     const firstToken = new Token<object>("first-disposal");
     const secondToken = new Token<object>("second-disposal");
     const scope = Container.createScope();
-    const container = TypeDIContainer.of(scope.id) as unknown as {
+    const container = RuntimeContainerBackend.of(scope.id) as unknown as {
       destroyServiceInstance: (service: ServiceMetadata<unknown>) => void;
     };
     const destroyServiceInstance = container.destroyServiceInstance.bind(container);
@@ -148,7 +153,7 @@ describe("ContainerScope", () => {
     expect(destroyed).toEqual([firstToken, secondToken]);
     expect(
       (
-        TypeDIContainer as unknown as {
+        RuntimeContainerBackend as unknown as {
           instances: Array<{ id: string }>;
         }
       ).instances.some((instance) => instance.id === scope.id),

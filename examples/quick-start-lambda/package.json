@@ -3,14 +3,18 @@
   "version": "0.0.0",
   "private": true,
   "type": "commonjs",
+  "main": "./dist/index.js",
   "scripts": {
-    "dev": "tsx src/index.ts",
-    "build": "tsc --noEmit"
+    "dev": "tsx scripts/build.ts --watch",
+    "build": "tsx scripts/build.ts && tsc --noEmit",
+    "typecheck": "tsx scripts/build.ts && tsc --noEmit"
   },
   "dependencies": {
     "@croco/auth-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
+    "@croco/framework-module": "workspace:*",
     "@croco/metering-core": "workspace:*",
+    "@croco/preset-node": "workspace:*",
     "@croco/protocols-rest": "workspace:*",
     "@croco/ratelimit-core": "workspace:*",
     "@croco/telemetry-sdk-node": "workspace:*",
@@ -18,7 +22,9 @@
     "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
+    "@croco/esbuild-plugin": "workspace:*",
     "@types/node": "^22",
+    "esbuild": "^0.20.2",
     "tsx": "^4.19.0",
     "typescript": "^6.0.3"
   }

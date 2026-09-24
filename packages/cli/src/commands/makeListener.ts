@@ -48,8 +48,10 @@ export async function generateListener(
   );
   const content = `import { RegisterEventHandler } from "@croco/events-core";
 import type { EventHandler } from "@croco/events-core";
+import { Component } from "@croco/framework-context";
 import { ${className}Event } from "../events/${className}Event";
 
+@Component()
 @RegisterEventHandler(${className}Event)
 export class ${className}Listener implements EventHandler<${className}Event> {
   handle(event: ${className}Event): void {

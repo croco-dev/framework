@@ -31,6 +31,15 @@ The HTTP bootstrap uses security headers, an explicit CORS origin, a 1 MB body l
 
 ## Run Locally
 
+`src/app/bootstrap.ts` composes an application-owned module and the HTTP transport plugin in an
+isolated `ApplicationRuntime`. Checkout, controller, and projection dependencies are constructor
+arguments. The event publisher receives the same transaction manager that commits the order, so
+after-commit delivery belongs to that application without a global transaction registry. Each
+runtime owns its repository, payment gateway, event bus, and audit log; call `dispose()` to release it.
+
+The Lambda callback and HTTP testing entry point are bound with `ApplicationRuntime.bindHostCallback()`.
+The local Node listener starts inside the owning runtime, preserving its scope for incoming requests.
+
 From the repository root:
 
 ```bash

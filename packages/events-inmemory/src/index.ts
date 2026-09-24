@@ -8,18 +8,20 @@
  * ## In-Memory Event Bus Implementation
  *
  * `@croco/events-core`의 EventBus 인터페이스를 구현한 인메모리 이벤트 버스입니다.
- * TypeDI 컨테이너와 통합되어 핸들러 인스턴스를 자동으로 주입하며,
+ * 명시적인 handler resolver와 통합되어 핸들러 인스턴스를 생성하며,
  * OpenTelemetry를 통한 분산 추적을 지원합니다.
  *
  * @example
  * ```typescript
- * import 'reflect-metadata';
  * import { EventBusConfig, RegisterEventHandler } from '@croco/events-core';
  * import { InMemoryEventBus } from '@croco/events-inmemory';
  *
- * const config = EventBusConfig.getInstance();
+ * const config = new EventBusConfig();
  * config.setEventBus(new InMemoryEventBus());
- * await config.start({ handlers: [MyEventHandler] });
+ * await config.start({
+ *   handlers: [MyEventHandler],
+ *   resolver: { resolve: (handlerClass) => applicationRuntime.get(handlerClass) },
+ * });
  * ```
  *
  * @packageDocumentation
@@ -61,6 +63,7 @@ export {
   InvalidDeadLetterQueueLimitProblem,
   InvalidDeadLetterRetryCountProblem,
   InvalidEventBusConfigurationProblem,
+  MissingEventHandlerResolverProblem,
   UnsupportedDeadLetterValueProblem,
 } from "./libs/problems/EventsInmemoryProblems";
 export {

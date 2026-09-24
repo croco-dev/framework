@@ -120,7 +120,7 @@ export {
   EventBusNotSetProblem,
   EventDefinitionProblem,
   EventDeserializationError,
-  EventTransactionContextUnavailableProblem,
+  EventHandlerResolverRequiredProblem,
   InvalidEventBusDrainTimeoutProblem,
   UnknownEventTypeProblem,
 } from "./libs/problems/EventsProblems";

@@ -1,3 +1,4 @@
+import { createTestEventBus } from "./createTestEventBus";
 import {
   DomainEvent,
   EventBusConfig,
@@ -11,7 +12,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   DeadLetterQueueNotConfiguredProblem,
   InMemoryDeadLetterQueue,
-  InMemoryEventBus,
+  type InMemoryEventBus,
   InvalidDeadLetterQueueLimitProblem,
 } from "../index";
 
@@ -81,7 +82,7 @@ describe("InMemoryEventBus replay shutdown lifecycle", () => {
     const queue = new InMemoryDeadLetterQueue();
     await queue.enqueue(deadLetter("queued"));
     const dequeue = vi.spyOn(queue, "dequeue");
-    const bus = new InMemoryEventBus<ReplayLifecycleEvent>({ deadLetterQueue: queue });
+    const bus = createTestEventBus<ReplayLifecycleEvent>({ deadLetterQueue: queue });
     subscribe(bus, ReplayHandler, new ReplayHandler());
 
     await expect(bus.shutdown()).resolves.toMatchObject({ status: "drained" });
@@ -92,7 +93,7 @@ describe("InMemoryEventBus replay shutdown lifecycle", () => {
   });
 
   it("preserves the missing dead-letter queue problem after shutdown", async () => {
-    const bus = new InMemoryEventBus<ReplayLifecycleEvent>();
+    const bus = createTestEventBus<ReplayLifecycleEvent>();
     await expect(bus.shutdown()).resolves.toMatchObject({ status: "drained" });
 
     await expect(bus.replayDeadLetters()).rejects.toBeInstanceOf(
@@ -104,7 +105,7 @@ describe("InMemoryEventBus replay shutdown lifecycle", () => {
     const queue = new InMemoryDeadLetterQueue();
     await queue.enqueue(deadLetter("invalid-limit"));
     const dequeue = vi.spyOn(queue, "dequeue");
-    const bus = new InMemoryEventBus<ReplayLifecycleEvent>({ deadLetterQueue: queue });
+    const bus = createTestEventBus<ReplayLifecycleEvent>({ deadLetterQueue: queue });
     await expect(bus.shutdown()).resolves.toMatchObject({ status: "drained" });
 
     await expect(bus.replayDeadLetters(0)).rejects.toBeInstanceOf(
@@ -121,7 +122,7 @@ describe("InMemoryEventBus replay shutdown lifecycle", () => {
     }
     const queue = new ControlledDequeueQueue();
     await queue.enqueue(deadLetter("pending-dequeue"));
-    const bus = new InMemoryEventBus<ReplayLifecycleEvent>({ deadLetterQueue: queue });
+    const bus = createTestEventBus<ReplayLifecycleEvent>({ deadLetterQueue: queue });
     subscribe(bus, ReplayHandler, new ReplayHandler());
 
     const replay = bus.replayDeadLetters();
@@ -147,7 +148,7 @@ describe("InMemoryEventBus replay shutdown lifecycle", () => {
     await queue.enqueue(deadLetter("storage-failure"));
     const storageError = new Error("requeue unavailable");
     const enqueue = vi.spyOn(queue, "enqueue").mockRejectedValueOnce(storageError);
-    const bus = new InMemoryEventBus<ReplayLifecycleEvent>({ deadLetterQueue: queue });
+    const bus = createTestEventBus<ReplayLifecycleEvent>({ deadLetterQueue: queue });
     subscribe(bus, ReplayHandler, new ReplayHandler());
 
     const replay = bus.replayDeadLetters();
@@ -190,7 +191,7 @@ describe("InMemoryEventBus replay shutdown lifecycle", () => {
       const queue = new ControlledDequeueQueue();
       await queue.enqueue(deadLetter("blocked-replay"));
       queue.releaseDequeue.resolve();
-      const bus = new InMemoryEventBus<ReplayLifecycleEvent>({
+      const bus = createTestEventBus<ReplayLifecycleEvent>({
         deadLetterQueue: queue,
         maxConcurrency: 1,
         backpressureStrategy: "block",
@@ -256,7 +257,7 @@ describe("InMemoryEventBus replay shutdown lifecycle", () => {
     const queue = new InMemoryDeadLetterQueue();
     await queue.enqueue(deadLetter("started"));
     await queue.enqueue(deadLetter("later"));
-    const bus = new InMemoryEventBus<ReplayLifecycleEvent>({
+    const bus = createTestEventBus<ReplayLifecycleEvent>({
       deadLetterQueue: queue,
       maxConcurrency: 1,
     });

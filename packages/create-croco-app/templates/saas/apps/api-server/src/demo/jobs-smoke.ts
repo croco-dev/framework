@@ -9,7 +9,7 @@ import type {
 } from "@croco/cli";
 import { createCrocoApp } from "../app";
 import { SaasDemoSmokeProblem } from "../problems";
-import { getSaasRuntimeState, runSaasDemoFlow, type SaasRuntime } from "../saasDemo";
+import { SAAS_RUNTIME_STATE_TOKEN, runSaasDemoFlow, type SaasRuntime } from "../saasDemo";
 import { assertSaasSmokeContract } from "./saasSmokeContract";
 
 type CliJobsModule = {
@@ -28,7 +28,7 @@ const JOBS_BASE_URL = "http://localhost/ops";
 async function main(): Promise<void> {
   const app = await createCrocoApp({ profileMode: "zero-credential" });
   try {
-    const runtime = app.applicationRuntime.run(() => getSaasRuntimeState().current);
+    const runtime = app.applicationRuntime.get(SAAS_RUNTIME_STATE_TOKEN).current;
     const snapshot = await runSaasDemoFlow(runtime);
     assertSaasSmokeContract(snapshot);
 

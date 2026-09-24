@@ -1,12 +1,9 @@
-import { EventBusConfig, EventPublisher } from "@croco/events-core";
-import { Container } from "@croco/framework-context";
+import type { EventPublisher } from "@croco/events-core";
 import { NoBackoff, RetryTemplate } from "@croco/retry-core";
 import { recordEvent, withSpan } from "@croco/telemetry-api";
-import { TxManagerRegistry } from "@croco/tx-core";
+import type { TxManager } from "@croco/tx-core";
 import { OrderPaidEvent } from "../events/OrderPaidEvent";
-import { PAYMENT_GATEWAY_TOKEN } from "../integrations/ScriptedPaymentGateway";
 import type { InMemoryTxClient } from "../integrations/InMemoryTxAdapter";
-import { ORDER_REPOSITORY_TOKEN } from "./InMemoryOrderRepository";
 import { calculateAmountCents, isPlanId } from "./Plans";
 import { CheckoutValidationProblem, OrderNotFoundProblem } from "./Problems";
 import type {
@@ -18,14 +15,16 @@ import type {
 } from "./types";
 
 export class CheckoutService {
-  private readonly orders = Container.get<OrderRepository>(ORDER_REPOSITORY_TOKEN);
-  private readonly payments = Container.get<PaymentGateway>(PAYMENT_GATEWAY_TOKEN);
-  private readonly publisher = new EventPublisher(EventBusConfig.getInstance());
   private readonly retry = new RetryTemplate({
     backoffPolicy: new NoBackoff(),
     maxAttempts: 2,
   });
-  private readonly txManager = TxManagerRegistry.get<InMemoryTxClient>();
+  constructor(
+    private readonly orders: OrderRepository,
+    private readonly payments: PaymentGateway,
+    private readonly publisher: EventPublisher,
+    private readonly txManager: TxManager<InMemoryTxClient>,
+  ) {}
 
   async checkout(rawInput: CheckoutRequest): Promise<CheckoutResponse> {
     const input = normalizeCheckoutRequest(rawInput);

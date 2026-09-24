@@ -114,23 +114,29 @@ The `@BatchLoad` decorator automatically batches multiple `findById` calls into 
 Install `@croco/dataloader-core` and `@croco/framework-context` alongside `@croco/repository-core` for this example.
 
 ```typescript typecheck
-import { registerBatchLoaderFactory } from "@croco/dataloader-core";
-import { Context } from "@croco/framework-context";
-import { BatchLoad, type KeyedRepositoryResult, type ReadRepository } from "@croco/repository-core";
+import { BatchLoaderFactory } from "@croco/dataloader-core";
+import { Context, Inject } from "@croco/framework-context";
+import {
+  BatchLoad,
+  BATCH_LOADER_FACTORY_TOKEN,
+  type IBatchLoaderFactory,
+  type KeyedRepositoryResult,
+  type ReadRepository,
+} from "@croco/repository-core";
 
 interface User {
   id: string;
   name: string;
 }
 
-// 1. Register the batch loader factory
-registerBatchLoaderFactory();
-
-// 2. Apply the decorator to repository methods
+// The application provides one factory to each repository instance.
 class UserRepository implements ReadRepository<User, string> {
-  constructor(private readonly users: ReadonlyMap<string, User>) {}
+  constructor(
+    private readonly users: ReadonlyMap<string, User>,
+    @Inject(BATCH_LOADER_FACTORY_TOKEN) readonly batchLoaderFactory: IBatchLoaderFactory,
+  ) {}
 
-  @BatchLoad({ by: "id" })
+  @BatchLoad<UserRepository>({ by: "id", factory: (repository) => repository.batchLoaderFactory })
   async findById(id: string): Promise<User | null> {
     return this.users.get(id) ?? null;
   }
@@ -153,6 +159,7 @@ async function loadUsers() {
         ["1", { id: "1", name: "Ada" }],
         ["2", { id: "2", name: "Lin" }],
       ]),
+      new BatchLoaderFactory(),
     );
     const [user1, user2, user3] = await Promise.all([
       userRepository.findById("1"),
@@ -170,7 +177,9 @@ void loadUsers();
 ### Batch Load Options
 
 ```typescript
-interface BatchLoadOptions {
+interface BatchLoadOptions<TRepository extends object> {
+  /** Returns the factory injected into this repository by its application. */
+  factory: (repository: TRepository) => IBatchLoaderFactory;
   /**
    * The field name to use as the key for mapping results.
    * Required to ensure the order of results matches the order of keys.
@@ -198,7 +207,10 @@ share batching and cached values across instances, return the same safe scope id
 const dataSourceScope = Symbol("primary-data-source");
 
 class UserRepository {
+  constructor(readonly batchLoaderFactory: IBatchLoaderFactory) {}
+
   @BatchLoad<UserRepository>({
+    factory: (repository) => repository.batchLoaderFactory,
     by: "id",
     scope: () => dataSourceScope,
   })
@@ -213,9 +225,12 @@ repository that changes transactions cannot reuse an earlier loader:
 
 ```typescript
 class TransactionalUserRepository {
+  constructor(readonly batchLoaderFactory: IBatchLoaderFactory) {}
+
   activeTransaction: object;
 
   @BatchLoad<TransactionalUserRepository>({
+    factory: (repository) => repository.batchLoaderFactory,
     by: "id",
     scope: (repository) => repository.activeTransaction,
   })

@@ -1,6 +1,6 @@
 import { rm } from "node:fs/promises";
 
-import { Container, Token } from "typedi";
+import { RuntimeContainer as Container, Token } from "@croco/framework-context";
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { AiRateLimitExceededProblem, AiTenantRequiredProblem } from "../aiProblems";
 import { createCrocoApp } from "../app";
@@ -10,7 +10,6 @@ import {
   buildAiIdempotencyKey,
   createAiSaasRuntime,
   DEFAULT_AI_MODEL_ID,
-  getAiSaasRuntime,
   getAiProviderProfile,
   runAiSaasDemoFlow,
   seedAiSaasTenant,
@@ -153,11 +152,41 @@ describe("AI SaaS generated baseline", () => {
           }),
         }),
       );
-      const applicationAiRuntime = app.applicationRuntime.run(() => getAiSaasRuntime());
+      const applicationAiRuntime = app.applicationRuntime.get(AI_SAAS_RUNTIME_TOKEN);
 
       expect(AI_SAAS_RUNTIME_TOKEN).toBeInstanceOf(Token);
       expect(app.applicationRuntime.get(AI_SAAS_RUNTIME_TOKEN)).toBe(applicationAiRuntime);
       expect(generateResponse.status).toBe(200);
+      await expect(
+        applicationAiRuntime.service.listInvocationLogs(seed.tenant.id),
+      ).resolves.toHaveLength(1);
+
+      const secondSeedResponse = await app.fetch(
+        new Request("http://localhost/saas/demo/seed", { method: "POST" }),
+      );
+      expect(secondSeedResponse.status).toBe(200);
+      const secondSeed = (await secondSeedResponse.json()) as {
+        readonly tenant: { readonly id: string };
+      };
+      const secondGenerateResponse = await app.fetch(
+        new Request("http://localhost/ai/generate", {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+            "x-tenant-id": secondSeed.tenant.id,
+          },
+          body: JSON.stringify({
+            requestId: "application-scoped-ai-route-after-reset",
+            prompt: "Draft a second tenant onboarding email.",
+          }),
+        }),
+      );
+      expect(secondGenerateResponse.status).toBe(200);
+      const replacementAiRuntime = app.applicationRuntime.get(AI_SAAS_RUNTIME_TOKEN);
+      expect(replacementAiRuntime).not.toBe(applicationAiRuntime);
+      await expect(
+        replacementAiRuntime.service.listInvocationLogs(secondSeed.tenant.id),
+      ).resolves.toHaveLength(1);
       await expect(
         applicationAiRuntime.service.listInvocationLogs(seed.tenant.id),
       ).resolves.toHaveLength(1);

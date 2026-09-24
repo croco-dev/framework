@@ -1104,6 +1104,15 @@ describe("MeteringService", () => {
 
       try {
         Container.set(LOGGER_TOKEN, logger);
+        service = new MeteringService(
+          {
+            meterRegistry: mockRegistry,
+            usageStorage: mockStorage,
+            idempotencyManager: mockIdempotency,
+            eventBus: mockEventBus,
+          },
+          logger,
+        );
         vi.mocked(mockRegistry.getOrThrow).mockResolvedValue(createMeter({ quota: undefined }));
         vi.mocked(mockIdempotency.markMeteringEventsPublishing).mockRejectedValue(meteringError);
         vi.mocked(mockIdempotency.releaseMeteringProcessing).mockRejectedValue(cleanupError);

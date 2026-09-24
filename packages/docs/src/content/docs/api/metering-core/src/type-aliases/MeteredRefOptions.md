@@ -11,6 +11,12 @@ title: "MeteredRefOptions"
 
 ## Type Declaration
 
+### logger?
+
+> `optional` **logger?**: [`ILogger`](/api/framework-context/src/interfaces/ilogger/)
+
+Explicit reporter for non-billable recording failures. Without one, failures propagate.
+
 ### metadataExtractor?
 
 > `optional` **metadataExtractor?**: (`args`, `result`) => `Record`\<`string`, `unknown`\> \| `undefined`

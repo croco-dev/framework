@@ -715,6 +715,7 @@ const paths = {
   healthController: join(QUICK_START_DIR, "src", "protocols", "HealthController.ts"),
   userController: join(QUICK_START_DIR, "src", "protocols", "UserController.ts"),
   authProvider: join(QUICK_START_DIR, "src", "integrations", "TestAuthProvider.ts"),
+  authGuard: join(QUICK_START_DIR, "src", "integrations", "ApiKeyGuard.ts"),
   quickStartBootstrap: join(QUICK_START_DIR, "src", "app", "bootstrap.ts"),
   examplePkg: join(QUICK_START_DIR, "package.json"),
   saasReadme: join(SAAS_BILLING_DIR, "README.md"),
@@ -766,13 +767,16 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
     pass("A1b", "README documents `pnpm dev`");
   }
 
-  // Example package.json dev script maps to tsx src/index.ts
+  // Development runs the compiler so constructor injection is generated before execution.
   const pkg = parsePackageJson(examplePkg);
   const devScript: string | undefined = pkg.scripts?.dev;
   if (!devScript) {
     fail("A1c", "example quick-start-lambda/package.json missing `scripts.dev`");
-  } else if (!devScript.includes("tsx") || !devScript.includes("index.ts")) {
-    fail("A1c", `scripts.dev="${devScript}" does not match expected "tsx src/index.ts"`);
+  } else if (devScript !== "tsx scripts/build.ts --watch") {
+    fail(
+      "A1c",
+      `scripts.dev="${devScript}" does not match expected "tsx scripts/build.ts --watch"`,
+    );
   } else {
     pass("A1c", `scripts.dev matches expected pattern (${devScript})`);
   }
@@ -880,7 +884,7 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
   }
 }
 
-// A3. Users list: GET /api/users with @UseGuards(AuthGuard)
+// A3. Users list: GET /api/users with @UseGuards(ApiKeyGuard)
 {
   const userController = read(paths.userController);
 
@@ -896,10 +900,19 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
     pass("A3b", "UserController has @Get()");
   }
 
-  if (!userController.includes("@UseGuards(AuthGuard)")) {
-    fail("A3c", "list() missing @UseGuards(AuthGuard)");
+  const listMethodIndex = userController.indexOf("list(");
+  const listBlockStart =
+    listMethodIndex === -1 ? 0 : Math.max(0, userController.lastIndexOf("\n\n", listMethodIndex));
+  const listDecoratorBlock =
+    listMethodIndex === -1 ? "" : userController.slice(listBlockStart, listMethodIndex);
+
+  if (
+    !listDecoratorBlock.includes("@Get()") ||
+    !listDecoratorBlock.includes("@UseGuards(ApiKeyGuard)")
+  ) {
+    fail("A3c", "list() missing @UseGuards(ApiKeyGuard)");
   } else {
-    pass("A3c", "list() has @UseGuards(AuthGuard)");
+    pass("A3c", "list() has @UseGuards(ApiKeyGuard)");
   }
 }
 
@@ -923,11 +936,11 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
 
   if (
     !createDecoratorBlock.includes("@Post()") ||
-    !createDecoratorBlock.includes("@UseGuards(AuthGuard)")
+    !createDecoratorBlock.includes("@UseGuards(ApiKeyGuard)")
   ) {
-    fail("A4b", "create() missing @UseGuards(AuthGuard)");
+    fail("A4b", "create() missing @UseGuards(ApiKeyGuard)");
   } else {
-    pass("A4b", "create() has @UseGuards(AuthGuard)");
+    pass("A4b", "create() has @UseGuards(ApiKeyGuard)");
   }
 
   if (!userController.includes('@Metered({ meterId: "api_user_create" })')) {
@@ -940,6 +953,19 @@ console.log("\n📋 A. Quick-start-lambda endpoint contract\n");
 // ── B. Auth contract ─────────────────────────────────────────────────────────
 
 console.log("\n📋 B. Auth contract\n");
+
+{
+  const guard = read(paths.authGuard);
+  if (
+    !guard.includes("constructor(provider: TestAuthProvider)") ||
+    !guard.includes("this.delegate = new AuthGuard(provider)") ||
+    !guard.includes("return this.delegate.canActivate(context)")
+  ) {
+    fail("B0", "ApiKeyGuard must delegate to AuthGuard with its injected TestAuthProvider");
+  } else {
+    pass("B0", "ApiKeyGuard delegates to AuthGuard with its injected TestAuthProvider");
+  }
+}
 
 {
   const auth = read(paths.authProvider);

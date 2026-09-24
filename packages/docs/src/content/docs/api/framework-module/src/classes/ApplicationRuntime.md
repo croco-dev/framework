@@ -15,13 +15,17 @@ Owns one isolated DI scope and one module lifecycle for a Croco application.
 
 ### Constructor
 
-> **new ApplicationRuntime**(`options?`): `ApplicationRuntime`
+> **new ApplicationRuntime**(`options?`, `generatedGraphOverride?`): `ApplicationRuntime`
 
 #### Parameters
 
 ##### options?
 
 [`ApplicationRuntimeOptions`](/api/framework-module/src/type-aliases/applicationruntimeoptions/) \| [`CrocoApplicationDefinition`](/api/framework-module/src/type-aliases/crocoapplicationdefinition/)
+
+##### generatedGraphOverride?
+
+[`GeneratedDiGraph`](/api/framework-context/src/type-aliases/generateddigraph/)
 
 #### Returns
 

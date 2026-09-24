@@ -1,4 +1,4 @@
-import { Container } from "@croco/framework-context";
+import { Container, RuntimeContainer } from "@croco/framework-context";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CustomerHealthService } from "../libs/CustomerHealthService";
@@ -62,7 +62,7 @@ describe("CustomerHealthService", () => {
 
     Container.set(CustomerHealthEventPublisher.token, mockEventPublisher);
 
-    service = new CustomerHealthService(mockRegistry, store, calculator);
+    service = new CustomerHealthService(mockRegistry, store, calculator, mockEventPublisher);
   });
 
   it("should collect signals, calculate score, and store result", async () => {
@@ -200,7 +200,7 @@ describe("CustomerHealthService", () => {
     mockRegistry = new MockSignalProvider();
     mockRegistry.addProvider("usage", riskSignals);
     calculator = new HealthScoreCalculator();
-    service = new CustomerHealthService(mockRegistry, store, calculator);
+    service = new CustomerHealthService(mockRegistry, store, calculator, mockEventPublisher);
 
     const result = await service.calculateAndStore("tenant-1", profile);
 
@@ -260,7 +260,7 @@ describe("CustomerHealthService", () => {
     mockRegistry = new MockSignalProvider();
     mockRegistry.addProvider("usage", lowScoreSignals);
     calculator = new HealthScoreCalculator();
-    service = new CustomerHealthService(mockRegistry, store, calculator);
+    service = new CustomerHealthService(mockRegistry, store, calculator, mockEventPublisher);
 
     const result = await service.calculateAndStore("tenant-1", profile);
 
@@ -292,12 +292,22 @@ describe("CustomerHealthService", () => {
       thresholds: { healthy: 80, atRisk: 60 },
     };
     mockRegistry.addProvider("usage", [healthSignal(90, "2026-03-15T10:00:00Z")]);
-    service = new CustomerHealthService(mockRegistry, deferredStore, calculator);
+    service = new CustomerHealthService(
+      mockRegistry,
+      deferredStore,
+      calculator,
+      mockEventPublisher,
+    );
     await service.calculateAndStore("tenant-1", profile);
 
     mockRegistry = new MockSignalProvider();
     mockRegistry.addProvider("usage", [healthSignal(50, "2026-03-15T11:00:00Z")]);
-    service = new CustomerHealthService(mockRegistry, deferredStore, calculator);
+    service = new CustomerHealthService(
+      mockRegistry,
+      deferredStore,
+      calculator,
+      mockEventPublisher,
+    );
 
     await service.calculateAndStore("tenant-1", profile);
 
@@ -339,7 +349,7 @@ describe("CustomerHealthService", () => {
         collectedAt: new Date("2026-03-15T11:00:00Z"),
       },
     ]);
-    service = new CustomerHealthService(mockRegistry, store, calculator);
+    service = new CustomerHealthService(mockRegistry, store, calculator, mockEventPublisher);
     vi.mocked(mockEventPublisher.publishIdempotently).mockRejectedValueOnce(
       new Error("publisher unavailable"),
     );
@@ -400,7 +410,7 @@ describe("CustomerHealthService", () => {
         collectedAt: new Date("2026-03-15T11:00:00Z"),
       },
     ]);
-    service = new CustomerHealthService(mockRegistry, store, calculator);
+    service = new CustomerHealthService(mockRegistry, store, calculator, mockEventPublisher);
     const markPublished = vi.spyOn(store, "markEventIntentPublished");
     markPublished.mockRejectedValueOnce(new Error("acknowledgement unavailable"));
 
@@ -430,7 +440,7 @@ describe("CustomerHealthService", () => {
 
     mockRegistry = new MockSignalProvider();
     mockRegistry.addProvider("usage", [healthSignal(50, "2026-03-15T11:00:00Z")]);
-    service = new CustomerHealthService(mockRegistry, store, calculator);
+    service = new CustomerHealthService(mockRegistry, store, calculator, mockEventPublisher);
     vi.mocked(mockEventPublisher.publishIdempotently).mockRejectedValue(
       new Error("publisher unavailable"),
     );
@@ -440,7 +450,7 @@ describe("CustomerHealthService", () => {
 
     mockRegistry = new MockSignalProvider();
     mockRegistry.addProvider("usage", [healthSignal(55, "2026-03-15T12:00:00Z")]);
-    service = new CustomerHealthService(mockRegistry, store, calculator);
+    service = new CustomerHealthService(mockRegistry, store, calculator, mockEventPublisher);
     await expect(service.calculateAndStore("tenant-1", profile)).rejects.toThrow(
       "publisher unavailable",
     );
@@ -473,14 +483,18 @@ describe("CustomerHealthService", () => {
     criticalRegistry.addProvider("usage", [healthSignal(50, "2026-03-15T11:00:01Z")]);
 
     await Promise.all([
-      new CustomerHealthService(riskRegistry, store, calculator).calculateAndStore(
-        "tenant-1",
-        profile,
-      ),
-      new CustomerHealthService(criticalRegistry, store, calculator).calculateAndStore(
-        "tenant-1",
-        profile,
-      ),
+      new CustomerHealthService(
+        riskRegistry,
+        store,
+        calculator,
+        mockEventPublisher,
+      ).calculateAndStore("tenant-1", profile),
+      new CustomerHealthService(
+        criticalRegistry,
+        store,
+        calculator,
+        mockEventPublisher,
+      ).calculateAndStore("tenant-1", profile),
     ]);
 
     const history = await store.findHistory("tenant-1", 10);
@@ -547,7 +561,7 @@ describe("CustomerHealthService", () => {
     mockRegistry = new MockSignalProvider();
     mockRegistry.addProvider("usage", slightlyLowerSignals);
     calculator = new HealthScoreCalculator();
-    service = new CustomerHealthService(mockRegistry, store, calculator);
+    service = new CustomerHealthService(mockRegistry, store, calculator, mockEventPublisher);
 
     const result = await service.calculateAndStore("tenant-1", profile);
 
@@ -611,15 +625,33 @@ describe("CustomerHealthService", () => {
     );
   });
 
-  it("should resolve from Container with optional event publisher wiring intact", () => {
+  it("should resolve from Container with optional event publisher wiring intact", async () => {
     Container.set(HealthSignalRegistry.token, mockRegistry as unknown as HealthSignalRegistry);
     Container.set(HealthScoreStore.token, store as unknown as HealthScoreStore);
     Container.set(HealthScoreCalculator, calculator);
-    Container.register(CustomerHealthService, "transient");
+    RuntimeContainer.set({
+      id: CustomerHealthService,
+      scope: "transient",
+      factory: () =>
+        new CustomerHealthService(
+          Container.get(HealthSignalRegistry.token),
+          Container.get(HealthScoreStore.token),
+          Container.get(HealthScoreCalculator),
+          Container.getOptional(CustomerHealthEventPublisher.token),
+        ),
+    });
 
     const resolved = Container.get(CustomerHealthService);
 
     expect(resolved).toBeInstanceOf(CustomerHealthService);
+    expect(Container.get(CustomerHealthService)).not.toBe(resolved);
+    await expect(resolved.publishPendingEvents("tenant-1")).resolves.toBe(0);
+
+    Container.remove(CustomerHealthEventPublisher.token);
+    const withoutPublisher = Container.get(CustomerHealthService);
+    await expect(withoutPublisher.publishPendingEvents("tenant-1")).rejects.toBeInstanceOf(
+      HealthEventPublisherNotConfiguredProblem,
+    );
   });
 
   it("should return latest score from store without recalculating", async () => {

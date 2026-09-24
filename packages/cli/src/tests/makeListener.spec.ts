@@ -23,8 +23,9 @@ describe("generateListener", () => {
     expect(result?.path).toBe(filePath);
     expect(content).toContain('import { RegisterEventHandler } from "@croco/events-core";');
     expect(content).toContain('import type { EventHandler } from "@croco/events-core";');
+    expect(content).toContain('import { Component } from "@croco/framework-context";');
     expect(content).toContain('import { UserProfileEvent } from "../events/UserProfileEvent";');
-    expect(content).toContain("@RegisterEventHandler(UserProfileEvent)");
+    expect(content).toContain("@Component()\n@RegisterEventHandler(UserProfileEvent)");
     expect(content).toContain(
       "export class UserProfileListener implements EventHandler<UserProfileEvent>",
     );
@@ -49,7 +50,26 @@ describe("generateListener", () => {
     );
 
     await expect(generateListener("UserProfile", { cwd })).rejects.toThrow(
-      "Missing dependencies in apps/api-server/package.json for generated imports: @croco/events-core.",
+      "Missing dependencies in apps/api-server/package.json for generated imports: @croco/events-core, @croco/framework-context.",
+    );
+    await expect(fs.access(filePath)).rejects.toThrow();
+  });
+
+  it("should require framework-context before writing a listener", async () => {
+    const cwd = await createWorkspace({
+      apiServerManifest: apiServerManifest(["@croco/events-core"]),
+    });
+    const filePath = path.join(
+      cwd,
+      "apps",
+      "api-server",
+      "src",
+      "listeners",
+      "UserProfileListener.ts",
+    );
+
+    await expect(generateListener("UserProfile", { cwd })).rejects.toThrow(
+      "Missing dependencies in apps/api-server/package.json for generated imports: @croco/framework-context.",
     );
     await expect(fs.access(filePath)).rejects.toThrow();
   });
@@ -72,7 +92,8 @@ async function createWorkspace(options: { apiServerManifest?: string } = {}): Pr
   await fs.writeFile(path.join(cwd, "pnpm-workspace.yaml"), "packages: []\n");
   await fs.writeFile(
     path.join(cwd, "apps", "api-server", "package.json"),
-    options.apiServerManifest ?? apiServerManifest(["@croco/events-core"]),
+    options.apiServerManifest ??
+      apiServerManifest(["@croco/events-core", "@croco/framework-context"]),
   );
 
   return cwd;

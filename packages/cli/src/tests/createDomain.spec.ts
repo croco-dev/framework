@@ -104,7 +104,7 @@ describe("runCreateDomain", () => {
     const domainDir = path.join(cwd, "apps", "api-server", "src", "domains", "user");
 
     await expect(runCreateDomain("User", { cwd })).rejects.toThrow(
-      "Missing dependencies in apps/api-server/package.json for generated imports: @croco/protocols-rest, @croco/transports-http, typedi, @croco/repository-core.",
+      "Missing dependencies in apps/api-server/package.json for generated imports: @croco/protocols-rest, @croco/transports-http, @croco/framework-context, @croco/repository-core.",
     );
     await expect(fs.access(path.join(domainDir, "UserController.ts"))).rejects.toThrow();
     await expect(fs.access(path.join(domainDir, "UserService.ts"))).rejects.toThrow();
@@ -124,7 +124,7 @@ async function createWorkspace(options: { apiServerManifest?: string } = {}): Pr
         "@croco/protocols-rest",
         "@croco/transports-http",
         "@croco/repository-core",
-        "typedi",
+        "@croco/framework-context",
       ]),
   );
   await fs.writeFile(

@@ -4,6 +4,7 @@ import { createApplicationRuntime } from "@croco/framework-module";
 import type { ApplicationRuntime } from "@croco/framework-module";
 import { createApp, createGracefulShutdownController } from "@croco/transports-http";
 import type { CrocoApp, MiddlewareFunction } from "@croco/transports-http";
+import { generatedDiGraph } from "../.croco/di.generated";
 import { BootstrapLogger } from "./bootstrapLogger";
 import { APPLICATION_CONTROLLERS, createSaasCompositionRoot } from "./compositionRoot";
 import {
@@ -55,7 +56,7 @@ export async function createCrocoApp(
         : { additionalMiddlewares: options.additionalMiddlewares }),
       ...(options.hostPlatform === undefined ? {} : { hostPlatform: options.hostPlatform }),
     });
-    const runtime = createApplicationRuntime(application);
+    const runtime = createApplicationRuntime(application, generatedDiGraph);
     disposeRuntime = () => runtime.dispose();
     await runtime.initialize();
     assertGeneratedSaasProfileGraph(runtime.createGraphManifest(), profileMode);

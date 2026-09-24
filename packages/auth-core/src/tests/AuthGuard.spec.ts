@@ -45,8 +45,22 @@ describe("AuthGuard", () => {
     mockAuthProvider = {
       authenticate: vi.fn(),
     };
-    Container.set(AUTH_PROVIDER_TOKEN, mockAuthProvider);
-    authGuard = new AuthGuard();
+    authGuard = new AuthGuard(mockAuthProvider);
+  });
+
+  it("keeps the injected provider isolated from global provider replacement", async () => {
+    class TestController {
+      protectedMethod() {}
+    }
+    vi.mocked(mockAuthProvider.authenticate).mockResolvedValue(mockUser);
+    const unrelatedProvider = { authenticate: vi.fn().mockResolvedValue(null) };
+    Container.set(AUTH_PROVIDER_TOKEN, unrelatedProvider);
+
+    await expect(
+      authGuard.canActivate(createMockContext(TestController.prototype, "protectedMethod")),
+    ).resolves.toBe(true);
+    expect(mockAuthProvider.authenticate).toHaveBeenCalledOnce();
+    expect(unrelatedProvider.authenticate).not.toHaveBeenCalled();
   });
 
   describe.each(authGuardConformance.invalidRouteMetadataTargets)(

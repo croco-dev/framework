@@ -1,4 +1,4 @@
-import { Container, LOGGER_TOKEN } from "@croco/framework-context";
+import type { ILogger } from "@croco/framework-context";
 import { recordError } from "@croco/telemetry-api";
 
 type AuditErrorHandlerConfig = {
@@ -6,6 +6,7 @@ type AuditErrorHandlerConfig = {
   baseDelayMs: number;
   maxDelayMs: number;
   onExhausted?: (error: Error, attempt: number) => void;
+  logger?: Pick<ILogger, "error">;
 };
 
 const DEFAULT_CONFIG: AuditErrorHandlerConfig = {
@@ -79,7 +80,7 @@ export class AuditErrorHandler {
     recordError(error);
 
     try {
-      const logger = Container.get(LOGGER_TOKEN);
+      const logger = this.config.logger ?? console;
       logger.error("[AuditErrorHandler] Audit operation failed after retries", {
         context,
         attempts,
@@ -97,7 +98,7 @@ export class AuditErrorHandler {
         this.config.onExhausted(error, attempts);
       } catch (callbackError) {
         try {
-          const logger = Container.get(LOGGER_TOKEN);
+          const logger = this.config.logger ?? console;
           logger.error("[AuditErrorHandler] onExhausted callback failed:", callbackError as Error);
         } catch {
           // Logger DI is unavailable; fallback to console.error so the error is not lost.

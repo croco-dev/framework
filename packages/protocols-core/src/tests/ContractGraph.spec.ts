@@ -1,6 +1,5 @@
 import "reflect-metadata";
 import { defineProblemRegistry, ProblemCategory } from "@croco/problems-core";
-import { Container } from "typedi";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import {
@@ -57,7 +56,6 @@ import {
 
 describe("buildContractGraph", () => {
   beforeEach(() => {
-    Container.reset();
     vi.restoreAllMocks();
   });
 

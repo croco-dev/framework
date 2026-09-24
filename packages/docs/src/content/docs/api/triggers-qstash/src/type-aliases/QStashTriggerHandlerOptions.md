@@ -69,12 +69,11 @@ QStash receiver instance for verifying webhook signatures.
 
 ---
 
-### serviceResolver?
+### serviceResolver
 
-> `readonly` `optional` **serviceResolver?**: `ServiceResolver`
+> `readonly` **serviceResolver**: `ServiceResolver`
 
-Optional service resolver for getting target instances.
-If not provided, uses the framework Container with constructor fallback.
+Application-owned resolver for getting generated target instances.
 
 ---
 

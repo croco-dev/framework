@@ -1,12 +1,9 @@
 import type { ContractDiagnostic, ContractGraph } from "@croco/protocols-core";
-import { Container } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
 import { runContractsCheck } from "../commands/contractsCheck.js";
 
 describe("contractsCheck", () => {
-  beforeEach(() => {
-    Container.reset();
-  });
+  beforeEach(() => {});
 
   it("should validate a contract graph with text output", async () => {
     const stdout: string[] = [];

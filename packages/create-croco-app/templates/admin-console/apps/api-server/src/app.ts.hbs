@@ -1,5 +1,4 @@
 import "reflect-metadata";
-import { Component } from "@croco/framework-context";
 import { createApplicationRuntime } from "@croco/framework-module";
 import {
   createSlidingWindowPolicy,
@@ -20,6 +19,7 @@ import {
 import type { ApplicationRuntime } from "@croco/framework-module";
 import type { Constructor } from "@croco/protocols-rest";
 import type { CrocoApp, MiddlewareFunction } from "@croco/transports-http";
+import { generatedDiGraph } from "../.croco/di.generated";
 import { initializeAdminRuntime } from "./admin";
 import { AdminController } from "./controllers/AdminController";
 import { UserController } from "./controllers/UserController";
@@ -28,8 +28,6 @@ import { initializeUserRuntime } from "./users";
 
 const OPERATIONAL_RATE_LIMIT_BYPASS_PATHS = new Set(["/ops/health", "/ops/metrics"]);
 const controllers = [UserController, AdminController];
-
-Component()(HttpExceptionFilter);
 
 export type CreateCrocoAppOptions = {
   readonly extraControllers?: readonly Constructor[];
@@ -50,7 +48,24 @@ export function createCrocoDiGraphRoots(options: CreateCrocoAppOptions = {}): re
 }
 
 export function createCrocoApp(options: CreateCrocoAppOptions = {}): RuntimeOwnedCrocoApp {
-  const runtime = createApplicationRuntime();
+  const runtime = createApplicationRuntime(
+    {},
+    {
+      ...generatedDiGraph,
+      providers: [
+        ...generatedDiGraph.providers,
+        {
+          token: HttpExceptionFilter,
+          tokenId: "@croco/protocols-rest#HttpExceptionFilter",
+          debugName: "HttpExceptionFilter",
+          scope: "singleton",
+          dependencies: [],
+          factory: () => new HttpExceptionFilter(),
+          sourceLocation: { file: "src/app.ts", line: 1, column: 1 },
+        },
+      ],
+    },
+  );
 
   return runtime.run(() => {
     initializeUserRuntime();

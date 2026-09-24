@@ -1,6 +1,12 @@
 import "reflect-metadata";
 import type { AnalyticsManager } from "@croco/analytics-core";
-import { Container, Context, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
+import {
+  Container,
+  Context,
+  RuntimeContainer,
+  type ILogger,
+  LOGGER_TOKEN,
+} from "@croco/framework-context";
 import { PostHogClient } from "@croco/integrations-posthog";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PostHogAnalyticsDiagnosticsProvider } from "../libs/PostHogAnalyticsDiagnosticsProvider";
@@ -48,7 +54,7 @@ describe("PostHog Integration", () => {
     };
     logger.child.mockReturnValue(logger);
     Container.set(LOGGER_TOKEN, logger);
-    analyticsManager = new PostHogAnalyticsManager(postHogClient);
+    analyticsManager = new PostHogAnalyticsManager(postHogClient, {}, logger);
   });
 
   afterEach(() => {
@@ -62,6 +68,7 @@ describe("PostHog Integration", () => {
   describe("without a registered logger", () => {
     beforeEach(() => {
       Container.remove(LOGGER_TOKEN);
+      analyticsManager = new PostHogAnalyticsManager(postHogClient);
       vi.spyOn(console, "warn").mockImplementation(() => {});
       vi.spyOn(console, "info").mockImplementation(() => {});
     });
@@ -123,8 +130,7 @@ describe("PostHog Integration", () => {
     });
 
     it("should report all disabled operations through the console without calling the provider", async () => {
-      Container.set(POSTHOG_ANALYTICS_MANAGER_OPTIONS, { enabled: false });
-      const disabledManager = new PostHogAnalyticsManager(postHogClient);
+      const disabledManager = new PostHogAnalyticsManager(postHogClient, { enabled: false });
       const provider = vi.spyOn(postHogClient, "getClient");
       const flush = vi.spyOn(postHogClient, "flush");
 
@@ -152,12 +158,22 @@ describe("PostHog Integration", () => {
   it("should resolve analytics manager through the Croco container", () => {
     Container.set(PostHogClient, postHogClient);
     Container.set(LOGGER_TOKEN, logger);
-    Container.register(PostHogAnalyticsManager, "singleton");
+    RuntimeContainer.set({
+      id: PostHogAnalyticsManager,
+      scope: "singleton",
+      factory: () =>
+        new PostHogAnalyticsManager(
+          Container.get(PostHogClient),
+          Container.getOptional(POSTHOG_ANALYTICS_MANAGER_OPTIONS),
+          Container.getOptional(LOGGER_TOKEN),
+        ),
+    });
     const captureSpy = vi.spyOn(postHogClient.getClient(), "capture");
 
     const resolved = Container.get(PostHogAnalyticsManager);
 
     expect(resolved).toBeInstanceOf(PostHogAnalyticsManager);
+    expect(Container.get(PostHogAnalyticsManager)).toBe(resolved);
     resolved.capture("di-event", { userId: "user-di" });
     expect(captureSpy).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -475,8 +491,7 @@ describe("PostHog Integration", () => {
   });
 
   it("should skip capture identify group and flush when analytics is disabled", async () => {
-    Container.set(POSTHOG_ANALYTICS_MANAGER_OPTIONS, { enabled: false });
-    const disabledManager = new PostHogAnalyticsManager(postHogClient);
+    const disabledManager = new PostHogAnalyticsManager(postHogClient, { enabled: false }, logger);
     const client = postHogClient.getClient();
     const captureSpy = vi.spyOn(client, "capture");
     const identifySpy = vi.spyOn(client, "identify");

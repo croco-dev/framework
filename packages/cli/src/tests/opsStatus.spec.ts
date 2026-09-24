@@ -1,4 +1,3 @@
-import { Container } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   formatOpsStatusReport,
@@ -11,9 +10,7 @@ import type { OpsStatusFetch } from "../commands/ops.js";
 import { CLI_DIAGNOSTIC_CODES, CLI_LEGACY_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
 
 describe("ops status", () => {
-  beforeEach(() => {
-    Container.reset();
-  });
+  beforeEach(() => {});
 
   it("fetches the standard operational endpoints and summarizes a healthy app", async () => {
     const calls: FetchCall[] = [];

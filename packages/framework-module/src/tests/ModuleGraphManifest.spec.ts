@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { Container, Token } from "typedi";
+import { RuntimeContainer as Container, Token } from "@croco/framework-context";
 import { beforeEach, describe, expect, it } from "vitest";
 import { Inject } from "@croco/framework-context";
 import type { ModuleOptions } from "../index";
@@ -16,16 +16,15 @@ describe("Module graph manifest", () => {
     let setupRan = false;
 
     class PrivateDatabaseService {}
+    const privateToken = new Token<PrivateDatabaseService>("private-database");
 
     class UserService {
-      constructor(readonly database: PrivateDatabaseService) {}
+      constructor(@Inject(privateToken) readonly database: PrivateDatabaseService) {}
     }
-
-    Reflect.defineMetadata("design:paramtypes", [PrivateDatabaseService], UserService);
 
     const databaseModule = defineCrocoModule({
       name: "database",
-      providers: [PrivateDatabaseService],
+      providers: [{ provide: privateToken, useClass: PrivateDatabaseService }],
       setup: () => {
         setupRan = true;
       },
@@ -45,7 +44,7 @@ describe("Module graph manifest", () => {
       modules: [
         {
           name: "database",
-          providers: [{ token: "PrivateDatabaseService", provider: "class" }],
+          providers: [{ token: "private-database", provider: "class" }],
           exports: [],
         },
         {
@@ -59,8 +58,8 @@ describe("Module graph manifest", () => {
           code: "framework-module/provider-not-visible",
           severity: "error",
           moduleName: "users",
-          token: "PrivateDatabaseService",
-          path: ["users", "UserService", "PrivateDatabaseService"],
+          token: "private-database",
+          path: ["users", "UserService", "private-database"],
         },
       ],
     });

@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 785,
+  problemCount: 793,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -5542,7 +5542,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoApp.ts",
-          line: 285,
+          line: 296,
           column: 11,
           kind: "problem-factory",
         },
@@ -7792,7 +7792,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 159,
+          line: 158,
           column: 1,
           kind: "problem-class",
         },
@@ -7824,7 +7824,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 174,
+          line: 173,
           column: 1,
           kind: "problem-class",
         },
@@ -7857,7 +7857,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 148,
+          line: 147,
           column: 1,
           kind: "problem-class",
         },
@@ -7889,7 +7889,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 92,
+          line: 106,
           column: 1,
           kind: "problem-class",
         },
@@ -7921,7 +7921,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 103,
+          line: 117,
           column: 1,
           kind: "problem-class",
         },
@@ -7953,7 +7953,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 118,
+          line: 132,
           column: 1,
           kind: "problem-class",
         },
@@ -7985,7 +7985,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 40,
+          line: 54,
           column: 1,
           kind: "problem-class",
         },
@@ -8016,7 +8016,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 26,
+          line: 40,
           column: 1,
           kind: "problem-class",
         },
@@ -8046,7 +8046,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 16,
+          line: 30,
           column: 1,
           kind: "problem-class",
         },
@@ -8078,7 +8078,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 7,
+          line: 21,
           column: 1,
           kind: "problem-class",
         },
@@ -8110,7 +8110,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 70,
+          line: 84,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "events-core/handler-resolver-required",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#events-core-handler-resolver-required",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/events-core/src/libs/problems/EventsProblems.ts",
+          line: 5,
           column: 1,
           kind: "problem-class",
         },
@@ -8138,16 +8170,16 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         },
       },
       lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 133,
-          column: 1,
-          kind: "problem-class",
+        status: "deprecated",
+        deprecation: {
+          reason:
+            "After-commit publication no longer resolves a transaction context through a process-global container.",
+          migrationNote:
+            "See docs/release/problem-code-migrations.md#explicit-event-transaction-context.",
+          replacementCode: "events-core/after-commit-requires-active-transaction",
         },
-      ],
+      },
+      sources: [],
     },
     {
       code: "events-core/unknown-event-type",
@@ -8175,7 +8207,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-core/src/libs/problems/EventsProblems.ts",
-          line: 81,
+          line: 95,
           column: 1,
           kind: "problem-class",
         },
@@ -8205,7 +8237,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 160,
+          line: 174,
           column: 1,
           kind: "problem-class",
         },
@@ -8235,7 +8267,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 176,
+          line: 190,
           column: 1,
           kind: "problem-class",
         },
@@ -8268,7 +8300,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 108,
+          line: 122,
           column: 1,
           kind: "problem-class",
         },
@@ -8301,7 +8333,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 94,
+          line: 108,
           column: 1,
           kind: "problem-class",
         },
@@ -8334,7 +8366,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 18,
+          line: 32,
           column: 1,
           kind: "problem-class",
         },
@@ -8366,7 +8398,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 42,
+          line: 56,
           column: 1,
           kind: "problem-class",
         },
@@ -8399,7 +8431,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 127,
+          line: 141,
           column: 1,
           kind: "problem-class",
         },
@@ -8432,7 +8464,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 80,
+          line: 94,
           column: 1,
           kind: "problem-class",
         },
@@ -8465,7 +8497,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 63,
+          line: 77,
           column: 1,
           kind: "problem-class",
         },
@@ -8498,7 +8530,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 141,
+          line: 155,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "events-inmemory/missing-handler-resolver",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#events-inmemory-missing-handler-resolver",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
+          line: 4,
           column: 1,
           kind: "problem-class",
         },
@@ -8530,7 +8595,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          line: 109,
+          line: 105,
           column: 1,
           kind: "problem-class",
         },
@@ -8562,7 +8627,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/InmemoryEventBus.ts",
-          line: 92,
+          line: 88,
           column: 1,
           kind: "problem-class",
         },
@@ -8595,7 +8660,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/events-inmemory/src/libs/problems/EventsInmemoryProblems.ts",
-          line: 28,
+          line: 42,
           column: 1,
           kind: "problem-class",
         },
@@ -9438,7 +9503,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 220,
+          line: 287,
           column: 13,
           kind: "problem-factory",
         },
@@ -9471,7 +9536,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 121,
+          line: 161,
           column: 10,
           kind: "problem-factory",
         },
@@ -9504,7 +9569,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 327,
+          line: 437,
           column: 17,
           kind: "problem-factory",
         },
@@ -9537,7 +9602,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 348,
+          line: 458,
           column: 13,
           kind: "problem-factory",
         },
@@ -9568,7 +9633,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 186,
+          line: 230,
           column: 13,
           kind: "problem-factory",
         },
@@ -9668,6 +9733,132 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 30,
           column: 1,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "framework-context/generated-di-graph-invalid",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#framework-context-generated-di-graph-invalid",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-context/src/libs/Container.ts",
+          line: 844,
+          column: 13,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "framework-context/generated-di-graph-version-mismatch",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#framework-context-generated-di-graph-version-mismatch",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-context/src/libs/Container.ts",
+          line: 838,
+          column: 13,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "framework-context/generated-di-provider-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#framework-context-generated-di-provider-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-context/src/libs/Container.ts",
+          line: 1462,
+          column: 15,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "framework-context/generated-di-token-identity-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#framework-context-generated-di-token-identity-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-context/src/libs/Container.ts",
+          line: 1530,
+          column: 13,
+          kind: "problem-factory",
         },
       ],
     },
@@ -9826,6 +10017,71 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "framework-context/request-scope-disposal-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#framework-context-request-scope-disposal-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-context/src/libs/Context.ts",
+          line: 106,
+          column: 28,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "framework-context/request-scope-missing",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#framework-context-request-scope-missing",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-context/src/libs/Context.ts",
+          line: 28,
+          column: 11,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
       code: "framework-context/request-scope-outside-context",
       category: "InternalServerError",
       status: 500,
@@ -9852,8 +10108,8 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 2154,
-          column: 13,
+          line: 2605,
+          column: 12,
           kind: "problem-factory",
         },
       ],
@@ -21160,7 +21416,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/testing.ts",
-          line: 184,
+          line: 192,
           column: 5,
           kind: "problem-constructor",
         },
@@ -21706,7 +21962,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/testing/src/libs/testing.ts",
-          line: 171,
+          line: 170,
           column: 5,
           kind: "problem-constructor",
         },
@@ -22127,7 +22383,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/CrocoApp.ts",
-          line: 327,
+          line: 338,
           column: 11,
           kind: "problem-factory",
         },
@@ -22880,7 +23136,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
-          line: 424,
+          line: 399,
           column: 13,
           kind: "problem-metadata",
         },
@@ -22912,7 +23168,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
-          line: 252,
+          line: 243,
           column: 13,
           kind: "problem-factory",
         },
@@ -22976,9 +23232,9 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
-          line: 414,
-          column: 15,
-          kind: "problem-metadata",
+          line: 256,
+          column: 13,
+          kind: "problem-factory",
         },
       ],
     },

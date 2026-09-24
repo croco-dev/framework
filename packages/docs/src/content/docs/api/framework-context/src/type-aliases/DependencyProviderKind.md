@@ -5,4 +5,4 @@ prev: false
 title: "DependencyProviderKind"
 ---
 
-> **DependencyProviderKind** = `"component"` \| `"registered-value"` \| `"lazy"` \| `"typedi"` \| `"missing"`
+> **DependencyProviderKind** = `"component"` \| `"registered-value"` \| `"lazy"` \| `"missing"`

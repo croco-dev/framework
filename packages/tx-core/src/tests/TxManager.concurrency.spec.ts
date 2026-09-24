@@ -9,7 +9,6 @@ import {
   TransactionRollbackConfirmedProblem,
   TransactionTimeoutProblem,
   TxManager,
-  TxManagerRegistry,
 } from "../index";
 import type { TxAdapter } from "../index";
 
@@ -54,10 +53,8 @@ describe("TxManager Concurrent Tests", () => {
 
   beforeEach(() => {
     Container.reset();
-    TxManagerRegistry.clear();
     mockAdapter = createMockAdapter();
     txManager = new TxManager(mockAdapter);
-    TxManagerRegistry.register(txManager);
   });
 
   describe("concurrent transaction isolation", () => {
@@ -239,7 +236,7 @@ describe("TxManager Concurrent Tests", () => {
 
     it("should reject MANDATORY without existing transaction", async () => {
       class TestService {
-        @Transactional({ propagation: "MANDATORY" })
+        @Transactional(() => txManager, { propagation: "MANDATORY" })
         async execute() {
           return "result";
         }
@@ -253,12 +250,12 @@ describe("TxManager Concurrent Tests", () => {
 
     it("should reject NEVER with existing transaction", async () => {
       class TestService {
-        @Transactional({ propagation: "REQUIRED" })
+        @Transactional(() => txManager, { propagation: "REQUIRED" })
         async outer() {
           return await this.inner();
         }
 
-        @Transactional({ propagation: "NEVER" })
+        @Transactional(() => txManager, { propagation: "NEVER" })
         async inner() {
           return "result";
         }
@@ -307,7 +304,6 @@ describe("TxManager Transaction Timeout", () => {
 
   beforeEach(() => {
     Container.reset();
-    TxManagerRegistry.clear();
   });
 
   describe("timeout validation", () => {
@@ -731,15 +727,13 @@ describe("TxManager @Transactional timeout propagation", () => {
 
   beforeEach(() => {
     Container.reset();
-    TxManagerRegistry.clear();
     slowAdapter = createMockAdapter({ delay: 200 });
     txManager = new TxManager(slowAdapter);
-    TxManagerRegistry.register(txManager);
   });
 
   it("should propagate timeout through @Transactional decorator", async () => {
     class TestService {
-      @Transactional({ timeout: 50 })
+      @Transactional(() => txManager, { timeout: 50 })
       async slowOperation() {
         await new Promise((r) => setTimeout(r, 100));
         return "result";
@@ -752,12 +746,10 @@ describe("TxManager @Transactional timeout propagation", () => {
 
   it("should complete successfully when within timeout via decorator", async () => {
     fastAdapter = createMockAdapter({ delay: 10 });
-    TxManagerRegistry.clear();
     txManager = new TxManager(fastAdapter);
-    TxManagerRegistry.register(txManager);
 
     class TestService {
-      @Transactional({ timeout: 100 })
+      @Transactional(() => txManager, { timeout: 100 })
       async fastOperation() {
         await new Promise((r) => setTimeout(r, 20));
         return "success";

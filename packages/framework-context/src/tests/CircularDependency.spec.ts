@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import "reflect-metadata";
-import { Container, Inject, MetadataStorage } from "../index";
+import { Container, MetadataStorage } from "../index";
+import { registerInjectionMetadata } from "../libs/InjectionMetadata";
 import { CircularDependencyProblem } from "../libs/problems/CircularDependencyProblem";
 
 describe("Container.validate", () => {
@@ -25,6 +26,9 @@ describe("Container.validate", () => {
     Reflect.defineMetadata("design:paramtypes", [ServiceB], ServiceA);
     Reflect.defineMetadata("design:paramtypes", [ServiceC], ServiceB);
     Reflect.defineMetadata("design:paramtypes", [ServiceA], ServiceC);
+    registerInjectionMetadata(ServiceA, { index: 0, token: ServiceB });
+    registerInjectionMetadata(ServiceB, { index: 0, token: ServiceC });
+    registerInjectionMetadata(ServiceC, { index: 0, token: ServiceA });
 
     Container.register(ServiceA, "transient");
     Container.register(ServiceB, "transient");
@@ -53,6 +57,8 @@ describe("Container.validate", () => {
     Reflect.defineMetadata("design:paramtypes", [], ServiceA);
     Reflect.defineMetadata("design:paramtypes", [ServiceA], ServiceB);
     Reflect.defineMetadata("design:paramtypes", [ServiceB], ServiceC);
+    registerInjectionMetadata(ServiceB, { index: 0, token: ServiceA });
+    registerInjectionMetadata(ServiceC, { index: 0, token: ServiceB });
 
     Container.register(ServiceA, "singleton");
     Container.register(ServiceB, "singleton");
@@ -69,6 +75,7 @@ describe("Container.validate", () => {
     }
 
     Reflect.defineMetadata("design:paramtypes", [SelfReferencing], SelfReferencing);
+    registerInjectionMetadata(SelfReferencing, { index: 0, token: SelfReferencing });
     Container.register(SelfReferencing, "transient");
 
     expect(() => {
@@ -89,8 +96,8 @@ describe("Container.validate", () => {
       constructor(_dependency: unknown = undefined) {}
     }
 
-    Inject(() => ServiceB)(ServiceA, undefined, 0);
-    Inject(() => ServiceA)(ServiceB, undefined, 0);
+    registerInjectionMetadata(ServiceA, { index: 0, token: ServiceB });
+    registerInjectionMetadata(ServiceB, { index: 0, token: ServiceA });
 
     Container.register(ServiceA, "transient");
     Container.register(ServiceB, "transient");
@@ -124,6 +131,10 @@ describe("Container.validate", () => {
     Reflect.defineMetadata("design:paramtypes", [ServiceC], ServiceB);
     Reflect.defineMetadata("design:paramtypes", [ServiceD], ServiceC);
     Reflect.defineMetadata("design:paramtypes", [ServiceB], ServiceD);
+    registerInjectionMetadata(ServiceA, { index: 0, token: SharedDependency });
+    registerInjectionMetadata(ServiceB, { index: 0, token: ServiceC });
+    registerInjectionMetadata(ServiceC, { index: 0, token: ServiceD });
+    registerInjectionMetadata(ServiceD, { index: 0, token: ServiceB });
 
     Container.register(SharedDependency, "singleton");
     Container.register(ServiceA, "singleton");
@@ -145,6 +156,7 @@ describe("Container.validate", () => {
 
     Reflect.defineMetadata("design:paramtypes", [], Dependency);
     Reflect.defineMetadata("design:paramtypes", [Dependency], Consumer);
+    registerInjectionMetadata(Consumer, { index: 0, token: Dependency });
 
     Container.register(Dependency, "singleton");
     Container.register(Consumer, "singleton");
@@ -170,6 +182,7 @@ describe("Container.validate", () => {
 
     Reflect.defineMetadata("design:paramtypes", [], Dependency);
     Reflect.defineMetadata("design:paramtypes", [Dependency], Consumer);
+    registerInjectionMetadata(Consumer, { index: 0, token: Dependency });
 
     Container.register(Dependency, "singleton");
     Container.register(Consumer, "singleton");

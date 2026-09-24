@@ -7,19 +7,65 @@ title: "CrocoPluginConfig"
 
 ## Properties
 
-### generateRegistry?
+### di?
+
+> `optional` **di?**: `object`
+
+#### bindings?
+
+> `optional` **bindings?**: readonly `object`[]
+
+#### enabled?
+
+> `optional` **enabled?**: `boolean`
+
+#### graphId?
+
+> `optional` **graphId?**: `string`
+
+#### manifestFile?
+
+> `optional` **manifestFile?**: `string`
+
+#### moduleProviders?
+
+> `optional` **moduleProviders?**: readonly `object`[]
+
+#### modules?
+
+> `optional` **modules?**: readonly `object`[]
+
+#### outFile?
+
+> `optional` **outFile?**: `string`
+
+#### packageDescriptors?
+
+> `optional` **packageDescriptors?**: `string`[]
+
+#### tsconfig?
+
+> `optional` **tsconfig?**: `string`
+
+---
+
+### ~~generateRegistry?~~
 
 > `optional` **generateRegistry?**: `object`
 
-#### enabled
+:::caution[Deprecated]
+Use `di` generated graph options.
+:::
+
+#### ~~enabled~~
 
 > **enabled**: `boolean`
 
-#### outDir?
+#### ~~outDir?~~
 
 > `optional` **outDir?**: `string`
 
-#### outFile?
+#### ~~outFile?~~
 
 > `optional` **outFile?**: `string`
 
@@ -39,9 +85,13 @@ title: "CrocoPluginConfig"
 
 > `optional` **cache?**: `boolean`
 
-#### decorators?
+#### ~~decorators?~~
 
 > `optional` **decorators?**: `string`[]
+
+:::caution[Deprecated]
+Croco stereotypes are recognized by symbol identity.
+:::
 
 #### dirs?
 

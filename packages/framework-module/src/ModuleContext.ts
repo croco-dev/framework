@@ -1,5 +1,5 @@
-import type { ContainerInstance } from "typedi";
 import { Container as FrameworkContainer } from "@croco/framework-context";
+import type { ContainerInstance } from "@croco/framework-context";
 import { ModuleProviderVisibilityProblem } from "./problems";
 import type { ResolvedModuleContribution } from "./types/ModuleContribution";
 import type { Constructor } from "./types/ModuleToken";
@@ -72,13 +72,13 @@ export class ModuleContext {
       return this.resolveProvider(token);
     }
 
-    return this.container.get(FrameworkContainer.toTypeDIServiceIdentifier(token));
+    return this.container.get(FrameworkContainer.toServiceIdentifier(token));
   }
 
   set<T>(token: ModuleToken<T>, value: T): void {
     this.validateRuntime?.();
     this.validateProviderWrite?.(this.moduleName, token);
-    this.container.set(FrameworkContainer.toTypeDIServiceIdentifier(token), value);
+    this.container.set(FrameworkContainer.toServiceIdentifier(token), value);
   }
 
   getContributions<T, TKind extends string = string>(

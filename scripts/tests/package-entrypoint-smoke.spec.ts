@@ -468,7 +468,7 @@ describe("package-entrypoint-smoke.mts", () => {
   });
 
   it(
-    "verifies packed ESM and CJS decorator metadata with implicit DI",
+    "verifies packed ESM and CJS decorator ABI with direct construction",
     () => {
       const root = createTempRoot();
       writeDecoratorMetadataPackages(root);
@@ -477,37 +477,34 @@ describe("package-entrypoint-smoke.mts", () => {
 
       expect(result.status, result.stderr || result.stdout).toBe(0);
       expect(result.stdout).toContain(
-        "cjs decorator metadata and implicit DI ok @croco/auth-better-auth",
+        "cjs decorator ABI and direct construction ok @croco/auth-better-auth",
       );
       expect(result.stdout).toContain(
-        "esm decorator metadata and implicit DI ok @croco/auth-better-auth",
+        "esm decorator ABI and direct construction ok @croco/auth-better-auth",
       );
       expect(result.stdout).toContain(
-        "cjs decorator metadata and implicit DI ok @croco/features-posthog",
+        "cjs decorator ABI and direct construction ok @croco/features-posthog",
       );
       expect(result.stdout).toContain(
-        "esm decorator metadata and implicit DI ok @croco/features-posthog",
+        "esm decorator ABI and direct construction ok @croco/features-posthog",
       );
       expect(result.stdout).toContain(
-        "cjs decorator metadata and implicit DI ok @croco/metering-core",
+        "cjs decorator ABI and direct construction ok @croco/metering-core",
       );
       expect(result.stdout).toContain(
-        "esm decorator metadata and implicit DI ok @croco/metering-core",
+        "esm decorator ABI and direct construction ok @croco/metering-core",
       );
     },
     scriptTestTimeout,
   );
 
-  it("fails when the packed auth service loses concrete constructor metadata", () => {
+  it("does not require packed auth constructor metadata for DI", () => {
     const root = createTempRoot();
     writeDecoratorMetadataPackages(root, { missingAuthMetadata: true });
 
     const result = runScript(root);
 
-    expect(result.status).toBe(1);
-    expect(`${result.stdout}\n${result.stderr}`).toContain(
-      "BetterAuthProvider design:paramtypes expected [BetterAuthFactory, Object], received [missing]",
-    );
+    expect(result.status, result.stderr || result.stdout).toBe(0);
   });
 
   it("rejects a packed auth provider that requires an options dependency", () => {
@@ -523,33 +520,27 @@ describe("package-entrypoint-smoke.mts", () => {
   });
 
   it(
-    "fails when the packed feature service loses concrete constructor metadata",
+    "does not require packed feature constructor metadata for DI",
     () => {
       const root = createTempRoot();
       writeDecoratorMetadataPackages(root, { missingFeatureMetadata: true });
 
       const result = runScript(root);
 
-      expect(result.status).toBe(1);
-      expect(`${result.stdout}\n${result.stderr}`).toContain(
-        "PostHogFeatureManager design:paramtypes expected [PostHogClient], received [missing]",
-      );
+      expect(result.status, result.stderr || result.stdout).toBe(0);
     },
     scriptTestTimeout,
   );
 
   it(
-    "fails when the packed container injects trailing metadata instead of preserving defaults",
+    "preserves constructor defaults without container metadata resolution",
     () => {
       const root = createTempRoot();
       writeDecoratorMetadataPackages(root, { brokenDefaultResolution: true });
 
       const result = runScript(root);
 
-      expect(result.status).toBe(1);
-      expect(`${result.stdout}\n${result.stderr}`).toContain(
-        "Container.get(MeterRegistry) expected default cacheTtlMs=60000",
-      );
+      expect(result.status, result.stderr || result.stdout).toBe(0);
     },
     scriptTestTimeout,
   );

@@ -1,4 +1,4 @@
-import { Inject, Token } from "typedi";
+import { Inject, Token } from "@croco/framework-context";
 import { describe, expect, it, vi } from "vitest";
 import {
   createApplicationRuntime,
@@ -190,7 +190,7 @@ describe("plugin composition", () => {
     await duplicateOwnerRuntime.dispose();
   });
 
-  it("registers factory and class replacements in an application-owned context", async () => {
+  it("registers factory replacements in an application-owned context", async () => {
     const dependencyToken = new Token<string>("replacement-dependency");
     const factoryToken = new Token<string>("factory-replacement");
     const classToken = new Token<ReplacementService>("class-replacement");
@@ -246,7 +246,10 @@ describe("plugin composition", () => {
               replaces: ["owner-with-import", "owner-without-import"],
             },
             {
-              provider: { provide: classToken, useClass: ReplacementService },
+              provider: {
+                provide: classToken,
+                useFactory: (ctx) => new ReplacementService(ctx.get(dependencyToken)),
+              },
               replaces: ["owner-with-import", "owner-without-import"],
             },
           ],

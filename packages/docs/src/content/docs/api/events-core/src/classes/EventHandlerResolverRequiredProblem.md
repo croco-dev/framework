@@ -2,10 +2,10 @@
 editUrl: false
 next: false
 prev: false
-title: "EventTransactionContextUnavailableProblem"
+title: "EventHandlerResolverRequiredProblem"
 ---
 
-트랜잭션 컨텍스트 조회 자체가 실패했을 때 발생하는 Problem입니다.
+A subscription without an explicit handler requires an application-owned resolver.
 
 ## Extends
 
@@ -15,17 +15,17 @@ title: "EventTransactionContextUnavailableProblem"
 
 ### Constructor
 
-> **new EventTransactionContextUnavailableProblem**(`reason`): `EventTransactionContextUnavailableProblem`
+> **new EventHandlerResolverRequiredProblem**(`handlerName`): `EventHandlerResolverRequiredProblem`
 
 #### Parameters
 
-##### reason
+##### handlerName
 
 `string`
 
 #### Returns
 
-`EventTransactionContextUnavailableProblem`
+`EventHandlerResolverRequiredProblem`
 
 #### Overrides
 
@@ -55,7 +55,7 @@ title: "EventTransactionContextUnavailableProblem"
 
 ### code
 
-> `readonly` **code**: `"events-core/transaction-context-unavailable"` = `"events-core/transaction-context-unavailable"`
+> `readonly` **code**: `"events-core/handler-resolver-required"` = `"events-core/handler-resolver-required"`
 
 #### Overrides
 

@@ -9,13 +9,17 @@ title: "PostHogClient"
 
 ### Constructor
 
-> **new PostHogClient**(`config`): `PostHogClient`
+> **new PostHogClient**(`config`, `logger?`): `PostHogClient`
 
 #### Parameters
 
 ##### config
 
 [`PostHogConfig`](/api/integrations-posthog/src/interfaces/posthogconfig/)
+
+##### logger?
+
+[`ILogger`](/api/framework-context/src/interfaces/ilogger/)
 
 #### Returns
 

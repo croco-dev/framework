@@ -162,7 +162,7 @@ describe.each(["lambda", "worker"] as const)("SaaS %s async host bootstrap", (en
 const GENERATED_API_DI_GRAPH_SCRIPT =
   "cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
 const GENERATED_SAAS_API_DI_GRAPH_SCRIPT =
-  "cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoDiGraphApplication --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
+  "pnpm di:generate && cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoDiGraphApplication --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
 const ROOT_PACKAGE_JSON = join(TEMPLATES_DIR, "..", "..", "..", "package.json");
 const REPOSITORY_ROOT = join(TEMPLATES_DIR, "..", "..", "..");
 
@@ -419,9 +419,10 @@ function checkSpaBeSplitStructure() {
   const apiPackageJson = readJsonTemplate("spa-be-split", "apps", "api-server", "package.json.hbs");
   expect(apiPackageJson).toMatchObject({
     scripts: expect.objectContaining({
-      "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
-      "dev:smoke": "tsx src/dev-smoke.ts",
-      test: "vitest run",
+      "di:graph": `pnpm di:generate && ${GENERATED_API_DI_GRAPH_SCRIPT}`,
+      "di:generate": "tsx scripts/generate-di.ts",
+      "dev:smoke": "pnpm di:generate && tsx src/dev-smoke.ts",
+      test: "pnpm di:generate && vitest run",
     }),
     devDependencies: expect.objectContaining({
       "cross-env": "^10.1.0",
@@ -606,9 +607,10 @@ function checkAdminConsoleStructure() {
       "@croco/webhooks-core": "workspace:*",
     }),
     scripts: expect.objectContaining({
-      "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
+      "di:graph": `pnpm di:generate && ${GENERATED_API_DI_GRAPH_SCRIPT}`,
+      "di:generate": "tsx scripts/generate-di.ts",
       "admin:smoke":
-        "tsx src/dev-smoke.ts && tsx src/webhook-smoke.ts && vitest run src/tests/CreditOperations.spec.ts",
+        "pnpm di:generate && tsx src/dev-smoke.ts && tsx src/webhook-smoke.ts && vitest run src/tests/CreditOperations.spec.ts",
     }),
     devDependencies: expect.objectContaining({
       "cross-env": "^10.1.0",
@@ -932,6 +934,13 @@ function checkSaasStructure() {
   checkFileContains("saas", ["pnpm-workspace.yaml.hbs"], /saasCloudflare/);
   checkFileContains("saas", ["pnpm-workspace.yaml.hbs"], /- workerd/);
   checkFileExists("saas", "apps", "api-server", "package.json.hbs");
+  checkFileContains(
+    "saas",
+    ["apps", "api-server", "tsup.config.ts"],
+    /crocoPlugin\(\{ di: diOptions \}\)/,
+  );
+  checkFileContains("saas", ["apps", "api-server", "di.config.ts"], /moduleProviders/);
+  checkFileExists("saas", "apps", "api-server", "scripts", "generate-di.ts");
   checkFileExists("saas", "apps", "api-server", "wrangler.toml.hbs");
   checkFileExists("saas", "apps", "api-server", "vitest.config.ts");
   checkFileExists("saas", "apps", "api-server", "src", "saasDemo.ts");
@@ -1035,17 +1044,21 @@ function checkSaasStructure() {
   expect(apiPackageJson).toMatchObject({
     scripts: expect.objectContaining({
       "di:graph": GENERATED_SAAS_API_DI_GRAPH_SCRIPT,
-      "demo:seed": "tsx src/demo/seed.ts",
-      "demo:smoke": "tsx src/demo/smoke.ts",
-      "demo:scenario": "tsx src/demo/scenario.ts",
-      "demo:usage-recover": "tsx src/demo/usage-recover.ts",
-      "ops:smoke": "tsx src/demo/ops-smoke.ts",
-      "jobs:smoke": "tsx src/demo/jobs-smoke.ts",
-      "failure-drill:smoke": "tsx src/demo/failure-drill-smoke.ts",
-      "failure-drill:integration": "tsx src/provider-profile-check.ts --mode=real-provider",
-      "profile:check": "tsx src/provider-profile-check.ts --mode=manifest",
-      "profile:smoke:real": "tsx src/provider-profile-check.ts --mode=real-provider",
-      test: "vitest run",
+      build: "tsup --config tsup.config.ts",
+      dev: expect.stringContaining("tsup --config tsup.config.ts --watch"),
+      "demo:seed": "pnpm di:generate && tsx src/demo/seed.ts",
+      "demo:smoke": "pnpm di:generate && tsx src/demo/smoke.ts",
+      "demo:scenario": "pnpm di:generate && tsx src/demo/scenario.ts",
+      "demo:usage-recover": "pnpm di:generate && tsx src/demo/usage-recover.ts",
+      "ops:smoke": "pnpm di:generate && tsx src/demo/ops-smoke.ts",
+      "jobs:smoke": "pnpm di:generate && tsx src/demo/jobs-smoke.ts",
+      "failure-drill:smoke": "pnpm di:generate && tsx src/demo/failure-drill-smoke.ts",
+      "failure-drill:integration":
+        "pnpm di:generate && tsx src/provider-profile-check.ts --mode=real-provider",
+      "profile:check": "pnpm di:generate && tsx src/provider-profile-check.ts --mode=manifest",
+      "profile:smoke:real":
+        "pnpm di:generate && tsx src/provider-profile-check.ts --mode=real-provider",
+      test: "pnpm di:generate && vitest run",
     }),
     dependencies: expect.objectContaining({
       "@croco/tenant-core": "workspace:*",
@@ -1071,10 +1084,10 @@ function checkSaasStructure() {
     }),
     devDependencies: expect.objectContaining({
       "@croco/cli": "workspace:*",
+      "@croco/esbuild-plugin": "workspace:*",
       "@croco/testing": "workspace:*",
       "@croco/webhooks-core": "workspace:*",
       "cross-env": "^10.1.0",
-      typedi: "^0.10.0",
     }),
   });
   expect(apiPackageJson.dependencies).not.toHaveProperty("@croco/testing");
@@ -1160,7 +1173,7 @@ function checkSaasStructure() {
   checkFileContains(
     "saas",
     ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
-    /const activeScopeIds = getTypeDIContainerScopeIds\(\)/,
+    /const activeScopeIds = getRuntimeContainerScopeIds\(\)/,
   );
   checkFileDoesNotContain(
     "saas",
@@ -1170,7 +1183,7 @@ function checkSaasStructure() {
   checkFileDoesNotContain(
     "saas",
     ["apps", "api-server", "src", "tests", "ContractFuzz.spec.ts"],
-    /TypeDIContainer\.remove\(/,
+    /RuntimeContainer\.remove\(/,
   );
   checkFileDoesNotContain(
     "saas",
@@ -1410,6 +1423,12 @@ function checkAiSaasStructure() {
   checkFileExists("ai-saas", "package.json.hbs");
   checkFileExists("ai-saas", "README.md.hbs");
   checkFileExists("ai-saas", "apps", "api-server", "package.json.hbs");
+  checkFileContains(
+    "ai-saas",
+    ["apps", "api-server", "tsup.config.ts"],
+    /crocoPlugin\(\{ di: diOptions \}\)/,
+  );
+  checkFileContains("ai-saas", ["apps", "api-server", "di.config.ts.hbs"], /moduleProviders/);
   checkFileExists("ai-saas", "apps", "api-server", "src", "aiSaas.ts");
   checkFileExists("ai-saas", "apps", "api-server", "src", "aiProblems.ts");
   checkFileExists("ai-saas", "apps", "api-server", "src", "controllers", "AiController.ts");
@@ -1467,14 +1486,17 @@ function checkAiSaasStructure() {
   expect(apiPackageJson).toMatchObject({
     scripts: expect.objectContaining({
       "di:graph": GENERATED_SAAS_API_DI_GRAPH_SCRIPT,
-      "ai:smoke": "tsx src/demo/ai-smoke.ts",
-      "demo:scenario": "tsx src/demo/scenario.ts",
-      "demo:usage-recover": "tsx src/demo/usage-recover.ts",
-      "ops:smoke": "tsx src/demo/ops-smoke.ts",
-      "jobs:smoke": "tsx src/demo/jobs-smoke.ts",
-      "failure-drill:smoke": "tsx src/demo/failure-drill-smoke.ts",
-      "failure-drill:integration": "tsx src/provider-profile-check.ts --mode=real-provider",
-      test: "vitest run",
+      build: "tsup --config tsup.config.ts",
+      dev: expect.stringContaining("tsup --config tsup.config.ts --watch"),
+      "ai:smoke": "pnpm di:generate && tsx src/demo/ai-smoke.ts",
+      "demo:scenario": "pnpm di:generate && tsx src/demo/scenario.ts",
+      "demo:usage-recover": "pnpm di:generate && tsx src/demo/usage-recover.ts",
+      "ops:smoke": "pnpm di:generate && tsx src/demo/ops-smoke.ts",
+      "jobs:smoke": "pnpm di:generate && tsx src/demo/jobs-smoke.ts",
+      "failure-drill:smoke": "pnpm di:generate && tsx src/demo/failure-drill-smoke.ts",
+      "failure-drill:integration":
+        "pnpm di:generate && tsx src/provider-profile-check.ts --mode=real-provider",
+      test: "pnpm di:generate && vitest run",
     }),
     dependencies: expect.objectContaining({
       "@croco/billing-polar": "workspace:*",
@@ -1488,6 +1510,7 @@ function checkAiSaasStructure() {
       openai: "6.44.0",
     }),
     devDependencies: expect.objectContaining({
+      "@croco/esbuild-plugin": "workspace:*",
       "@croco/testing": "workspace:*",
       "@croco/webhooks-core": "workspace:*",
       "cross-env": "^10.1.0",
@@ -1509,7 +1532,7 @@ function checkAiSaasStructure() {
   checkFileContains(
     "ai-saas",
     ["apps", "api-server", "src", "compositionRoot.ts.hbs"],
-    /onRuntimeReset:[\s\S]*ctx\.set\(AI_SAAS_RUNTIME_TOKEN, createAiSaasRuntime\(runtime\)\)/,
+    /onRuntimeReset:[\s\S]*ctx\.set\(AI_SAAS_RUNTIME_TOKEN, aiRuntime\)[\s\S]*ctx\.get\(AI_SAAS_RUNTIME_STATE_TOKEN\)\.update\(aiRuntime\)/,
   );
   checkFileDoesNotContain(
     "ai-saas",

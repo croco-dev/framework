@@ -2,8 +2,10 @@ import { Container } from "@croco/framework-context";
 import type { EventBus } from "./EventBus";
 import { type EventHandlerClass, getEventHandlerSubscriptions } from "./EventHandler";
 import type { HandlerResolver } from "./HandlerResolver";
-import { DefaultHandlerResolver } from "./HandlerResolver";
-import { EventBusNotSetProblem } from "./problems/EventsProblems";
+import {
+  EventBusNotSetProblem,
+  EventHandlerResolverRequiredProblem,
+} from "./problems/EventsProblems";
 import type { EventSubscription } from "./types/EventSubscription";
 import type { EventBusStats } from "./EventBusStats";
 
@@ -153,8 +155,6 @@ export class EventBusConfig {
       throw new EventBusNotSetProblem();
     }
 
-    const resolver = options.resolver ?? new DefaultHandlerResolver();
-
     for (const handlerClass of options.handlers) {
       for (const subscription of getEventHandlerSubscriptions(handlerClass)) {
         this.subscribe(subscription);
@@ -168,7 +168,13 @@ export class EventBusConfig {
         continue;
       }
 
-      const handler = resolver.resolve(subscription.handlerClass);
+      let handler = subscription.handler;
+      if (!handler) {
+        if (!options.resolver) {
+          throw new EventHandlerResolverRequiredProblem(subscription.handlerClass.name);
+        }
+        handler = options.resolver.resolve(subscription.handlerClass);
+      }
       const startedSubscription = {
         ...subscription,
         handler,

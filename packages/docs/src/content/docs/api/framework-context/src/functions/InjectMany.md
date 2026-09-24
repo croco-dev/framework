@@ -5,13 +5,13 @@ prev: false
 title: "InjectMany"
 ---
 
-같은 식별자로 등록된 모든 서비스를 클래스 프로퍼티 또는 생성자 파라미터에 주입하는 TypeDI 데코레이터입니다.
+DI compiler가 같은 식별자의 모든 provider를 주입하도록 표시하는 데코레이터입니다.
 
 ## Param
 
 **token**
 
-선택적 다중 주입 식별자입니다. 생략하면 타입 메타데이터를 사용합니다.
+선택적 다중 주입 식별자입니다. 생략하면 DI compiler가 선언 타입 symbol을 해석합니다.
 
 ## Call Signature
 
@@ -57,7 +57,7 @@ title: "InjectMany"
 
 #### token
 
-[`Token`](/api/framework-context/src/classes/token/)\<`unknown`\>
+`symbol` \| [`Token`](/api/framework-context/src/classes/token/)\<`unknown`\>
 
 ### Returns
 

@@ -17,13 +17,17 @@ Usage Metering 핵심 서비스
 
 ### Constructor
 
-> **new MeteringService**(`options`): `MeteringService`
+> **new MeteringService**(`options`, `logger?`): `MeteringService`
 
 #### Parameters
 
 ##### options
 
 [`MeteringServiceOptions`](/api/metering-core/src/type-aliases/meteringserviceoptions/)
+
+##### logger?
+
+[`ILogger`](/api/framework-context/src/interfaces/ilogger/)
 
 #### Returns
 

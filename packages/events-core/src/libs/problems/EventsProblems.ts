@@ -1,6 +1,20 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { EventBusActiveHandler, EventBusShutdownResult } from "../EventBusLifecycleTypes";
 
+/** A subscription without an explicit handler requires an application-owned resolver. */
+export class EventHandlerResolverRequiredProblem extends Problem {
+  readonly code = "events-core/handler-resolver-required";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor(handlerName: string) {
+    super(
+      undefined,
+      undefined,
+      `Event handler '${handlerName}' requires an explicit handler instance or resolver.`,
+    );
+  }
+}
+
 /**
  * EventBus가 설정되지 않은 상태에서 발행을 시도하면 발생하는 Problem입니다.
  */
@@ -123,21 +137,6 @@ export class DuplicateEventNameProblem extends Problem {
       undefined,
       undefined,
       `Duplicate event registration detected for eventName '${eventName}'`,
-    );
-  }
-}
-
-/**
- * 트랜잭션 컨텍스트 조회 자체가 실패했을 때 발생하는 Problem입니다.
- */
-export class EventTransactionContextUnavailableProblem extends Problem {
-  readonly code = "events-core/transaction-context-unavailable";
-  readonly category = ProblemCategory.InternalServerError;
-  constructor(reason: string) {
-    super(
-      undefined,
-      undefined,
-      `Transaction context unavailable during event publication: ${reason}`,
     );
   }
 }

@@ -34,7 +34,10 @@ describe("SearchAutoSync", () => {
       publishNow: vi.fn(),
     };
 
-    searchAutoSync = new SearchAutoSync(eventBusMock as SearchSyncFailedEventPublisher);
+    searchAutoSync = new SearchAutoSync(
+      eventBusMock as SearchSyncFailedEventPublisher,
+      searchEngine,
+    );
   });
 
   const mockUserAutoSyncMetadata = (): void => {
@@ -477,6 +480,11 @@ describe("SearchAutoSync", () => {
       mockUserAutoSyncMetadata();
       const logger = createLoggerMock();
       Container.set(LOGGER_TOKEN, logger);
+      searchAutoSync = new SearchAutoSync(
+        eventBusMock as SearchSyncFailedEventPublisher,
+        searchEngine,
+        logger,
+      );
       const originalError = new Error("Indexing failed");
       const publishError = new Error("Failed event publisher unavailable");
       (searchEngine.indexDocument as Mock)
@@ -633,7 +641,7 @@ describe("SearchAutoSync", () => {
 
       const error = new Error("Delete failed");
       (searchEngine.deleteDocument as Mock).mockRejectedValue(error);
-      searchAutoSync = new SearchAutoSync();
+      searchAutoSync = new SearchAutoSync(undefined, searchEngine);
 
       await expect(
         searchAutoSync.handle(new DocumentDeletedEvent("users", "user-1", "tenant-1")),

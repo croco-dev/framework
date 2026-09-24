@@ -6,7 +6,6 @@ import type {
 } from "@croco/execution-core";
 import { ExecutionProblems } from "@croco/execution-core";
 import type { Constructor } from "@croco/framework-context";
-import { Container } from "@croco/framework-context";
 import {
   Problem,
   ProblemCategory,
@@ -18,13 +17,6 @@ import { QstashError } from "@upstash/qstash";
 import type { Client, Receiver } from "@upstash/qstash";
 
 type ServiceResolver = (targetClass: Constructor) => unknown;
-
-class DefaultServiceResolverError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "DefaultServiceResolverError";
-  }
-}
 
 const GENERIC_EXECUTION_ERROR_CODE = "triggers-qstash/execution-failed";
 const DELIVERY_IDENTITY_VERIFICATION_FAILED_ERROR_CODE =
@@ -71,10 +63,9 @@ export type QStashTriggerHandlerOptions = {
   ) => void | Promise<void>;
 
   /**
-   * Optional service resolver for getting target instances.
-   * If not provided, uses the framework Container with constructor fallback.
+   * Application-owned resolver for getting generated target instances.
    */
-  readonly serviceResolver?: ServiceResolver;
+  readonly serviceResolver: ServiceResolver;
 };
 
 /** Input used to verify a delivery body and payload against its QStash message ID. */
@@ -220,6 +211,7 @@ type ErrorResponse = {
  *   receiver,
  *   deliveryIdentityVerifier: createQStashApiDeliveryIdentityVerifier(client),
  *   executionManager,
+ *   serviceResolver: (target) => applicationRuntime.get(target),
  *   executionTimeout: 60_000,
  * });
  *
@@ -245,7 +237,6 @@ export class QStashTriggerHandler {
     | undefined;
   private readonly serviceResolver: ServiceResolver;
   private readonly timeoutRetryPolicy: "idempotent" | "indeterminate";
-  private readonly usesDefaultServiceResolver: boolean;
 
   constructor(options: QStashTriggerHandlerOptions) {
     if (!Number.isSafeInteger(options.executionTimeout) || options.executionTimeout <= 0) {
@@ -261,18 +252,13 @@ export class QStashTriggerHandler {
     this.maxAttempts = options.maxAttempts;
     this.onDeliveryIdentityVerificationFailure = options.onDeliveryIdentityVerificationFailure;
     this.timeoutRetryPolicy = options.timeoutRetryPolicy ?? "indeterminate";
-    this.usesDefaultServiceResolver = !options.serviceResolver;
-    this.serviceResolver =
-      options.serviceResolver ??
-      ((targetClass: Constructor) => {
-        try {
-          return Container.get(targetClass);
-        } catch (error) {
-          throw new DefaultServiceResolverError(
-            error instanceof Error ? error.message : String(error),
-          );
-        }
-      });
+    if (typeof options.serviceResolver !== "function") {
+      throw ProblemFactory.internalServerError(
+        SERVICE_RESOLUTION_ERROR_CODE,
+        "An application serviceResolver is required",
+      );
+    }
+    this.serviceResolver = options.serviceResolver;
   }
 
   /**
@@ -404,17 +390,6 @@ export class QStashTriggerHandler {
           error: "Execution failed",
           code: error.code,
           category: error.category,
-        } satisfies ErrorResponse,
-      };
-    }
-
-    if (this.usesDefaultServiceResolver && error instanceof DefaultServiceResolverError) {
-      return {
-        statusCode: 500,
-        body: {
-          error: "Execution failed",
-          code: SERVICE_RESOLUTION_ERROR_CODE,
-          category: ProblemCategory.InternalServerError,
         } satisfies ErrorResponse,
       };
     }

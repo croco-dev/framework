@@ -8877,12 +8877,6 @@
               "exportKind": "named",
               "source": "./libs/createBatchLoader",
               "declarationKind": "function"
-            },
-            {
-              "name": "registerBatchLoaderFactory",
-              "exportKind": "named",
-              "source": "./libs/BatchLoaderFactory",
-              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -10796,6 +10790,12 @@
           "sourceEntrypoint": "packages/esbuild-plugin/src/index.ts",
           "runtimeExports": [
             {
+              "name": "compileDiGraph",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler",
+              "declarationKind": "function"
+            },
+            {
               "name": "ComponentScanner",
               "exportKind": "named",
               "source": "./libs/ComponentScanner",
@@ -10826,15 +10826,57 @@
               "declarationKind": "class"
             },
             {
+              "name": "createDiPackageDescriptor",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler",
+              "declarationKind": "function"
+            },
+            {
               "name": "crocoPlugin",
               "exportKind": "named",
               "source": "./libs/plugin",
               "declarationKind": "function"
             },
             {
+              "name": "DI_COMPILER_VERSION",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler",
+              "declarationKind": "const"
+            },
+            {
+              "name": "DI_MANIFEST_VERSION",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler",
+              "declarationKind": "const"
+            },
+            {
+              "name": "DI_PACKAGE_DESCRIPTOR_VERSION",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler",
+              "declarationKind": "const"
+            },
+            {
+              "name": "DiCompilerError",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler",
+              "declarationKind": "class"
+            },
+            {
               "name": "scanForComponents",
               "exportKind": "named",
               "source": "./libs/ComponentScanner",
+              "declarationKind": "function"
+            },
+            {
+              "name": "writeDiGraph",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler",
+              "declarationKind": "function"
+            },
+            {
+              "name": "writeDiPackageDescriptor",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler",
               "declarationKind": "function"
             }
           ],
@@ -10848,6 +10890,51 @@
               "name": "CrocoPluginOptions",
               "exportKind": "named",
               "source": "./libs/ComponentScanner"
+            },
+            {
+              "name": "DiCompilerDiagnostic",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler"
+            },
+            {
+              "name": "DiCompilerManifest",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler"
+            },
+            {
+              "name": "DiCompilerOptions",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler"
+            },
+            {
+              "name": "DiCompilerResult",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler"
+            },
+            {
+              "name": "DiLinkedPackage",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler"
+            },
+            {
+              "name": "DiManifestDependency",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler"
+            },
+            {
+              "name": "DiManifestProvider",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler"
+            },
+            {
+              "name": "DiPackageDescriptor",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler"
+            },
+            {
+              "name": "ImportReference",
+              "exportKind": "named",
+              "source": "./libs/DiCompiler"
             }
           ]
         }
@@ -11003,6 +11090,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "EventHandlerResolverRequiredProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "EventPublisher",
               "exportKind": "named",
               "source": "./libs/EventPublisher",
@@ -11018,12 +11111,6 @@
               "name": "EventSubscriptionIndex",
               "exportKind": "named",
               "source": "./libs/EventBus",
-              "declarationKind": "class"
-            },
-            {
-              "name": "EventTransactionContextUnavailableProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/EventsProblems",
               "declarationKind": "class"
             },
             {
@@ -11314,6 +11401,12 @@
               "exportKind": "named",
               "source": "./libs/problems/EventsInmemoryProblems",
               "declarationKind": "const"
+            },
+            {
+              "name": "MissingEventHandlerResolverProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsInmemoryProblems",
+              "declarationKind": "class"
             },
             {
               "name": "UnsupportedDeadLetterValueProblem",
@@ -12622,6 +12715,13 @@
               "compatibilityGroup": "runtime-policy"
             },
             {
+              "name": "CannotInstantiateValueError",
+              "exportKind": "named",
+              "source": "./libs/RuntimeContainer",
+              "declarationKind": "class",
+              "compatibilityGroup": "di"
+            },
+            {
               "name": "checkPolicyRuntimeCapabilities",
               "exportKind": "named",
               "source": "./libs/RuntimePolicy",
@@ -12708,7 +12808,8 @@
             {
               "name": "ContainerInstance",
               "exportKind": "named",
-              "source": "typedi",
+              "source": "./libs/RuntimeContainer",
+              "declarationKind": "class",
               "compatibilityGroup": "di"
             },
             {
@@ -12768,6 +12869,13 @@
               "compatibilityGroup": "runtime-capability"
             },
             {
+              "name": "defineGeneratedDiGraph",
+              "exportKind": "named",
+              "source": "./libs/GeneratedGraph",
+              "declarationKind": "function",
+              "compatibilityGroup": "di"
+            },
+            {
               "name": "definePolicy",
               "exportKind": "named",
               "source": "./libs/RuntimePolicy",
@@ -12817,6 +12925,13 @@
               "compatibilityGroup": "runtime-policy"
             },
             {
+              "name": "GENERATED_DI_GRAPH_VERSION",
+              "exportKind": "named",
+              "source": "./libs/GeneratedGraph",
+              "declarationKind": "const",
+              "compatibilityGroup": "di"
+            },
+            {
               "name": "getDeclaredComponentScope",
               "exportKind": "named",
               "source": "./libs/decorators/Component",
@@ -12853,6 +12968,13 @@
             },
             {
               "name": "InjectMany",
+              "exportKind": "named",
+              "source": "./libs/decorators/Inject",
+              "declarationKind": "function",
+              "compatibilityGroup": "di"
+            },
+            {
+              "name": "InjectOptional",
               "exportKind": "named",
               "source": "./libs/decorators/Inject",
               "declarationKind": "function",
@@ -13048,6 +13170,13 @@
               "compatibilityGroup": "runtime-capability"
             },
             {
+              "name": "RuntimeContainer",
+              "exportKind": "named",
+              "source": "./libs/RuntimeContainer",
+              "declarationKind": "class",
+              "compatibilityGroup": "di"
+            },
+            {
               "name": "RuntimeInspector",
               "exportKind": "named",
               "source": "./libs/RuntimeInspector",
@@ -13060,6 +13189,13 @@
               "source": "./libs/problems/RuntimeInspectorProblems",
               "declarationKind": "class",
               "compatibilityGroup": "runtime-inspector"
+            },
+            {
+              "name": "ServiceNotFoundError",
+              "exportKind": "named",
+              "source": "./libs/RuntimeContainer",
+              "declarationKind": "class",
+              "compatibilityGroup": "di"
             },
             {
               "name": "ShutdownConfigurationConflictProblem",
@@ -13113,7 +13249,8 @@
             {
               "name": "Token",
               "exportKind": "named",
-              "source": "typedi",
+              "source": "./libs/Token",
+              "declarationKind": "class",
               "compatibilityGroup": "di"
             },
             {
@@ -13247,6 +13384,12 @@
               "compatibilityGroup": "di"
             },
             {
+              "name": "Constructable",
+              "exportKind": "named",
+              "source": "./libs/RuntimeContainer",
+              "compatibilityGroup": "di"
+            },
+            {
               "name": "Constructor",
               "exportKind": "named",
               "source": "./libs/types",
@@ -13367,6 +13510,42 @@
               "compatibilityGroup": "di"
             },
             {
+              "name": "GeneratedDiGraph",
+              "exportKind": "named",
+              "source": "./libs/GeneratedGraph",
+              "compatibilityGroup": "di"
+            },
+            {
+              "name": "GeneratedModuleProviderDeclaration",
+              "exportKind": "named",
+              "source": "./libs/GeneratedGraph",
+              "compatibilityGroup": "di"
+            },
+            {
+              "name": "GeneratedProviderDefinition",
+              "exportKind": "named",
+              "source": "./libs/GeneratedGraph",
+              "compatibilityGroup": "di"
+            },
+            {
+              "name": "GeneratedProviderDependency",
+              "exportKind": "named",
+              "source": "./libs/GeneratedGraph",
+              "compatibilityGroup": "di"
+            },
+            {
+              "name": "GeneratedProviderKind",
+              "exportKind": "named",
+              "source": "./libs/GeneratedGraph",
+              "compatibilityGroup": "di"
+            },
+            {
+              "name": "GeneratedProviderResolver",
+              "exportKind": "named",
+              "source": "./libs/GeneratedGraph",
+              "compatibilityGroup": "di"
+            },
+            {
               "name": "Guard",
               "exportKind": "named",
               "source": "./libs/Guard",
@@ -13376,6 +13555,12 @@
               "name": "ILogger",
               "exportKind": "named",
               "source": "./libs/ILogger",
+              "compatibilityGroup": "di"
+            },
+            {
+              "name": "InjectionInspection",
+              "exportKind": "named",
+              "source": "./libs/types",
               "compatibilityGroup": "di"
             },
             {
@@ -13787,6 +13972,24 @@
               "compatibilityGroup": "di"
             },
             {
+              "name": "ServiceIdentifier",
+              "exportKind": "named",
+              "source": "./libs/RuntimeContainer",
+              "compatibilityGroup": "di"
+            },
+            {
+              "name": "ServiceMetadata",
+              "exportKind": "named",
+              "source": "./libs/RuntimeContainer",
+              "compatibilityGroup": "di"
+            },
+            {
+              "name": "ServiceOptions",
+              "exportKind": "named",
+              "source": "./libs/RuntimeContainer",
+              "compatibilityGroup": "di"
+            },
+            {
               "name": "ShutdownHook",
               "exportKind": "named",
               "source": "./libs/types",
@@ -13827,12 +14030,6 @@
               "exportKind": "named",
               "source": "./libs/TransactionContext",
               "compatibilityGroup": "context"
-            },
-            {
-              "name": "TypeDIInjectionInspection",
-              "exportKind": "named",
-              "source": "./libs/types",
-              "compatibilityGroup": "di"
             },
             {
               "name": "UnsupportedRuntimeCapabilityName",
@@ -16723,6 +16920,12 @@
           "sourceEntrypoint": "packages/integrations-posthog/src/index.ts",
           "runtimeExports": [
             {
+              "name": "createPostHogConfig",
+              "exportKind": "named",
+              "source": "./libs/PostHogConfig",
+              "declarationKind": "function"
+            },
+            {
               "name": "POSTHOG_CONFIG_TOKEN",
               "exportKind": "named",
               "source": "./libs/PostHogConfig",
@@ -16739,12 +16942,6 @@
               "exportKind": "named",
               "source": "./libs/problems/PostHogProblems",
               "declarationKind": "class"
-            },
-            {
-              "name": "registerPostHogConfig",
-              "exportKind": "named",
-              "source": "./libs/PostHogConfig",
-              "declarationKind": "function"
             },
             {
               "name": "validatePostHogConfig",
@@ -32776,7 +32973,7 @@
               "name": "TxManagerRegistry",
               "exportKind": "named",
               "source": "./libs/TxManagerRegistry",
-              "declarationKind": "const"
+              "declarationKind": "class"
             },
             {
               "name": "TxPropagationError",

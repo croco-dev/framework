@@ -1,7 +1,13 @@
-import { Container, ServiceNotFoundError } from "typedi";
-import type { Constructable, ContainerInstance, ServiceIdentifier, ServiceMetadata } from "typedi";
 import "reflect-metadata";
-import { Container as FrameworkContainer } from "@croco/framework-context";
+import {
+  type Constructable,
+  type ContainerInstance,
+  type ServiceIdentifier,
+  type ServiceMetadata,
+  Container as FrameworkContainer,
+  RuntimeContainer as Container,
+  ServiceNotFoundError,
+} from "@croco/framework-context";
 import { detectCircularDependency } from "./CircularDependencyDetector";
 import { ModuleContext } from "./ModuleContext";
 import { getModuleTokenLabel } from "./moduleTokenLabels";
@@ -84,8 +90,13 @@ type ContainerServiceMetadataSnapshot = {
 
 type ModuleProviderVisibilityFailure = {
   readonly moduleName: string;
-  readonly providerClass: Constructor<unknown>;
+  readonly provider: ModuleToken<unknown>;
   readonly token: ModuleToken<unknown>;
+};
+
+type ProviderDependency = {
+  readonly token: ModuleToken<unknown>;
+  readonly optional?: boolean;
 };
 
 type ModuleProviderOwnershipConflict = {
@@ -113,14 +124,6 @@ type ModuleRegistryState = {
   disposePromise: Promise<void> | null;
 };
 
-const IGNORED_CONSTRUCTOR_DEPENDENCIES = new Set<unknown>([
-  Array,
-  Boolean,
-  Number,
-  Object,
-  Promise,
-  String,
-]);
 const MAX_TIMER_DELAY_MS = 2_147_483_647;
 const APPLICATION_MODULE_NAME = "<application>";
 const APPLICATION_REPLACEMENT_PHASE = Symbol("application-replacement-phase");
@@ -413,6 +416,16 @@ async function performInitializeModules(
   }
 
   try {
+    if (state.rejectGlobalProviderFallback) {
+      const failure = getGeneratedApplicationProviderVisibilityFailures(
+        state.moduleStates,
+        state.providerReplacements,
+      )[0];
+      if (failure) {
+        throw new ModuleProviderVisibilityProblem(failure.moduleName, failure.token);
+      }
+    }
+
     for (const unit of initializationUnits) {
       if (unit === APPLICATION_REPLACEMENT_PHASE) {
         const applicationModule: ModuleOptions = { name: APPLICATION_MODULE_NAME };
@@ -770,9 +783,7 @@ function snapshotContainerServices(
   const affectedIdentifiers = new Set<ServiceIdentifier<unknown>>();
   for (const module of modules) {
     for (const provider of module.providers ?? []) {
-      affectedIdentifiers.add(
-        FrameworkContainer.toTypeDIServiceIdentifier(getProviderToken(provider)),
-      );
+      affectedIdentifiers.add(FrameworkContainer.toServiceIdentifier(getProviderToken(provider)));
     }
   }
 
@@ -883,7 +894,7 @@ function getContainerServiceMetadataAccess(
     throw new ModuleLifecycleProblem(
       "<registry>",
       "setup",
-      "TypeDI 0.10.0 container metadata contract is unavailable.",
+      "Croco runtime 0.10.0 container metadata contract is unavailable.",
     );
   }
 
@@ -1007,20 +1018,22 @@ function createModuleGraphDiagnostics(
       }
 
       const [, providerClass] = classProvider;
-      for (const inspection of FrameworkContainer.inspectTypeDIInjections(providerClass)) {
-        if (inspection.status !== "uninspectable") {
-          continue;
-        }
+      if (!FrameworkContainer.getGeneratedProviders().has(providerClass)) {
+        for (const inspection of FrameworkContainer.inspectInjections(providerClass)) {
+          if (inspection.status !== "uninspectable") {
+            continue;
+          }
 
-        const provider = getModuleTokenLabel(providerClass);
-        diagnostics.push({
-          code: "framework-module/provider-injection-uninspectable",
-          severity: "error",
-          moduleName: module.name,
-          token: provider,
-          message: `Module '${module.name}' provider '${provider}' has a TypeDI injection handler at ${inspection.site} that cannot be inspected without executing user code.`,
-          path: [module.name, provider, inspection.site],
-        });
+          const provider = getModuleTokenLabel(providerClass);
+          diagnostics.push({
+            code: "framework-module/provider-injection-uninspectable",
+            severity: "error",
+            moduleName: module.name,
+            token: provider,
+            message: `Module '${module.name}' provider '${provider}' has a Croco injection handler at ${inspection.site} that cannot be inspected without executing user code.`,
+            path: [module.name, provider, inspection.site],
+          });
+        }
       }
 
       for (const failure of getClassProviderVisibilityFailures(
@@ -1036,9 +1049,26 @@ function createModuleGraphDiagnostics(
           moduleName: module.name,
           token: provider,
           message: `Module '${module.name}' cannot access provider '${provider}'. Export it from an imported module or register it locally.`,
-          path: [module.name, getModuleTokenLabel(failure.providerClass), provider],
+          path: [module.name, getModuleTokenLabel(failure.provider), provider],
         });
       }
+    }
+  }
+
+  if (rejectUnknownProvider) {
+    for (const failure of getGeneratedApplicationProviderVisibilityFailures(
+      states,
+      providerReplacements,
+    )) {
+      const provider = getModuleTokenLabel(failure.token);
+      diagnostics.push({
+        code: "framework-module/provider-not-visible",
+        severity: "error",
+        moduleName: failure.moduleName,
+        token: provider,
+        message: `Application cannot access provider '${provider}'. Export it from an application module.`,
+        path: [failure.moduleName, getModuleTokenLabel(failure.provider), provider],
+      });
     }
   }
 
@@ -1207,12 +1237,12 @@ function getUnresolvedProviderOwnershipConflicts(
 ): ModuleProviderOwnershipConflict[] {
   const replacementIdentifiers = new Set(
     replacements.map((replacement) =>
-      FrameworkContainer.toTypeDIServiceIdentifier(replacement.provider.provide),
+      FrameworkContainer.toServiceIdentifier(replacement.provider.provide),
     ),
   );
   return getProviderOwnershipConflicts(modules).filter(
     (conflict) =>
-      !replacementIdentifiers.has(FrameworkContainer.toTypeDIServiceIdentifier(conflict.token)),
+      !replacementIdentifiers.has(FrameworkContainer.toServiceIdentifier(conflict.token)),
   );
 }
 
@@ -1224,7 +1254,7 @@ function assertValidProviderReplacements(
   const ownership = getProviderOwnership(modules);
 
   for (const replacement of replacements) {
-    const identifier = FrameworkContainer.toTypeDIServiceIdentifier(replacement.provider.provide);
+    const identifier = FrameworkContainer.toServiceIdentifier(replacement.provider.provide);
     if (seen.has(identifier)) {
       throw new InvalidModuleDefinitionProblem(
         `Application defines multiple replacements for provider '${getModuleTokenLabel(replacement.provider.provide)}'.`,
@@ -1267,7 +1297,7 @@ function getProviderOwnership(
   for (const module of modules) {
     for (const provider of module.providers ?? []) {
       const token = getProviderToken(provider);
-      const identifier = FrameworkContainer.toTypeDIServiceIdentifier(token);
+      const identifier = FrameworkContainer.toServiceIdentifier(token);
       const entry = ownership.get(identifier) ?? { token, owners: new Set<string>() };
       entry.owners.add(module.name);
       ownership.set(identifier, entry);
@@ -1661,10 +1691,13 @@ async function registerProviders(
       if (isConstructorToken(provider)) {
         validateClassProviderVisibility(state, module.name, provider);
         validateProviderWrite(state, module.name, provider);
-        container.set({
-          id: FrameworkContainer.toTypeDIServiceIdentifier(provider),
-          type: toTypediConstructable(provider),
-        });
+        if (!FrameworkContainer.getGeneratedProviders().has(provider)) {
+          assertUncompiledClassProviderCanBeConstructed(module.name, provider);
+          container.set({
+            id: FrameworkContainer.toServiceIdentifier(provider),
+            type: toRuntimeConstructable(provider),
+          });
+        }
       }
       signal.throwIfAborted();
       continue;
@@ -1697,10 +1730,10 @@ function getProviderReplacement(
   state: ModuleRegistryState,
   provider: ModuleProvider,
 ): ApplicationProviderReplacement | undefined {
-  const identifier = FrameworkContainer.toTypeDIServiceIdentifier(getProviderToken(provider));
+  const identifier = FrameworkContainer.toServiceIdentifier(getProviderToken(provider));
   return state.providerReplacements.find(
     (replacement) =>
-      FrameworkContainer.toTypeDIServiceIdentifier(replacement.provider.provide) === identifier,
+      FrameworkContainer.toServiceIdentifier(replacement.provider.provide) === identifier,
   );
 }
 
@@ -1721,9 +1754,20 @@ async function registerProviderDefinition<T>(
   if ("useClass" in provider) {
     validateClassProviderVisibility(state, moduleName, provider.useClass);
     validateProviderWrite(state, moduleName, token);
+    if (FrameworkContainer.getGeneratedProviders().has(provider.useClass)) {
+      if (token !== provider.useClass) {
+        container.set({
+          id: FrameworkContainer.toServiceIdentifier(token),
+          factory: () => FrameworkContainer.get(provider.useClass),
+          scope: "transient",
+        });
+      }
+      return;
+    }
+    assertUncompiledClassProviderCanBeConstructed(moduleName, provider.useClass);
     container.set({
-      id: FrameworkContainer.toTypeDIServiceIdentifier(token),
-      type: toTypediConstructable(provider.useClass),
+      id: FrameworkContainer.toServiceIdentifier(token),
+      type: toRuntimeConstructable(provider.useClass),
     });
     return;
   }
@@ -1777,7 +1821,10 @@ function isKnownTokenInStates(
   return Array.from(states.values()).some(
     (state) =>
       hasEquivalentToken(state.providers, normalizedToken) ||
-      hasEquivalentToken(state.exports, normalizedToken),
+      hasEquivalentToken(state.exports, normalizedToken) ||
+      [...state.classProviders.values()].some((providerClass) =>
+        areEquivalentTokens(providerClass, normalizedToken),
+      ),
   );
 }
 
@@ -1792,7 +1839,12 @@ function canAccessTokenInStates(
   }
 
   const normalizedToken = normalizeTokenInStates(token, states);
-  if (hasEquivalentToken(state.providers, normalizedToken)) {
+  if (
+    hasEquivalentToken(state.providers, normalizedToken) ||
+    [...state.classProviders.values()].some((providerClass) =>
+      areEquivalentTokens(providerClass, normalizedToken),
+    )
+  ) {
     return true;
   }
 
@@ -1851,7 +1903,7 @@ function validateProviderAccess(
     applicationDependencies,
   );
   if (!provider) {
-    if (hasUndeclaredTypediClassProvider(container, token)) {
+    if (hasUndeclaredRuntimeClassProvider(container, token)) {
       throw new ModuleProviderVisibilityProblem(moduleName, token);
     }
 
@@ -1945,30 +1997,75 @@ function getClassProviderVisibilityFailures<T>(
   canAccessProvider: (token: ModuleToken<unknown>) => boolean = (token) =>
     canAccessTokenInStates(moduleName, token, states),
 ): ModuleProviderVisibilityFailure[] {
+  return getProviderVisibilityFailures(
+    moduleName,
+    providerClass,
+    getClassProviderDependencies(providerClass),
+    states,
+    rejectUnknownProvider,
+    canAccessProvider,
+  );
+}
+
+function getProviderVisibilityFailures(
+  moduleName: string,
+  provider: ModuleToken<unknown>,
+  dependencies: readonly ProviderDependency[],
+  states: ReadonlyMap<string, ModuleRuntimeState>,
+  rejectUnknownProvider: boolean,
+  canAccessProvider: (token: ModuleToken<unknown>) => boolean,
+): ModuleProviderVisibilityFailure[] {
   const failures: ModuleProviderVisibilityFailure[] = [];
-  const dependencies = getConstructorDependencies(providerClass);
-
   for (const dependency of dependencies) {
-    if (!isConstructorToken(dependency) || IGNORED_CONSTRUCTOR_DEPENDENCIES.has(dependency)) {
-      continue;
-    }
-
-    const dependencyToken = dependency as ModuleToken<unknown>;
+    const dependencyToken = normalizeTokenInStates(dependency.token, states);
     const known = isKnownTokenInStates(dependencyToken, states);
-    if ((known && !canAccessProvider(dependencyToken)) || (!known && rejectUnknownProvider)) {
-      failures.push({ moduleName, providerClass, token: dependencyToken });
-    }
-  }
-
-  for (const dependency of getTypediHandlerDependencies(providerClass)) {
-    const dependencyToken = normalizeTokenInStates(dependency, states);
-    const known = isKnownTokenInStates(dependencyToken, states);
-    if ((known && !canAccessProvider(dependencyToken)) || (!known && rejectUnknownProvider)) {
-      failures.push({ moduleName, providerClass, token: dependencyToken });
+    if (
+      (known && !canAccessProvider(dependencyToken)) ||
+      (!known && rejectUnknownProvider && !dependency.optional)
+    ) {
+      failures.push({ moduleName, provider, token: dependencyToken });
     }
   }
 
   return failures;
+}
+
+function getClassProviderDependencies<T>(providerClass: Constructor<T>): ProviderDependency[] {
+  const generatedProviders = FrameworkContainer.getGeneratedProviders().get(providerClass);
+  if (generatedProviders) {
+    return generatedProviders.flatMap((provider) => provider.dependencies);
+  }
+
+  return getRuntimeHandlerDependencies(providerClass).map((token) => ({ token }));
+}
+
+function getGeneratedApplicationProviderVisibilityFailures(
+  states: ReadonlyMap<string, ModuleRuntimeState>,
+  replacements: readonly ApplicationProviderReplacement[],
+): ModuleProviderVisibilityFailure[] {
+  const declaredTokens = [...states.values()].flatMap((state) => [
+    ...state.providers,
+    ...state.classProviders.values(),
+  ]);
+  const exported = (token: ModuleToken<unknown>): boolean =>
+    [...states.values()].some((state) => hasEquivalentToken(state.exports, token)) ||
+    replacements.some((replacement) => areEquivalentTokens(replacement.provider.provide, token));
+
+  return [...FrameworkContainer.getGeneratedProviders().values()]
+    .flat()
+    .filter((provider) =>
+      declaredTokens.every((token) => !areEquivalentTokens(token, provider.token)),
+    )
+    .flatMap((provider) =>
+      getProviderVisibilityFailures(
+        APPLICATION_MODULE_NAME,
+        provider.token,
+        provider.dependencies,
+        states,
+        false,
+        exported,
+      ),
+    );
 }
 
 function normalizeTokenInStates(
@@ -1979,7 +2076,7 @@ function normalizeTokenInStates(
     for (const candidate of state.providers) {
       if (
         typeof candidate === "symbol" &&
-        FrameworkContainer.toTypeDIServiceIdentifier(candidate) === token
+        FrameworkContainer.toServiceIdentifier(candidate) === token
       ) {
         return candidate;
       }
@@ -1988,7 +2085,7 @@ function normalizeTokenInStates(
     for (const candidate of state.exports) {
       if (
         typeof candidate === "symbol" &&
-        FrameworkContainer.toTypeDIServiceIdentifier(candidate) === token
+        FrameworkContainer.toServiceIdentifier(candidate) === token
       ) {
         return candidate;
       }
@@ -2023,38 +2120,48 @@ function getEquivalentTokenValue<T>(
 function areEquivalentTokens(left: ModuleToken<unknown>, right: ModuleToken<unknown>): boolean {
   return (
     left === right ||
-    (typeof left === "symbol" && FrameworkContainer.toTypeDIServiceIdentifier(left) === right) ||
-    (typeof right === "symbol" && FrameworkContainer.toTypeDIServiceIdentifier(right) === left)
+    (typeof left === "symbol" && FrameworkContainer.toServiceIdentifier(left) === right) ||
+    (typeof right === "symbol" && FrameworkContainer.toServiceIdentifier(right) === left)
   );
 }
 
-function getConstructorDependencies<T>(providerClass: Constructor<T>): readonly unknown[] {
-  return (
-    (Reflect.getMetadata("design:paramtypes", providerClass) as readonly unknown[] | undefined) ??
-    []
+function toRuntimeConstructable<T>(providerClass: Constructor<T>): Constructable<T> {
+  return providerClass;
+}
+
+function assertUncompiledClassProviderCanBeConstructed<T>(
+  moduleName: string,
+  providerClass: Constructor<T>,
+): void {
+  if (
+    providerClass.length === 0 &&
+    FrameworkContainer.inspectInjections(providerClass).length === 0
+  ) {
+    return;
+  }
+
+  throw new InvalidModuleDefinitionProblem(
+    `Module '${moduleName}' class provider '${getModuleTokenLabel(providerClass)}' requires a generated DI factory. Use a generated application graph or an explicit useFactory provider.`,
+    { moduleName, provider: getModuleTokenLabel(providerClass) },
   );
 }
 
-function toTypediConstructable<T>(providerClass: Constructor<T>): Constructable<T> {
-  return providerClass as unknown as Constructable<T>;
-}
-
-function hasUndeclaredTypediClassProvider(
+function hasUndeclaredRuntimeClassProvider(
   container: ContainerInstance,
   token: ModuleToken<unknown>,
 ): boolean {
-  const service = getTypediServiceMetadata(container, token);
+  const service = getRuntimeServiceMetadata(container, token);
 
   return Boolean(service?.type || service?.factory);
 }
 
-function getTypediServiceMetadata(
+function getRuntimeServiceMetadata(
   container: ContainerInstance,
   token: ModuleToken<unknown>,
 ): ServiceMetadata<unknown> | undefined {
   const services = getContainerServices(container);
 
-  const identifier = FrameworkContainer.toTypeDIServiceIdentifier(token);
+  const identifier = FrameworkContainer.toServiceIdentifier(token);
   return services.find((service) => service.id === identifier);
 }
 
@@ -2064,7 +2171,10 @@ function resolveRuntimeProvider<T>(
   token: ModuleToken<T>,
 ): T {
   try {
-    return container.get(FrameworkContainer.toTypeDIServiceIdentifier(token));
+    if (FrameworkContainer.getGeneratedProviders().has(token)) {
+      return FrameworkContainer.get(token);
+    }
+    return container.get(FrameworkContainer.toServiceIdentifier(token));
   } catch (error) {
     if (error instanceof ServiceNotFoundError) {
       throw new ModuleProviderUnavailableProblem(moduleName, token, error);
@@ -2092,8 +2202,8 @@ function getClassProviderEntry(
   return null;
 }
 
-function getTypediHandlerDependencies<T>(providerClass: Constructor<T>): ModuleToken<unknown>[] {
-  return FrameworkContainer.inspectTypeDIInjections(providerClass).flatMap((inspection) =>
+function getRuntimeHandlerDependencies<T>(providerClass: Constructor<T>): ModuleToken<unknown>[] {
+  return FrameworkContainer.inspectInjections(providerClass).flatMap((inspection) =>
     inspection.status === "resolved" ? [inspection.token as ModuleToken<unknown>] : [],
   );
 }

@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { ProblemFactory } from "@croco/problems-core";
 import { MiddlewareChain } from "./MiddlewareChain";
 import type {
-  Constructor,
   LifecycleHooks,
   Middleware,
   RequestContext,
@@ -12,7 +12,8 @@ import type {
 interface ContextData {
   context: RequestContext;
   createdAt: number;
-  scopedCache: Map<string | Constructor, unknown>;
+  scopedCache: Map<unknown, unknown>;
+  scopedDisposables: Map<object, () => void>;
 }
 
 export type ContextRunOptions = {
@@ -20,6 +21,19 @@ export type ContextRunOptions = {
 };
 
 const contextStorage = new AsyncLocalStorage<ContextData>();
+
+export function trackRequestInstance(instance: object, dispose: () => void): void {
+  const data = contextStorage.getStore();
+  if (!data) {
+    throw ProblemFactory.internalServerError(
+      "framework-context/request-scope-missing",
+      "A request instance cannot be tracked outside a request context.",
+    );
+  }
+  if (!data.scopedDisposables.has(instance)) {
+    data.scopedDisposables.set(instance, dispose);
+  }
+}
 
 /**
  * AsyncLocalStorage 기반으로 요청 컨텍스트를 실행하고 조회하는 유틸리티입니다.
@@ -41,8 +55,96 @@ export class Context {
       context,
       createdAt: parentData?.createdAt ?? Date.now(),
       scopedCache: parentData?.scopedCache ?? new Map(),
+      scopedDisposables: parentData?.scopedDisposables ?? new Map(),
     };
-    return Context.STORAGE.run(data, fn);
+    const ownsScope = parentData === undefined;
+    return Context.STORAGE.run(data, () => {
+      let result: Promise<T> | T;
+      try {
+        result = fn();
+      } catch (error) {
+        if (ownsScope) Context.disposeRequestScope(data, { error });
+        throw error;
+      }
+      if (
+        result !== null &&
+        result !== undefined &&
+        typeof (result as Promise<T>).then === "function"
+      ) {
+        return Promise.resolve(result).then(
+          (value) => {
+            if (ownsScope) Context.disposeRequestScope(data);
+            return value;
+          },
+          (error: unknown) => {
+            if (ownsScope) Context.disposeRequestScope(data, { error });
+            throw error;
+          },
+        );
+      }
+      if (ownsScope) Context.disposeRequestScope(data);
+      return result;
+    });
+  }
+
+  private static disposeRequestScope(
+    data: ContextData,
+    failure?: { readonly error: unknown },
+  ): void {
+    const failures: unknown[] = [];
+    for (const dispose of [...data.scopedDisposables.values()].reverse()) {
+      try {
+        dispose();
+      } catch (error) {
+        failures.push(error);
+      }
+    }
+    data.scopedDisposables.clear();
+    data.scopedCache.clear();
+    if (failures.length === 0) return;
+
+    const cleanupFailure = ProblemFactory.internalServerError(
+      "framework-context/request-scope-disposal-failed",
+      "Request-scoped provider cleanup failed.",
+      { extensions: { cleanupFailures: failures } },
+    );
+    if (!failure) throw cleanupFailure;
+    Context.reportRequestCleanupFailure(data.context, failure.error, cleanupFailure);
+  }
+
+  private static reportRequestCleanupFailure(
+    context: RequestContext,
+    primaryError: unknown,
+    cleanupFailure: unknown,
+  ): void {
+    const details = { primaryError, cleanupFailure };
+    const reportingFailures: unknown[] = [];
+    try {
+      if (context.runtimeInspector) {
+        context.runtimeInspector.recordEvent({
+          requestId: context.requestId,
+          kind: "error",
+          outcome: "failed",
+          name: "request.cleanup",
+          details,
+        });
+        return;
+      }
+    } catch (error) {
+      reportingFailures.push(error);
+    }
+    try {
+      if (context.runtime?.logger) {
+        context.runtime.logger.error("Request provider cleanup failed", {
+          ...details,
+          reportingFailures,
+        });
+        return;
+      }
+    } catch (error) {
+      reportingFailures.push(error);
+    }
+    console.error("[Context] Request provider cleanup failed", { ...details, reportingFailures });
   }
 
   static get(): RequestContext | null {
@@ -74,7 +176,7 @@ export class Context {
     return data?.createdAt ?? null;
   }
 
-  static getCache(): Map<string | Constructor, unknown> | undefined {
+  static getCache(): Map<unknown, unknown> | undefined {
     return Context.STORAGE.getStore()?.scopedCache;
   }
 
@@ -106,34 +208,27 @@ export class Context {
     hooks: LifecycleHooks<RequestContext>,
     fn: () => Promise<T>,
   ): Promise<T> {
-    return Context.STORAGE.run(
-      {
-        context,
-        createdAt: Date.now(),
-        scopedCache: new Map(),
-      },
-      async () => {
-        try {
-          await hooks.onRequestStart?.(context);
+    return Context.run(context, async () => {
+      try {
+        await hooks.onRequestStart?.(context);
 
-          const chain = new MiddlewareChain<RequestContext>();
-          for (const middleware of middlewares) {
-            chain.use(middleware);
-          }
-
-          const result = middlewares.length > 0 ? await chain.execute(context, fn) : await fn();
-
-          await hooks.onRequestEnd?.(context, result);
-
-          return result;
-        } catch (error) {
-          const normalizedError = Context.normalizeRequestError(error);
-
-          await Context.runRequestErrorHook(context, hooks, normalizedError);
-          throw error;
+        const chain = new MiddlewareChain<RequestContext>();
+        for (const middleware of middlewares) {
+          chain.use(middleware);
         }
-      },
-    );
+
+        const result = middlewares.length > 0 ? await chain.execute(context, fn) : await fn();
+
+        await hooks.onRequestEnd?.(context, result);
+
+        return result;
+      } catch (error) {
+        const normalizedError = Context.normalizeRequestError(error);
+
+        await Context.runRequestErrorHook(context, hooks, normalizedError);
+        throw error;
+      }
+    });
   }
 
   private static normalizeRequestError(error: unknown): Error {

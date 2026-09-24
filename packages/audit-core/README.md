@@ -11,10 +11,17 @@ pnpm add @croco/audit-core
 ## 사용법
 
 ```ts
-import { Auditable } from "@croco/audit-core";
+import { Auditable, type AuditLogRepository } from "@croco/audit-core";
+import type { ILogger } from "@croco/framework-context";
 
 class UserService {
+  constructor(
+    readonly repository: AuditLogRepository,
+    readonly logger: ILogger,
+  ) {}
+
   @Auditable({
+    dependencies: (service: UserService) => service,
     action: "user.update",
     resourceType: "User",
     resourceIdIndex: 0,
@@ -27,6 +34,11 @@ class UserService {
   }
 }
 ```
+
+`dependencies`는 서비스 인스턴스에 주입된 repository와 logger를 반환해야 합니다. 생성된 DI graph의
+생성자 주입이나 명시적인 module factory에서 두 의존성을 제공하세요. 전역 Container 조회는 하지 않으며,
+의존성이 없거나 selector가 실패하면 `throwOnFailure`와 관계없이 비즈니스 메서드 실행 전에 실패합니다.
+`throwOnFailure`는 구성 오류가 아닌 감사 로그 저장 실패에만 적용됩니다.
 
 `resourceIdIndex`와 `payloadIndex`는 0부터 시작하는 메서드 파라미터 인덱스입니다. 예를 들어 컨텍스트가 첫 번째
 인자이고 리소스 ID와 payload가 뒤따르면 각각 `1`, `2`를 지정합니다. 기존 `resourceIdParam`과 `payloadParam`은
@@ -44,7 +56,7 @@ labelled secret 문자열을 재귀적으로 치환합니다. 메서드 결과�
 ```ts
 import { AuditInterceptor } from "@croco/audit-core";
 
-const interceptor = new AuditInterceptor(auditLogRepository);
+const interceptor = new AuditInterceptor(auditLogRepository, logger);
 ```
 
 기본 정책은 `x-forwarded-for`, `x-real-ip`, `cf-connecting-ip` 같은 전달 헤더를 신뢰하지 않고 직접 연결
@@ -53,7 +65,7 @@ const interceptor = new AuditInterceptor(auditLogRepository);
 애플리케이션 바로 앞의 프록시가 전달 헤더를 정리하거나 덧붙이는 신뢰 경계라면 hop 수를 명시합니다.
 
 ```ts
-const interceptor = new AuditInterceptor(auditLogRepository, {
+const interceptor = new AuditInterceptor(auditLogRepository, logger, {
   trustedProxyHops: 2,
 });
 ```

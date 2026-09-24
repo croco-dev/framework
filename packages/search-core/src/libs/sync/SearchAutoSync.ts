@@ -1,6 +1,12 @@
 import type { EventHandler } from "@croco/events-core";
 import { RegisterEventHandler } from "@croco/events-core";
-import { Container, Context, type ILogger, LOGGER_TOKEN } from "@croco/framework-context";
+import {
+  Context,
+  Inject,
+  InjectOptional,
+  type ILogger,
+  LOGGER_TOKEN,
+} from "@croco/framework-context";
 import type { SearchableMetadata } from "../decorators/Searchable";
 import { compileSearchableMetadataRegistry } from "../decorators/SearchableMetadataRegistry";
 import { DocumentDeletedEvent, DocumentIndexedEvent, SearchSyncFailedEvent } from "../events";
@@ -56,10 +62,11 @@ export type SearchSyncFailedEventPublisher = {
 export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | DocumentDeletedEvent> {
   private processedEvents = new LRUCache<void>(10000);
   private readonly inFlightEvents = new Map<string, Promise<void>>();
-  private readonly searchEngineToken = SearchEngine.token;
 
   constructor(
     private readonly failedEventPublisher: SearchSyncFailedEventPublisher | undefined = undefined,
+    @Inject(SearchEngine.token) private readonly searchEngine: SearchEngine,
+    @InjectOptional(LOGGER_TOKEN) private readonly logger?: ILogger,
   ) {}
 
   async handle(event: DocumentIndexedEvent | DocumentDeletedEvent): Promise<void> {
@@ -131,7 +138,7 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
         tenantId: event.tenantId,
       },
       async () => {
-        const searchEngine = Container.get(this.searchEngineToken);
+        const searchEngine = this.searchEngine;
 
         if (event instanceof DocumentIndexedEvent) {
           await searchEngine.indexDocument(event.indexName, {
@@ -188,21 +195,30 @@ export class SearchAutoSync implements EventHandler<DocumentIndexedEvent | Docum
   private reportFailedEventPublishError(event: SearchSyncFailedEvent, error: Error): void {
     const logContext = this.createFailedEventLogContext(event);
     try {
-      const logger = Container.get(LOGGER_TOKEN) as ILogger;
-      logger
-        .child({
-          searchSyncFailedEvent: logContext,
-        })
-        .error(SEARCH_SYNC_FAILED_EVENT_PUBLISH_ERROR_MESSAGE, error);
+      if (this.logger) {
+        this.logger
+          .child({
+            searchSyncFailedEvent: logContext,
+          })
+          .error(SEARCH_SYNC_FAILED_EVENT_PUBLISH_ERROR_MESSAGE, error);
+        return;
+      }
     } catch {
-      // Logger DI is unavailable; fallback to console.error so the error is not lost.
-      // eslint-disable-next-line no-console
-      console.error(
-        SEARCH_SYNC_FAILED_EVENT_PUBLISH_ERROR_MESSAGE,
-        { searchSyncFailedEvent: logContext },
-        error,
-      );
+      this.reportFailedEventPublishErrorToConsole(logContext, error);
+      return;
     }
+    this.reportFailedEventPublishErrorToConsole(logContext, error);
+  }
+
+  private reportFailedEventPublishErrorToConsole(
+    logContext: SearchSyncFailedEventLogContext,
+    error: Error,
+  ): void {
+    console.error(
+      SEARCH_SYNC_FAILED_EVENT_PUBLISH_ERROR_MESSAGE,
+      { searchSyncFailedEvent: logContext },
+      error,
+    );
   }
 
   private createFailedEventLogContext(

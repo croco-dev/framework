@@ -1,6 +1,12 @@
 import "reflect-metadata";
 import { EventBusConfig } from "@croco/events-core";
-import { Component, Container, Context, ShutdownManager, Token } from "@croco/framework-context";
+import {
+  Container,
+  Context,
+  defineGeneratedDiGraph,
+  ShutdownManager,
+  Token,
+} from "@croco/framework-context";
 import { createApplicationRuntime } from "@croco/framework-module";
 import { Controller, Get } from "@croco/protocols-rest";
 import { Problem, ProblemCategory } from "@croco/problems-core";
@@ -108,6 +114,41 @@ const productionSecurityMiddleware = declareSecurityMiddlewareCapabilities(
   (async (_ctx, next) => await next()) satisfies MiddlewareFunction,
   ["security-headers", "cors", "body-limit", "rate-limit"],
 );
+
+const DECORATED_KERNEL_GRAPH = defineGeneratedDiGraph({
+  version: "croco.generated-di-graph.v1",
+  graphId: "testing.decorated-kernel",
+  compilerVersion: "test",
+  inputHash: "testing.decorated-kernel.v1",
+  providers: [
+    {
+      token: DecoratedKernelService,
+      tokenId: "testing:DecoratedKernelService",
+      debugName: "DecoratedKernelService",
+      scope: "singleton",
+      dependencies: [],
+      factory: () => new DecoratedKernelService(),
+      sourceLocation: { file: "src/tests/TestKernel.spec.ts" },
+    },
+    {
+      token: DecoratedKernelController,
+      tokenId: "testing:DecoratedKernelController",
+      debugName: "DecoratedKernelController",
+      kind: "rest-controller",
+      scope: "singleton",
+      dependencies: [
+        {
+          token: DecoratedKernelService,
+          tokenId: "testing:DecoratedKernelService",
+          parameterIndex: 0,
+        },
+      ],
+      factory: (resolver) => new DecoratedKernelController(resolver.get(DecoratedKernelService)),
+      sourceLocation: { file: "src/tests/TestKernel.spec.ts" },
+    },
+  ],
+  roots: [DecoratedKernelController],
+});
 
 function bootstrapProductionApp(value: string) {
   const service = new KernelValueService(value);
@@ -460,23 +501,16 @@ describe("TestKernel", () => {
     await kernel.dispose();
   });
 
-  it("creates isolated singleton instances from component metadata registered before kernel boot", async () => {
-    Reflect.defineMetadata("design:paramtypes", [], DecoratedKernelService);
-    Reflect.defineMetadata(
-      "design:paramtypes",
-      [DecoratedKernelService],
-      DecoratedKernelController,
-    );
-    Component({ scope: "singleton" })(DecoratedKernelService);
-    Component({ scope: "singleton" })(DecoratedKernelController);
-
-    const bootstrap = () =>
-      createApp({
+  it("creates isolated singleton instances from a generated graph installed before kernel boot", async () => {
+    const bootstrap = () => {
+      Container.installGeneratedGraph(DECORATED_KERNEL_GRAPH);
+      return createApp({
         controllers: [DecoratedKernelController as never],
         diValidation: "enforce",
         middlewares: [productionSecurityMiddleware],
         securityValidation: "enforce",
       });
+    };
     const [first, second] = await Promise.all([
       createTestKernel({ bootstrap, fidelity: "application" }),
       createTestKernel({ bootstrap, fidelity: "application" }),
@@ -597,18 +631,49 @@ describe("TestKernel", () => {
       constructor(readonly dependency: RequestDependency) {}
     }
 
-    Reflect.defineMetadata("design:paramtypes", [], RequestDependency);
-    Reflect.defineMetadata("design:paramtypes", [RequestDependency], InvalidSingleton);
-
     await expect(
       createTestKernel({
         bootstrap: () => {
-          Component({ scope: "request" })(RequestDependency);
-          Component({ scope: "singleton" })(InvalidSingleton);
+          Controller("/invalid-scope")(InvalidSingleton);
+          Container.installGeneratedGraph(
+            defineGeneratedDiGraph({
+              version: "croco.generated-di-graph.v1",
+              graphId: "testing.invalid-scope",
+              compilerVersion: "test",
+              inputHash: "testing.invalid-scope.v1",
+              providers: [
+                {
+                  token: RequestDependency,
+                  tokenId: "testing:RequestDependency",
+                  debugName: "RequestDependency",
+                  scope: "request",
+                  dependencies: [],
+                  factory: () => new RequestDependency(),
+                  sourceLocation: { file: "src/tests/TestKernel.spec.ts" },
+                },
+                {
+                  token: InvalidSingleton,
+                  tokenId: "testing:InvalidSingleton",
+                  debugName: "InvalidSingleton",
+                  scope: "singleton",
+                  dependencies: [
+                    {
+                      token: RequestDependency,
+                      tokenId: "testing:RequestDependency",
+                      parameterIndex: 0,
+                    },
+                  ],
+                  factory: (resolver) => new InvalidSingleton(resolver.get(RequestDependency)),
+                  sourceLocation: { file: "src/tests/TestKernel.spec.ts" },
+                },
+              ],
+              roots: [InvalidSingleton],
+            }),
+          );
           Container.set(KernelValueService, new KernelValueService("invalid-scope"));
           Container.set(KernelController, new KernelController());
           return createApp({
-            controllers: [KernelController],
+            controllers: [KernelController, InvalidSingleton as never],
             diValidation: "enforce",
             middlewares: [productionSecurityMiddleware],
             securityValidation: "enforce",

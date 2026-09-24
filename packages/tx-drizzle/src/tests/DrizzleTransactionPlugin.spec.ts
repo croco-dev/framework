@@ -1,5 +1,5 @@
 import { createApplicationRuntime, defineCrocoApplication } from "@croco/framework-module";
-import { TxManager, TxManagerRegistry } from "@croco/tx-core";
+import { TxManager } from "@croco/tx-core";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { drizzleTransaction } from "../libs/DrizzleTransactionPlugin";
 import type { DrizzleDb } from "../libs/types";
@@ -154,17 +154,23 @@ describe("drizzleTransaction", () => {
     });
   });
 
-  it("does not read or mutate the global TxManagerRegistry", async () => {
-    const register = vi.spyOn(TxManagerRegistry, "register");
-    const get = vi.spyOn(TxManagerRegistry, "get");
-    const { db } = createDb();
-    const runtime = createRuntime(db);
+  it("isolates transaction managers between application runtimes", async () => {
+    const firstDatabase = createDb();
+    const secondDatabase = createDb();
+    const firstRuntime = createRuntime(firstDatabase.db);
+    const secondRuntime = createRuntime(secondDatabase.db);
 
-    await runtime.initialize();
-    expect(runtime.get(TxManager)).toBeInstanceOf(TxManager);
+    await Promise.all([firstRuntime.initialize(), secondRuntime.initialize()]);
+    const firstManager = firstRuntime.get(TxManager);
+    const secondManager = secondRuntime.get(TxManager);
+    expect(firstManager).toBeInstanceOf(TxManager);
+    expect(secondManager).toBeInstanceOf(TxManager);
+    expect(firstManager).not.toBe(secondManager);
 
-    expect(register).not.toHaveBeenCalled();
-    expect(get).not.toHaveBeenCalled();
+    await expect(firstManager.run(async () => "first")).resolves.toBe("first");
+    await expect(secondManager.run(async () => "second")).resolves.toBe("second");
+    expect(firstDatabase.transaction).toHaveBeenCalledOnce();
+    expect(secondDatabase.transaction).toHaveBeenCalledOnce();
   });
 
   it("awaits application-owned database cleanup exactly once during disposal", async () => {

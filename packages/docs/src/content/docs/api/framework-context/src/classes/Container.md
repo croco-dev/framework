@@ -133,6 +133,22 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 ---
 
+### getGeneratedProviderTokens()
+
+> `static` **getGeneratedProviderTokens**(`kind`): readonly [`Constructor`](/api/framework-context/src/type-aliases/constructor/)[]
+
+#### Parameters
+
+##### kind
+
+[`GeneratedProviderKind`](/api/framework-context/src/type-aliases/generatedproviderkind/)
+
+#### Returns
+
+readonly [`Constructor`](/api/framework-context/src/type-aliases/constructor/)[]
+
+---
+
 ### getLastResolutionTrace()
 
 > `static` **getLastResolutionTrace**(): [`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/) \| `undefined`
@@ -145,21 +161,43 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 ### getMany()
 
-> `static` **getMany**\<`T`\>(`tokens`): `T`[]
+#### Call Signature
 
-#### Type Parameters
+> `static` **getMany**\<`TTokens`\>(`tokens`): \{ -readonly \[TIndex in string \| number \| symbol\]: TokenIdentifierValue\<TTokens\[TIndex\]\> \}
 
-##### T
+##### Type Parameters
+
+###### TTokens
+
+`TTokens` _extends_ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`unknown`\>[]
+
+##### Parameters
+
+###### tokens
+
+`TTokens`
+
+##### Returns
+
+\{ -readonly \[TIndex in string \| number \| symbol\]: TokenIdentifierValue\<TTokens\[TIndex\]\> \}
+
+#### Call Signature
+
+> `static` **getMany**\<`T`\>(`token`): `T`[]
+
+##### Type Parameters
+
+###### T
 
 `T`
 
-#### Parameters
+##### Parameters
 
-##### tokens
+###### token
 
-[`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`T`\>[]
+[`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidentifier/)\<`T`\>
 
-#### Returns
+##### Returns
 
 `T`[]
 
@@ -231,9 +269,9 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 ---
 
-### inspectTypeDIConstructorInjections()
+### inspectConstructorInjections()
 
-> `static` **inspectTypeDIConstructorInjections**(`token`): readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/typediinjectioninspection/)[]
+> `static` **inspectConstructorInjections**(`token`): readonly [`InjectionInspection`](/api/framework-context/src/type-aliases/injectioninspection/)[]
 
 #### Parameters
 
@@ -243,13 +281,13 @@ readonly [`TokenIdentifier`](/api/framework-context/src/type-aliases/tokenidenti
 
 #### Returns
 
-readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/typediinjectioninspection/)[]
+readonly [`InjectionInspection`](/api/framework-context/src/type-aliases/injectioninspection/)[]
 
 ---
 
-### inspectTypeDIInjections()
+### inspectInjections()
 
-> `static` **inspectTypeDIInjections**(`token`): readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/typediinjectioninspection/)[]
+> `static` **inspectInjections**(`token`): readonly [`InjectionInspection`](/api/framework-context/src/type-aliases/injectioninspection/)[]
 
 #### Parameters
 
@@ -259,7 +297,23 @@ readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/t
 
 #### Returns
 
-readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/typediinjectioninspection/)[]
+readonly [`InjectionInspection`](/api/framework-context/src/type-aliases/injectioninspection/)[]
+
+---
+
+### installGeneratedGraph()
+
+> `static` **installGeneratedGraph**(`graph`): `void`
+
+#### Parameters
+
+##### graph
+
+[`GeneratedDiGraph`](/api/framework-context/src/type-aliases/generateddigraph/)
+
+#### Returns
+
+`void`
 
 ---
 
@@ -363,6 +417,22 @@ readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/t
 
 ---
 
+### removeGeneratedGraph()
+
+> `static` **removeGeneratedGraph**(`graphId`): `void`
+
+#### Parameters
+
+##### graphId
+
+`string`
+
+#### Returns
+
+`void`
+
+---
+
 ### reset()
 
 > `static` **reset**(): `void`
@@ -425,11 +495,11 @@ readonly [`TypeDIInjectionInspection`](/api/framework-context/src/type-aliases/t
 
 ---
 
-### toTypeDIServiceIdentifier()
+### toServiceIdentifier()
 
-> `static` **toTypeDIServiceIdentifier**\<`T`\>(`token`): `ServiceIdentifier`\<`T`\>
+> `static` **toServiceIdentifier**\<`T`\>(`token`): [`ServiceIdentifier`](/api/framework-context/src/type-aliases/serviceidentifier/)\<`T`\>
 
-Returns the TypeDI identifier used internally for a Croco token.
+Returns the Croco runtime identifier used internally for a Croco token.
 Symbol mappings remain stable until [Container.reset](/api/framework-context/src/classes/container/#reset).
 
 #### Type Parameters
@@ -446,7 +516,7 @@ Symbol mappings remain stable until [Container.reset](/api/framework-context/src
 
 #### Returns
 
-`ServiceIdentifier`\<`T`\>
+[`ServiceIdentifier`](/api/framework-context/src/type-aliases/serviceidentifier/)\<`T`\>
 
 ---
 

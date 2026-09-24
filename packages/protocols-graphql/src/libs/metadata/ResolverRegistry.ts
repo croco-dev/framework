@@ -1,5 +1,4 @@
-import { MetadataStorage } from "@croco/framework-context";
-import { RESOLVERS_KEY } from "../constants";
+import { Container } from "@croco/framework-context";
 
 export class ResolverRegistry {
   private static instance: ResolverRegistry;
@@ -43,7 +42,7 @@ export class ResolverRegistry {
   }
 
   private static getMetadataResolvers(): Function[] {
-    return MetadataStorage.getAll<boolean>(RESOLVERS_KEY).map((entry) => entry.target as Function);
+    return [...Container.getGeneratedProviderTokens("graphql-resolver")];
   }
 }
 

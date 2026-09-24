@@ -6,7 +6,7 @@
  */
 
 import { spawn, type ChildProcess } from "node:child_process";
-import { cpSync, mkdtempSync, rmSync } from "node:fs";
+import { cpSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,7 +17,7 @@ const rootDir = resolve(__dirname, "..");
 const packageName = "@croco-example/quick-start-lambda";
 const smokeRoot = mkdtempSync(join(tmpdir(), "croco-quick-start-lambda-smoke-"));
 const commandTimeoutMs = 600_000;
-const startupTimeoutMs = 30_000;
+const startupTimeoutMs = 60_000;
 const requestTimeoutMs = 5_000;
 
 type SmokeResponse = {
@@ -50,12 +50,52 @@ try {
     "--ignore-scripts",
   ]);
   await runPhase("build", "pnpm", ["--filter", `${packageName}...`, "build"]);
+  assertGeneratedGraph();
   await runMeteringReplaySmoke();
+  await runApplicationLifecycleSmoke();
   await runRuntimeSmoke();
 
   console.log("quick-start-lambda-smoke: all checks passed");
 } finally {
   rmSync(smokeRoot, { force: true, recursive: true });
+}
+
+function assertGeneratedGraph(): void {
+  const manifestPath = join(
+    smokeRoot,
+    "examples",
+    "quick-start-lambda",
+    ".croco",
+    "di.manifest.json",
+  );
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
+    readonly providers: readonly {
+      readonly exportName: string;
+      readonly dependencies: readonly { readonly tokenId: string }[];
+    }[];
+  };
+  const providers = new Map(manifest.providers.map((provider) => [provider.exportName, provider]));
+  for (const name of [
+    "TestAuthProvider",
+    "ApiKeyGuard",
+    "UserService",
+    "HealthController",
+    "UserController",
+  ]) {
+    if (!providers.has(name)) {
+      throw new Error(`quick-start-lambda-smoke: generated graph missing ${name}`);
+    }
+  }
+  if (
+    !providers
+      .get("UserController")
+      ?.dependencies.some((dependency) => dependency.tokenId.includes("UserService"))
+  ) {
+    throw new Error(
+      "quick-start-lambda-smoke: generated UserController does not depend on UserService",
+    );
+  }
+  console.log("quick-start-lambda-smoke: generated graph passed");
 }
 
 function copyWorkspace(sourceDir: string, targetDir: string): void {
@@ -71,7 +111,9 @@ function copyWorkspace(sourceDir: string, targetDir: string): void {
 
       const segments = relativePath.split(sep);
       return !segments.some((segment) =>
-        [".git", ".turbo", "ci-reports", "coverage", "dist", "node_modules"].includes(segment),
+        [".croco", ".git", ".turbo", "ci-reports", "coverage", "dist", "node_modules"].includes(
+          segment,
+        ),
       );
     },
     recursive: true,
@@ -153,8 +195,8 @@ function terminateProcessGroup(child: ChildProcess, signal: NodeJS.Signals): voi
 async function runRuntimeSmoke(): Promise<void> {
   const port = await findOpenPort();
   const exampleDir = join(smokeRoot, "examples", "quick-start-lambda");
-  const server = spawn("pnpm", ["--dir", exampleDir, "dev"], {
-    cwd: smokeRoot,
+  const server = spawn(process.execPath, ["--import=tsx", "scripts/build.ts", "--watch"], {
+    cwd: exampleDir,
     detached: process.platform !== "win32",
     env: { ...process.env, CI: "true", NODE_ENV: "development", PORT: String(port) },
     stdio: ["ignore", "pipe", "pipe"],
@@ -184,6 +226,12 @@ async function runRuntimeSmoke(): Promise<void> {
       expectedText: '"status":"ok"',
     });
     await assertEndpoint("unauthorized users", port, "/api/users", { expectedStatus: 401 });
+    await assertEndpoint("unauthorized user creation", port, "/api/users", {
+      body: JSON.stringify({ name: "Mallory" }),
+      expectedStatus: 401,
+      headers: { "content-type": "application/json" },
+      method: "POST",
+    });
     await assertEndpoint("authorized users", port, "/api/users", {
       expectedStatus: 200,
       expectedText: "Alice",
@@ -195,6 +243,11 @@ async function runRuntimeSmoke(): Promise<void> {
       expectedText: "Carol",
       headers: { "content-type": "application/json", "x-api-key": "test-key" },
       method: "POST",
+    });
+    await assertEndpoint("created user remains available", port, "/api/users", {
+      expectedStatus: 200,
+      expectedText: "Carol",
+      headers: { "x-api-key": "test-key" },
     });
     await assertServerOutput("create user metering", serverOutput, "usage recorded");
   } finally {
@@ -350,6 +403,47 @@ async function runMeteringReplaySmoke(): Promise<void> {
   `;
 
   await runPhase("metering replay", "pnpm", ["--dir", exampleDir, "exec", "tsx", "-e", probe]);
+}
+
+async function runApplicationLifecycleSmoke(): Promise<void> {
+  const exampleDir = join(smokeRoot, "examples", "quick-start-lambda");
+  const probe = `
+    import "reflect-metadata";
+    import { createLambdaExampleRuntime } from "./src/app/bootstrap.ts";
+
+    void (async () => {
+      const runtime = await createLambdaExampleRuntime();
+      const response = await runtime.applicationRuntime.run(() =>
+        runtime.app.fetch(new Request("http://localhost/api/health")),
+      );
+      if (response.status !== 200) {
+        throw new Error("application-scoped health request returned " + response.status);
+      }
+
+      await runtime.applicationRuntime.dispose();
+      let rejectedAfterDisposal = false;
+      try {
+        runtime.applicationRuntime.run(() => undefined);
+      } catch {
+        rejectedAfterDisposal = true;
+      }
+      if (!rejectedAfterDisposal) {
+        throw new Error("disposed application scope accepted a callback");
+      }
+    })().catch((error: unknown) => {
+      console.error("quick-start-lambda-smoke: lifecycle probe failed", error);
+      process.exitCode = 1;
+    });
+  `;
+
+  await runPhase("application lifecycle", "pnpm", [
+    "--dir",
+    exampleDir,
+    "exec",
+    "tsx",
+    "-e",
+    probe,
+  ]);
 }
 
 function writeLiveServerOutput(output: string, stream: NodeJS.WriteStream): void {

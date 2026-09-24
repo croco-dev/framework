@@ -77,9 +77,9 @@ try {
 ```
 
 Each created runtime owns its registry, initialization and shutdown operations,
-diagnostics state, and a named TypeDI container. Resolve runtime providers through
+diagnostics state, and a named runtime container. Resolve runtime providers through
 the `ModuleContext` returned by `initialize()` or supplied to lifecycle hooks;
-isolated runtimes do not fall back to providers in the process-global TypeDI
+isolated runtimes do not fall back to providers in the process-global Croco runtime
 container.
 
 `shutdown()` runs lifecycle cleanup and leaves the registered graph reusable.
@@ -154,15 +154,15 @@ its direct imports. Accessing a known but non-exported provider throws
 Module-scoped contexts also reject undeclared class providers. Register class
 providers in the module's `providers` metadata, or export them from an imported
 module, before resolving them through `ctx.get`.
-Token-backed TypeDI classes should be declared as
+Token-backed Croco runtime classes should be declared as
 `{ provide: Token, useClass: ServiceClass }`; exporting a token alone does not
 make global `@Service(token)` class metadata part of the module contract.
 
 ## Provider Ownership
 
 Each provider token has exactly one declaring module. Croco validates the complete
-module graph before provider factories, lifecycle hooks, or global TypeDI
-registration run. If unrelated modules declare the same string, symbol, TypeDI
+module graph before provider factories, lifecycle hooks, or global Croco runtime
+registration run. If unrelated modules declare the same string, symbol, Croco runtime
 token, or class token, initialization throws `ModuleProviderOwnershipProblem`
 with every owner in deterministic name order. Importing an exported provider
 grants read access and does not create another owner.

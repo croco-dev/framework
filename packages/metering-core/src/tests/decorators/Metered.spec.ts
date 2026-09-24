@@ -1,6 +1,5 @@
 import "reflect-metadata";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Container, LOGGER_TOKEN } from "@croco/framework-context";
 import type { ILogger } from "@croco/framework-context";
 import {
   clearMeteringService,
@@ -324,7 +323,6 @@ describe("@Metered decorator", () => {
     let mockLogger: ILogger;
 
     beforeEach(() => {
-      Container.reset();
       mockLogger = {
         debug: vi.fn(),
         info: vi.fn(),
@@ -333,16 +331,15 @@ describe("@Metered decorator", () => {
         fatal: vi.fn(),
         child: vi.fn().mockReturnThis(),
       };
-      Container.set(LOGGER_TOKEN, mockLogger);
     });
 
-    it("should return result even if metering fails and log via DI logger", async () => {
+    it("should report local metering failures through the explicit logger", async () => {
       vi.mocked(mockService.record).mockRejectedValue(new Error("Metering error"));
 
       class TestService {
         tenantId = "tenant-1";
 
-        @Metered({ meterId: "api_calls" })
+        @Metered({ meterId: "api_calls", logger: mockLogger })
         async doSomething(): Promise<string> {
           return "success";
         }
@@ -369,6 +366,7 @@ describe("@Metered decorator", () => {
       class TestService {
         @Metered({
           meter,
+          logger: mockLogger,
           dimensionsExtractor: () => {
             throw new Error("Dimension extraction failed");
           },
@@ -395,6 +393,7 @@ describe("@Metered decorator", () => {
       class TestService {
         @Metered({
           meter,
+          logger: mockLogger,
           eventIdExtractor: () => {
             throw new Error("Event ID extraction failed");
           },
@@ -410,13 +409,7 @@ describe("@Metered decorator", () => {
       expect(mockLogger.error).toHaveBeenCalled();
     });
 
-    it("should fallback to console.error if DI logger fails", async () => {
-      vi.spyOn(Container, "get").mockImplementationOnce((token) => {
-        if (token === LOGGER_TOKEN) {
-          throw new Error("ServiceNotFoundError");
-        }
-        return Container.get(token);
-      });
+    it("should propagate a local metering failure without an explicit logger", async () => {
       vi.mocked(mockService.record).mockRejectedValue(new Error("Metering error"));
       const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
@@ -430,12 +423,24 @@ describe("@Metered decorator", () => {
       }
 
       const service = new TestService();
-      const result = await service.doSomething();
-
-      expect(result).toBe("success");
-      expect(consoleSpy).toHaveBeenCalled();
+      await expect(service.doSomething()).rejects.toThrow("Metering error");
+      expect(consoleSpy).not.toHaveBeenCalled();
 
       consoleSpy.mockRestore();
+    });
+
+    it("should propagate explicit logger failures", async () => {
+      vi.mocked(mockService.record).mockRejectedValue(new Error("Metering error"));
+      vi.mocked(mockLogger.error).mockImplementation(() => {
+        throw new Error("Logger error");
+      });
+      class TestService {
+        @Metered({ meterId: "api_calls", logger: mockLogger })
+        async doSomething(): Promise<string> {
+          return "success";
+        }
+      }
+      await expect(new TestService().doSomething()).rejects.toThrow("Logger error");
     });
 
     it("should fail closed when a billing-required meter rejects the record", async () => {

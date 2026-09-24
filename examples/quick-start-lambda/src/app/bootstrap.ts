@@ -1,6 +1,11 @@
-import { AUTH_PROVIDER_TOKEN, AuthGuard } from "@croco/auth-core";
-import { Container, LOGGER_TOKEN } from "@croco/framework-context";
-import { setMeteringService } from "@croco/metering-core";
+import { LOGGER_TOKEN } from "@croco/framework-context";
+import {
+  createApplicationRuntime,
+  defineCrocoApplication,
+  defineCrocoModule,
+} from "@croco/framework-module";
+import { runWithMeteringService } from "@croco/metering-core";
+import { createNodeHost } from "@croco/preset-node";
 import {
   createSlidingWindowPolicy,
   RateLimiter,
@@ -11,19 +16,24 @@ import {
   bodyLimitMiddleware,
   corsMiddleware,
   createApp,
+  createHttpAppConfig,
   createRuntimeAwareRateLimitClientIdentityPolicy,
+  httpTransport,
   mb,
   rateLimitHttpMiddleware,
   securityHeadersMiddleware,
 } from "@croco/transports-http";
+import { generatedDiGraph } from "../../.croco/di.generated";
 import { createMeteringService } from "../integrations/inMemoryMetering";
-import { TestAuthProvider } from "../integrations/TestAuthProvider";
-import { HealthController } from "../protocols/HealthController";
-import { UserController } from "../protocols/UserController";
 import type { ILogger } from "@croco/framework-context";
-import type { MiddlewareFunction } from "@croco/transports-http";
+import type { ApplicationRuntime } from "@croco/framework-module";
+import type { NodeHost } from "@croco/preset-node";
+import type { CrocoApp, MiddlewareFunction } from "@croco/transports-http";
 
-type LambdaExampleApp = ReturnType<typeof createApp>;
+export type LambdaExampleRuntime = {
+  readonly app: CrocoApp;
+  readonly applicationRuntime: ApplicationRuntime;
+};
 
 const RATE_LIMIT_BYPASS_PATHS = new Set(["/api/health"]);
 
@@ -66,18 +76,48 @@ const demoLogger: ILogger = {
   child: () => demoLogger,
 };
 
-export function createLambdaExampleApp(): LambdaExampleApp {
-  registerDemoRuntime();
+export async function createLambdaExampleRuntime(): Promise<LambdaExampleRuntime> {
+  const meteringService = createMeteringService();
+  const applicationRuntime = createApplicationRuntime(
+    defineCrocoApplication({
+      name: "quick-start-lambda",
+      imports: [
+        httpTransport({
+          middlewares: [
+            {
+              id: "metering",
+              order: 50,
+              middleware: (_context, next) => runWithMeteringService(meteringService, next),
+            },
+            { id: "security-headers", order: 100, middleware: securityHeadersMiddleware() },
+            {
+              id: "cors",
+              order: 200,
+              middleware: corsMiddleware({
+                origins: [process.env.WEB_ORIGIN ?? "http://localhost:5173"],
+              }),
+            },
+            { id: "body-limit", order: 300, middleware: bodyLimitMiddleware({ limit: mb(1) }) },
+            { id: "rate-limit", order: 400, middleware: createApiRateLimitMiddleware() },
+          ],
+        }),
+        defineCrocoModule({
+          name: "quick-start-logger",
+          providers: [{ provide: LOGGER_TOKEN, useValue: demoLogger }],
+        }),
+      ],
+    }),
+    generatedDiGraph,
+  );
+  await applicationRuntime.initialize();
 
-  return createApp({
-    controllers: [HealthController, UserController],
-    middlewares: [
-      securityHeadersMiddleware(),
-      corsMiddleware({ origins: [process.env.WEB_ORIGIN ?? "http://localhost:5173"] }),
-      bodyLimitMiddleware({ limit: mb(1) }),
-      createApiRateLimitMiddleware(),
-    ],
+  const app = applicationRuntime.run(() => {
+    const transport = createApp(createHttpAppConfig(applicationRuntime));
+    transport.getHono();
+    return transport;
   });
+
+  return { app, applicationRuntime };
 }
 
 function createApiRateLimitMiddleware(): MiddlewareFunction {
@@ -94,16 +134,21 @@ function createApiRateLimitMiddleware(): MiddlewareFunction {
   });
 }
 
-export function startLocalServer(app: LambdaExampleApp): void {
+export function startLocalServer(runtime: LambdaExampleRuntime): NodeHost | undefined {
   const port = parseLocalPort(process.env.PORT);
   if (port === undefined) {
     console.error(`Invalid PORT value "${process.env.PORT}". Use an integer from 1 to 65535.`);
     process.exitCode = 1;
-    return;
+    return undefined;
   }
 
-  void app
-    .listen(port)
+  const hono = runtime.app.getHono();
+  const host = createNodeHost(
+    { fetch: runtime.applicationRuntime.bindHostCallback(hono.fetch.bind(hono)) },
+    { port },
+  );
+  void host
+    .start()
     .then(() => {
       console.log(`SaaS demo API running at http://localhost:${port}/api`);
     })
@@ -111,13 +156,8 @@ export function startLocalServer(app: LambdaExampleApp): void {
       console.error("Failed to start local server", error);
       process.exitCode = 1;
     });
-}
 
-function registerDemoRuntime(): void {
-  setMeteringService(createMeteringService());
-  Container.set(LOGGER_TOKEN, demoLogger);
-  Container.set(AUTH_PROVIDER_TOKEN, new TestAuthProvider());
-  Container.set(AuthGuard, new AuthGuard());
+  return host;
 }
 
 function parseLocalPort(rawPort: string | undefined): number | undefined {

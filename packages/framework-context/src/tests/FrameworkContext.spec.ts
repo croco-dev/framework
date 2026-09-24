@@ -1,8 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import "reflect-metadata";
-import { Component, Container, Context, Inject, MetadataStorage, Token } from "../index";
+import { Container, Context, Inject, InjectOptional, MetadataStorage, Token } from "../index";
 import type { RuntimeContext } from "../index";
-import { getComponentScope, getDeclaredComponentScope } from "../libs/decorators/Component";
+import { registerInjectionMetadata } from "../libs/InjectionMetadata";
+import {
+  Component as RuntimeComponent,
+  getComponentScope,
+  getDeclaredComponentScope,
+} from "../libs/decorators/Component";
+import { Component } from "./registerTestComponent";
 
 class SimpleService {
   getValue(): string {
@@ -47,6 +53,7 @@ describe("Container", () => {
       }
 
       Reflect.defineMetadata("design:paramtypes", [Repository, Number, Object], DefaultedService);
+      registerInjectionMetadata(DefaultedService, { index: 0, token: Repository });
       Component()(DefaultedService);
       const repository = Container.set(Repository, new Repository());
 
@@ -81,6 +88,19 @@ describe("Container", () => {
       const dependency = Container.set(dependencyToken, new SimpleService());
 
       expect(Container.get(SourceModeService).dependency).toBe(dependency);
+    });
+
+    it("uses a constructor default when an optional token is not bound", () => {
+      const optionalToken = new Token<number>("optional.value");
+      class OptionalService {
+        constructor(@InjectOptional(optionalToken) readonly value: number = 42) {}
+      }
+
+      Component({ scope: "transient" })(OptionalService);
+      expect(Container.get(OptionalService).value).toBe(42);
+
+      Container.set(optionalToken, 7);
+      expect(Container.get(OptionalService).value).toBe(7);
     });
   });
 
@@ -706,41 +726,42 @@ describe("Component decorator", () => {
     MetadataStorage.clear();
   });
 
-  it("should register component with default singleton scope", () => {
-    @Component()
+  it("should declare the default singleton scope without runtime registration", () => {
+    @RuntimeComponent()
     class SingletonService {}
 
     const scope = getComponentScope(SingletonService);
     expect(scope).toBe("singleton");
+    expect(Container.getComponentMetadata(SingletonService)).toBeUndefined();
   });
 
-  it("should register component with specified scope", () => {
-    @Component({ scope: "transient" })
+  it("should declare a transient scope", () => {
+    @RuntimeComponent({ scope: "transient" })
     class TransientService {}
 
     const scope = getComponentScope(TransientService);
     expect(scope).toBe("transient");
   });
 
-  it("should register component with request scope", () => {
-    @Component({ scope: "request" })
+  it("should declare a request scope", () => {
+    @RuntimeComponent({ scope: "request" })
     class RequestService {}
 
     const scope = getComponentScope(RequestService);
     expect(scope).toBe("request");
   });
 
-  it("should expose component metadata through Container public API", () => {
-    @Component({ scope: "transient" })
+  it("does not expose marker metadata through the runtime container", () => {
+    @RuntimeComponent({ scope: "transient" })
     class MetadataService {}
 
     const metadata = Container.getComponentMetadata(MetadataService);
-    expect(metadata?.scope).toBe("transient");
-    expect(metadata?.target).toBe(MetadataService);
+    expect(metadata).toBeUndefined();
+    expect(getDeclaredComponentScope(MetadataService)).toBe("transient");
   });
 
   it("should preserve the declared scope after the container is reset", () => {
-    @Component({ scope: "request" })
+    @RuntimeComponent({ scope: "request" })
     class RequestService {}
 
     Container.reset();

@@ -33,9 +33,9 @@ const IMPORT_SPECIFIER_PATTERN =
   /\b(?:import|export)\s+(type\s+)?(?:[^'"]*?\s+from\s+)?["']([^"']+)["']/g;
 const DYNAMIC_IMPORT_SPECIFIER_PATTERN = /\bimport\(\s*["']([^"']+)["']\s*\)/g;
 const GENERATED_API_DI_GRAPH_SCRIPT =
-  "cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
+  "pnpm di:generate && cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoApp --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
 const GENERATED_SAAS_API_DI_GRAPH_SCRIPT =
-  "cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoDiGraphApplication --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
+  "pnpm di:generate && cross-env NODE_OPTIONS=--import=tsx croco di graph --module src/app.ts --bootstrap createCrocoDiGraphApplication --roots createCrocoDiGraphRoots --write ../../.croco/build/di-graph.manifest.json";
 const WORKSPACE_ROOT = join(process.cwd(), "..", "..");
 const TSX_CLI_PATH = join(
   WORKSPACE_ROOT,
@@ -1160,9 +1160,9 @@ describe("E2E: generate()", () => {
       expect(rootPackageJson.scripts?.["contract:client"]).toContain("--strict-schemas");
       expect(apiPackageJson.scripts).toMatchObject({
         "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
-        "dev:smoke": "tsx src/dev-smoke.ts",
-        build: "tsup src/index.ts src/lambda.ts --format cjs --clean",
-        test: "vitest run",
+        "dev:smoke": "pnpm di:generate && tsx src/dev-smoke.ts",
+        build: "tsup --config tsup.config.ts",
+        test: "pnpm di:generate && vitest run",
       });
       expect(apiPackageJson.devDependencies?.["cross-env"]).toBe("^10.1.0");
       expect(apiAppSource).toContain("createCrocoDiGraphRoots");
@@ -1348,7 +1348,7 @@ describe("E2E: generate()", () => {
       expect(apiPackageJson.scripts).toMatchObject({
         "di:graph": GENERATED_API_DI_GRAPH_SCRIPT,
         "admin:smoke":
-          "tsx src/dev-smoke.ts && tsx src/webhook-smoke.ts && vitest run src/tests/CreditOperations.spec.ts",
+          "pnpm di:generate && tsx src/dev-smoke.ts && tsx src/webhook-smoke.ts && vitest run src/tests/CreditOperations.spec.ts",
       });
       expect(apiPackageJson.devDependencies?.["cross-env"]).toBe("^10.1.0");
       expect(consolePackageJson.dependencies).toMatchObject({
@@ -1578,22 +1578,31 @@ describe("E2E: generate()", () => {
     });
     expect(apiPackageJson.scripts).toMatchObject({
       "di:graph": GENERATED_SAAS_API_DI_GRAPH_SCRIPT,
-      "profile:check": "tsx src/provider-profile-check.ts --mode=manifest",
-      "profile:smoke:real": "tsx src/provider-profile-check.ts --mode=real-provider",
+      "profile:check": "pnpm di:generate && tsx src/provider-profile-check.ts --mode=manifest",
+      "profile:smoke:real":
+        "pnpm di:generate && tsx src/provider-profile-check.ts --mode=real-provider",
     });
     expect(apiPackageJson.devDependencies?.["cross-env"]).toBe("^10.1.0");
-    expect(apiPackageJson.devDependencies?.typedi).toBe("^0.10.0");
+    expect(apiPackageJson.devDependencies?.typedi).toBeUndefined();
     expect(apiPackageJson.devDependencies?.["@croco/cli"]).toMatch(/^\^[0-9]+\.[0-9]+\.[0-9]+$/);
     expect(apiPackageJson.devDependencies?.["@croco/testing"]).toBe("^0.0.1");
-    expect(apiPackageJson.scripts?.["ops:smoke"]).toBe("tsx src/demo/ops-smoke.ts");
-    expect(apiPackageJson.scripts?.["jobs:smoke"]).toBe("tsx src/demo/jobs-smoke.ts");
-    expect(apiPackageJson.scripts?.["demo:scenario"]).toBe("tsx src/demo/scenario.ts");
-    expect(apiPackageJson.scripts?.["demo:usage-recover"]).toBe("tsx src/demo/usage-recover.ts");
+    expect(apiPackageJson.scripts?.["ops:smoke"]).toBe(
+      "pnpm di:generate && tsx src/demo/ops-smoke.ts",
+    );
+    expect(apiPackageJson.scripts?.["jobs:smoke"]).toBe(
+      "pnpm di:generate && tsx src/demo/jobs-smoke.ts",
+    );
+    expect(apiPackageJson.scripts?.["demo:scenario"]).toBe(
+      "pnpm di:generate && tsx src/demo/scenario.ts",
+    );
+    expect(apiPackageJson.scripts?.["demo:usage-recover"]).toBe(
+      "pnpm di:generate && tsx src/demo/usage-recover.ts",
+    );
     expect(apiPackageJson.scripts?.["failure-drill:smoke"]).toBe(
-      "tsx src/demo/failure-drill-smoke.ts",
+      "pnpm di:generate && tsx src/demo/failure-drill-smoke.ts",
     );
     expect(apiPackageJson.scripts?.["failure-drill:integration"]).toBe(
-      "tsx src/provider-profile-check.ts --mode=real-provider",
+      "pnpm di:generate && tsx src/provider-profile-check.ts --mode=real-provider",
     );
     expect(existsSync(join(testDir, "apps", "api-server", "src", "saasDemo.ts"))).toBe(true);
     expect(
@@ -3194,6 +3203,10 @@ describe("E2E: generate()", () => {
         join(testDir, "apps", "api-server", "src", "controllers", "AiController.ts"),
         "utf8",
       );
+      const diConfigSource = readFileSync(
+        join(testDir, "apps", "api-server", "di.config.ts"),
+        "utf8",
+      );
       const failureDrillSource = readFileSync(
         join(testDir, "apps", "api-server", "src", "demo", "failure-drill-smoke.ts"),
         "utf8",
@@ -3234,10 +3247,18 @@ describe("E2E: generate()", () => {
       expect(apiPackageJson.dependencies?.["@croco/testing"]).toBeUndefined();
       expect(apiPackageJson.devDependencies?.["@croco/testing"]).toBe("^0.0.1");
       expect(apiPackageJson.devDependencies?.["cross-env"]).toBe("^10.1.0");
-      expect(apiPackageJson.scripts?.["ai:smoke"]).toBe("tsx src/demo/ai-smoke.ts");
-      expect(apiPackageJson.scripts?.["demo:scenario"]).toBe("tsx src/demo/scenario.ts");
-      expect(apiPackageJson.scripts?.["demo:usage-recover"]).toBe("tsx src/demo/usage-recover.ts");
-      expect(apiPackageJson.scripts?.["jobs:smoke"]).toBe("tsx src/demo/jobs-smoke.ts");
+      expect(apiPackageJson.scripts?.["ai:smoke"]).toBe(
+        "pnpm di:generate && tsx src/demo/ai-smoke.ts",
+      );
+      expect(apiPackageJson.scripts?.["demo:scenario"]).toBe(
+        "pnpm di:generate && tsx src/demo/scenario.ts",
+      );
+      expect(apiPackageJson.scripts?.["demo:usage-recover"]).toBe(
+        "pnpm di:generate && tsx src/demo/usage-recover.ts",
+      );
+      expect(apiPackageJson.scripts?.["jobs:smoke"]).toBe(
+        "pnpm di:generate && tsx src/demo/jobs-smoke.ts",
+      );
       expect(appSource).toContain("createApplicationRuntime");
       expect(appSource).toContain("applicationRuntime");
       expect(compositionRootSource).toContain("AI_SAAS_RUNTIME_TOKEN");
@@ -3247,20 +3268,20 @@ describe("E2E: generate()", () => {
       );
       expect(aiRuntimeSource).toContain('new Token<AiSaasRuntime>("AiSaasRuntime")');
       expect(compositionRootSource).toContain("createSaasApplicationModule");
-      expect(compositionRootSource).toContain(
-        "ctx.set(AI_SAAS_RUNTIME_TOKEN, createAiSaasRuntime(runtime))",
-      );
+      expect(compositionRootSource).toContain("ctx.set(AI_SAAS_RUNTIME_TOKEN, aiRuntime)");
       expect(appSource).toContain("runtime.bindHostCallback");
       expect(appSource).toMatch(
         /hostPlatform\?: ['"]node['"] \| ['"]lambda['"] \| ['"]cloudflare-workers['"]/,
       );
       expect(appSource).not.toContain("Container.set");
       expect(appSource).not.toContain("Container.has(LOGGER_TOKEN)");
-      expect(aiControllerSource).toContain("getAiSaasRuntime()");
+      expect(aiControllerSource).toContain("@Inject(AI_SAAS_RUNTIME_STATE_TOKEN)");
+      expect(diConfigSource).toContain('exportName: "AI_SAAS_RUNTIME_STATE_TOKEN"');
+      expect(aiControllerSource).not.toContain("Container.get");
       expect(aiControllerSource).not.toMatch(/defaultAiSaasRuntime|defaultSaasRuntime/);
       expect(apiPackageJson.scripts?.["di:graph"]).toBe(GENERATED_SAAS_API_DI_GRAPH_SCRIPT);
       expect(apiPackageJson.scripts?.["failure-drill:smoke"]).toBe(
-        "tsx src/demo/failure-drill-smoke.ts",
+        "pnpm di:generate && tsx src/demo/failure-drill-smoke.ts",
       );
       expect(failureDrillSource).toContain("assertSaasSmokeContract(snapshot)");
       expect(appSource).toContain("createCrocoDiGraphRoots");

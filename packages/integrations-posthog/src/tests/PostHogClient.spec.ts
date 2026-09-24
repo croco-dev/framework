@@ -1,10 +1,10 @@
 import "reflect-metadata";
-import { Container, ContainerResolutionProblem, LOGGER_TOKEN } from "@croco/framework-context";
+import { Container } from "@croco/framework-context";
 import type { ILogger } from "@croco/framework-context";
 import { PostHog } from "posthog-node";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PostHogClient } from "../libs/PostHogClient";
-import { POSTHOG_CONFIG_TOKEN, registerPostHogConfig } from "../libs/PostHogConfig";
+import { POSTHOG_CONFIG_TOKEN, createPostHogConfig } from "../libs/PostHogConfig";
 import { PostHogConfigProblem } from "../libs/problems/PostHogProblems";
 
 vi.mock("posthog-node", () => {
@@ -53,9 +53,8 @@ describe("PostHogClient", () => {
       warn: vi.fn<ILogger["warn"]>(),
     };
     loggerMock.child.mockReturnValue(loggerMock);
-    Container.set(LOGGER_TOKEN, loggerMock);
     vi.stubEnv("POSTHOG_HOST", "https://test.posthog.com");
-    client = new PostHogClient({ apiKey: "test-key" });
+    client = new PostHogClient({ apiKey: "test-key" }, loggerMock);
     loggerMock.warn.mockClear();
   });
 
@@ -110,33 +109,29 @@ describe("PostHogClient", () => {
     expect(shutdownSpy).toHaveBeenCalled();
   });
 
-  it("should resolve through Container after configuration is registered", () => {
-    Container.reset();
-    Container.register(PostHogClient, "singleton");
-    Container.set(LOGGER_TOKEN, loggerMock);
-    const config = registerPostHogConfig({
+  it("should create validated configuration without registering global providers", () => {
+    const config = createPostHogConfig({
       apiKey: "registered-key",
       host: "https://registered.posthog.example",
     });
 
-    const resolved = Container.get(PostHogClient);
+    const resolved = new PostHogClient(config, loggerMock);
 
-    expect(Container.get(POSTHOG_CONFIG_TOKEN)).toBe(config);
-    expect(resolved).toBe(Container.get(PostHogClient));
+    expect(Container.has(POSTHOG_CONFIG_TOKEN)).toBe(false);
+    expect(Container.has(PostHogClient)).toBe(false);
+    expect(resolved.getClient()).not.toBeUndefined();
+    expect(loggerMock.warn).not.toHaveBeenCalled();
     expect(PostHog).toHaveBeenLastCalledWith("registered-key", {
       host: "https://registered.posthog.example",
     });
   });
 
-  it("should freeze the resolved environment host when configuration is registered", () => {
-    Container.reset();
-    Container.register(PostHogClient, "singleton");
-    Container.set(LOGGER_TOKEN, loggerMock);
+  it("should freeze the resolved environment host when configuration is created", () => {
     vi.stubEnv("POSTHOG_HOST", "https://registered-env.posthog.example");
 
-    const config = registerPostHogConfig({ apiKey: "registered-key" });
+    const config = createPostHogConfig({ apiKey: "registered-key" }, loggerMock);
     vi.unstubAllEnvs();
-    const resolved = Container.get(PostHogClient);
+    const resolved = new PostHogClient(config, loggerMock);
 
     expect(config).toEqual({
       apiKey: "registered-key",
@@ -150,13 +145,23 @@ describe("PostHogClient", () => {
     expect(loggerMock.warn).toHaveBeenCalledOnce();
   });
 
-  it("should resolve with an environment host when no logger is registered", () => {
-    Container.reset();
-    Container.register(PostHogClient, "singleton");
+  it("should keep independently composed client configurations isolated", () => {
+    const firstConfig = createPostHogConfig({ apiKey: "first", host: "https://first.example" });
+    const secondConfig = createPostHogConfig({ apiKey: "second", host: "https://second.example" });
+
+    new PostHogClient(firstConfig);
+    expect(PostHog).toHaveBeenLastCalledWith("first", { host: "https://first.example" });
+    new PostHogClient(secondConfig);
+    expect(PostHog).toHaveBeenLastCalledWith("second", { host: "https://second.example" });
+    expect(firstConfig).toEqual({ apiKey: "first", host: "https://first.example" });
+    expect(Container.has(POSTHOG_CONFIG_TOKEN)).toBe(false);
+  });
+
+  it("should construct with an environment host when no logger is supplied", () => {
     vi.stubEnv("POSTHOG_HOST", "https://bootstrap.posthog.example");
 
-    registerPostHogConfig({ apiKey: "bootstrap-key" });
-    const resolved = Container.get(PostHogClient);
+    const config = createPostHogConfig({ apiKey: "bootstrap-key" });
+    const resolved = new PostHogClient(config);
 
     expect(resolved.getClient()).not.toBeUndefined();
     expect(PostHog).toHaveBeenLastCalledWith("bootstrap-key", {
@@ -164,34 +169,18 @@ describe("PostHogClient", () => {
     });
   });
 
-  it("should fail with a stable DI diagnostic when configuration is not registered", () => {
-    Container.reset();
-    Container.register(PostHogClient, "singleton");
-
-    const error = captureError(() => Container.get(PostHogClient));
-
-    expect(error).toBeInstanceOf(ContainerResolutionProblem);
-    expect(error).toMatchObject({
-      code: "framework-context/di-resolution-failed",
-      reason: "missing-provider",
-    });
-  });
-
   it.each([
     ["apiKey", { apiKey: "", host: "https://valid.posthog.example" }],
     ["host", { apiKey: "valid-key", host: "not-a-url" }],
-  ])("should reject invalid %s configuration before registration", (field, config) => {
-    Container.reset();
-
-    const configError = captureError(() => registerPostHogConfig(config));
+  ])("should reject invalid %s configuration without registering providers", (field, config) => {
+    const configError = captureError(() => createPostHogConfig(config));
     expect(configError).toBeInstanceOf(PostHogConfigProblem);
     expect(configError).toMatchObject({
       code: "integrations-posthog/missing-config",
       detail: expect.stringContaining(field),
     });
 
-    const resolutionError = captureError(() => Container.get(POSTHOG_CONFIG_TOKEN));
-    expect(resolutionError).toMatchObject({ code: "framework-context/di-resolution-failed" });
+    expect(Container.has(POSTHOG_CONFIG_TOKEN)).toBe(false);
   });
 
   it("should throw error when host is not provided", () => {
@@ -216,7 +205,7 @@ describe("PostHogClient", () => {
   it("should fallback to POSTHOG_HOST with a data residency warning when host is not provided", () => {
     vi.stubEnv("POSTHOG_HOST", "https://env.posthog.example");
 
-    new PostHogClient({ apiKey: "env-key" });
+    new PostHogClient({ apiKey: "env-key" }, loggerMock);
 
     expect(PostHog).toHaveBeenLastCalledWith("env-key", {
       host: "https://env.posthog.example",
@@ -232,7 +221,9 @@ describe("PostHogClient", () => {
   it("should throw error when POSTHOG_HOST is empty string", () => {
     vi.stubEnv("POSTHOG_HOST", "");
 
-    expect(() => new PostHogClient({ apiKey: "env-key" })).toThrow(HOST_REQUIRED_MESSAGE);
+    expect(() => new PostHogClient({ apiKey: "env-key" }, loggerMock)).toThrow(
+      HOST_REQUIRED_MESSAGE,
+    );
 
     vi.unstubAllEnvs();
   });

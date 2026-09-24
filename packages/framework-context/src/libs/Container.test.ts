@@ -1,8 +1,10 @@
-import { Token, Container as TypeDIContainer } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
 import { Container } from "./Container";
 import { Context } from "./Context";
-import { Component } from "./decorators/Component";
+import { Inject } from "./decorators/Inject";
+import { registerInjectionMetadata } from "./InjectionMetadata";
+import { Token } from "./Token";
+import { Component } from "../tests/registerTestComponent";
 
 describe("Container.getRequestScoped", () => {
   beforeEach(() => {
@@ -132,11 +134,7 @@ describe("Container.getRequestScoped", () => {
     }
 
     Reflect.defineMetadata("design:paramtypes", [String], ConfigConsumer);
-    TypeDIContainer.registerHandler({
-      object: ConfigConsumer,
-      index: 0,
-      value: (container) => container.get(configToken),
-    });
+    Inject(configToken)(ConfigConsumer, undefined, 0);
     Component({ scope: "transient" })(ConfigConsumer);
     Container.set(configToken, "token-value");
 
@@ -156,6 +154,7 @@ describe("Container.getRequestScoped", () => {
 
     Reflect.defineMetadata("design:paramtypes", [], Dep);
     Reflect.defineMetadata("design:paramtypes", [Dep], SingletonService);
+    registerInjectionMetadata(SingletonService, { index: 0, token: Dep });
     Component()(Dep);
     Component()(SingletonService);
 
@@ -175,11 +174,7 @@ describe("Container.getRequestScoped", () => {
     }
 
     Reflect.defineMetadata("design:paramtypes", [String], RequestConfigConsumer);
-    TypeDIContainer.registerHandler({
-      object: RequestConfigConsumer,
-      index: 0,
-      value: (container) => container.get(configToken),
-    });
+    Inject(configToken)(RequestConfigConsumer, undefined, 0);
     Component({ scope: "request" })(RequestConfigConsumer);
     Container.set(configToken, "request-token-value");
 
@@ -192,25 +187,25 @@ describe("Container.getRequestScoped", () => {
   });
 });
 
-describe("Container.toTypeDIServiceIdentifier", () => {
+describe("Container.toServiceIdentifier", () => {
   beforeEach(() => Container.reset());
 
   it("returns non-symbol identifiers unchanged", () => {
     class Service {}
     const token = new Token<string>("config");
 
-    expect(Container.toTypeDIServiceIdentifier(Service)).toBe(Service);
-    expect(Container.toTypeDIServiceIdentifier(token)).toBe(token);
-    expect(Container.toTypeDIServiceIdentifier("config")).toBe("config");
+    expect(Container.toServiceIdentifier(Service)).toBe(Service);
+    expect(Container.toServiceIdentifier(token)).toBe(token);
+    expect(Container.toServiceIdentifier("config")).toBe("config");
   });
 
-  it("maps symbols to one TypeDI token until reset", () => {
+  it("maps symbols to one Croco runtime token until reset", () => {
     const symbol = Symbol("config");
-    const first = Container.toTypeDIServiceIdentifier(symbol);
+    const first = Container.toServiceIdentifier(symbol);
 
-    expect(Container.toTypeDIServiceIdentifier(symbol)).toBe(first);
+    expect(Container.toServiceIdentifier(symbol)).toBe(first);
     Container.reset();
-    expect(Container.toTypeDIServiceIdentifier(symbol)).not.toBe(first);
+    expect(Container.toServiceIdentifier(symbol)).not.toBe(first);
   });
 });
 

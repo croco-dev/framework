@@ -9,7 +9,7 @@ export type { PostHogConfig } from "./libs/PostHogClient";
 export { PostHogClient } from "./libs/PostHogClient";
 export {
   POSTHOG_CONFIG_TOKEN,
-  registerPostHogConfig,
+  createPostHogConfig,
   validatePostHogConfig,
 } from "./libs/PostHogConfig";
 export { PostHogConfigProblem } from "./libs/problems/PostHogProblems";

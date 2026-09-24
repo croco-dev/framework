@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { Component, Container, Context } from "../index";
+import { Container, Context } from "../index";
+import { Component } from "./registerTestComponent";
 
 describe("request scoped container behavior", () => {
   beforeEach(() => {

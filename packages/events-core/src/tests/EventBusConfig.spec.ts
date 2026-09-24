@@ -8,8 +8,9 @@ import {
   type EventHandlerClass,
   RegisterEventHandler,
 } from "../libs/EventHandler";
-import type { HandlerResolver } from "../libs/HandlerResolver";
+import { DefaultHandlerResolver, type HandlerResolver } from "../libs/HandlerResolver";
 import type { EventSubscription } from "../libs/types/EventSubscription";
+import { EventHandlerResolverRequiredProblem } from "../libs/problems/EventsProblems";
 
 class TestEvent extends DomainEvent {
   static eventName = "TestEvent";
@@ -137,7 +138,7 @@ describe("EventBusConfig", () => {
         handlerClass: secondHandler as EventHandlerClass,
       });
 
-      await config.start({ handlers: [] });
+      await config.start({ handlers: [], resolver: new DefaultHandlerResolver() });
 
       expect(mockBus.subscriptions).toHaveLength(2);
       expect(mockBus.subscriptions[0].handlerClass).toBe(firstHandler);
@@ -154,7 +155,7 @@ describe("EventBusConfig", () => {
         eventName: "TestEvent",
         handlerClass: TestHandler as EventHandlerClass,
       });
-      await config.start({ handlers: [] });
+      await config.start({ handlers: [], resolver: new DefaultHandlerResolver() });
 
       expect(firstBus.subscriptions).toHaveLength(1);
 
@@ -163,7 +164,7 @@ describe("EventBusConfig", () => {
       expect(firstBus.subscriptions).toHaveLength(0);
       expect(secondBus.subscriptions).toHaveLength(0);
 
-      await config.start({ handlers: [] });
+      await config.start({ handlers: [], resolver: new DefaultHandlerResolver() });
 
       expect(secondBus.subscriptions).toHaveLength(1);
     });
@@ -291,7 +292,7 @@ describe("EventBusConfig", () => {
 
       config.subscribe(subscription);
 
-      await config.start({ handlers: [] });
+      await config.start({ handlers: [], resolver: new DefaultHandlerResolver() });
 
       expect(mockBus.subscriptions.length).toBeGreaterThanOrEqual(1);
       expect(mockBus.subscriptions[mockBus.subscriptions.length - 1].eventName).toBe("TestEvent");
@@ -309,7 +310,7 @@ describe("EventBusConfig", () => {
 
       config.setEventBus(mockBus as EventBus);
       config.subscribe(subscription);
-      await config.start({ handlers: [] });
+      await config.start({ handlers: [], resolver: new DefaultHandlerResolver() });
 
       config.unsubscribe(subscription);
 
@@ -327,7 +328,7 @@ describe("EventBusConfig", () => {
         eventName: "ClearEvent",
         handlerClass: TestHandler as EventHandlerClass,
       });
-      await config.start({ handlers: [] });
+      await config.start({ handlers: [], resolver: new DefaultHandlerResolver() });
 
       config.clear();
 
@@ -344,11 +345,11 @@ describe("EventBusConfig", () => {
 
       config.setEventBus(mockBus as EventBus);
       config.subscribe(subscription);
-      await config.start({ handlers: [] });
+      await config.start({ handlers: [], resolver: new DefaultHandlerResolver() });
 
       config.clear();
       config.subscribe(subscription);
-      await config.start({ handlers: [] });
+      await config.start({ handlers: [], resolver: new DefaultHandlerResolver() });
 
       const restartedSubscriptions = mockBus.subscriptions.filter(
         (entry) => entry.eventName === "ClearRestartEvent",
@@ -358,13 +359,56 @@ describe("EventBusConfig", () => {
   });
 
   describe("start", () => {
+    it("rejects unresolved handlers without invoking their constructors", async () => {
+      let constructions = 0;
+      class InjectedHandler implements EventHandler<TestEvent> {
+        constructor() {
+          constructions += 1;
+        }
+        async handle(): Promise<void> {}
+      }
+      const config = new EventBusConfig();
+      const bus = new MockEventBus();
+      config.setEventBus(bus);
+      config.subscribe({ eventName: "TestEvent", handlerClass: InjectedHandler });
+      await expect(config.start({ handlers: [] })).rejects.toMatchObject({
+        code: "events-core/handler-resolver-required",
+      });
+      await expect(config.start({ handlers: [] })).rejects.toThrow(
+        EventHandlerResolverRequiredProblem,
+      );
+      expect(constructions).toBe(0);
+      expect(bus.subscriptions).toHaveLength(0);
+    });
+
+    it("uses an explicit subscription handler without consulting a resolver", async () => {
+      const config = new EventBusConfig();
+      const bus = new MockEventBus();
+      const handler = new TestHandler();
+      config.setEventBus(bus);
+      config.subscribe({ eventName: "TestEvent", handlerClass: TestHandler, handler });
+      await config.start({
+        handlers: [],
+        resolver: {
+          resolve() {
+            throw new Error("unexpected resolution");
+          },
+        },
+      });
+      expect(bus.subscriptions[0].handler).toBe(handler);
+      config.clear();
+      config.subscribe({ eventName: "TestEvent", handlerClass: TestHandler, handler });
+      await config.start({ handlers: [] });
+      expect(bus.subscriptions[0].handler).toBe(handler);
+    });
+
     it("should throw error when event bus is not set", async () => {
       const config = EventBusConfig.getInstance();
       config.setEventBus(undefined as unknown as EventBus);
 
-      await expect(config.start({ handlers: [] })).rejects.toThrow(
-        "EventBus has not been set. Call setEventBus() first.",
-      );
+      await expect(
+        config.start({ handlers: [], resolver: new DefaultHandlerResolver() }),
+      ).rejects.toThrow("EventBus has not been set. Call setEventBus() first.");
     });
 
     it("should preserve stable handler IDs from handlers array metadata", async () => {
@@ -378,7 +422,7 @@ describe("EventBusConfig", () => {
         async handle(_event: TestEvent): Promise<void> {}
       }
 
-      await config.start({ handlers: [DecoratedHandler] });
+      await config.start({ handlers: [DecoratedHandler], resolver: new DefaultHandlerResolver() });
 
       expect(mockBus.subscriptions.length).toBeGreaterThanOrEqual(1);
       const lastSub = mockBus.subscriptions[mockBus.subscriptions.length - 1];
@@ -387,7 +431,7 @@ describe("EventBusConfig", () => {
       expect(lastSub.handlerId).toBe("test.decorated.v1");
     });
 
-    it("should use DefaultHandlerResolver when no resolver provided", async () => {
+    it("should use DefaultHandlerResolver when explicitly provided", async () => {
       const config = EventBusConfig.getInstance();
       const mockBus = new MockEventBus();
 
@@ -398,7 +442,7 @@ describe("EventBusConfig", () => {
         handlerClass: TestHandler as EventHandlerClass,
       });
 
-      await config.start({ handlers: [] });
+      await config.start({ handlers: [], resolver: new DefaultHandlerResolver() });
 
       const lastSub = mockBus.subscriptions[mockBus.subscriptions.length - 1];
       expect(lastSub.handler).toBeInstanceOf(TestHandler);
@@ -446,7 +490,7 @@ describe("EventBusConfig", () => {
         handlerClass: AnotherHandler as EventHandlerClass,
       });
 
-      await config.start({ handlers: [] });
+      await config.start({ handlers: [], resolver: new DefaultHandlerResolver() });
 
       const multiTestSubs = mockBus.subscriptions.filter(
         (s) => s.eventName === "MultiTestEvent1" || s.eventName === "MultiTestEvent2",
@@ -469,7 +513,7 @@ describe("EventBusConfig", () => {
         handlerClass: AnotherHandler as EventHandlerClass,
       });
 
-      await config.start({ handlers: [] });
+      await config.start({ handlers: [], resolver: new DefaultHandlerResolver() });
 
       const lastSubs = mockBus.subscriptions.slice(-2);
       expect(lastSubs[0].eventName).toBe("FirstEvent");
@@ -489,7 +533,7 @@ describe("EventBusConfig", () => {
         async handle(_event: TestEvent): Promise<void> {}
       }
 
-      await config.start({ handlers: [DecoratedHandler] });
+      await config.start({ handlers: [DecoratedHandler], resolver: new DefaultHandlerResolver() });
 
       expect(mockBus.subscriptions.length).toBeGreaterThanOrEqual(1);
       expect(mockBus.subscriptions[mockBus.subscriptions.length - 1].handler).toBeInstanceOf(
@@ -511,7 +555,7 @@ describe("EventBusConfig", () => {
       });
 
       const beforeCount = mockBus.subscriptions.length;
-      await config.start({ handlers: [] });
+      await config.start({ handlers: [], resolver: new DefaultHandlerResolver() });
 
       expect(mockBus.subscriptions.length).toBeGreaterThan(beforeCount);
     });
@@ -527,8 +571,8 @@ describe("EventBusConfig", () => {
         handlerClass: TestHandler as EventHandlerClass,
       });
 
-      await config.start({ handlers: [] });
-      await config.start({ handlers: [] });
+      await config.start({ handlers: [], resolver: new DefaultHandlerResolver() });
+      await config.start({ handlers: [], resolver: new DefaultHandlerResolver() });
 
       const repeatEventSubs = mockBus.subscriptions.filter((s) => s.eventName === "RepeatEvent");
       expect(repeatEventSubs.length).toBe(1);

@@ -6,7 +6,7 @@ import type {
   ExecutionError,
   ExecutionManager,
 } from "@croco/execution-core";
-import { Container, MetadataStorage } from "@croco/framework-context";
+import { Container, defineGeneratedDiGraph, MetadataStorage } from "@croco/framework-context";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { CronTriggerMetadata } from "@croco/triggers-core";
 import { triggerRegistry } from "@croco/triggers-core";
@@ -22,9 +22,14 @@ import {
 
 class QStashTriggerHandler extends QStashTriggerHandlerBase {
   constructor(
-    options: Omit<QStashTriggerHandlerOptions, "deliveryIdentityVerifier" | "executionTimeout">,
+    options: Omit<
+      QStashTriggerHandlerOptions,
+      "deliveryIdentityVerifier" | "executionTimeout" | "serviceResolver"
+    > &
+      Partial<Pick<QStashTriggerHandlerOptions, "serviceResolver">>,
   ) {
     super({
+      serviceResolver: (target) => Container.get(target),
       ...options,
       deliveryIdentityVerifier: vi.fn().mockResolvedValue(true),
       executionTimeout: 60_000,
@@ -178,6 +183,86 @@ describe("QStashTriggerHandler", () => {
     vi.restoreAllMocks();
   });
 
+  it("requires an application resolver at construction", () => {
+    const { manager } = createIdempotentExecutionManager();
+    expect(
+      () =>
+        new QStashTriggerHandlerBase({
+          receiver: { verify: vi.fn() } as unknown as Receiver,
+          deliveryIdentityVerifier: vi.fn(),
+          executionManager: manager,
+          executionTimeout: 60_000,
+          serviceResolver: undefined as unknown as QStashTriggerHandlerOptions["serviceResolver"],
+        }),
+    ).toThrow("An application serviceResolver is required");
+  });
+
+  it("executes generated trigger providers in isolated application scopes", async () => {
+    class IsolatedHandler {
+      constructor(readonly application: string) {}
+      execute(): string {
+        return this.application;
+      }
+    }
+    triggerRegistry.register({
+      type: "cron",
+      expression: "* * * * *",
+      methodName: "execute",
+      target: IsolatedHandler.prototype,
+      options: {},
+    });
+    const scopes = [Container.createScope(), Container.createScope()];
+    try {
+      for (const [index, scope] of scopes.entries()) {
+        scope.run(() =>
+          Container.installGeneratedGraph(
+            defineGeneratedDiGraph({
+              version: "croco.generated-di-graph.v1",
+              graphId: `qstash-app-${index}`,
+              compilerVersion: "test",
+              inputHash: String(index),
+              roots: [IsolatedHandler],
+              providers: [
+                {
+                  token: IsolatedHandler,
+                  tokenId: "IsolatedHandler",
+                  debugName: "IsolatedHandler",
+                  kind: "component",
+                  scope: "singleton",
+                  dependencies: [],
+                  factory: () => new IsolatedHandler(`app-${index}`),
+                  sourceLocation: { file: "QStashTriggerHandler.spec.ts" },
+                },
+              ],
+            }),
+          ),
+        );
+        const { manager } = createIdempotentExecutionManager();
+        const handler = new QStashTriggerHandler({
+          receiver: { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver,
+          executionManager: manager,
+          serviceResolver: (target) => scope.run(() => Container.get(target)),
+        });
+        const result = await handler.handle(
+          JSON.stringify({
+            scheduleId: "isolated",
+            className: "IsolatedHandler",
+            methodName: "execute",
+            cronExpression: "* * * * *",
+            timestamp: "2026-08-13T00:00:00.000Z",
+          }),
+          "signature",
+          { messageId: `message-${index}` },
+        );
+        expect(result.success).toBe(true);
+        expect((await manager.get(result.executionId as string)).result).toBe(`app-${index}`);
+      }
+      expect(Container.has(IsolatedHandler)).toBe(false);
+    } finally {
+      for (const scope of scopes) scope.dispose();
+    }
+  });
+
   it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY])(
     "유효하지 않은 executionTimeout %s는 구성 단계에서 거부해야 한다",
     (executionTimeout) => {
@@ -187,6 +272,7 @@ describe("QStashTriggerHandler", () => {
       let thrown: unknown;
       try {
         new QStashTriggerHandlerBase({
+          serviceResolver: (target) => Container.get(target),
           receiver,
           deliveryIdentityVerifier: vi.fn(),
           executionManager: manager,
@@ -224,6 +310,7 @@ describe("QStashTriggerHandler", () => {
     const receiver = { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver;
     const { manager, create } = createIdempotentExecutionManager();
     const handler = new QStashTriggerHandlerBase({
+      serviceResolver: (target) => Container.get(target),
       receiver,
       deliveryIdentityVerifier: vi.fn().mockResolvedValue(false),
       executionManager: manager,
@@ -257,6 +344,7 @@ describe("QStashTriggerHandler", () => {
       .mockRejectedValue(new Error("telemetry unavailable"));
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const handler = new QStashTriggerHandlerBase({
+      serviceResolver: (target) => Container.get(target),
       receiver,
       deliveryIdentityVerifier: vi.fn().mockRejectedValue(providerError),
       executionManager: manager,
@@ -932,7 +1020,7 @@ describe("QStashTriggerHandler", () => {
     });
   });
 
-  it("기본 serviceResolver는 DI 해석 실패를 숨기지 않고 500으로 반환해야 한다", async () => {
+  it("명시적 serviceResolver는 DI 해석 실패를 숨기지 않고 500으로 반환해야 한다", async () => {
     class DefaultResolverFailureHandler {
       async execute(): Promise<string> {
         return "handled";
@@ -989,7 +1077,7 @@ describe("QStashTriggerHandler", () => {
     expect(result.statusCode).toBe(500);
     expect(result.body).toEqual({
       error: "Execution failed",
-      code: "triggers-qstash/service-resolution-failed",
+      code: "triggers-qstash/execution-failed",
       category: ProblemCategory.InternalServerError,
     });
     expect(executionManager.create).not.toHaveBeenCalled();

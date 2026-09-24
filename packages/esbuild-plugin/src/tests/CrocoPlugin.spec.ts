@@ -1,740 +1,767 @@
 import * as fs from "node:fs";
+import { createRequire } from "node:module";
 import * as path from "node:path";
 import * as esbuild from "esbuild";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ComponentScannerDiagnosticError } from "../libs/ComponentScanner";
 import { crocoPlugin } from "../libs/plugin";
 
 const TEMP_DIR = path.join(__dirname, "plugin-temp");
-const FIXTURES_DIR = path.join(__dirname, "fixtures");
+
+function createProject(): { readonly entry: string; readonly component: string } {
+  const repositoryRoot = path.resolve(__dirname, "../../../..");
+  const srcDir = path.join(TEMP_DIR, "src");
+  const entry = path.join(srcDir, "index.ts");
+  const component = path.join(srcDir, "Service.ts");
+  fs.mkdirSync(srcDir, { recursive: true });
+  fs.writeFileSync(
+    path.join(TEMP_DIR, "tsconfig.json"),
+    JSON.stringify({
+      compilerOptions: {
+        target: "ES2022",
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        experimentalDecorators: true,
+        baseUrl: repositoryRoot,
+        paths: {
+          "@croco/framework-context": ["packages/framework-context/src/index.ts"],
+          "@croco/framework-module": ["packages/framework-module/src/index.ts"],
+        },
+      },
+    }),
+  );
+  fs.writeFileSync(
+    entry,
+    'import { createApplicationRuntime } from "@croco/framework-module";\nexport const runtime = createApplicationRuntime();',
+  );
+  fs.writeFileSync(
+    component,
+    `
+      import { Component } from "@croco/framework-context";
+      @Component()
+      export class Service {}
+    `,
+  );
+  return { entry, component };
+}
+
+function createMockBuild(entry: string, platform: esbuild.Platform = "node"): esbuild.PluginBuild {
+  return {
+    initialOptions: {
+      absWorkingDir: TEMP_DIR,
+      entryPoints: [entry],
+      platform,
+    },
+    onStart: vi.fn(),
+    onLoad: vi.fn(),
+    onEnd: vi.fn(),
+  } as unknown as esbuild.PluginBuild;
+}
 
 describe("crocoPlugin", () => {
-  let mockBuildContext!: esbuild.PluginBuild;
-
   beforeEach(() => {
-    mockBuildContext = {
-      initialOptions: {
-        entryPoints: [],
-      },
-      onStart: vi.fn(),
-      onLoad: vi.fn(),
-      onEnd: vi.fn(),
-    } as unknown as esbuild.PluginBuild;
-
-    if (!fs.existsSync(TEMP_DIR)) {
-      fs.mkdirSync(TEMP_DIR, { recursive: true });
-    }
+    fs.rmSync(TEMP_DIR, { recursive: true, force: true });
   });
 
   afterEach(() => {
-    if (fs.existsSync(TEMP_DIR)) {
-      fs.rmSync(TEMP_DIR, { recursive: true, force: true });
-    }
+    fs.rmSync(TEMP_DIR, { recursive: true, force: true });
   });
 
-  describe("configuration", () => {
-    it("should use default config when none provided", () => {
-      const plugin = crocoPlugin();
+  it("attaches one generated graph to the app runtime without import-time registration", async () => {
+    const { entry, component } = createProject();
+    const build = createMockBuild("src/index.ts");
+    const plugin = crocoPlugin({ di: { graphId: "plugin-test" } });
+    plugin.setup(build);
 
-      expect(plugin).not.toBeUndefined();
-      expect(plugin.name).toBe("croco-plugin");
-      expect(typeof plugin.setup).toBe("function");
-    });
+    const onStart = vi.mocked(build.onStart).mock.calls[0]?.[0];
+    expect(onStart?.()).toBeUndefined();
+    const generatedFile = path.join(TEMP_DIR, ".croco", "di.generated.ts");
+    const manifestFile = path.join(TEMP_DIR, ".croco", "di.manifest.json");
+    expect(fs.existsSync(generatedFile)).toBe(true);
+    expect(fs.existsSync(manifestFile)).toBe(true);
+    expect(fs.readFileSync(generatedFile, "utf8")).toContain("new source0.Service(");
 
-    it("should merge custom config with defaults", () => {
-      const customConfig = {
-        reflectMetadata: false,
-        scan: {
-          dirs: ["src", "lib"],
-          decorators: ["Service"],
-        },
-      };
-
-      const plugin = crocoPlugin(customConfig);
-
-      expect(plugin).not.toBeUndefined();
-      expect(plugin.name).toBe("croco-plugin");
-    });
-
-    it("should disable reflectMetadata when false", () => {
-      const customConfig = {
-        reflectMetadata: false,
-      };
-
-      const plugin = crocoPlugin(customConfig);
-
-      expect(plugin).not.toBeUndefined();
-    });
-  });
-
-  describe("onStart", () => {
-    it("should clear scanner cache", () => {
-      const plugin = crocoPlugin({
-        scan: {
-          dirs: [FIXTURES_DIR],
-        },
-      });
-
-      plugin.setup(mockBuildContext);
-      expect(mockBuildContext.onStart).toHaveBeenCalled();
-    });
-
-    it("should resolve entry points", () => {
-      mockBuildContext.initialOptions.entryPoints = ["src/index.ts"];
-
-      const plugin = crocoPlugin();
-      plugin.setup(mockBuildContext);
-
-      expect(mockBuildContext.onStart).toHaveBeenCalled();
-    });
-
-    it("should scan for components", () => {
-      mockBuildContext.initialOptions.entryPoints = [path.join(FIXTURES_DIR, "WithComponent.ts")];
-
-      const plugin = crocoPlugin({
-        scan: {
-          dirs: [FIXTURES_DIR],
-        },
-      });
-
-      plugin.setup(mockBuildContext);
-
-      expect(mockBuildContext.onStart).toHaveBeenCalled();
-    });
-
-    it("should resolve default scan dirs from absWorkingDir instead of the entry file directory", async () => {
-      const projectRoot = path.join(TEMP_DIR, "project-root");
-      const srcDir = path.join(projectRoot, "src");
-      const entryFilePath = path.join(srcDir, "index.ts");
-      const componentFilePath = path.join(srcDir, "DefaultComponent.ts");
-      const onLoadArgs: esbuild.OnLoadArgs = {
-        path: entryFilePath,
-        namespace: "",
-        suffix: "",
-        pluginData: {},
-        with: {},
-      };
-
-      fs.mkdirSync(srcDir, { recursive: true });
-      fs.writeFileSync(entryFilePath, "console.log('hello');");
-      fs.writeFileSync(componentFilePath, "@Component()\nexport class DefaultComponent {}");
-
-      mockBuildContext.initialOptions = {
-        entryPoints: ["src/index.ts"],
-        absWorkingDir: projectRoot,
-      };
-
-      const plugin = crocoPlugin();
-      plugin.setup(mockBuildContext);
-
-      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
-      onStartCallback?.();
-
-      expect(vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1]).toBeDefined();
-      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]![1];
-      const result = onLoadCallback(onLoadArgs) as esbuild.OnLoadResult;
-      const actualResult = typeof result === "object" && "then" in result ? await result : result;
-
-      expect(actualResult?.contents).toContain("import './DefaultComponent';");
-    });
-
-    it("should generate entry-specific auto-imports for multi-entry builds in different directories", async () => {
-      const projectRoot = path.join(TEMP_DIR, "multi-entry-project");
-      const appDir = path.join(projectRoot, "src", "app");
-      const adminDir = path.join(projectRoot, "src", "admin");
-      const appEntryPath = path.join(appDir, "index.ts");
-      const adminEntryPath = path.join(adminDir, "index.ts");
-      const appComponentPath = path.join(appDir, "AppComponent.ts");
-      const adminComponentPath = path.join(adminDir, "AdminComponent.ts");
-
-      fs.mkdirSync(appDir, { recursive: true });
-      fs.mkdirSync(adminDir, { recursive: true });
-      fs.writeFileSync(appEntryPath, "console.log('app');");
-      fs.writeFileSync(adminEntryPath, "console.log('admin');");
-      fs.writeFileSync(appComponentPath, "@Component()\nexport class AppComponent {}");
-      fs.writeFileSync(adminComponentPath, "@Component()\nexport class AdminComponent {}");
-
-      mockBuildContext.initialOptions = {
-        entryPoints: ["src/app/index.ts", "src/admin/index.ts"],
-        absWorkingDir: projectRoot,
-      };
-
-      const plugin = crocoPlugin();
-      plugin.setup(mockBuildContext);
-
-      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
-      onStartCallback?.();
-
-      expect(vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1]).toBeDefined();
-      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]![1];
-      const appResult = onLoadCallback({
-        path: appEntryPath,
-        namespace: "",
-        suffix: "",
-        pluginData: {},
-        with: {},
-      }) as esbuild.OnLoadResult;
-      const adminResult = onLoadCallback({
-        path: adminEntryPath,
-        namespace: "",
-        suffix: "",
-        pluginData: {},
-        with: {},
-      }) as esbuild.OnLoadResult;
-
-      const resolvedAppResult =
-        typeof appResult === "object" && "then" in appResult ? await appResult : appResult;
-      const resolvedAdminResult =
-        typeof adminResult === "object" && "then" in adminResult ? await adminResult : adminResult;
-
-      expect(resolvedAppResult?.contents).toContain("import './AppComponent';");
-      expect(resolvedAppResult?.contents).toContain("import '../admin/AdminComponent';");
-      expect(resolvedAdminResult?.contents).toContain("import './AdminComponent';");
-      expect(resolvedAdminResult?.contents).toContain("import '../app/AppComponent';");
-    });
-
-    it("should resolve object entry points from absWorkingDir", async () => {
-      const projectRoot = path.join(TEMP_DIR, "object-entry-project");
-      const srcDir = path.join(projectRoot, "src");
-      const entryFilePath = path.join(srcDir, "main.ts");
-      const componentFilePath = path.join(srcDir, "ObjectEntryComponent.ts");
-
-      fs.mkdirSync(srcDir, { recursive: true });
-      fs.writeFileSync(entryFilePath, "console.log('object-entry');");
-      fs.writeFileSync(componentFilePath, "@Component()\nexport class ObjectEntryComponent {}");
-
-      mockBuildContext.initialOptions = {
-        entryPoints: {
-          app: "src/main.ts",
-        },
-        absWorkingDir: projectRoot,
-      };
-
-      const plugin = crocoPlugin();
-      plugin.setup(mockBuildContext);
-
-      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
-      onStartCallback?.();
-
-      expect(vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1]).toBeDefined();
-      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]![1];
-      const result = onLoadCallback({
-        path: entryFilePath,
-        namespace: "",
-        suffix: "",
-        pluginData: {},
-        with: {},
-      }) as esbuild.OnLoadResult;
-      const actualResult = typeof result === "object" && "then" in result ? await result : result;
-
-      expect(actualResult?.contents).toContain("import './ObjectEntryComponent';");
-    });
-
-    it("should surface scan failures as build errors", () => {
-      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
-      const invalidFilePath = path.join(TEMP_DIR, "invalid.ts");
-
-      fs.writeFileSync(entryFilePath, "console.log('hello');");
-      fs.writeFileSync(invalidFilePath, "this is not valid typescript {{{");
-
-      mockBuildContext.initialOptions.entryPoints = [entryFilePath];
-
-      const plugin = crocoPlugin({
-        scan: {
-          dirs: [TEMP_DIR],
-        },
-      });
-
-      plugin.setup(mockBuildContext);
-
-      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
-      const result = onStartCallback?.();
-      const buildError = (result as { errors: esbuild.PartialMessage[] } | undefined)?.errors?.[0];
-
-      expect(result).toEqual({
-        errors: [
-          expect.objectContaining({
-            text: expect.stringContaining("Component scan failed:"),
-            detail: expect.objectContaining({
-              diagnostic: expect.any(Object),
-              cause: expect.any(Object),
-            }),
-            location: expect.objectContaining({
-              file: path.resolve(invalidFilePath),
-              line: expect.any(Number),
-              column: expect.any(Number),
-              lineText: "this is not valid typescript {{{",
-            }),
-          }),
-        ],
-      });
-
-      expect(buildError?.detail).toBeInstanceOf(ComponentScannerDiagnosticError);
-    });
-  });
-
-  describe("onLoad", () => {
-    const createMockOnLoadArgs = (filePath: string): esbuild.OnLoadArgs => ({
-      path: filePath,
+    const onLoad = vi.mocked(build.onLoad).mock.calls[0]?.[1];
+    const result = await onLoad?.({
+      path: entry,
       namespace: "",
       suffix: "",
       pluginData: {},
       with: {},
     });
+    const contents = result && "contents" in result ? String(result.contents) : "";
+    expect(contents).toContain("@croco/generated-di-graph");
+    expect(contents).toContain("createApplicationRuntime(undefined, crocoGeneratedDiGraph)");
+    expect(contents).not.toContain("installGeneratedGraph");
+    expect(contents).not.toContain("import './Service'");
+    expect(result && "watchFiles" in result ? result.watchFiles : []).toContain(component);
+    expect(result && "watchDirs" in result ? result.watchDirs : []).toContain(
+      path.join(TEMP_DIR, "src"),
+    );
+  });
 
-    it("should prepend reflect-metadata import to entry points", async () => {
-      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
-      fs.writeFileSync(entryFilePath, "console.log('hello');");
+  it("does not register decorated test or benchmark modules from default scans", () => {
+    const { entry } = createProject();
+    const decorated = `import { Component } from "@croco/framework-context"; @Component() export class Excluded {}`;
+    fs.writeFileSync(path.join(TEMP_DIR, "src", "Excluded.spec.tsx"), decorated);
+    fs.writeFileSync(path.join(TEMP_DIR, "src", "Excluded.bench.ts"), decorated);
+    const build = createMockBuild(entry);
+    crocoPlugin().setup(build);
 
-      mockBuildContext.initialOptions.entryPoints = [entryFilePath];
+    vi.mocked(build.onStart).mock.calls[0]?.[0]();
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(TEMP_DIR, ".croco", "di.manifest.json"), "utf8"),
+    ) as { providers: { exportName: string }[] };
+    expect(manifest.providers.map((provider) => provider.exportName)).toEqual(["Service"]);
+  });
 
-      const plugin = crocoPlugin();
-      plugin.setup(mockBuildContext);
+  it("regenerates when providers are added, renamed, or removed", () => {
+    const { component } = createProject();
+    const build = createMockBuild("src/index.ts");
+    crocoPlugin().setup(build);
+    const onStart = vi.mocked(build.onStart).mock.calls[0]?.[0];
 
-      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
-      if (onStartCallback) {
-        onStartCallback();
-      }
+    onStart?.();
+    const manifestFile = path.join(TEMP_DIR, ".croco", "di.manifest.json");
+    const first = JSON.parse(fs.readFileSync(manifestFile, "utf8")) as {
+      inputHash: string;
+      providers: { exportName: string }[];
+    };
+    expect(first.providers.map((provider) => provider.exportName)).toEqual(["Service"]);
 
-      expect(vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1]).toBeDefined();
-      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]![1];
-      const result = onLoadCallback(createMockOnLoadArgs(entryFilePath)) as esbuild.OnLoadResult;
-      const actualResult = typeof result === "object" && "then" in result ? await result : result;
+    fs.writeFileSync(
+      component,
+      `
+        import { Component } from "@croco/framework-context";
+        @Component()
+        export class RenamedService {}
+      `,
+    );
+    onStart?.();
+    const renamed = JSON.parse(fs.readFileSync(manifestFile, "utf8")) as typeof first;
+    expect(renamed.providers.map((provider) => provider.exportName)).toEqual(["RenamedService"]);
+    expect(renamed.inputHash).not.toBe(first.inputHash);
 
-      expect(actualResult?.contents).toContain("import 'reflect-metadata';");
-      expect(actualResult?.loader).toBe("ts");
+    fs.rmSync(component);
+    onStart?.();
+    const removed = JSON.parse(fs.readFileSync(manifestFile, "utf8")) as typeof first;
+    expect(removed.providers).toEqual([]);
+  });
+
+  it("does not generate or inject server providers into browser builds", async () => {
+    const { entry } = createProject();
+    const build = createMockBuild("src/index.ts", "browser");
+    crocoPlugin().setup(build);
+
+    const onStart = vi.mocked(build.onStart).mock.calls[0]?.[0];
+    expect(onStart?.()).toBeUndefined();
+    expect(fs.existsSync(path.join(TEMP_DIR, ".croco", "di.generated.ts"))).toBe(false);
+
+    const onLoad = vi.mocked(build.onLoad).mock.calls[0]?.[1];
+    const result = await onLoad?.({
+      path: entry,
+      namespace: "",
+      suffix: "",
+      pluginData: {},
+      with: {},
     });
+    const contents = result && "contents" in result ? String(result.contents) : "";
+    expect(contents).not.toContain("generated-di-graph");
+  });
 
-    it("should build injected TSX entry points with JSX", async () => {
-      const entryFilePath = path.join(TEMP_DIR, "entry.tsx");
-      fs.writeFileSync(entryFilePath, "export const App = () => <main>hello</main>;");
-
-      const result = await esbuild.build({
-        entryPoints: [entryFilePath],
-        plugins: [
-          crocoPlugin({
-            scan: {
-              dirs: [],
-            },
-          }),
+  it("forwards explicit bindings and module ownership to the compiler", () => {
+    createProject();
+    fs.writeFileSync(
+      path.join(TEMP_DIR, "src", "tokens.ts"),
+      `
+      import { Token } from "@croco/framework-context";
+      export const SERVICE = new Token("service");
+      export const CONFIG = new Token("config");
+    `,
+    );
+    const modules = [
+      {
+        id: "services",
+        providers: ["app:src/Service#Service", "app:src/tokens#SERVICE", "app:src/tokens#CONFIG"],
+        exports: ["app:src/Service#Service", "app:src/tokens#SERVICE"],
+      },
+    ];
+    const build = createMockBuild("src/index.ts");
+    crocoPlugin({
+      di: {
+        bindings: [
+          {
+            token: { moduleSpecifier: "./src/tokens.ts", exportName: "SERVICE" },
+            useExisting: { moduleSpecifier: "./src/Service.ts", exportName: "Service" },
+          },
         ],
-        jsx: "preserve",
-        write: false,
-      });
+        modules,
+        moduleProviders: [
+          {
+            token: { moduleSpecifier: "./src/tokens.ts", exportName: "CONFIG" },
+            moduleId: "services",
+            scope: "singleton",
+          },
+        ],
+      },
+    }).setup(build);
+    expect(vi.mocked(build.onStart).mock.calls[0]?.[0]()).toBeUndefined();
+    const manifest = JSON.parse(
+      fs.readFileSync(path.join(TEMP_DIR, ".croco", "di.manifest.json"), "utf8"),
+    ) as {
+      providers: { stereotype: string; tokenId: string }[];
+      modules: typeof modules;
+    };
+    expect(manifest.providers).toContainEqual(
+      expect.objectContaining({ stereotype: "binding", tokenId: "app:src/tokens#SERVICE" }),
+    );
+    expect(manifest.modules).toEqual(modules);
+    expect(manifest.providers).toContainEqual(
+      expect.objectContaining({ tokenId: "app:src/tokens#CONFIG", moduleName: "services" }),
+    );
+  });
 
-      expect(result.errors).toEqual([]);
-      expect(result.outputFiles).toHaveLength(1);
+  it("includes the DI graph in an SSR server build and excludes it from its browser hydration build", async () => {
+    const { entry, component } = createProject();
+    fs.writeFileSync(
+      component,
+      `
+      import { Component } from "@croco/framework-context";
+      @Component()
+      export class Service { readonly title = "server-only-render-provider"; }
+    `,
+    );
+    fs.writeFileSync(
+      entry,
+      `
+      import { createApplicationRuntime } from "@croco/framework-module";
+      import { Service } from "./Service";
+      const runtime = createApplicationRuntime();
+      export async function render() {
+        return new Response("<h1>" + runtime.get(Service).title + "</h1>");
+      }
+    `,
+    );
+    const browserEntry = path.join(TEMP_DIR, "src", "hydrate.ts");
+    fs.writeFileSync(
+      browserEntry,
+      'export const hydrate = () => document.querySelector("h1")?.textContent;',
+    );
+    const common: esbuild.BuildOptions = {
+      absWorkingDir: TEMP_DIR,
+      format: "esm",
+      bundle: true,
+      write: false,
+      metafile: true,
+      external: ["@croco/framework-context", "@croco/framework-module", "reflect-metadata"],
+      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+    };
+    const server = await esbuild.build({
+      ...common,
+      entryPoints: [entry],
+      platform: "node",
+      plugins: [crocoPlugin()],
+    });
+    expect(server.outputFiles?.[0]?.text).toContain("server-only-render-provider");
+    expect(Object.keys(server.metafile?.inputs ?? {})).toContain(".croco/di.generated.ts");
+    const browser = await esbuild.build({
+      ...common,
+      entryPoints: [browserEntry],
+      platform: "browser",
+      plugins: [crocoPlugin({ reflectMetadata: false })],
+    });
+    expect(browser.outputFiles?.[0]?.text).toContain("querySelector");
+    expect(browser.outputFiles?.[0]?.text).not.toContain("server-only-render-provider");
+    expect(Object.keys(browser.metafile?.inputs ?? {})).toEqual(["src/hydrate.ts"]);
+  });
+
+  it("builds an application with the generated graph through the real esbuild plugin", async () => {
+    const { entry } = createProject();
+    fs.writeFileSync(entry, `#!/usr/bin/env node\n${fs.readFileSync(entry, "utf8")}`);
+    const result = await esbuild.build({
+      absWorkingDir: TEMP_DIR,
+      entryPoints: [entry],
+      platform: "node",
+      format: "esm",
+      bundle: true,
+      write: false,
+      external: ["@croco/framework-context", "@croco/framework-module", "reflect-metadata"],
+      plugins: [crocoPlugin()],
+      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
     });
 
-    it("should prepend auto-import for component files", async () => {
-      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
-      fs.writeFileSync(entryFilePath, "console.log('hello');");
+    expect(result.errors).toEqual([]);
+    expect(result.outputFiles[0]?.text).not.toContain("RenamedService");
+    expect(result.outputFiles[0]?.text).toContain("var Service = class");
+  });
 
-      mockBuildContext.initialOptions.entryPoints = [entryFilePath];
-
-      const plugin = crocoPlugin({
-        scan: {
-          dirs: [FIXTURES_DIR],
-        },
-      });
-
-      plugin.setup(mockBuildContext);
-
-      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
-      if (onStartCallback) {
-        onStartCallback();
-      }
-
-      expect(vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1]).toBeDefined();
-      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]![1];
-      const result = onLoadCallback(createMockOnLoadArgs(entryFilePath)) as esbuild.OnLoadResult;
-      const actualResult = typeof result === "object" && "then" in result ? await result : result;
-
-      expect(actualResult?.contents).toContain("@croco/auto-import");
+  it("attaches graphs in imported composition modules for multiple server entrypoints", async () => {
+    const { entry } = createProject();
+    const composition = path.join(TEMP_DIR, "src", "app.ts");
+    fs.writeFileSync(
+      composition,
+      `
+      import { createApplicationRuntime as createRuntime } from "@croco/framework-module";
+      import { Service } from "./Service";
+      const crocoGeneratedDiGraph = "existing-binding";
+      export const runtime = createRuntime(undefined,);
+      export const resolve = () => [runtime.get(Service).constructor.name, crocoGeneratedDiGraph];
+    `,
+    );
+    fs.writeFileSync(entry, 'export { runtime, resolve } from "./app";');
+    const secondEntry = path.join(TEMP_DIR, "src", "worker.ts");
+    fs.writeFileSync(secondEntry, 'export { runtime, resolve } from "./app";');
+    const result = await esbuild.build({
+      absWorkingDir: TEMP_DIR,
+      entryPoints: [entry, secondEntry],
+      outdir: path.join(TEMP_DIR, "dist"),
+      platform: "node",
+      format: "cjs",
+      bundle: true,
+      write: false,
+      alias: {
+        "reflect-metadata": createRequire(
+          path.resolve(__dirname, "../../../framework-context/package.json"),
+        ).resolve("reflect-metadata"),
+      },
+      plugins: [crocoPlugin()],
+      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
     });
-
-    it("should not modify non-entry-point files", async () => {
-      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
-      const nonEntryFilePath = path.join(TEMP_DIR, "other.ts");
-
-      fs.writeFileSync(entryFilePath, "console.log('hello');");
-      fs.writeFileSync(nonEntryFilePath, "console.log('world');");
-
-      mockBuildContext.initialOptions.entryPoints = [entryFilePath];
-
-      const plugin = crocoPlugin();
-      plugin.setup(mockBuildContext);
-
-      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
-      if (onStartCallback) {
-        onStartCallback();
-      }
-
-      expect(vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1]).toBeDefined();
-      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]![1];
-      const result = onLoadCallback(createMockOnLoadArgs(nonEntryFilePath));
-      const actualResult =
-        result != null && typeof result === "object" && "then" in result ? await result : result;
-
-      expect(actualResult).toBeUndefined();
-    });
-
-    it("should return undefined when no prepend needed", async () => {
-      const nonEntryFilePath = path.join(TEMP_DIR, "other.ts");
-
-      fs.writeFileSync(nonEntryFilePath, "console.log('world');");
-
-      mockBuildContext.initialOptions.entryPoints = [];
-
-      const plugin = crocoPlugin();
-      plugin.setup(mockBuildContext);
-
-      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
-      if (onStartCallback) {
-        onStartCallback();
-      }
-
-      expect(vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1]).toBeDefined();
-      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]![1];
-      const result = onLoadCallback(createMockOnLoadArgs(nonEntryFilePath));
-      const actualResult =
-        result != null && typeof result === "object" && "then" in result ? await result : result;
-
-      expect(actualResult).toBeUndefined();
-    });
-
-    it("should disable reflect-metadata when config is false", async () => {
-      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
-      fs.writeFileSync(entryFilePath, "console.log('hello');");
-
-      mockBuildContext.initialOptions.entryPoints = [entryFilePath];
-
-      const plugin = crocoPlugin({
-        reflectMetadata: false,
-      });
-
-      plugin.setup(mockBuildContext);
-
-      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
-      if (onStartCallback) {
-        onStartCallback();
-      }
-
-      expect(vi.mocked(mockBuildContext.onLoad).mock.calls[0]?.[1]).toBeDefined();
-      const onLoadCallback = vi.mocked(mockBuildContext.onLoad).mock.calls[0]![1];
-      const result = onLoadCallback(createMockOnLoadArgs(entryFilePath)) as esbuild.OnLoadResult;
-      const actualResult = typeof result === "object" && "then" in result ? await result : result;
-      const actualContents = actualResult?.contents;
-
-      expect(typeof actualContents === "string" ? actualContents : "").not.toContain(
-        "import 'reflect-metadata';",
+    expect(result.outputFiles).toHaveLength(2);
+    for (const output of result.outputFiles) {
+      const loaded = { exports: {} };
+      new Function("require", "module", "exports", output.text)(
+        createRequire(entry),
+        loaded,
+        loaded.exports,
       );
-    });
+      const app = loaded.exports as { resolve(): string[]; runtime: { dispose(): Promise<void> } };
+      try {
+        expect(app.resolve()).toEqual(["Service", "existing-binding"]);
+      } finally {
+        await app.runtime.dispose();
+      }
+    }
   });
 
-  describe("watch mode optimization", () => {
-    it("should not clear cache on subsequent builds in watch mode", () => {
-      mockBuildContext.initialOptions = {
-        entryPoints: [path.join(FIXTURES_DIR, "WithComponent.ts")],
-        metafile: true,
-      };
-
-      const plugin = crocoPlugin({
-        scan: {
-          dirs: [FIXTURES_DIR],
-        },
-        watch: {
-          optimize: true,
-        },
-      });
-
-      plugin.setup(mockBuildContext);
-
-      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
-      const onEndCallback = vi.mocked(mockBuildContext.onEnd).mock.calls[0]?.[0];
-
-      if (onStartCallback) {
-        onStartCallback();
-      }
-
-      if (onEndCallback) {
-        onEndCallback({
-          errors: [],
-          warnings: [],
-          outputFiles: [],
-          metafile: undefined,
-          mangleCache: undefined,
-        });
-      }
-
-      if (onStartCallback) {
-        onStartCallback();
-      }
-
-      expect(mockBuildContext.onStart).toHaveBeenCalled();
+  it("preserves an explicit graph argument in an imported composition module", async () => {
+    const { entry } = createProject();
+    fs.writeFileSync(entry, 'export { runtime } from "./app";');
+    fs.writeFileSync(
+      path.join(TEMP_DIR, "src", "app.ts"),
+      `
+      import * as application from "@croco/framework-module";
+      const explicitGraph = { version: 1, graphId: "explicit", compilerVersion: "test", inputHash: "test", providers: [], roots: [] } as const;
+      export const runtime = application.createApplicationRuntime(undefined, explicitGraph);
+    `,
+    );
+    const result = await esbuild.build({
+      absWorkingDir: TEMP_DIR,
+      entryPoints: [entry],
+      platform: "node",
+      format: "esm",
+      bundle: true,
+      write: false,
+      metafile: true,
+      external: ["@croco/framework-module"],
+      plugins: [crocoPlugin({ reflectMetadata: false })],
     });
-
-    it("should clear cache when not in watch mode", () => {
-      mockBuildContext.initialOptions = {
-        entryPoints: [path.join(FIXTURES_DIR, "WithComponent.ts")],
-      };
-
-      const plugin = crocoPlugin({
-        scan: {
-          dirs: [FIXTURES_DIR],
-        },
-      });
-
-      plugin.setup(mockBuildContext);
-
-      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
-
-      if (onStartCallback) {
-        onStartCallback();
-      }
-
-      expect(mockBuildContext.onStart).toHaveBeenCalled();
-    });
-
-    it("should respect watch.optimize configuration", () => {
-      mockBuildContext.initialOptions = {
-        entryPoints: [path.join(FIXTURES_DIR, "WithComponent.ts")],
-        metafile: true,
-      };
-
-      const plugin = crocoPlugin({
-        scan: {
-          dirs: [FIXTURES_DIR],
-        },
-        watch: {
-          optimize: false,
-        },
-      });
-
-      plugin.setup(mockBuildContext);
-
-      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
-
-      if (onStartCallback) {
-        onStartCallback();
-      }
-
-      expect(mockBuildContext.onStart).toHaveBeenCalled();
-    });
+    expect(result.outputFiles[0]?.text).toContain("explicitGraph");
+    expect(Object.keys(result.metafile?.inputs ?? {})).not.toContain(".croco/di.generated.ts");
   });
 
-  describe("generateRegistry", () => {
-    const REGISTRY_DIR = path.join(TEMP_DIR, ".croco");
-
-    beforeEach(() => {
-      if (!fs.existsSync(REGISTRY_DIR)) {
-        fs.mkdirSync(REGISTRY_DIR, { recursive: true });
-      }
-    });
-
-    afterEach(() => {
-      if (fs.existsSync(REGISTRY_DIR)) {
-        fs.rmSync(REGISTRY_DIR, { recursive: true, force: true });
-      }
-    });
-
-    it("should generate a valid registry for .tsx components", () => {
-      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
-      fs.writeFileSync(entryFilePath, "console.log('hello');");
-
-      const cardFilePath = path.join(TEMP_DIR, "Card.tsx");
-      fs.writeFileSync(cardFilePath, "@Component()\nexport class Card { name: string; }");
-
-      mockBuildContext.initialOptions.entryPoints = [entryFilePath];
-
-      const plugin = crocoPlugin({
-        scan: {
-          dirs: [TEMP_DIR],
-          decorators: ["Component"],
-        },
-        generateRegistry: {
-          enabled: true,
-          outDir: REGISTRY_DIR,
-          outFile: "registry.gen.ts",
-        },
-      });
-
-      plugin.setup(mockBuildContext);
-
-      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
-      if (onStartCallback) {
-        onStartCallback();
-      }
-
-      const registryPath = path.join(REGISTRY_DIR, "registry.gen.ts");
-      expect(fs.existsSync(registryPath)).toBe(true);
-
-      const registryContent = fs.readFileSync(registryPath, "utf-8");
-      expect(registryContent).toContain("import { Card } from '../Card';");
-      expect(registryContent).toContain("export const components = [Card] as const;");
-      expect(registryContent).not.toContain("Card.tsx");
-    });
-
-    it("should build the generated registry with esbuild for .tsx components", async () => {
-      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
-      fs.writeFileSync(entryFilePath, "console.log('hello');");
-
-      const cardFilePath = path.join(TEMP_DIR, "Card.tsx");
-      fs.writeFileSync(cardFilePath, "@Component()\nexport class Card { name: string; }");
-
-      mockBuildContext.initialOptions.entryPoints = [entryFilePath];
-
-      const plugin = crocoPlugin({
-        scan: {
-          dirs: [TEMP_DIR],
-          decorators: ["Component"],
-        },
-        generateRegistry: {
-          enabled: true,
-          outDir: REGISTRY_DIR,
-          outFile: "registry.gen.ts",
-        },
-      });
-
-      plugin.setup(mockBuildContext);
-
-      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
-      if (onStartCallback) {
-        onStartCallback();
-      }
-
-      const registryPath = path.join(REGISTRY_DIR, "registry.gen.ts");
-      expect(fs.existsSync(registryPath)).toBe(true);
-
-      const buildResult = await esbuild.build({
-        entryPoints: [registryPath],
+  it("rejects a server build whose imported modules never bind an application runtime", async () => {
+    const { entry } = createProject();
+    fs.writeFileSync(entry, 'export { value } from "./app";');
+    fs.writeFileSync(path.join(TEMP_DIR, "src", "app.ts"), "export const value = 1;");
+    await expect(
+      esbuild.build({
+        absWorkingDir: TEMP_DIR,
+        entryPoints: [entry],
+        platform: "node",
         bundle: true,
         write: false,
-        format: "esm",
-      });
-
-      expect(buildResult.errors).toEqual([]);
-      expect(buildResult.outputFiles?.length).toBeGreaterThan(0);
-    });
-
-    it("should generate registry.gen.ts with controllers and components", () => {
-      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
-      fs.writeFileSync(entryFilePath, "console.log('hello');");
-
-      const controllerFilePath = path.join(TEMP_DIR, "UserController.ts");
-      fs.writeFileSync(
-        controllerFilePath,
-        "@Controller()\nexport class UserController { id: string; }",
-      );
-
-      const componentFilePath = path.join(TEMP_DIR, "MyComponent.ts");
-      fs.writeFileSync(
-        componentFilePath,
-        "@Component()\nexport class MyComponent { name: string; }",
-      );
-
-      mockBuildContext.initialOptions.entryPoints = [entryFilePath];
-
-      const plugin = crocoPlugin({
-        scan: {
-          dirs: [TEMP_DIR],
-          decorators: ["Component", "Controller"],
-        },
-        generateRegistry: {
-          enabled: true,
-          outDir: REGISTRY_DIR,
-          outFile: "registry.gen.ts",
-        },
-      });
-
-      plugin.setup(mockBuildContext);
-
-      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
-      if (onStartCallback) {
-        onStartCallback();
-      }
-
-      const registryPath = path.join(REGISTRY_DIR, "registry.gen.ts");
-      expect(fs.existsSync(registryPath)).toBe(true);
-
-      const registryContent = fs.readFileSync(registryPath, "utf-8");
-      expect(registryContent).toContain("// AUTO-GENERATED - DO NOT EDIT");
-      expect(registryContent).toContain("import { UserController } from '../UserController';");
-      expect(registryContent).toContain("import { MyComponent } from '../MyComponent';");
-      expect(registryContent).toContain("export const controllers = [UserController] as const;");
-      expect(registryContent).toContain("export const components = [MyComponent] as const;");
-      expect(registryContent).toContain("export type Controllers = typeof controllers;");
-      expect(registryContent).toContain("export type Components = typeof components;");
-    });
-
-    it("should use default outDir and outFile when not specified", () => {
-      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
-      fs.writeFileSync(entryFilePath, "console.log('hello');");
-
-      const controllerFilePath = path.join(TEMP_DIR, "UserController.ts");
-      fs.writeFileSync(
-        controllerFilePath,
-        "@Controller()\nexport class UserController { id: string; }",
-      );
-
-      mockBuildContext.initialOptions.entryPoints = [entryFilePath];
-
-      const plugin = crocoPlugin({
-        scan: {
-          dirs: [TEMP_DIR],
-          decorators: ["Controller"],
-        },
-        generateRegistry: {
-          enabled: true,
-        },
-      });
-
-      plugin.setup(mockBuildContext);
-
-      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
-      if (onStartCallback) {
-        onStartCallback();
-      }
-
-      const defaultRegistryPath = path.join(process.cwd(), ".croco", "registry.gen.ts");
-      expect(fs.existsSync(defaultRegistryPath)).toBe(true);
-
-      if (fs.existsSync(defaultRegistryPath)) {
-        fs.rmSync(defaultRegistryPath, { force: true });
-      }
-    });
-
-    it("should not generate registry when disabled", () => {
-      const entryFilePath = path.join(TEMP_DIR, "entry.ts");
-      fs.writeFileSync(entryFilePath, "console.log('hello');");
-
-      const controllerFilePath = path.join(TEMP_DIR, "UserController.ts");
-      fs.writeFileSync(
-        controllerFilePath,
-        "@Controller()\nexport class UserController { id: string; }",
-      );
-
-      mockBuildContext.initialOptions.entryPoints = [entryFilePath];
-
-      const plugin = crocoPlugin({
-        scan: {
-          dirs: [TEMP_DIR],
-          decorators: ["Controller"],
-        },
-        generateRegistry: {
-          enabled: false,
-        },
-      });
-
-      plugin.setup(mockBuildContext);
-
-      const onStartCallback = vi.mocked(mockBuildContext.onStart).mock.calls[0]?.[0];
-      if (onStartCallback) {
-        onStartCallback();
-      }
-
-      const registryPath = path.join(REGISTRY_DIR, "registry.gen.ts");
-      expect(fs.existsSync(registryPath)).toBe(false);
-    });
+        logLevel: "silent",
+        plugins: [crocoPlugin({ reflectMetadata: false })],
+      }),
+    ).rejects.toThrow("CROCO_DI_COMPILE_001");
   });
+
+  it("rebuilds provider generations without replacing in-flight scopes or publishing failed graphs", async () => {
+    const { entry, component } = createProject();
+    fs.writeFileSync(
+      entry,
+      `
+      import { Container } from "@croco/framework-context";
+      import { createApplicationRuntime } from "@croco/framework-module";
+      export const runtime = createApplicationRuntime();
+      export const resolveAll = () => runtime.run(() =>
+        Container.getGeneratedProviderTokens("component").map(token => Container.get(token))
+      );
+    `,
+    );
+    const providerSource = (name: string, version: string) => `
+      import { Component } from "@croco/framework-context";
+      @Component()
+      export class ${name} {
+        readonly version = ${JSON.stringify(version)};
+        disposed = false;
+        [Symbol.dispose]() { this.disposed = true; }
+      }
+    `;
+    fs.writeFileSync(component, providerSource("Service", "first"));
+    type Instance = { readonly version: string; readonly disposed: boolean };
+    type Generation = {
+      readonly runtime: {
+        run<T>(callback: () => Promise<T>): Promise<T>;
+        dispose(): Promise<void>;
+      };
+      readonly resolveAll: () => Instance[];
+    };
+    const generations: Generation[] = [];
+    const context = await esbuild.context({
+      absWorkingDir: TEMP_DIR,
+      entryPoints: [entry],
+      platform: "node",
+      format: "cjs",
+      bundle: true,
+      write: false,
+      logLevel: "silent",
+      alias: {
+        "reflect-metadata": createRequire(
+          path.resolve(__dirname, "../../../framework-context/package.json"),
+        ).resolve("reflect-metadata"),
+      },
+      plugins: [crocoPlugin({ di: { graphId: "rebuild-test" } })],
+      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+    });
+    const rebuild = async (): Promise<Generation> => {
+      const result = await context.rebuild();
+      const output = result.outputFiles?.[0];
+      expect(output).toBeDefined();
+      const loaded = { exports: {} };
+      new Function("require", "module", "exports", output?.text ?? "")(
+        createRequire(entry),
+        loaded,
+        loaded.exports,
+      );
+      const generation = loaded.exports as Generation;
+      generations.push(generation);
+      return generation;
+    };
+    let releaseRequest: () => void = () => {};
+    const requestBarrier = new Promise<void>((resolve) => {
+      releaseRequest = resolve;
+    });
+    let inFlight: Promise<Instance[]> | undefined;
+    try {
+      const first = await rebuild();
+      const original = first.resolveAll()[0];
+      expect(original?.version).toBe("first");
+      inFlight = first.runtime.run(async () => {
+        await requestBarrier;
+        return first.resolveAll();
+      });
+
+      const addedFile = path.join(TEMP_DIR, "src", "Added.ts");
+      fs.writeFileSync(addedFile, providerSource("Added", "added"));
+      const added = await rebuild();
+      expect(
+        added
+          .resolveAll()
+          .map((instance) => instance.version)
+          .sort(),
+      ).toEqual(["added", "first"]);
+      expect(added.resolveAll().find((instance) => instance.version === "first")).not.toBe(
+        original,
+      );
+
+      const graphFile = path.join(TEMP_DIR, ".croco", "di.generated.ts");
+      const manifestFile = path.join(TEMP_DIR, ".croco", "di.manifest.json");
+      const lastValidGraph = fs.readFileSync(graphFile, "utf8");
+      const lastValidManifest = fs.readFileSync(manifestFile, "utf8");
+      fs.writeFileSync(
+        component,
+        `
+        import { Component, Inject } from "@croco/framework-context";
+        @Component()
+        export class Broken { constructor(@Inject("missing") value: unknown) {} }
+      `,
+      );
+      await expect(context.rebuild()).rejects.toThrow("CROCO_DI");
+      expect(fs.readFileSync(graphFile, "utf8")).toBe(lastValidGraph);
+      expect(fs.readFileSync(manifestFile, "utf8")).toBe(lastValidManifest);
+      expect(first.resolveAll()).toEqual([original]);
+      expect(original?.disposed).toBe(false);
+
+      fs.writeFileSync(component, providerSource("RenamedService", "renamed"));
+      const renamed = await rebuild();
+      expect(
+        renamed
+          .resolveAll()
+          .map((instance) => instance.version)
+          .sort(),
+      ).toEqual(["added", "renamed"]);
+      expect(fs.readFileSync(graphFile, "utf8")).toContain("RenamedService");
+
+      fs.rmSync(component);
+      fs.rmSync(addedFile);
+      const removed = await rebuild();
+      expect(removed.resolveAll()).toEqual([]);
+      releaseRequest();
+      expect(await inFlight).toEqual([original]);
+      await first.runtime.dispose();
+      expect(original?.disposed).toBe(true);
+      expect(removed.resolveAll()).toEqual([]);
+    } finally {
+      releaseRequest();
+      await inFlight;
+      await context.dispose();
+      await Promise.all(generations.map((generation) => generation.runtime.dispose()));
+    }
+  }, 30_000);
+
+  it("watches provider additions, invalid changes, renames, and deletion automatically", async () => {
+    const { entry, component } = createProject();
+    const manifestFile = path.join(TEMP_DIR, ".croco", "di.manifest.json");
+    const buildResults: number[] = [];
+    const buildErrors: string[][] = [];
+    const context = await esbuild.context({
+      absWorkingDir: TEMP_DIR,
+      entryPoints: [entry],
+      platform: "node",
+      bundle: true,
+      write: false,
+      logLevel: "silent",
+      external: ["@croco/framework-context", "@croco/framework-module", "reflect-metadata"],
+      plugins: [
+        crocoPlugin(),
+        {
+          name: "watch-observer",
+          setup(build) {
+            build.onEnd((result) => {
+              buildResults.push(result.errors.length);
+              buildErrors.push(result.errors.map((error) => error.text));
+            });
+          },
+        },
+      ],
+      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+    });
+    const providerNames = (): string[] => {
+      const manifest = JSON.parse(fs.readFileSync(manifestFile, "utf8")) as {
+        providers: { exportName: string }[];
+      };
+      return manifest.providers.map((provider) => provider.exportName).sort();
+    };
+    const waitFor = async (predicate: () => boolean): Promise<void> => {
+      const deadline = Date.now() + 20_000;
+      while (!predicate()) {
+        if (Date.now() > deadline)
+          throw new Error(
+            `Timed out waiting for esbuild watch rebuild: ${JSON.stringify({ buildResults, buildErrors, providers: fs.existsSync(manifestFile) ? providerNames() : null })}`,
+          );
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+    };
+    try {
+      await context.watch();
+      await waitFor(() => buildResults.length > 0 && fs.existsSync(manifestFile));
+      expect(providerNames()).toEqual(["Service"]);
+
+      const addedFile = path.join(TEMP_DIR, "src", "Added.ts");
+      fs.writeFileSync(
+        addedFile,
+        'import { Component } from "@croco/framework-context"; @Component() export class Added {}',
+      );
+      await waitFor(() => providerNames().join() === "Added,Service");
+      await waitFor(() => buildResults.length >= 2);
+
+      const lastValidManifest = fs.readFileSync(manifestFile, "utf8");
+      const beforeFailure = buildResults.length;
+      fs.writeFileSync(
+        component,
+        'import { Component, Inject } from "@croco/framework-context"; @Component() export class Broken { constructor(@Inject("missing") value: unknown) {} }',
+      );
+      await waitFor(() => buildResults.length > beforeFailure && buildResults.at(-1)! > 0);
+      expect(fs.readFileSync(manifestFile, "utf8")).toBe(lastValidManifest);
+
+      const beforeRecovery = buildResults.length;
+      fs.writeFileSync(
+        component,
+        'import { Component } from "@croco/framework-context"; @Component() export class Renamed {}',
+      );
+      await waitFor(
+        () =>
+          buildResults.length > beforeRecovery &&
+          buildResults.at(-1) === 0 &&
+          providerNames().join() === "Added,Renamed",
+      );
+
+      const beforeFirstDeletion = buildResults.length;
+      fs.rmSync(addedFile);
+      await waitFor(
+        () =>
+          buildResults.length > beforeFirstDeletion &&
+          buildResults.at(-1) === 0 &&
+          providerNames().join() === "Renamed",
+      );
+      const beforeFinalDeletion = buildResults.length;
+      fs.rmSync(component);
+      await waitFor(
+        () =>
+          buildResults.length > beforeFinalDeletion &&
+          buildResults.at(-1) === 0 &&
+          providerNames().length === 0,
+      );
+    } finally {
+      await context.dispose();
+    }
+  }, 90_000);
+
+  it("recovers an initially invalid nested provider without touching the scan root", async () => {
+    const { entry, component } = createProject();
+    const nestedDir = path.join(TEMP_DIR, "src", "nested");
+    const nestedProvider = path.join(nestedDir, "Service.ts");
+    const manifestFile = path.join(TEMP_DIR, ".croco", "di.manifest.json");
+    fs.mkdirSync(nestedDir, { recursive: true });
+    fs.rmSync(component);
+    fs.writeFileSync(
+      nestedProvider,
+      'import { Component, Inject } from "@croco/framework-context"; @Component() export class Service { constructor(@Inject("missing") value: unknown) {} }',
+    );
+
+    const buildResults: string[][] = [];
+    const context = await esbuild.context({
+      absWorkingDir: TEMP_DIR,
+      entryPoints: [entry],
+      platform: "node",
+      bundle: true,
+      write: false,
+      logLevel: "silent",
+      external: ["@croco/framework-context", "@croco/framework-module", "reflect-metadata"],
+      plugins: [
+        crocoPlugin(),
+        {
+          name: "watch-observer",
+          setup(build) {
+            build.onEnd((result) => {
+              buildResults.push(result.errors.map((error) => error.text));
+            });
+          },
+        },
+      ],
+      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+    });
+    const waitFor = async (predicate: () => boolean): Promise<void> => {
+      const deadline = Date.now() + 20_000;
+      while (!predicate()) {
+        if (Date.now() > deadline)
+          throw new Error(
+            `Timed out waiting for nested provider recovery: ${JSON.stringify(buildResults)}`,
+          );
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+    };
+
+    try {
+      await context.watch();
+      await waitFor(
+        () =>
+          buildResults.length > 0 &&
+          buildResults[0]?.some((error) => error.includes("CROCO_DI")) === true,
+      );
+      expect(fs.existsSync(manifestFile)).toBe(false);
+
+      fs.writeFileSync(
+        nestedProvider,
+        'import { Component } from "@croco/framework-context"; @Component() export class Service {}',
+      );
+      await waitFor(
+        () =>
+          buildResults.length > 1 &&
+          buildResults.at(-1)?.length === 0 &&
+          fs.existsSync(manifestFile),
+      );
+      const manifest = JSON.parse(fs.readFileSync(manifestFile, "utf8")) as {
+        providers: { exportName: string }[];
+      };
+      expect(manifest.providers.map((provider) => provider.exportName)).toEqual(["Service"]);
+    } finally {
+      await context.dispose();
+    }
+  }, 60_000);
+
+  it("watches a selected descriptor through initial and subsequent compiler failures", async () => {
+    const { entry } = createProject();
+    const libraryDir = path.join(TEMP_DIR, "library");
+    const descriptorFile = path.join(libraryDir, "croco-di.json");
+    const manifestFile = path.join(TEMP_DIR, ".croco", "di.manifest.json");
+    fs.mkdirSync(libraryDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(libraryDir, "graph.ts"),
+      "export const generatedDiGraph = { providers: [], roots: [] };\n",
+    );
+    fs.writeFileSync(descriptorFile, "{");
+
+    const descriptor = JSON.stringify({
+      version: "croco.di-package-descriptor.v1",
+      packageName: "@fixture/library",
+      packageVersion: "1.0.0",
+      compilerVersion: "croco.di-compiler.v1",
+      inputHash: "fixture",
+      graph: { import: "./graph.ts", exportName: "generatedDiGraph" },
+      providers: [],
+      roots: [],
+    });
+    const buildResults: string[][] = [];
+    const context = await esbuild.context({
+      absWorkingDir: TEMP_DIR,
+      entryPoints: [entry],
+      platform: "node",
+      bundle: true,
+      write: false,
+      logLevel: "silent",
+      external: ["@croco/framework-context", "@croco/framework-module", "reflect-metadata"],
+      plugins: [
+        crocoPlugin({ di: { packageDescriptors: ["./library/croco-di.json"] } }),
+        {
+          name: "watch-observer",
+          setup(build) {
+            build.onEnd((result) => {
+              buildResults.push(result.errors.map((error) => error.text));
+            });
+          },
+        },
+      ],
+      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+    });
+    const waitFor = async (predicate: () => boolean): Promise<void> => {
+      const deadline = Date.now() + 20_000;
+      while (!predicate()) {
+        if (Date.now() > deadline)
+          throw new Error(
+            `Timed out waiting for descriptor recovery: ${JSON.stringify(buildResults)}`,
+          );
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      }
+    };
+
+    try {
+      await context.watch();
+      await waitFor(() => buildResults.length > 0 && buildResults[0]?.length !== 0);
+      expect(fs.existsSync(manifestFile)).toBe(false);
+
+      fs.writeFileSync(descriptorFile, descriptor);
+      await waitFor(() => buildResults.length > 1 && buildResults.at(-1)?.length === 0);
+      expect(fs.existsSync(manifestFile)).toBe(true);
+
+      fs.writeFileSync(descriptorFile, "{");
+      await waitFor(() => buildResults.length > 2 && buildResults.at(-1)?.length !== 0);
+
+      fs.writeFileSync(descriptorFile, descriptor);
+      await waitFor(() => buildResults.length > 3 && buildResults.at(-1)?.length === 0);
+    } finally {
+      await context.dispose();
+    }
+  }, 90_000);
 });

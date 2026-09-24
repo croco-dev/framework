@@ -6,7 +6,7 @@ title: "HandlerResolver"
 ---
 
 DI 컨테이너 추상화 인터페이스
-외부 DI 컨테이너(TypeDI 등)와 통합하기 위해 사용합니다.
+앱 runtime 또는 다른 DI 경계와 통합하기 위해 사용합니다.
 
 ## Methods
 

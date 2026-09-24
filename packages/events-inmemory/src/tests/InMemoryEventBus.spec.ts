@@ -17,7 +17,6 @@ import {
   DEV_INSPECTOR_TOKEN,
   RuntimeInspector,
   ShutdownManager,
-  TRANSACTION_CONTEXT_TOKEN,
   type TransactionContext,
 } from "@croco/framework-context";
 import * as telemetryApi from "@croco/telemetry-api";
@@ -32,7 +31,9 @@ import {
   InvalidEventBusConfigurationProblem,
   MAX_EVENT_BUS_CONCURRENCY,
   MAX_EVENT_BUS_TIMEOUT_MS,
+  MissingEventHandlerResolverProblem,
 } from "../index";
+import { createTestEventBus } from "./createTestEventBus";
 
 class TestEvent extends DomainEvent {
   static readonly eventName = "TestEvent";
@@ -91,12 +92,92 @@ describe("InMemoryEventBus", () => {
     Container.reset();
     ShutdownManager.reset();
     EventBusConfig.setStats(new EventBusStats());
-    eventBus = new InMemoryEventBus();
+    eventBus = createTestEventBus();
     testHandler = new TestHandler();
     Container.reset();
   });
 
   describe("subscribe", () => {
+    it("requires explicit resolution even when a handler is globally registered", async () => {
+      Container.set(TestHandler, testHandler);
+      const isolatedBus = new InMemoryEventBus<TestEvent>();
+      isolatedBus.subscribe({ eventName: "TestEvent", handlerClass: TestHandler });
+
+      await expect(isolatedBus.publish(new TestEvent("missing-resolver"))).rejects.toMatchObject({
+        failures: [{ error: expect.any(MissingEventHandlerResolverProblem) }],
+      });
+      expect(testHandler.handledEvents).toEqual([]);
+    });
+
+    it("keeps explicit resolvers isolated across buses", async () => {
+      const firstHandler = new TestHandler();
+      const secondHandler = new TestHandler();
+      const firstBus = new InMemoryEventBus<TestEvent>({
+        handlerResolver: { resolve: vi.fn().mockReturnValue(firstHandler) },
+      });
+      const secondBus = new InMemoryEventBus<TestEvent>({
+        handlerResolver: { resolve: vi.fn().mockReturnValue(secondHandler) },
+      });
+      firstBus.subscribe({ eventName: "TestEvent", handlerClass: TestHandler });
+      secondBus.subscribe({ eventName: "TestEvent", handlerClass: TestHandler });
+
+      await Promise.all([
+        firstBus.publish(new TestEvent("first")),
+        secondBus.publish(new TestEvent("second")),
+      ]);
+
+      expect(firstHandler.handledEvents.map((event) => event.message)).toEqual(["first"]);
+      expect(secondHandler.handledEvents.map((event) => event.message)).toEqual(["second"]);
+    });
+
+    it("uses only the explicitly configured logger and inspector", async () => {
+      const logger = { error: vi.fn() };
+      const runtimeInspector = { recordEvent: vi.fn() };
+      const isolatedBus = new InMemoryEventBus<TestEvent>({ logger, runtimeInspector });
+      const handler = new FailingHandler();
+      isolatedBus.subscribe({ eventName: "TestEvent", handlerClass: FailingHandler, handler });
+
+      await expect(isolatedBus.publish(new TestEvent("failure"))).rejects.toBeInstanceOf(
+        EventPublishFailedError,
+      );
+
+      expect(logger.error).toHaveBeenCalledWith(
+        "EventHandler error (TestEvent):",
+        expect.any(Error),
+      );
+      expect(runtimeInspector.recordEvent).toHaveBeenCalled();
+    });
+
+    it("preserves handler retries and dead-letter delivery when the logger throws", async () => {
+      const handlerError = new Error("handler failed");
+      const queue = new InMemoryDeadLetterQueue();
+      const handler = { handle: vi.fn(async () => Promise.reject(handlerError)) };
+      const logger = {
+        error: vi.fn(() => {
+          throw new Error("logger failed");
+        }),
+      };
+      const isolatedBus = new InMemoryEventBus<TestEvent>({
+        logger,
+        deadLetterQueue: queue,
+        deadLetterPolicy: { maxRetries: 1, retryDelayMs: 0 },
+      });
+      isolatedBus.subscribe({
+        eventName: TestEvent.eventName,
+        handlerClass: FailingHandler,
+        handler,
+        handlerId: "failing-handler.v1",
+      });
+
+      await expect(isolatedBus.publish(new TestEvent("failure"))).rejects.toMatchObject({
+        failures: [{ error: handlerError }],
+      });
+      expect(handler.handle).toHaveBeenCalledTimes(2);
+      expect(logger.error).toHaveBeenCalledTimes(2);
+      const [item] = await queue.peek<TestEvent>();
+      expect(item?.handlerId).toBe("failing-handler.v1");
+    });
+
     it("should use the handler instance resolved by EventBusConfig", async () => {
       class ContainerHandler implements EventHandler<TestEvent> {
         handle(): void {
@@ -143,7 +224,7 @@ describe("InMemoryEventBus", () => {
       expect(testHandler.handledEvents[0].message).toBe("subscribe-test");
     });
 
-    it("should restore Container fallback after a provided handler is unsubscribed", async () => {
+    it("should use the explicit resolver after a provided handler is unsubscribed", async () => {
       class SharedHandler implements EventHandler<TestEvent> {
         handle = vi.fn();
       }
@@ -911,7 +992,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const limitedBus = new InMemoryEventBus({ maxConcurrency: 1 });
+      const limitedBus = createTestEventBus({ maxConcurrency: 1 });
 
       Container.set(SlowHandler, new SlowHandler());
       limitedBus.subscribe({
@@ -964,7 +1045,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const limitedBus = new InMemoryEventBus({ maxConcurrency: 1 });
+      const limitedBus = createTestEventBus({ maxConcurrency: 1 });
 
       Container.set(SlowHandler, new SlowHandler());
       limitedBus.subscribe({
@@ -993,7 +1074,7 @@ describe("InMemoryEventBus", () => {
     it.each(["invalid", "", null, 0, false, {}])(
       "rejects invalid backpressureStrategy %j at construction",
       (value) => {
-        expect(() => new InMemoryEventBus({ backpressureStrategy: value as "block" })).toThrow(
+        expect(() => createTestEventBus({ backpressureStrategy: value as "block" })).toThrow(
           /backpressureStrategy must be block, drop, or error/,
         );
       },
@@ -1002,7 +1083,7 @@ describe("InMemoryEventBus", () => {
     it.each([undefined, "block", "drop", "error"] as const)(
       "accepts supported backpressureStrategy %s",
       (backpressureStrategy) => {
-        expect(() => new InMemoryEventBus({ backpressureStrategy })).not.toThrow();
+        expect(() => createTestEventBus({ backpressureStrategy })).not.toThrow();
       },
     );
 
@@ -1028,12 +1109,12 @@ describe("InMemoryEventBus", () => {
     it.each(invalidConcurrencyValues)(
       "rejects invalid maxConcurrency %s at construction",
       (value) => {
-        expect(() => new InMemoryEventBus<TestEvent>({ maxConcurrency: value })).toThrow(
+        expect(() => createTestEventBus<TestEvent>({ maxConcurrency: value })).toThrow(
           InvalidEventBusConfigurationProblem,
         );
 
         try {
-          new InMemoryEventBus<TestEvent>({ maxConcurrency: value });
+          createTestEventBus<TestEvent>({ maxConcurrency: value });
         } catch (error) {
           expect(error).toMatchObject({
             code: "events-inmemory/invalid-configuration",
@@ -1047,12 +1128,12 @@ describe("InMemoryEventBus", () => {
     it.each(invalidTimeoutValues)(
       "rejects invalid backpressureTimeoutMs %s at construction",
       (value) => {
-        expect(() => new InMemoryEventBus<TestEvent>({ backpressureTimeoutMs: value })).toThrow(
+        expect(() => createTestEventBus<TestEvent>({ backpressureTimeoutMs: value })).toThrow(
           InvalidEventBusConfigurationProblem,
         );
 
         try {
-          new InMemoryEventBus<TestEvent>({ backpressureTimeoutMs: value });
+          createTestEventBus<TestEvent>({ backpressureTimeoutMs: value });
         } catch (error) {
           expect(error).toMatchObject({
             code: "events-inmemory/invalid-configuration",
@@ -1066,25 +1147,24 @@ describe("InMemoryEventBus", () => {
     it.each([1, MAX_EVENT_BUS_CONCURRENCY])(
       "accepts maxConcurrency boundary %s without rounding",
       (maxConcurrency) => {
-        expect(() => new InMemoryEventBus<TestEvent>({ maxConcurrency })).not.toThrow();
+        expect(() => createTestEventBus<TestEvent>({ maxConcurrency })).not.toThrow();
       },
     );
 
     it.each([1, MAX_EVENT_BUS_TIMEOUT_MS])(
       "accepts backpressureTimeoutMs boundary %s without timer clamping",
       (backpressureTimeoutMs) => {
-        expect(() => new InMemoryEventBus<TestEvent>({ backpressureTimeoutMs })).not.toThrow();
+        expect(() => createTestEventBus<TestEvent>({ backpressureTimeoutMs })).not.toThrow();
       },
     );
 
     it("preserves existing valid tuning combinations", () => {
-      expect(
-        () =>
-          new InMemoryEventBus<TestEvent>({
-            maxConcurrency: 10,
-            backpressureStrategy: "block",
-            backpressureTimeoutMs: 5000,
-          }),
+      expect(() =>
+        createTestEventBus<TestEvent>({
+          maxConcurrency: 10,
+          backpressureStrategy: "block",
+          backpressureTimeoutMs: 5000,
+        }),
       ).not.toThrow();
     });
 
@@ -1099,7 +1179,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const limitedBus = new InMemoryEventBus<TestEvent>({
+      const limitedBus = createTestEventBus<TestEvent>({
         maxConcurrency: 1,
         backpressureStrategy: "block",
       });
@@ -1149,7 +1229,7 @@ describe("InMemoryEventBus", () => {
           }
         }
 
-        const limitedBus = new InMemoryEventBus<TestEvent>({
+        const limitedBus = createTestEventBus<TestEvent>({
           maxConcurrency: 1,
           backpressureStrategy: "block",
         });
@@ -1208,7 +1288,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const limitedBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 2 });
+      const limitedBus = createTestEventBus<TestEvent>({ maxConcurrency: 2 });
       const subscription = {
         eventName: "TestEvent",
         handlerClass: BlockingHandler,
@@ -1246,7 +1326,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const limitedBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
+      const limitedBus = createTestEventBus<TestEvent>({ maxConcurrency: 1 });
       const subscription = {
         eventName: "TestEvent",
         handlerClass: DeferredFailingHandler,
@@ -1284,7 +1364,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const dropBus = new InMemoryEventBus<TestEvent>({
+      const dropBus = createTestEventBus<TestEvent>({
         maxConcurrency: 1,
         backpressureStrategy: "drop",
       });
@@ -1394,7 +1474,7 @@ describe("InMemoryEventBus", () => {
 
       const firstHandler = new FirstHandler();
       const secondHandler = new SecondHandler();
-      const dropBus = new InMemoryEventBus<TestEvent>({
+      const dropBus = createTestEventBus<TestEvent>({
         maxConcurrency: 1,
         backpressureStrategy: "drop",
       });
@@ -1423,7 +1503,7 @@ describe("InMemoryEventBus", () => {
       class FirstFailingHandler extends FailingHandler {}
       class SecondHandler extends TestHandler {}
 
-      const dropBus = new InMemoryEventBus<TestEvent>({
+      const dropBus = createTestEventBus<TestEvent>({
         maxConcurrency: 1,
         backpressureStrategy: "drop",
       });
@@ -1494,7 +1574,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const errorBus = new InMemoryEventBus<TestEvent>({
+      const errorBus = createTestEventBus<TestEvent>({
         maxConcurrency: 1,
         backpressureStrategy: "error",
       });
@@ -1523,7 +1603,7 @@ describe("InMemoryEventBus", () => {
           }
         }
 
-        const timeoutBus = new InMemoryEventBus<TestEvent>({
+        const timeoutBus = createTestEventBus<TestEvent>({
           maxConcurrency: 1,
           backpressureStrategy: "block",
           backpressureTimeoutMs: 25,
@@ -1567,7 +1647,7 @@ describe("InMemoryEventBus", () => {
           }
         }
 
-        const blockBus = new InMemoryEventBus<TestEvent>({
+        const blockBus = createTestEventBus<TestEvent>({
           maxConcurrency: 1,
           backpressureStrategy: "block",
         });
@@ -1611,7 +1691,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const bus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
+      const bus = createTestEventBus<TestEvent>({ maxConcurrency: 1 });
       const publishing: EventPublishing<TestEvent> = bus;
       Container.set(BlockingHandler, new BlockingHandler());
       bus.subscribe({ eventName: "TestEvent", handlerClass: BlockingHandler });
@@ -1648,7 +1728,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const bus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
+      const bus = createTestEventBus<TestEvent>({ maxConcurrency: 1 });
       Container.set(BlockingHandler, new BlockingHandler());
       bus.subscribe({ eventName: "TestEvent", handlerClass: BlockingHandler });
 
@@ -1681,7 +1761,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const bus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
+      const bus = createTestEventBus<TestEvent>({ maxConcurrency: 1 });
       Container.set(BlockingHandler, new BlockingHandler());
       bus.subscribe({ eventName: "TestEvent", handlerClass: BlockingHandler });
 
@@ -1706,7 +1786,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const blockBus = new InMemoryEventBus<TestEvent>({
+      const blockBus = createTestEventBus<TestEvent>({
         maxConcurrency: 1,
         backpressureStrategy: "block",
       });
@@ -1733,7 +1813,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const limitedBus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
+      const limitedBus = createTestEventBus<TestEvent>({ maxConcurrency: 1 });
 
       Container.set(BlockingHandler, new BlockingHandler());
       limitedBus.subscribe({
@@ -1767,7 +1847,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const unlimitedBus = new InMemoryEventBus<TestEvent>();
+      const unlimitedBus = createTestEventBus<TestEvent>();
 
       Container.set(SlowHandler, new SlowHandler());
       unlimitedBus.subscribe({
@@ -1802,12 +1882,12 @@ describe("InMemoryEventBus", () => {
           registeredHook = hook;
         },
       };
-      const bus = new InMemoryEventBus({ deadLetterQueue: new InMemoryDeadLetterQueue() });
+      const bus = createTestEventBus({ deadLetterQueue: new InMemoryDeadLetterQueue() });
       const config = EventBusConfig.getInstance();
       config.setEventBus(bus);
-      Container.set(TRANSACTION_CONTEXT_TOKEN as never, txContext as never);
-
-      new EventPublisher(config).publishAfterCommit(new UnsupportedPayloadEvent(), { onError });
+      new EventPublisher(config, txContext).publishAfterCommit(new UnsupportedPayloadEvent(), {
+        onError,
+      });
 
       await expect(registeredHook?.()).rejects.toMatchObject({
         code: "events-core/after-commit-publish-failed",
@@ -1835,9 +1915,9 @@ describe("InMemoryEventBus", () => {
       };
       const config = EventBusConfig.getInstance();
       config.setEventBus(eventBus);
-      Container.set(TRANSACTION_CONTEXT_TOKEN as never, txContext as never);
-
-      new EventPublisher(config).publishAfterCommit(new TestEvent("after-shutdown"), { onError });
+      new EventPublisher(config, txContext).publishAfterCommit(new TestEvent("after-shutdown"), {
+        onError,
+      });
       await eventBus.shutdown();
 
       await expect(registeredHook?.()).rejects.toMatchObject({
@@ -1867,7 +1947,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const bus = new InMemoryEventBus<TestEvent>({
+      const bus = createTestEventBus<TestEvent>({
         maxConcurrency: 1,
         backpressureStrategy: "block",
       });
@@ -1932,7 +2012,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const bus = new InMemoryEventBus<TestEvent>();
+      const bus = createTestEventBus<TestEvent>();
       Container.set(FirstBlockingHandler, new FirstBlockingHandler());
       Container.set(SecondHandler, new SecondHandler());
       bus.subscribe({ eventName: TestEvent.eventName, handlerClass: FirstBlockingHandler });
@@ -1964,7 +2044,7 @@ describe("InMemoryEventBus", () => {
       }
 
       try {
-        const bus = new InMemoryEventBus<TestEvent>();
+        const bus = createTestEventBus<TestEvent>();
         Container.set(BlockingHandler, new BlockingHandler());
         bus.subscribe({ eventName: TestEvent.eventName, handlerClass: BlockingHandler });
 
@@ -2007,7 +2087,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const bus = new InMemoryEventBus<TestEvent>();
+      const bus = createTestEventBus<TestEvent>();
       const controller = new AbortController();
       Container.set(BlockingHandler, new BlockingHandler());
       bus.subscribe({ eventName: TestEvent.eventName, handlerClass: BlockingHandler });
@@ -2035,7 +2115,7 @@ describe("InMemoryEventBus", () => {
       1.5,
       2_147_483_648,
     ])("rejects invalid drain timeout %s without closing intake", async (timeoutMs) => {
-      const bus = new InMemoryEventBus<TestEvent>();
+      const bus = createTestEventBus<TestEvent>();
 
       await expect(bus.shutdown({ timeoutMs })).rejects.toBeInstanceOf(
         InvalidEventBusDrainTimeoutProblem,
@@ -2054,7 +2134,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const bus = new InMemoryEventBus<TestEvent>();
+      const bus = createTestEventBus<TestEvent>();
       Container.set(BlockingHandler, new BlockingHandler());
       bus.subscribe({ eventName: TestEvent.eventName, handlerClass: BlockingHandler });
       ShutdownManager.getInstance(1_000).register(
@@ -2091,7 +2171,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const bus = new InMemoryEventBus<TestEvent>();
+      const bus = createTestEventBus<TestEvent>();
 
       Container.set(QuickHandler, new QuickHandler());
       bus.subscribe({ eventName: "TestEvent", handlerClass: QuickHandler });
@@ -2114,7 +2194,7 @@ describe("InMemoryEventBus", () => {
         }
       }
 
-      const bus = new InMemoryEventBus<TestEvent>({ maxConcurrency: 1 });
+      const bus = createTestEventBus<TestEvent>({ maxConcurrency: 1 });
 
       Container.set(SlowHandler, new SlowHandler());
       bus.subscribe({ eventName: "TestEvent", handlerClass: SlowHandler });

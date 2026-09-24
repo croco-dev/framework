@@ -5,8 +5,8 @@ prev: false
 title: "Token"
 ---
 
-Used to create unique typed service identifier.
-Useful when service has only interface, but don't have a class.
+A type-safe dependency token whose runtime identity is the token object itself.
+The name is diagnostic-only and never participates in equality.
 
 ## Type Parameters
 
@@ -18,15 +18,13 @@ Useful when service has only interface, but don't have a class.
 
 ### Constructor
 
-> **new Token**\<`T`\>(`name?`): `Token`\<`T`\>
+> **new Token**\<`T`\>(`name`): `Token`\<`T`\>
 
 #### Parameters
 
-##### name?
+##### name
 
 `string`
-
-Token name, optional and only used for debugging purposes.
 
 #### Returns
 
@@ -34,6 +32,22 @@ Token name, optional and only used for debugging purposes.
 
 ## Properties
 
-### name?
+### \[TOKEN_IDENTITY\]
 
-> `optional` **name?**: `string`
+> `readonly` **\[TOKEN_IDENTITY\]**: `true` = `true`
+
+---
+
+### name
+
+> `readonly` **name**: `string`
+
+## Methods
+
+### toString()
+
+> **toString**(): `string`
+
+#### Returns
+
+`string`

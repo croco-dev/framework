@@ -79,7 +79,7 @@ export interface HttpResponseLike {
   headers: Record<string, string>;
 }
 
-export type Constructor<T = unknown> = new (...args: unknown[]) => T;
+export type Constructor<T = unknown> = new (...args: never[]) => T;
 export type PipeTransformConstructor = Constructor<PipeTransform>;
 export type GuardConstructor = Constructor<Guard>;
 export type InterceptorConstructor = Constructor<Interceptor>;

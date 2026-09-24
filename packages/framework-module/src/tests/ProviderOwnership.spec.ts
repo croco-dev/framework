@@ -1,5 +1,8 @@
-import { Container as FrameworkContainer } from "@croco/framework-context";
-import { Container as TypeDIContainer, Token } from "typedi";
+import {
+  Container as FrameworkContainer,
+  RuntimeContainer as RuntimeContainerBackend,
+  Token,
+} from "@croco/framework-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createModuleGraphManifest,
@@ -46,7 +49,7 @@ describe("module provider ownership", () => {
     ["string", (): ModuleToken<unknown> => "shared-string"],
     ["symbol", (): ModuleToken<unknown> => Symbol("shared-symbol")],
     ["class", (): ModuleToken<unknown> => class SharedService {}],
-    ["TypeDI Token", (): ModuleToken<unknown> => new Token("shared-token")],
+    ["Croco Token", (): ModuleToken<unknown> => new Token("shared-token")],
   ])(
     "rejects ambiguous %s ownership in either root order before mutation",
     async (_name, createToken) => {
@@ -92,7 +95,7 @@ describe("module provider ownership", () => {
     });
     expect(factory).not.toHaveBeenCalled();
     expect(setup).not.toHaveBeenCalled();
-    expect(TypeDIContainer.has(token)).toBe(false);
+    expect(RuntimeContainerBackend.has(token)).toBe(false);
   });
 
   it("produces the same ownership diagnostic for reversed roots", () => {
@@ -184,7 +187,7 @@ describe("module provider ownership", () => {
         extensions: { moduleName: "consumer", token: "config", declaredOwner: "owner" },
       }),
     });
-    expect(TypeDIContainer.has(token)).toBe(false);
+    expect(RuntimeContainerBackend.has(token)).toBe(false);
   });
 
   it("allows local token-only writes and rejects undeclared writes before mutation", async () => {
@@ -207,7 +210,7 @@ describe("module provider ownership", () => {
         extensions: { moduleName: "owner", token: "undeclared" },
       }),
     });
-    expect(TypeDIContainer.has(undeclaredToken)).toBe(false);
+    expect(RuntimeContainerBackend.has(undeclaredToken)).toBe(false);
   });
 
   it("rejects root-context writes directly before mutation", async () => {
@@ -219,7 +222,7 @@ describe("module provider ownership", () => {
     expect(() => context.set(token, "forbidden")).toThrow(
       "Root module context cannot write provider 'root-write'. Provider writes require ownership declared by a named module.",
     );
-    expect(TypeDIContainer.has(token)).toBe(false);
+    expect(RuntimeContainerBackend.has(token)).toBe(false);
   });
 
   it("shares symbol-backed registrations with framework-context and resets coherently", async () => {
@@ -228,8 +231,8 @@ describe("module provider ownership", () => {
 
     await CrocoModule.initialize();
 
-    const identifier = FrameworkContainer.toTypeDIServiceIdentifier(token);
-    expect(TypeDIContainer.get(identifier as Token<string>)).toBe("value");
+    const identifier = FrameworkContainer.toServiceIdentifier(token);
+    expect(RuntimeContainerBackend.get(identifier as Token<string>)).toBe("value");
     expect(FrameworkContainer.get(token)).toBe("value");
 
     CrocoModule.reset();
@@ -259,9 +262,9 @@ describe("module provider ownership", () => {
     });
   });
 
-  it("rejects symbol and adapted TypeDI identifiers as the same provider ownership", async () => {
+  it("rejects symbol and adapted runtime identifiers as the same provider ownership", async () => {
     const token = Symbol("shared-adapted-symbol");
-    const identifier = FrameworkContainer.toTypeDIServiceIdentifier(token) as Token<unknown>;
+    const identifier = FrameworkContainer.toServiceIdentifier(token) as Token<unknown>;
 
     CrocoModule.use({ name: "symbol-owner", providers: [{ provide: token, useValue: "symbol" }] });
     CrocoModule.use({
@@ -273,12 +276,12 @@ describe("module provider ownership", () => {
       code: "framework-module/provider-ownership-conflict",
       extensions: { owners: ["identifier-owner", "symbol-owner"] },
     });
-    expect(TypeDIContainer.has(identifier)).toBe(false);
+    expect(RuntimeContainerBackend.has(identifier)).toBe(false);
   });
 
   it("allows an owner to write through the original symbol for an adapted declaration", async () => {
     const token = Symbol("adapted-owner-write");
-    const identifier = FrameworkContainer.toTypeDIServiceIdentifier(token) as Token<string>;
+    const identifier = FrameworkContainer.toServiceIdentifier(token) as Token<string>;
 
     CrocoModule.use({
       name: "owner",
@@ -315,7 +318,7 @@ describe("module provider ownership", () => {
     CrocoModule.use({ name: "attacker", providers: attackerProviders });
 
     await expect(CrocoModule.initialize()).resolves.toBeDefined();
-    expect(TypeDIContainer.get(sharedToken)).toBe("safe");
+    expect(RuntimeContainerBackend.get(sharedToken)).toBe("safe");
     expect(FrameworkContainer.has(Attacker)).toBe(false);
   });
 
@@ -341,8 +344,8 @@ describe("module provider ownership", () => {
 
     await expect(CrocoModule.initialize()).resolves.toBeDefined();
     expect(tokenReads).toBe(1);
-    expect(TypeDIContainer.get(victimToken)).toBe("safe");
-    expect(TypeDIContainer.get(attackerToken)).toBeInstanceOf(Attacker);
+    expect(RuntimeContainerBackend.get(victimToken)).toBe("safe");
+    expect(RuntimeContainerBackend.get(attackerToken)).toBeInstanceOf(Attacker);
   });
 
   it("reads module provider metadata once when registration snapshots the graph", async () => {
@@ -370,7 +373,7 @@ describe("module provider ownership", () => {
     await CrocoModule.initialize();
 
     expect(providerReads).toBe(1);
-    expect(TypeDIContainer.get(victimToken)).toBe("safe");
-    expect(TypeDIContainer.get(innocentToken)).toBe("innocent");
+    expect(RuntimeContainerBackend.get(victimToken)).toBe("safe");
+    expect(RuntimeContainerBackend.get(innocentToken)).toBe("innocent");
   });
 });

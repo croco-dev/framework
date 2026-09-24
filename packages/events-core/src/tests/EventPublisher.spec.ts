@@ -1,8 +1,4 @@
-import {
-  Container,
-  TRANSACTION_CONTEXT_TOKEN,
-  type TransactionContext,
-} from "@croco/framework-context";
+import { Container, type TransactionContext } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AggregateRoot } from "../libs/AggregateRoot";
 import { DomainEvent } from "../libs/DomainEvent";
@@ -57,7 +53,7 @@ describe("EventPublisher", () => {
 
   beforeEach(() => {
     Container.reset();
-    Container.remove(TRANSACTION_CONTEXT_TOKEN as never);
+
     vi.restoreAllMocks();
     mockEventBus = new MockEventBus();
     config = EventBusConfig.getInstance();
@@ -146,7 +142,7 @@ describe("EventPublisher", () => {
         },
       };
 
-      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      publisher = new EventPublisher(config, mockTxContext);
 
       const event = new TestEvent("deprecated-with-tx");
 
@@ -173,7 +169,7 @@ describe("EventPublisher", () => {
         },
       };
 
-      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      publisher = new EventPublisher(config, mockTxContext);
 
       const event = new TestEvent("publish-now");
 
@@ -202,7 +198,7 @@ describe("EventPublisher", () => {
         onAfterCommit: vi.fn(),
       };
 
-      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      publisher = new EventPublisher(config, mockTxContext);
 
       expect(() => publisher.publishAfterCommit(new TestEvent("uncaptured"))).toThrow(
         EventAfterCommitOutcomeRequiredProblem,
@@ -220,7 +216,7 @@ describe("EventPublisher", () => {
         },
       };
 
-      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      publisher = new EventPublisher(config, mockTxContext);
 
       const event = new TestEvent("after-commit");
 
@@ -246,7 +242,7 @@ describe("EventPublisher", () => {
         },
       };
 
-      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      publisher = new EventPublisher(config, mockTxContext);
 
       publisher.publishAfterCommit(new TestEvent("acknowledged"), () => {
         acknowledged = true;
@@ -295,7 +291,7 @@ describe("EventPublisher", () => {
         clear(): void {},
       } satisfies EventBus;
 
-      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      publisher = new EventPublisher(config, mockTxContext);
       config.setEventBus(errorEventBus);
 
       publisher.publishAfterCommit(new TestEvent("failed-after-commit"), {
@@ -345,7 +341,7 @@ describe("EventPublisher", () => {
         clear(): void {},
       } satisfies EventBus;
 
-      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      publisher = new EventPublisher(config, mockTxContext);
       config.setEventBus(errorEventBus);
 
       publisher.publishAfterCommit(new TestEvent("non-stringifiable-failure"), {
@@ -399,7 +395,7 @@ describe("EventPublisher", () => {
         clear(): void {},
       } satisfies EventBus;
 
-      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      publisher = new EventPublisher(config, mockTxContext);
       config.setEventBus(statsManagedEventBus);
 
       publisher.publishAfterCommit(new TestEvent("managed-failure"), { onError: vi.fn() });
@@ -434,7 +430,7 @@ describe("EventPublisher", () => {
         clear(): void {},
       } satisfies EventBus;
 
-      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      publisher = new EventPublisher(config, mockTxContext);
       config.setEventBus(errorEventBus);
 
       publisher.publishAfterCommit(new TestEvent("observer-failure"), {
@@ -471,7 +467,7 @@ describe("EventPublisher", () => {
         clear(): void {},
       } satisfies EventBus;
 
-      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      publisher = new EventPublisher(config, mockTxContext);
       config.setEventBus(errorEventBus);
 
       publisher.publishAfterCommit(new TestEvent("observer-failure"), {
@@ -502,7 +498,7 @@ describe("EventPublisher", () => {
         },
       };
 
-      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      publisher = new EventPublisher(config, mockTxContext);
 
       publisher.publishAfterCommit(new TestEvent("options-success"), { onPublished });
       await registeredHook?.();
@@ -707,6 +703,27 @@ describe("EventPublisher", () => {
     });
   });
   describe("tx-aware publishing", () => {
+    it("keeps after-commit hooks on each publisher's injected transaction context", () => {
+      const firstHook = vi.fn();
+      const secondHook = vi.fn();
+      const first = new EventPublisher(config, {
+        isInTransaction: () => true,
+        canRegisterAfterCommit: () => true,
+        onAfterCommit: firstHook,
+      });
+      const second = new EventPublisher(config, {
+        isInTransaction: () => true,
+        canRegisterAfterCommit: () => true,
+        onAfterCommit: secondHook,
+      });
+      first.publishAfterCommit(new TestEvent("first"));
+      expect(firstHook).toHaveBeenCalledTimes(1);
+      expect(secondHook).not.toHaveBeenCalled();
+      second.publishAfterCommit(new TestEvent("second"));
+      expect(firstHook).toHaveBeenCalledTimes(1);
+      expect(secondHook).toHaveBeenCalledTimes(1);
+    });
+
     it("트랜잭션 컨텍스트가 없으면 즉시 발행한다", async () => {
       const event = new TestEvent("no-tx");
 
@@ -717,14 +734,11 @@ describe("EventPublisher", () => {
     });
 
     it("등록된 트랜잭션 컨텍스트가 비활성 상태면 즉시 발행한다", async () => {
-      Container.set(
-        TRANSACTION_CONTEXT_TOKEN as never,
-        {
-          isInTransaction: () => false,
-          canRegisterAfterCommit: () => false,
-          onAfterCommit: () => {},
-        } satisfies TransactionContext as never,
-      );
+      publisher = new EventPublisher(config, {
+        isInTransaction: () => false,
+        canRegisterAfterCommit: () => false,
+        onAfterCommit: () => {},
+      } satisfies TransactionContext);
 
       const event = new TestEvent("inactive-tx");
       await publisher.publishNow(event);
@@ -735,7 +749,6 @@ describe("EventPublisher", () => {
 
     it("등록된 트랜잭션 컨텍스트 조회 실패 시 명시적 오류를 던진다", async () => {
       // Ensure no transaction context is registered
-      Container.remove(TRANSACTION_CONTEXT_TOKEN as never);
 
       const event = new TestEvent("no-tx");
       expect(() => publisher.publishAfterCommit(event)).toThrow(
@@ -755,7 +768,7 @@ describe("EventPublisher", () => {
         },
       };
 
-      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      publisher = new EventPublisher(config, mockTxContext);
 
       const event = new TestEvent("with-tx");
       publisher.publishAfterCommit(event);
@@ -781,7 +794,7 @@ describe("EventPublisher", () => {
         },
       };
 
-      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      publisher = new EventPublisher(config, mockTxContext);
 
       const event = new TestEvent("rollback-tx");
       publisher.publishAfterCommit(event);
@@ -800,7 +813,7 @@ describe("EventPublisher", () => {
         },
       };
 
-      Container.set(TRANSACTION_CONTEXT_TOKEN as never, mockTxContext as never);
+      publisher = new EventPublisher(config, mockTxContext);
 
       class TestAgg extends AggregateRoot {
         doWork() {

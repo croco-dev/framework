@@ -5,8 +5,7 @@ import type {
   ExecutionAttemptToken,
   ExecutionManager,
 } from "@croco/execution-core";
-import type { ILogger } from "@croco/framework-context";
-import { Container } from "@croco/framework-context";
+import type { Constructor, ILogger } from "@croco/framework-context";
 import { Problem } from "@croco/problems-core";
 import { recordError } from "@croco/telemetry-api";
 import {
@@ -28,7 +27,6 @@ import type {
   TaskTimeoutRetryPolicy,
 } from "./types";
 
-type Constructor<T = object> = new (...args: unknown[]) => T;
 type RuntimeTaskReference = Pick<TaskReference, "name" | "target" | "methodName">;
 type TaskExecutionArguments<TReference extends TaskReference> = TReference extends TaskReference
   ? [
@@ -41,6 +39,7 @@ type TaskExecutionArguments<TReference extends TaskReference> = TReference exten
 const MAX_TIMER_DELAY_MS = 2_147_483_647;
 
 export interface TaskRunnerRuntime {
+  readonly serviceResolver?: (target: Constructor<object>) => object;
   readonly now?: () => number;
   readonly schedule?: (callback: () => void, delayMs: number) => () => void;
 }
@@ -184,6 +183,7 @@ function isRuntimeTaskReference(candidate: unknown): candidate is RuntimeTaskRef
 }
 
 export class TaskRunner {
+  private readonly serviceResolver: TaskRunnerRuntime["serviceResolver"];
   private readonly now: () => number;
   private readonly schedule: (callback: () => void, delayMs: number) => () => void;
 
@@ -193,6 +193,7 @@ export class TaskRunner {
     private logger: ILogger = noopLogger,
     runtime: TaskRunnerRuntime = {},
   ) {
+    this.serviceResolver = runtime.serviceResolver;
     this.now = runtime.now ?? (() => Date.now());
     this.schedule =
       runtime.schedule ??
@@ -622,7 +623,13 @@ export class TaskRunner {
   private createInstance(target: object): object {
     if (typeof target === "function") {
       try {
-        return Container.get(target as Constructor<object>);
+        if (!this.serviceResolver) {
+          throw new TaskRunnerDIFailureProblem(
+            target.name || "Unknown",
+            "An application serviceResolver is required for class task targets",
+          );
+        }
+        return this.serviceResolver(target as Constructor<object>);
       } catch (error) {
         const targetName = target.name || "Unknown";
         this.logger.warn("DI resolution failed while creating task instance", {

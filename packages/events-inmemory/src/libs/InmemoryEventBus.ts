@@ -12,6 +12,7 @@ import type {
   EventHandlerClass,
   EventPublishOptions,
   EventSubscription,
+  HandlerResolver,
   RetryableEventHandler,
 } from "@croco/events-core";
 import {
@@ -23,14 +24,8 @@ import {
   InvalidEventBusDrainTimeoutProblem,
   MAX_EVENT_BUS_DRAIN_TIMEOUT_MS,
 } from "@croco/events-core";
-import type { ILogger, RuntimeInspector, RuntimeInspectorRecorder } from "@croco/framework-context";
-import {
-  Container,
-  Context as CrocoContext,
-  DEV_INSPECTOR_TOKEN,
-  LOGGER_TOKEN,
-  recordRuntimeInspectionEvent,
-} from "@croco/framework-context";
+import type { ILogger, RuntimeInspectorRecorder } from "@croco/framework-context";
+import { Context as CrocoContext, recordRuntimeInspectionEvent } from "@croco/framework-context";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { TraceInfo } from "@croco/telemetry-api";
 import { getActiveTraceInfo, getTracer } from "@croco/telemetry-api";
@@ -47,6 +42,7 @@ import {
   InvalidDeadLetterQueueLimitProblem,
   InvalidDeadLetterRetryCountProblem,
   InvalidEventBusConfigurationProblem,
+  MissingEventHandlerResolverProblem,
   MAX_EVENT_BUS_CONCURRENCY,
   MAX_EVENT_BUS_TIMEOUT_MS,
 } from "./problems/EventsInmemoryProblems";
@@ -127,6 +123,12 @@ export class EventPublishDroppedProblem extends Problem {
 export type BackpressureStrategy = "drop" | "block" | "error";
 
 export type InMemoryEventBusOptions = {
+  /** Resolves class-only subscriptions through the owning application's DI graph. */
+  handlerResolver?: HandlerResolver;
+  /** Receives handler failures. */
+  logger?: Pick<ILogger, "error">;
+  /** Records events outside a request-provided inspector. */
+  runtimeInspector?: RuntimeInspectorRecorder;
   /** Positive safe integer. Defaults to 100. */
   maxConcurrency?: number;
   backpressureStrategy?: BackpressureStrategy;
@@ -160,7 +162,7 @@ type SubscriberExecutionResult<TEvent extends DomainEvent> = {
 };
 
 /**
- * TypeDI와 OpenTelemetry를 사용하는 인메모리 EventBus 구현체입니다.
+ * 명시적인 handler resolver와 OpenTelemetry를 사용하는 인메모리 EventBus 구현체입니다.
  */
 export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
   implements EventBus<TEvent>, EventBusLifecycle
@@ -185,7 +187,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
   private readonly drainWaiters = new Set<() => void>();
   private intakeClosed = false;
 
-  constructor(options: InMemoryEventBusOptions = {}) {
+  constructor(private readonly options: InMemoryEventBusOptions = {}) {
     const maxConcurrency = options.maxConcurrency === undefined ? 100 : options.maxConcurrency;
     if (
       !Number.isSafeInteger(maxConcurrency) ||
@@ -650,7 +652,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
     let handlerInstance: DeadLetterCapableHandler<TEvent>;
     try {
       handlerInstance = (handler ??
-        Container.get(handlerClass)) as DeadLetterCapableHandler<TEvent>;
+        this.resolveHandler(handlerClass)) as DeadLetterCapableHandler<TEvent>;
     } catch (error) {
       const failure = { handlerName, error: this.normalizeError(error) };
       if (execution.source === "replay") {
@@ -810,7 +812,7 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
         async (handleSpan: Span) => {
           try {
             const handlerInstance =
-              typeof handler === "function" ? Container.get(handler) : handler;
+              typeof handler === "function" ? this.resolveHandler(handler) : handler;
             const handlerEvent = this.cloneEvent(baseEvent);
             await handlerInstance.handle(handlerEvent);
             handleSpan.setStatus({ code: SpanStatusCode.OK });
@@ -827,13 +829,9 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
             });
 
             try {
-              const logger = Container.get(LOGGER_TOKEN) as ILogger;
-              logger.error(`EventHandler error (${eventName}):`, normalizedError);
-            } catch {
-              // Fallback when DI container cannot resolve Logger.
-              // This is intentional: error logging must not fail silently.
-              // eslint-disable-next-line no-console
-              console.error(`EventHandler error (${eventName}):`, normalizedError);
+              this.options.logger?.error(`EventHandler error (${eventName}):`, normalizedError);
+            } catch (loggingError) {
+              handleSpan.recordException(this.normalizeError(loggingError));
             }
           } finally {
             handleSpan.end();
@@ -1044,10 +1042,14 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
   }
 
   private resolveRuntimeInspector(): RuntimeInspectorRecorder | undefined {
-    return (
-      CrocoContext.get()?.runtimeInspector ??
-      Container.getOptional<RuntimeInspector>(DEV_INSPECTOR_TOKEN)
-    );
+    return CrocoContext.get()?.runtimeInspector ?? this.options.runtimeInspector;
+  }
+
+  private resolveHandler(handlerClass: EventHandlerClass<TEvent>): EventHandler<TEvent> {
+    if (!this.options.handlerResolver) {
+      throw new MissingEventHandlerResolverProblem(handlerClass.name);
+    }
+    return this.options.handlerResolver.resolve(handlerClass);
   }
 
   private recordInspectionEvent(

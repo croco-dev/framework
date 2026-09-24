@@ -1,5 +1,5 @@
 import type { EventBus } from "@croco/events-core";
-import { Component, Container, LOGGER_TOKEN } from "@croco/framework-context";
+import { Component, InjectOptional, LOGGER_TOKEN, type ILogger } from "@croco/framework-context";
 import type {
   BillableUsageEvent,
   BillableUsageJournal,
@@ -73,7 +73,10 @@ export class MeteringService {
   private readonly billableUsageJournal?: BillableUsageJournal;
   private readonly quotaManager: QuotaManager;
 
-  constructor(options: MeteringServiceOptions) {
+  constructor(
+    options: MeteringServiceOptions,
+    @InjectOptional(LOGGER_TOKEN) private readonly logger?: ILogger,
+  ) {
     this.meterRegistry = options.meterRegistry;
     this.usageStorage = options.usageStorage;
     this.idempotencyManager = options.idempotencyManager;
@@ -255,7 +258,7 @@ export class MeteringService {
     const context = { originalError, cleanupError };
 
     try {
-      const logger = Container.getOptional(LOGGER_TOKEN);
+      const logger = this.logger;
       if (logger) {
         const reportingResult: unknown = logger.error(message, context);
         void Promise.resolve(reportingResult).catch((reportingError: unknown) => {

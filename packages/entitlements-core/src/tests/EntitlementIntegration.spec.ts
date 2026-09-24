@@ -92,7 +92,14 @@ describe("EntitlementIntegration", () => {
 
     Container.set(EntitlementEventPublisher.token, eventPublisher);
 
-    manager = new EntitlementManager(registry, subscriptionProvider, quotaChecker, meterLookup);
+    manager = new EntitlementManager(
+      registry,
+      subscriptionProvider,
+      quotaChecker,
+      meterLookup,
+      {},
+      eventPublisher,
+    );
   });
 
   describe("Scenario 1: Plan Upgrade (Free → Pro)", () => {
@@ -116,7 +123,14 @@ describe("EntitlementIntegration", () => {
       registry.register("pro", proRules);
 
       const proProvider = new StaticSubscriptionProvider("pro");
-      const proManager = new EntitlementManager(registry, proProvider, quotaChecker, meterLookup);
+      const proManager = new EntitlementManager(
+        registry,
+        proProvider,
+        quotaChecker,
+        meterLookup,
+        {},
+        eventPublisher,
+      );
 
       const result = await proManager.check("tenant-1", "projects");
 
@@ -133,7 +147,14 @@ describe("EntitlementIntegration", () => {
       registry.register("free", freeRules);
 
       const freeProvider = new StaticSubscriptionProvider("free");
-      const freeManager = new EntitlementManager(registry, freeProvider, quotaChecker, meterLookup);
+      const freeManager = new EntitlementManager(
+        registry,
+        freeProvider,
+        quotaChecker,
+        meterLookup,
+        {},
+        eventPublisher,
+      );
 
       const freeResult = await freeManager.check("tenant-1", "projects");
       expect(freeResult.granted).toBe(true);
@@ -146,7 +167,14 @@ describe("EntitlementIntegration", () => {
       registry.register("pro", proRules);
 
       const proProvider = new StaticSubscriptionProvider("pro");
-      const proManager = new EntitlementManager(registry, proProvider, quotaChecker, meterLookup);
+      const proManager = new EntitlementManager(
+        registry,
+        proProvider,
+        quotaChecker,
+        meterLookup,
+        {},
+        eventPublisher,
+      );
 
       const proResult = await proManager.check("tenant-1", "projects");
       expect(proResult.granted).toBe(true);

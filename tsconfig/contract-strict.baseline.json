@@ -63,13 +63,6 @@
       "targetMilestone": "1.0 RC"
     },
     {
-      "packageName": "@croco/tx-core",
-      "reason": "Full-spine strict-contract enrollment captures existing diagnostics for targeted hardening before the 1.0 RC gate.",
-      "owner": "@croco/transactions",
-      "debt": "staged-rollout",
-      "targetMilestone": "1.0 RC"
-    },
-    {
       "packageName": "@croco/events-core",
       "reason": "Full-spine strict-contract enrollment captures existing diagnostics for targeted hardening before the 1.0 RC gate.",
       "owner": "@croco/events",
@@ -120,38 +113,6 @@
     }
   ],
   "diagnostics": [
-    {
-      "packageName": "@croco/framework-context",
-      "file": "packages/framework-context/src/libs/Container.ts",
-      "line": 722,
-      "column": 36,
-      "code": "TS4111",
-      "message": "Property 'CROCO_DI_VALIDATE' comes from an index signature, so it must be accessed with ['CROCO_DI_VALIDATE']."
-    },
-    {
-      "packageName": "@croco/framework-context",
-      "file": "packages/framework-context/src/libs/Container.ts",
-      "line": 727,
-      "column": 24,
-      "code": "TS4111",
-      "message": "Property 'NODE_ENV' comes from an index signature, so it must be accessed with ['NODE_ENV']."
-    },
-    {
-      "packageName": "@croco/framework-context",
-      "file": "packages/framework-context/src/libs/decorators/Inject.ts",
-      "line": 101,
-      "column": 39,
-      "code": "TS2379",
-      "message": "Argument of type '{ index: number | undefined; propertyKey: string | symbol | undefined; resolveToken: () => InjectionTokenIdentifier | undefined; }' is not assignable to parameter of type 'InjectionMetadata' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/framework-context",
-      "file": "packages/framework-context/src/libs/decorators/Inject.ts",
-      "line": 72,
-      "column": 39,
-      "code": "TS2379",
-      "message": "Argument of type '{ index: number | undefined; propertyKey: string | symbol | undefined; resolveToken: () => InjectionTokenIdentifier | undefined; }' is not assignable to parameter of type 'InjectionMetadata' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
     {
       "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/MiddlewareChain.ts",
@@ -666,46 +627,6 @@
     },
     {
       "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 204,
-      "column": 61,
-      "code": "TS2379",
-      "message": "Argument of type '{ container: { get<T>(type: Constructor<T>): T; }; globalGuards: unknown[] | undefined; globalInterceptors: unknown[] | undefined; globalFilters: unknown[] | undefined; globalPipes: unknown[] | undefined; }' is not assignable to parameter of type 'CompileOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 343,
-      "column": 33,
-      "code": "TS4111",
-      "message": "Property 'CROCO_HTTP_DI_VALIDATION' comes from an index signature, so it must be accessed with ['CROCO_HTTP_DI_VALIDATION']."
-    },
-    {
-      "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 349,
-      "column": 24,
-      "code": "TS4111",
-      "message": "Property 'NODE_ENV' comes from an index signature, so it must be accessed with ['NODE_ENV']."
-    },
-    {
-      "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 349,
-      "column": 66,
-      "code": "TS4111",
-      "message": "Property 'NODE_ENV' comes from an index signature, so it must be accessed with ['NODE_ENV']."
-    },
-    {
-      "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/CrocoApp.ts",
-      "line": 444,
-      "column": 33,
-      "code": "TS4111",
-      "message": "Property 'CROCO_HTTP_SECURITY_VALIDATION' comes from an index signature, so it must be accessed with ['CROCO_HTTP_SECURITY_VALIDATION']."
-    },
-    {
-      "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/CrocoRouteRegistrar.ts",
       "line": 105,
       "column": 35,
@@ -903,22 +824,6 @@
       "column": 3,
       "code": "TS2375",
       "message": "Type '{ platform: \"node\" | \"lambda\" | \"cloudflare-workers\" | (string & {}); requestId: string; abortSignal: AbortSignal | undefined; env: Record<string, unknown> | undefined; ... 6 more ...; shutdown: () => Promise<...>; }' is not assignable to type 'RuntimeContext' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/tx-core",
-      "file": "packages/tx-core/src/libs/Transactional.ts",
-      "line": 40,
-      "column": 74,
-      "code": "TS2379",
-      "message": "Argument of type '{ nesting: NestingStrategy; options: TOptions | undefined; timeout: number | undefined; }' is not assignable to parameter of type 'TxRunOptions<unknown>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/tx-core",
-      "file": "packages/tx-core/src/libs/Transactional.ts",
-      "line": 48,
-      "column": 69,
-      "code": "TS2379",
-      "message": "Argument of type '{ nesting: \"join\"; options: TOptions | undefined; timeout: number | undefined; }' is not assignable to parameter of type 'TxRunOptions<unknown>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
     },
     {
       "packageName": "@croco/events-core",
@@ -1289,94 +1194,6 @@
       "message": "Property 'retryable' comes from an index signature, so it must be accessed with ['retryable']."
     },
     {
-      "packageName": "@croco/testing",
-      "file": "packages/testing/src/libs/testing.ts",
-      "line": 406,
-      "column": 30,
-      "code": "TS2379",
-      "message": "Argument of type '{ logger: ILogger | undefined; providers: readonly TestingProvider<unknown>[]; transactionContext: false | TestingTransactionContextOptions | TestingTransactionContext | undefined; }' is not assignable to parameter of type 'ResetCrocoTestingContextOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/testing",
-      "file": "packages/testing/src/libs/testing.ts",
-      "line": 525,
-      "column": 30,
-      "code": "TS2379",
-      "message": "Argument of type '{ logger: ILogger | undefined; providers: readonly TestingProvider<unknown>[]; transactionContext: false | TestingTransactionContext; }' is not assignable to parameter of type 'ResetCrocoTestingContextOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/testing",
-      "file": "packages/testing/src/libs/testing.ts",
-      "line": 812,
-      "column": 18,
-      "code": "TS4111",
-      "message": "Property 'type' comes from an index signature, so it must be accessed with ['type']."
-    },
-    {
-      "packageName": "@croco/testing",
-      "file": "packages/testing/src/libs/testing.ts",
-      "line": 813,
-      "column": 18,
-      "code": "TS4111",
-      "message": "Property 'title' comes from an index signature, so it must be accessed with ['title']."
-    },
-    {
-      "packageName": "@croco/testing",
-      "file": "packages/testing/src/libs/testing.ts",
-      "line": 814,
-      "column": 18,
-      "code": "TS4111",
-      "message": "Property 'status' comes from an index signature, so it must be accessed with ['status']."
-    },
-    {
-      "packageName": "@croco/testing",
-      "file": "packages/testing/src/libs/testing.ts",
-      "line": 815,
-      "column": 18,
-      "code": "TS4111",
-      "message": "Property 'code' comes from an index signature, so it must be accessed with ['code']."
-    },
-    {
-      "packageName": "@croco/testing",
-      "file": "packages/testing/src/libs/testing.ts",
-      "line": 816,
-      "column": 12,
-      "code": "TS4111",
-      "message": "Property 'detail' comes from an index signature, so it must be accessed with ['detail']."
-    },
-    {
-      "packageName": "@croco/testing",
-      "file": "packages/testing/src/libs/testing.ts",
-      "line": 816,
-      "column": 49,
-      "code": "TS4111",
-      "message": "Property 'detail' comes from an index signature, so it must be accessed with ['detail']."
-    },
-    {
-      "packageName": "@croco/testing",
-      "file": "packages/testing/src/libs/testing.ts",
-      "line": 817,
-      "column": 12,
-      "code": "TS4111",
-      "message": "Property 'instance' comes from an index signature, so it must be accessed with ['instance']."
-    },
-    {
-      "packageName": "@croco/testing",
-      "file": "packages/testing/src/libs/testing.ts",
-      "line": 817,
-      "column": 51,
-      "code": "TS4111",
-      "message": "Property 'instance' comes from an index signature, so it must be accessed with ['instance']."
-    },
-    {
-      "packageName": "@croco/testing",
-      "file": "packages/testing/src/libs/testing.ts",
-      "line": 878,
-      "column": 42,
-      "code": "TS4111",
-      "message": "Property 'requestId' comes from an index signature, so it must be accessed with ['requestId']."
-    },
-    {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/cli-result.ts",
       "line": 1,
@@ -1567,54 +1384,6 @@
       "column": 62,
       "code": "TS4111",
       "message": "Property 'column' comes from an index signature, so it must be accessed with ['column']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/diGraph.ts",
-      "line": 175,
-      "column": 44,
-      "code": "TS2345",
-      "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/diGraph.ts",
-      "line": 187,
-      "column": 25,
-      "code": "TS2345",
-      "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/diGraph.ts",
-      "line": 196,
-      "column": 27,
-      "code": "TS2345",
-      "message": "Argument of type 'string | undefined' is not assignable to parameter of type 'string'."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/diGraph.ts",
-      "line": 200,
-      "column": 9,
-      "code": "TS18048",
-      "message": "'arg' is possibly 'undefined'."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/diGraph.ts",
-      "line": 318,
-      "column": 3,
-      "code": "TS2322",
-      "message": "Type '{ kind: \"ready\"; roots: readonly TokenIdentifier<unknown>[] | undefined; container: DependencyGraphContainer; }' is not assignable to type '{ readonly kind: \"ready\"; readonly container: DependencyGraphContainer; readonly roots?: readonly TokenIdentifier<unknown>[]; } | { readonly kind: \"error\"; readonly message: string; }'."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/diGraph.ts",
-      "line": 559,
-      "column": 36,
-      "code": "TS4111",
-      "message": "Property 'exports' comes from an index signature, so it must be accessed with ['exports']."
     },
     {
       "packageName": "@croco/cli",
@@ -3091,7 +2860,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/makeListener.ts",
-      "line": 90,
+      "line": 92,
       "column": 68,
       "code": "TS2379",
       "message": "Argument of type '{ dryRun: boolean; overwrite: boolean; cwd: string | undefined; }' is not assignable to parameter of type 'GenerateListenerOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."

@@ -124,16 +124,17 @@ invariant(
 );
 
 async function verifyRuntime(): Promise<void> {
-  const controller = Container.get(PackedController);
+  invariant(
+    !Container.has(PackedController),
+    "decorator import unexpectedly registered the controller",
+  );
+  const controller = new PackedController();
   const getResult = controller.getUser(7, "full");
   const postResult = await controller.createUser({ name: "packed" });
-  invariant(
-    getResult.id === 7 && getResult.name === "full",
-    "registered GET controller invocation failed",
-  );
+  invariant(getResult.id === 7 && getResult.name === "full", "GET controller invocation failed");
   invariant(
     postResult.id === 11 && postResult.name === "packed",
-    "registered POST controller invocation failed",
+    "POST controller invocation failed",
   );
 }
 

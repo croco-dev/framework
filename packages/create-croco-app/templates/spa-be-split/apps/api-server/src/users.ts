@@ -1,6 +1,5 @@
 import { DomainEvent, EventBusConfig, EventPublisher, type EventHandler } from "@croco/events-core";
 import { InMemoryEventBus } from "@croco/events-inmemory";
-import { Container } from "@croco/framework-context";
 import type { KeyedRepositoryResult, Repository } from "@croco/repository-core";
 import { RetryTemplate } from "@croco/retry-core";
 import { recordEvent, withSpan } from "@croco/telemetry-api";
@@ -185,10 +184,10 @@ function createUserRuntime(): UserRuntime {
 
   EventBusConfig.setInstance(eventBusConfig);
   eventBusConfig.setEventBus(eventBus);
-  Container.set(UserCreatedAuditHandler, new UserCreatedAuditHandler(auditLog));
   eventBus.subscribe({
     eventName: UserCreatedEvent.eventName,
     handlerClass: UserCreatedAuditHandler,
+    handler: new UserCreatedAuditHandler(auditLog),
   });
 
   return {

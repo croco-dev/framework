@@ -1,10 +1,8 @@
-import { Container } from "@croco/framework-context";
 import {
   InvalidImpersonationConfigurationProblem,
   type ImpersonationConfigurationConstraint,
 } from "./problems/ImpersonationProblems";
 import type { ImpersonationConfig } from "./types";
-import { IMPERSONATION_CONFIG_TOKEN } from "./types";
 
 const MAX_DATE_TIMESTAMP_MS = 8_640_000_000_000_000;
 
@@ -116,8 +114,7 @@ export function assertValidImpersonationConfig(
   }
 }
 
-export function resolveImpersonationConfig(): ImpersonationConfig {
-  const config: unknown = Container.getOptional(IMPERSONATION_CONFIG_TOKEN);
+export function resolveImpersonationConfig(config: unknown): ImpersonationConfig {
   if (config === undefined) {
     throw invalidConfigurationProblem("registered", "missing");
   }

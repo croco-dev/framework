@@ -1,8 +1,6 @@
-// Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
-/* oxlint-disable typescript/consistent-type-imports */
 import { Component } from "@croco/framework-context";
 import type { BillableUsageJournal } from "./BillableUsageJournal";
-import { MeterRepository } from "./MeterRepository";
+import type { MeterRepository } from "./MeterRepository";
 import { BillableUsageJournalRequiredProblem } from "./problems/BillableUsageJournalRequiredProblem";
 import { InvalidMeterProblem } from "./problems/InvalidMeterProblem";
 import type { MeterDefinition, MeterRegistrationOptions } from "./types";

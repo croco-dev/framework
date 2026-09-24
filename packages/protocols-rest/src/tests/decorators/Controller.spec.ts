@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { Component, Container } from "@croco/framework-context";
+import { Component, Container, getDeclaredComponentScope } from "@croco/framework-context";
 import { beforeEach, describe, expect, it } from "vitest";
 import { REST_CONTROLLER_KEY } from "../../libs/constants";
 import { Controller } from "../../libs/decorators/Controller";
@@ -10,23 +10,22 @@ describe("Controller decorator", () => {
     Container.reset();
   });
 
-  it("should register the controller as a singleton component", () => {
+  it("should not register the controller in the runtime container on import", () => {
     @Controller("/users")
     class UserController {}
 
-    expect(Container.getComponentMetadata(UserController)?.scope).toBe("singleton");
-    expect(Container.get(UserController)).toBeInstanceOf(UserController);
+    expect(Container.getComponentMetadata(UserController)).toBeUndefined();
+    expect(Container.has(UserController)).toBe(false);
   });
 
-  it("should report the controller declaration as its DI source location", () => {
+  it("should report the controller declaration source in route metadata", () => {
     @Controller("/users")
     class UserController {}
 
-    const manifest = Container.createDependencyGraphManifest({ roots: [UserController] });
-    const provider = manifest.providers.find((entry) => entry.token === "UserController");
+    const metadata = Reflect.getMetadata(REST_CONTROLLER_KEY, UserController) as ControllerMetadata;
 
-    expect(provider?.sourceLocation?.file).toContain("Controller.spec.ts");
-    expect(provider?.sourceLocation?.file).not.toContain("libs/decorators/Controller");
+    expect(metadata.sourceLocation?.path).toContain("Controller.spec.ts");
+    expect(metadata.sourceLocation?.path).not.toContain("libs/decorators/Controller");
   });
 
   it("should preserve request scope when @Component is evaluated after @Controller", () => {
@@ -34,7 +33,7 @@ describe("Controller decorator", () => {
     @Controller("/users")
     class UserController {}
 
-    expect(Container.getComponentMetadata(UserController)?.scope).toBe("request");
+    expect(getDeclaredComponentScope(UserController)).toBe("request");
   });
 
   it("should preserve request scope when @Component is evaluated before @Controller", () => {
@@ -42,7 +41,7 @@ describe("Controller decorator", () => {
     @Component({ scope: "request" })
     class UserController {}
 
-    expect(Container.getComponentMetadata(UserController)?.scope).toBe("request");
+    expect(getDeclaredComponentScope(UserController)).toBe("request");
   });
 
   it("should define controller metadata with path", () => {

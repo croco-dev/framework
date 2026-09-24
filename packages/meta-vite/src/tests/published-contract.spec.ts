@@ -76,6 +76,38 @@ const buildTargets: readonly BuildTarget[] = [
 ];
 
 describe("published @croco/meta-vite contract", () => {
+  it(
+    "isolates generated request providers while rendering concurrent SSR requests from tarballs",
+    () => {
+      const packRoot = mkdtempSync(join(tmpdir(), "croco-meta-vite-di-pack-"));
+      const consumerRoot = mkdtempSync(join(tmpdir(), "croco-meta-vite-di-consumer-"));
+
+      try {
+        const tarballs = packPackages(packRoot);
+        writeConsumerPackageJson(consumerRoot, tarballs);
+        installMetaViteConsumer(consumerRoot, tarballs, [
+          tarballs.frameworkContext,
+          "react@^19.0.0",
+          "react-dom@^19.0.0",
+          "vite@6.4.3",
+          "zod@^3.23.8",
+        ]);
+        writeFileSync(
+          join(consumerRoot, "runtime.mjs"),
+          readFileSync(join(__dirname, "fixtures", "generated-di-ssr.mjs"), "utf8"),
+        );
+
+        expect(run("node", ["runtime.mjs"], consumerRoot).stdout.trim()).toBe(
+          "generated DI SSR request isolation passed",
+        );
+      } finally {
+        rmSync(packRoot, { force: true, recursive: true });
+        rmSync(consumerRoot, { force: true, recursive: true });
+      }
+    },
+    publishedContractTimeoutMs,
+  );
+
   it("runs the Windows pnpm shim through its JavaScript entrypoint", () => {
     const root = mkdtempSync(join(tmpdir(), "croco-meta-vite-pnpm-launcher-"));
     const pnpmHome = join(root, "node_modules", ".bin");

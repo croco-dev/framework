@@ -29,15 +29,12 @@ import {
   type RouteBody,
   type RouteMethodReturn,
 } from "@croco/protocols-rest";
-import { Container } from "typedi";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import { emitOpenAPI, emitOpenAPIFromContractGraph } from "../libs/emitOpenAPI";
 
 describe("emitOpenAPI", () => {
-  beforeEach(() => {
-    Container.reset();
-  });
+  beforeEach(() => {});
 
   it("should emit a GET operation with a path parameter", () => {
     @Controller("/users")

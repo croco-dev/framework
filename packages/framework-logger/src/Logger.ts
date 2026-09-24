@@ -1,6 +1,4 @@
-// Constructor dependencies must remain runtime values for emitted design:paramtypes metadata.
-/* oxlint-disable typescript/consistent-type-imports */
-import { ConfigService } from "@croco/framework-config";
+import type { ConfigService } from "@croco/framework-config";
 import type { ILogger } from "@croco/framework-context";
 import { Component, Context } from "@croco/framework-context";
 import { trace } from "@opentelemetry/api";
