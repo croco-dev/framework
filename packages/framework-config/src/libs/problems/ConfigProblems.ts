@@ -9,13 +9,13 @@ export class ConfigSchemaNotFoundProblem extends Problem {
 }
 
 export class ConfigValidationProblem extends Problem {
-  constructor(missingPaths: string[]) {
-    const missing = missingPaths.join(", ");
+  constructor(diagnostics: string[]) {
+    const detail = diagnostics.join("; ");
 
     super(
       "framework-config/config-validation-failed",
       ProblemCategory.ValidationError,
-      `Missing required: ${missing}`,
+      `Config validation failed: ${detail}`,
     );
   }
 }
