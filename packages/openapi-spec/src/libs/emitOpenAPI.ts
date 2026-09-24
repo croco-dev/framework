@@ -150,7 +150,11 @@ export function emitOpenAPIFromContractGraph(
       : {}),
   };
 
-  assertContractGraphConsumerRouteCoverage(graph, "openapi", collectOpenAPICoveredRoutes(document));
+  assertContractGraphConsumerRouteCoverage(
+    graph,
+    "openapi",
+    collectOpenAPICoveredRoutes(document, routes),
+  );
 
   return document;
 }
@@ -288,23 +292,24 @@ function toResponseConfig(
   problemDetailsRef: OpenAPIReference,
 ): RouteResponses {
   const outputSchema = unwrapZodEffectsSchema(route.outputSchema);
+  const successStatus = getSuccessStatus(route);
   const responses = {
     ...defaultResponses,
     ...toDeclaredProblemResponseConfig(route, problemDetailsRef),
   };
-  if (!outputSchema) delete responses[200];
-
   return {
     ...responses,
-    ...(outputSchema
+    [successStatus]: outputSchema
       ? {
-          200: {
-            description: "Successful response",
-            content: { "application/json": { schema: outputSchema } },
-          },
+          description: "Successful response",
+          content: { "application/json": { schema: outputSchema } },
         }
-      : { 204: { description: "No content" } }),
+      : { description: "No content" },
   };
+}
+
+function getSuccessStatus(route: ContractGraphRoute): number {
+  return route.successStatus ?? (route.outputSchema ? 200 : 204);
 }
 
 function toDeclaredProblemResponseConfig(
@@ -498,8 +503,10 @@ function formatRoute(route: ContractGraphRoute): string {
 
 function collectOpenAPICoveredRoutes(
   document: OpenAPIDocument,
+  routes: readonly ContractGraphRoute[],
 ): ContractGraphObservedConsumerRoute[] {
   const coveredRoutes: ContractGraphObservedConsumerRoute[] = [];
+  const routesById = new Map(routes.map((route) => [route.routeId, route]));
 
   for (const [path, pathItem] of Object.entries(document.paths ?? {})) {
     if (!isRecord(pathItem)) {
@@ -529,7 +536,9 @@ function collectOpenAPICoveredRoutes(
           "request.path": hasOpenAPIParameters(operation, "path") ? "present" : "absent",
           "request.query": hasOpenAPIParameters(operation, "query") ? "present" : "absent",
           "request.headers": hasOpenAPIParameters(operation, "header") ? "present" : "absent",
-          response: hasOpenAPIJsonSuccessResponse(operation) ? "present" : "absent",
+          response: hasOpenAPIJsonSuccessResponse(operation, routesById.get(operation.summary))
+            ? "present"
+            : "absent",
           problems: openAPIProblemsFingerprint(operation),
           entitlements: openAPIEntitlementsFingerprint(operation),
         },
@@ -581,9 +590,12 @@ function hasOpenAPIParameters(
     .some((parameter) => parameter.in === location && typeof parameter.name === "string");
 }
 
-function hasOpenAPIJsonSuccessResponse(operation: Record<string, unknown>): boolean {
+function hasOpenAPIJsonSuccessResponse(
+  operation: Record<string, unknown>,
+  route: ContractGraphRoute | undefined,
+): boolean {
   const responses = isRecord(operation.responses) ? operation.responses : {};
-  const successResponse = responses["200"];
+  const successResponse = route ? responses[String(getSuccessStatus(route))] : undefined;
 
   if (!isRecord(successResponse) || !isRecord(successResponse.content)) {
     return false;

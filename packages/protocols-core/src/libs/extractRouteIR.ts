@@ -70,7 +70,7 @@ export function extractRouteIR(controllerCtor: Constructor): RouteIR[] {
       inputSchema: inputSchemas.body,
       inputSchemas,
       outputSchema,
-      successStatus: routeMeta.statusCode ?? 200,
+      ...(routeMeta.statusCode === undefined ? {} : { successStatus: routeMeta.statusCode }),
       problemResponses,
       domain: null,
     };

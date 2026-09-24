@@ -448,6 +448,7 @@ function validateRoute(
   diagnostics.push(...validatePathParams(route));
   diagnostics.push(...validateNamedParams(route));
   diagnostics.push(...validateBodyParams(route));
+  diagnostics.push(...validateSuccessStatus(route));
   diagnostics.push(...validateRouteContract(route));
   diagnostics.push(...validateBindingContractSchemas(route));
   diagnostics.push(...validateStrictSchemas(route, options));
@@ -457,6 +458,21 @@ function validateRoute(
   diagnostics.push(...validateStrictProblemResponses(route, options));
 
   return diagnostics;
+}
+
+function validateSuccessStatus(route: ContractGraphRoute): ContractDiagnostic[] {
+  if ((route.successStatus !== 204 && route.successStatus !== 205) || !route.outputSchema) {
+    return [];
+  }
+
+  return [
+    createRouteDiagnostic(
+      route,
+      "contract-route-body-forbidden-status",
+      "error",
+      `Success status ${route.successStatus} cannot have a response schema because HTTP forbids a response body.`,
+    ),
+  ];
 }
 
 function validateStrictSchemas(

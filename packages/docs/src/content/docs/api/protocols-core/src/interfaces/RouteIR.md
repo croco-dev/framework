@@ -83,4 +83,4 @@ title: "RouteIR"
 
 > `optional` **successStatus?**: `number`
 
-Declared successful HTTP status. Defaults to 200 for legacy RouteIR artifacts.
+Declared successful HTTP status. Omitted when the route does not declare one.

@@ -17,7 +17,7 @@ export interface RouteIR {
   inputSchema: z.ZodType | null;
   inputSchemas: RouteInputSchemas;
   outputSchema: z.ZodType | null;
-  /** Declared successful HTTP status. Defaults to 200 for legacy RouteIR artifacts. */
+  /** Declared successful HTTP status. Omitted when the route does not declare one. */
   successStatus?: number;
   problemResponses?: readonly ProblemResponseIR[];
   domain: string | null;

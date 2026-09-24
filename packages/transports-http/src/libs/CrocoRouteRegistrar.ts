@@ -388,8 +388,8 @@ export class CrocoRouteRegistrar {
     }
 
     if (result === undefined || result === null) {
-      ctx.res.status = 204;
-      return this.toEmptyResponse(ctx);
+      ctx.res.status = successStatus ?? 204;
+      return this.toEmptyResponse(ctx, ctx.res.status);
     }
 
     return ctx.jsonResponse(result, successStatus ?? 200);

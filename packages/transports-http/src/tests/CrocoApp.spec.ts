@@ -492,7 +492,7 @@ describe("CrocoApp", () => {
     expect(json).toEqual({ message: "Hello, World!" });
   });
 
-  it("should apply declared route success statuses to JSON responses", async () => {
+  it("should apply declared route success statuses to JSON and empty responses", async () => {
     @Controller("/success-status")
     class SuccessStatusController {
       @Post("/created")
@@ -509,6 +509,11 @@ describe("CrocoApp", () => {
       empty() {
         return null;
       }
+
+      @Post("/accepted")
+      accepted() {
+        return undefined;
+      }
     }
 
     const routeMetadata = Reflect.getMetadata(
@@ -520,6 +525,11 @@ describe("CrocoApp", () => {
       throw new TypeError("Expected metadata for SuccessStatusController.create.");
     }
     createdRoute.statusCode = 201;
+    const acceptedRoute = routeMetadata.find((route) => route.methodName === "accepted");
+    if (!acceptedRoute) {
+      throw new TypeError("Expected metadata for SuccessStatusController.accepted.");
+    }
+    acceptedRoute.statusCode = 202;
 
     const app = createApp({ controllers: [SuccessStatusController] });
     const createdResponse = await app.fetch(
@@ -529,11 +539,16 @@ describe("CrocoApp", () => {
     const emptyResponse = await app.fetch(
       new Request("http://localhost/success-status/empty", { method: "POST" }),
     );
+    const acceptedResponse = await app.fetch(
+      new Request("http://localhost/success-status/accepted", { method: "POST" }),
+    );
 
     expect(createdResponse.status).toBe(201);
     await expect(createdResponse.json()).resolves.toEqual({ created: true });
     expect(defaultResponse.status).toBe(200);
     expect(emptyResponse.status).toBe(204);
+    expect(acceptedResponse.status).toBe(202);
+    await expect(acceptedResponse.text()).resolves.toBe("");
   });
 
   it("should run HTTP middlewares around the controller handler", async () => {
