@@ -1047,7 +1047,6 @@ export function findRequiredWorkflowPolicyViolations(source: string): readonly s
       "docs",
       "api-source",
       "real-resources",
-      "windows-scaffold",
       "profile",
       "base",
       "head",
@@ -1056,7 +1055,6 @@ export function findRequiredWorkflowPolicyViolations(source: string): readonly s
     changeOutputs?.docs !== "${{ steps.filter.outputs.docs }}" ||
     changeOutputs?.["api-source"] !== "${{ steps.filter.outputs.api-source }}" ||
     changeOutputs?.["real-resources"] !== "${{ steps.filter.outputs.real_resources }}" ||
-    changeOutputs?.["windows-scaffold"] !== "${{ steps.filter.outputs.windows_scaffold }}" ||
     changeOutputs?.profile !== "${{ steps.verification.outputs.profile }}" ||
     changeOutputs?.base !== "${{ steps.verification.outputs.base }}" ||
     changeOutputs?.head !== "${{ steps.verification.outputs.head }}" ||

@@ -74,11 +74,11 @@ describe("pull-request CI performance budget", () => {
     ).toEqual([]);
   });
 
-  it("rejects broad Windows and advisory PR routing", () => {
+  it("rejects broad advisory PR routing", () => {
     const mutant = WORKFLOW.replace(
       "if: github.event_name == 'workflow_dispatch' && needs.changes.outputs.profile != 'repo'",
       "if: needs.changes.outputs.profile != 'repo'",
-    ).replace("              - 'packages/create-croco-app/**'", "              - 'packages/**'");
+    );
     const violations = findCiPerformanceBudgetViolations({
       maintenancePullRequestManifest: MAINTENANCE_PR_MANIFEST,
       ordinaryPullRequestManifest: ORDINARY_PR_MANIFEST,
@@ -86,7 +86,6 @@ describe("pull-request CI performance budget", () => {
     });
 
     expect(violations).toContain("ecosystem advisory smoke must stay off automatic change runs");
-    expect(violations).toContain("Windows scaffold must not be triggered by every package change");
   });
 
   it("rejects API documentation checks that run for unrelated pull requests", () => {

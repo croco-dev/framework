@@ -2,6 +2,14 @@
 
 Select checks from the changed contract and the generated project's own scripts. Do not claim a provider or runtime path was exercised when credentials or a live environment were unavailable.
 
+## Development environment support
+
+Native Windows CLI/scaffold development environments are currently outside Croco's official
+support and verification scope. Windows developers can use a Linux toolchain inside WSL2;
+see [Microsoft's WSL development environment guide](https://learn.microsoft.com/ko-kr/windows/wsl/setup/environment).
+Croco has not verified WSL2 itself; passing Linux CI does not certify WSL2. Support for Windows
+users accessing web applications through a browser is unchanged.
+
 ## Always
 
 1. Re-run the project inspector and confirm the intended Croco dependencies, manifests, composition roots, and verification scripts are visible.

@@ -4,6 +4,14 @@ Croco CLI is a code generator and project scaffolding tool for Croco framework w
 
 > **New to Croco?** Start with [`npx create-croco-app`](https://github.com/croco-dev/framework/tree/trunk/packages/create-croco-app) to scaffold your first SaaS API, then follow the [Getting Started guide](https://github.com/croco-dev/framework/tree/trunk/packages/docs/src/content/docs/en/guides/getting-started.mdx).
 
+## Development environment support
+
+Native Windows CLI/scaffold development environments are currently outside Croco's official
+support and verification scope. Windows developers can use a Linux toolchain inside WSL2;
+see [Microsoft's WSL development environment guide](https://learn.microsoft.com/ko-kr/windows/wsl/setup/environment).
+Croco has not verified WSL2 itself; passing Linux CI does not certify WSL2. Support for Windows
+users accessing web applications through a browser is unchanged.
+
 ## Quick Start
 
 ```bash

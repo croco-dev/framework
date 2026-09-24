@@ -6,6 +6,18 @@ Project scaffolding CLI for Croco applications.
 interactive and noninteractive options, reports Problem-backed CLI failures, and
 provides generated-app smoke coverage for the supported presets.
 
+## Development environment support
+
+Native Windows CLI/scaffold development environments are currently outside Croco's official
+support and verification scope. Windows developers can use a Linux toolchain inside WSL2;
+see [Microsoft's WSL development environment guide](https://learn.microsoft.com/ko-kr/windows/wsl/setup/environment).
+Croco has not verified WSL2 itself; passing Linux CI does not certify WSL2. Support for Windows
+users accessing web applications through a browser is unchanged.
+
+The generated-app CI contract runs on Linux: it exercises the packaged CLI and generated
+application installation, typecheck, production build, and smoke. Historical Windows CI results
+describe earlier verification and do not establish current native Windows support.
+
 ## Public API
 
 - `create-croco-app` binary - interactive and scripted project generation.
