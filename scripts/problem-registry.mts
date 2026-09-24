@@ -842,23 +842,100 @@ function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
         if (constructor) {
           const superCalls: ts.CallExpression[] = [];
           const aliases = new Map<string, ts.Expression>();
+          const objectIds = new Map<string, ReadonlySet<number>>();
           const mutatedAliases = new Set<string>();
+          let nextObjectId = 0;
+          function getObjectIds(name: string): ReadonlySet<number> {
+            const existing = objectIds.get(name);
+            if (existing !== undefined) {
+              return existing;
+            }
+            const ids = new Set([++nextObjectId]);
+            objectIds.set(name, ids);
+            return ids;
+          }
+          function markObjectMutation(name: string): void {
+            const ids = getObjectIds(name);
+            for (const [alias, aliasIds] of objectIds) {
+              if ([...ids].some((id) => aliasIds.has(id))) {
+                mutatedAliases.add(alias);
+              }
+            }
+          }
+          function isConditionalRebinding(node: ts.Node): boolean {
+            let parent = node.parent;
+            while (parent && !ts.isConstructorDeclaration(parent)) {
+              if (
+                ts.isIfStatement(parent) ||
+                ts.isConditionalExpression(parent) ||
+                ts.isSwitchStatement(parent) ||
+                ts.isForStatement(parent) ||
+                ts.isForInStatement(parent) ||
+                ts.isForOfStatement(parent) ||
+                ts.isWhileStatement(parent) ||
+                ts.isDoStatement(parent) ||
+                ts.isTryStatement(parent) ||
+                (ts.isBinaryExpression(parent) &&
+                  (parent.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken ||
+                    parent.operatorToken.kind === ts.SyntaxKind.BarBarToken ||
+                    parent.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken))
+              ) {
+                return true;
+              }
+              parent = parent.parent;
+            }
+            return false;
+          }
           function collectSuperCalls(child: ts.Node): void {
             if (ts.isClassDeclaration(child) || ts.isClassExpression(child)) {
               return;
+            }
+            if (ts.isVariableDeclaration(child) && ts.isIdentifier(child.name)) {
+              const source = unwrapExpression(child.initializer);
+              objectIds.set(
+                child.name.text,
+                source && ts.isIdentifier(source)
+                  ? getObjectIds(source.text)
+                  : new Set([++nextObjectId]),
+              );
             }
             if (
               ts.isBinaryExpression(child) &&
               child.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
               child.operatorToken.kind <= ts.SyntaxKind.LastAssignment
             ) {
-              const target =
+              const mutatesObject =
                 ts.isPropertyAccessExpression(child.left) ||
-                ts.isElementAccessExpression(child.left)
-                  ? child.left.expression
-                  : child.left;
+                ts.isElementAccessExpression(child.left);
+              const target = mutatesObject ? child.left.expression : child.left;
               if (ts.isIdentifier(target)) {
                 mutatedAliases.add(target.text);
+                if (mutatesObject) {
+                  markObjectMutation(target.text);
+                } else {
+                  const source = unwrapExpression(child.right);
+                  const updatedIds =
+                    child.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+                    source &&
+                    ts.isIdentifier(source)
+                      ? getObjectIds(source.text)
+                      : new Set([++nextObjectId]);
+                  objectIds.set(
+                    target.text,
+                    isConditionalRebinding(child)
+                      ? new Set([...getObjectIds(target.text), ...updatedIds])
+                      : updatedIds,
+                  );
+                }
+              }
+            }
+            if (ts.isDeleteExpression(child)) {
+              const target = child.expression;
+              if (
+                (ts.isPropertyAccessExpression(target) || ts.isElementAccessExpression(target)) &&
+                ts.isIdentifier(target.expression)
+              ) {
+                markObjectMutation(target.expression.text);
               }
             }
             if (
@@ -870,13 +947,12 @@ function getProblemCauseDiagnostics(rootDir: string): readonly string[] {
             ts.forEachChild(child, collectSuperCalls);
           }
           for (const statement of constructor.body?.statements ?? []) {
-            if (
-              ts.isVariableStatement(statement) &&
-              (statement.declarationList.flags & ts.NodeFlags.Const) !== 0
-            ) {
+            if (ts.isVariableStatement(statement)) {
               for (const declaration of statement.declarationList.declarations) {
                 if (ts.isIdentifier(declaration.name) && declaration.initializer) {
-                  aliases.set(declaration.name.text, declaration.initializer);
+                  if ((statement.declarationList.flags & ts.NodeFlags.Const) !== 0) {
+                    aliases.set(declaration.name.text, declaration.initializer);
+                  }
                 }
               }
             }
@@ -1104,7 +1180,12 @@ function forwardsProblemCause(
       }
       continue;
     }
-    if (!ts.isPropertyAssignment(property) || getPropertyName(property.name) !== "cause") {
+    const propertyName = getStaticPropertyName(property.name);
+    if (propertyName !== null && propertyName !== "cause") {
+      continue;
+    }
+    if (!ts.isPropertyAssignment(property) || propertyName === null) {
+      forwarded = false;
       continue;
     }
     forwarded = forwardsCauseValue(
@@ -1173,11 +1254,13 @@ function isCauseFreeSpread(
     });
   }
   if (ts.isObjectLiteralExpression(expression)) {
-    return expression.properties.every((property) =>
-      ts.isSpreadAssignment(property)
-        ? isCauseFreeSpread(property.expression, aliases, new Set(visited))
-        : getPropertyName(property.name) !== "cause",
-    );
+    return expression.properties.every((property) => {
+      if (ts.isSpreadAssignment(property)) {
+        return isCauseFreeSpread(property.expression, aliases, new Set(visited));
+      }
+      const name = getStaticPropertyName(property.name);
+      return name !== null && name !== "cause";
+    });
   }
   return (
     expression.kind === ts.SyntaxKind.UndefinedKeyword ||
@@ -2343,7 +2426,11 @@ function unwrapExpression(node: ts.Node | undefined): ts.Expression | undefined 
 
   let expression: ts.Expression = node;
 
-  while (ts.isAsExpression(expression) || ts.isSatisfiesExpression(expression)) {
+  while (
+    ts.isAsExpression(expression) ||
+    ts.isSatisfiesExpression(expression) ||
+    ts.isParenthesizedExpression(expression)
+  ) {
     expression = expression.expression;
   }
 
@@ -2376,6 +2463,19 @@ function getProblemCategory(
 
 function getPropertyName(name: ts.PropertyName): string | null {
   return ts.isIdentifier(name) || ts.isStringLiteral(name) ? name.text : null;
+}
+
+function getStaticPropertyName(name: ts.PropertyName): string | null {
+  if (ts.isComputedPropertyName(name)) {
+    return ts.isStringLiteral(name.expression) ||
+      ts.isNoSubstitutionTemplateLiteral(name.expression)
+      ? name.expression.text
+      : null;
+  }
+  if (ts.isNumericLiteral(name)) {
+    return name.text;
+  }
+  return getPropertyName(name);
 }
 
 const telemetryAttributes = ["problem.code", "problem.category", "problem.status"] as const;
