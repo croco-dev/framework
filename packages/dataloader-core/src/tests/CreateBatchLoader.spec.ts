@@ -57,6 +57,28 @@ describe("createBatchLoader inside a request context", () => {
     });
   });
 
+  it("treats empty static and dynamic scopes as absent scopes", async () => {
+    const first = createBatchLoader({
+      name: "byId",
+      batchFn: async (ids: readonly number[]) => ids,
+    });
+    const second = createBatchLoader({
+      name: "byId",
+      scope: "",
+      resolveScope: () => "",
+      batchFn: async (ids: readonly number[]) => ids,
+    });
+
+    await Context.run({ requestId: "empty-scope" }, async () => {
+      expect(await first.load(1)).toBe(1);
+      expect(() => second.load(1)).toThrow(
+        expect.objectContaining({
+          extensions: { name: "byId", scope: null, dynamicScope: null },
+        }),
+      );
+    });
+  });
+
   it("shares batches and cached results across repeated calls of one factory", async () => {
     const users = createEntityLoader("user", "byId");
 
@@ -95,6 +117,31 @@ describe("createBatchLoader inside a request context", () => {
       expect(await byDynamicScope("tx-b").load(1)).toBe("tx-b:1");
     });
   });
+
+  it.each([
+    [
+      { name: "x", scope: "y:scope:z" },
+      { name: "x", scope: "y", resolveScope: () => "z" },
+    ],
+    [
+      { name: "x", scope: "scope:t" },
+      { name: "x", resolveScope: () => "t" },
+    ],
+    [{ name: "a:v1:b" }, { name: "a", scope: "b:v1" }],
+  ])(
+    "keeps %o and %o independent even when their parts share delimiters",
+    async (first, second) => {
+      const echo = (label: string) => async (ids: readonly number[]) =>
+        ids.map((id) => `${label}:${id}`);
+      const firstLoader = createBatchLoader({ ...first, batchFn: echo("first") });
+      const secondLoader = createBatchLoader({ ...second, batchFn: echo("second") });
+
+      await Context.run({ requestId: "delimiters" }, async () => {
+        expect(await firstLoader.load(1)).toBe("first:1");
+        expect(await secondLoader.load(1)).toBe("second:1");
+      });
+    },
+  );
 
   it("allows another request to use the name with a different loader", async () => {
     const users = createEntityLoader("user", "byId");

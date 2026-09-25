@@ -19,7 +19,7 @@ export class DuplicateBatchLoaderNameProblem extends Problem {
     super(
       undefined,
       undefined,
-      `BatchLoader: name '${name}' is already used by a different loader for the same scope in this request`,
+      `BatchLoader: name '${name}' is already used by a different loader for the same scope in this request; create each loader once and reuse it, or give it a unique name or scope`,
       { extensions: { name, scope, dynamicScope } },
     );
   }

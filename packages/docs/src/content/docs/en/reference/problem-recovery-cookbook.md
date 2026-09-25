@@ -4286,7 +4286,7 @@ Sources:
 - Lifecycle: `active`
 - Cause: Two different batch loaders use the same name and scope within one request context.
 - User action: Use an application build where every batch loader has a unique name and scope combination.
-- Operator action: Inspect the name, scope, and dynamicScope extensions to find the conflicting batch loader definitions, then rename one loader or give it a distinct scope.
+- Operator action: Inspect the name, scope, and dynamicScope extensions to find the conflicting batch loaders. Create each loader once and reuse it instead of recreating it per call, or give the conflicting loader a distinct name or scope.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:

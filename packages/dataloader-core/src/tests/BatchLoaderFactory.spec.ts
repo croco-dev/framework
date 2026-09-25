@@ -29,4 +29,15 @@ describe("BatchLoaderFactory", () => {
       );
     });
   });
+
+  it("rejects a factory-created loader that reuses a createBatchLoader name", async () => {
+    const batchFn = double();
+
+    await Context.run({ requestId: "loader-collision" }, async () => {
+      expect(await createBatchLoader({ name: "byId", batchFn }).load(1)).toBe(2);
+      expect(() => new BatchLoaderFactory().create({ name: "byId", batchFn }).load(1)).toThrow(
+        DuplicateBatchLoaderNameProblem,
+      );
+    });
+  });
 });

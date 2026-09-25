@@ -3127,7 +3127,7 @@ const recoveryMetadataByCode = {
     userAction:
       "Use an application build where every batch loader has a unique name and scope combination.",
     operatorAction:
-      "Inspect the name, scope, and dynamicScope extensions to find the conflicting batch loader definitions, then rename one loader or give it a distinct scope.",
+      "Inspect the name, scope, and dynamicScope extensions to find the conflicting batch loaders. Create each loader once and reuse it instead of recreating it per call, or give the conflicting loader a distinct name or scope.",
     retryability: "not-retryable",
     redactionPolicy: "operator-only",
     severity: "error",

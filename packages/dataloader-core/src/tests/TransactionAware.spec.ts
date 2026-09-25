@@ -46,12 +46,6 @@ describe("createBatchLoader (Transaction Aware)", () => {
       // 4. Rollback/End Transaction (Back to null or previous)
       currentTxId = null;
       // Should return to the original loader instance (if it was cached)
-      // Since Context.getCache() persists map entries for the request duration:
-      // 'dataloader:UserLoader:v1' <- exists
-      // 'dataloader:UserLoader:v1:scope:tx-a' <- exists
-      // 'dataloader:UserLoader:v1:scope:tx-b' <- exists
-
-      // When we go back to null scope, we access 'dataloader:UserLoader:v1'
       await loaderFactory.load(1);
       expect(batchFn).toHaveBeenCalledTimes(3); // Should hit the first cache
     });
