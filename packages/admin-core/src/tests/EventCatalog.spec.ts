@@ -246,6 +246,36 @@ describe("EventCatalog", () => {
     });
   });
 
+  it.each([
+    { label: "missing failure codes", observation: { kind: "observed", receivedCount: 1 } },
+    {
+      label: "non-string failure code",
+      observation: { kind: "observed", receivedCount: 1, recentFailureCodes: [42] },
+    },
+    {
+      label: "non-string timestamp",
+      observation: {
+        kind: "observed",
+        receivedCount: 1,
+        recentFailureCodes: [],
+        lastReceivedAt: 42,
+      },
+    },
+    { label: "null observation", observation: null },
+  ])("rejects $label from a remote catalog source", async ({ observation }) => {
+    const catalog: EventCatalogRegistry = {
+      ...createRegistry(true),
+      getObservation: () => observation as never,
+    };
+
+    const state = await loadEventCatalog({ ...access, source: createSource(catalog) });
+
+    expect(state).toMatchObject({
+      kind: "problem",
+      problem: { code: "admin-core/event-catalog-observation-invalid", status: 502 },
+    });
+  });
+
   it("keeps the source timestamp when receipts are present", async () => {
     const catalog: EventCatalogRegistry = {
       ...createRegistry(true),

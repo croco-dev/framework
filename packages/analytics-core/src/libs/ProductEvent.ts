@@ -206,6 +206,9 @@ export function defineProductEvent<const S extends ProductEventObjectSchema>(
       "Product event schema and property descriptions are required",
     );
   }
+  if (definition.scope === "app" && definition.subjectKind === "tenant") {
+    throw new ProductEventDefinitionProblem("App-scoped events cannot have a tenant subject");
+  }
   const schemaKeys = Object.keys(definition.schema.properties);
   if (
     schemaKeys.length === 0 ||
@@ -362,29 +365,53 @@ export class ProductEventCatalog {
   }
 
   validatePayload(name: string, version: number, payload: unknown): ProductEventValidationResult {
+    const result = this.validateAndSnapshotPayload(name, version, payload);
+    return result.status === "valid" ? { status: "valid" } : result;
+  }
+
+  private validateAndSnapshotPayload(
+    name: string,
+    version: number,
+    payload: unknown,
+  ):
+    | { readonly status: "valid"; readonly payload: Readonly<Record<string, unknown>> }
+    | { readonly status: "invalid"; readonly code: string } {
     const definition = this.definitions.get(eventKey(name, version));
     if (!definition)
       return { status: "invalid", code: "analytics-core/product-event-version-unregistered" };
-    if (!isRecord(payload))
-      return { status: "invalid", code: "analytics-core/product-event-payload-invalid" };
     const schema = definition.schema.properties;
-    for (const key of Reflect.ownKeys(payload)) {
-      if (typeof key !== "string") {
-        return { status: "invalid", code: "analytics-core/product-event-property-unknown" };
+    const snapshotEntries: [string, unknown][] = [];
+    try {
+      if (!isRecord(payload))
+        return { status: "invalid", code: "analytics-core/product-event-payload-invalid" };
+      for (const key of Reflect.ownKeys(payload)) {
+        if (typeof key !== "string") {
+          return { status: "invalid", code: "analytics-core/product-event-property-unknown" };
+        }
+        const own = Object.getOwnPropertyDescriptor(payload, key);
+        if (
+          !own ||
+          !own.enumerable ||
+          !("value" in own) ||
+          RESERVED_PROPERTIES.has(key) ||
+          !Object.prototype.hasOwnProperty.call(schema, key)
+        ) {
+          return { status: "invalid", code: "analytics-core/product-event-property-unknown" };
+        }
+        const value = own.value;
+        const isArray = Array.isArray(value);
+        const copied = isArray ? snapshotArray(value) : value;
+        if (isArray && copied === undefined) {
+          return { status: "invalid", code: "analytics-core/product-event-property-invalid" };
+        }
+        snapshotEntries.push([key, copied]);
       }
-      const own = Object.getOwnPropertyDescriptor(payload, key);
-      if (
-        !own ||
-        !own.enumerable ||
-        !("value" in own) ||
-        RESERVED_PROPERTIES.has(key) ||
-        !Object.prototype.hasOwnProperty.call(schema, key)
-      ) {
-        return { status: "invalid", code: "analytics-core/product-event-property-unknown" };
-      }
+    } catch {
+      return { status: "invalid", code: "analytics-core/product-event-payload-invalid" };
     }
+    const snapshot = Object.fromEntries(snapshotEntries);
     for (const [key, property] of Object.entries(schema)) {
-      const own = Object.getOwnPropertyDescriptor(payload, key);
+      const own = Object.getOwnPropertyDescriptor(snapshot, key);
       if (!own) {
         if (!property.optional)
           return { status: "invalid", code: "analytics-core/product-event-property-required" };
@@ -394,7 +421,7 @@ export class ProductEventCatalog {
         return { status: "invalid", code: "analytics-core/product-event-property-invalid" };
       }
     }
-    return { status: "valid" };
+    return { status: "valid", payload: snapshot };
   }
 
   captureTyped<S extends ProductEventObjectSchema>(
@@ -411,7 +438,11 @@ export class ProductEventCatalog {
       return { status: "invalid", code: "analytics-core/product-event-context-invalid" };
     }
     const scope = diagnosticScope(context);
-    const validation = this.validatePayload(definition.name, definition.version, payload);
+    const validation = this.validateAndSnapshotPayload(
+      definition.name,
+      definition.version,
+      payload,
+    );
     if (validation.status === "invalid") {
       return {
         ...validation,
@@ -425,12 +456,6 @@ export class ProductEventCatalog {
         ),
       };
     }
-    const validatedPayload = Object.fromEntries(
-      Object.entries(payload).map(([key, value]) => [
-        key,
-        Array.isArray(value) ? [...value] : value,
-      ]),
-    );
     const transportUnavailable = (): CaptureResult => {
       const code = "analytics-core/product-event-transport-unavailable";
       return {
@@ -447,7 +472,7 @@ export class ProductEventCatalog {
       ...context,
       name: definition.name,
       schemaVersion: definition.version,
-      payload: validatedPayload,
+      payload: validation.payload,
       receivedAt,
     };
     let accepted: boolean;
@@ -523,6 +548,20 @@ function compareBytes(left: string, right: string): number {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function snapshotArray(value: unknown[]): unknown[] | undefined {
+  if (Object.getPrototypeOf(value) !== Array.prototype) return undefined;
+  const length = Object.getOwnPropertyDescriptor(value, "length")?.value;
+  if (!Number.isSafeInteger(length) || length < 0 || Reflect.ownKeys(value).length !== length + 1)
+    return undefined;
+  const snapshot: unknown[] = [];
+  for (let index = 0; index < length; index++) {
+    const own = Object.getOwnPropertyDescriptor(value, String(index));
+    if (!own?.enumerable || !("value" in own)) return undefined;
+    snapshot.push(own.value);
+  }
+  return snapshot;
 }
 
 function matchesProperty(value: unknown, property: ProductEventPropertySchema): boolean {

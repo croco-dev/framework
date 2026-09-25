@@ -180,6 +180,9 @@ describe("ProductEventCatalog", () => {
         properties: { userId: "Forged identity" },
       }),
     ).toThrow(ProductEventDefinitionProblem);
+    expect(() =>
+      defineProductEvent({ ...reportCreated, scope: "app", subjectKind: "tenant" }),
+    ).toThrow(ProductEventDefinitionProblem);
   });
 
   it("reports unavailable transport without counting a received event", () => {
@@ -387,5 +390,55 @@ describe("ProductEventCatalog", () => {
     ).toMatchObject({ status: "accepted" });
     tags.push("changed");
     expect(manager.capture.mock.calls[0]?.[1]?.tags).toEqual(["published"]);
+  });
+
+  it("validates the exact descriptor snapshot delivered through transport", () => {
+    const manager = new LocalAnalyticsManager();
+    const catalog = new ProductEventCatalog([reportCreated], manager);
+    const payload = new Proxy(
+      { reportType: "daily" as const, itemCount: 1, tags: ["published"] },
+      {
+        get(target, key, receiver) {
+          if (key === "itemCount") return "unvalidated";
+          return Reflect.get(target, key, receiver);
+        },
+      },
+    );
+    const tags = new Proxy(["published"], {
+      get(target, key, receiver) {
+        if (key === "0") return "unvalidated";
+        return Reflect.get(target, key, receiver);
+      },
+    });
+
+    expect(catalog.captureTyped(reportCreated, payload, context)).toMatchObject({
+      status: "accepted",
+    });
+    expect(
+      catalog.captureTyped(reportCreated, { reportType: "daily", itemCount: 1, tags }, context),
+    ).toMatchObject({
+      status: "accepted",
+    });
+    expect(manager.capture.mock.calls.map((call) => call[1])).toMatchObject([
+      { itemCount: 1, tags: ["published"] },
+      { itemCount: 1, tags: ["published"] },
+    ]);
+  });
+
+  it("reports a revoked payload proxy as invalid without reaching transport", () => {
+    const manager = new LocalAnalyticsManager();
+    const catalog = new ProductEventCatalog([reportCreated], manager);
+    const payload = Proxy.revocable({ reportType: "daily" as const, itemCount: 1 }, {});
+    payload.revoke();
+
+    expect(catalog.validatePayload("report.created", 1, payload.proxy)).toEqual({
+      status: "invalid",
+      code: "analytics-core/product-event-payload-invalid",
+    });
+    expect(catalog.captureTyped(reportCreated, payload.proxy, context)).toMatchObject({
+      status: "invalid",
+      code: "analytics-core/product-event-payload-invalid",
+    });
+    expect(manager.capture).not.toHaveBeenCalled();
   });
 });

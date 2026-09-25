@@ -273,15 +273,28 @@ export async function loadEventCatalog(input: EventCatalogInput): Promise<EventC
   return { kind: "ready", scope, entries: result.entries };
 }
 
-function isValidObservation(observation: EventCatalogObservation): boolean {
+function isValidObservation(observation: unknown): observation is EventCatalogObservation {
+  if (typeof observation !== "object" || observation === null || !("kind" in observation)) {
+    return false;
+  }
   if (observation.kind === "unobserved") {
     return true;
   }
   return (
     observation.kind === "observed" &&
+    "receivedCount" in observation &&
+    typeof observation.receivedCount === "number" &&
     Number.isSafeInteger(observation.receivedCount) &&
     observation.receivedCount >= 0 &&
-    (observation.receivedCount > 0 || observation.lastReceivedAt === undefined)
+    (!("lastReceivedAt" in observation) ||
+      observation.lastReceivedAt === undefined ||
+      typeof observation.lastReceivedAt === "string") &&
+    (observation.receivedCount > 0 ||
+      !("lastReceivedAt" in observation) ||
+      observation.lastReceivedAt === undefined) &&
+    "recentFailureCodes" in observation &&
+    Array.isArray(observation.recentFailureCodes) &&
+    observation.recentFailureCodes.every((code: unknown) => typeof code === "string")
   );
 }
 
