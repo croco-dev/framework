@@ -873,7 +873,8 @@ describe("SagaRunner", () => {
 
   it("retries standard Errors by default until the step succeeds", async () => {
     let attempts = 0;
-    const runner = new SagaRunner();
+    const store = new InMemorySagaStore();
+    const runner = new SagaRunner(store);
     const definition: SagaDefinition = {
       name: "standard-error-retry",
       steps: [
@@ -896,6 +897,13 @@ describe("SagaRunner", () => {
     expect(attempts).toBe(3);
     expect(result.execution.status).toBe("completed");
     expect(result.steps).toEqual([{ stepId: "charge-provider", result: "charged" }]);
+    const persisted = await store.findById(result.execution.id);
+    expect(persisted?.steps[0]).toMatchObject({
+      status: "completed",
+      attempts: 3,
+      result: "charged",
+    });
+    expect(persisted?.steps[0]).not.toHaveProperty("error");
   });
 
   it("records standard Errors as retryable when retries are exhausted", async () => {
