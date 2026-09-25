@@ -92,6 +92,12 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/EventCatalog.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/TenantWorkspace.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -176,6 +182,12 @@
       "owner": "@croco/admin-react"
     },
     {
+      "path": "packages/admin-react/src/tests/EventCatalogPanel.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
       "path": "packages/admin-react/src/tests/LifecycleAutomationConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -243,6 +255,18 @@
     },
     {
       "path": "packages/analytics-core/src/tests/AnalyticsManager.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/analytics-core"
+    },
+    {
+      "path": "packages/analytics-core/src/tests/ProductEvent.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/analytics-core"
+    },
+    {
+      "path": "packages/analytics-core/src/tests/ProductEventAfterCommit.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/analytics-core"

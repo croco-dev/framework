@@ -4,6 +4,17 @@ Provider-neutral React contracts and primitives for SaaS billing, entitlement,
 tenant switching, impersonation, and permission inspection administration.
 Also includes contract-aware admin resource tables.
 
+## Product event catalog
+
+`EventCatalogPanel` loads the scoped catalog through the `@croco/admin-core` source, shows the
+declared event description, occurrence, owner, versions, property meanings, schema, and diagnostic
+codes, and runs the same server-side validator from its payload form. Validation is explicitly
+unsent, so operator test input does not enter product analytics. The panel pages event choices in
+groups of 20 and keeps loading, empty, partial, permission denied, unsupported, source failure,
+unobserved, observed-zero, and unknown receipt-time states distinct. Requests declare either app or
+tenant scope; app scope uses separate app-level permissions. The host must provide a server-backed `EventCatalogSource` that
+checks the authenticated principal and scope; browser props alone are not authorization evidence.
+
 ## Monetization plan releases
 
 `PlanReleaseConsole` renders the React-independent `PlanReleaseConsoleState` contract for editing,

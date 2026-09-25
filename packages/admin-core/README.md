@@ -5,6 +5,26 @@ Croco admin surfaces. Admin packages can describe resources, list/detail fields,
 permissions, audit evidence, declared Problems, and recovery semantics without
 depending on React or a transport adapter.
 
+## Product event catalog
+
+`loadEventCatalog()` and `validateEventCatalogPayload()` use an explicit app or tenant scope with
+an app ID and environment. Tenant scope requires a tenant ID and `analytics:read` or
+`analytics:validate`; app scope omits the tenant ID and requires the separate
+`analytics:app:read` or `analytics:app:validate` permission. The source must enforce the
+authenticated principal and server-resolved permission before returning catalog entries or a
+validation result. Caller-provided permission strings are not an authentication mechanism. The load response
+contains serializable entries; the separate asynchronous validation call belongs on a trusted
+server. `createInProcessEventCatalogSource()` adapts an `@croco/analytics-core`
+`ProductEventCatalog` for a trusted in-process host.
+
+The load result distinguishes an unobserved event from an observed event with zero receipts.
+The in-process adapter validates with that same registered schema. `validateEventCatalogPayload`
+returns `delivery: "not-sent"` for valid, invalid, and missing event versions; test payloads
+are never captured or stored by these helpers. Diagnostics expose bounded codes and receipt
+timestamps, not rejected payloads. Hosts that need durable diagnostics supply a durable sink to
+the analytics catalog. A source response for another scope or an inconsistent observation is
+rejected instead of being displayed as current tenant data.
+
 ## Tenant 360 sources
 
 `TenantBusinessSource<TState>` is a structural, React-independent boundary for

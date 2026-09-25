@@ -67,3 +67,30 @@ export {
    */
   AnalyticsManager,
 } from "./libs/AnalyticsManager";
+export {
+  defineProductEvent,
+  InMemoryProductEventDiagnosticsSink,
+  ProductEventCatalog,
+  ProductEventDefinitionProblem,
+  productEventManifestJson,
+  productEventManifestMarkdown,
+} from "./libs/ProductEvent";
+export type {
+  CaptureResult,
+  EventDescriptor,
+  EventObservation,
+  ProductEventContext,
+  ProductEventDiagnosticScope,
+  ProductEventDefinition,
+  ProductEventDiagnosticsSink,
+  ProductEventEnvelope,
+  ProductEventObjectSchema,
+  ProductEventOccurrence,
+  ProductEventPayload,
+  ProductEventPropertySchema,
+  ProductEventScalarSchema,
+  ProductEventScope,
+  ProductEventSubject,
+  ProductEventSubjectKind,
+  ProductEventValidationResult,
+} from "./libs/ProductEvent";

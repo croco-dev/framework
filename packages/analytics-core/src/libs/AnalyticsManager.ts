@@ -1,4 +1,5 @@
 import { Token } from "@croco/framework-context";
+import type { ProductEventEnvelope } from "./ProductEvent";
 
 export abstract class AnalyticsManager {
   static readonly token = new Token<AnalyticsManager>("AnalyticsManager");
@@ -8,6 +9,22 @@ export abstract class AnalyticsManager {
    * `userId` and `tenantId` will be automatically injected from Context if available.
    */
   abstract capture(event: string, properties?: Record<string, unknown>): void;
+
+  /** Returns whether a validated event was accepted by the local transport. */
+  captureValidatedEnvelope(envelope: ProductEventEnvelope): boolean {
+    this.capture(envelope.name, {
+      ...envelope.payload,
+      appId: envelope.appId,
+      environment: envelope.environment,
+      ...(envelope.tenantId ? { tenantId: envelope.tenantId } : {}),
+      subject: envelope.subject,
+      eventId: envelope.eventId,
+      occurredAt: envelope.occurredAt,
+      receivedAt: envelope.receivedAt,
+      schemaVersion: envelope.schemaVersion,
+    });
+    return true;
+  }
 
   /**
    * Identify a user.

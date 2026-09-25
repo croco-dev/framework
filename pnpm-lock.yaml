@@ -508,7 +508,16 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
     devDependencies:
+      '@croco/events-core':
+        specifier: workspace:*
+        version: link:../events-core
+      '@croco/tx-core':
+        specifier: workspace:*
+        version: link:../tx-core
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2

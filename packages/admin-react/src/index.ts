@@ -37,6 +37,7 @@ export {
   TenantBusinessWorkspace,
 } from "./libs/TenantBusinessWorkspace";
 export { WebhookReliabilityConsole } from "./libs/WebhookReliabilityConsole";
+export { EventCatalogPanel } from "./libs/EventCatalogPanel";
 export {
   AudienceCampaignOperationsPanel,
   Customer360CommunicationPanel,
@@ -247,6 +248,7 @@ export type {
   TenantWorkspaceActionResult,
 } from "./libs/TenantBusinessWorkspace";
 export type { WebhookReliabilityConsoleProps } from "./libs/WebhookReliabilityConsole";
+export type { EventCatalogPanelProps } from "./libs/EventCatalogPanel";
 export type {
   AudienceCampaignOperationsPanelProps,
   Customer360CommunicationPanelProps,

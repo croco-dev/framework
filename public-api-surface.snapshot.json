@@ -409,9 +409,21 @@
               "declarationKind": "function"
             },
             {
+              "name": "createEventCatalogLoadingState",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog",
+              "declarationKind": "function"
+            },
+            {
               "name": "createInMemoryTenantBusinessSource",
               "exportKind": "named",
               "source": "./libs/TenantWorkspace",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createInProcessEventCatalogSource",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog",
               "declarationKind": "function"
             },
             {
@@ -481,6 +493,36 @@
               "declarationKind": "function"
             },
             {
+              "name": "EVENT_CATALOG_APP_READ_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog",
+              "declarationKind": "const"
+            },
+            {
+              "name": "EVENT_CATALOG_APP_VALIDATE_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog",
+              "declarationKind": "const"
+            },
+            {
+              "name": "EVENT_CATALOG_READ_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog",
+              "declarationKind": "const"
+            },
+            {
+              "name": "EVENT_CATALOG_VALIDATE_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog",
+              "declarationKind": "const"
+            },
+            {
+              "name": "EventCatalogValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog",
+              "declarationKind": "class"
+            },
+            {
               "name": "executeCreditOperationsAction",
               "exportKind": "named",
               "source": "./libs/CreditOperations",
@@ -520,6 +562,12 @@
               "name": "loadEngagementOperations",
               "exportKind": "named",
               "source": "./libs/EngagementOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "loadEventCatalog",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog",
               "declarationKind": "function"
             },
             {
@@ -568,6 +616,12 @@
               "name": "validateAdminResource",
               "exportKind": "named",
               "source": "./libs/AdminResource",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateEventCatalogPayload",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog",
               "declarationKind": "function"
             },
             {
@@ -987,6 +1041,76 @@
               "name": "EngagementTestSendResult",
               "exportKind": "named",
               "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "EventCatalogDescriptor",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog"
+            },
+            {
+              "name": "EventCatalogEntry",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog"
+            },
+            {
+              "name": "EventCatalogInput",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog"
+            },
+            {
+              "name": "EventCatalogObservation",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog"
+            },
+            {
+              "name": "EventCatalogPayloadValidationInput",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog"
+            },
+            {
+              "name": "EventCatalogPayloadValidationState",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog"
+            },
+            {
+              "name": "EventCatalogRegistry",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog"
+            },
+            {
+              "name": "EventCatalogScope",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog"
+            },
+            {
+              "name": "EventCatalogSource",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog"
+            },
+            {
+              "name": "EventCatalogSourceLoadResult",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog"
+            },
+            {
+              "name": "EventCatalogSourceRequest",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog"
+            },
+            {
+              "name": "EventCatalogSourceValidationRequest",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog"
+            },
+            {
+              "name": "EventCatalogSourceValidationResult",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog"
+            },
+            {
+              "name": "EventCatalogState",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog"
             },
             {
               "name": "LoadCreditOperationsInput",
@@ -2034,6 +2158,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "EventCatalogPanel",
+              "exportKind": "named",
+              "source": "./libs/EventCatalogPanel",
+              "declarationKind": "function"
+            },
+            {
               "name": "getAllowedPlanReleaseActions",
               "exportKind": "named",
               "source": "./libs/planReleaseConsole",
@@ -2725,6 +2855,11 @@
               "source": "./libs/EngagementOperationsConsole"
             },
             {
+              "name": "EventCatalogPanelProps",
+              "exportKind": "named",
+              "source": "./libs/EventCatalogPanel"
+            },
+            {
               "name": "LifecycleAutomationConsoleProps",
               "exportKind": "named",
               "source": "./libs/LifecycleAutomationConsole"
@@ -3341,9 +3476,131 @@
               "exportKind": "named",
               "source": "./libs/AnalyticsManager",
               "declarationKind": "class"
+            },
+            {
+              "name": "defineProductEvent",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent",
+              "declarationKind": "function"
+            },
+            {
+              "name": "InMemoryProductEventDiagnosticsSink",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ProductEventCatalog",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ProductEventDefinitionProblem",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent",
+              "declarationKind": "class"
+            },
+            {
+              "name": "productEventManifestJson",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent",
+              "declarationKind": "function"
+            },
+            {
+              "name": "productEventManifestMarkdown",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent",
+              "declarationKind": "function"
             }
           ],
-          "typeExports": []
+          "typeExports": [
+            {
+              "name": "CaptureResult",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent"
+            },
+            {
+              "name": "EventDescriptor",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent"
+            },
+            {
+              "name": "EventObservation",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent"
+            },
+            {
+              "name": "ProductEventContext",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent"
+            },
+            {
+              "name": "ProductEventDefinition",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent"
+            },
+            {
+              "name": "ProductEventDiagnosticScope",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent"
+            },
+            {
+              "name": "ProductEventDiagnosticsSink",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent"
+            },
+            {
+              "name": "ProductEventEnvelope",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent"
+            },
+            {
+              "name": "ProductEventObjectSchema",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent"
+            },
+            {
+              "name": "ProductEventOccurrence",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent"
+            },
+            {
+              "name": "ProductEventPayload",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent"
+            },
+            {
+              "name": "ProductEventPropertySchema",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent"
+            },
+            {
+              "name": "ProductEventScalarSchema",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent"
+            },
+            {
+              "name": "ProductEventScope",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent"
+            },
+            {
+              "name": "ProductEventSubject",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent"
+            },
+            {
+              "name": "ProductEventSubjectKind",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent"
+            },
+            {
+              "name": "ProductEventValidationResult",
+              "exportKind": "named",
+              "source": "./libs/ProductEvent"
+            }
+          ]
         }
       ]
     },

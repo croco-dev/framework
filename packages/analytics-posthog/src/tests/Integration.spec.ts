@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import type { AnalyticsManager } from "@croco/analytics-core";
+import type { AnalyticsManager, ProductEventEnvelope } from "@croco/analytics-core";
 import {
   Container,
   Context,
@@ -181,6 +181,141 @@ describe("PostHog Integration", () => {
         event: "di-event",
       }),
     );
+  });
+
+  describe("validated product events", () => {
+    const envelope: ProductEventEnvelope = {
+      appId: "app-1",
+      environment: "test",
+      tenantId: "tenant-trusted",
+      subject: { kind: "user", id: "user-trusted" },
+      eventId: "action-1",
+      occurredAt: "2026-09-25T01:02:03.000Z",
+      receivedAt: "2026-09-25T01:02:04.000Z",
+      name: "report.created",
+      schemaVersion: 2,
+      payload: { reportType: "sales" },
+    };
+
+    it("maps trusted context into PostHog without accepting payload impersonation", () => {
+      const capture = vi.spyOn(postHogClient.getClient(), "capture");
+
+      expect(
+        analyticsManager.captureValidatedEnvelope({
+          ...envelope,
+          payload: {
+            reportType: "sales",
+            environment: "spoofed-production",
+            userId: "spoofed-user",
+            tenantId: "spoofed-tenant",
+            eventId: "spoofed-event",
+            occurredAt: "1999-01-01T00:00:00.000Z",
+            groups: { tenant: "spoofed-tenant" },
+            distinctId: "spoofed-user",
+            $insert_id: "spoofed-event",
+          },
+        }),
+      ).toBe(true);
+
+      expect(capture).toHaveBeenCalledExactlyOnceWith({
+        distinctId: "user:user-trusted",
+        event: "report.created",
+        properties: {
+          reportType: "sales",
+          appId: "app-1",
+          environment: "test",
+          tenantId: "tenant-trusted",
+          subjectKind: "user",
+          eventId: "action-1",
+          occurredAt: "2026-09-25T01:02:03.000Z",
+          receivedAt: "2026-09-25T01:02:04.000Z",
+          schemaVersion: 2,
+        },
+        groups: { tenant: "tenant-trusted" },
+        uuid: expect.stringMatching(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+        ),
+        timestamp: new Date("2026-09-25T01:02:03.000Z"),
+      });
+    });
+
+    it("preserves one event ID across retries and different IDs for separate actions", () => {
+      const capture = vi.spyOn(postHogClient.getClient(), "capture");
+
+      analyticsManager.captureValidatedEnvelope(envelope);
+      analyticsManager.captureValidatedEnvelope(envelope);
+      analyticsManager.captureValidatedEnvelope({ ...envelope, eventId: "action-2" });
+
+      const uuids = capture.mock.calls.map(([event]) => event.uuid);
+      expect(uuids[0]).toBe("e33023b1-8575-50fc-b670-848ca46c4733");
+      expect(uuids[0]).toBe(uuids[1]);
+      expect(uuids[2]).not.toBe(uuids[0]);
+      expect(capture.mock.calls.map(([event]) => event.properties?.eventId)).toEqual([
+        "action-1",
+        "action-1",
+        "action-2",
+      ]);
+    });
+
+    it("passes valid source UUIDs through and scopes derived UUIDs by app and environment", () => {
+      const capture = vi.spyOn(postHogClient.getClient(), "capture");
+      const sourceUuid = "1bde3ce4-4bea-46bf-b0c5-305b8afca330";
+
+      analyticsManager.captureValidatedEnvelope({ ...envelope, eventId: sourceUuid });
+      analyticsManager.captureValidatedEnvelope(envelope);
+      analyticsManager.captureValidatedEnvelope({ ...envelope, appId: "app-2" });
+      analyticsManager.captureValidatedEnvelope({ ...envelope, environment: "production" });
+      analyticsManager.captureValidatedEnvelope({
+        ...envelope,
+        eventId: "00000000-0000-0000-0000-000000000000",
+      });
+
+      expect(capture.mock.calls[0]?.[0].uuid).toBe(sourceUuid);
+      expect(capture.mock.calls[1]?.[0].uuid).not.toBe(capture.mock.calls[2]?.[0].uuid);
+      expect(capture.mock.calls[1]?.[0].uuid).not.toBe(capture.mock.calls[3]?.[0].uuid);
+      expect(capture.mock.calls[4]?.[0].uuid).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+      );
+    });
+
+    it("keeps user, tenant, and anonymous subject identities separate", () => {
+      const capture = vi.spyOn(postHogClient.getClient(), "capture");
+
+      for (const kind of ["user", "tenant", "anonymous"] as const) {
+        analyticsManager.captureValidatedEnvelope({
+          ...envelope,
+          subject: { kind, id: "same-id" },
+        });
+      }
+
+      expect(capture.mock.calls.map(([event]) => event.distinctId)).toEqual([
+        "user:same-id",
+        "tenant:same-id",
+        "anonymous:same-id",
+      ]);
+    });
+
+    it("returns false when disabled or the local SDK invocation fails", () => {
+      const capture = vi.spyOn(postHogClient.getClient(), "capture");
+      const disabledManager = new PostHogAnalyticsManager(
+        postHogClient,
+        { enabled: false },
+        logger,
+      );
+
+      expect(disabledManager.captureValidatedEnvelope(envelope)).toBe(false);
+      expect(capture).not.toHaveBeenCalled();
+
+      capture.mockImplementationOnce(() => {
+        throw new Error("local capture failure");
+      });
+      expect(analyticsManager.captureValidatedEnvelope(envelope)).toBe(false);
+      expect(logger.warn).toHaveBeenCalledWith("PostHog capture failed", {
+        event: "report.created",
+        errorName: "Error",
+        problemCode: "analytics-posthog/capture-failed",
+      });
+    });
   });
 
   it("should auto-inject context into analytics", async () => {
