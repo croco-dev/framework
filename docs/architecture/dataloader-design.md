@@ -184,7 +184,8 @@ Croco는 “모든 데이터 접근을 강제”하지 않는다. 다음 2가지
 개념:
 
 - `createBatchLoader({ name, batchFn, maxBatchSize?, cache? ... })`
-- `Context.getCache()`에 `name`으로 저장/재사용하는 헬퍼를 함께 제공한다.
+- `Context.getCache()`에 `name`·scope 기준으로 저장/재사용한다. 요청 캐시 항목은 `createBatchLoader()` 결과가 소유하므로, 같은 요청에서 다른 결과가 같은 `name`·scope를 쓰면 `DuplicateBatchLoaderNameProblem`으로 실패한다.
+- `BatchLoaderFactory.create()`는 `IBatchLoaderFactory` 계약에 따라 같은 `name`·scope의 요청 로더를 조회해 재사용한다.
 
 장점:
 

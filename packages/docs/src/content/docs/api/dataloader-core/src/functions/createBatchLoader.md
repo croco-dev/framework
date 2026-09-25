@@ -9,6 +9,8 @@ title: "createBatchLoader"
 
 Creates a factory that returns a BatchLoader instance.
 The instance is scoped to the current request context using AsyncLocalStorage.
+Within one request, a different createBatchLoader() result that uses the same name and scope
+throws DuplicateBatchLoaderNameProblem from its methods.
 
 ## Type Parameters
 

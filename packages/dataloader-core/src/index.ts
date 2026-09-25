@@ -81,7 +81,10 @@
  */
 export { BatchLoaderFactory } from "./libs/BatchLoaderFactory";
 export { createBatchLoader } from "./libs/createBatchLoader";
-export { BatchResultLengthMismatchProblem } from "./libs/problems/BatchLoaderProblems";
+export {
+  BatchResultLengthMismatchProblem,
+  DuplicateBatchLoaderNameProblem,
+} from "./libs/problems/BatchLoaderProblems";
 /**
  * Batch function type for loading multiple values.
  *
@@ -129,7 +132,8 @@ export { BatchResultLengthMismatchProblem } from "./libs/problems/BatchLoaderPro
  * @template K - The type of keys
  * @template V - The type of loaded values
  *
- * @property name - Unique identifier for caching the loader in request context
+ * @property name - Unique identifier for caching the loader in request context. A different loader that
+ * uses the same name and scope in one request throws `DuplicateBatchLoaderNameProblem`.
  * @property batchFn - Function that batches multiple keys into a single load operation
  * @property maxBatchSize - Optional maximum number of items per batch; must be a positive safe integer or Infinity
  * (default: Infinity)

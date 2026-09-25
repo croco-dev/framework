@@ -76,6 +76,12 @@ await Context.run({ requestId: "req-123" }, async () => {
 });
 ```
 
+Create each loader once and reuse the returned object. Inside one request, a second
+`createBatchLoader()` call with the same name and scope is a different loader and fails with
+`DuplicateBatchLoaderNameProblem`, even when it repeats the same options. A custom
+`IBatchLoaderFactory` whose `create()` runs per call, such as through `@BatchLoad`, should
+delegate to `BatchLoaderFactory`, which retrieves request loaders by name.
+
 ### Transaction-Aware Scoping
 
 ```typescript
@@ -147,7 +153,10 @@ Creates a request-scoped batch loader.
 
 #### Options
 
-- **name** (`string`): Unique name for caching the loader in request context
+- **name** (`string`): Unique name for caching the loader in request context. Within one request, a
+  different `createBatchLoader()` result with the same name and scope fails with
+  `DuplicateBatchLoaderNameProblem` (`dataloader-core/duplicate-loader-name`) instead of sharing the first
+  loader's batches and cache.
 - **batchFn** (`BatchFn<K, V>`): Function that loads data for multiple keys. It must return a dense array with
   exactly one result per key; sparse arrays are rejected for the whole batch. An explicitly assigned `undefined`
   is a present result when `V` includes `undefined`.

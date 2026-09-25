@@ -71,7 +71,8 @@ Optional maximum number of items per batch; must be a positive safe integer or I
 
 > **name**: `string`
 
-Unique identifier for caching the loader in request context
+Unique identifier for caching the loader in request context. A different loader that
+uses the same name and scope in one request throws `DuplicateBatchLoaderNameProblem`.
 
 ---
 
