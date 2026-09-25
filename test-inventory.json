@@ -4333,6 +4333,12 @@
       "owner": "@croco/tx-core"
     },
     {
+      "path": "packages/tx-core/src/tests/TxManager.savepointSiblings.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/tx-core"
+    },
+    {
       "path": "packages/tx-core/src/tests/TxManager.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
