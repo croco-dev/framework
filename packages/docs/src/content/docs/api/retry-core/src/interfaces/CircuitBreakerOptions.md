@@ -45,6 +45,24 @@ Positive integer milliseconds up to 2,147,483,647 (default: 30000).
 
 ---
 
+### recordFailure?
+
+> `optional` **recordFailure?**: (`error`) => `boolean`
+
+Return true when an error should count toward opening the circuit.
+
+#### Parameters
+
+##### error
+
+`unknown`
+
+#### Returns
+
+`boolean`
+
+---
+
 ### stateStore?
 
 > `optional` **stateStore?**: [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/)
