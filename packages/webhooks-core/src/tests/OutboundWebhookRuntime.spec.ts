@@ -1047,6 +1047,12 @@ describe("outbound webhook signing and URL policy", () => {
     "https://[100:0:0:1::1]/hook",
     "https://[3fff::1]/hook",
     "https://[5f00::1]/hook",
+    "https://[64:ff9b::a00:1]/hook",
+    "https://[64:ff9b::7f00:1]/hook",
+    "https://[64:ff9b::a9fe:a9fe]/hook",
+    "https://[2002:a00:1::]/hook",
+    "https://[2002:a9fe:a9fe::]/hook",
+    "https://[fec0::1]/hook",
   ])("rejects SSRF-oriented endpoint URL %s", async (url) => {
     await expect(defaultOutboundWebhookUrlPolicy.validate(url)).rejects.toBeInstanceOf(
       InvalidOutboundWebhookUrlProblem,
@@ -1096,6 +1102,18 @@ describe("outbound webhook signing and URL policy", () => {
     "100:0:0:1::1",
     "3fff::1",
     "5f00::1",
+    "64:ff9b::a00:1",
+    "64:ff9b::7f00:1",
+    "64:ff9b::a9fe:a9fe",
+    "64:ff9b:0:0:0:0:a00:1",
+    "64:ff9b::10.0.0.1",
+    "2002:a00:1::",
+    "2002:0a00:0001::",
+    "2002:a9fe:a9fe::",
+    "fec0::1",
+    "64:ff9b::a00:1%eth0",
+    "2002:a00:1::%eth0",
+    "2606:4700:4700::1111%eth0",
   ])(
     "rejects uncompressed and alternative IPv6 representations in isBlockedIpAddress: %s",
     (ip) => {
@@ -1109,6 +1127,8 @@ describe("outbound webhook signing and URL policy", () => {
     "2001:4860:4860::8888",
     "1.1.1.1",
     "8.8.8.8",
+    "64:ff9b::101:101",
+    "2002:101:101::",
   ])("allows public IP addresses in isBlockedIpAddress: %s", (ip) => {
     expect(isBlockedIpAddress(ip)).toBe(false);
   });
@@ -1128,6 +1148,42 @@ describe("outbound webhook signing and URL policy", () => {
       metadataPolicy.validate("https://hooks.customer.example/v1/events"),
     ).rejects.toBeInstanceOf(InvalidOutboundWebhookUrlProblem);
   });
+
+  it.each([
+    "64:ff9b::a00:1",
+    "64:ff9b::7f00:1",
+    "64:ff9b::a9fe:a9fe",
+    "2002:a00:1::",
+    "2002:a9fe:a9fe::",
+    "fec0::1",
+    "64:ff9b::a00:1%eth0",
+    "2002:a00:1::%eth0",
+    "2606:4700:4700::1111%eth0",
+  ])("rejects a public hostname resolving to unsafe IPv6 address %s", async (address) => {
+    const policy = createOutboundWebhookUrlPolicy({
+      resolveHostname: async () => [address],
+    });
+
+    await expect(
+      policy.validate("https://hooks.customer.example/v1/events"),
+    ).rejects.toBeInstanceOf(InvalidOutboundWebhookUrlProblem);
+  });
+
+  it.each(["64:ff9b::101:101", "2002:101:101::"])(
+    "allows public IPv4 embedded in IPv6 address %s as a URL and DNS result",
+    async (address) => {
+      const literalUrl = `https://[${address}]/hook`;
+      await expect(defaultOutboundWebhookUrlPolicy.validate(literalUrl)).resolves.toMatchObject({
+        url: literalUrl,
+        resolvedAddresses: [address],
+      });
+
+      const policy = createOutboundWebhookUrlPolicy({ resolveHostname: async () => [address] });
+      await expect(policy.validate("https://hooks.customer.example/hook")).resolves.toMatchObject({
+        resolvedAddresses: [address],
+      });
+    },
+  );
 
   it("rejects non-IP resolver output so transports never resolve a second hostname", async () => {
     const policy = createOutboundWebhookUrlPolicy({
