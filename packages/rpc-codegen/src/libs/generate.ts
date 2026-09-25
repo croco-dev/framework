@@ -1916,6 +1916,11 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   `;
 }
 
+const RPC_PATH_PARAM_INPUT_PROBLEM = {
+  code: "rpc-codegen/path-param-input-unsupported",
+  category: ProblemCategory.ValidationError,
+} as const;
+
 function generateRpcTelemetrySupport(): string {
   return `export type RpcRouteKind = 'query' | 'mutation';
 
@@ -2032,8 +2037,8 @@ export type RpcClientRequest = {
 };
 
 export class RpcPathParamInputError extends Problem {
-  readonly code = 'rpc-codegen/path-param-input-unsupported';
-  readonly category = ProblemCategory.ValidationError;
+  readonly code = ${literalValueToTypeScript(RPC_PATH_PARAM_INPUT_PROBLEM.code)};
+  readonly category = ProblemCategory.${RPC_PATH_PARAM_INPUT_PROBLEM.category};
   readonly routeId: string;
   readonly param: string;
 

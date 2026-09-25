@@ -5,7 +5,7 @@ import {
   createFrontendActionManifest,
   type FrontendActionManifestEntry,
 } from "@croco/presentation-preset";
-import { Problem, ProblemCategory } from "@croco/problems-core";
+import { CROCO_PROBLEM_CODE_REGISTRY, Problem, ProblemCategory } from "@croco/problems-core";
 import {
   CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
   type ContractGraph,
@@ -2725,6 +2725,11 @@ void handleMissingProblemBranch;
       status: 422,
     });
     expect(encodeRpcPathSegment(route, "id", "a/b c")).toBe("a%2Fb%20c");
+    expect(
+      CROCO_PROBLEM_CODE_REGISTRY.problems.find(
+        (problem) => problem.code === "rpc-codegen/path-param-input-unsupported",
+      ),
+    ).toMatchObject({ category: ProblemCategory.ValidationError, status: 422 });
   });
 
   it(
