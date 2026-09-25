@@ -16724,6 +16724,12 @@
               "exportKind": "named",
               "source": "./libs/problems/IdempotencyProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "isRetryableHandlerFailure",
+              "exportKind": "named",
+              "source": "./libs/IdempotencyCoordinator",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [

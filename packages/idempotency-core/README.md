@@ -54,6 +54,8 @@ handler가 실패하면 첫 호출은 원래 오류를 throw하고, 비재시도
 재시도 여부는 요청의 `isRetryable(error)` 정책, 오류의 boolean `retryable`, `extensions.retryable`, HTTP `status` 순서로 결정합니다.
 기본적으로 408·429를 제외한 4xx는 비재시도 실패이며, 5xx와 재시도 정보가 없는 오류는 기존처럼 재시도할 수 있습니다.
 도메인 오류나 외부 SDK 오류는 `coordinator.execute({ key, isRetryable: (error) => ... }, handler)`로 분류할 수 있습니다.
+기본 판정은 `isRetryableHandlerFailure(error)`로 export합니다. handler 오류를 다른 Problem으로 감싸 throw하는 호출자는
+이 결과를 감싼 Problem의 `extensions.retryable`에 옮겨야 원래 분류가 유지됩니다.
 이 정책은 handler 실패에만 적용하며, 예약 감사와 commit 실패는 기존 복구 동작을 유지합니다. 정책 함수가 throw하면
 원래 handler 오류에 `idempotencyFailureRecordError`로 첨부되고 실패 레코드는 기록되지 않습니다.
 

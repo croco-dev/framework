@@ -1,3 +1,4 @@
+import { isRetryableHandlerFailure } from "@croco/idempotency-core";
 import { Problem, ProblemCategory, type ProblemOptions } from "@croco/problems-core";
 
 export const WEBHOOK_DIAGNOSTIC_CODES = {
@@ -122,7 +123,9 @@ export class WebhookDispatchProblem extends WebhookProblem {
         provider: options.provider,
         eventId: options.eventId,
         eventType: options.eventType,
-        ...(cause instanceof Problem ? { causeCode: cause.code } : {}),
+        ...(cause instanceof Problem
+          ? { causeCode: cause.code, retryable: isRetryableHandlerFailure(cause) }
+          : {}),
       },
       ...(cause === undefined ? {} : { cause }),
     });
@@ -167,6 +170,7 @@ export class WebhookReporterProblem extends WebhookProblem {
         provider: options.provider,
         eventId: options.eventId,
         eventType: options.eventType,
+        ...(cause instanceof Problem ? { retryable: isRetryableHandlerFailure(cause) } : {}),
       },
       ...(cause === undefined ? {} : { cause }),
     });

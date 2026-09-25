@@ -24181,7 +24181,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/webhooks-core/src/libs/problems/WebhookProblems.ts",
-          line: 38,
+          line: 39,
           column: 11,
           kind: "problem-metadata",
         },
@@ -24213,7 +24213,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/webhooks-core/src/libs/problems/WebhookProblems.ts",
-          line: 117,
+          line: 118,
           column: 11,
           kind: "problem-metadata",
         },
@@ -24243,7 +24243,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/webhooks-core/src/libs/problems/WebhookProblems.ts",
-          line: 139,
+          line: 142,
           column: 11,
           kind: "problem-metadata",
         },
@@ -24274,7 +24274,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/webhooks-core/src/libs/problems/WebhookProblems.ts",
-          line: 74,
+          line: 75,
           column: 11,
           kind: "problem-metadata",
         },
@@ -24305,7 +24305,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/webhooks-core/src/libs/problems/WebhookProblems.ts",
-          line: 178,
+          line: 182,
           column: 11,
           kind: "problem-metadata",
         },
@@ -24336,7 +24336,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/webhooks-core/src/libs/problems/WebhookProblems.ts",
-          line: 54,
+          line: 55,
           column: 11,
           kind: "problem-metadata",
         },
@@ -24650,7 +24650,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/webhooks-core/src/libs/problems/WebhookProblems.ts",
-          line: 162,
+          line: 165,
           column: 11,
           kind: "problem-metadata",
         },
@@ -24681,7 +24681,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/webhooks-core/src/libs/problems/WebhookProblems.ts",
-          line: 94,
+          line: 95,
           column: 11,
           kind: "problem-metadata",
         },
