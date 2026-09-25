@@ -80,6 +80,19 @@ export function recordError(error: unknown, span?: Span): void {
       exception.stack = error.stack;
     }
     exception.name = error.name;
+
+    if (
+      "code" in error &&
+      typeof error.code === "string" &&
+      "category" in error &&
+      typeof error.category === "string" &&
+      "status" in error &&
+      typeof error.status === "number"
+    ) {
+      activeSpan.setAttribute("problem.code", error.code);
+      activeSpan.setAttribute("problem.category", error.category);
+      activeSpan.setAttribute("problem.status", error.status);
+    }
   }
 
   activeSpan.recordException(exception);
