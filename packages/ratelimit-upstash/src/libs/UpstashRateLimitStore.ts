@@ -428,6 +428,7 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
       throw new InvalidRateLimitPolicyProblem("fixed window refund receipt");
     }
 
+    const windowStart = Math.floor(this.now() / policy.windowMs) * policy.windowMs;
     const redisKey = clusteredRateLimitKey(this.prefix, key);
     const receiptKey = `${redisKey}:receipts`;
     const ttlSeconds = Math.ceil(policy.windowMs / 1000);
@@ -436,7 +437,7 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
       this.redis.eval(
         fixedWindowRefundLua,
         [redisKey, receiptKey],
-        [policy.limit, ttlSeconds, receipt.windowStart, receipt.id],
+        [policy.limit, ttlSeconds, receipt.windowStart, receipt.id, windowStart],
       ),
     )) as [number, number, number];
 

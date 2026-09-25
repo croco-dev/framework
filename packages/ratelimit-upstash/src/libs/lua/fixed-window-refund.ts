@@ -5,6 +5,7 @@ local limit = tonumber(ARGV[1])
 local ttl = tonumber(ARGV[2])
 local windowStart = ARGV[3]
 local receiptId = ARGV[4]
+local activeWindowStart = ARGV[5]
 
 local current = redis.call('GET', key)
 if not current then
@@ -13,6 +14,11 @@ end
 
 local currentWindowStart, currentCount = string.match(current, '([^:]+):([^:]+)')
 local count = tonumber(currentCount) or 0
+
+if currentWindowStart ~= activeWindowStart then
+  redis.call('SREM', receiptKey, receiptId)
+  return {0, 0, limit}
+end
 
 if currentWindowStart ~= windowStart then
   local remaining = limit - count
