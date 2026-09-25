@@ -12,6 +12,17 @@ export {
   CreditOperationsValidationProblem,
 } from "./libs/CreditOperations";
 export {
+  createEventCatalogLoadingState,
+  createInProcessEventCatalogSource,
+  EVENT_CATALOG_APP_READ_PERMISSION,
+  EVENT_CATALOG_APP_VALIDATE_PERMISSION,
+  EVENT_CATALOG_READ_PERMISSION,
+  EVENT_CATALOG_VALIDATE_PERMISSION,
+  EventCatalogValidationProblem,
+  loadEventCatalog,
+  validateEventCatalogPayload,
+} from "./libs/EventCatalog";
+export {
   ADMIN_CORE_DIAGNOSTIC_CODES,
   AdminResourceValidationProblem,
   assertAdminResourceValid,
@@ -77,6 +88,22 @@ export type {
   CreditOperationsWriteEvidence,
   LoadCreditOperationsInput,
 } from "./libs/CreditOperations";
+export type {
+  EventCatalogDescriptor,
+  EventCatalogEntry,
+  EventCatalogInput,
+  EventCatalogObservation,
+  EventCatalogPayloadValidationInput,
+  EventCatalogPayloadValidationState,
+  EventCatalogRegistry,
+  EventCatalogScope,
+  EventCatalogSource,
+  EventCatalogSourceLoadResult,
+  EventCatalogSourceRequest,
+  EventCatalogSourceValidationRequest,
+  EventCatalogSourceValidationResult,
+  EventCatalogState,
+} from "./libs/EventCatalog";
 export type {
   AdminResourceDiagnostic,
   AdminResourceDiagnosticCode,

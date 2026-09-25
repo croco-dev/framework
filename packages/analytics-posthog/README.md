@@ -37,6 +37,24 @@ this.analytics.capture("order.created", {
 });
 ```
 
+`ProductEventCatalog.captureTyped()`로 검증된 이벤트는 별도
+`captureValidatedEnvelope()` 경로를 사용합니다. 이 경로는 서버에서 검증한
+`subject.kind`와 `subject.id`를 합친 PostHog `distinctId`를 사용하므로 user,
+tenant, anonymous의 같은 ID가 합쳐지지 않습니다. 검증한 `tenantId`는
+`groups.tenant`로, `occurredAt`은 SDK의 `timestamp`로 전달합니다. SDK의 `uuid`는
+`eventId` 형식과 관계없이 `appId`, `environment`, `eventId`로 결정적인 UUIDv5를
+만들어 전달합니다. 신뢰한 `environment`와 원래 `eventId`는 이벤트 속성에 보존합니다.
+payload가 context 키를 포함하더라도 이를 전송 속성에 반영하지 않습니다.
+기존 `capture(event, properties)` 동작은 그대로 유지됩니다.
+typed 이벤트의 사용자를 `identify()`로 연결하려면 같은 접두사를 붙인
+`user:{id}`를 `distinctId`로 전달해야 합니다.
+
+`captureValidatedEnvelope()`의 `true`는 로컬 SDK 호출이 성공적으로 반환되었다는
+뜻이며 PostHog 저장 확정이 아닙니다. 동일 논리 이벤트를 재시도할 때 같은
+`eventId`에서 같은 provider UUID를 만들지만, SDK 버퍼와 외부 provider 경계에서 정확히 한 번 저장되는
+것을 보장하지 않습니다. 애플리케이션은 필요한 경우 자체 outbox와 reconciliation을
+사용해야 합니다.
+
 ### 3. 사용자 식별
 
 로그인 또는 회원가입 후 사용자를 식별합니다.
@@ -178,6 +196,10 @@ secret 값을 노출하지 않는 boolean/source/status evidence만 포함합니
 - **`capture(event: string, properties?: Record<string, unknown>): void`**
   - 이벤트를 PostHog에 전송합니다.
   - 실패 시 로그에 기록하고 애플리케이션 흐름을 차단하지 않습니다.
+
+- **`captureValidatedEnvelope(envelope: ProductEventEnvelope): boolean`**
+  - 검증된 이벤트의 신뢰 context와 payload를 PostHog에 전송합니다.
+  - analytics가 비활성화되었거나 동기 SDK 호출이 실패하면 `false`를 반환합니다.
 
 - **`identify(distinctId: string, properties?: Record<string, unknown>): void`**
   - 사용자를 식별합니다.

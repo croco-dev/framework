@@ -1,5 +1,6 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { AnalyticsManager } from "@croco/analytics-core";
+import type { ProductEventEnvelope } from "@croco/analytics-core";
 import {
   Component,
   Context,
@@ -55,6 +56,36 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
         event,
         properties,
         groups,
+      }),
+    );
+  }
+
+  override captureValidatedEnvelope(envelope: ProductEventEnvelope): boolean {
+    if (!this.isEnabled()) {
+      this.logDisabledOperation("capture", { event: envelope.name });
+      return false;
+    }
+
+    return this.invokeProvider({ name: "capture", event: envelope.name }, () =>
+      this.posthogClient.getClient().capture({
+        distinctId: `${envelope.subject.kind}:${envelope.subject.id}`,
+        event: envelope.name,
+        properties: {
+          ...Object.fromEntries(
+            Object.entries(envelope.payload).filter(([key]) => !RESERVED_EVENT_PROPERTIES.has(key)),
+          ),
+          appId: envelope.appId,
+          environment: envelope.environment,
+          ...(envelope.tenantId ? { tenantId: envelope.tenantId } : {}),
+          subjectKind: envelope.subject.kind,
+          eventId: envelope.eventId,
+          occurredAt: envelope.occurredAt,
+          receivedAt: envelope.receivedAt,
+          schemaVersion: envelope.schemaVersion,
+        },
+        ...(envelope.tenantId ? { groups: { tenant: envelope.tenantId } } : {}),
+        uuid: toPostHogEventUuid(envelope.appId, envelope.environment, envelope.eventId),
+        timestamp: new Date(envelope.occurredAt),
       }),
     );
   }
@@ -132,14 +163,16 @@ export class PostHogAnalyticsManager extends AnalyticsManager {
     return undefined;
   }
 
-  private invokeProvider(operation: PostHogAnalyticsOperation, invocation: () => unknown): void {
+  private invokeProvider(operation: PostHogAnalyticsOperation, invocation: () => unknown): boolean {
     try {
       const result = invocation();
       void Promise.resolve(result).catch((error: unknown) => {
         this.logProviderFailure(operation, error);
       });
+      return true;
     } catch (error) {
       this.logProviderFailure(operation, error);
+      return false;
     }
   }
 
@@ -182,6 +215,38 @@ type PostHogAnalyticsOperation =
   | { readonly name: "capture"; readonly event: string }
   | { readonly name: "identify" }
   | { readonly name: "group" };
+
+const RESERVED_EVENT_PROPERTIES = new Set([
+  "appId",
+  "environment",
+  "tenantId",
+  "userId",
+  "eventId",
+  "occurredAt",
+  "receivedAt",
+  "schemaVersion",
+  "subject",
+  "subjectKind",
+  "groups",
+  "distinctId",
+  "$insert_id",
+]);
+
+const UUID_DNS_NAMESPACE = Buffer.from("6ba7b8109dad11d180b400c04fd430c8", "hex");
+
+function toPostHogEventUuid(appId: string, environment: string, eventId: string): string {
+  const bytes = createHash("sha1")
+    .update(UUID_DNS_NAMESPACE)
+    .update(
+      `croco.analytics-posthog.product-event:${JSON.stringify([appId, environment, eventId])}`,
+    )
+    .digest()
+    .subarray(0, 16);
+  bytes[6] = (bytes[6] & 0x0f) | 0x50;
+  bytes[8] = (bytes[8] & 0x3f) | 0x80;
+  const hex = bytes.toString("hex");
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
 
 function createProviderFailureProblem(operation: PostHogAnalyticsOperation, error: unknown) {
   const cause = toErrorCause(error);

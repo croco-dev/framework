@@ -78,6 +78,28 @@ Capture an event.
 
 ---
 
+### captureValidatedEnvelope()
+
+> **captureValidatedEnvelope**(`envelope`): `boolean`
+
+Returns whether a validated event was accepted by the local transport.
+
+#### Parameters
+
+##### envelope
+
+[`ProductEventEnvelope`](/api/analytics-core/src/type-aliases/producteventenvelope/)
+
+#### Returns
+
+`boolean`
+
+#### Overrides
+
+[`AnalyticsManager`](/api/analytics-core/src/classes/analyticsmanager/).[`captureValidatedEnvelope`](/api/analytics-core/src/classes/analyticsmanager/#capturevalidatedenvelope)
+
+---
+
 ### flush()
 
 > **flush**(): `Promise`\<`void`\>
