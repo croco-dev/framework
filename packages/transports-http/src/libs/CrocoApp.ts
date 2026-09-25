@@ -463,14 +463,18 @@ export class CrocoApp {
 
   private registerSystemRoutes(): void {
     this.hono.get("/health", async (c) => {
-      const result = sanitizeHealthCheckResult(await this.healthCheckRegistry.check());
+      const result = sanitizeHealthCheckResult(
+        await this.healthCheckRegistry.check({ signal: c.req.raw.signal }),
+      );
       return c.json(result, result.status === "up" ? 200 : 503);
     });
 
     this.hono.get("/health/live", (c) => c.json({ status: "ok" }, 200));
 
     const readinessHandler = async (c: Context) => {
-      const result = sanitizeHealthCheckResult(await this.healthCheckRegistry.checkReadiness());
+      const result = sanitizeHealthCheckResult(
+        await this.healthCheckRegistry.checkReadiness({ signal: c.req.raw.signal }),
+      );
       return c.json(result, result.status === "up" ? 200 : 503);
     };
 

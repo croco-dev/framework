@@ -62,12 +62,12 @@ export class HealthCheckRegistry {
     return this.checks.size;
   }
 
-  async check(): Promise<HealthCheckRegistryResult> {
-    return this.service.check();
+  async check(options: { signal?: AbortSignal } = {}): Promise<HealthCheckRegistryResult> {
+    return this.service.check(options);
   }
 
-  async checkReadiness(): Promise<HealthCheckRegistryResult> {
-    return this.service.checkReadiness();
+  async checkReadiness(options: { signal?: AbortSignal } = {}): Promise<HealthCheckRegistryResult> {
+    return this.service.checkReadiness(options);
   }
 }
 

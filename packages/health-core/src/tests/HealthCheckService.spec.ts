@@ -570,6 +570,103 @@ describe("HealthCheckService", () => {
     expect(didAbort).toBe(true);
   });
 
+  it("does not start health or readiness indicators for an aborted caller", async () => {
+    const controller = new AbortController();
+    controller.abort();
+    const check = vi.fn().mockResolvedValue({ name: "db", status: "up" });
+    const isReady = vi.fn().mockResolvedValue({ name: "db", status: "up" });
+    service.register("db", { check });
+    service.registerReadiness("db", { check, isReady });
+
+    await expect(service.check({ signal: controller.signal })).resolves.toMatchObject({
+      status: "down",
+      results: [{ name: "db", status: "down" }],
+    });
+    await expect(service.checkReadiness({ signal: controller.signal })).resolves.toMatchObject({
+      status: "down",
+      results: [{ name: "db", status: "down" }],
+    });
+    expect(check).not.toHaveBeenCalled();
+    expect(isReady).not.toHaveBeenCalled();
+  });
+
+  it("aborts in-flight health and readiness checks without waiting for their timeouts", async () => {
+    const controller = new AbortController();
+    const signals: AbortSignal[] = [];
+    const check = vi.fn((signal?: AbortSignal): Promise<HealthIndicatorResult> => {
+      if (signal) signals.push(signal);
+      return new Promise(() => {});
+    });
+    const isReady = vi.fn((signal?: AbortSignal): Promise<HealthIndicatorResult> => {
+      if (signal) signals.push(signal);
+      return new Promise(() => {});
+    });
+    service.register("db", { check });
+    service.registerReadiness("db", { check, isReady });
+
+    const healthResult = service.check({ signal: controller.signal });
+    const readinessResult = service.checkReadiness({ signal: controller.signal });
+    expect(signals).toHaveLength(2);
+
+    controller.abort();
+
+    expect(signals.every((signal) => signal.aborted)).toBe(true);
+    await expect(healthResult).resolves.toMatchObject({
+      status: "down",
+      results: [{ name: "db", status: "down" }],
+    });
+    await expect(readinessResult).resolves.toMatchObject({
+      status: "down",
+      results: [{ name: "db", status: "down" }],
+    });
+  });
+
+  it("skips remaining indicators when a synchronous check aborts the caller", async () => {
+    const controller = new AbortController();
+    const laterCheck = vi.fn().mockResolvedValue({ name: "later", status: "up" });
+    service.register("first", {
+      check: () => {
+        controller.abort();
+        throw new Error("cancelled");
+      },
+    });
+    service.register("later", { check: laterCheck });
+
+    await expect(service.check({ signal: controller.signal })).resolves.toMatchObject({
+      status: "down",
+      results: [
+        { name: "first", status: "down" },
+        { name: "later", status: "down" },
+      ],
+    });
+    expect(laterCheck).not.toHaveBeenCalled();
+  });
+
+  it("preserves the indicator timeout when the caller provides a live signal", async () => {
+    vi.useFakeTimers();
+    const controller = new AbortController();
+    const fastService = new HealthCheckService({ timeout: 100 });
+    let indicatorSignal: AbortSignal | undefined;
+    fastService.register("slow", {
+      check: (signal) => {
+        indicatorSignal = signal;
+        return new Promise(() => {});
+      },
+    });
+
+    const resultPromise = fastService.check({ signal: controller.signal });
+    await vi.advanceTimersByTimeAsync(100);
+
+    expect(indicatorSignal?.aborted).toBe(true);
+    expect(controller.signal.aborted).toBe(false);
+    await expect(resultPromise).resolves.toEqual({
+      status: "down",
+      results: [
+        { name: "slow", status: "down", details: { error: "Health check timeout for slow" } },
+      ],
+    });
+  });
+
   it("should honor per-indicator timeout overrides", async () => {
     let didAbort = false;
 

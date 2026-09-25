@@ -43,7 +43,15 @@ const result = await service.check();
 
 ### check()
 
-> **check**(): `Promise`\<[`HealthCheckResult`](/api/health-core/src/type-aliases/healthcheckresult/)\>
+> **check**(`options?`): `Promise`\<[`HealthCheckResult`](/api/health-core/src/type-aliases/healthcheckresult/)\>
+
+#### Parameters
+
+##### options?
+
+###### signal?
+
+`AbortSignal`
 
 #### Returns
 
@@ -53,7 +61,15 @@ const result = await service.check();
 
 ### checkReadiness()
 
-> **checkReadiness**(): `Promise`\<[`HealthCheckResult`](/api/health-core/src/type-aliases/healthcheckresult/)\>
+> **checkReadiness**(`options?`): `Promise`\<[`HealthCheckResult`](/api/health-core/src/type-aliases/healthcheckresult/)\>
+
+#### Parameters
+
+##### options?
+
+###### signal?
+
+`AbortSignal`
 
 #### Returns
 
