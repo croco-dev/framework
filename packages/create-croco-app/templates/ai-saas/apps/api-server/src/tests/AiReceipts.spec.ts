@@ -102,15 +102,56 @@ class SnapshotReceiptStore implements AiReceiptStore {
 }
 
 describe("AI generation receipt recovery", () => {
+  it("normalizes non-Error provider failures without invoking untrusted stringification", async () => {
+    const reason = {
+      toString: () => {
+        throw new Error("sensitive provider payload");
+      },
+    };
+    const runtime = createAiSaasRuntime(undefined, {
+      providerProfile: "in-memory",
+      generate: async () => {
+        throw reason;
+      },
+      promptPolicy: demoPromptPolicy,
+      pricing,
+      publishCompletion: async () => {},
+    });
+    const { tenant } = await seedAiSaasTenant(runtime, "team", "non-error-provider");
+
+    const failure = await runtime.service
+      .generateText({ tenantId: tenant.id, requestId: "non-error", prompt: "Hello" })
+      .catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(AiProviderUnavailableProblem);
+    expect((failure as AiProviderUnavailableProblem).cause).toBeInstanceOf(Error);
+    expect((failure as AiProviderUnavailableProblem).toJSON()).toMatchObject({
+      code: "ai-saas/provider-unavailable",
+      status: 500,
+    });
+    expect(JSON.stringify(failure)).not.toContain("sensitive provider payload");
+  });
+
   it("persists response loss and blocks new spending after recreating the service", async () => {
     let requests = 0;
+    let sdkError: unknown;
     const baseURL = await fixture((request) => {
       requests++;
       request.socket.destroy();
     });
+    const generate = createOpenAIGenerate(() =>
+      createTenantOpenAIClient({ apiKey: "test", baseURL }),
+    );
     const options = {
       providerProfile: "openai" as const,
-      generate: createOpenAIGenerate(() => createTenantOpenAIClient({ apiKey: "test", baseURL })),
+      generate: async (input: Parameters<typeof generate>[0]) => {
+        try {
+          return await generate(input);
+        } catch (error) {
+          sdkError = error;
+          throw error;
+        }
+      },
       promptPolicy: demoPromptPolicy,
       pricing,
       publishCompletion: async () => {},
@@ -121,7 +162,14 @@ describe("AI generation receipt recovery", () => {
     const request = { tenantId: tenant.id, requestId: "lost", prompt: "Hello" };
     const failure = await runtime.service.generateText(request).catch((error: unknown) => error);
     expect(failure).toBeInstanceOf(AiProviderUnavailableProblem);
-    expect((failure as AiProviderUnavailableProblem).cause).toBeInstanceOf(Error);
+    expect(sdkError).toBeInstanceOf(Error);
+    expect((failure as AiProviderUnavailableProblem).cause).toBe(sdkError);
+    expect((failure as AiProviderUnavailableProblem).code).toBe("ai-saas/provider-unavailable");
+    expect((failure as AiProviderUnavailableProblem).toJSON()).toMatchObject({
+      code: "ai-saas/provider-unavailable",
+      status: 500,
+    });
+    expect(JSON.stringify(failure)).not.toContain((sdkError as Error).message);
     const restartedReceipts = new SnapshotReceiptStore(receipts.snapshot());
     const restarted = createAiSaasRuntime(runtime.saasRuntime, options, restartedReceipts);
     await expect(restarted.service.generateText(request)).rejects.toThrow();
