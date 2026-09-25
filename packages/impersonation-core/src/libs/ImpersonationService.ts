@@ -106,6 +106,10 @@ export class ImpersonationService {
     targetUserId: string,
     reason?: string,
   ): Promise<ImpersonationState> {
+    if (resolveImpersonationContext(context).status !== "absent") {
+      throw new NestedImpersonationProblem();
+    }
+
     const principal = await this.resolveManager(context);
 
     if (principal.id === targetUserId) {
