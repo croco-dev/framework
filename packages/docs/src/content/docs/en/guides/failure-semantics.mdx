@@ -55,10 +55,11 @@ from `@croco/problems-core` reads a top-level `retryable` boolean first and `ext
 second; any other value counts as no classification. The retry-core default policy uses it, so a
 provider Problem with `extensions.retryable: false` runs once and a `Conflict` Problem with
 `extensions.retryable: true` retries while attempts remain. Idempotency handler failures, saga
-steps, and QStash triggers record their retry classification through the same function. In the
-retry-core default policy, `noRetryFor` still wins: its default programmer errors (`TypeError`,
-`ReferenceError`, `SyntaxError`, `RangeError`) are not retried even when they declare
-`retryable: true`.
+steps, and QStash triggers classify failures through the same function unless the caller supplies
+its own `isRetryable` or `shouldRetry`. In the retry-core default policy, `noRetryFor` still wins:
+its default programmer errors (`TypeError`, `ReferenceError`, `SyntaxError`, `RangeError`) are not
+retried even when they declare `retryable: true`. Retry-core wraps a thrown non-`Error` value in an
+`Error` before classification, so only flags on `Error` instances reach its policy.
 
 That means package authors should classify expected failures before retry sees them:
 
