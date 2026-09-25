@@ -900,6 +900,9 @@ describe("E2E: generate()", () => {
       );
       expect(workspaceConfig).toContain("onlyBuiltDependencies:");
       expect(workspaceConfig).toContain("- workerd");
+      expect(workspaceConfig).toContain("- 'libs/**/*'");
+      expect(workspaceConfig).toContain("tsup@8.5.1: patches/tsup@8.5.1.patch");
+      expect(existsSync(join(testDir, "patches", "tsup@8.5.1.patch"))).toBe(true);
       expect(workerWranglerConfig).not.toMatch(/^\s*\[build\]\s*$/m);
       expect(ssrWorkerPackageJson.dependencies?.["@croco/meta-vite"]).toBe(
         externalCrocoRange("@croco/meta-vite"),

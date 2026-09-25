@@ -329,11 +329,13 @@ describe("Phase B cacheable verification shadow", () => {
 
   it("pins one Node patch release across independent hosted runners", () => {
     expect(MISE_TOML).toMatch(/^node = "\d+\.\d+\.\d+"$/m);
-    expect(/^pnpm = "(\d+\.\d+\.\d+)"$/m.exec(MISE_TOML)?.[1]).toBe(
+    const misePnpmVersion = /^pnpm = "(\d+\.\d+\.\d+)"$/m.exec(MISE_TOML)?.[1];
+    expect(misePnpmVersion).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(
       /^pnpm@(\d+\.\d+\.\d+)\+sha512\.[0-9a-f]{128}$/.exec(
         String(ROOT_PACKAGE_JSON.packageManager),
       )?.[1],
-    );
+    ).toBe(misePnpmVersion);
     const steps = Object.entries(WORKFLOWS).flatMap(([path, source]) =>
       Object.values(
         (parseDocument(source).toJS() as { jobs: Record<string, { steps?: WorkflowStep[] }> }).jobs,
@@ -667,6 +669,7 @@ describe("CI verification profile contract", () => {
     ];
 
     for (const [index, mutation] of mutations.entries()) {
+      expect(mutation, `mutation ${index}`).not.toBe(WORKFLOW);
       expect(findRequiredWorkflowPolicyViolations(mutation), `mutation ${index}`).not.toEqual([]);
     }
   });
