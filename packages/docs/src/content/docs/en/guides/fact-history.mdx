@@ -3,7 +3,7 @@ title: Customer Fact History
 description: Append customer property changes and inspect values at effective and recorded times.
 ---
 
-`@croco/analytics-core` defines fact history. `@croco/analytics-drizzle` stores it in PostgreSQL, and `@croco/admin-core` with `@croco/admin-react` provides the operator comparison and correction panel. See the [standalone PostgreSQL example](https://github.com/croco-dev/framework/tree/trunk/examples/fact-history) for a definition, explicit subscription event, two time-specific reads, and a panel render.
+`@croco/analytics-core` defines fact history. `@croco/analytics-drizzle` stores it in PostgreSQL, and `@croco/admin-core` with `@croco/admin-react` provides the operator comparison and correction panel. The standalone PostgreSQL example at `examples/fact-history` in the [examples directory](https://github.com/croco-dev/framework/tree/trunk/examples) shows a definition, explicit subscription event, two time-specific reads, and a panel render.
 
 Server code imports `createFactHistoryOperations` from `@croco/admin-core/fact-history-operations`. The panel uses the browser-safe validators from `@croco/admin-core/fact-history-validation`, so the browser bundle does not load the server history service.
 
