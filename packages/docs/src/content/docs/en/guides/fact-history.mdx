@@ -1,0 +1,24 @@
+---
+title: Customer Fact History
+description: Append customer property changes and inspect values at effective and recorded times.
+---
+
+`@croco/analytics-core` defines fact history. `@croco/analytics-drizzle` stores it in PostgreSQL, and `@croco/admin-core` with `@croco/admin-react` provides the operator comparison and correction panel. See the [standalone PostgreSQL example](https://github.com/croco-dev/framework/tree/trunk/examples/fact-history) for a definition, explicit subscription event, two time-specific reads, and a panel render.
+
+Server code imports `createFactHistoryOperations` from `@croco/admin-core/fact-history-operations`. The panel uses the browser-safe validators from `@croco/admin-core/fact-history-validation`, so the browser bundle does not load the server history service.
+
+## Time and identity
+
+A fact projection has a subject, definition version, projection ID, row key, materialization revision, value, and half-open validity interval `[validFrom, validTo)`. The trusted service clock assigns `recordedAt` when the event is accepted. `effectiveAt` selects when the value applied; `knownAt` selects what the system had recorded by that time. A value learned at noon is unknown to a query whose `knownAt` is 11:30, even when its `validFrom` is 11:00. Current profile values never fill a missing past interval.
+
+Each source receipt is identified by scope, source, and source event ID. Its fingerprint detects a conflicting redelivery. Each projected row has its own subject, definition, projection, row key, and materialization revision. A single source event can therefore write several attributes or subjects without conflating them. `appendFacts` accepts a bounded batch of up to 100 rows that share one materialization revision, and commits the receipt and every row in one PostgreSQL transaction. A failed batch leaves no partial source completion; retry the same event after fixing the failure. Distinct source event IDs remain distinct even if their values match.
+
+Reads name the definition version and materialization revision. Corrections append a new row with `supersedes`, actor, reason, expected scope revision, and idempotency key. They do not overwrite the original row. Overlapping effective rows with incompatible values return `conflict` unless an explicit correction or definition source priority resolves them. A new projection generation is read separately from older generations.
+
+## Authorization and storage
+
+Create `FactHistoryService` with explicit fact definitions, a store, and a policy that authorizes each read, write, correction, and deletion and masks fields before returning rows. Every request supplies application, environment, and an explicit tenant ID or `null`; `null` represents a distinct scope and is never a wildcard. Subject kinds (`user`, `tenant`, `anonymous`) remain distinct. The admin operations wrapper uses this same service; bind its actor to the authenticated server principal. Do not use the permissive demonstration policy in production.
+
+Run `createFactHistory(db)` before accepting writes. The migration creates source receipts, batch completion records, fact rows, a subject tombstone, and a subject/definition/time lookup index. `deleteSubject` blocks later reads and writes for that subject, including historical records. The adapter stores the source fingerprint and projected values, not the full source payload. Applications remain responsible for deleting or expiring any source records and derived caches they own; no automatic retention policy is included.
+
+The PostgreSQL adapter supports Node and Lambda deployments with a supplied connection. Cloudflare Workers compatibility is unclaimed. This feature is independent of Cohort, the warehouse SQL engine, and the dimension work in #2865. It does not infer user identity from a current email address or join subject kinds automatically.

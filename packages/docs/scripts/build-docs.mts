@@ -15,6 +15,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { argv, env, exit } from "node:process";
 import { fileURLToPath } from "node:url";
+import { moveBuildOutput } from "./move-build-output.mts";
 
 const DOCS_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const REPOSITORY_ROOT = resolve(DOCS_ROOT, "..", "..");
@@ -69,10 +70,7 @@ function buildHermetically(): void {
     copyDirectory(join(DOCS_ROOT, "public"), join(temporaryRoot, "public"));
     runAstro(temporaryRoot, "build");
 
-    const output = join(DOCS_ROOT, "dist");
-    rmSync(output, { force: true, recursive: true });
-    mkdirSync(dirname(output), { recursive: true });
-    cpSync(join(temporaryRoot, "dist"), output, { recursive: true });
+    moveBuildOutput(join(temporaryRoot, "dist"), join(DOCS_ROOT, "dist"));
   } finally {
     rmSync(temporaryRoot, { force: true, recursive: true });
   }

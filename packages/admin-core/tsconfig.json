@@ -3,7 +3,9 @@
   "extends": "../../tsconfig/tsconfig.node.json",
   "compilerOptions": {
     "paths": {
-      "@croco/problems-core": ["../problems-core/src/index.ts"]
+      "@croco/admin-core/fact-history-validation": ["./src/fact-history-validation.ts"],
+      "@croco/problems-core": ["../problems-core/src/index.ts"],
+      "@croco/analytics-core": ["../analytics-core/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts"],

@@ -219,3 +219,19 @@ export type {
   EngagementTestSendResult,
   RecipientRef,
 } from "./libs/EngagementOperations";
+
+export {
+  FactHistoryInputProblem,
+  validateFactHistoryComparison,
+  validateFactHistoryCorrection,
+} from "@croco/admin-core/fact-history-validation";
+export type {
+  FactHistorySelection,
+  FactHistoryComparisonRequest,
+  FactHistoryDisplayRow,
+  FactHistoryPoint,
+  FactHistorySnapshot,
+  FactHistoryState,
+  FactHistoryCorrectionRequest,
+  FactHistoryOperations,
+} from "./libs/FactHistoryValidation";

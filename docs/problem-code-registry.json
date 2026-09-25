@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 800,
+  "problemCount": 810,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -327,6 +327,36 @@
         {
           "file": "packages/admin-core/src/libs/EventCatalog.ts",
           "line": 183,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "admin-core/fact-history-input",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#admin-core-fact-history-input",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/admin-core/src/libs/FactHistoryValidation.ts",
+          "line": 80,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -1047,6 +1077,276 @@
           "line": 60,
           "column": 1,
           "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "analytics/fact-history/deleted",
+      "category": "Gone",
+      "status": 410,
+      "title": "Gone",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-fact-history-deleted",
+      "recovery": {
+        "cause": "The requested resource is no longer available through this API surface.",
+        "userAction": "Stop using the stale reference and follow the replacement flow when available.",
+        "operatorAction": "Verify lifecycle, migration, deprecation, and retention state.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/FactHistory.ts",
+          "line": 126,
+          "column": 12,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics/fact-history/denied",
+      "category": "Forbidden",
+      "status": 403,
+      "title": "Forbidden",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-fact-history-denied",
+      "recovery": {
+        "cause": "The authenticated caller is not allowed to perform the requested action.",
+        "userAction": "Request the required permission or choose an allowed action.",
+        "operatorAction": "Review policy, role, tenant, entitlement, and impersonation context.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/FactHistory.ts",
+          "line": 125,
+          "column": 11,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics/fact-history/history-limit",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-fact-history-history-limit",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/FactHistory.ts",
+          "line": 127,
+          "column": 20,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics/fact-history/invalid-input",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-fact-history-invalid-input",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/FactHistory.ts",
+          "line": 105,
+          "column": 20,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics/fact-history/invalid-value",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-fact-history-invalid-value",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/FactHistory.ts",
+          "line": 109,
+          "column": 20,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics/fact-history/persistence-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-fact-history-persistence-failed",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/FactHistory.ts",
+          "line": 131,
+          "column": 25,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics/fact-history/projection-conflict",
+      "category": "Conflict",
+      "status": 409,
+      "title": "Conflict",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-fact-history-projection-conflict",
+      "recovery": {
+        "cause": "The request conflicts with current state or an idempotency constraint.",
+        "userAction": "Refresh state, resolve the conflict, and retry with the updated intent.",
+        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/FactHistory.ts",
+          "line": 117,
+          "column": 26,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics/fact-history/revision-conflict",
+      "category": "Conflict",
+      "status": 409,
+      "title": "Conflict",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-fact-history-revision-conflict",
+      "recovery": {
+        "cause": "The request conflicts with current state or an idempotency constraint.",
+        "userAction": "Refresh state, resolve the conflict, and retry with the updated intent.",
+        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/FactHistory.ts",
+          "line": 121,
+          "column": 24,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics/fact-history/source-conflict",
+      "category": "Conflict",
+      "status": 409,
+      "title": "Conflict",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-fact-history-source-conflict",
+      "recovery": {
+        "cause": "The request conflicts with current state or an idempotency constraint.",
+        "userAction": "Refresh state, resolve the conflict, and retry with the updated intent.",
+        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/FactHistory.ts",
+          "line": 113,
+          "column": 22,
+          "kind": "problem-metadata"
         }
       ]
     },

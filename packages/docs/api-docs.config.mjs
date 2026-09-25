@@ -55,6 +55,12 @@ export const apiDocPackages = [
     moduleName: "analytics-core/src",
   },
   {
+    packageName: "@croco/analytics-drizzle",
+    directory: "analytics-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "analytics-drizzle/src",
+  },
+  {
     packageName: "@croco/analytics-posthog",
     directory: "analytics-posthog",
     entryPoint: "src/index.ts",

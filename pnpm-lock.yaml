@@ -124,6 +124,52 @@ importers:
         specifier: 2.9.0
         version: 2.9.0
 
+  examples/fact-history:
+    dependencies:
+      '@croco/admin-core':
+        specifier: workspace:*
+        version: link:../../packages/admin-core
+      '@croco/admin-react':
+        specifier: workspace:*
+        version: link:../../packages/admin-react
+      '@croco/analytics-core':
+        specifier: workspace:*
+        version: link:../../packages/analytics-core
+      '@croco/analytics-drizzle':
+        specifier: workspace:*
+        version: link:../../packages/analytics-drizzle
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.20.0)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.17)(pg@8.22.0)
+      pg:
+        specifier: 8.22.0
+        version: 8.22.0
+      react:
+        specifier: ^19.0.0
+        version: 19.2.5
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.5(react@19.2.5)
+    devDependencies:
+      '@types/node':
+        specifier: ^22
+        version: 22.19.3
+      '@types/pg':
+        specifier: 8.20.0
+        version: 8.20.0
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.14)
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+
   examples/first-party-plugin-composition:
     dependencies:
       '@croco/auth-better-auth':
@@ -362,6 +408,9 @@ importers:
 
   packages/admin-core:
     dependencies:
+      '@croco/analytics-core':
+        specifier: workspace:*
+        version: link:../analytics-core
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
@@ -527,6 +576,28 @@ importers:
       typescript:
         specifier: 6.0.3
         version: 6.0.3
+      vitest:
+        specifier: 4.1.8
+        version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@26.1.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@26.1.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
+
+  packages/analytics-drizzle:
+    dependencies:
+      '@croco/analytics-core':
+        specifier: workspace:*
+        version: link:../analytics-core
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+    devDependencies:
+      '@types/pg':
+        specifier: 8.20.0
+        version: 8.20.0
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.20.0)(@upstash/redis@1.36.1)(better-sqlite3@11.10.0)(kysely@0.28.17)(pg@8.22.0)
+      pg:
+        specifier: 8.22.0
+        version: 8.22.0
       vitest:
         specifier: 4.1.8
         version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@26.1.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@26.1.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
@@ -1266,6 +1337,9 @@ importers:
       '@croco/analytics-core':
         specifier: workspace:*
         version: link:../analytics-core
+      '@croco/analytics-drizzle':
+        specifier: workspace:*
+        version: link:../analytics-drizzle
       '@croco/analytics-posthog':
         specifier: workspace:*
         version: link:../analytics-posthog

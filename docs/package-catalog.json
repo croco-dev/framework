@@ -489,6 +489,12 @@
       "runtimes": [],
       "domain": "Analytics"
     },
+    "analytics-drizzle": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Analytics"
+    },
     "analytics-posthog": {
       "role": "Plugins",
       "subtype": "integration",
@@ -1218,6 +1224,7 @@
       "description": "Concrete datastore, SaaS provider, and external service adapters",
       "packages": [
         "access-drizzle",
+        "analytics-drizzle",
         "audit-drizzle",
         "auth-better-auth",
         "auth-clerk",
@@ -1431,6 +1438,7 @@
       "packages": [
         "admin-generated",
         "admin-react",
+        "analytics-drizzle",
         "auth-better-auth",
         "auth-clerk",
         "batch-qstash",
@@ -1486,6 +1494,19 @@
         "runtimes": ["node", "lambda"],
         "requiredEnv": ["database connection supplied by app"],
         "features": ["permission checks", "policy storage"]
+      },
+      "analytics-drizzle": {
+        "domain": "Analytics",
+        "adapter": "Transactional PostgreSQL fact history store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "source receipt and projected row identity",
+          "atomic multi-projection append",
+          "effective and known time reads",
+          "revision compare-and-set",
+          "subject deletion tombstones"
+        ]
       },
       "analytics-posthog": {
         "domain": "Analytics",

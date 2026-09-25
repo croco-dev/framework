@@ -1,0 +1,8 @@
+---
+"@croco/analytics-core": minor
+"@croco/analytics-drizzle": minor
+"@croco/admin-core": minor
+"@croco/admin-react": minor
+---
+
+Store customer fact projections with separate source and row identities, reconstruct values at effective and known times, and inspect provenance and corrections from the admin panel.

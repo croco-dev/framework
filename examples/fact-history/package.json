@@ -1,0 +1,29 @@
+{
+  "name": "@croco-example/fact-history",
+  "version": "0.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@croco/admin-core": "workspace:*",
+    "@croco/admin-react": "workspace:*",
+    "@croco/analytics-core": "workspace:*",
+    "@croco/analytics-drizzle": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "pg": "8.22.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/pg": "8.20.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^6.0.3"
+  }
+}

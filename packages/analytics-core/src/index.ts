@@ -94,3 +94,33 @@ export type {
   ProductEventSubjectKind,
   ProductEventValidationResult,
 } from "./libs/ProductEvent";
+
+export {
+  FactHistoryProblem,
+  FactHistoryService,
+  canonicalFactValue,
+  evaluateFactsAt,
+  factProjectionKey,
+  factScopeKey,
+  factSubjectKey,
+  validateFactScope,
+  validateFactSubject,
+} from "./libs/FactHistory";
+export type {
+  AppendFactsInput,
+  AppendFactsResult,
+  FactAuthorizationRequest,
+  FactCorrection,
+  FactDefinition,
+  FactHistoryPolicy,
+  FactHistoryProblemCode,
+  FactHistoryQuery,
+  FactHistoryStore,
+  FactProjection,
+  FactReadResult,
+  FactRow,
+  FactScope,
+  FactSubject,
+  FactValue,
+  ReadFactsAtInput,
+} from "./libs/FactHistory";

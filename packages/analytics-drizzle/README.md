@@ -1,0 +1,11 @@
+# @croco/analytics-drizzle
+
+Node.js PostgreSQL persistence for `@croco/analytics-core` fact history. Apply `createFactHistory(drizzle(pool))` once before constructing `new DrizzleFactHistoryStore(drizzle(pool))`, and pass the store to `FactHistoryService` with explicit definitions and authorization policy.
+
+The service accepts at most 100 projections per append, all with the same materialization revision. Each bounded append is one database transaction: a source receipt, the hash of the complete expected projection set, and every history row commit together. Failed appends leave no partial rows and can be redelivered after restart. Source fingerprints are caller-supplied canonical hashes; raw source payloads and projection subject IDs are never stored in receipts or batch metadata. Each materialization revision fixes its projection identities. Recompute using a new materialization revision and explicitly select that revision when reading.
+
+A scope row lock serializes appends, corrections, reads, and deletion across connections. Correction `expectedRevision` is scope-wide and obtained through the service's authorized history result; unrelated writes in that scope also invalidate it. Receipts and projection identities have independent unique constraints. Subject deletion physically removes projected values and leaves a tombstone preventing reads or replay from restoring them. Receipt hashes remain without source payloads; applications must also block their original source and derived caches under their own retention policy.
+
+The migration creates only additive `analytics_fact_*` tables and an index on scope, subject, definition, generation, recorded time and effective start. `dropFactHistory(db)` destructively removes these tables for rollback or disposable database teardown. Existing customer tables require no migration. There is no automatic current-value backfill or connection to a warehouse profile.
+
+Run `ANALYTICS_POSTGRES_URL=postgres://... pnpm --filter @croco/analytics-drizzle test:postgres` against a disposable database. Tests use two independent pools and verify concurrency, rollback/restart, correction CAS, collisions, generations, tenant isolation and deletion.
