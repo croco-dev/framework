@@ -139,7 +139,7 @@ function isRetryable(error: unknown): boolean {
 
 function toFailure(error: unknown): { readonly code: string; readonly message: string } {
   if (error instanceof Problem) {
-    return { code: error.code, message: error.code };
+    return { code: error.code, message: error.detail ?? error.message };
   }
   return {
     code: "billing-polar/usage-delivery-failed",
