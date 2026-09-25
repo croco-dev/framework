@@ -37,8 +37,8 @@ function memoryStore(): FactHistoryStore {
       revision++;
       return { rows: added, revision };
     },
-    async readHistory() {
-      return rows;
+    async readHistory(input) {
+      return rows.filter((row) => row.recordedAt <= input.knownAt);
     },
     async getRevision() {
       return revision;
@@ -75,13 +75,14 @@ describe("Fact history operations", () => {
       },
     });
     const operations = createFactHistoryOperations(service, "operator");
-    const state = await operations.compare(request);
+    const earlierRequest = { ...request, knownAt: "2026-09-25T09:00:00Z" };
+    const state = await operations.compare(earlierRequest);
     expect(state.kind).toBe("ready");
     if (!("snapshot" in state)) throw new Error("Expected snapshot");
     expect(state.snapshot.before.status).toBe("unknown");
     expect(state.snapshot.after.value).toBe("true");
     const correction = {
-      ...request,
+      ...earlierRequest,
       rowId: state.snapshot.rows[0].id,
       value: false,
       validFrom: request.compareEffectiveAt,

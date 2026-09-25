@@ -217,8 +217,12 @@ export function FactHistoryPanel({
                   onSubmit: (event: FormEvent) => {
                     event.preventDefault();
                     void run(async () => {
-                      const correction = {
-                        ...request,
+                      const correction: FactHistoryCorrectionRequest = {
+                        scope: request.scope,
+                        subject: request.subject,
+                        definitionId: request.definitionId,
+                        definitionVersion: request.definitionVersion,
+                        materializationRevision: request.materializationRevision,
                         rowId,
                         actor,
                         reason,

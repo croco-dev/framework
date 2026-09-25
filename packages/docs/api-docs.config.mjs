@@ -4,6 +4,7 @@ export const apiDocCompilerOptions = {
   module: "ESNext",
   moduleResolution: "bundler",
   paths: {
+    "@croco/admin-core/fact-history-validation": ["../admin-core/src/fact-history-validation.ts"],
     "@croco/*": ["../*/src/index.ts"],
   },
   strictNullChecks: true,

@@ -69,7 +69,14 @@ export function createFactHistoryOperations(
     async correct(request) {
       validateFactHistoryCorrection(request);
       if (request.actor !== actor) throw new FactHistoryInputProblem("actor");
-      const history = await service.readHistory({ ...request, limit: 1000 });
+      const history = await service.readHistory({
+        scope: request.scope,
+        subject: request.subject,
+        definitionId: request.definitionId,
+        definitionVersion: request.definitionVersion,
+        materializationRevision: request.materializationRevision,
+        limit: 1000,
+      });
       const original = history.find((row) => row.id === request.rowId);
       if (!original) throw new FactHistoryInputProblem("rowId");
       const digest = await globalThis.crypto.subtle.digest(

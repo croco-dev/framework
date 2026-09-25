@@ -11,7 +11,7 @@ title: "validateFactHistoryCorrection"
 
 ### request
 
-`FactHistoryCorrectionRequest`
+[`FactHistoryCorrectionRequest`](/api/admin-core/src/type-aliases/facthistorycorrectionrequest/)
 
 ## Returns
 

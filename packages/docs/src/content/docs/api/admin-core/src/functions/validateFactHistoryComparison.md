@@ -11,7 +11,7 @@ title: "validateFactHistoryComparison"
 
 ### request
 
-`FactHistoryComparisonRequest`
+[`FactHistoryComparisonRequest`](/api/admin-core/src/type-aliases/facthistorycomparisonrequest/)
 
 ## Returns
 
