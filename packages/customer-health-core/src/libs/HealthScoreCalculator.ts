@@ -10,6 +10,8 @@ import { InvalidHealthScoreInputProblem } from "./problems/HealthProblems";
 
 const SCORE_EXPECTATION = "a finite number between 0 and 100";
 const WEIGHT_EXPECTATION = "a finite number between 0 and 1";
+const WEIGHT_TOTAL_EXPECTATION = "category weights summing to 1";
+const WEIGHT_TOTAL_ROUNDOFF = Number.EPSILON * 3;
 
 function assertScore(input: string, value: number): void {
   if (!Number.isFinite(value) || value < 0 || value > 100) {
@@ -39,6 +41,15 @@ export class HealthScoreCalculator {
 
     for (const category of ["usage", "business", "engagement"] as const) {
       assertWeight(`profile.weights.${category}`, profile.weights[category]);
+    }
+    const weightTotal =
+      profile.weights.usage + profile.weights.business + profile.weights.engagement;
+    if (Math.abs(weightTotal - 1) > WEIGHT_TOTAL_ROUNDOFF) {
+      throw new InvalidHealthScoreInputProblem(
+        "profile.weights",
+        weightTotal,
+        WEIGHT_TOTAL_EXPECTATION,
+      );
     }
     assertScore("profile.thresholds.healthy", profile.thresholds.healthy);
     assertScore("profile.thresholds.atRisk", profile.thresholds.atRisk);
@@ -84,14 +95,23 @@ export class HealthScoreCalculator {
 
     for (const category of Object.keys(categoryScores) as SignalCategory[]) {
       if (categoryWeights[category] > 0) {
-        categoryScores[category] = categoryScores[category] / categoryWeights[category];
+        categoryScores[category] = Math.min(
+          100,
+          categoryScores[category] / categoryWeights[category],
+        );
       }
     }
 
-    const overallScore =
-      categoryScores.usage * profile.weights.usage +
-      categoryScores.business * profile.weights.business +
-      categoryScores.engagement * profile.weights.engagement;
+    const weightedScore =
+      (categoryScores.usage * profile.weights.usage +
+        categoryScores.business * profile.weights.business +
+        categoryScores.engagement * profile.weights.engagement) /
+      weightTotal;
+    if (!Number.isFinite(weightedScore)) {
+      throw new InvalidHealthScoreInputProblem("overallScore", weightedScore, SCORE_EXPECTATION);
+    }
+    const overallScore = Math.min(100, weightedScore);
+    assertScore("overallScore", overallScore);
 
     let status: HealthStatus;
     if (overallScore >= profile.thresholds.healthy) {

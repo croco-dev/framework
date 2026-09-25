@@ -82,7 +82,7 @@ describe("CustomerHealthService", () => {
     const profile: HealthScoreProfile = {
       id: "profile-1",
       name: "Default Profile",
-      weights: { usage: 1.0, business: 1.0, engagement: 1.0 },
+      weights: { usage: 1, business: 0, engagement: 0 },
       thresholds: { healthy: 80, atRisk: 60 },
     };
 
@@ -101,11 +101,28 @@ describe("CustomerHealthService", () => {
     expect(mockEventPublisher.publishIdempotently).not.toHaveBeenCalled();
   });
 
+  it("does not persist a score when profile weights do not sum to 1", async () => {
+    mockRegistry.addProvider("usage", [healthSignal(100, "2026-03-15T10:00:00Z")]);
+    const profile: HealthScoreProfile = {
+      id: "invalid-profile",
+      name: "Invalid Profile",
+      weights: { usage: 1, business: 1, engagement: 1 },
+      thresholds: { healthy: 80, atRisk: 60 },
+    };
+
+    await expect(service.calculateAndStore("tenant-1", profile)).rejects.toMatchObject({
+      code: "customer-health-core/invalid-score-input",
+      input: "profile.weights",
+    });
+    await expect(store.findLatest("tenant-1")).resolves.toBeNull();
+    expect(mockEventPublisher.publishIdempotently).not.toHaveBeenCalled();
+  });
+
   it("should stop retrying when transition persistence never commits", async () => {
     const profile: HealthScoreProfile = {
       id: "profile-1",
       name: "Default Profile",
-      weights: { usage: 1, business: 1, engagement: 1 },
+      weights: { usage: 1, business: 0, engagement: 0 },
       thresholds: { healthy: 80, atRisk: 60 },
     };
     mockRegistry.addProvider("usage", [healthSignal(80, "2026-03-15T10:00:00Z")]);
@@ -137,7 +154,7 @@ describe("CustomerHealthService", () => {
     const profile: HealthScoreProfile = {
       id: "profile-1",
       name: "Default Profile",
-      weights: { usage: 1, business: 1, engagement: 1 },
+      weights: { usage: 1, business: 0, engagement: 0 },
       thresholds: { healthy: 80, atRisk: 60 },
     };
     mockRegistry.addProvider("usage", [
@@ -180,7 +197,7 @@ describe("CustomerHealthService", () => {
     const profile: HealthScoreProfile = {
       id: "profile-1",
       name: "Default Profile",
-      weights: { usage: 1.0, business: 1.0, engagement: 1.0 },
+      weights: { usage: 1, business: 0, engagement: 0 },
       thresholds: { healthy: 80, atRisk: 60 },
     };
 
@@ -240,7 +257,7 @@ describe("CustomerHealthService", () => {
     const profile: HealthScoreProfile = {
       id: "profile-1",
       name: "Default Profile",
-      weights: { usage: 1.0, business: 1.0, engagement: 1.0 },
+      weights: { usage: 1, business: 0, engagement: 0 },
       thresholds: { healthy: 80, atRisk: 60 },
     };
 
@@ -288,7 +305,7 @@ describe("CustomerHealthService", () => {
     const profile: HealthScoreProfile = {
       id: "profile-1",
       name: "Default Profile",
-      weights: { usage: 1, business: 1, engagement: 1 },
+      weights: { usage: 1, business: 0, engagement: 0 },
       thresholds: { healthy: 80, atRisk: 60 },
     };
     mockRegistry.addProvider("usage", [healthSignal(90, "2026-03-15T10:00:00Z")]);
@@ -323,7 +340,7 @@ describe("CustomerHealthService", () => {
     const profile: HealthScoreProfile = {
       id: "profile-1",
       name: "Default Profile",
-      weights: { usage: 1, business: 1, engagement: 1 },
+      weights: { usage: 1, business: 0, engagement: 0 },
       thresholds: { healthy: 80, atRisk: 60 },
     };
     mockRegistry.addProvider("usage", [
@@ -384,7 +401,7 @@ describe("CustomerHealthService", () => {
     const profile: HealthScoreProfile = {
       id: "profile-1",
       name: "Default Profile",
-      weights: { usage: 1, business: 1, engagement: 1 },
+      weights: { usage: 1, business: 0, engagement: 0 },
       thresholds: { healthy: 80, atRisk: 60 },
     };
     mockRegistry.addProvider("usage", [
@@ -432,7 +449,7 @@ describe("CustomerHealthService", () => {
     const profile: HealthScoreProfile = {
       id: "profile-1",
       name: "Default Profile",
-      weights: { usage: 1, business: 1, engagement: 1 },
+      weights: { usage: 1, business: 0, engagement: 0 },
       thresholds: { healthy: 80, atRisk: 60 },
     };
     mockRegistry.addProvider("usage", [healthSignal(90, "2026-03-15T10:00:00Z")]);
@@ -464,7 +481,7 @@ describe("CustomerHealthService", () => {
     const profile: HealthScoreProfile = {
       id: "profile-1",
       name: "Default Profile",
-      weights: { usage: 1, business: 1, engagement: 1 },
+      weights: { usage: 1, business: 0, engagement: 0 },
       thresholds: { healthy: 80, atRisk: 60 },
     };
     mockRegistry.addProvider("usage", [healthSignal(90, "2026-03-15T10:00:00Z")]);
@@ -532,7 +549,7 @@ describe("CustomerHealthService", () => {
     const profile: HealthScoreProfile = {
       id: "profile-1",
       name: "Default Profile",
-      weights: { usage: 1.0, business: 1.0, engagement: 1.0 },
+      weights: { usage: 1, business: 0, engagement: 0 },
       thresholds: { healthy: 80, atRisk: 60 },
     };
 
@@ -593,7 +610,7 @@ describe("CustomerHealthService", () => {
     const profile: HealthScoreProfile = {
       id: "profile-1",
       name: "Default Profile",
-      weights: { usage: 1.0, business: 1.0, engagement: 1.0 },
+      weights: { usage: 1, business: 0, engagement: 0 },
       thresholds: { healthy: 80, atRisk: 60 },
     };
 
@@ -671,7 +688,7 @@ describe("CustomerHealthService", () => {
     const profile: HealthScoreProfile = {
       id: "profile-1",
       name: "Default Profile",
-      weights: { usage: 1.0, business: 1.0, engagement: 1.0 },
+      weights: { usage: 1, business: 0, engagement: 0 },
       thresholds: { healthy: 80, atRisk: 60 },
     };
 
@@ -724,7 +741,7 @@ describe("CustomerHealthService", () => {
     const profile: HealthScoreProfile = {
       id: "profile-1",
       name: "Default Profile",
-      weights: { usage: 1.0, business: 0.5, engagement: 1.0 },
+      weights: { usage: 0.5, business: 0.5, engagement: 0 },
       thresholds: { healthy: 80, atRisk: 60 },
     };
 
