@@ -238,7 +238,10 @@ describe("PolarUsageDeliveryWorker", () => {
       state: "retryable-failed",
       retryCount: 1,
       retryAt: new Date("2026-08-01T00:01:01.000Z"),
-      failure: { code: "billing-polar/retryable-upstream" },
+      failure: {
+        code: "billing-polar/retryable-upstream",
+        message: "Polar upstream request failed retryably during usage.ingest",
+      },
     });
   });
 
@@ -256,9 +259,32 @@ describe("PolarUsageDeliveryWorker", () => {
     ).resolves.toEqual({ accepted: 0, retryableFailed: 0, terminalFailed: 1 });
     await expect(journal.get("event-terminal")).resolves.toMatchObject({
       state: "terminal-failed",
-      failure: { code: "billing-polar/usage-meter-mapping-not-found" },
+      failure: {
+        code: "billing-polar/usage-meter-mapping-not-found",
+        message: "No Polar usage meter binding is configured for Croco meter 'ai.tokens'",
+      },
     });
     await expect(journal.get("event-pending")).resolves.toMatchObject({ state: "pending" });
+  });
+
+  it("stores a generic safe failure for unknown provider errors", async () => {
+    const journal = new InMemoryBillableUsageJournal();
+    await appendDeliverable(journal, "event-unknown-error");
+    const usageGateway: UsageBillingGateway = {
+      ingest: vi.fn().mockRejectedValue(new Error("provider token leaked")),
+      getCustomerMeterState: vi.fn(),
+    };
+
+    await expect(
+      createWorker(journal, usageGateway).deliverNextBatch(new Date("2026-08-01T00:01:00.000Z")),
+    ).resolves.toEqual({ accepted: 0, retryableFailed: 0, terminalFailed: 1 });
+    await expect(journal.get("event-unknown-error")).resolves.toMatchObject({
+      state: "terminal-failed",
+      failure: {
+        code: "billing-polar/usage-delivery-failed",
+        message: "Polar usage delivery failed without a recoverable provider diagnosis",
+      },
+    });
   });
 
   it("claims each event immediately before provider delivery rather than expiring a prefetched batch", async () => {
