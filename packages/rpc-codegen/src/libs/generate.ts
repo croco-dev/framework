@@ -81,6 +81,7 @@ type ResponseHelperOptions = {
   readonly hasOutputRoutes: boolean;
   readonly hasNoOutputRoutes: boolean;
   readonly hasFormRoutes: boolean;
+  readonly hasPathParamRoutes: boolean;
   readonly hasQueryKeyInputs: boolean;
 };
 
@@ -571,6 +572,7 @@ function generateDomainClient(domainRoutes: DomainRoutes, options: GenerateClien
     hasOutputRoutes: domainRoutes.routes.some((route) => route.outputSchema),
     hasNoOutputRoutes: domainRoutes.routes.some((route) => !route.outputSchema),
     hasFormRoutes: formArtifacts.length > 0,
+    hasPathParamRoutes: domainRoutes.routes.some(hasPathParams),
     hasQueryKeyInputs: domainRoutes.routes.some(needsInput),
   });
   const queryHelpers = domainRoutes.routes.some((route) => route.inputSchemas.query)
@@ -985,6 +987,10 @@ function getResponseHelperImports(options: ResponseHelperOptions): string {
 
   if (options.hasFormRoutes) {
     valueHelpers.push("toRpcFormProblem");
+  }
+
+  if (options.hasPathParamRoutes) {
+    valueHelpers.push("encodeRpcPathSegment");
   }
 
   if (options.hasQueryKeyInputs) {
@@ -2025,6 +2031,63 @@ export type RpcClientRequest = {
   readonly telemetry?: RpcTelemetryRequestState;
 };
 
+export class RpcPathParamInputError extends Problem {
+  readonly code = 'rpc-codegen/path-param-input-unsupported';
+  readonly category = ProblemCategory.ValidationError;
+  readonly routeId: string;
+  readonly param: string;
+
+  constructor(routeId: string, param: string, segment: string) {
+    super(
+      undefined,
+      undefined,
+      \`RPC path parameter '\${param}' for route '\${routeId}' cannot be '\${segment}' because URL normalization would change the request path.\`,
+      { extensions: { routeId, param } },
+    );
+    this.routeId = routeId;
+    this.param = param;
+  }
+}
+
+export function encodeRpcPathSegment(
+  route: RpcRouteTelemetryMetadata,
+  name: string,
+  value: unknown,
+): string {
+  const segment = String(value);
+
+  if (segment === '' || segment === '.' || segment === '..') {
+    throw new RpcPathParamInputError(route.routeId, name, segment);
+  }
+
+  return encodeURIComponent(segment);
+}
+
+type RpcRequestTarget = {
+  readonly url: string;
+  readonly pathError?: RpcPathParamInputError;
+};
+
+function resolveRpcRequestTarget(
+  route: RpcRouteTelemetryMetadata,
+  url: string | (() => string),
+): RpcRequestTarget {
+  if (typeof url === 'string') {
+    return { url };
+  }
+
+  try {
+    return { url: url() };
+  } catch (error) {
+    if (!(error instanceof RpcPathParamInputError)) {
+      throw error;
+    }
+
+    // Never fetched: the declared route path only supplies the telemetry request origin.
+    return { url: route.path, pathError: error };
+  }
+}
+
 function joinRpcUrl(baseUrl: string, path: string): string {
   const base = new URL(baseUrl);
   base.pathname = base.pathname.replace(/\\/+$/, '') + '/';
@@ -2034,13 +2097,15 @@ function joinRpcUrl(baseUrl: string, path: string): string {
 export function createRpcClientRequest(
   route: RpcRouteTelemetryMetadata,
   routeKind: RpcRouteKind,
-  url: string,
+  url: string | (() => string),
   init: RequestInit,
   options: RpcClientRequestOptions = {},
   config: RpcClientConfig = {},
 ): RpcClientRequest {
   const effectiveOptions: RpcClientRequestOptions = { ...config, ...options };
-  const requestUrl = config.baseUrl === undefined ? url : joinRpcUrl(config.baseUrl, url);
+  const target = resolveRpcRequestTarget(route, url);
+  const requestUrl =
+    config.baseUrl === undefined ? target.url : joinRpcUrl(config.baseUrl, target.url);
   const requestOrigin = getRpcRequestOrigin(requestUrl);
   const context = createRpcTelemetryRequestContext(
     route,
@@ -2076,6 +2141,10 @@ export function createRpcClientRequest(
     url: requestUrl,
     init: requestInit,
     fetch: (requestUrl: string, fetchInit: RequestInit) => Promise.resolve().then(() => {
+      if (target.pathError) {
+        throw target.pathError;
+      }
+
       const execute = () => fetchImpl(requestUrl, fetchInit);
       return lifecycle?.run ? lifecycle.run(execute) : execute();
     }),
@@ -3089,23 +3158,23 @@ function generateClientMethod(
 
   if (hasStructuredInput(route)) {
     return `  ${route.methodName}: (${requestOptions}): ${returnType} => {
-    const path = ${getPathExpression(route)};
+    ${getPathStatement(route, routeMetadata)}
 ${getQueryStatements(route)}    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getUrlExpression(route)}, ${fetchOptions}, options, config);
     return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => ${response});
   },
   ${getResultMethodName(route)}: (${requestOptions}): ${resultReturnType} => {
-    const path = ${getPathExpression(route)};
+    ${getPathStatement(route, routeMetadata)}
 ${getQueryStatements(route)}    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getUrlExpression(route)}, ${fetchOptions}, options, config);
     return request.fetch(request.url, request.init).then((response) => ${resultResponse}, (error) => handleRpcRequestResultError(error, request.telemetry));
   },`;
   }
 
   return `  ${route.methodName}: (${requestOptions}): ${returnType} => {
-    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getPathExpression(route)}, ${fetchOptions}, options, config);
+    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${literalValueToTypeScript(route.path)}, ${fetchOptions}, options, config);
     return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => ${response});
   },
   ${getResultMethodName(route)}: (${requestOptions}): ${resultReturnType} => {
-    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${getPathExpression(route)}, ${fetchOptions}, options, config);
+    const request = createRpcClientRequest(${routeMetadata}, '${routeKind}', ${literalValueToTypeScript(route.path)}, ${fetchOptions}, options, config);
     return request.fetch(request.url, request.init).then((response) => ${resultResponse}, (error) => handleRpcRequestResultError(error, request.telemetry));
   },`;
 }
@@ -3810,14 +3879,22 @@ function isJavaScriptIdentifier(value: string): boolean {
   return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(value);
 }
 
-function getPathExpression(route: GeneratedClientRoute): string {
-  const pathParams = getContractPathParams(route.path);
+function hasPathParams(route: GeneratedClientRoute): boolean {
+  return getContractPathParams(route.path).length > 0;
+}
 
-  if (pathParams.length === 0) {
-    return literalValueToTypeScript(route.path);
+function getPathStatement(route: GeneratedClientRoute, routeMetadata: string): string {
+  if (!hasPathParams(route)) {
+    return `const path = ${literalValueToTypeScript(route.path)};`;
   }
 
-  const paramsByToken = new Map(pathParams.map((param) => [param.token, param.name]));
+  return `const path = (): string => ${getPathExpression(route, routeMetadata)};`;
+}
+
+function getPathExpression(route: GeneratedClientRoute, routeMetadata: string): string {
+  const paramsByToken = new Map(
+    getContractPathParams(route.path).map((param) => [param.token, param.name]),
+  );
   const pathExpression = route.path
     .split(/(:[^/]+)/g)
     .map((part) => {
@@ -3825,7 +3902,7 @@ function getPathExpression(route: GeneratedClientRoute): string {
         const name = paramsByToken.get(part.slice(1));
 
         if (name) {
-          return `\${encodeURIComponent(String(${getPathInputAccessor(name)}))}`;
+          return `\${encodeRpcPathSegment(${routeMetadata}, ${literalValueToTypeScript(name)}, ${getPathInputAccessor(name)})}`;
         }
       }
 
@@ -3845,6 +3922,12 @@ function getPathInputAccessor(name: string): string {
 function getQueryStatements(route: GeneratedClientRoute): string {
   if (!route.inputSchemas.query) {
     return "";
+  }
+
+  if (hasPathParams(route)) {
+    return `    const query = serializeQueryParams(input.query);
+    const url = (): string => (query ? \`${"${path()}"}?${"${query}"}\` : path());
+`;
   }
 
   return `    const query = serializeQueryParams(input.query);

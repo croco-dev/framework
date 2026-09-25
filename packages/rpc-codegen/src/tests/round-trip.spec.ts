@@ -47,6 +47,28 @@ const HEADER_INPUT_SCHEMAS = {
     "x-request-id": z.string().optional(),
   }) as any,
 };
+const REMOVE_SESSION_ROUTE_IRS: RouteIR[] = [
+  {
+    controllerName: "UserController",
+    methodName: "removeSession",
+    httpMethod: "DELETE",
+    path: "/users/:userId/sessions/:sessionId",
+    routeContract: null,
+    params: [
+      { kind: "path", name: "userId", schema: null },
+      { kind: "path", name: "sessionId", schema: null },
+    ],
+    inputSchema: null,
+    inputSchemas: {
+      body: null,
+      path: z.object({ userId: z.string(), sessionId: z.string() }) as any,
+      query: null,
+      headers: null,
+    },
+    outputSchema: null,
+    domain: "user",
+  },
+];
 
 describe("rpc-codegen round trip", () => {
   beforeEach(() => {
@@ -760,6 +782,220 @@ describe("rpc-codegen round trip", () => {
     expect(fetchMock).toHaveBeenCalledWith(
       "/users/a%2Fb%20c%3F%23%25?includePosts=true&page=2&tags=new&tags=vip&deletedAt=null",
       { method: "GET" },
+    );
+  });
+
+  it("rejects dot-segment path parameters on query routes before appending the query", async () => {
+    const routeIRs: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "getUser",
+        httpMethod: "GET",
+        path: "/users/:id",
+        routeContract: null,
+        params: [
+          { kind: "path", name: "id", schema: null },
+          { kind: "query", name: "includePosts", schema: null },
+        ],
+        inputSchema: null,
+        inputSchemas: PATH_QUERY_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: "user",
+      },
+    ];
+    const files = generateClientFiles(routeIRs, outDir);
+    const userModule = await importGeneratedClient(
+      "user-path-query-dot-segment.ts",
+      fs.readFileSync(files[0], "utf-8"),
+    );
+    const events: Record<string, unknown>[] = [];
+    const fetchMock = vi.fn(async (_url: string, _init: RequestInit) => jsonResponse({ id: "1" }));
+    const client = userModule.createUserClient({
+      fetch: fetchMock,
+      telemetry: {
+        record: (event: Record<string, unknown>) => {
+          events.push(event);
+        },
+      },
+    });
+    const input = {
+      path: { id: ".." },
+      query: { includePosts: true, page: 1, tags: [], deletedAt: null },
+    };
+    const expectedError = {
+      code: "rpc-codegen/path-param-input-unsupported",
+      routeId: "UserController.getUser",
+      param: "id",
+    };
+
+    await expect(callWithoutSynchronousThrow(() => client.getUser(input))).rejects.toMatchObject(
+      expectedError,
+    );
+    expect(events.map((event) => event.kind)).toEqual([
+      "rpc.request.started",
+      "rpc.request.external_failure",
+    ]);
+
+    events.length = 0;
+
+    await expect(
+      callWithoutSynchronousThrow(() => client.getUserResult(input)),
+    ).resolves.toMatchObject({ ok: false, kind: "external", error: expectedError });
+    expect(events.map((event) => event.kind)).toEqual([
+      "rpc.request.started",
+      "rpc.request.external_failure",
+    ]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each(["inline", "frontend-problems"] as const)(
+    "rejects path parameters that URL normalization would remove with the %s problem runtime",
+    async (problemRuntime) => {
+      const files = generateClientFiles(REMOVE_SESSION_ROUTE_IRS, outDir, { problemRuntime });
+      const userModule = await importGeneratedClient(
+        `user-path-dot-segments-${problemRuntime}.ts`,
+        fs.readFileSync(files[0], "utf-8"),
+      );
+      const events: Record<string, unknown>[] = [];
+      const outcomes: Record<string, unknown>[] = [];
+      const fetchMock = vi.fn(
+        async (_url: string, _init: RequestInit) => new Response(null, { status: 204 }),
+      );
+      const client = userModule.createUserClient({
+        baseUrl: "https://api.example.com/v1",
+        fetch: fetchMock,
+        telemetry: {
+          startRequest: () => ({
+            headers: {},
+            end: (outcome: Record<string, unknown>) => {
+              outcomes.push(outcome);
+            },
+          }),
+          record: (event: Record<string, unknown>) => {
+            events.push(event);
+          },
+        },
+      });
+      const cases = [
+        { param: "sessionId", path: { userId: "u-1", sessionId: ".." }, segment: ".." },
+        { param: "sessionId", path: { userId: "u-1", sessionId: "." }, segment: "." },
+        { param: "sessionId", path: { userId: "u-1", sessionId: "" }, segment: "" },
+        { param: "userId", path: { userId: "..", sessionId: "s-1" }, segment: ".." },
+        {
+          param: "sessionId",
+          path: { userId: "u-1", sessionId: { toString: () => ".." } },
+          segment: "..",
+        },
+        { param: "sessionId", path: { userId: "u-1", sessionId: [".."] }, segment: ".." },
+      ];
+
+      for (const { param, path: pathInput, segment } of cases) {
+        const expectedError = {
+          name: "RpcPathParamInputError",
+          code: "rpc-codegen/path-param-input-unsupported",
+          category: ProblemCategory.ValidationError,
+          routeId: "UserController.removeSession",
+          param,
+          message: `RPC path parameter '${param}' for route 'UserController.removeSession' cannot be '${segment}' because URL normalization would change the request path.`,
+        };
+        events.length = 0;
+        outcomes.length = 0;
+
+        const thrown = await getRejectedError(
+          callWithoutSynchronousThrow(() => client.removeSession({ path: pathInput })),
+        );
+        expect(thrown).toMatchObject(expectedError);
+        expect(events.map((event) => event.kind)).toEqual([
+          "rpc.request.started",
+          "rpc.mutation.started",
+          "rpc.request.external_failure",
+          "rpc.mutation.external_failure",
+        ]);
+        expect(events[2]).toMatchObject({ errorName: "RpcPathParamInputError" });
+        expect(outcomes).toEqual([
+          { kind: "external_failure", errorName: "RpcPathParamInputError" },
+        ]);
+
+        events.length = 0;
+        outcomes.length = 0;
+
+        const result = await callWithoutSynchronousThrow(() =>
+          client.removeSessionResult({ path: pathInput }),
+        );
+
+        expect(result).toEqual({ ok: false, kind: "external", error: expect.any(Error) });
+        if (result.ok) {
+          expect.fail("Expected the Result method to return an external failure.");
+        }
+        expect(result.error).toMatchObject(expectedError);
+        expect((result.error as object).constructor).toBe((thrown as object).constructor);
+        expect(events.map((event) => event.kind)).toEqual([
+          "rpc.request.started",
+          "rpc.mutation.started",
+          "rpc.request.external_failure",
+          "rpc.mutation.external_failure",
+        ]);
+        expect(outcomes).toEqual([
+          { kind: "external_failure", errorName: "RpcPathParamInputError" },
+        ]);
+      }
+
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it("propagates unexpected path serialization errors without sending the request", async () => {
+    const files = generateClientFiles(REMOVE_SESSION_ROUTE_IRS, outDir);
+    const userModule = await importGeneratedClient(
+      "user-path-serialization-error.ts",
+      fs.readFileSync(files[0], "utf-8"),
+    );
+    const fetchMock = vi.fn(
+      async (_url: string, _init: RequestInit) => new Response(null, { status: 204 }),
+    );
+    const client = userModule.createUserClient({ fetch: fetchMock });
+    const path = { userId: "u-1", sessionId: Object.create(null) as unknown };
+
+    expect(() => client.removeSession({ path })).toThrow(TypeError);
+    expect(() => client.removeSessionResult({ path })).toThrow(TypeError);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("sends path parameters that are not dot segments as one encoded segment", async () => {
+    const files = generateClientFiles(REMOVE_SESSION_ROUTE_IRS, outDir);
+    const userModule = await importGeneratedClient(
+      "user-path-single-segment.ts",
+      fs.readFileSync(files[0], "utf-8"),
+    );
+    const fetchMock = vi.fn(
+      async (_url: string, _init: RequestInit) => new Response(null, { status: 204 }),
+    );
+    const client = userModule.createUserClient({
+      baseUrl: "https://api.example.com/v1",
+      fetch: fetchMock,
+    });
+    const cases = [
+      { sessionId: "a/b c", encoded: "a%2Fb%20c" },
+      { sessionId: "...", encoded: "..." },
+      { sessionId: ".a", encoded: ".a" },
+      { sessionId: "a.", encoded: "a." },
+      { sessionId: "%2E%2E", encoded: "%252E%252E" },
+    ];
+
+    for (const { sessionId } of cases) {
+      await expect(
+        client.removeSession({ path: { userId: "u-1", sessionId } }),
+      ).resolves.toBeUndefined();
+      await expect(
+        client.removeSessionResult({ path: { userId: "u-1", sessionId } }),
+      ).resolves.toMatchObject({ ok: true });
+    }
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(
+      cases.flatMap(({ encoded }) => [
+        `https://api.example.com/v1/users/u-1/sessions/${encoded}`,
+        `https://api.example.com/v1/users/u-1/sessions/${encoded}`,
+      ]),
     );
   });
 
@@ -2006,6 +2242,22 @@ async function importGeneratedClient(fileName: string, source: string) {
         input: { readonly headers: { readonly "x-precedence": string } },
         options?: unknown,
       ) => Promise<unknown>;
+      readonly removeSession: (
+        input: { readonly path: { readonly userId: unknown; readonly sessionId: unknown } },
+        options?: unknown,
+      ) => Promise<unknown>;
+      readonly removeSessionResult: (
+        input: { readonly path: { readonly userId: unknown; readonly sessionId: unknown } },
+        options?: unknown,
+      ) => Promise<
+        | { readonly ok: true; readonly data: unknown; readonly response: Response }
+        | {
+            readonly ok: false;
+            readonly kind: "external";
+            readonly error: unknown;
+            readonly response?: Response;
+          }
+      >;
     };
     readonly userClient: {
       readonly listUsers: () => Promise<unknown>;
@@ -2205,6 +2457,16 @@ function createAbortError(): Error {
   error.name = "AbortError";
 
   return error;
+}
+
+function callWithoutSynchronousThrow<T>(call: () => Promise<T>): Promise<T> {
+  try {
+    return call();
+  } catch (error) {
+    return expect.fail(
+      `Expected a returned Promise, but the call threw synchronously: ${String(error)}`,
+    );
+  }
 }
 
 async function getRejectedError(promise: Promise<unknown>): Promise<unknown> {

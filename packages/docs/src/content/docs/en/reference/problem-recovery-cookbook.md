@@ -11641,7 +11641,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:113:5` (problem-constructor)
+- `packages/rpc-codegen/src/libs/generate.ts:114:5` (problem-constructor)
 
 <a id="rpc-codegen-no-rest-controllers-found"></a>
 
@@ -11677,7 +11677,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:119:5` (problem-constructor)
+- `packages/rpc-codegen/src/libs/generate.ts:120:5` (problem-constructor)
 
 <a id="saas-demo-application-bootstrap-failed"></a>
 

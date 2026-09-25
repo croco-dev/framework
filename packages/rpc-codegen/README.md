@@ -163,6 +163,13 @@ Generated `*Result` methods resolve rejected `fetch` calls, including fetch-stag
 failures continue to include one. Once a response exists, response-body cancellation rejects with
 the original `AbortError`. The equivalent throwing methods preserve the rejected `fetch` error.
 
+Generated clients percent-encode each path parameter as one URL segment. A value whose `String()`
+form is `""`, `"."`, or `".."` would be removed or collapsed by URL normalization and reach a
+different route, so the request is rejected before `fetch` runs. Throwing methods reject with
+`RpcPathParamInputError` (`rpc-codegen/path-param-input-unsupported`), which names the `routeId`
+and `param`. `*Result` methods resolve the same error as `{ ok: false, kind: "external", error }`,
+and both variants record an external-failure telemetry event.
+
 Generated query arrays are serialized as repeated query keys. Generated header arrays accept
 readonly arrays and serialize them as comma-separated header values, matching Croco HTTP runtime
 validation and OpenAPI parameter serialization.
