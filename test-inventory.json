@@ -260,13 +260,13 @@
       "owner": "@croco/analytics-core"
     },
     {
-      "path": "packages/analytics-core/src/tests/ProductEvent.spec.ts",
+      "path": "packages/analytics-core/src/tests/EventPublisher.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/analytics-core"
     },
     {
-      "path": "packages/analytics-core/src/tests/ProductEventAfterCommit.spec.ts",
+      "path": "packages/analytics-core/src/tests/ProductEvent.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/analytics-core"

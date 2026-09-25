@@ -232,12 +232,9 @@ const RESERVED_EVENT_PROPERTIES = new Set([
   "$insert_id",
 ]);
 
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const UUID_DNS_NAMESPACE = Buffer.from("6ba7b8109dad11d180b400c04fd430c8", "hex");
 
 function toPostHogEventUuid(appId: string, environment: string, eventId: string): string {
-  if (UUID_PATTERN.test(eventId)) return eventId;
-
   const bytes = createHash("sha1")
     .update(UUID_DNS_NAMESPACE)
     .update(

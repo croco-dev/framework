@@ -41,12 +41,11 @@ this.analytics.capture("order.created", {
 `captureValidatedEnvelope()` 경로를 사용합니다. 이 경로는 서버에서 검증한
 `subject.kind`와 `subject.id`를 합친 PostHog `distinctId`를 사용하므로 user,
 tenant, anonymous의 같은 ID가 합쳐지지 않습니다. 검증한 `tenantId`는
-`groups.tenant`로, `occurredAt`은 SDK의 `timestamp`로 전달합니다. 유효한 UUID
-형식의 `eventId`는 SDK의 `uuid`로 그대로 전달하고, 그 밖의 ID는 `appId`,
-`environment`, `eventId`로 결정적인 UUIDv5를 만들어 전달합니다. 신뢰한
-`environment`와 원래 `eventId`는 이벤트 속성에
-보존합니다. payload가 context 키를 포함하더라도 이를 전송 속성에
-반영하지 않습니다. 기존 `capture(event, properties)` 동작은 그대로 유지됩니다.
+`groups.tenant`로, `occurredAt`은 SDK의 `timestamp`로 전달합니다. SDK의 `uuid`는
+`eventId` 형식과 관계없이 `appId`, `environment`, `eventId`로 결정적인 UUIDv5를
+만들어 전달합니다. 신뢰한 `environment`와 원래 `eventId`는 이벤트 속성에 보존합니다.
+payload가 context 키를 포함하더라도 이를 전송 속성에 반영하지 않습니다.
+기존 `capture(event, properties)` 동작은 그대로 유지됩니다.
 typed 이벤트의 사용자를 `identify()`로 연결하려면 같은 접두사를 붙인
 `user:{id}`를 `distinctId`로 전달해야 합니다.
 

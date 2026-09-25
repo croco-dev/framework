@@ -12,8 +12,11 @@ codes, and runs the same server-side validator from its payload form. Validation
 unsent, so operator test input does not enter product analytics. The panel pages event choices in
 groups of 20 and keeps loading, empty, partial, permission denied, unsupported, source failure,
 unobserved, observed-zero, and unknown receipt-time states distinct. Requests declare either app or
-tenant scope; app scope uses separate app-level permissions. The host must provide a server-backed `EventCatalogSource` that
-checks the authenticated principal and scope; browser props alone are not authorization evidence.
+tenant scope; app scope uses separate app-level permissions. The host must provide a server-backed
+`EventCatalogSource` and authenticate the principal and resolve scoped permissions on the server;
+browser props alone are not authorization evidence. Keep the `source` object stable across renders
+(for example, create it outside the component or with `useMemo`). Replacing the source is treated as
+a new catalog request and resets the panel's selection and validation state.
 
 ## Monetization plan releases
 

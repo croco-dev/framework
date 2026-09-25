@@ -764,6 +764,6 @@ describe("EventCatalog", () => {
         payload: {},
       }),
     ).rejects.toThrow(EventCatalogValidationProblem);
-    expect(source.load).not.toHaveBeenCalled();
+    expect(source.validate).not.toHaveBeenCalled();
   });
 });

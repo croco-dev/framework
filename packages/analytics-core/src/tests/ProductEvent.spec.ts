@@ -9,7 +9,7 @@ import {
   productEventManifestJson,
   productEventManifestMarkdown,
 } from "../libs/ProductEvent";
-import type { ProductEventPayload } from "../libs/ProductEvent";
+import type { ProductEventEnvelope, ProductEventPayload } from "../libs/ProductEvent";
 
 class LocalAnalyticsManager extends AnalyticsManager {
   capture = vi.fn();
@@ -173,6 +173,20 @@ describe("ProductEventCatalog", () => {
     expect(() => new ProductEventCatalog([reportCreated, reportCreated])).toThrow(
       ProductEventDefinitionProblem,
     );
+    const privateDefinition = defineProductEvent({
+      ...reportCreated,
+      name: "private.customer-event",
+    });
+    let duplicate: unknown;
+    try {
+      new ProductEventCatalog([privateDefinition, privateDefinition]);
+    } catch (error) {
+      duplicate = error;
+    }
+    expect(duplicate).toBeInstanceOf(ProductEventDefinitionProblem);
+    expect((duplicate as ProductEventDefinitionProblem).toJSON().detail).toBe(
+      "Product event is registered more than once",
+    );
     expect(() =>
       defineProductEvent({
         ...reportCreated,
@@ -213,6 +227,27 @@ describe("ProductEventCatalog", () => {
     });
     sink.recordFailure(scope, "other", 1, "last");
     expect(sink.getObservation(scope, "report.created", 1)).toEqual({ kind: "unobserved" });
+  });
+
+  it("evicts the least recently used diagnostic key", () => {
+    const written = new InMemoryProductEventDiagnosticsSink(2);
+    written.recordFailure(scope, "first", 1, "failure");
+    written.recordFailure(scope, "second", 1, "failure");
+    written.recordFailure(scope, "first", 1, "again");
+    written.recordFailure(scope, "third", 1, "failure");
+    expect(written.getObservation(scope, "second", 1)).toEqual({ kind: "unobserved" });
+    expect(written.getObservation(scope, "first", 1)).toMatchObject({
+      kind: "observed",
+      recentFailureCodes: ["failure", "again"],
+    });
+
+    const read = new InMemoryProductEventDiagnosticsSink(2);
+    read.recordFailure(scope, "first", 1, "failure");
+    read.recordFailure(scope, "second", 1, "failure");
+    read.getObservation(scope, "first", 1);
+    read.recordFailure(scope, "third", 1, "failure");
+    expect(read.getObservation(scope, "second", 1)).toEqual({ kind: "unobserved" });
+    expect(read.getObservation(scope, "first", 1)).toMatchObject({ kind: "observed" });
   });
 
   it("isolates diagnostics by app, environment, and tenant", () => {
@@ -423,6 +458,39 @@ describe("ProductEventCatalog", () => {
       { itemCount: 1, tags: ["published"] },
       { itemCount: 1, tags: ["published"] },
     ]);
+  });
+
+  it("captures only validated context fields and a stable subject snapshot", () => {
+    const transport = {
+      captureValidatedEnvelope: vi.fn((_envelope: ProductEventEnvelope) => true),
+    };
+    const catalog = new ProductEventCatalog([reportCreated], transport);
+    const subject = { ...context.subject, internalId: "private-subject" };
+    const callerContext = { ...context, subject, privateToken: "private-context" };
+
+    expect(
+      catalog.captureTyped(reportCreated, { reportType: "daily", itemCount: 1 }, callerContext),
+    ).toMatchObject({ status: "accepted", eventId: "event-1" });
+    subject.id = "mutated-user";
+    callerContext.eventId = "mutated-event";
+    const captured = transport.captureValidatedEnvelope.mock.calls[0]?.[0];
+    expect(captured).toMatchObject({ eventId: "event-1", subject: { kind: "user", id: "user-a" } });
+    expect(captured?.subject).toEqual({ kind: "user", id: "user-a" });
+    expect(captured).not.toHaveProperty("privateToken");
+
+    let reads = 0;
+    const unstableContext = {
+      ...context,
+      get eventId() {
+        reads += 1;
+        return reads === 1 ? "validated-event" : "unvalidated-event";
+      },
+    };
+    expect(
+      catalog.captureTyped(reportCreated, { reportType: "daily", itemCount: 1 }, unstableContext),
+    ).toMatchObject({ status: "accepted", eventId: "validated-event" });
+    expect(reads).toBe(1);
+    expect(transport.captureValidatedEnvelope.mock.calls[1]?.[0]?.eventId).toBe("validated-event");
   });
 
   it("reports a revoked payload proxy as invalid without reaching transport", () => {

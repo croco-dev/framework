@@ -257,11 +257,22 @@ describe("PostHog Integration", () => {
       ]);
     });
 
-    it("passes valid source UUIDs through and scopes derived UUIDs by app and environment", () => {
+    it("scopes provider UUIDs by app and environment for every source event ID format", () => {
       const capture = vi.spyOn(postHogClient.getClient(), "capture");
       const sourceUuid = "1bde3ce4-4bea-46bf-b0c5-305b8afca330";
 
       analyticsManager.captureValidatedEnvelope({ ...envelope, eventId: sourceUuid });
+      analyticsManager.captureValidatedEnvelope({ ...envelope, eventId: sourceUuid });
+      analyticsManager.captureValidatedEnvelope({
+        ...envelope,
+        appId: "app-2",
+        eventId: sourceUuid,
+      });
+      analyticsManager.captureValidatedEnvelope({
+        ...envelope,
+        environment: "production",
+        eventId: sourceUuid,
+      });
       analyticsManager.captureValidatedEnvelope(envelope);
       analyticsManager.captureValidatedEnvelope({ ...envelope, appId: "app-2" });
       analyticsManager.captureValidatedEnvelope({ ...envelope, environment: "production" });
@@ -270,10 +281,15 @@ describe("PostHog Integration", () => {
         eventId: "00000000-0000-0000-0000-000000000000",
       });
 
-      expect(capture.mock.calls[0]?.[0].uuid).toBe(sourceUuid);
-      expect(capture.mock.calls[1]?.[0].uuid).not.toBe(capture.mock.calls[2]?.[0].uuid);
-      expect(capture.mock.calls[1]?.[0].uuid).not.toBe(capture.mock.calls[3]?.[0].uuid);
-      expect(capture.mock.calls[4]?.[0].uuid).toMatch(
+      const events = capture.mock.calls.map(([event]) => event);
+      expect(events[0]?.uuid).toBe(events[1]?.uuid);
+      expect(events[0]?.uuid).not.toBe(sourceUuid);
+      expect(events[0]?.uuid).not.toBe(events[2]?.uuid);
+      expect(events[0]?.uuid).not.toBe(events[3]?.uuid);
+      expect(events[4]?.uuid).not.toBe(events[5]?.uuid);
+      expect(events[4]?.uuid).not.toBe(events[6]?.uuid);
+      expect(events[0]?.properties?.eventId).toBe(sourceUuid);
+      expect(events[7]?.uuid).toMatch(
         /^[0-9a-f]{8}-[0-9a-f]{4}-5[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
       );
     });

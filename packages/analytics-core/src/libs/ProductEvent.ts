@@ -294,8 +294,11 @@ export class InMemoryProductEventDiagnosticsSink implements ProductEventDiagnost
     name: string,
     version: number,
   ): EventObservation {
-    const observation = this.observations.get(observationKey(scope, name, version));
+    const key = observationKey(scope, name, version);
+    const observation = this.observations.get(key);
     if (!observation) return { kind: "unobserved" };
+    this.observations.delete(key);
+    this.observations.set(key, observation);
     return {
       kind: "observed",
       receivedCount: observation.receivedCount,
@@ -311,14 +314,16 @@ export class InMemoryProductEventDiagnosticsSink implements ProductEventDiagnost
   ): MutableObservation {
     const key = observationKey(scope, name, version);
     let observation = this.observations.get(key);
-    if (!observation) {
+    if (observation) {
+      this.observations.delete(key);
+    } else {
       if (this.observations.size >= this.maxEntries) {
         const oldest = this.observations.keys().next().value;
         if (oldest !== undefined) this.observations.delete(oldest);
       }
       observation = { receivedCount: 0, recentFailureCodes: [] };
-      this.observations.set(key, observation);
     }
+    this.observations.set(key, observation);
     return observation;
   }
 }
@@ -337,9 +342,7 @@ export class ProductEventCatalog {
       defineProductEvent(definition);
       const key = eventKey(definition.name, definition.version);
       if (this.definitions.has(key)) {
-        throw new ProductEventDefinitionProblem(
-          `Product event ${key} is registered more than once`,
-        );
+        throw new ProductEventDefinitionProblem("Product event is registered more than once");
       }
       this.definitions.set(key, definition);
     }
@@ -434,10 +437,11 @@ export class ProductEventCatalog {
       return { status: "invalid", code: "analytics-core/product-event-version-unregistered" };
     if (registered !== definition)
       return { status: "invalid", code: "analytics-core/product-event-definition-unregistered" };
-    if (!isValidContext(registered, context)) {
+    const validatedContext = snapshotValidContext(registered, context);
+    if (!validatedContext) {
       return { status: "invalid", code: "analytics-core/product-event-context-invalid" };
     }
-    const scope = diagnosticScope(context);
+    const scope = diagnosticScope(validatedContext);
     const validation = this.validateAndSnapshotPayload(
       definition.name,
       definition.version,
@@ -469,7 +473,7 @@ export class ProductEventCatalog {
     if (!this.manager) return transportUnavailable();
     const receivedAt = new Date().toISOString();
     const envelope: ProductEventEnvelope = {
-      ...context,
+      ...validatedContext,
       name: definition.name,
       schemaVersion: definition.version,
       payload: validation.payload,
@@ -484,7 +488,7 @@ export class ProductEventCatalog {
     if (!accepted) return transportUnavailable();
     return {
       status: "accepted",
-      eventId: context.eventId,
+      eventId: validatedContext.eventId,
       receivedAt,
       ...tryRecordDiagnostic(() =>
         this.diagnostics.recordAccepted(scope, definition.name, definition.version, receivedAt),
@@ -644,6 +648,29 @@ function isValidContext(definition: ProductEventDefinition, context: ProductEven
     (context.subject.kind !== "tenant" || context.subject.id === context.tenantId) &&
     !Number.isNaN(Date.parse(context.occurredAt)),
   );
+}
+
+function snapshotValidContext(
+  definition: ProductEventDefinition,
+  context: ProductEventContext,
+): ProductEventContext | undefined {
+  try {
+    if (!isRecord(context)) return undefined;
+    const subject = context.subject;
+    if (!isRecord(subject)) return undefined;
+    const tenantId = context.tenantId;
+    const snapshot: ProductEventContext = {
+      appId: context.appId,
+      environment: context.environment,
+      ...(tenantId !== undefined ? { tenantId } : {}),
+      subject: { kind: subject.kind, id: subject.id },
+      eventId: context.eventId,
+      occurredAt: context.occurredAt,
+    };
+    return isValidContext(definition, snapshot) ? snapshot : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function toEventDescriptor(definition: ProductEventDefinition): EventDescriptor {

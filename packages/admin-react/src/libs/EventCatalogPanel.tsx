@@ -12,6 +12,7 @@ import { useEffect, useId, useRef, useState, type FormEvent, type ReactElement }
 export type EventCatalogPanelProps = EventCatalogScope & {
   readonly principalId: string;
   readonly grantedPermissions: readonly string[];
+  /** Keep this reference stable across renders; replacing it starts a new catalog request. */
   readonly source: EventCatalogSource;
 };
 

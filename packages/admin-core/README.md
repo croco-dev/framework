@@ -10,12 +10,13 @@ depending on React or a transport adapter.
 `loadEventCatalog()` and `validateEventCatalogPayload()` use an explicit app or tenant scope with
 an app ID and environment. Tenant scope requires a tenant ID and `analytics:read` or
 `analytics:validate`; app scope omits the tenant ID and requires the separate
-`analytics:app:read` or `analytics:app:validate` permission. The source must enforce the
-authenticated principal and server-resolved permission before returning catalog entries or a
-validation result. Caller-provided permission strings are not an authentication mechanism. The load response
-contains serializable entries; the separate asynchronous validation call belongs on a trusted
-server. `createInProcessEventCatalogSource()` adapts an `@croco/analytics-core`
-`ProductEventCatalog` for a trusted in-process host.
+`analytics:app:read` or `analytics:app:validate` permission. The host must authenticate the
+principal and resolve permissions for the requested scope on the server before calling either
+operation. Caller-provided principal IDs and permission strings are not authentication evidence.
+The load response contains serializable entries; the separate asynchronous validation call belongs
+on a trusted server. `createInProcessEventCatalogSource()` adapts an `@croco/analytics-core`
+`ProductEventCatalog` for a trusted in-process host; the adapter itself does not authenticate
+principals or resolve permissions.
 
 The load result distinguishes an unobserved event from an observed event with zero receipts.
 The in-process adapter validates with that same registered schema. `validateEventCatalogPayload`

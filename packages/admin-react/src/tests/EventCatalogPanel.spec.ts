@@ -298,6 +298,27 @@ describe("EventCatalogPanel", () => {
     );
   });
 
+  it("keeps a stable source loaded and resets the panel when the source changes", async () => {
+    const firstSource = createSource();
+    const first = props(firstSource);
+    render(first);
+    await vi.waitFor(() => expect(render(first).markup).toContain('data-state="ready"'));
+    (find(render(first).tree, "button", "report.failed (2)").props.onClick as () => void)();
+    expect(render(first).markup).toContain('aria-label="report.failed event details"');
+
+    render({ ...first });
+    expect(firstSource.load).toHaveBeenCalledTimes(1);
+
+    const secondSource = createSource({ empty: true });
+    const second = { ...first, source: secondSource };
+    const loading = render(second).markup;
+    expect(loading).toContain('data-state="loading"');
+    expect(loading).not.toContain("report.failed");
+    await vi.waitFor(() => expect(render(second).markup).toContain('data-state="empty"'));
+    expect(secondSource.load).toHaveBeenCalledTimes(1);
+    expect(firstSource.load).toHaveBeenCalledTimes(1);
+  });
+
   it("limits a large catalog to 20 choices per page and retains selection across pages", async () => {
     const source = createSource({ catalogSize: 25 });
     const first = props(source);
