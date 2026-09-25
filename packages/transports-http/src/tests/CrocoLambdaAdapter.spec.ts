@@ -224,6 +224,78 @@ describe("CrocoLambdaAdapter base64 request bodies", () => {
   });
 });
 
+describe("CrocoLambdaAdapter response bodies", () => {
+  function invoke(response: Response) {
+    return new CrocoLambdaAdapter({ fetch: () => response }).createHandler()(
+      createLambdaEvent(),
+      createLambdaContext(),
+    );
+  }
+
+  it.each(["gzip", "BR"])(
+    "base64-encodes a JSON body with content-encoding %j even when it is valid UTF-8",
+    async (contentEncoding) => {
+      const json = JSON.stringify({ ok: true });
+
+      const result = await invoke(
+        new Response(json, {
+          headers: { "content-type": "application/json", "content-encoding": contentEncoding },
+        }),
+      );
+
+      expect(result.isBase64Encoded).toBe(true);
+      expect(Buffer.from(result.body ?? "", "base64").toString("utf8")).toBe(json);
+    },
+  );
+
+  it.each(["identity", "IDENTITY", ""])(
+    "keeps a JSON body as text with content-encoding %j",
+    async (contentEncoding) => {
+      const json = JSON.stringify({ ok: true });
+
+      const result = await invoke(
+        new Response(json, {
+          headers: { "content-type": "application/json", "content-encoding": contentEncoding },
+        }),
+      );
+
+      expect(result.isBase64Encoded).toBe(false);
+      expect(result.body).toBe(json);
+    },
+  );
+
+  it("base64-encodes a text body that is not valid UTF-8 without replacing bytes", async () => {
+    const bytes = Uint8Array.from([0x48, 0x69, 0xff, 0xfe, 0x80]);
+
+    const result = await invoke(
+      new Response(bytes, { headers: { "content-type": "text/plain; charset=utf-8" } }),
+    );
+
+    expect(result.isBase64Encoded).toBe(true);
+    expect(new Uint8Array(Buffer.from(result.body ?? "", "base64"))).toEqual(bytes);
+  });
+
+  it("keeps a valid multibyte UTF-8 text body as text", async () => {
+    const text = "한글 ✓ café";
+
+    const result = await invoke(
+      new Response(text, { headers: { "content-type": "text/plain; charset=utf-8" } }),
+    );
+
+    expect(result.isBase64Encoded).toBe(false);
+    expect(result.body).toBe(text);
+  });
+
+  it("base64-encodes a binary MIME body even when its bytes are valid UTF-8", async () => {
+    const bytes = new TextEncoder().encode("PNG");
+
+    const result = await invoke(new Response(bytes, { headers: { "content-type": "image/png" } }));
+
+    expect(result.isBase64Encoded).toBe(true);
+    expect(new Uint8Array(Buffer.from(result.body ?? "", "base64"))).toEqual(bytes);
+  });
+});
+
 describe("CrocoLambdaAdapter waitUntil draining", () => {
   afterEach(() => {
     vi.useRealTimers();

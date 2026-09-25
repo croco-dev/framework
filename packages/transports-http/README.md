@@ -238,8 +238,9 @@ single-value record에 넣지 않고 API Gateway v2 전용 `LambdaResponse.cooki
 API Gateway는 `cookies` 배열의 각 값을 개별 `set-cookie` 응답 헤더로 변환하므로, auth/session 응답에서
 여러 쿠키나 `Expires=Wed, 21 Oct ...`처럼 comma가 포함된 쿠키 값을 안전하게 보존할 수 있습니다.
 
-JSON 응답은 문자열 body와 `isBase64Encoded: false`를 유지하고, binary 응답은 기존처럼 body를 base64로
-인코딩한 뒤 `isBase64Encoded: true`를 반환합니다.
+JSON·텍스트 응답은 UTF-8 문자열 body와 `isBase64Encoded: false`를 유지합니다. binary MIME 타입 응답,
+`identity`가 아닌 `Content-Encoding`이 붙은 응답(예: `compressionMiddleware`의 `gzip`·`br`·`deflate`), UTF-8로
+디코딩할 수 없는 텍스트 응답은 body 바이트를 그대로 base64로 인코딩한 뒤 `isBase64Encoded: true`를 반환합니다.
 
 ### Node 서버 실행
 

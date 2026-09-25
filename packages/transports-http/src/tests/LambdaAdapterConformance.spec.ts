@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { Buffer } from "node:buffer";
+import { brotliDecompressSync, gunzipSync, inflateSync } from "node:zlib";
 import type { ILogger } from "@croco/framework-context";
 import { Container, LOGGER_TOKEN } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
@@ -29,7 +30,15 @@ import { toLambdaHandler } from "../libs/adapters/LambdaAdapter";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
 import { bodyLimitMiddleware } from "../libs/middleware/BodyLimitMiddleware";
+import { compressionMiddleware } from "../libs/middleware/CompressionMiddleware";
 import type { LambdaContext, LambdaEvent } from "../libs/types";
+
+const LARGE_JSON_PAYLOAD = {
+  items: Array.from({ length: 64 }, (_, index) => ({
+    id: `item-${index}`,
+    label: "compressible lambda payload",
+  })),
+};
 
 type RawLambdaContext = LambdaExecutionContext & {
   req: {
@@ -277,6 +286,11 @@ describe("Lambda adapter API Gateway v2 conformance", () => {
       });
     }
 
+    @Get("/large-json")
+    largeJson() {
+      return LARGE_JSON_PAYLOAD;
+    }
+
     @Get("/helpers")
     helpers(@Raw() raw: RawLambdaContext) {
       const event = getLambdaEvent(raw);
@@ -497,6 +511,64 @@ describe("Lambda adapter API Gateway v2 conformance", () => {
     expect(cookieResponse.headers?.["x-cookie-result"]).toBe("ok");
     expect(cookieResponse.cookies).toEqual(["session=abc; Path=/; HttpOnly", "theme=dark; Path=/"]);
     expect(await readJsonBody(cookieResponse)).toEqual({ ok: true });
+  });
+
+  it.each([
+    { encoding: "gzip", decompress: gunzipSync },
+    { encoding: "br", decompress: brotliDecompressSync },
+    { encoding: "deflate", decompress: inflateSync },
+  ] as const)(
+    "base64-encodes $encoding compressed JSON bytes so clients can decompress them",
+    async ({ encoding, decompress }) => {
+      app = createApp({
+        controllers: [LambdaConformanceController],
+        middlewares: [compressionMiddleware({ encodings: [encoding] })],
+        securityValidation: "off",
+      });
+      handler = toLambdaHandler(app);
+
+      const response = await handler(
+        createLambdaEvent({
+          method: "GET",
+          path: "/lambda-conformance/large-json",
+          headers: {
+            host: "example.execute-api.ap-northeast-2.amazonaws.com",
+            "accept-encoding": encoding,
+          },
+        }),
+        lambdaContext,
+      );
+
+      expect(response.statusCode).toBe(200);
+      expect(response.headers?.["content-encoding"]).toBe(encoding);
+      expect(response.headers?.["content-type"]).toContain("application/json");
+      expect(response.isBase64Encoded).toBe(true);
+      expect(
+        JSON.parse(decompress(Buffer.from(response.body ?? "", "base64")).toString("utf8")),
+      ).toEqual(LARGE_JSON_PAYLOAD);
+    },
+  );
+
+  it("keeps uncompressed JSON as text when compression is enabled but not negotiated", async () => {
+    app = createApp({
+      controllers: [LambdaConformanceController],
+      middlewares: [compressionMiddleware()],
+      securityValidation: "off",
+    });
+    handler = toLambdaHandler(app);
+
+    const response = await handler(
+      createLambdaEvent({
+        method: "GET",
+        path: "/lambda-conformance/large-json",
+      }),
+      lambdaContext,
+    );
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers?.["content-encoding"]).toBeUndefined();
+    expect(response.isBase64Encoded).toBe(false);
+    expect(await readJsonBody(response)).toEqual(LARGE_JSON_PAYLOAD);
   });
 
   it("passes PATCH, OPTIONS, and HEAD method shapes through the Lambda adapter", async () => {

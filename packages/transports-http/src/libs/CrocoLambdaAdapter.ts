@@ -14,6 +14,13 @@ type LambdaResponseHeaders = {
   cookies: string[];
 };
 
+type LambdaResponseBody = {
+  body: string;
+  isBase64Encoded: boolean;
+};
+
+const UTF8_DECODER = new TextDecoder("utf-8", { fatal: true });
+
 function isBinaryContentType(contentType: string): boolean {
   const mimeType = contentType.split(";", 1)[0]?.trim().toLowerCase() ?? "";
 
@@ -35,6 +42,35 @@ function isBinaryContentType(contentType: string): boolean {
   }
 
   return true;
+}
+
+function hasContentCoding(headers: Headers): boolean {
+  const contentEncoding = headers.get("content-encoding")?.toLowerCase() ?? "";
+  return contentEncoding !== "" && contentEncoding !== "identity";
+}
+
+function decodeUtf8Text(bytes: Uint8Array): string | undefined {
+  try {
+    return UTF8_DECODER.decode(bytes);
+  } catch (error) {
+    if (error instanceof TypeError) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
+async function toLambdaResponseBody(response: Response): Promise<LambdaResponseBody> {
+  const bytes = new Uint8Array(await response.arrayBuffer());
+  const text =
+    hasContentCoding(response.headers) ||
+    isBinaryContentType(response.headers.get("content-type") ?? "")
+      ? undefined
+      : decodeUtf8Text(bytes);
+
+  return text === undefined
+    ? { body: Buffer.from(bytes).toString("base64"), isBase64Encoded: true }
+    : { body: text, isBase64Encoded: false };
 }
 
 function getSetCookieHeaders(headers: Headers): string[] {
@@ -624,11 +660,7 @@ export class CrocoLambdaAdapter {
         options,
       );
 
-      const contentType = response.headers.get("content-type") ?? "";
-      const isBinary = isBinaryContentType(contentType);
-      const responseBody = isBinary
-        ? Buffer.from(await response.arrayBuffer()).toString("base64")
-        : await response.text();
+      const { body: responseBody, isBase64Encoded } = await toLambdaResponseBody(response);
       const { headers: responseHeaders, cookies } = toLambdaResponseHeaders(response.headers);
 
       return {
@@ -636,7 +668,7 @@ export class CrocoLambdaAdapter {
         headers: responseHeaders,
         ...(cookies.length > 0 ? { cookies } : {}),
         body: responseBody,
-        isBase64Encoded: isBinary,
+        isBase64Encoded,
       };
     };
   }
