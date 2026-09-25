@@ -61,7 +61,7 @@ function decodeUtf8Text(bytes: Uint8Array): string | undefined {
 }
 
 async function toLambdaResponseBody(response: Response): Promise<LambdaResponseBody> {
-  const bytes = new Uint8Array(await response.arrayBuffer());
+  const bytes = Buffer.from(await response.arrayBuffer());
   const text =
     hasContentCoding(response.headers) ||
     isBinaryContentType(response.headers.get("content-type") ?? "")
@@ -69,7 +69,7 @@ async function toLambdaResponseBody(response: Response): Promise<LambdaResponseB
       : decodeUtf8Text(bytes);
 
   return text === undefined
-    ? { body: Buffer.from(bytes).toString("base64"), isBase64Encoded: true }
+    ? { body: bytes.toString("base64"), isBase64Encoded: true }
     : { body: text, isBase64Encoded: false };
 }
 
