@@ -248,7 +248,12 @@ export class ClerkOrganizationService {
     memberships: ClerkOrganizationMembership[];
     totalCount: number;
   }> {
-    const params = { organizationId };
+    const { limit, offset } = _options ?? {};
+    const params = {
+      organizationId,
+      ...(limit !== undefined && { limit }),
+      ...(offset !== undefined && { offset }),
+    };
 
     const response = await executeClerkOperation(
       "organizations.getOrganizationMembershipList",
