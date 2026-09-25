@@ -3684,7 +3684,7 @@ function ensureGeneratedVerificationBaseline(validationDir: string): void {
   run("git", ["init", "--quiet"], validationDir);
   run("git", ["config", "user.email", "generated-smoke@croco.local"], validationDir);
   run("git", ["config", "user.name", "Croco Generated Smoke"], validationDir);
-  run("git", ["add", "-A", "--", ".", ":(exclude)**/node_modules/**"], validationDir);
+  run("git", ["add", "-A", "--", ".", ":(glob,exclude)**/node_modules/**"], validationDir);
   run("git", ["commit", "--quiet", "-m", "generated verification baseline"], validationDir);
 }
 
