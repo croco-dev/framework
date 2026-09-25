@@ -68,16 +68,6 @@ describe("Logger.child() - Request-scoped Isolation", () => {
   });
 
   describe("설정 상속", () => {
-    it("child Logger가 부모의 redact 설정을 상속받아야 함", () => {
-      // biome-ignore lint/complexity/useLiteralKeys: private property access for testing
-      const childLogger = logger.child({ module: "Test" });
-      // biome-ignore lint/complexity/useLiteralKeys: private property access for testing
-      const childPino = childLogger["logger"];
-
-      // Pino child는 부모의 설정을 상속받음
-      expect(childPino).not.toBeUndefined();
-    });
-
     it("child Logger가 부모와 동일한 ConfigService를 유지해야 함", () => {
       // biome-ignore lint/complexity/useLiteralKeys: private property access for testing
       const childLogger = logger.child({ module: "Test" });

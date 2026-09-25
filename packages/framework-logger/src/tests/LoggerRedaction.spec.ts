@@ -65,6 +65,88 @@ function createCapturedLogger(): { logger: Logger; raw: () => string; records: (
 }
 
 describe("Logger serialized redaction", () => {
+  it("removes credential key variants at every structured logging boundary", () => {
+    const { logger, raw, records } = createCapturedLogger();
+    const credentialKeys = [
+      "password",
+      "pass_word",
+      "TOKEN",
+      "secret",
+      "authorization",
+      "cookie",
+      "accessToken",
+      "ACCESS-TOKEN",
+      "refresh_token",
+      "ID-TOKEN",
+      "apiKey",
+      "API_KEY",
+      "x-api-key",
+      "X_API_KEY",
+      "clientSecret",
+      "private_key",
+      "accessKey",
+      "secret_access_key",
+      "credential",
+      "credentials",
+      "set-cookie",
+      "proxy-authorization",
+      "databaseUrl",
+      "redis_url",
+      "connection-string",
+      "dsn",
+    ];
+    const credentials = (location: string): Record<string, string> =>
+      Object.fromEntries(
+        credentialKeys.map((key, index) => [key, `${location}-credential-${index}-end`]),
+      );
+
+    logger.info("request received", {
+      ...credentials("top"),
+      nested: { ...credentials("nested"), tokenCount: 12 },
+      entries: [{ ...credentials("array"), tokensUsed: 7 }],
+    });
+
+    logger
+      .child({
+        ...credentials("binding"),
+        childContext: { ...credentials("child"), passwordPolicy: "strict" },
+      })
+      .info("child request", { operation: "charge" });
+
+    const error = Object.assign(new Error("provider failed"), {
+      ...credentials("error"),
+      metadata: { ...credentials("error-nested"), tokenCount: 3 },
+    });
+    logger.error("provider request failed", error);
+
+    const bytes = raw();
+    for (const location of [
+      "top",
+      "nested",
+      "array",
+      "binding",
+      "child",
+      "error",
+      "error-nested",
+    ]) {
+      for (const value of Object.values(credentials(location))) {
+        expect(bytes).not.toContain(value);
+      }
+    }
+
+    expect(records()[0]).toMatchObject({
+      nested: { tokenCount: 12 },
+      entries: [{ tokensUsed: 7 }],
+    });
+    expect(records()[1]).toMatchObject({
+      childContext: { passwordPolicy: "strict" },
+      operation: "charge",
+    });
+    expect(records()[2]).toMatchObject({
+      err: { message: "provider failed", metadata: { tokenCount: 3 } },
+    });
+  });
+
   it("removes sensitive keys case-insensitively from nested objects and arrays", () => {
     const { logger, raw, records } = createCapturedLogger();
 
