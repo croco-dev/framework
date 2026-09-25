@@ -1,4 +1,5 @@
 import { recordEvent } from "@croco/telemetry-api";
+import { ProblemFactory } from "@croco/problems-core";
 import { describe, expect, it, vi } from "vitest";
 import { CircuitBreaker, type CircuitBreakerOptions } from "../libs/CircuitBreaker";
 import {
@@ -50,6 +51,150 @@ describe("CircuitBreaker", () => {
 
     expect(await breaker.getState()).toBe(CircuitState.OPEN);
     expect(await breaker.getFailureCount()).toBe(2);
+  });
+
+  it.each([
+    ProblemFactory.notFound("missing"),
+    ProblemFactory.validationError("invalid"),
+    ProblemFactory.forbidden("forbidden"),
+    ProblemFactory.conflict("conflict"),
+  ])("does not count caller Problem %s as a circuit failure", async (problem) => {
+    const breaker = createBreaker();
+
+    for (let attempt = 0; attempt < 3; attempt++) {
+      await expect(breaker.execute(async () => Promise.reject(problem))).rejects.toBe(problem);
+    }
+
+    expect(await breaker.getFailureCount()).toBe(0);
+    expect(await breaker.getState()).toBe(CircuitState.CLOSED);
+    await expect(breaker.execute(async () => "healthy")).resolves.toBe("healthy");
+  });
+
+  it.each([
+    ProblemFactory.internalServerError("server"),
+    ProblemFactory.notImplemented("unsupported"),
+    ProblemFactory.tooManyRequests("rate-limited"),
+    new Error("dependency failed"),
+  ])("counts dependency failure %s toward opening the circuit", async (error) => {
+    const breaker = createBreaker({ failureThreshold: 2 });
+
+    await expect(breaker.execute(async () => Promise.reject(error))).rejects.toBe(error);
+    await expect(breaker.execute(async () => Promise.reject(error))).rejects.toBe(error);
+
+    expect(await breaker.getFailureCount()).toBe(2);
+    expect(await breaker.getState()).toBe(CircuitState.OPEN);
+  });
+
+  it("uses recordFailure in place of the default classification", async () => {
+    const callerProblem = ProblemFactory.notFound("missing");
+    const serverProblem = ProblemFactory.internalServerError("server");
+    const recordFailure = vi.fn((error: unknown) => error === callerProblem);
+    const breaker = createBreaker({ failureThreshold: 1, recordFailure });
+
+    await expect(breaker.execute(async () => Promise.reject(serverProblem))).rejects.toBe(
+      serverProblem,
+    );
+    expect(await breaker.getFailureCount()).toBe(0);
+    await expect(breaker.execute(async () => Promise.reject(callerProblem))).rejects.toBe(
+      callerProblem,
+    );
+    expect(await breaker.getState()).toBe(CircuitState.OPEN);
+    expect(recordFailure).toHaveBeenCalledTimes(2);
+  });
+
+  it("passes an ignored non-Error rejection through unchanged", async () => {
+    const rejected = { code: "CALLER_INPUT" };
+    const stateStore = new InMemoryCircuitBreakerStateStore();
+    const breaker = createBreaker({
+      failureThreshold: 1,
+      stateStore,
+      recordFailure: (error) => error !== rejected,
+    });
+
+    await expect(breaker.execute(async () => Promise.reject(rejected))).rejects.toBe(rejected);
+    expect(await breaker.getFailureCount()).toBe(0);
+    expect(await breaker.getState()).toBe(CircuitState.CLOSED);
+
+    await stateStore.setState("test-circuit", CircuitState.HALF_OPEN);
+    await expect(breaker.execute(async () => Promise.reject(rejected))).rejects.toBe(rejected);
+    expect(await breaker.getState()).toBe(CircuitState.HALF_OPEN);
+    expect(await stateStore.getHalfOpenActiveCount("test-circuit")).toBe(0);
+  });
+
+  it("releases a half-open slot after a caller Problem without changing circuit state", async () => {
+    const stateStore = new InMemoryCircuitBreakerStateStore();
+    const breaker = createBreaker({ stateStore, halfOpenRequests: 1 });
+    const problem = ProblemFactory.notFound("missing");
+    await stateStore.setState("test-circuit", CircuitState.HALF_OPEN);
+
+    await expect(breaker.execute(async () => Promise.reject(problem))).rejects.toBe(problem);
+    expect(await breaker.getState()).toBe(CircuitState.HALF_OPEN);
+    expect(await stateStore.getHalfOpenActiveCount("test-circuit")).toBe(0);
+
+    await expect(breaker.execute(async () => "healthy")).resolves.toBe("healthy");
+    expect(await breaker.getState()).toBe(CircuitState.CLOSED);
+  });
+
+  it("releases a half-open slot when the custom failure classifier throws", async () => {
+    const stateStore = new InMemoryCircuitBreakerStateStore();
+    const classificationError = new Error("classifier failed");
+    const recordFailure = vi.fn(() => {
+      throw classificationError;
+    });
+    const breaker = createBreaker({ stateStore, halfOpenRequests: 1, recordFailure });
+    await stateStore.setState("test-circuit", CircuitState.HALF_OPEN);
+
+    await expect(
+      breaker.execute(async () => Promise.reject(new Error("work failed"))),
+    ).rejects.toBe(classificationError);
+    expect(await breaker.getState()).toBe(CircuitState.HALF_OPEN);
+    expect(await stateStore.getHalfOpenActiveCount("test-circuit")).toBe(0);
+
+    await expect(breaker.execute(async () => "healthy")).resolves.toBe("healthy");
+    expect(recordFailure).toHaveBeenCalledTimes(1);
+    expect(await breaker.getState()).toBe(CircuitState.CLOSED);
+  });
+
+  it("does not release a later half-open cycle's slot when an old caller-error probe settles", async () => {
+    const stateStore = new InMemoryCircuitBreakerStateStore();
+    const breaker = createBreaker({ stateStore, halfOpenRequests: 2, openDuration: 1 });
+    const problem = ProblemFactory.notFound("missing");
+    let rejectOld!: (error: Error) => void;
+    let resolveFirst!: (value: string) => void;
+    let resolveSecond!: (value: string) => void;
+    await stateStore.setState("test-circuit", CircuitState.HALF_OPEN);
+
+    const oldProbe = breaker
+      .execute(() => new Promise<string>((_resolve, reject) => (rejectOld = reject)))
+      .catch((error: unknown) => error);
+    await vi.waitFor(() => expect(rejectOld).toBeDefined());
+    await expect(
+      breaker.execute(async () => Promise.reject(new Error("dependency failed"))),
+    ).rejects.toThrow("dependency failed");
+    expect(await breaker.getState()).toBe(CircuitState.OPEN);
+    await stateStore.setLastFailureTime("test-circuit", Date.now() - 2);
+
+    const firstNewProbe = breaker.execute(
+      () => new Promise<string>((resolve) => (resolveFirst = resolve)),
+    );
+    await vi.waitFor(() => expect(resolveFirst).toBeDefined());
+    const secondNewProbe = breaker.execute(
+      () => new Promise<string>((resolve) => (resolveSecond = resolve)),
+    );
+    await vi.waitFor(() => expect(resolveSecond).toBeDefined());
+    expect(await stateStore.getHalfOpenActiveCount("test-circuit")).toBe(2);
+
+    rejectOld(problem);
+    await expect(oldProbe).resolves.toBe(problem);
+    expect(await stateStore.getHalfOpenActiveCount("test-circuit")).toBe(2);
+    const extraProbe = vi.fn(async () => "unexpected");
+    await expect(breaker.execute(extraProbe)).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    expect(extraProbe).not.toHaveBeenCalled();
+
+    resolveFirst("first");
+    resolveSecond("second");
+    await expect(firstNewProbe).resolves.toBe("first");
+    await expect(secondNewProbe).resolves.toBe("second");
   });
 
   it("OPEN 상태에서 요청이 거부되어야 한다", async () => {

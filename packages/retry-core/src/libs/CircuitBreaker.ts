@@ -1,3 +1,4 @@
+import { Problem, toHttpStatus } from "@croco/problems-core";
 import { recordEvent } from "@croco/telemetry-api";
 import {
   type CircuitBreakerStateStore,
@@ -18,12 +19,25 @@ export interface CircuitBreakerOptions {
   halfOpenRequests?: number;
   stateStore?: CircuitBreakerStateStore;
   fallback?: CircuitBreakerFallback;
+  /** Return true when an error should count toward opening the circuit. */
+  recordFailure?: (error: unknown) => boolean;
+}
+
+function defaultRecordFailure(error: unknown): boolean {
+  if (!(error instanceof Problem)) {
+    return true;
+  }
+
+  const status = toHttpStatus(error.category);
+  return status >= 500 || status === 429;
 }
 
 /**
  * Fallback function type for circuit breaker.
  */
 export type CircuitBreakerFallback<T = unknown> = () => T | Promise<T>;
+
+type HalfOpenSlot = { lastFailureTime: number | null };
 
 /**
  * 실패율이 높은 의존성 호출을 차단하고 회복 여부를 관리하는 서킷 브레이커입니다.
@@ -35,6 +49,7 @@ export class CircuitBreaker {
   private readonly halfOpenRequests: number;
   private readonly stateStore: CircuitBreakerStateStore;
   private readonly fallback: CircuitBreakerFallback | undefined;
+  private readonly recordFailure: (error: unknown) => boolean;
 
   constructor(options: CircuitBreakerOptions) {
     const failureThreshold = options.failureThreshold ?? 5;
@@ -59,6 +74,7 @@ export class CircuitBreaker {
     this.halfOpenRequests = halfOpenRequests;
     this.stateStore = options.stateStore ?? new InMemoryCircuitBreakerStateStore();
     this.fallback = options.fallback;
+    this.recordFailure = options.recordFailure ?? defaultRecordFailure;
   }
 
   async execute<T>(fn: () => Promise<T>): Promise<T> {
@@ -96,6 +112,8 @@ export class CircuitBreaker {
       }
 
       await this.setCircuitState(CircuitState.HALF_OPEN);
+      // Keep the cycle marker alive at least as long as the Redis HALF_OPEN state.
+      await this.stateStore.setLastFailureTime(this.circuitId, lastFailureTime);
       return CircuitState.HALF_OPEN;
     });
 
@@ -111,8 +129,8 @@ export class CircuitBreaker {
   }
 
   private async handleHalfOpen<T>(fn: () => Promise<T>): Promise<T> {
-    const canExecute = await this.tryAcquireHalfOpenSlot();
-    if (!canExecute) {
+    const slot = await this.tryAcquireHalfOpenSlot();
+    if (!slot) {
       throw new CircuitBreakerOpenProblem(this.circuitId);
     }
 
@@ -120,12 +138,26 @@ export class CircuitBreaker {
     try {
       result = await fn();
     } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
-      await this.markHalfOpenFailure();
-      throw err;
+      let shouldRecord: boolean;
+      try {
+        shouldRecord = this.recordFailure(error);
+      } catch (classificationError) {
+        await this.releaseHalfOpenSlot(slot);
+        throw classificationError;
+      }
+
+      if (shouldRecord) {
+        await this.markHalfOpenFailure(slot);
+      } else {
+        await this.releaseHalfOpenSlot(slot);
+        throw error;
+      }
+      throw error instanceof Error ? error : new Error(String(error));
     }
 
-    await this.recordSuccessBookkeeping(CircuitState.HALF_OPEN, () => this.markHalfOpenSuccess());
+    await this.recordSuccessBookkeeping(CircuitState.HALF_OPEN, () =>
+      this.markHalfOpenSuccess(slot),
+    );
     return result;
   }
 
@@ -139,9 +171,11 @@ export class CircuitBreaker {
     try {
       result = await fn();
     } catch (error) {
-      const err = error instanceof Error ? error : new Error(String(error));
+      if (!this.recordFailure(error)) {
+        throw error;
+      }
       await this.recordClosedFailure();
-      throw err;
+      throw error instanceof Error ? error : new Error(String(error));
     }
 
     await this.recordSuccessBookkeeping(CircuitState.CLOSED, () => this.recordClosedSuccess());
@@ -215,27 +249,27 @@ export class CircuitBreaker {
     return this.stateStore.withCircuitLock(this.circuitId, operation);
   }
 
-  private async tryAcquireHalfOpenSlot(): Promise<boolean> {
+  private async tryAcquireHalfOpenSlot(): Promise<HalfOpenSlot | undefined> {
     return this.withCircuitLock(async () => {
       const state = await this.stateStore.getState(this.circuitId);
       if (state !== CircuitState.HALF_OPEN) {
-        return false;
+        return undefined;
       }
 
       const activeCount = await this.getHalfOpenActiveCount();
       if (activeCount >= this.halfOpenRequests) {
-        return false;
+        return undefined;
       }
 
+      const lastFailureTime = await this.stateStore.getLastFailureTime(this.circuitId);
       await this.setHalfOpenActiveCount(activeCount + 1);
-      return true;
+      return { lastFailureTime };
     });
   }
 
-  private async markHalfOpenSuccess(): Promise<void> {
+  private async markHalfOpenSuccess(slot: HalfOpenSlot): Promise<void> {
     await this.withCircuitLock(async () => {
-      const state = await this.stateStore.getState(this.circuitId);
-      if (state !== CircuitState.HALF_OPEN) {
+      if (!(await this.isCurrentHalfOpenSlot(slot))) {
         return;
       }
 
@@ -253,16 +287,35 @@ export class CircuitBreaker {
     });
   }
 
-  private async markHalfOpenFailure(): Promise<void> {
+  private async markHalfOpenFailure(slot: HalfOpenSlot): Promise<void> {
     await this.withCircuitLock(async () => {
-      const state = await this.stateStore.getState(this.circuitId);
-      if (state !== CircuitState.HALF_OPEN) {
+      if (!(await this.isCurrentHalfOpenSlot(slot))) {
         return;
       }
 
+      await this.setHalfOpenActiveCount(0);
+      await this.setHalfOpenSuccessCount(0);
       await this.stateStore.setLastFailureTime(this.circuitId, Date.now());
       await this.setCircuitState(CircuitState.OPEN);
     });
+  }
+
+  private async releaseHalfOpenSlot(slot: HalfOpenSlot): Promise<void> {
+    await this.withCircuitLock(async () => {
+      if (!(await this.isCurrentHalfOpenSlot(slot))) {
+        return;
+      }
+
+      const activeCount = await this.getHalfOpenActiveCount();
+      await this.setHalfOpenActiveCount(Math.max(0, activeCount - 1));
+    });
+  }
+
+  private async isCurrentHalfOpenSlot(slot: HalfOpenSlot): Promise<boolean> {
+    return (
+      (await this.stateStore.getState(this.circuitId)) === CircuitState.HALF_OPEN &&
+      (await this.stateStore.getLastFailureTime(this.circuitId)) === slot.lastFailureTime
+    );
   }
 
   private async setCircuitState(state: CircuitState): Promise<void> {

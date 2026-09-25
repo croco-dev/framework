@@ -337,6 +337,30 @@ describe("@Retryable", () => {
     }
   });
 
+  it("passes the circuit failure predicate through @Retryable", async () => {
+    const error = new Error("caller failure");
+    const recordFailure = vi.fn(() => false);
+    let calls = 0;
+
+    class TestService {
+      @Retryable({
+        maxAttempts: 1,
+        circuitBreaker: { failureThreshold: 1, recordFailure },
+      })
+      async doWork(): Promise<void> {
+        calls++;
+        throw error;
+      }
+    }
+
+    const service = new TestService();
+    await expect(service.doWork()).rejects.toBe(error);
+    await expect(service.doWork()).rejects.toBe(error);
+    expect(calls).toBe(2);
+    expect(recordFailure).toHaveBeenCalledTimes(2);
+    expect(recordFailure).toHaveBeenCalledWith(error);
+  });
+
   it("keeps open state for the default circuit id across sequential calls", async () => {
     const attempts: string[] = [];
 
