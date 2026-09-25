@@ -1,3 +1,4 @@
+import { readExplicitRetryability } from "@croco/problems-core";
 import type {
   IdempotencyAuditEvent,
   IdempotencyAuditSink,
@@ -244,21 +245,13 @@ function toProblemSummary(error: unknown): {
 }
 
 export function isRetryableHandlerFailure(error: unknown): boolean {
+  const explicitRetryability = readExplicitRetryability(error);
+  if (explicitRetryability !== undefined) {
+    return explicitRetryability;
+  }
+
   if (typeof error !== "object" || error === null) {
     return true;
-  }
-
-  const retryable = readDiagnosticProperty(error, "retryable");
-  if (typeof retryable === "boolean") {
-    return retryable;
-  }
-
-  const extensions = readDiagnosticProperty(error, "extensions");
-  if (typeof extensions === "object" && extensions !== null) {
-    const extensionRetryable = readDiagnosticProperty(extensions, "retryable");
-    if (typeof extensionRetryable === "boolean") {
-      return extensionRetryable;
-    }
   }
 
   const status = readDiagnosticProperty(error, "status");
@@ -273,7 +266,7 @@ export function isRetryableHandlerFailure(error: unknown): boolean {
 
 function readDiagnosticProperty(
   error: object,
-  property: "code" | "status" | "detail" | "message" | "retryable" | "extensions",
+  property: "code" | "status" | "detail" | "message",
 ): unknown {
   try {
     return (error as Record<string, unknown>)[property];

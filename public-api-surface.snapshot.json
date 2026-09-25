@@ -23620,6 +23620,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "readExplicitRetryability",
+              "exportKind": "named",
+              "source": "./libs/readExplicitRetryability",
+              "declarationKind": "function"
+            },
+            {
               "name": "resolveProblemCodeRedactionPolicy",
               "exportKind": "named",
               "source": "./libs/ProblemResponseRedaction",

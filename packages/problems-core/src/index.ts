@@ -126,3 +126,4 @@ export {
   resolveProblemResponseRedactionPolicy,
 } from "./libs/ProblemResponseRedaction";
 export { isValidExtensions, validateExtensions } from "./libs/validators/validateExtensions";
+export { readExplicitRetryability } from "./libs/readExplicitRetryability";

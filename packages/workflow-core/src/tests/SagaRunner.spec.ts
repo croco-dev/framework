@@ -1088,6 +1088,42 @@ describe("SagaRunner", () => {
     },
   );
 
+  it.each([
+    {
+      signal: "a non-boolean top-level retryable as undeclared",
+      createError: () =>
+        Object.assign(new Error("payment provider outage"), { retryable: undefined }),
+      expectedAttempts: 2,
+    },
+    {
+      signal: "a standard Error extension retryable=false as terminal",
+      createError: () =>
+        Object.assign(new Error("payment provider outage"), {
+          extensions: { retryable: false },
+        }),
+      expectedAttempts: 1,
+    },
+  ])("classifies $signal", async ({ createError, expectedAttempts }) => {
+    let attempts = 0;
+    const runner = new SagaRunner();
+    const definition: SagaDefinition = {
+      name: `explicit-retryability-${String(expectedAttempts)}`,
+      steps: [
+        {
+          id: "charge-provider",
+          retry: { maxAttempts: 2 },
+          run: () => {
+            attempts += 1;
+            throw createError();
+          },
+        },
+      ],
+    };
+
+    await expect(runner.execute(definition, {})).rejects.toThrow(SagaExecutionFailedProblem);
+    expect(attempts).toBe(expectedAttempts);
+  });
+
   it("scopes saga idempotency keys by saga name", async () => {
     const events: string[] = [];
     const runner = new SagaRunner();

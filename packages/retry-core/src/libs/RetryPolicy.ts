@@ -1,4 +1,4 @@
-import { Problem, ProblemCategory } from "@croco/problems-core";
+import { Problem, ProblemCategory, readExplicitRetryability } from "@croco/problems-core";
 import { RetrySuccessHookProblem } from "./errors";
 
 /**
@@ -47,7 +47,7 @@ export const DEFAULT_NO_RETRY_FOR: Array<new (message?: string) => Error> = [
 ];
 
 /**
- * Default retry policy with ProblemCategory support.
+ * Default retry policy that honors an error's explicit `retryable` classification before ProblemCategory.
  */
 export class DefaultRetryPolicy implements RetryPolicy {
   private readonly retryFor: Array<new (message?: string) => Error>;
@@ -73,6 +73,11 @@ export class DefaultRetryPolicy implements RetryPolicy {
     // Check noRetryFor first (highest priority)
     if (error instanceof Error && this.noRetryFor.some((cls) => error instanceof cls)) {
       return false;
+    }
+
+    const explicitRetryability = readExplicitRetryability(error);
+    if (explicitRetryability !== undefined) {
+      return explicitRetryability;
     }
 
     // Check explicit retryFor

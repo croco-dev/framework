@@ -5,7 +5,7 @@ prev: false
 title: "DefaultRetryPolicy"
 ---
 
-Default retry policy with ProblemCategory support.
+Default retry policy that honors an error's explicit `retryable` classification before ProblemCategory.
 
 ## Implements
 

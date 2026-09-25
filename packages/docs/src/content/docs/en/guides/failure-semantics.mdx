@@ -50,6 +50,14 @@ tenant ids, provider trace ids, localized text, or mutable provider messages in 
 `InternalServerError` and `TooManyRequests`, does not retry client/domain categories, and rejects
 programmer errors such as `TypeError`, `ReferenceError`, `SyntaxError`, and `RangeError`.
 
+An explicit classification on the error takes precedence over its category. `readExplicitRetryability()`
+from `@croco/problems-core` reads a top-level `retryable` boolean first and `extensions.retryable`
+second; any other value counts as no classification. The retry-core default policy, idempotency,
+saga steps, and QStash triggers all read the flag through this function, so a provider Problem with
+`extensions.retryable: false` runs once and a `Conflict` Problem with `extensions.retryable: true`
+retries while attempts remain. Programmer errors stay non-retryable even when they declare
+`retryable: true`.
+
 That means package authors should classify expected failures before retry sees them:
 
 ```typescript no-check
