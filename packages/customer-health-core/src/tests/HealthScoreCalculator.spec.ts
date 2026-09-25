@@ -247,6 +247,74 @@ describe("HealthScoreCalculator", () => {
       },
     );
 
+    it.each([
+      [3, { usage: 1, business: 1, engagement: 1 }],
+      [0.5, { usage: 0.5, business: 0, engagement: 0 }],
+      [0, { usage: 0, business: 0, engagement: 0 }],
+      [1.00000001, { usage: 1, business: 0.00000001, engagement: 0 }],
+    ] as const)("rejects profile weights with a total of %s", (total, weights) => {
+      const profile: HealthScoreProfile = {
+        id: "invalid-total",
+        name: "Invalid Total",
+        weights,
+        thresholds: { healthy: 80, atRisk: 50 },
+      };
+
+      expect(() => calculator.calculate([], profile)).toThrow(
+        expect.objectContaining({
+          code: "customer-health-core/invalid-score-input",
+          input: "profile.weights",
+          receivedValue: String(total),
+        }),
+      );
+    });
+
+    it.each([
+      ["exact", { usage: 0.14, business: 0.55, engagement: 0.31 }],
+      ["rounded", { usage: 0.06, business: 0.57, engagement: 0.37 }],
+    ] as const)("returns 100 for maximum signals with %s profile weight totals", (_, weights) => {
+      const signals: HealthSignal[] = (["usage", "business", "engagement"] as const).map(
+        (category) => ({
+          category,
+          name: category,
+          value: 100,
+          weight: 1,
+          rawValue: 100,
+          collectedAt: new Date(),
+        }),
+      );
+      const profile: HealthScoreProfile = {
+        id: "maximum",
+        name: "Maximum",
+        weights,
+        thresholds: { healthy: 80, atRisk: 50 },
+      };
+
+      expect(calculator.calculate(signals, profile).overallScore).toBe(100);
+    });
+
+    it("keeps a maximum category score in range after many signals", () => {
+      const signals: HealthSignal[] = Array.from({ length: 100 }, (_, index) => ({
+        category: "usage",
+        name: `usage-${index}`,
+        value: 100,
+        weight: 0.1,
+        rawValue: 100,
+        collectedAt: new Date(),
+      }));
+      const profile: HealthScoreProfile = {
+        id: "many-signals",
+        name: "Many Signals",
+        weights: { usage: 1, business: 0, engagement: 0 },
+        thresholds: { healthy: 80, atRisk: 50 },
+      };
+
+      const result = calculator.calculate(signals, profile);
+
+      expect(result.categoryScores.usage).toBe(100);
+      expect(result.overallScore).toBe(100);
+    });
+
     it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, -1, 101])(
       "rejects an invalid threshold of %s",
       (threshold) => {
