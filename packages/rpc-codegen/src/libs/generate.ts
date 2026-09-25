@@ -1840,8 +1840,39 @@ function extractRpcFormFieldErrors<FieldName extends string>(
 ): RpcFormFieldErrors<FieldName> {
   const source = getRpcFormFieldErrorSource(problem);
   const errors: Partial<Record<FieldName, readonly string[]>> = {};
+  const setFieldError = (fieldName: FieldName, messages: readonly string[]): void => {
+    Object.defineProperty(errors, fieldName, {
+      configurable: true,
+      enumerable: true,
+      value: messages,
+      writable: true,
+    });
+  };
 
   if (!source) {
+    if (!Array.isArray(problem.issues)) {
+      return errors;
+    }
+
+    for (const issue of problem.issues) {
+      if (!isRecord(issue) || typeof issue.path !== 'string' || typeof issue.message !== 'string') {
+        continue;
+      }
+
+      if (!issue.path.startsWith('body.')) {
+        continue;
+      }
+
+      const fieldName = issue.path.slice('body.'.length) as FieldName;
+
+      if (fieldNames.includes(fieldName)) {
+        const previous = Object.prototype.hasOwnProperty.call(errors, fieldName)
+          ? errors[fieldName]
+          : undefined;
+        setFieldError(fieldName, [...(previous ?? []), issue.message]);
+      }
+    }
+
     return errors;
   }
 
@@ -1849,7 +1880,7 @@ function extractRpcFormFieldErrors<FieldName extends string>(
     const value = source[fieldName];
 
     if (typeof value === 'string') {
-      errors[fieldName] = [value];
+      setFieldError(fieldName, [value]);
       continue;
     }
 
@@ -1857,7 +1888,7 @@ function extractRpcFormFieldErrors<FieldName extends string>(
       const messages = value.filter((item): item is string => typeof item === 'string');
 
       if (messages.length > 0) {
-        errors[fieldName] = messages;
+        setFieldError(fieldName, messages);
       }
     }
   }

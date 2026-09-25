@@ -1,0 +1,104 @@
+[
+  {
+    "name": "repeated body issues preserve order and require exact field names",
+    "fieldNames": ["name", "email"],
+    "extensions": {
+      "issues": [
+        { "path": "body.name", "message": "Name is required." },
+        { "path": "body.name", "message": "Name is too short." },
+        { "path": "body.email", "message": "Email is invalid." },
+        { "path": "body.email.extra", "message": "Nested email issue." },
+        { "path": "body.address.city", "message": "Nested address issue." },
+        { "path": "body.other", "message": "Unknown field." }
+      ]
+    },
+    "expected": {
+      "name": ["Name is required.", "Name is too short."],
+      "email": ["Email is invalid."]
+    }
+  },
+  {
+    "name": "other sources and malformed issues do not map",
+    "fieldNames": ["name", "email"],
+    "extensions": {
+      "issues": [
+        { "path": "query.name", "message": "Query name." },
+        { "path": "params.name", "message": "Path name." },
+        { "path": "headers.name", "message": "Header name." },
+        { "path": "name", "message": "Unqualified name." },
+        { "path": "body.name", "message": 123 },
+        { "path": 123, "message": "Invalid path." },
+        null
+      ]
+    },
+    "expected": {}
+  },
+  {
+    "name": "inherited field names accumulate messages as own properties",
+    "fieldNames": ["constructor", "toString", "__proto__"],
+    "extensions": {
+      "issues": [
+        { "path": "body.constructor", "message": "Constructor is required." },
+        { "path": "body.constructor", "message": "Constructor is invalid." },
+        { "path": "body.toString", "message": "String conversion is invalid." },
+        { "path": "body.__proto__", "message": "Prototype value is invalid." }
+      ]
+    },
+    "expected": {
+      "constructor": ["Constructor is required.", "Constructor is invalid."],
+      "toString": ["String conversion is invalid."],
+      "__proto__": ["Prototype value is invalid."]
+    }
+  },
+  {
+    "name": "existing fields records can contain inherited names",
+    "fieldNames": ["constructor", "toString", "__proto__"],
+    "extensions": {
+      "fields": {
+        "constructor": "Constructor is required.",
+        "__proto__": ["Prototype value is invalid."]
+      },
+      "issues": [{ "path": "body.toString", "message": "Ignored issue." }]
+    },
+    "expected": {
+      "constructor": ["Constructor is required."],
+      "__proto__": ["Prototype value is invalid."]
+    }
+  },
+  {
+    "name": "fields take precedence over fieldErrors and issues",
+    "fieldNames": ["name", "email"],
+    "extensions": {
+      "fields": { "name": ["Fields error."] },
+      "fieldErrors": { "name": ["Field errors error."] },
+      "issues": [{ "path": "body.email", "message": "Issue error." }]
+    },
+    "expected": { "name": ["Fields error."] }
+  },
+  {
+    "name": "fieldErrors take precedence over issues",
+    "fieldNames": ["name", "email"],
+    "extensions": {
+      "fieldErrors": { "email": "Field errors error." },
+      "issues": [{ "path": "body.name", "message": "Issue error." }]
+    },
+    "expected": { "email": ["Field errors error."] }
+  },
+  {
+    "name": "an empty fields record still takes precedence",
+    "fieldNames": ["name", "email"],
+    "extensions": {
+      "fields": {},
+      "issues": [{ "path": "body.name", "message": "Issue error." }]
+    },
+    "expected": {}
+  },
+  {
+    "name": "a non-array issues value does not map",
+    "fieldNames": ["name", "email"],
+    "extensions": {
+      "issues": { "path": "body.name", "message": "Invalid issues value." }
+    },
+    "expected": {}
+  }
+]

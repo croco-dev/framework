@@ -972,8 +972,37 @@ export function extractProblemFormFieldErrors<FieldName extends string>(
 ): ProblemFormFieldErrors<FieldName> {
   const source = getProblemFormFieldErrorSource(problem);
   const errors: Partial<Record<FieldName, readonly string[]>> = {};
+  const setFieldError = (fieldName: FieldName, messages: readonly string[]): void => {
+    Object.defineProperty(errors, fieldName, {
+      configurable: true,
+      enumerable: true,
+      value: messages,
+      writable: true,
+    });
+  };
 
   if (!source) {
+    if (Array.isArray(problem.issues)) {
+      for (const issue of problem.issues) {
+        if (
+          !isRecord(issue) ||
+          typeof issue.path !== "string" ||
+          !issue.path.startsWith("body.") ||
+          typeof issue.message !== "string"
+        ) {
+          continue;
+        }
+
+        const fieldName = issue.path.slice("body.".length) as FieldName;
+        if (fieldNames.includes(fieldName)) {
+          const previous = Object.prototype.hasOwnProperty.call(errors, fieldName)
+            ? errors[fieldName]
+            : undefined;
+          setFieldError(fieldName, [...(previous ?? []), issue.message]);
+        }
+      }
+    }
+
     return errors;
   }
 
@@ -981,7 +1010,7 @@ export function extractProblemFormFieldErrors<FieldName extends string>(
     const value = source[fieldName];
 
     if (typeof value === "string") {
-      errors[fieldName] = [value];
+      setFieldError(fieldName, [value]);
       continue;
     }
 
@@ -989,7 +1018,7 @@ export function extractProblemFormFieldErrors<FieldName extends string>(
       const messages = value.filter((item): item is string => typeof item === "string");
 
       if (messages.length > 0) {
-        errors[fieldName] = messages;
+        setFieldError(fieldName, messages);
       }
     }
   }

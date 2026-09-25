@@ -19011,7 +19011,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 1919,
+          line: 1950,
           column: 38,
           kind: "problem-metadata",
         },
