@@ -6,12 +6,12 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   117 |
+| Public packages                |   118 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
 | Missing generated API docs     |     0 |
 | Missing package test directory |     0 |
-| Extension matrix packages      |    48 |
+| Extension matrix packages      |    49 |
 | Certification records          |     8 |
 | Croco 1.0 spine packages       |    18 |
 
@@ -115,6 +115,7 @@ None.
 | `@croco/admin-react`                   | Plugins        | presentation  | Admin React             | browser, node                             |
 | `@croco/ai-usage`                      | Plugins        | integration   | AI Usage                | unclaimed                                 |
 | `@croco/analytics-core`                | Contracts      | domain        | Analytics               | unclaimed                                 |
+| `@croco/analytics-drizzle`             | Plugins        | provider      | Analytics               | node, lambda                              |
 | `@croco/analytics-posthog`             | Plugins        | integration   | Analytics               | node, lambda                              |
 | `@croco/architecture-policy`           | Tooling        | policy        | Architecture Policy     | unclaimed                                 |
 | `@croco/audit-core`                    | Contracts      | domain        | Audit                   | unclaimed                                 |
@@ -231,7 +232,7 @@ None.
 | ------------ | -------: |
 | Core         |       23 |
 | Domain       |       30 |
-| Provider     |       28 |
+| Provider     |       29 |
 | Integration  |        5 |
 | Protocol     |        8 |
 | Transport    |        2 |
@@ -244,7 +245,7 @@ None.
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
 | 🟡 beta             |       78 |
-| 🔴 alpha/WIP        |       16 |
+| 🔴 alpha/WIP        |       17 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix
@@ -253,7 +254,7 @@ Extension matrix metadata is maintained in `docs/package-catalog.json` and rende
 
 | Group        | Packages | Without package tests |
 | ------------ | -------: | --------------------: |
-| Provider     |       28 |                     0 |
+| Provider     |       29 |                     0 |
 | Integration  |        5 |                     0 |
 | Transport    |        2 |                     0 |
 | Host         |        4 |                     0 |

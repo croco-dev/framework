@@ -98,6 +98,18 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/FactHistoryEntrypoints.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/FactHistoryOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/TenantWorkspace.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -188,6 +200,12 @@
       "owner": "@croco/admin-react"
     },
     {
+      "path": "packages/admin-react/src/tests/FactHistoryPanel.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
       "path": "packages/admin-react/src/tests/LifecycleAutomationConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -266,10 +284,34 @@
       "owner": "@croco/analytics-core"
     },
     {
+      "path": "packages/analytics-core/src/tests/FactHistory.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/analytics-core"
+    },
+    {
       "path": "packages/analytics-core/src/tests/ProductEvent.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/analytics-core"
+    },
+    {
+      "path": "packages/analytics-drizzle/src/tests/DrizzleFactHistoryStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/analytics-drizzle"
+    },
+    {
+      "path": "packages/analytics-drizzle/src/tests/Migration.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/analytics-drizzle"
+    },
+    {
+      "path": "packages/analytics-drizzle/src/tests/PersistenceFailure.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/analytics-drizzle"
     },
     {
       "path": "packages/analytics-posthog/src/tests/Integration.spec.ts",

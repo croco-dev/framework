@@ -913,6 +913,8 @@ describe("CI verification profile contract", () => {
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/metering-drizzle...");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/metering-drizzle test:postgres");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/credits-drizzle test:postgres");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/analytics-drizzle...");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/analytics-drizzle test:postgres");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/engagement-drizzle...");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/engagement-drizzle test:postgres");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/entitlements-drizzle...");

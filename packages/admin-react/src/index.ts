@@ -284,3 +284,6 @@ export type {
   LifecycleRunOutcome,
   LoadLifecycleAutomationOptions,
 } from "./libs/lifecycleAutomation";
+
+export { FactHistoryPanel } from "./libs/FactHistoryPanel";
+export type { FactHistoryPanelProps } from "./libs/FactHistoryPanel";

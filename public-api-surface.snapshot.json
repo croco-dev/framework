@@ -535,6 +535,11 @@
               "declarationKind": "function"
             },
             {
+              "name": "FactHistoryInputProblem",
+              "exportKind": "named",
+              "source": "@croco/admin-core/fact-history-validation"
+            },
+            {
               "name": "filterCreditOperationsTransactions",
               "exportKind": "named",
               "source": "./libs/CreditOperations",
@@ -623,6 +628,16 @@
               "exportKind": "named",
               "source": "./libs/EventCatalog",
               "declarationKind": "function"
+            },
+            {
+              "name": "validateFactHistoryComparison",
+              "exportKind": "named",
+              "source": "@croco/admin-core/fact-history-validation"
+            },
+            {
+              "name": "validateFactHistoryCorrection",
+              "exportKind": "named",
+              "source": "@croco/admin-core/fact-history-validation"
             },
             {
               "name": "WebhookOperationsActionValidationProblem",
@@ -1113,6 +1128,46 @@
               "source": "./libs/EventCatalog"
             },
             {
+              "name": "FactHistoryComparisonRequest",
+              "exportKind": "named",
+              "source": "./libs/FactHistoryValidation"
+            },
+            {
+              "name": "FactHistoryCorrectionRequest",
+              "exportKind": "named",
+              "source": "./libs/FactHistoryValidation"
+            },
+            {
+              "name": "FactHistoryDisplayRow",
+              "exportKind": "named",
+              "source": "./libs/FactHistoryValidation"
+            },
+            {
+              "name": "FactHistoryOperations",
+              "exportKind": "named",
+              "source": "./libs/FactHistoryValidation"
+            },
+            {
+              "name": "FactHistoryPoint",
+              "exportKind": "named",
+              "source": "./libs/FactHistoryValidation"
+            },
+            {
+              "name": "FactHistorySelection",
+              "exportKind": "named",
+              "source": "./libs/FactHistoryValidation"
+            },
+            {
+              "name": "FactHistorySnapshot",
+              "exportKind": "named",
+              "source": "./libs/FactHistoryValidation"
+            },
+            {
+              "name": "FactHistoryState",
+              "exportKind": "named",
+              "source": "./libs/FactHistoryValidation"
+            },
+            {
               "name": "LoadCreditOperationsInput",
               "exportKind": "named",
               "source": "./libs/CreditOperations"
@@ -1333,6 +1388,74 @@
               "source": "./libs/WebhookOperations"
             }
           ]
+        },
+        {
+          "exportPath": "./fact-history-operations",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/fact-history-operations.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/fact-history-operations.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/fact-history-operations.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/admin-core/src/fact-history-operations.ts",
+          "runtimeExports": [
+            {
+              "name": "createFactHistoryOperations",
+              "exportKind": "named",
+              "source": "./libs/FactHistoryOperations",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": []
+        },
+        {
+          "exportPath": "./fact-history-validation",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/fact-history-validation.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/fact-history-validation.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/fact-history-validation.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/admin-core/src/fact-history-validation.ts",
+          "runtimeExports": [
+            {
+              "name": "FactHistoryInputProblem",
+              "exportKind": "named",
+              "source": "./libs/FactHistoryValidation",
+              "declarationKind": "class"
+            },
+            {
+              "name": "validateFactHistoryComparison",
+              "exportKind": "named",
+              "source": "./libs/FactHistoryValidation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateFactHistoryCorrection",
+              "exportKind": "named",
+              "source": "./libs/FactHistoryValidation",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": []
         }
       ]
     },
@@ -2164,6 +2287,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "FactHistoryPanel",
+              "exportKind": "named",
+              "source": "./libs/FactHistoryPanel",
+              "declarationKind": "function"
+            },
+            {
               "name": "getAllowedPlanReleaseActions",
               "exportKind": "named",
               "source": "./libs/planReleaseConsole",
@@ -2860,6 +2989,11 @@
               "source": "./libs/EventCatalogPanel"
             },
             {
+              "name": "FactHistoryPanelProps",
+              "exportKind": "named",
+              "source": "./libs/FactHistoryPanel"
+            },
+            {
               "name": "LifecycleAutomationConsoleProps",
               "exportKind": "named",
               "source": "./libs/LifecycleAutomationConsole"
@@ -3478,9 +3612,51 @@
               "declarationKind": "class"
             },
             {
+              "name": "canonicalFactValue",
+              "exportKind": "named",
+              "source": "./libs/FactHistory",
+              "declarationKind": "function"
+            },
+            {
               "name": "defineProductEvent",
               "exportKind": "named",
               "source": "./libs/ProductEvent",
+              "declarationKind": "function"
+            },
+            {
+              "name": "evaluateFactsAt",
+              "exportKind": "named",
+              "source": "./libs/FactHistory",
+              "declarationKind": "function"
+            },
+            {
+              "name": "FactHistoryProblem",
+              "exportKind": "named",
+              "source": "./libs/FactHistory",
+              "declarationKind": "class"
+            },
+            {
+              "name": "FactHistoryService",
+              "exportKind": "named",
+              "source": "./libs/FactHistory",
+              "declarationKind": "class"
+            },
+            {
+              "name": "factProjectionKey",
+              "exportKind": "named",
+              "source": "./libs/FactHistory",
+              "declarationKind": "function"
+            },
+            {
+              "name": "factScopeKey",
+              "exportKind": "named",
+              "source": "./libs/FactHistory",
+              "declarationKind": "function"
+            },
+            {
+              "name": "factSubjectKey",
+              "exportKind": "named",
+              "source": "./libs/FactHistory",
               "declarationKind": "function"
             },
             {
@@ -3512,9 +3688,31 @@
               "exportKind": "named",
               "source": "./libs/ProductEvent",
               "declarationKind": "function"
+            },
+            {
+              "name": "validateFactScope",
+              "exportKind": "named",
+              "source": "./libs/FactHistory",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateFactSubject",
+              "exportKind": "named",
+              "source": "./libs/FactHistory",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
+            {
+              "name": "AppendFactsInput",
+              "exportKind": "named",
+              "source": "./libs/FactHistory"
+            },
+            {
+              "name": "AppendFactsResult",
+              "exportKind": "named",
+              "source": "./libs/FactHistory"
+            },
             {
               "name": "CaptureResult",
               "exportKind": "named",
@@ -3529,6 +3727,71 @@
               "name": "EventObservation",
               "exportKind": "named",
               "source": "./libs/ProductEvent"
+            },
+            {
+              "name": "FactAuthorizationRequest",
+              "exportKind": "named",
+              "source": "./libs/FactHistory"
+            },
+            {
+              "name": "FactCorrection",
+              "exportKind": "named",
+              "source": "./libs/FactHistory"
+            },
+            {
+              "name": "FactDefinition",
+              "exportKind": "named",
+              "source": "./libs/FactHistory"
+            },
+            {
+              "name": "FactHistoryPolicy",
+              "exportKind": "named",
+              "source": "./libs/FactHistory"
+            },
+            {
+              "name": "FactHistoryProblemCode",
+              "exportKind": "named",
+              "source": "./libs/FactHistory"
+            },
+            {
+              "name": "FactHistoryQuery",
+              "exportKind": "named",
+              "source": "./libs/FactHistory"
+            },
+            {
+              "name": "FactHistoryStore",
+              "exportKind": "named",
+              "source": "./libs/FactHistory"
+            },
+            {
+              "name": "FactProjection",
+              "exportKind": "named",
+              "source": "./libs/FactHistory"
+            },
+            {
+              "name": "FactReadResult",
+              "exportKind": "named",
+              "source": "./libs/FactHistory"
+            },
+            {
+              "name": "FactRow",
+              "exportKind": "named",
+              "source": "./libs/FactHistory"
+            },
+            {
+              "name": "FactScope",
+              "exportKind": "named",
+              "source": "./libs/FactHistory"
+            },
+            {
+              "name": "FactSubject",
+              "exportKind": "named",
+              "source": "./libs/FactHistory"
+            },
+            {
+              "name": "FactValue",
+              "exportKind": "named",
+              "source": "./libs/FactHistory"
             },
             {
               "name": "ProductEventContext",
@@ -3599,6 +3862,68 @@
               "name": "ProductEventValidationResult",
               "exportKind": "named",
               "source": "./libs/ProductEvent"
+            },
+            {
+              "name": "ReadFactsAtInput",
+              "exportKind": "named",
+              "source": "./libs/FactHistory"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/analytics-drizzle",
+      "relativeDir": "packages/analytics-drizzle",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/analytics-drizzle/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "createFactHistory",
+              "exportKind": "named",
+              "source": "./migrations/createFactHistory",
+              "declarationKind": "function"
+            },
+            {
+              "name": "DrizzleFactHistoryStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleFactHistoryStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "dropFactHistory",
+              "exportKind": "named",
+              "source": "./migrations/createFactHistory",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "FactHistoryConnection",
+              "exportKind": "named",
+              "source": "./libs/DrizzleFactHistoryStore"
+            },
+            {
+              "name": "FactHistoryDatabase",
+              "exportKind": "named",
+              "source": "./libs/DrizzleFactHistoryStore"
             }
           ]
         }

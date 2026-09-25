@@ -7,6 +7,7 @@
   "@croco/admin-react": "plugins",
   "@croco/ai-usage": "plugins",
   "@croco/analytics-core": "contracts",
+  "@croco/analytics-drizzle": "plugins",
   "@croco/analytics-posthog": "plugins",
   "@croco/architecture-policy": "tooling",
   "@croco/audit-core": "contracts",

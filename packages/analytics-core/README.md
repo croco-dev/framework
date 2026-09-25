@@ -180,3 +180,88 @@ void captureCommittedReport;
 pnpm --filter @croco/analytics-core test
 pnpm --filter @croco/analytics-core typecheck
 ```
+
+## Fact history
+
+`FactHistoryService` records explicitly supplied attribute changes through a
+`FactHistoryStore`. `@croco/analytics-drizzle` supplies the PostgreSQL store. The
+application retains ownership of its customer repository and verifies subject
+identity before invoking the service.
+
+```typescript no-check
+import { FactHistoryService } from "@croco/analytics-core";
+
+const facts = new FactHistoryService(
+  store,
+  [{ id: "verified", version: "1", validate: (value) => typeof value === "boolean" }],
+  {
+    authorize: (request) => applicationPolicy.requireFactAccess(request),
+    mask: (row) => applicationPolicy.maskFact(row),
+  },
+);
+
+await facts.appendFact({
+  scope: { app: "shop", environment: "production", tenantId: "tenant-1" },
+  source: "identity-provider",
+  sourceEventId: "verification-123",
+  sourceFingerprint: canonicalSourceSha256,
+  row: {
+    subject: { kind: "user", id: "customer-1" },
+    definitionId: "verified",
+    definitionVersion: "1",
+    projectionId: "customer-attributes",
+    projectionRowKey: "verified",
+    materializationRevision: "1",
+    value: true,
+    validFrom: "2026-09-25T11:00:00Z",
+  },
+});
+
+const result = await facts.readFactsAt({
+  scope: { app: "shop", environment: "production", tenantId: "tenant-1" },
+  subject: { kind: "user", id: "customer-1" },
+  definitionId: "verified",
+  definitionVersion: "1",
+  materializationRevision: "1",
+  effectiveAt: "2026-09-25T11:00:00Z",
+  knownAt: "2026-09-25T11:30:00Z",
+});
+```
+
+`effectiveAt` selects the half-open `[validFrom, validTo)` interval. `knownAt`
+excludes rows received later, using the service-assigned `recordedAt`. Omitted
+`knownAt` is frozen once per query. Missing history returns `unknown`; incompatible
+active values return `conflict` unless an explicit correction or configured source
+priority resolves them. Storage and authorization errors propagate. The service
+never backfills history from a current customer value.
+
+Source receipt identity is `(scope, source, sourceEventId)`. A canonical source
+hash detects conflicting reuse of that identity without storing the source
+payload. Each receipt may produce multiple subjects and definitions. Projection
+identity additionally includes subject kind/id, definition ID, projection ID,
+projection row key, and materialization revision; the exported
+`factProjectionKey` encodes the tuple without delimiter ambiguity.
+
+`appendFacts` accepts 1–100 rows with one materialization revision as an atomic source batch. The store must fix
+its expected projection set per materialization generation and make a replay
+idempotent. No chunked ingestion mode is provided. Reads explicitly select both
+`definitionVersion` and `materializationRevision`, so recomputed generations are
+never combined implicitly. `readHistory` accepts a limit of 1–1000;
+`readFactsAt` fails with `history-limit` when reconstruction exceeds 1000 rows.
+
+Manual corrections append rows with `supersedes` and batch correction metadata:
+`actor`, `reason`, `expectedRevision`, and `idempotencyKey`. `getRevision` returns
+the store's scope-wide revision for compare-and-set; an intervening write in that
+scope requires the caller to reread before retrying a correction. Prior rows are
+retained as correction provenance until subject deletion.
+
+Both `authorize` and `mask` are required application policies. Authorization runs
+for the exact scope, subject, operation, and definition before persistence. A null
+`tenantId` identifies the explicit tenantless scope and grants no additional
+access. User, tenant, and anonymous subjects remain separate. Masking runs after
+conflict evaluation, preserving contradictions even when values are redacted.
+The application must authenticate correction actors and restrict fields through
+this policy. `deleteSubject` authorizes deletion; the store must remove the
+subject's data and persist an access tombstone to prevent replay restoration.
+Applications must invalidate their derived caches and apply a finite retention
+policy to the source and projections as part of their deletion lifecycle.

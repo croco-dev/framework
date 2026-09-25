@@ -13,7 +13,8 @@
       "@croco/pagination-core": ["../pagination-core/src/index.ts"],
       "@croco/problems-core": ["../problems-core/src/index.ts"],
       "@croco/search-core": ["../search-core/src/index.ts"],
-      "@croco/tenant-core": ["../tenant-core/src/libs/types.ts"]
+      "@croco/tenant-core": ["../tenant-core/src/libs/types.ts"],
+      "@croco/analytics-core": ["../analytics-core/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"]

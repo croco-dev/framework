@@ -13,8 +13,26 @@
   ],
   "type": "commonjs",
   "sideEffects": false,
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    },
+    "./fact-history-validation": {
+      "types": "./dist/fact-history-validation.d.ts",
+      "import": "./dist/fact-history-validation.mjs",
+      "require": "./dist/fact-history-validation.js"
+    },
+    "./fact-history-operations": {
+      "types": "./dist/fact-history-operations.d.ts",
+      "import": "./dist/fact-history-operations.mjs",
+      "require": "./dist/fact-history-operations.js"
+    }
+  },
   "publishConfig": {
     "main": "./dist/index.js",
     "types": "./dist/index.d.ts",
@@ -23,12 +41,22 @@
         "types": "./dist/index.d.ts",
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
+      },
+      "./fact-history-validation": {
+        "types": "./dist/fact-history-validation.d.ts",
+        "import": "./dist/fact-history-validation.mjs",
+        "require": "./dist/fact-history-validation.js"
+      },
+      "./fact-history-operations": {
+        "types": "./dist/fact-history-operations.d.ts",
+        "import": "./dist/fact-history-operations.mjs",
+        "require": "./dist/fact-history-operations.js"
       }
     },
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
+    "build": "tsup src/index.ts src/fact-history-validation.ts src/fact-history-operations.ts --format esm,cjs --minify --clean --dts --external @croco/admin-core/fact-history-validation",
     "lint": "oxlint .",
     "test": "vitest run",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
@@ -36,6 +64,7 @@
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
+    "@croco/analytics-core": "workspace:*",
     "@croco/problems-core": "workspace:*"
   },
   "devDependencies": {

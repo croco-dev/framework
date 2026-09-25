@@ -34,6 +34,7 @@
     "@croco/admin-react": "workspace:*",
     "@croco/ai-usage": "workspace:*",
     "@croco/analytics-core": "workspace:*",
+    "@croco/analytics-drizzle": "workspace:*",
     "@croco/analytics-posthog": "workspace:*",
     "@croco/architecture-policy": "workspace:*",
     "@croco/audit-core": "workspace:*",

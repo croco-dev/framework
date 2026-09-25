@@ -14,6 +14,7 @@ import { delimiter, join, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { apiDocModelEntryPoints, apiDocPackages } from "../../packages/docs/api-docs.config.mjs";
+import { moveBuildOutput } from "../../packages/docs/scripts/move-build-output.mts";
 import { prunePreviouslyDocumentedExports } from "../../packages/docs/scripts/prepare-api-models.mjs";
 import {
   normalizeCliDiagnosticDefinitions,
@@ -49,11 +50,59 @@ describe("API documentation pipeline", () => {
     for (const root of TEMP_ROOTS.splice(0)) rmSync(root, { force: true, recursive: true });
   });
 
+  it("moves the built site without copying it on the same filesystem", () => {
+    const root = mkdtempSync(join(tmpdir(), "croco-docs-output-"));
+    TEMP_ROOTS.push(root);
+    const source = join(root, "temporary", "dist");
+    const destination = join(root, "published", "dist");
+    mkdirSync(source, { recursive: true });
+    writeFileSync(join(source, "index.html"), "built site");
+
+    moveBuildOutput(source, destination);
+
+    expect(existsSync(source)).toBe(false);
+    expect(readFileSync(join(destination, "index.html"), "utf8")).toBe("built site");
+  });
+
+  it("copies the built site only when a cross-device rename fails", () => {
+    const root = mkdtempSync(join(tmpdir(), "croco-docs-output-"));
+    TEMP_ROOTS.push(root);
+    const source = join(root, "temporary", "dist");
+    const destination = join(root, "published", "dist");
+    mkdirSync(source, { recursive: true });
+    writeFileSync(join(source, "index.html"), "built site");
+    const rename = vi.fn(() => {
+      throw Object.assign(new Error("Cross-device link"), { code: "EXDEV" });
+    });
+
+    moveBuildOutput(source, destination, rename);
+
+    expect(rename).toHaveBeenCalledOnce();
+    expect(readFileSync(join(destination, "index.html"), "utf8")).toBe("built site");
+  });
+
+  it("propagates other output move failures", () => {
+    const root = mkdtempSync(join(tmpdir(), "croco-docs-output-"));
+    TEMP_ROOTS.push(root);
+    const source = join(root, "temporary", "dist");
+    const destination = join(root, "published", "dist");
+    mkdirSync(source, { recursive: true });
+    writeFileSync(join(source, "index.html"), "built site");
+    const failure = new Error("Access denied");
+    const rename = () => {
+      throw failure;
+    };
+
+    expect(() => moveBuildOutput(source, destination, rename)).toThrow(failure);
+    expect(existsSync(source)).toBe(true);
+    expect(existsSync(destination)).toBe(false);
+  });
+
   it("keeps one canonical, ordered package-model catalog", () => {
-    expect(apiDocPackages).toHaveLength(117);
-    expect(new Set(apiDocPackages.map(({ packageName }) => packageName)).size).toBe(117);
-    expect(new Set(apiDocPackages.map(({ directory }) => directory)).size).toBe(117);
-    expect(new Set(apiDocPackages.map(({ moduleName }) => moduleName)).size).toBe(117);
+    expect(apiDocPackages).toHaveLength(118);
+    expect(new Set(apiDocPackages.map(({ packageName }) => packageName)).size).toBe(118);
+    expect(new Set(apiDocPackages.map(({ directory }) => directory)).size).toBe(118);
+    expect(new Set(apiDocPackages.map(({ moduleName }) => moduleName)).size).toBe(118);
     expect(apiDocModelEntryPoints).toEqual(
       apiDocPackages.map(({ directory }) => `../${directory}/.turbo/docs-api/model.json`),
     );

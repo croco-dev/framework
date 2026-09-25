@@ -78,6 +78,7 @@
       "packages": [
         "@croco/access-drizzle",
         "@croco/admin-react",
+        "@croco/analytics-drizzle",
         "@croco/analytics-posthog",
         "@croco/audit-drizzle",
         "@croco/auth-better-auth",

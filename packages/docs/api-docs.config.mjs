@@ -4,6 +4,7 @@ export const apiDocCompilerOptions = {
   module: "ESNext",
   moduleResolution: "bundler",
   paths: {
+    "@croco/admin-core/fact-history-validation": ["../admin-core/src/fact-history-validation.ts"],
     "@croco/*": ["../*/src/index.ts"],
   },
   strictNullChecks: true,
@@ -53,6 +54,12 @@ export const apiDocPackages = [
     directory: "analytics-core",
     entryPoint: "src/index.ts",
     moduleName: "analytics-core/src",
+  },
+  {
+    packageName: "@croco/analytics-drizzle",
+    directory: "analytics-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "analytics-drizzle/src",
   },
   {
     packageName: "@croco/analytics-posthog",

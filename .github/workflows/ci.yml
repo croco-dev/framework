@@ -648,6 +648,8 @@ jobs:
               - 'turbo.json'
               - 'packages/auth-core/**'
               - 'packages/auth-drizzle/**'
+              - 'packages/analytics-core/**'
+              - 'packages/analytics-drizzle/**'
               - 'packages/credits-core/**'
               - 'packages/credits-drizzle/**'
               - 'packages/customer-health-core/**'
@@ -683,6 +685,7 @@ jobs:
               - 'packages/admin-react/src/**'
               - 'packages/ai-usage/src/**'
               - 'packages/analytics-core/src/**'
+              - 'packages/analytics-drizzle/src/**'
               - 'packages/analytics-posthog/src/**'
               - 'packages/architecture-policy/src/**'
               - 'packages/audit-core/src/**'
@@ -1482,6 +1485,7 @@ jobs:
 
       - name: Verify persistence concurrency against PostgreSQL
         env:
+          ANALYTICS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           CREDITS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           CUSTOMER_HEALTH_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           ENGAGEMENT_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
@@ -1490,6 +1494,8 @@ jobs:
           MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           METERING_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
         run: |
+          pnpm build --filter=@croco/analytics-drizzle...
+          pnpm --filter @croco/analytics-drizzle test:postgres
           pnpm build --filter=@croco/credits-drizzle...
           pnpm --filter @croco/credits-drizzle test:postgres
           pnpm build --filter=@croco/customer-health-drizzle...
