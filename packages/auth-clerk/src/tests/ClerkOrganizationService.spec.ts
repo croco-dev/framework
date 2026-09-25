@@ -265,9 +265,55 @@ describe("ClerkOrganizationService", () => {
 
       const result = await service.getOrganizationMembershipList("org_123");
 
+      expect(mockClerkClient.organizations.getOrganizationMembershipList).toHaveBeenCalledWith({
+        organizationId: "org_123",
+      });
       expect(result.memberships).toHaveLength(1);
       expect(result.totalCount).toBe(1);
       expect(result.memberships[0].role).toBe("org:member");
+    });
+
+    it.each([
+      { options: { limit: 5, offset: 0 }, membershipId: "mem_first" },
+      { options: { limit: 5, offset: 10 }, membershipId: "mem_later" },
+      { options: { limit: 5 }, membershipId: "mem_limit_only" },
+      { options: { offset: 10 }, membershipId: "mem_offset_only" },
+    ])(
+      "should forward $options and return the requested page",
+      async ({ options, membershipId }) => {
+        vi.mocked(mockClerkClient.organizations.getOrganizationMembershipList).mockResolvedValue({
+          data: [createMockMembership(membershipId)],
+          totalCount: 20,
+        } as unknown as Awaited<
+          ReturnType<typeof mockClerkClient.organizations.getOrganizationMembershipList>
+        >);
+
+        const result = await service.getOrganizationMembershipList("org_123", options);
+
+        expect(mockClerkClient.organizations.getOrganizationMembershipList).toHaveBeenCalledWith({
+          organizationId: "org_123",
+          ...options,
+        });
+        expect(result.memberships.map((membership) => membership.id)).toEqual([membershipId]);
+        expect(result.totalCount).toBe(1);
+      },
+    );
+
+    it("should forward only defined pagination fields without replacing the organization", async () => {
+      vi.mocked(mockClerkClient.organizations.getOrganizationMembershipList).mockResolvedValue({
+        data: [],
+        totalCount: 0,
+      } as unknown as Awaited<
+        ReturnType<typeof mockClerkClient.organizations.getOrganizationMembershipList>
+      >);
+
+      const options = { limit: undefined, offset: 10, organizationId: "org_other" };
+      await service.getOrganizationMembershipList("org_123", options);
+
+      expect(mockClerkClient.organizations.getOrganizationMembershipList).toHaveBeenCalledWith({
+        organizationId: "org_123",
+        offset: 10,
+      });
     });
 
     it("should count only memberships with public user data", async () => {
