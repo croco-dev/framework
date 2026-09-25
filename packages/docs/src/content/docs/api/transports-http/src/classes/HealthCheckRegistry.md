@@ -21,7 +21,15 @@ HTTP 애플리케이션 구성과 라우트 실행에 사용하는 핵심 공개
 
 ### check()
 
-> **check**(): `Promise`\<[`HealthCheckRegistryResult`](/api/transports-http/src/interfaces/healthcheckregistryresult/)\>
+> **check**(`options?`): `Promise`\<[`HealthCheckRegistryResult`](/api/transports-http/src/interfaces/healthcheckregistryresult/)\>
+
+#### Parameters
+
+##### options?
+
+###### signal?
+
+`AbortSignal`
 
 #### Returns
 
@@ -31,7 +39,15 @@ HTTP 애플리케이션 구성과 라우트 실행에 사용하는 핵심 공개
 
 ### checkReadiness()
 
-> **checkReadiness**(): `Promise`\<[`HealthCheckRegistryResult`](/api/transports-http/src/interfaces/healthcheckregistryresult/)\>
+> **checkReadiness**(`options?`): `Promise`\<[`HealthCheckRegistryResult`](/api/transports-http/src/interfaces/healthcheckregistryresult/)\>
+
+#### Parameters
+
+##### options?
+
+###### signal?
+
+`AbortSignal`
 
 #### Returns
 

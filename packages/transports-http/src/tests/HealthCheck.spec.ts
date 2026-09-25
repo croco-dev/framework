@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import { Container } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
+import { HealthCheckService } from "@croco/health-core";
 import { Problem } from "@croco/problems-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../libs/CrocoApp";
@@ -31,9 +32,22 @@ describe("HealthCheck", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   describe("HealthCheckRegistry", () => {
+    it("should forward the caller signal to both health-core aggregates", async () => {
+      const signal = new AbortController().signal;
+      const check = vi.spyOn(HealthCheckService.prototype, "check");
+      const checkReadiness = vi.spyOn(HealthCheckService.prototype, "checkReadiness");
+
+      await registry.check({ signal });
+      await registry.checkReadiness({ signal });
+
+      expect(check).toHaveBeenCalledWith({ signal });
+      expect(checkReadiness).toHaveBeenCalledWith({ signal });
+    });
+
     it("should expose the health-core aggregate contract", async () => {
       registry.register("db", async () => ({ status: "up", latency: 10 }));
 
@@ -153,6 +167,49 @@ describe("HealthCheck", () => {
   });
 
   describe("GET /health", () => {
+    it.each(["/health", "/ready", "/health/ready"])(
+      "aborts the %s indicator when its request is cancelled",
+      async (path) => {
+        const controller = new AbortController();
+        let indicatorSignal: AbortSignal | undefined;
+        const check = (signal?: AbortSignal): Promise<{ status: "up" }> => {
+          indicatorSignal = signal;
+          return new Promise(() => {});
+        };
+        if (path === "/health") registry.register("db", check);
+        else registry.registerReadiness("db", check);
+
+        const app = createApp({ controllers: [], securityValidation: "off" });
+        const responsePromise = app.fetch(
+          new Request(`http://localhost${path}`, { signal: controller.signal }),
+        );
+        expect(indicatorSignal?.aborted).toBe(false);
+
+        controller.abort();
+
+        expect(indicatorSignal?.aborted).toBe(true);
+        const response = await responsePromise;
+        expect(response.status).toBe(503);
+        await expect(response.json()).resolves.toMatchObject({
+          status: "down",
+          results: [{ name: "db", status: "down" }],
+        });
+      },
+    );
+
+    it("should pass the request signal to the registry", async () => {
+      const app = createApp({ controllers: [], securityValidation: "off" });
+      const request = new Request("http://localhost/health", {
+        signal: new AbortController().signal,
+      });
+      const check = vi.spyOn(registry, "check");
+
+      const response = await app.fetch(request);
+
+      expect(response.status).toBe(200);
+      expect(check).toHaveBeenCalledWith({ signal: request.signal });
+    });
+
     it("should return the healthy aggregate contract", async () => {
       registry.register("db", async () => ({ status: "up", latency: 10 }));
 
@@ -350,6 +407,22 @@ describe("HealthCheck", () => {
   });
 
   describe("GET /ready", () => {
+    it("should pass the request signal to the registry on both readiness routes", async () => {
+      const app = createApp({ controllers: [], securityValidation: "off" });
+      const checkReadiness = vi.spyOn(registry, "checkReadiness");
+
+      for (const path of ["/ready", "/health/ready"]) {
+        const request = new Request(`http://localhost${path}`, {
+          signal: new AbortController().signal,
+        });
+        const response = await app.fetch(request);
+
+        expect(response.status).toBe(200);
+        expect(checkReadiness).toHaveBeenLastCalledWith({ signal: request.signal });
+      }
+      expect(checkReadiness).toHaveBeenCalledTimes(2);
+    });
+
     it("should return the empty readiness contract from both aliases", async () => {
       const app = createApp({ controllers: [], securityValidation: "off" });
 

@@ -35,6 +35,7 @@ export interface HealthIndicatorRegistration {
 }
 
 const DEFAULT_TIMEOUT = 5000;
+const CALLER_ABORTED = Symbol("caller-aborted");
 
 function assertValidTimeout(timeout: number, source: "default" | "indicator"): void {
   if (!Number.isSafeInteger(timeout) || timeout <= 0 || timeout > MAX_HEALTH_CHECK_TIMEOUT_MS) {
@@ -47,6 +48,14 @@ type RegisteredIndicator<TIndicator extends HealthIndicator> = {
   readonly indicator: TIndicator;
   readonly timeout?: number;
 };
+
+function abortedResult(registration: RegisteredIndicator<HealthIndicator>): HealthIndicatorResult {
+  return {
+    name: registration.id ?? getIndicatorName(registration.indicator),
+    status: "down",
+    details: { error: "Health check aborted" },
+  };
+}
 
 export class HealthCheckService {
   private readonly healthIndicators = new Set<RegisteredIndicator<HealthIndicator>>();
@@ -176,21 +185,46 @@ export class HealthCheckService {
     return result.status === "up";
   }
 
-  async check(): Promise<HealthCheckResult> {
-    return this.checkIndicators(this.healthIndicators, "check");
+  async check(options: { signal?: AbortSignal } = {}): Promise<HealthCheckResult> {
+    return this.checkIndicators(this.healthIndicators, "check", options.signal);
   }
 
-  async checkReadiness(): Promise<HealthCheckResult> {
-    return this.checkIndicators(this.readinessIndicators, "isReady");
+  async checkReadiness(options: { signal?: AbortSignal } = {}): Promise<HealthCheckResult> {
+    return this.checkIndicators(this.readinessIndicators, "isReady", options.signal);
   }
 
   private async checkIndicators(
     indicators: ReadonlySet<RegisteredIndicator<HealthIndicator | ReadinessIndicator>>,
     method: "check" | "isReady",
+    signal?: AbortSignal,
   ): Promise<HealthCheckResult> {
-    const results = await Promise.all(
-      Array.from(indicators, (registration) => this.checkWithTimeout(registration, method)),
-    );
+    if (signal?.aborted) {
+      const results = Array.from(indicators, (registration) => abortedResult(registration));
+      return { status: results.length === 0 ? "up" : "down", results };
+    }
+
+    const callerController = new AbortController();
+    let onAbort: (() => void) | undefined;
+    const abortPromise = signal
+      ? new Promise<typeof CALLER_ABORTED>((resolve) => {
+          onAbort = () => {
+            resolve(CALLER_ABORTED);
+            callerController.abort();
+          };
+          signal.addEventListener("abort", onAbort, { once: true });
+        })
+      : undefined;
+
+    let results: HealthIndicatorResult[];
+    try {
+      results = await Promise.all(
+        Array.from(indicators, (registration) =>
+          this.checkWithTimeout(registration, method, callerController.signal, abortPromise),
+        ),
+      );
+    } finally {
+      if (onAbort) signal?.removeEventListener("abort", onAbort);
+    }
 
     const status = results.every((r) => r.status === "up") ? "up" : "down";
 
@@ -200,7 +234,11 @@ export class HealthCheckService {
   private async checkWithTimeout(
     registration: RegisteredIndicator<HealthIndicator | ReadinessIndicator>,
     method: "check" | "isReady",
+    callerSignal: AbortSignal,
+    abortPromise?: Promise<typeof CALLER_ABORTED>,
   ): Promise<HealthIndicatorResult> {
+    if (callerSignal.aborted) return abortedResult(registration);
+
     const { id, indicator, timeout: timeoutOverride } = registration;
     const controller = new AbortController();
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -218,7 +256,15 @@ export class HealthCheckService {
         method === "isReady" && "isReady" in indicator
           ? indicator.isReady.bind(indicator)
           : indicator.check.bind(indicator);
-      const result = await Promise.race([checkFn(controller.signal), timeoutPromise]);
+      const signal = abortPromise
+        ? AbortSignal.any([controller.signal, callerSignal])
+        : controller.signal;
+      const result = await Promise.race([
+        checkFn(signal),
+        timeoutPromise,
+        ...(abortPromise ? [abortPromise] : []),
+      ]);
+      if (result === CALLER_ABORTED) return abortedResult(registration);
       return id === undefined ? result : { ...result, name: id };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
