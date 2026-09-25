@@ -156,6 +156,23 @@ describe("Croco failure semantics", () => {
     expect(operation).toHaveBeenCalledTimes(1);
   });
 
+  it("rethrows a Problem declaring retryable=false without running exhaustion recovery", async () => {
+    const template = new RetryTemplate({
+      maxAttempts: 3,
+      backoffPolicy: new NoBackoff(),
+    });
+    const problem = new ClassifiedProviderProblem(ProblemCategory.InternalServerError, false);
+    const operation = vi.fn(async (): Promise<string> => {
+      throw problem;
+    });
+    const recovery = vi.fn(() => "recovered");
+
+    await expect(template.execute(operation, recovery)).rejects.toBe(problem);
+
+    expect(operation).toHaveBeenCalledTimes(1);
+    expect(recovery).not.toHaveBeenCalled();
+  });
+
   it("retries a Conflict Problem declaring retryable=true until attempts are exhausted", async () => {
     const template = new RetryTemplate({
       maxAttempts: 3,

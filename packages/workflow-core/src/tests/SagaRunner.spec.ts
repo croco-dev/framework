@@ -1090,12 +1090,20 @@ describe("SagaRunner", () => {
 
   it.each([
     {
-      signal: "a non-boolean top-level retryable as undeclared",
+      id: "undefined",
+      signal: "a top-level retryable=undefined as undeclared",
       createError: () =>
         Object.assign(new Error("payment provider outage"), { retryable: undefined }),
       expectedAttempts: 2,
     },
     {
+      id: "zero",
+      signal: "a non-boolean top-level retryable=0 as undeclared",
+      createError: () => Object.assign(new Error("payment provider outage"), { retryable: 0 }),
+      expectedAttempts: 2,
+    },
+    {
+      id: "extension-false",
       signal: "a standard Error extension retryable=false as terminal",
       createError: () =>
         Object.assign(new Error("payment provider outage"), {
@@ -1103,11 +1111,11 @@ describe("SagaRunner", () => {
         }),
       expectedAttempts: 1,
     },
-  ])("classifies $signal", async ({ createError, expectedAttempts }) => {
+  ])("classifies $signal", async ({ id, createError, expectedAttempts }) => {
     let attempts = 0;
     const runner = new SagaRunner();
     const definition: SagaDefinition = {
-      name: `explicit-retryability-${String(expectedAttempts)}`,
+      name: `explicit-retryability-${id}`,
       steps: [
         {
           id: "charge-provider",

@@ -110,7 +110,7 @@ class PaymentService {
 
 기본 정책은 `ProblemCategory.InternalServerError`와 `ProblemCategory.TooManyRequests`를 재시도 가능한 transient 실패로 취급합니다. `BadRequest`, `ValidationError`, `BusinessRuleViolation`, `Conflict`, 인증/인가, not-found 계열은 기본적으로 terminal 실패입니다.
 
-오류가 재시도 분류를 명시하면 기본 정책은 category보다 그 값을 먼저 따릅니다. 최상위 `retryable` boolean, 그다음 `extensions.retryable` boolean을 `@croco/problems-core`의 `readExplicitRetryability()`로 읽습니다. 따라서 `extensions.retryable: false`인 `InternalServerError` Problem은 한 번만 실행되고, `extensions.retryable: true`인 `Conflict` Problem은 남은 시도 안에서 재시도됩니다. `noRetryFor`에 해당하는 오류는 명시 분류와 관계없이 재시도하지 않으며, 명시 분류가 없는 오류에는 기존 `retryFor`와 category 규칙이 그대로 적용됩니다.
+오류가 재시도 분류를 명시하면 기본 정책은 category보다 그 값을 먼저 따릅니다. 최상위 `retryable` boolean, 그다음 `extensions.retryable` boolean을 `@croco/problems-core`의 `readExplicitRetryability()`로 읽습니다. 따라서 `extensions.retryable: false`인 `InternalServerError` Problem은 한 번만 실행되고, `extensions.retryable: true`인 `Conflict` Problem은 남은 시도 안에서 재시도됩니다. `noRetryFor`에 해당하는 오류는 명시 분류와 관계없이 재시도하지 않으며, 명시 분류가 없는 오류에는 기존 `retryFor`와 category 규칙이 그대로 적용됩니다. 명시 `false`는 다른 terminal 실패처럼 원래 오류를 바로 throw하므로 recovery 콜백, `@Recover`, exhausted 리스너, `wrapExhausted`를 거치지 않습니다. `Error`가 아닌 값을 throw하면 재시도 엔진이 `Error`로 감싸므로 그 값의 명시 분류는 정책에 전달되지 않습니다.
 
 `LambdaTimeoutGuard`는 다음 재시도를 시작할 시간이 부족하면 `LambdaTimeoutProblem`을 throw합니다. 열린 서킷은 `CircuitBreakerOpenProblem`을 throw하며 category는 `TooManyRequests`입니다. 두 실패 모두 generic `Error`가 아니라 Croco `Problem`이므로 호출자는 코드와 category로 복구 경로를 판단할 수 있습니다.
 

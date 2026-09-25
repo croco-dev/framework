@@ -31,6 +31,17 @@ class TestWorkflowProblem extends Problem {
   }
 }
 
+class ExplicitRetryabilityProblem extends Problem {
+  constructor(retryable: boolean) {
+    super(
+      "workflow-core/test-explicit-retryability",
+      ProblemCategory.Conflict,
+      "explicit retryability outage",
+      { extensions: { retryable } },
+    );
+  }
+}
+
 class InMemoryExecutionStore
   extends ExecutionStore
   implements ExecutionLogStore, ExecutionAttemptStore
@@ -626,6 +637,56 @@ describe("workflow-core", () => {
         metadata: expect.objectContaining({
           workflowContractFingerprint: expect.stringMatching(/^workflow-contract:v2:[a-f0-9]{64}$/),
         }),
+      }),
+    );
+  });
+
+  it.each([
+    {
+      signal: "a Problem extension retryable=true",
+      createError: () => new ExplicitRetryabilityProblem(true),
+      retryable: true,
+      status: "retrying",
+    },
+    {
+      signal: "a non-boolean top-level retryable",
+      createError: () =>
+        Object.assign(new Error("explicit retryability outage"), { retryable: "false" }),
+      retryable: false,
+      status: "failed",
+    },
+  ])("records $signal through the shared explicit retryability rule", async (scenario) => {
+    @Component()
+    class ExplicitRetryabilityTasks {
+      @Task({ name: "billing.explicit-retryability" })
+      run(): never {
+        throw scenario.createError();
+      }
+    }
+
+    @Component()
+    class ExplicitRetryabilityWorkflows {
+      @Workflow({
+        name: "billing-explicit-retryability",
+        steps: ["billing.explicit-retryability"],
+        maxAttempts: 2,
+      })
+      run(): void {}
+    }
+
+    instances.set(ExplicitRetryabilityTasks, new ExplicitRetryabilityTasks());
+    instances.set(ExplicitRetryabilityWorkflows, new ExplicitRetryabilityWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    await expect(runner.execute("billing-explicit-retryability", {})).rejects.toThrow(
+      "explicit retryability outage",
+    );
+
+    const [workflowExecution] = await manager.list({ type: "workflow" });
+    expect(workflowExecution).toEqual(
+      expect.objectContaining({
+        status: scenario.status,
+        error: expect.objectContaining({ retryable: scenario.retryable }),
       }),
     );
   });

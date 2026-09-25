@@ -53,10 +53,11 @@ programmer errors such as `TypeError`, `ReferenceError`, `SyntaxError`, and `Ran
 An explicit classification on the error takes precedence over its category. `readExplicitRetryability()`
 from `@croco/problems-core` reads a top-level `retryable` boolean first and `extensions.retryable`
 second; any other value counts as no classification. The retry-core default policy, idempotency,
-saga steps, and QStash triggers all read the flag through this function, so a provider Problem with
-`extensions.retryable: false` runs once and a `Conflict` Problem with `extensions.retryable: true`
-retries while attempts remain. Programmer errors stay non-retryable even when they declare
-`retryable: true`.
+workflow executions, saga steps, and QStash triggers all read the flag through this function, so a
+provider Problem with `extensions.retryable: false` runs once and a `Conflict` Problem with
+`extensions.retryable: true` retries while attempts remain. In the retry-core default policy,
+`noRetryFor` still wins: its default programmer errors (`TypeError`, `ReferenceError`,
+`SyntaxError`, `RangeError`) are not retried even when they declare `retryable: true`.
 
 That means package authors should classify expected failures before retry sees them:
 
