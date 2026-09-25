@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { AI_INPUT_TOKENS, AI_OUTPUT_TOKENS } from "@croco/ai-usage";
 import type { MeteringService, RecordOptions, UsageRecord } from "@croco/metering-core";
+import { createHttpProblemDetails } from "@croco/protocols-rest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createOpenAIGenerate,
@@ -170,6 +171,9 @@ describe("AI generation receipt recovery", () => {
       status: 500,
     });
     expect(JSON.stringify(failure)).not.toContain((sdkError as Error).message);
+    const publicBody = createHttpProblemDetails(failure as AiProviderUnavailableProblem);
+    expect(publicBody).not.toHaveProperty("cause");
+    expect(JSON.stringify(publicBody)).not.toContain((sdkError as Error).message);
     const restartedReceipts = new SnapshotReceiptStore(receipts.snapshot());
     const restarted = createAiSaasRuntime(runtime.saasRuntime, options, restartedReceipts);
     await expect(restarted.service.generateText(request)).rejects.toThrow();
