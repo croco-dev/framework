@@ -412,6 +412,12 @@ describe("WebhookGateway", () => {
           },
         });
       }
+      await expect(
+        gateway.replay({ provider: "fixture", ...signedRequest() }),
+      ).resolves.toMatchObject({
+        outcome: "failed",
+        record: { status: "failed", retryable: false },
+      });
       expect(handler).toHaveBeenCalledTimes(1);
     },
   );
@@ -427,6 +433,11 @@ describe("WebhookGateway", () => {
       failure: new FixtureHandlerProblem(ProblemCategory.NotFound, { retryable: true }),
       extensions: { retryable: true },
     },
+    {
+      name: "a Problem with a server-error status",
+      failure: new FixtureHandlerProblem(ProblemCategory.InternalServerError),
+      extensions: { retryable: true },
+    },
   ])(
     "wraps retryable reporter failures from $name and re-runs the reporter on redelivery",
     async ({ failure, extensions }) => {
@@ -439,6 +450,11 @@ describe("WebhookGateway", () => {
           .catch((caught: unknown) => caught);
 
         expect(error).toBeInstanceOf(WebhookReporterProblem);
+        expect(error).toMatchObject({
+          code: "webhooks-core/reporter-failed",
+          category: ProblemCategory.InternalServerError,
+          status: 500,
+        });
         expect((error as WebhookReporterProblem).extensions).toEqual({
           provider: "fixture",
           eventId: "evt-1",
@@ -471,6 +487,11 @@ describe("WebhookGateway", () => {
         .catch((caught: unknown) => caught);
 
       expect(error).toBeInstanceOf(WebhookReporterProblem);
+      expect(error).toMatchObject({
+        code: "webhooks-core/reporter-failed",
+        category: ProblemCategory.InternalServerError,
+        status: 500,
+      });
       expect((error as WebhookReporterProblem).extensions).toEqual({
         provider: "fixture",
         eventId: "evt-1",
@@ -478,13 +499,17 @@ describe("WebhookGateway", () => {
         retryable: false,
       });
       expect((error as WebhookReporterProblem).cause).toBe(failure);
-      await expect(gateway.handle(signedRequest("customer.updated"))).resolves.toMatchObject({
-        outcome: "failed",
-        record: {
-          retryable: false,
-          problem: { code: "webhooks-core/reporter-failed", status: 500 },
-        },
-      });
+
+      for (let redelivery = 0; redelivery < 2; redelivery += 1) {
+        await expect(gateway.handle(signedRequest("customer.updated"))).resolves.toMatchObject({
+          outcome: "failed",
+          record: {
+            status: "failed",
+            retryable: false,
+            problem: { code: "webhooks-core/reporter-failed", status: 500 },
+          },
+        });
+      }
       expect(reporter.reportUnknownEvent).toHaveBeenCalledTimes(1);
     },
   );
