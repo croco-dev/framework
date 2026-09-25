@@ -78,7 +78,9 @@ await Context.run({ requestId: "req-123" }, async () => {
 
 Create each loader once and reuse the returned object. Inside one request, a second
 `createBatchLoader()` call with the same name and scope is a different loader and fails with
-`DuplicateBatchLoaderNameProblem`, even when it repeats the same options.
+`DuplicateBatchLoaderNameProblem`, even when it repeats the same options. A custom
+`IBatchLoaderFactory` whose `create()` runs per call, such as through `@BatchLoad`, should
+delegate to `BatchLoaderFactory`, which retrieves request loaders by name.
 
 ### Transaction-Aware Scoping
 

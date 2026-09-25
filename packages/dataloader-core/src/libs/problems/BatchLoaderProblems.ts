@@ -12,6 +12,9 @@ export class BatchResultLengthMismatchProblem extends Problem {
   }
 }
 
+/**
+ * Raised when a different batch loader claims a name and scope already used in the current request.
+ */
 export class DuplicateBatchLoaderNameProblem extends Problem {
   readonly code = "dataloader-core/duplicate-loader-name";
   readonly category = ProblemCategory.InternalServerError;

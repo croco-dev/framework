@@ -5,7 +5,7 @@ prev: false
 title: "DuplicateBatchLoaderNameProblem"
 ---
 
-RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다.
+Raised when a different batch loader claims a name and scope already used in the current request.
 
 ## Extends
 

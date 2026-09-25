@@ -4291,7 +4291,7 @@ Sources:
 
 Sources:
 
-- `packages/dataloader-core/src/libs/problems/BatchLoaderProblems.ts:15:1` (problem-class)
+- `packages/dataloader-core/src/libs/problems/BatchLoaderProblems.ts:18:1` (problem-class)
 
 <a id="desktop-codegen-invalid-contract-graph"></a>
 

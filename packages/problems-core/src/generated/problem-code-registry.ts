@@ -6013,7 +6013,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/dataloader-core/src/libs/problems/BatchLoaderProblems.ts",
-          line: 15,
+          line: 18,
           column: 1,
           kind: "problem-class",
         },
