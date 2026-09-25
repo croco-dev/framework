@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 797,
+  problemCount: 798,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -18575,7 +18575,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 113,
+          line: 114,
           column: 5,
           kind: "problem-constructor",
         },
@@ -18613,6 +18613,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "rpc-codegen/path-param-input-unsupported",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#rpc-codegen-path-param-input-unsupported",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/rpc-codegen/src/libs/generate.ts",
+          line: 1919,
+          column: 38,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
       code: "rpc-codegen/unsupported-form-schema",
       category: "ValidationError",
       status: 422,
@@ -18636,7 +18667,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/rpc-codegen/src/libs/generate.ts",
-          line: 119,
+          line: 120,
           column: 5,
           kind: "problem-constructor",
         },

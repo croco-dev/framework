@@ -5,7 +5,7 @@ import {
   createFrontendActionManifest,
   type FrontendActionManifestEntry,
 } from "@croco/presentation-preset";
-import { Problem, ProblemCategory } from "@croco/problems-core";
+import { CROCO_PROBLEM_CODE_REGISTRY, Problem, ProblemCategory } from "@croco/problems-core";
 import {
   CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE,
   type ContractGraph,
@@ -2026,7 +2026,7 @@ void handleMissingProblemBranch;
 `;
 
       expect(content).toContain(
-        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, serializeRpcQueryKeyInput } from './rpc';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcProblemDetailsFor } from './rpc';",
+        "import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, encodeRpcPathSegment, serializeRpcQueryKeyInput } from './rpc';\nimport type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcProblemDetailsFor } from './rpc';",
       );
       expect(content).toContain(
         "export type GetProblem = RpcDeclaredProblem<'USER_NOT_FOUND', 'NotFound', 404> | RpcDeclaredProblem<'USER_FORBIDDEN', 'Forbidden', 403>;",
@@ -2452,7 +2452,7 @@ void handleMissingProblemBranch;
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
-      "const path = `/users/${encodeURIComponent(String(input.path.id))}`;",
+      "const path = (): string => `/users/${encodeRpcPathSegment(userContractRoutes[0], 'id', input.path.id)}`;",
     );
     expect(content).toContain(
       "const request = createRpcClientRequest(userContractRoutes[0], 'query', path, { method: 'GET' }, options, config);",
@@ -2530,10 +2530,10 @@ void handleMissingProblemBranch;
         "createRpcClientRequest(vectorContractRoutes[5], 'query', '/lines/se\\u2028p\\u2029arator', { method: 'GET' }, options, config);",
       );
       expect(content).toContain(
-        "const path = `/users/o\\'clock/${encodeURIComponent(String(input.path.id))}`;",
+        "const path = (): string => `/users/o\\'clock/${encodeRpcPathSegment(vectorContractRoutes[6], 'id', input.path.id)}`;",
       );
       expect(content).toContain(
-        "const path = `/tick\\`tock/${encodeURIComponent(String(input.path.id))}`;",
+        "const path = (): string => `/tick\\`tock/${encodeRpcPathSegment(vectorContractRoutes[7], 'id', input.path.id)}`;",
       );
       assertGeneratedPackageTypechecks([
         "index.ts",
@@ -2621,9 +2621,11 @@ void handleMissingProblemBranch;
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
-      "const path = `/pairs/${encodeURIComponent(String(input.path.id))}/${encodeURIComponent(String(input.path.id2))}`;",
+      "const path = (): string => `/pairs/${encodeRpcPathSegment(pairContractRoutes[0], 'id', input.path.id)}/${encodeRpcPathSegment(pairContractRoutes[0], 'id2', input.path.id2)}`;",
     );
-    expect(content).not.toContain("${encodeURIComponent(String(input.path.id))}2");
+    expect(content).not.toContain(
+      "${encodeRpcPathSegment(pairContractRoutes[0], 'id', input.path.id)}2",
+    );
   });
 
   it("should bracket-access path parameters that are not JavaScript identifiers", () => {
@@ -2653,7 +2655,7 @@ void handleMissingProblemBranch;
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
-      "const path = `/users/${encodeURIComponent(String(input.path['user-id']))}`;",
+      "const path = (): string => `/users/${encodeRpcPathSegment(userContractRoutes[0], 'user-id', input.path['user-id'])}`;",
     );
   });
 
@@ -2677,9 +2679,95 @@ void handleMissingProblemBranch;
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
-      "const path = `/assets/${encodeURIComponent(String(input.path.id))}`;",
+      "const path = (): string => `/assets/${encodeRpcPathSegment(assetContractRoutes[0], 'id', input.path.id)}`;",
     );
   });
+
+  it("should reject dot-segment path parameters as validation Problems", () => {
+    const routes: RouteIR[] = [
+      {
+        controllerName: "UserController",
+        methodName: "get",
+        httpMethod: "GET",
+        path: "/users/:id",
+        routeContract: null,
+        params: [{ kind: "path", name: "id", schema: null }],
+        inputSchema: null,
+        inputSchemas: PATH_INPUT_SCHEMAS,
+        outputSchema: null,
+        domain: null,
+      },
+    ];
+
+    generateClientFiles(routes, TEMP_DIR);
+    const rpcModule = loadGeneratedRpcModule();
+    const encodeRpcPathSegment = rpcModule.encodeRpcPathSegment as (
+      route: { readonly routeId: string },
+      name: string,
+      value: unknown,
+    ) => string;
+    const route = { routeId: "UserController.get" };
+    const error = captureThrownError(() => encodeRpcPathSegment(route, "id", ".."));
+
+    expect(error).toBeInstanceOf(rpcModule.RpcPathParamInputError as typeof Problem);
+    assertProblem(error);
+    expect(error).toMatchObject({
+      category: ProblemCategory.ValidationError,
+      code: "rpc-codegen/path-param-input-unsupported",
+      routeId: "UserController.get",
+      param: "id",
+      status: 422,
+    });
+    expect(error.toJSON()).toMatchObject({
+      code: "rpc-codegen/path-param-input-unsupported",
+      routeId: "UserController.get",
+      param: "id",
+      status: 422,
+    });
+    expect(encodeRpcPathSegment(route, "id", "a/b c")).toBe("a%2Fb%20c");
+    expect(
+      CROCO_PROBLEM_CODE_REGISTRY.problems.find(
+        (problem) => problem.code === "rpc-codegen/path-param-input-unsupported",
+      ),
+    ).toMatchObject({ category: ProblemCategory.ValidationError, status: 422 });
+  });
+
+  it(
+    "should typecheck path and query clients with the frontend-problems runtime",
+    () => {
+      const routes: RouteIR[] = [
+        {
+          controllerName: "UserController",
+          methodName: "search",
+          httpMethod: "GET",
+          path: "/users/:id/posts",
+          routeContract: null,
+          params: [
+            { kind: "path", name: "id", schema: null },
+            { kind: "query", name: "page", schema: null },
+          ],
+          inputSchema: null,
+          inputSchemas: {
+            body: null,
+            path: z.object({ id: z.string() }) as any,
+            query: z.object({ page: z.string() }) as any,
+            headers: null,
+          },
+          outputSchema: null,
+          domain: null,
+        },
+      ];
+
+      generateClientFiles(routes, TEMP_DIR, { problemRuntime: "frontend-problems" });
+      const rpcContent = fs.readFileSync(path.join(TEMP_DIR, "rpc.ts"), "utf-8");
+
+      expect(rpcContent).toContain("} from '@croco/frontend-problems';");
+      expect(rpcContent).toContain("export class RpcPathParamInputError extends Problem");
+      expect(rpcContent).toContain("export function encodeRpcPathSegment(");
+      assertGeneratedPackageTypechecks(["index.ts", "rpc.ts", "user.ts"]);
+    },
+    GENERATED_CLIENT_TYPECHECK_TIMEOUT_MS,
+  );
 
   it.each([
     { label: "omitted query", query: undefined, headers: {}, omit: "query" },
@@ -3486,10 +3574,10 @@ void updateResult;
 
     const content = fs.readFileSync(files[0], "utf-8");
     expect(content).toContain(
-      "const path = `/users/${encodeURIComponent(String(input.path.id))}`;",
+      "const path = (): string => `/users/${encodeRpcPathSegment(userContractRoutes[0], 'id', input.path.id)}`;",
     );
     expect(content).toContain("const query = serializeQueryParams(input.query);");
-    expect(content).toContain("const url = query ? `${path}?${query}` : path;");
+    expect(content).toContain("const url = (): string => (query ? `${path()}?${query}` : path());");
     expect(content).toContain(
       "const request = createRpcClientRequest(userContractRoutes[0], 'mutation', url, { method: 'PATCH', body: JSON.stringify(input.body), headers: { 'Content-Type': 'application/json' } }, options, config);",
     );
