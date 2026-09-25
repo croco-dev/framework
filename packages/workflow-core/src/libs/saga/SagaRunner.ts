@@ -499,12 +499,14 @@ export class SagaRunner {
     }
 
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      record = await this.replaceStepRecord(execution.id, {
+      const runningRecord = {
         ...record,
         status: "running",
         attempts: attempt,
         startedAt: record.startedAt ?? new Date(),
-      });
+      } satisfies SagaStepExecutionRecord;
+      delete runningRecord.error;
+      record = await this.replaceStepRecord(execution.id, runningRecord);
 
       const outboxMessages: SagaOutboxRecord[] = [];
       const context: SagaStepContext = {
