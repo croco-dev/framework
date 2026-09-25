@@ -1,6 +1,6 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
-/** A score, weight, or threshold is outside the supported health-score domain. */
+/** A signal category, score, weight, or threshold is outside the supported health-score domain. */
 export class InvalidHealthScoreInputProblem extends Problem {
   readonly code = "customer-health-core/invalid-score-input";
   readonly category = ProblemCategory.ValidationError;
@@ -8,7 +8,7 @@ export class InvalidHealthScoreInputProblem extends Problem {
 
   constructor(
     readonly input: string,
-    value: number,
+    value: number | string,
     readonly expected: string,
   ) {
     const receivedValue = String(value);

@@ -44,6 +44,34 @@ describe("HealthScoreCalculator", () => {
       expect(result.categoryScores.usage).toBe(66);
     });
 
+    it("rejects a signal outside the supported categories", () => {
+      const profile: HealthScoreProfile = {
+        id: "default",
+        name: "Default Profile",
+        weights: { usage: 1, business: 0, engagement: 0 },
+        thresholds: { healthy: 80, atRisk: 50 },
+      };
+      const signals = [
+        {
+          category: "security",
+          name: "security_score",
+          value: 90,
+          weight: 1,
+          rawValue: 90,
+          collectedAt: new Date(),
+        },
+      ];
+
+      expect(() => calculator.calculate(signals, profile)).toThrow(
+        expect.objectContaining({
+          code: "customer-health-core/invalid-score-input",
+          input: "signals[0].category",
+          receivedValue: "security",
+          expected: "usage, business, or engagement",
+        }),
+      );
+    });
+
     it("should return score 0 and critical status for empty signals", () => {
       const signals: HealthSignal[] = [];
 
@@ -179,6 +207,11 @@ describe("HealthScoreCalculator", () => {
       expect(result.categoryScores.usage).toBe(80);
       expect(result.categoryScores.business).toBe(60);
       expect(result.categoryScores.engagement).toBe(40);
+      expect(Object.keys(result.categoryScores).sort()).toEqual([
+        "business",
+        "engagement",
+        "usage",
+      ]);
     });
 
     it.each([Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, -1, 101])(

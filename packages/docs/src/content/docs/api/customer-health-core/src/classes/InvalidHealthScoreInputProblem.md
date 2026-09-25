@@ -5,7 +5,7 @@ prev: false
 title: "InvalidHealthScoreInputProblem"
 ---
 
-A score, weight, or threshold is outside the supported health-score domain.
+A signal category, score, weight, or threshold is outside the supported health-score domain.
 
 ## Extends
 
@@ -25,7 +25,7 @@ A score, weight, or threshold is outside the supported health-score domain.
 
 ##### value
 
-`number`
+`string` \| `number`
 
 ##### expected
 

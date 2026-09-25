@@ -54,11 +54,6 @@ export class HealthScoreCalculator {
     assertScore("profile.thresholds.healthy", profile.thresholds.healthy);
     assertScore("profile.thresholds.atRisk", profile.thresholds.atRisk);
 
-    for (const [index, signal] of signals.entries()) {
-      assertScore(`signals[${index}].value`, signal.value);
-      assertWeight(`signals[${index}].weight`, signal.weight);
-    }
-
     if (signals.length === 0) {
       return {
         tenantId: "",
@@ -87,8 +82,17 @@ export class HealthScoreCalculator {
       engagement: 0,
     };
 
-    for (const signal of signals) {
-      const category = signal.category as SignalCategory;
+    for (const [index, signal] of signals.entries()) {
+      const category = signal.category;
+      if (category !== "usage" && category !== "business" && category !== "engagement") {
+        throw new InvalidHealthScoreInputProblem(
+          `signals[${index}].category`,
+          category,
+          "usage, business, or engagement",
+        );
+      }
+      assertScore(`signals[${index}].value`, signal.value);
+      assertWeight(`signals[${index}].weight`, signal.weight);
       categoryScores[category] += signal.value * signal.weight;
       categoryWeights[category] += signal.weight;
     }
