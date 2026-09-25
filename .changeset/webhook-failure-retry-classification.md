@@ -4,4 +4,4 @@
 "@croco/problems-core": patch
 ---
 
-Keep a handler or unknown-event reporter Problem's retry classification when the webhook gateway wraps it, so a non-retryable failure is recorded once and redelivered events return the stored failure without running the handler again. `WebhookDispatchProblem` and `WebhookReporterProblem` now carry `extensions.retryable` from a Problem cause, and `@croco/idempotency-core` exports its default rule as `isRetryableHandlerFailure`.
+Keep a handler or unknown-event reporter Problem's retry classification when the webhook gateway wraps it, so a non-retryable failure is recorded once and redelivered events return the stored failure without running the handler again. A client-error Problem without an explicit `retryable` flag now stays failed for the idempotency TTL; mark transient client errors with `extensions.retryable: true`. `WebhookDispatchProblem` and `WebhookReporterProblem` carry `extensions.retryable` from a Problem cause, and `@croco/idempotency-core` exports its default rule as `isRetryableHandlerFailure`.

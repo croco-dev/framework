@@ -86,6 +86,12 @@ Handler failures surface as `WebhookDispatchProblem` and unknown-event reporter 
 return `outcome: "failed"` without running the handler again. Retryable Problems and other errors
 leave the event open, so the next delivery runs the handler again.
 
+A client-error Problem without an explicit flag (any 4xx category except `TooManyRequests`) is
+non-retryable, so the stored failure lasts for `idempotencyTtlMs` (24 hours by default). Mark a
+transient client error such as an out-of-order event with `extensions.retryable: true` to keep
+redeliveries running. `replay()` uses the same idempotency key and returns the stored failure until
+the record expires.
+
 ## Unknown Events
 
 `unknownEventPolicy` is required and explicit:
