@@ -364,6 +364,8 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`QuotaExceededProblem`](/api/metering-core/src/classes/quotaexceededproblem/)
 - [`RedisProblem`](/api/metering-core/src/classes/redisproblem/)
 - [`UsageFlushConfigurationProblem`](/api/metering-core/src/classes/usageflushconfigurationproblem/)
+- [`DuplicateMeterDefinitionsProblem`](/api/metering-drizzle/src/classes/duplicatemeterdefinitionsproblem/)
+- [`InvalidMeterDefinitionProblem`](/api/metering-drizzle/src/classes/invalidmeterdefinitionproblem/)
 - [`UsageEnvelopeConfigurationProblem`](/api/metering-drizzle/src/classes/usageenvelopeconfigurationproblem/)
 - [`MissingUpstashMeteringConfigProblem`](/api/metering-upstash/src/classes/missingupstashmeteringconfigproblem/)
 - [`UpstashMeteringUpstreamProblem`](/api/metering-upstash/src/classes/upstashmeteringupstreamproblem/)

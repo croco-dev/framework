@@ -1,4 +1,6 @@
 export { DrizzleMeterRepository } from "./DrizzleMeterRepository";
+export { DuplicateMeterDefinitionsProblem } from "./problems/DuplicateMeterDefinitionsProblem";
+export { InvalidMeterDefinitionProblem } from "./problems/InvalidMeterDefinitionProblem";
 export { UsageEnvelopeConfigurationProblem } from "./problems/UsageEnvelopeConfigurationProblem";
 /**
  * PostgreSQL, SQLite용 미터 스키마입니다.

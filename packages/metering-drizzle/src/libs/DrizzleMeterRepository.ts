@@ -4,10 +4,17 @@ import { ProblemFactory } from "@croco/problems-core";
 
 import type { AnyColumn, SQL, Table } from "drizzle-orm";
 import type { ILogger } from "@croco/framework-context";
-import type { MeterDefinition, MeterRegistrationOptions, UsageRecord } from "@croco/metering-core";
+import type {
+  MeterAggregation,
+  MeterBillingIntent,
+  MeterDefinition,
+  MeterRegistrationOptions,
+  UsageRecord,
+} from "@croco/metering-core";
 import type { TxManager } from "@croco/tx-core";
 import type { DrizzleInsertCapability, DrizzleSelectCapability } from "@croco/tx-drizzle";
 
+import { InvalidMeterDefinitionProblem } from "./problems/InvalidMeterDefinitionProblem";
 import { UsageEnvelopeConfigurationProblem } from "./problems/UsageEnvelopeConfigurationProblem";
 
 const DRIZZLE_JSON_COLUMN_TYPES = new Set([
@@ -19,6 +26,15 @@ const DRIZZLE_JSON_COLUMN_TYPES = new Set([
   "SQLiteBlobJson",
   "SQLiteTextJson",
 ]);
+
+const METER_BILLING_VALUES = ["local", "required"] as const satisfies readonly MeterBillingIntent[];
+const METER_AGGREGATION_VALUES = ["COUNT", "SUM"] as const satisfies readonly MeterAggregation[];
+
+type StoredMeterBillingContract = {
+  readonly billing: MeterBillingIntent;
+  readonly aggregation: MeterAggregation | null;
+  readonly unit: string | null;
+};
 
 type DrizzleQueryResult<T> = PromiseLike<T>;
 
@@ -38,7 +54,12 @@ type DrizzleSelectQuery = {
 
 type DrizzleInsertValuesQuery = {
   onConflictDoNothing: (config?: never) => DrizzleQueryResult<unknown>;
-  returning(): DrizzleQueryResult<unknown[]>;
+  onConflictDoUpdate(config: {
+    target: AnyColumn | SQL | (AnyColumn | SQL)[];
+    set: Record<string, unknown>;
+  }): {
+    returning(): DrizzleQueryResult<unknown[]>;
+  };
 };
 
 type DrizzlePostgresInsertValuesQuery = Omit<DrizzleInsertValuesQuery, "onConflictDoNothing"> & {
@@ -54,6 +75,10 @@ type DrizzleInsertQuery = {
 
 type DrizzleMeterQueryClient = DrizzleInsertCapability<(table: Table) => DrizzleInsertQuery> &
   DrizzleSelectCapability<() => DrizzleSelectQuery>;
+
+function isOneOf<const T extends string>(values: readonly T[], value: unknown): value is T {
+  return values.some((candidate) => candidate === value);
+}
 
 function isPostgresInsertValuesQuery(
   query: DrizzleInsertValuesQuery,
@@ -75,6 +100,9 @@ export type MeterTable = {
   tenantId: AnyColumn;
   meterId: AnyColumn;
   type: AnyColumn;
+  billing: AnyColumn;
+  aggregation: AnyColumn;
+  unit: AnyColumn;
   quota: AnyColumn;
   allowOverQuota: AnyColumn;
   metadata: AnyColumn;
@@ -165,34 +193,54 @@ export class DrizzleMeterRepository extends MeterRepository {
 
   /**
    * 미터 정의를 저장하고 저장된 결과를 반환합니다.
+   *
+   * 같은 `(tenantId, meterId)`가 이미 있으면 새 행을 추가하지 않고 그 행을 이번 등록값 전체로 갱신합니다.
+   * 생략한 `quota`, `aggregation`, `unit`, `metadata`는 비워지고 `billing`은 `local`, `allowOverQuota`는 `false`가
+   * 되며, `id`와 `createdAt`은 처음 저장한 값을 유지합니다.
    */
   async save(meter: MeterRegistrationOptions): Promise<MeterDefinition> {
     const client = this.getClient();
     const now = new Date();
 
     this.validateQuota(meter.quota);
+    const billingContract = {
+      billing: meter.billing === undefined ? "local" : meter.billing,
+      aggregation: meter.aggregation ?? null,
+      unit: meter.unit ?? null,
+    };
+    this.assertStoredBillingContract(meter, billingContract);
 
-    const values = {
-      tenantId: meter.tenantId,
-      meterId: meter.meterId,
+    const definition = {
       type: meter.type,
+      ...billingContract,
       quota: meter.quota ?? null,
       allowOverQuota: meter.allowOverQuota ? 1 : 0,
       metadata: this.encodeJsonColumn(meter.metadata ?? {}, this.meterSchema.metadata),
-      createdAt: this.encodeDateColumn(now, this.meterSchema.createdAt),
       updatedAt: this.encodeDateColumn(now, this.meterSchema.updatedAt),
     };
 
-    const [inserted] = await client.insert(this.meterTable).values(values).returning();
+    const [saved] = await client
+      .insert(this.meterTable)
+      .values({
+        tenantId: meter.tenantId,
+        meterId: meter.meterId,
+        ...definition,
+        createdAt: this.encodeDateColumn(now, this.meterSchema.createdAt),
+      })
+      .onConflictDoUpdate({
+        target: [this.meterSchema.tenantId, this.meterSchema.meterId],
+        set: definition,
+      })
+      .returning();
 
-    if (!inserted) {
+    if (!saved) {
       throw ProblemFactory.internalServerError(
         "meter/insert-failed",
         "Failed to persist meter definition",
       );
     }
 
-    return this.mapToMeterDefinition(inserted as Record<string, unknown>);
+    return this.mapToMeterDefinition(saved as Record<string, unknown>);
   }
 
   /**
@@ -337,18 +385,40 @@ export class DrizzleMeterRepository extends MeterRepository {
   private mapToMeterDefinition(raw: Record<string, unknown>): MeterDefinition {
     const quota = raw.quota === null || raw.quota === undefined ? undefined : Number(raw.quota);
     this.validateQuota(quota);
+    const tenantId = String(raw.tenantId);
+    const meterId = String(raw.meterId);
+    const billingContract = { billing: raw.billing, aggregation: raw.aggregation, unit: raw.unit };
+    this.assertStoredBillingContract({ tenantId, meterId }, billingContract);
 
     return {
       id: String(raw.id),
-      tenantId: String(raw.tenantId),
-      meterId: String(raw.meterId),
+      tenantId,
+      meterId,
       type: String(raw.type) as MeterDefinition["type"],
+      billing: billingContract.billing,
+      aggregation: billingContract.aggregation ?? undefined,
+      unit: billingContract.unit ?? undefined,
       quota,
       allowOverQuota: Boolean(raw.allowOverQuota),
       metadata: this.deserializeMetadata(raw.metadata),
       createdAt: this.parseDate(raw.createdAt),
       updatedAt: this.parseDate(raw.updatedAt),
     };
+  }
+
+  private assertStoredBillingContract(
+    meter: Pick<MeterDefinition, "tenantId" | "meterId">,
+    stored: { readonly billing: unknown; readonly aggregation: unknown; readonly unit: unknown },
+  ): asserts stored is StoredMeterBillingContract {
+    if (!isOneOf(METER_BILLING_VALUES, stored.billing)) {
+      throw new InvalidMeterDefinitionProblem(meter, "billing", stored.billing);
+    }
+    if (stored.aggregation !== null && !isOneOf(METER_AGGREGATION_VALUES, stored.aggregation)) {
+      throw new InvalidMeterDefinitionProblem(meter, "aggregation", stored.aggregation);
+    }
+    if (stored.unit !== null && typeof stored.unit !== "string") {
+      throw new InvalidMeterDefinitionProblem(meter, "unit", stored.unit);
+    }
   }
 
   private validateQuota(quota: number | undefined): void {

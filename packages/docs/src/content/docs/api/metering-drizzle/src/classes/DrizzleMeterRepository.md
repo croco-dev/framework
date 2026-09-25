@@ -131,6 +131,10 @@ Enforce uniqueness in persistent storage; an in-process cache is insufficient.
 
 미터 정의를 저장하고 저장된 결과를 반환합니다.
 
+같은 `(tenantId, meterId)`가 이미 있으면 새 행을 추가하지 않고 그 행을 이번 등록값 전체로 갱신합니다.
+생략한 `quota`, `aggregation`, `unit`, `metadata`는 비워지고 `billing`은 `local`, `allowOverQuota`는 `false`가
+되며, `id`와 `createdAt`은 처음 저장한 값을 유지합니다.
+
 #### Parameters
 
 ##### meter
