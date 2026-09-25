@@ -1,9 +1,4 @@
-import {
-  GENERATED_NODE_ENGINE_RANGE,
-  GENERATED_NODE_VERSION,
-  SAAS_GENERATED_NODE_ENGINE_RANGE,
-  SAAS_GENERATED_NODE_VERSION,
-} from "./node-runtime.js";
+import { GENERATED_NODE_ENGINE_RANGE, GENERATED_NODE_VERSION } from "./node-runtime.js";
 import { isSaasPreset } from "./options.js";
 import type { GeneratorOptions } from "./types.js";
 
@@ -63,12 +58,6 @@ export function createGenerationResult(
   options: GeneratorOptions,
   runtimePlatform: GenerationRuntimePlatform,
 ): GenerationResult {
-  const saasPreset = isSaasPreset(options.preset);
-  const nodeRequirement = saasPreset
-    ? SAAS_GENERATED_NODE_ENGINE_RANGE
-    : GENERATED_NODE_ENGINE_RANGE;
-  const nodeVersion = saasPreset ? SAAS_GENERATED_NODE_VERSION : GENERATED_NODE_VERSION;
-
   return {
     ok: true,
     code: "create-croco-app/project-created",
@@ -76,8 +65,8 @@ export function createGenerationResult(
     projectName: options.projectName,
     preset: options.preset,
     packageManager: "pnpm",
-    nodeRequirement,
-    nodeRecovery: `Run nvm install ${nodeVersion} && nvm use ${nodeVersion}.`,
+    nodeRequirement: GENERATED_NODE_ENGINE_RANGE,
+    nodeRecovery: `Run nvm install ${GENERATED_NODE_VERSION} && nvm use ${GENERATED_NODE_VERSION}.`,
     configuration: createResolvedGenerationConfiguration(options, runtimePlatform),
     artifacts: createGenerationArtifacts(options),
     postActions: {

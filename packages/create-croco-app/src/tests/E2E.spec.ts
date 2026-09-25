@@ -558,8 +558,8 @@ describe("E2E: generate()", () => {
     expect(existsSync(join(testDir, "pnpm-workspace.yaml"))).toBe(true);
     expect(existsSync(join(testDir, "turbo.json"))).toBe(true);
     expect(existsSync(join(testDir, "tsconfig.json"))).toBe(true);
-    expect(readPackageJson(join(testDir, "package.json")).engines?.node).toBe(">=22");
-    expect(readFileSync(join(testDir, ".nvmrc"), "utf8")).toBe("22\n");
+    expect(readPackageJson(join(testDir, "package.json")).engines?.node).toBe(">=24");
+    expect(readFileSync(join(testDir, ".nvmrc"), "utf8")).toBe("24\n");
     const readme = readFileSync(join(testDir, "README.md"), "utf8");
     expect(readme).toContain("Blank Croco workspace");
     expect(readme).toContain("pnpm install");
@@ -567,11 +567,11 @@ describe("E2E: generate()", () => {
     expect(readme).toContain("pnpm typecheck");
     expect(readme).toContain("expected success state");
     expect(readme).toContain("Recovery");
-    expect(readme).toContain("Dependency installation and builds require Node.js >=22");
+    expect(readme).toContain("Dependency installation and builds require Node.js >=24");
     expect(readme).toContain(
       "browser and Cloudflare Workers outputs still deploy without a Node.js runtime",
     );
-    expect(readme).toContain("nvm install 22");
+    expect(readme).toContain("nvm install 24");
     expect(
       JSON.parse(readFileSync(join(testDir, "croco-runtime-capability.manifest.json"), "utf8")),
     ).toMatchObject({
@@ -1516,10 +1516,10 @@ describe("E2E: generate()", () => {
     );
     const readme = readFileSync(join(testDir, "README.md"), "utf8");
 
-    expect(rootPackageJson.engines?.node).toBe(">=22.5");
-    expect(readFileSync(join(testDir, ".nvmrc"), "utf8")).toBe("22.5\n");
-    expect(readme).toContain("Dependency installation and builds require Node.js >=22.5");
-    expect(readme).toContain("nvm use 22.5");
+    expect(rootPackageJson.engines?.node).toBe(">=24");
+    expect(readFileSync(join(testDir, ".nvmrc"), "utf8")).toBe("24\n");
+    expect(readme).toContain("Dependency installation and builds require Node.js >=24");
+    expect(readme).toContain("nvm use 24");
 
     expect(rootPackageJson.scripts).toMatchObject({
       typecheck: "turbo typecheck",

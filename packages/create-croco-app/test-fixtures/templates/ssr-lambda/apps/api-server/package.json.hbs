@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsup src/lambda.ts --format esm --platform node --target node22 --out-dir ../../dist/api --clean",
+    "build": "tsup src/lambda.ts --format esm --platform node --target node24 --out-dir ../../dist/api --clean",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.146",
-    "@types/node": "^22",
+    "@types/node": "^24",
     "tsx": "^4.20.3",
     "tsup": "^8.5.1",
     "typescript": "^5.8.0"

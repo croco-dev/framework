@@ -126,5 +126,5 @@ API for applications that separate this boundary.
 
 ## Prerequisites
 
-- Node.js >=22 (run `nvm install 22 && nvm use 22` if your current version is unsupported)
-- pnpm (install via `corepack enable && corepack prepare pnpm@latest --activate`)
+- Node.js and pnpm at the versions pinned by the repository (run `mise install` at the repository root; see
+  [CONTRIBUTING.md](../../CONTRIBUTING.md#prerequisites))
