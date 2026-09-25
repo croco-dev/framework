@@ -163,6 +163,8 @@ Clock이 유효하지 않은 `Date`를 반환하면 `IMPERSONATION_CONFIGURATION
 경우 provider identity와 일치해야 하며, 모든 검증이 성공한 뒤 `ImpersonationStore.commitStart()`로
 actor별 세션과 시작 event intent를 원자적으로 저장합니다. 같은 actor의 동시 요청 중 하나만 성공하고 나머지는
 `NestedImpersonationProblem`으로 거부됩니다.
+이미 impersonation 중인 컨텍스트나 impersonation 상태를 판별할 수 없는 컨텍스트에서는 새 세션을 시작할 수 없습니다.
+두 경우 모두 principal을 조회하거나 세션과 시작 이벤트를 만들기 전에 `NestedImpersonationProblem`으로 거부됩니다.
 
 `end`도 같은 principal과 전역 `impersonation:manage` 권한을 검증하며, 세션을 시작한 원래 impersonator만 종료할 수
 있습니다. 인증, 권한, 요청 identity 또는 세션 actor 검증이 실패하면 세션은 유지되고 종료 이벤트도 발행되지 않습니다.

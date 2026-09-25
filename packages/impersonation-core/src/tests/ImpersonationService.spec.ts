@@ -488,6 +488,55 @@ describe("ImpersonationService", () => {
       expect(eventPublisher.events).toHaveLength(0);
     });
 
+    it.each([
+      ["effective user", "user-123"],
+      ["original actor", "admin-1"],
+    ])(
+      "rejects an active impersonation context with the %s principal",
+      async (_mode, principalId) => {
+        const originalSession = await service.start(context("admin-1"), "user-123");
+        const targetLookupCount = authProvider.targetLookupCount;
+        authProvider.principal = { id: principalId, permissions: ["impersonation:manage"] };
+        eventPublisher.clear();
+        store.commitStartCount = 0;
+        const impersonatedContext = { ...context("user-123"), impersonation: originalSession };
+
+        await expect(service.start(impersonatedContext, "user-456")).rejects.toMatchObject({
+          code: "NESTED_IMPERSONATION_NOT_ALLOWED",
+        });
+
+        expect(store.commitStartCount).toBe(0);
+        expect(authProvider.targetLookupCount).toBe(targetLookupCount);
+        expect(await store.find(originalSession.sessionId)).toEqual(originalSession);
+        expect(await store.findByImpersonator("user-123")).toBeNull();
+        expect(eventPublisher.events).toHaveLength(0);
+      },
+    );
+
+    it.each([
+      ["malformed", { sessionId: "imp-123" }],
+      [
+        "expired",
+        {
+          sessionId: "imp-123",
+          impersonatorId: "admin-1",
+          targetUserId: "user-123",
+          startedAt: new Date(Date.now() - 60_000),
+          expiresAt: new Date(Date.now() - 1),
+        },
+      ],
+    ])("rejects a %s impersonation context without side effects", async (_kind, impersonation) => {
+      const invalidContext = { ...context("admin-1"), impersonation };
+
+      await expect(service.start(invalidContext, "user-123")).rejects.toMatchObject({
+        code: "NESTED_IMPERSONATION_NOT_ALLOWED",
+      });
+
+      expect(authProvider.targetLookupCount).toBe(0);
+      expectNoStartSideEffects();
+      expect(await store.findByImpersonator("admin-1")).toBeNull();
+    });
+
     it("allows only one concurrent start for the same verified principal", async () => {
       const concurrentStore = new InMemoryImpersonationStore();
       const concurrentPublisher = new MockLifecycleEventPublisher();
