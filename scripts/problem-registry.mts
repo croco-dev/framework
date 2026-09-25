@@ -2939,6 +2939,28 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "metering-drizzle/duplicate-meter-definitions": recovery({
+    cause:
+      "The meters table holds several rows for one (tenant_id, meter_id), so the meter definition migration cannot create its unique index.",
+    userAction:
+      "Do not rerun the migration until the duplicate meter definitions are resolved; it fails the same way each time.",
+    operatorAction:
+      "Use extensions.duplicates to find each duplicated (tenant_id, meter_id), inspect those rows in the meters table to choose one to keep, delete the others, then rerun the migration.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "metering-drizzle/invalid-meter-definition": recovery({
+    cause:
+      "A meter definition passed to save, or a meter row read from the meters table, has a billing, aggregation, or unit value outside the meter contract.",
+    userAction:
+      "Do not retry with the same meter definition; register the meter with a supported billing, aggregation, and unit.",
+    operatorAction:
+      "Use the tenantId, meterId, field, and receivedValue extensions to correct the registration or the stored row, and confirm that meterTable property names match the MeterTable keys.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "retry-core/success-hook-failed": recovery({
     cause:
       "The business callback completed successfully, but its onSuccess observation hook failed afterward.",

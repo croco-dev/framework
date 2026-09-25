@@ -96,6 +96,9 @@ Meter 정의 조회 (tenantId + meterId로 검색)
 
 Meter 정의 등록 (정적 + 동적 모두 사용)
 
+같은 `tenantId`와 `meterId`로 다시 등록하면 정의를 추가하지 않고 저장된 정의 하나를 이번 등록값 전체로
+교체합니다. 조회는 항상 마지막으로 등록한 정의 하나를 반환해야 합니다.
+
 #### Parameters
 
 ##### meter

@@ -21,17 +21,24 @@ import {
 /**
  * PostgreSQL용 미터 정의 스키마입니다.
  */
-export const metersPg = pgTable("meters", {
-  id: uuid("id").defaultRandom().primaryKey(),
-  tenantId: text("tenant_id").notNull(),
-  meterId: text("meter_id").notNull(),
-  type: text("type").notNull(),
-  quota: bigint("quota", { mode: "number" }),
-  allowOverQuota: integer("allow_over_quota").notNull().default(0),
-  metadata: jsonb("metadata").notNull().default({}),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+export const metersPg = pgTable(
+  "meters",
+  {
+    id: uuid("id").defaultRandom().primaryKey(),
+    tenantId: text("tenant_id").notNull(),
+    meterId: text("meter_id").notNull(),
+    type: text("type").notNull(),
+    billing: text("billing").notNull().default("local"),
+    aggregation: text("aggregation"),
+    unit: text("unit"),
+    quota: bigint("quota", { mode: "number" }),
+    allowOverQuota: integer("allow_over_quota").notNull().default(0),
+    metadata: jsonb("metadata").notNull().default({}),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("meters_tenant_meter_unique").on(table.tenantId, table.meterId)],
+);
 
 /**
  * PostgreSQL용 사용량 기록 스키마입니다.
@@ -64,17 +71,24 @@ export const usageRecordsPg = pgTable(
 /**
  * SQLite용 미터 정의 스키마입니다.
  */
-export const metersSqlite = sqliteTable("meters", {
-  id: sqliteInteger("id").primaryKey({ autoIncrement: true }),
-  tenantId: sqliteText("tenant_id").notNull(),
-  meterId: sqliteText("meter_id").notNull(),
-  type: sqliteText("type").notNull(),
-  quota: sqliteInteger("quota"),
-  allowOverQuota: sqliteInteger("allow_over_quota").notNull().default(0),
-  metadata: sqliteText("metadata").notNull().default("{}"),
-  createdAt: sqliteInteger("created_at").notNull(),
-  updatedAt: sqliteInteger("updated_at").notNull(),
-});
+export const metersSqlite = sqliteTable(
+  "meters",
+  {
+    id: sqliteInteger("id").primaryKey({ autoIncrement: true }),
+    tenantId: sqliteText("tenant_id").notNull(),
+    meterId: sqliteText("meter_id").notNull(),
+    type: sqliteText("type").notNull(),
+    billing: sqliteText("billing").notNull().default("local"),
+    aggregation: sqliteText("aggregation"),
+    unit: sqliteText("unit"),
+    quota: sqliteInteger("quota"),
+    allowOverQuota: sqliteInteger("allow_over_quota").notNull().default(0),
+    metadata: sqliteText("metadata").notNull().default("{}"),
+    createdAt: sqliteInteger("created_at").notNull(),
+    updatedAt: sqliteInteger("updated_at").notNull(),
+  },
+  (table) => [sqliteUniqueIndex("meters_tenant_meter_unique").on(table.tenantId, table.meterId)],
+);
 
 /**
  * SQLite용 사용량 기록 스키마입니다.

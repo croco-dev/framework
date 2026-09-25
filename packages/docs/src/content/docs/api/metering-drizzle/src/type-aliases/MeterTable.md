@@ -11,9 +11,21 @@ title: "MeterTable"
 
 ## Properties
 
+### aggregation
+
+> **aggregation**: `AnyColumn`
+
+---
+
 ### allowOverQuota
 
 > **allowOverQuota**: `AnyColumn`
+
+---
+
+### billing
+
+> **billing**: `AnyColumn`
 
 ---
 
@@ -56,6 +68,12 @@ title: "MeterTable"
 ### type
 
 > **type**: `AnyColumn`
+
+---
+
+### unit
+
+> **unit**: `AnyColumn`
 
 ---
 

@@ -1,6 +1,11 @@
 import type { ILogger } from "@croco/framework-context";
 import { InvalidUsageValueProblem, MeterRegistry, UsageAggregator } from "@croco/metering-core";
-import type { UsageRecord, UsageStorage } from "@croco/metering-core";
+import type {
+  BillableUsageJournal,
+  MeterRegistrationOptions,
+  UsageRecord,
+  UsageStorage,
+} from "@croco/metering-core";
 import { ProblemFactory } from "@croco/problems-core";
 import {
   assertDrizzleProblem,
@@ -14,15 +19,29 @@ import { drizzle } from "drizzle-orm/better-sqlite3";
 import type { BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { drizzle as drizzlePostgres } from "drizzle-orm/node-postgres";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
-import { bigint, jsonb, pgTable, PgDialect, text, timestamp } from "drizzle-orm/pg-core";
-import { SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
+import {
+  bigint,
+  getTableConfig as getPgTableConfig,
+  jsonb,
+  pgTable,
+  PgDialect,
+  text,
+  timestamp,
+} from "drizzle-orm/pg-core";
+import { getTableConfig as getSqliteTableConfig, SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import {
   type DrizzleMeterDatabase,
   DrizzleMeterRepository,
   type DrizzleMeterRepositoryConfig,
 } from "../libs/DrizzleMeterRepository";
+import { DuplicateMeterDefinitionsProblem } from "../libs/problems/DuplicateMeterDefinitionsProblem";
+import { InvalidMeterDefinitionProblem } from "../libs/problems/InvalidMeterDefinitionProblem";
 import { metersPg, metersSqlite, usageRecordsPg, usageRecordsSqlite } from "../libs/schema";
+import {
+  addMeterDefinitionFieldsPostgres,
+  addMeterDefinitionFieldsSqlite,
+} from "../migrations/addMeterDefinitionFields";
 import {
   addUsageEnvelopeFieldsPostgres,
   addUsageEnvelopeFieldsSqlite,
@@ -38,6 +57,9 @@ const createRepositoryConfig = () => ({
     tenantId: metersSqlite.tenantId,
     meterId: metersSqlite.meterId,
     type: metersSqlite.type,
+    billing: metersSqlite.billing,
+    aggregation: metersSqlite.aggregation,
+    unit: metersSqlite.unit,
     quota: metersSqlite.quota,
     allowOverQuota: metersSqlite.allowOverQuota,
     metadata: metersSqlite.metadata,
@@ -163,12 +185,18 @@ describe("DrizzleMeterRepository", () => {
         tenant_id TEXT NOT NULL,
         meter_id TEXT NOT NULL,
         type TEXT NOT NULL,
+        billing TEXT NOT NULL DEFAULT 'local',
+        aggregation TEXT,
+        unit TEXT,
         quota INTEGER,
         allow_over_quota INTEGER NOT NULL DEFAULT 0,
         metadata TEXT NOT NULL DEFAULT '{}',
         created_at INTEGER NOT NULL,
         updated_at INTEGER NOT NULL
       )
+    `);
+    sqlite.exec(`
+      CREATE UNIQUE INDEX meters_tenant_meter_unique ON meters (tenant_id, meter_id)
     `);
 
     sqlite.exec(`
@@ -485,13 +513,16 @@ describe("DrizzleMeterRepository", () => {
     });
 
     it("should encode PostgreSQL meter timestamps as dates", async () => {
-      const values = vi.fn().mockReturnValue({
+      const onConflictDoUpdate = vi.fn().mockReturnValue({
         returning: vi.fn().mockResolvedValue([
           {
             id: "3d3ff6c3-09a3-4b12-9896-536f58c92cb5",
             tenantId: "tenant-pg",
             meterId: "api_calls",
             type: "COUNT",
+            billing: "local",
+            aggregation: null,
+            unit: null,
             quota: null,
             allowOverQuota: 0,
             metadata: {},
@@ -500,6 +531,7 @@ describe("DrizzleMeterRepository", () => {
           },
         ]),
       });
+      const values = vi.fn().mockReturnValue({ onConflictDoUpdate });
       const pgDb = {
         insert: vi.fn().mockReturnValue({ values }),
       } as unknown as DrizzleMeterDatabase;
@@ -526,6 +558,19 @@ describe("DrizzleMeterRepository", () => {
           updatedAt: expect.any(Date),
         }),
       );
+      expect(onConflictDoUpdate).toHaveBeenCalledWith({
+        target: [metersPg.tenantId, metersPg.meterId],
+        set: {
+          type: "COUNT",
+          billing: "local",
+          aggregation: null,
+          unit: null,
+          quota: null,
+          allowOverQuota: 0,
+          metadata: {},
+          updatedAt: expect.any(Date),
+        },
+      });
     });
 
     it("should create meter definition", async () => {
@@ -694,6 +739,9 @@ describe("DrizzleMeterRepository", () => {
           tenant_id TEXT NOT NULL,
           meter_id TEXT NOT NULL,
           type TEXT NOT NULL,
+          billing TEXT NOT NULL DEFAULT 'local',
+          aggregation TEXT,
+          unit TEXT,
           quota INTEGER,
           allow_over_quota INTEGER NOT NULL DEFAULT 0,
           metadata TEXT NOT NULL DEFAULT '{}',
@@ -740,6 +788,413 @@ describe("DrizzleMeterRepository", () => {
 
       expect(meters).toHaveLength(0);
     });
+  });
+
+  describe("meter billing contract", () => {
+    const persistentJournal = { durability: "persistent" } as BillableUsageJournal;
+
+    it("should round-trip billing, aggregation, and unit through every lookup", async () => {
+      const saved = await repository.save({
+        tenantId: "tenant-1",
+        meterId: "llm-tokens",
+        type: "CUSTOM_EVENT",
+        billing: "required",
+        aggregation: "SUM",
+        unit: "token",
+      });
+
+      const contract = { billing: "required", aggregation: "SUM", unit: "token" };
+      expect(saved).toMatchObject(contract);
+      expect(await repository.findByMeterIdAndTenant("llm-tokens", "tenant-1")).toMatchObject(
+        contract,
+      );
+      expect(await repository.findByTenant("tenant-1")).toEqual([
+        expect.objectContaining(contract),
+      ]);
+      expect(await repository.findAll()).toEqual([expect.objectContaining(contract)]);
+    });
+
+    it("should store local billing without aggregation or unit when they are omitted", async () => {
+      const saved = await repository.save({
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        type: "COUNT",
+      });
+
+      expect(saved.billing).toBe("local");
+      expect(saved.aggregation).toBeUndefined();
+      expect(saved.unit).toBeUndefined();
+      expect(sqlite.prepare("SELECT billing, aggregation, unit FROM meters").all()).toEqual([
+        { billing: "local", aggregation: null, unit: null },
+      ]);
+    });
+
+    it("should store explicit null aggregation and unit as omitted", async () => {
+      const saved = await repository.save({
+        tenantId: "tenant-1",
+        meterId: "null-optional-fields",
+        type: "COUNT",
+        aggregation: null,
+        unit: null,
+      } as unknown as MeterRegistrationOptions);
+
+      expect(saved).toMatchObject({ billing: "local", aggregation: undefined, unit: undefined });
+      expect(
+        sqlite
+          .prepare("SELECT aggregation, unit FROM meters WHERE meter_id = ?")
+          .all("null-optional-fields"),
+      ).toEqual([{ aggregation: null, unit: null }]);
+    });
+
+    it("should keep billing-required meters required after registration and restart", async () => {
+      const registry = new MeterRegistry(repository, 60_000, persistentJournal);
+
+      await registry.register({
+        tenantId: "t2",
+        meterId: "llm-tokens",
+        type: "CUSTOM_EVENT",
+        billing: "required",
+        aggregation: "SUM",
+        unit: "token",
+      });
+      expect(registry.getCachedBillingRequirement("t2", "llm-tokens")).toBe("required");
+
+      registry.clearCache();
+      await registry.loadAll();
+      expect(registry.getCachedBillingRequirement("t2", "llm-tokens")).toBe("required");
+
+      const restartedRegistry = new MeterRegistry(repository, 60_000, persistentJournal);
+      await restartedRegistry.loadAll();
+      expect(restartedRegistry.getCachedBillingRequirement("t2", "llm-tokens")).toBe("required");
+      expect(await restartedRegistry.get("t2", "llm-tokens")).toMatchObject({
+        aggregation: "SUM",
+        unit: "token",
+      });
+    });
+
+    it("should replace the single stored definition when a meter is registered again", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      try {
+        vi.setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
+        const first = await repository.save({
+          tenantId: "t1",
+          meterId: "ai-tokens",
+          type: "COUNT",
+          aggregation: "COUNT",
+          unit: "request",
+          quota: 1000,
+          allowOverQuota: true,
+          metadata: { plan: "starter" },
+        });
+
+        vi.setSystemTime(new Date("2026-09-02T00:00:00.000Z"));
+        const second = await repository.save({
+          tenantId: "t1",
+          meterId: "ai-tokens",
+          type: "CUSTOM_EVENT",
+          billing: "required",
+          aggregation: "SUM",
+          unit: "token",
+          quota: 5000,
+        });
+
+        const expected = {
+          id: first.id,
+          tenantId: "t1",
+          meterId: "ai-tokens",
+          type: "CUSTOM_EVENT",
+          billing: "required",
+          aggregation: "SUM",
+          unit: "token",
+          quota: 5000,
+          allowOverQuota: false,
+          metadata: undefined,
+          createdAt: new Date("2026-09-01T00:00:00.000Z"),
+          updatedAt: new Date("2026-09-02T00:00:00.000Z"),
+        };
+        expect(second).toEqual(expected);
+        expect(await repository.findByMeterIdAndTenant("ai-tokens", "t1")).toEqual(expected);
+        expect(
+          sqlite
+            .prepare("SELECT quota FROM meters WHERE tenant_id = ? AND meter_id = ?")
+            .all("t1", "ai-tokens"),
+        ).toEqual([{ quota: 5000 }]);
+
+        const third = await repository.save({
+          tenantId: "t1",
+          meterId: "ai-tokens",
+          type: "COUNT",
+        });
+        expect(third).toMatchObject({
+          id: first.id,
+          billing: "local",
+          aggregation: undefined,
+          unit: undefined,
+          quota: undefined,
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("should keep one definition per tenant when registration repeats at every startup", async () => {
+      const registration = {
+        tenantId: "t1",
+        meterId: "ai-tokens",
+        type: "COUNT" as const,
+        quota: 1000,
+      };
+
+      await new MeterRegistry(repository).register(registration);
+      await new MeterRegistry(repository).register({ ...registration, quota: 5000 });
+      await new MeterRegistry(repository).register({ ...registration, tenantId: "t2" });
+
+      expect(await repository.findByTenant("t1")).toEqual([
+        expect.objectContaining({ meterId: "ai-tokens", quota: 5000 }),
+      ]);
+      expect(await repository.findAll()).toHaveLength(2);
+    });
+
+    it.each([
+      ["billing", "remote", "remote"],
+      ["aggregation", "AVERAGE", "AVERAGE"],
+      ["unit", Buffer.from("token"), "token"],
+    ] as const)(
+      "should reject a stored %s value outside the meter contract",
+      async (field, storedValue, receivedValue) => {
+        sqlite
+          .prepare(
+            `INSERT INTO meters (tenant_id, meter_id, type, ${field}, created_at, updated_at)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+          )
+          .run("tenant-1", "corrupt-meter", "COUNT", storedValue, Date.now(), Date.now());
+
+        await expect(
+          repository.findByMeterIdAndTenant("corrupt-meter", "tenant-1"),
+        ).rejects.toMatchObject({
+          code: "metering-drizzle/invalid-meter-definition",
+          extensions: { tenantId: "tenant-1", meterId: "corrupt-meter", field, receivedValue },
+        });
+        await expect(repository.findAll()).rejects.toThrow(InvalidMeterDefinitionProblem);
+      },
+    );
+
+    it.each([
+      ["billing", "billing", { billing: "remote" }],
+      ["null billing", "billing", { billing: null }],
+      ["aggregation", "aggregation", { aggregation: "AVERAGE" }],
+      ["unit", "unit", { unit: 42 }],
+    ] as const)(
+      "should reject an unsupported %s before writing the meter",
+      async (_case, field, contract) => {
+        await expect(
+          repository.save({
+            tenantId: "tenant-1",
+            meterId: "invalid-contract",
+            type: "COUNT",
+            ...contract,
+          } as unknown as MeterRegistrationOptions),
+        ).rejects.toMatchObject({
+          code: "metering-drizzle/invalid-meter-definition",
+          extensions: { field },
+        });
+
+        expect(sqlite.prepare("SELECT * FROM meters").all()).toHaveLength(0);
+      },
+    );
+  });
+
+  describe("meter definition migrations", () => {
+    const createLegacyMetersTable = () => {
+      sqlite.exec("DROP TABLE meters");
+      sqlite.exec(`
+        CREATE TABLE meters (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          tenant_id TEXT NOT NULL,
+          meter_id TEXT NOT NULL,
+          type TEXT NOT NULL,
+          quota INTEGER,
+          allow_over_quota INTEGER NOT NULL DEFAULT 0,
+          metadata TEXT NOT NULL DEFAULT '{}',
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        )
+      `);
+    };
+    const insertLegacyMeter = (tenantId: string, meterId: string, quota: number) => {
+      sqlite
+        .prepare(
+          `INSERT INTO meters (tenant_id, meter_id, type, quota, created_at, updated_at)
+           VALUES (?, ?, 'COUNT', ?, ?, ?)`,
+        )
+        .run(tenantId, meterId, quota, Date.now(), Date.now());
+    };
+    const listMeterColumns = () =>
+      (sqlite.prepare("PRAGMA table_info('meters')").all() as Array<{ name: string }>).map(
+        (column) => column.name,
+      );
+    const listMeterIndexes = () =>
+      sqlite.prepare("PRAGMA index_list('meters')").all() as Array<{
+        name: string;
+        unique: number;
+      }>;
+    const renderPostgres = (queries: readonly SQL[]) =>
+      queries.map((query) => new PgDialect().sqlToQuery(query).sql.replace(/\s+/g, " ").trim());
+
+    it("should declare the unique index that the migrations create", () => {
+      const migratedIndex = {
+        name: "meters_tenant_meter_unique",
+        unique: true,
+        columns: ["tenant_id", "meter_id"],
+      };
+      const describeIndexes = (
+        indexes: readonly {
+          config: { name?: string; unique: boolean; columns: readonly unknown[] };
+        }[],
+      ) =>
+        indexes.map(({ config }) => ({
+          name: config.name,
+          unique: config.unique,
+          columns: config.columns.map((column) => (column as { name: string }).name),
+        }));
+
+      expect(describeIndexes(getPgTableConfig(metersPg).indexes)).toEqual([migratedIndex]);
+      expect(describeIndexes(getSqliteTableConfig(metersSqlite).indexes)).toEqual([migratedIndex]);
+    });
+
+    it("should upgrade a legacy SQLite meters table so re-registration updates one row", async () => {
+      createLegacyMetersTable();
+      insertLegacyMeter("t1", "ai-tokens", 1000);
+      const migrationClient = createSqliteMigrationClient();
+
+      await addMeterDefinitionFieldsSqlite(migrationClient);
+      await addMeterDefinitionFieldsSqlite(migrationClient);
+
+      expect(listMeterColumns()).toEqual(
+        expect.arrayContaining(["billing", "aggregation", "unit"]),
+      );
+      expect(listMeterIndexes()).toEqual([
+        expect.objectContaining({ name: "meters_tenant_meter_unique", unique: 1 }),
+      ]);
+      expect(await repository.findByMeterIdAndTenant("ai-tokens", "t1")).toMatchObject({
+        billing: "local",
+        aggregation: undefined,
+        unit: undefined,
+        quota: 1000,
+      });
+
+      await repository.save({
+        tenantId: "t1",
+        meterId: "ai-tokens",
+        type: "CUSTOM_EVENT",
+        billing: "required",
+        aggregation: "SUM",
+        unit: "token",
+        quota: 5000,
+      });
+      expect(await repository.findByTenant("t1")).toEqual([
+        expect.objectContaining({ billing: "required", aggregation: "SUM", quota: 5000 }),
+      ]);
+    });
+
+    it("should report duplicate SQLite meter definitions without changing the table", async () => {
+      createLegacyMetersTable();
+      insertLegacyMeter("t2", "storage", 1);
+      insertLegacyMeter("t1", "ai-tokens", 1000);
+      insertLegacyMeter("t2", "ai-tokens", 1000);
+      insertLegacyMeter("t1", "ai-tokens", 5000);
+      insertLegacyMeter("t2", "storage", 2);
+      insertLegacyMeter("t2", "storage", 3);
+      const legacyColumns = listMeterColumns();
+
+      const error = await addMeterDefinitionFieldsSqlite(createSqliteMigrationClient()).then(
+        () => undefined,
+        (reason: unknown) => reason,
+      );
+
+      expect(error).toBeInstanceOf(DuplicateMeterDefinitionsProblem);
+      expect(error).toMatchObject({
+        code: "metering-drizzle/duplicate-meter-definitions",
+        detail:
+          "Cannot enforce unique meter definitions because duplicates exist: tenant 't1', meter 'ai-tokens' (2 rows); tenant 't2', meter 'storage' (3 rows)",
+        extensions: {
+          duplicates: [
+            { tenantId: "t1", meterId: "ai-tokens", rowCount: 2 },
+            { tenantId: "t2", meterId: "storage", rowCount: 3 },
+          ],
+        },
+      });
+      expect(listMeterColumns()).toEqual(legacyColumns);
+      expect(listMeterIndexes()).toEqual([]);
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM meters").get()).toEqual({ count: 6 });
+    });
+
+    it.each([
+      [20, ""],
+      [23, "; 3 more in extensions.duplicates"],
+    ])(
+      "should bound the duplicate detail for %i duplicates while keeping all of them in extensions",
+      (count, suffix) => {
+        const duplicates = Array.from({ length: count }, (_, index) => ({
+          tenantId: `t${String(index).padStart(2, "0")}`,
+          meterId: "ai-tokens",
+          rowCount: 2,
+        }));
+
+        const problem = new DuplicateMeterDefinitionsProblem(duplicates);
+
+        const listed = duplicates
+          .slice(0, 20)
+          .map((duplicate) => `tenant '${duplicate.tenantId}', meter 'ai-tokens' (2 rows)`)
+          .join("; ");
+        expect(problem.detail).toBe(
+          `Cannot enforce unique meter definitions because duplicates exist: ${listed}${suffix}`,
+        );
+        expect(problem.extensions).toEqual({ duplicates });
+      },
+    );
+
+    it("should expose PostgreSQL meter definition upgrade statements", async () => {
+      const queries: SQL[] = [];
+
+      await addMeterDefinitionFieldsPostgres({
+        async execute(query) {
+          queries.push(query as SQL);
+          return { rows: [] };
+        },
+      });
+
+      expect(renderPostgres(queries)).toEqual([
+        "ALTER TABLE meters ADD COLUMN IF NOT EXISTS billing TEXT NOT NULL DEFAULT 'local'",
+        "ALTER TABLE meters ADD COLUMN IF NOT EXISTS aggregation TEXT",
+        "ALTER TABLE meters ADD COLUMN IF NOT EXISTS unit TEXT",
+        "SELECT tenant_id, meter_id, CAST(COUNT(*) AS INTEGER) AS row_count FROM meters GROUP BY tenant_id, meter_id HAVING COUNT(*) > 1 ORDER BY tenant_id, meter_id",
+        "CREATE UNIQUE INDEX IF NOT EXISTS meters_tenant_meter_unique ON meters (tenant_id, meter_id)",
+      ]);
+    });
+
+    it.each([
+      ["a non-row result", undefined],
+      ["an uncast duplicate count", { rows: [{ tenant_id: "t1", meter_id: "m", row_count: "2" }] }],
+    ])(
+      "should reject %s from the duplicate check before creating the index",
+      async (_case, duplicateResult) => {
+        const queries: SQL[] = [];
+        const migration = addMeterDefinitionFieldsPostgres({
+          async execute(query) {
+            queries.push(query as SQL);
+            return renderPostgres([query as SQL])[0]?.startsWith("SELECT")
+              ? duplicateResult
+              : undefined;
+          },
+        });
+
+        await expect(migration).rejects.toMatchObject({
+          code: "metering-drizzle/migration-query-result-unsupported",
+        });
+        expect(renderPostgres(queries).some((query) => query.startsWith("CREATE"))).toBe(false);
+      },
+    );
   });
 
   describe("UsageAggregator replay", () => {
@@ -1165,47 +1620,47 @@ describe("DrizzleMeterRepository", () => {
     });
   });
 
-  describe("usage envelope migrations", () => {
-    const createSqliteMigrationClient = (failOnDimensions = false) => {
-      const dialect = new SQLiteSyncDialect();
-      let transactionTail = Promise.resolve();
-      const execute = async (query: unknown): Promise<unknown> => {
-        const rendered = dialect.sqlToQuery(query as SQL);
-        if (failOnDimensions && rendered.sql.includes("ADD COLUMN dimensions")) {
-          throw new Error("simulated migration failure");
-        }
-        if (rendered.sql.trimStart().startsWith("PRAGMA")) {
-          return sqlite.prepare(rendered.sql).all(...rendered.params);
-        }
-        return sqlite.prepare(rendered.sql).run(...rendered.params);
-      };
-
-      return {
-        execute,
-        async transaction<T>(
-          fn: (tx: { execute(query: unknown): Promise<unknown> }) => Promise<T>,
-        ): Promise<T> {
-          const previousTransaction = transactionTail;
-          let releaseTransaction = () => {};
-          transactionTail = new Promise<void>((resolve) => {
-            releaseTransaction = resolve;
-          });
-          await previousTransaction;
-          sqlite.exec("BEGIN IMMEDIATE");
-          try {
-            const result = await fn({ execute });
-            sqlite.exec("COMMIT");
-            return result;
-          } catch (error) {
-            sqlite.exec("ROLLBACK");
-            throw error;
-          } finally {
-            releaseTransaction();
-          }
-        },
-      };
+  const createSqliteMigrationClient = (failOnDimensions = false) => {
+    const dialect = new SQLiteSyncDialect();
+    let transactionTail = Promise.resolve();
+    const execute = async (query: unknown): Promise<unknown> => {
+      const rendered = dialect.sqlToQuery(query as SQL);
+      if (failOnDimensions && rendered.sql.includes("ADD COLUMN dimensions")) {
+        throw new Error("simulated migration failure");
+      }
+      const statement = sqlite.prepare(rendered.sql);
+      return statement.reader
+        ? statement.all(...rendered.params)
+        : statement.run(...rendered.params);
     };
 
+    return {
+      execute,
+      async transaction<T>(
+        fn: (tx: { execute(query: unknown): Promise<unknown> }) => Promise<T>,
+      ): Promise<T> {
+        const previousTransaction = transactionTail;
+        let releaseTransaction = () => {};
+        transactionTail = new Promise<void>((resolve) => {
+          releaseTransaction = resolve;
+        });
+        await previousTransaction;
+        sqlite.exec("BEGIN IMMEDIATE");
+        try {
+          const result = await fn({ execute });
+          sqlite.exec("COMMIT");
+          return result;
+        } catch (error) {
+          sqlite.exec("ROLLBACK");
+          throw error;
+        } finally {
+          releaseTransaction();
+        }
+      },
+    };
+  };
+
+  describe("usage envelope migrations", () => {
     it("should upgrade an existing SQLite usage table before typed writes", async () => {
       sqlite.exec("DROP TABLE usage_records");
       sqlite.exec(`

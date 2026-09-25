@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 798,
+  "problemCount": 800,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -13380,9 +13380,69 @@
       "sources": [
         {
           "file": "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts",
-          "line": 189,
+          "line": 237,
           "column": 13,
           "kind": "problem-factory"
+        }
+      ]
+    },
+    {
+      "code": "metering-drizzle/duplicate-meter-definitions",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metering-drizzle-duplicate-meter-definitions",
+      "recovery": {
+        "cause": "The meters table holds several rows for one (tenant_id, meter_id), so the meter definition migration cannot create its unique index.",
+        "userAction": "Do not rerun the migration until the duplicate meter definitions are resolved; it fails the same way each time.",
+        "operatorAction": "Use extensions.duplicates to find each duplicated (tenant_id, meter_id), inspect those rows in the meters table to choose one to keep, delete the others, then rerun the migration.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/metering-drizzle/src/libs/problems/DuplicateMeterDefinitionsProblem.ts",
+          "line": 22,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "metering-drizzle/invalid-meter-definition",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metering-drizzle-invalid-meter-definition",
+      "recovery": {
+        "cause": "A meter definition passed to save, or a meter row read from the meters table, has a billing, aggregation, or unit value outside the meter contract.",
+        "userAction": "Do not retry with the same meter definition; register the meter with a supported billing, aggregation, and unit.",
+        "operatorAction": "Use the tenantId, meterId, field, and receivedValue extensions to correct the registration or the stored row, and confirm that meterTable property names match the MeterTable keys.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/metering-drizzle/src/libs/problems/InvalidMeterDefinitionProblem.ts",
+          "line": 13,
+          "column": 5,
+          "kind": "problem-constructor"
         }
       ]
     },
@@ -13409,9 +13469,9 @@
       },
       "sources": [
         {
-          "file": "packages/metering-drizzle/src/migrations/addUsageEnvelopeFields.ts",
-          "line": 125,
-          "column": 9,
+          "file": "packages/metering-drizzle/src/migrations/migrationSupport.ts",
+          "line": 50,
+          "column": 10,
           "kind": "problem-factory"
         }
       ]

@@ -310,8 +310,9 @@ export { MeterRegistry } from "./libs/MeterRegistry";
  *     );
  *   }
  *
+ *   // Re-registration replaces the single (tenantId, meterId) definition.
  *   async save(meter: MeterRegistrationOptions) {
- *     return db.insert('meters', meter);
+ *     return db.upsert('meters', meter, ['tenant_id', 'meter_id']);
  *   }
  *
  *   async findAll() {

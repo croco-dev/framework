@@ -20070,6 +20070,18 @@
           "sourceEntrypoint": "packages/metering-drizzle/src/index.ts",
           "runtimeExports": [
             {
+              "name": "addMeterDefinitionFieldsPostgres",
+              "exportKind": "declaration",
+              "source": "./migrations/addMeterDefinitionFields",
+              "declarationKind": "function"
+            },
+            {
+              "name": "addMeterDefinitionFieldsSqlite",
+              "exportKind": "declaration",
+              "source": "./migrations/addMeterDefinitionFields",
+              "declarationKind": "function"
+            },
+            {
               "name": "addUsageEnvelopeFieldsPostgres",
               "exportKind": "declaration",
               "source": "./migrations/addUsageEnvelopeFields",
@@ -20112,6 +20124,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "DuplicateMeterDefinitionsProblem",
+              "exportKind": "named",
+              "source": "./problems/DuplicateMeterDefinitionsProblem",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidMeterDefinitionProblem",
+              "exportKind": "named",
+              "source": "./problems/InvalidMeterDefinitionProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "metersPg",
               "exportKind": "named",
               "source": "./schema",
@@ -20150,12 +20174,6 @@
               "declarationKind": "type"
             },
             {
-              "name": "MeteringMigrationClient",
-              "exportKind": "declaration",
-              "source": "./migrations/addUsageEnvelopeFields",
-              "declarationKind": "type"
-            },
-            {
               "name": "UsageRecordIdMigrationClient",
               "exportKind": "declaration",
               "source": "./migrations/widenUsageRecordIds",
@@ -20170,6 +20188,11 @@
               "name": "DrizzleMeterRepositoryConfig",
               "exportKind": "named",
               "source": "./DrizzleMeterRepository"
+            },
+            {
+              "name": "MeteringMigrationClient",
+              "exportKind": "named",
+              "source": "./migrationSupport"
             },
             {
               "name": "MeterTable",
