@@ -659,6 +659,56 @@ describe("Trace async iterable lifecycle", () => {
     );
     expect(mockSpan.end).toHaveBeenCalledTimes(1);
   });
+
+  it("should retain the iteration Problem diagnostics when cleanup also fails", async () => {
+    const mockSpan = createMockSpan();
+    const iterationError = Object.assign(new Error("iteration failed"), {
+      code: "stream/iteration-failed",
+      category: "Internal",
+      status: 500,
+    });
+    const cleanupError = Object.assign(new Error("cleanup failed"), {
+      code: "stream/cleanup-failed",
+      category: "Unavailable",
+      status: 503,
+    });
+    const iterable: AsyncIterable<number> = {
+      [Symbol.asyncIterator]() {
+        return {
+          next: async (): Promise<IteratorResult<number>> => {
+            throw iterationError;
+          },
+          return: async (): Promise<IteratorResult<number>> => {
+            throw cleanupError;
+          },
+        };
+      },
+    };
+
+    const iterator = createTracedAsyncIterable(iterable, mockSpan.span)[Symbol.asyncIterator]();
+
+    await expect(iterator.next()).rejects.toBe(iterationError);
+
+    expect(mockSpan.setAttribute).toHaveBeenCalledTimes(3);
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith("problem.code", iterationError.code);
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith("problem.category", iterationError.category);
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith("problem.status", iterationError.status);
+    expect(mockSpan.recordException).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ message: iterationError.message }),
+    );
+    expect(mockSpan.recordException).toHaveBeenNthCalledWith(2, {
+      message: cleanupError.message,
+      name: cleanupError.name,
+      stack: cleanupError.stack,
+    });
+    expect(mockSpan.setStatus).toHaveBeenCalledOnce();
+    expect(mockSpan.setStatus).toHaveBeenCalledWith({
+      code: SpanStatusCode.ERROR,
+      message: iterationError.message,
+    });
+    expect(mockSpan.end).toHaveBeenCalledOnce();
+  });
 });
 
 describe("withSpan", () => {
@@ -727,6 +777,50 @@ describe("recordError", () => {
     expect(mockSpan.setStatus).toHaveBeenCalledWith({
       code: expect.any(Number),
       message: "broken value",
+    });
+    expect(mockSpan.setAttribute).not.toHaveBeenCalled();
+  });
+
+  it("should not treat an Error with only a code as a Problem", () => {
+    const mockSpan = createMockSpan();
+    const error = Object.assign(new Error("socket closed"), { code: "ECONNRESET" });
+
+    recordError(error, mockSpan.span);
+
+    expect(mockSpan.setAttribute).not.toHaveBeenCalled();
+    expect(mockSpan.recordException).toHaveBeenCalledOnce();
+  });
+
+  it("should record Problem metadata on the span without replacing exception details", async () => {
+    class TestProblem extends Error {
+      readonly code = "orders/not-found";
+      readonly category = "NotFound";
+      readonly status = 404;
+    }
+
+    const mockSpan = createMockSpan();
+    const problem = new TestProblem("Order not found");
+    vi.spyOn(tracerModule, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+
+    await expect(
+      withSpan(() => {
+        throw problem;
+      }),
+    ).rejects.toBe(problem);
+
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith("problem.code", "orders/not-found");
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith("problem.category", "NotFound");
+    expect(mockSpan.setAttribute).toHaveBeenCalledWith("problem.status", 404);
+    expect(mockSpan.recordException).toHaveBeenCalledWith(
+      expect.objectContaining<Exception>({
+        message: "Order not found",
+        name: "Error",
+        stack: expect.stringContaining("Order not found"),
+      }),
+    );
+    expect(mockSpan.setStatus).toHaveBeenCalledWith({
+      code: SpanStatusCode.ERROR,
+      message: "Order not found",
     });
   });
 });

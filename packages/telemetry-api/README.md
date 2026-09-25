@@ -119,6 +119,11 @@ include request bodies, query values, raw headers, response bodies, credentials,
 - 타입: `TraceDecoratorOptions`, `SpanOptions`, `TraceInfo`, `TracerOptions`,
   `FrontendTelemetryBridge`, `FrontendTelemetryEvent`, `FrontendTelemetrySink`
 
+`recordError`는 Problem의 `code`, `category`, `status`를 각각 Span 속성
+`problem.code`, `problem.category`, `problem.status`로 기록합니다. `problem.status`는
+HTTP 상태 코드(숫자)입니다. 예외 메시지, 타입, 스택을 담는 OpenTelemetry 표준 exception
+이벤트와 Span 오류 상태는 그대로 기록됩니다. 일반 `Error`에는 Problem 속성을 추가하지 않습니다.
+
 ## 참고
 
 - 이 패키지만 단독으로 사용하면 Span이 전송되지 않습니다.

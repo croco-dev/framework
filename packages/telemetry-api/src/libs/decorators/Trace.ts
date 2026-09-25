@@ -1,5 +1,5 @@
 import { type Attributes, context, type Context, type Span, trace } from "@opentelemetry/api";
-import { recordError } from "../span.js";
+import { recordError, recordException } from "../span.js";
 import { getTracer } from "../tracer.js";
 
 export type TraceDecoratorOptions = {
@@ -47,11 +47,13 @@ async function finalizeAsyncIterator<ReturnType>(
 
       await context.with(spanContext, () => cleanup.call(iterator));
     } catch (error) {
-      recordError(error, span);
-
-      if (!hasIterationError) {
-        throw error;
+      if (hasIterationError) {
+        recordException(error, span);
+        return;
       }
+
+      recordError(error, span);
+      throw error;
     }
   } finally {
     endSpan();

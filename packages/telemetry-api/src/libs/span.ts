@@ -62,15 +62,7 @@ export function recordEvent(name: string, attributes: Attributes = {}): void {
   span.addEvent(name, attributes);
 }
 
-/**
- * 현재 활성 Span 또는 지정한 Span에 에러를 기록합니다.
- */
-export function recordError(error: unknown, span?: Span): void {
-  const activeSpan = span ?? trace.getActiveSpan();
-  if (!activeSpan) {
-    return;
-  }
-
+export function recordException(error: unknown, span: Span): void {
   const exception: Exception = {
     message: error instanceof Error ? error.message : String(error),
   };
@@ -82,7 +74,34 @@ export function recordError(error: unknown, span?: Span): void {
     exception.name = error.name;
   }
 
-  activeSpan.recordException(exception);
+  span.recordException(exception);
+}
+
+/**
+ * 현재 활성 Span 또는 지정한 Span에 에러를 기록합니다.
+ */
+export function recordError(error: unknown, span?: Span): void {
+  const activeSpan = span ?? trace.getActiveSpan();
+  if (!activeSpan) {
+    return;
+  }
+
+  if (error instanceof Error) {
+    if (
+      "code" in error &&
+      typeof error.code === "string" &&
+      "category" in error &&
+      typeof error.category === "string" &&
+      "status" in error &&
+      typeof error.status === "number"
+    ) {
+      activeSpan.setAttribute("problem.code", error.code);
+      activeSpan.setAttribute("problem.category", error.category);
+      activeSpan.setAttribute("problem.status", error.status);
+    }
+  }
+
+  recordException(error, activeSpan);
   activeSpan.setStatus({
     code: SpanStatusCode.ERROR,
     message: error instanceof Error ? error.message : String(error),
