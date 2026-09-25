@@ -239,6 +239,23 @@ export class CrocoApp {
       }
     }
 
+    if (
+      this.config.middlewares?.some((middleware) =>
+        hasSecurityMiddlewareCapability(middleware, "cors"),
+      )
+    ) {
+      const explicitOptionsPaths = new Set(
+        this.routes
+          .filter((route) => ["OPTIONS", "ALL"].includes(route.method.toUpperCase()))
+          .map((route) => route.path),
+      );
+      for (const path of new Set(this.routes.map((route) => route.path))) {
+        if (!explicitOptionsPaths.has(path)) {
+          this.routeRegistrar.registerPreflight(path);
+        }
+      }
+    }
+
     this.booted = true;
   }
 

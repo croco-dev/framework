@@ -30,6 +30,7 @@ export const corsMiddleware = (options: CorsOptions): MiddlewareFunction => {
 
   const middleware: MiddlewareFunction = async (ctx, next) => {
     setOriginVary(ctx);
+    let varyRequestHeaders = false;
     try {
       const requestOrigin = ctx.header("origin");
 
@@ -45,6 +46,12 @@ export const corsMiddleware = (options: CorsOptions): MiddlewareFunction => {
 
       if (allowedHeaders && allowedHeaders.length > 0) {
         ctx.raw.header("Access-Control-Allow-Headers", allowedHeaders.join(", "));
+      } else if (allowedHeaders === undefined && isPreflight) {
+        const requestedHeaders = ctx.header("access-control-request-headers");
+        if (requestedHeaders) {
+          varyRequestHeaders = true;
+          ctx.raw.header("Access-Control-Allow-Headers", requestedHeaders);
+        }
       }
 
       if (exposedHeaders && exposedHeaders.length > 0) {
@@ -63,17 +70,20 @@ export const corsMiddleware = (options: CorsOptions): MiddlewareFunction => {
 
       await next();
     } finally {
-      setOriginVary(ctx);
+      setOriginVary(ctx, varyRequestHeaders);
     }
   };
 
   return markSecurityMiddleware(middleware, "corsMiddleware");
 };
 
-function setOriginVary(ctx: Parameters<MiddlewareFunction>[0]): void {
+function setOriginVary(ctx: Parameters<MiddlewareFunction>[0], varyRequestHeaders = false): void {
   const headers = ctx.raw.res.headers;
   mergeVaryHeader(headers, ctx.res.headers["vary"] ?? "");
   setVaryHeader(headers, "Origin");
+  if (varyRequestHeaders) {
+    setVaryHeader(headers, "Access-Control-Request-Headers");
+  }
   const vary = headers.get("Vary") ?? "Origin";
   ctx.raw.header("Vary", vary);
   ctx.res.headers["vary"] = vary;
