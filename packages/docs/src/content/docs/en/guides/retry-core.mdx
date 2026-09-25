@@ -20,7 +20,8 @@ pnpm add @croco/retry-core
 Retry behavior follows Croco's shared [Failure Semantics](/en/guides/failure-semantics/) contract.
 By default, `InternalServerError` and `TooManyRequests` Problems are retryable, client/domain
 Problems are terminal, and timeout/circuit control failures remain typed Problems instead of generic
-errors. An explicit `retryable` or `extensions.retryable` boolean on the error overrides the category.
+errors. An explicit `retryable` or `extensions.retryable` boolean on the error overrides the
+category, while `noRetryFor` errors are still never retried.
 
 ## Usage
 

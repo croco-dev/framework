@@ -6,7 +6,6 @@ import type {
   ReplayExecutionParams,
 } from "@croco/execution-core";
 import { ExecutionProblems } from "@croco/execution-core";
-import { readExplicitRetryability } from "@croco/problems-core";
 import { TaskRunner } from "@croco/tasks-core";
 import { withSpan } from "@croco/telemetry-api";
 import {
@@ -125,7 +124,7 @@ async function resolveExecutionIdempotency(
 function toExecutionError(error: unknown) {
   return {
     message: error instanceof Error ? error.message : String(error),
-    retryable: readExplicitRetryability(error) ?? false,
+    retryable: error instanceof Error && "retryable" in error ? Boolean(error.retryable) : false,
     code: error instanceof Error && "code" in error ? String(error.code) : undefined,
     stack: error instanceof Error ? error.stack : undefined,
   };

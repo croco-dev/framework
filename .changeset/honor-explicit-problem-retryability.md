@@ -8,9 +8,8 @@
 
 Honor an error's explicit retry classification in the default `@Retryable` and `RetryTemplate` policy. `DefaultRetryPolicy` now follows a top-level `retryable` boolean, then `extensions.retryable`, before `retryFor` and `ProblemCategory`, so an `InternalServerError` Problem with `extensions.retryable: false` runs once and a `Conflict` Problem with `extensions.retryable: true` retries while attempts remain. `noRetryFor` still wins, and errors without an explicit flag keep their previous classification. An explicit `false` is rethrown immediately like any other terminal failure, so it does not reach recovery callbacks, `@Recover` handlers, exhausted listeners, or `wrapExhausted`. The retry engine still wraps thrown non-`Error` values in an `Error`, so their flags do not reach the policy.
 
-The flag is read by the new `readExplicitRetryability()` in `@croco/problems-core`, which idempotency handler failures, workflow executions, saga steps, and QStash triggers now share. Only boolean values count, `extensions.retryable` is read from any error object rather than only `Problem` instances, and a throwing accessor counts as no classification. As a result:
+The flag is read by the new `readExplicitRetryability()` in `@croco/problems-core`, which idempotency handler failures, saga steps, and QStash triggers now share. Only boolean values count, `extensions.retryable` is read from any error object rather than only `Problem` instances, and a throwing accessor counts as no classification. As a result:
 
-- Workflow executions now record `extensions.retryable: true` failures as retryable and ignore a non-boolean top-level `retryable` value that was previously coerced with `Boolean()`.
 - Saga steps and QStash triggers ignore a non-boolean top-level `retryable` value (previously coerced), honor `extensions.retryable` on errors that are not `Problem` instances, and no longer fail classification when the `retryable` accessor throws.
 - Idempotency handler failures thrown as functions now honor their declared `retryable` flag.
 
