@@ -91,8 +91,10 @@ when its HTTP `status` is a 4xx other than 408 or 429; with the default category
 every 4xx category except `TooManyRequests`. The stored failure then lasts for `idempotencyTtlMs`
 (24 hours by default). Mark a transient client error such as an out-of-order event with
 `extensions.retryable: true` to keep redeliveries running. `replay()` uses the same idempotency key
-and returns the stored failure until the record expires. To run the handler again sooner, remove the
-record with `idempotencyStore.expire({ key: result.idempotencyKey })`.
+and returns the stored failure until the record expires. To run the handler again sooner, keep a
+reference to the store passed as `idempotencyStore` and call
+`await store.expire({ key: result.idempotencyKey })` with the `failed` result of a redelivery or
+`replay()`; the first delivery throws the wrapper Problem and has no result.
 
 ## Unknown Events
 

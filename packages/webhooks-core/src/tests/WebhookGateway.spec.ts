@@ -99,6 +99,10 @@ class FixtureHandlerProblem extends Problem {
   }
 }
 
+class TopLevelRetryableProblem extends FixtureHandlerProblem {
+  readonly retryable = true;
+}
+
 function signedRequest(type = "subscription.created") {
   return {
     rawBody: JSON.stringify({
@@ -345,6 +349,11 @@ describe("WebhookGateway", () => {
       failure: new FixtureHandlerProblem(ProblemCategory.InternalServerError),
       extensions: { causeCode: "webhooks-core/test-handler-problem", retryable: true },
     },
+    {
+      name: "a Problem whose top-level retryable flag overrides its extension flag",
+      failure: new TopLevelRetryableProblem(ProblemCategory.NotFound, { retryable: false }),
+      extensions: { causeCode: "webhooks-core/test-handler-problem", retryable: true },
+    },
   ])(
     "wraps retryable handler failures from $name and re-runs the handler on redelivery",
     async ({ failure, extensions }) => {
@@ -434,8 +443,18 @@ describe("WebhookGateway", () => {
       extensions: { retryable: true },
     },
     {
+      name: "a Problem with a retryable client-error status",
+      failure: new FixtureHandlerProblem(ProblemCategory.TooManyRequests),
+      extensions: { retryable: true },
+    },
+    {
       name: "a Problem with a server-error status",
       failure: new FixtureHandlerProblem(ProblemCategory.InternalServerError),
+      extensions: { retryable: true },
+    },
+    {
+      name: "a Problem whose top-level retryable flag overrides its extension flag",
+      failure: new TopLevelRetryableProblem(ProblemCategory.NotFound, { retryable: false }),
       extensions: { retryable: true },
     },
   ])(
