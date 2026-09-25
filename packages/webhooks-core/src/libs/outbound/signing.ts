@@ -206,6 +206,7 @@ function createBlockedIpRanges(): BlockList {
   ranges.addSubnet("5f00::", 16, "ipv6");
   ranges.addSubnet("fc00::", 7, "ipv6");
   ranges.addSubnet("fe80::", 10, "ipv6");
+  ranges.addSubnet("fec0::", 10, "ipv6");
   ranges.addSubnet("ff00::", 8, "ipv6");
 
   return ranges;
@@ -228,7 +229,36 @@ export function isBlockedIpAddress(hostname: string): boolean {
     return BLOCKED_IP_RANGES.check(normalized, "ipv4");
   }
   if (ipVersion === 6) {
-    return BLOCKED_IP_RANGES.check(normalized, "ipv6");
+    if (normalized.includes("%")) {
+      return true;
+    }
+    if (BLOCKED_IP_RANGES.check(normalized, "ipv6")) {
+      return true;
+    }
+    const embeddedIpv4 = getEmbeddedIpv4Address(normalized);
+    return embeddedIpv4 !== undefined && BLOCKED_IP_RANGES.check(embeddedIpv4, "ipv4");
   }
   return false;
+}
+
+function getEmbeddedIpv4Address(ipv6: string): string | undefined {
+  const canonical = new URL(`http://[${ipv6}]`).hostname.slice(1, -1);
+  const [left, right] = canonical.split("::");
+  const leftGroups = left.split(":").filter(Boolean);
+  const rightGroups = right?.split(":").filter(Boolean) ?? [];
+  const groups = [
+    ...leftGroups,
+    ...Array<string>(8 - leftGroups.length - rightGroups.length).fill("0"),
+    ...rightGroups,
+  ].map((group) => Number.parseInt(group, 16));
+
+  const isNat64 =
+    groups[0] === 0x64 && groups[1] === 0xff9b && groups.slice(2, 6).every((group) => group === 0);
+  const is6to4 = groups[0] === 0x2002;
+  if (!isNat64 && !is6to4) {
+    return undefined;
+  }
+  const firstGroup = groups[isNat64 ? 6 : 1];
+  const secondGroup = groups[isNat64 ? 7 : 2];
+  return `${firstGroup >> 8}.${firstGroup & 0xff}.${secondGroup >> 8}.${secondGroup & 0xff}`;
 }
