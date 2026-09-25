@@ -1,4 +1,5 @@
 import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it, vi } from "vitest";
 import {
   InvalidWebhookEnvelopeProblem,
@@ -7,6 +8,7 @@ import {
   UnknownWebhookEventProblem,
   WebhookDispatchProblem,
   WebhookGatewayConfigurationProblem,
+  WebhookReporterProblem,
   type WebhookEvent,
   WebhookGateway,
   type WebhookGatewayStoredResult,
@@ -77,6 +79,39 @@ function createGateway(
   });
 
   return { gateway, handler, reporter };
+}
+
+class FixtureHandlerProblem extends Problem {
+  constructor(category: ProblemCategory, extensions?: { readonly retryable: boolean }) {
+    super(
+      "webhooks-core/test-handler-problem",
+      category,
+      "fixture handler failed",
+      extensions === undefined ? {} : { extensions },
+    );
+  }
+}
+
+function createGatewayWithHandlerFailure(failure: Error) {
+  const handler = vi.fn(
+    async (
+      _event: WebhookEvent<{ subscriptionId: string; tenantId: string }, "subscription.created">,
+    ) => {
+      throw failure;
+    },
+  );
+  const router = createWebhookEventRouter<FixtureEvents>().register(
+    "subscription.created",
+    handler,
+  );
+  const gateway = new WebhookGateway({
+    adapter: createAdapter(),
+    router,
+    idempotencyStore: new InMemoryIdempotencyStore<WebhookGatewayStoredResult>(),
+    unknownEventPolicy: "fail",
+  });
+
+  return { gateway, handler };
 }
 
 function signedRequest(type = "subscription.created") {
@@ -304,28 +339,139 @@ describe("WebhookGateway", () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
-  it("wraps handler failures in stable webhook Problems and releases retryable reservations", async () => {
-    const handler = vi.fn(
-      async (
-        _event: WebhookEvent<{ subscriptionId: string; tenantId: string }, "subscription.created">,
-      ) => {
-        throw new Error("database unavailable");
-      },
-    );
-    const router = createWebhookEventRouter<FixtureEvents>().register(
-      "subscription.created",
-      handler,
-    );
-    const gateway = new WebhookGateway({
-      adapter: createAdapter(),
-      router,
-      idempotencyStore: new InMemoryIdempotencyStore<WebhookGatewayStoredResult>(),
-      unknownEventPolicy: "fail",
-    });
+  it.each([
+    {
+      name: "a plain Error",
+      failure: new Error("database unavailable"),
+      extensions: {},
+    },
+    {
+      name: "a Problem marked retryable on a client-error category",
+      failure: new FixtureHandlerProblem(ProblemCategory.NotFound, { retryable: true }),
+      extensions: { causeCode: "webhooks-core/test-handler-problem", retryable: true },
+    },
+    {
+      name: "a Problem with a retryable client-error status",
+      failure: new FixtureHandlerProblem(ProblemCategory.TooManyRequests),
+      extensions: { causeCode: "webhooks-core/test-handler-problem", retryable: true },
+    },
+  ])(
+    "wraps retryable handler failures from $name and re-runs the handler on redelivery",
+    async ({ failure, extensions }) => {
+      const { gateway, handler } = createGatewayWithHandlerFailure(failure);
 
-    await expect(gateway.handle(signedRequest())).rejects.toBeInstanceOf(WebhookDispatchProblem);
-    await expect(gateway.handle(signedRequest())).rejects.toBeInstanceOf(WebhookDispatchProblem);
-    expect(handler).toHaveBeenCalledTimes(2);
+      for (let delivery = 0; delivery < 3; delivery += 1) {
+        const error = await gateway.handle(signedRequest()).catch((caught: unknown) => caught);
+
+        expect(error).toBeInstanceOf(WebhookDispatchProblem);
+        expect(error).toMatchObject({
+          code: "webhooks-core/dispatch-failed",
+          category: ProblemCategory.InternalServerError,
+          status: 500,
+        });
+        expect((error as WebhookDispatchProblem).extensions).toEqual({
+          provider: "fixture",
+          eventId: "evt-1",
+          eventType: "subscription.created",
+          ...extensions,
+        });
+        expect((error as WebhookDispatchProblem).cause).toBe(failure);
+      }
+      expect(handler).toHaveBeenCalledTimes(3);
+    },
+  );
+
+  it.each([
+    {
+      name: "a Problem marked non-retryable on a server-error category",
+      failure: new FixtureHandlerProblem(ProblemCategory.InternalServerError, { retryable: false }),
+    },
+    {
+      name: "a Problem with a client-error status",
+      failure: new FixtureHandlerProblem(ProblemCategory.NotFound),
+    },
+  ])(
+    "records non-retryable handler failures from $name without re-running the handler",
+    async ({ failure }) => {
+      const { gateway, handler } = createGatewayWithHandlerFailure(failure);
+
+      const error = await gateway.handle(signedRequest()).catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(WebhookDispatchProblem);
+      expect(error).toMatchObject({
+        code: "webhooks-core/dispatch-failed",
+        category: ProblemCategory.InternalServerError,
+        status: 500,
+      });
+      expect((error as WebhookDispatchProblem).extensions).toEqual({
+        provider: "fixture",
+        eventId: "evt-1",
+        eventType: "subscription.created",
+        causeCode: "webhooks-core/test-handler-problem",
+        retryable: false,
+      });
+      expect((error as WebhookDispatchProblem).cause).toBe(failure);
+
+      for (let redelivery = 0; redelivery < 2; redelivery += 1) {
+        await expect(gateway.handle(signedRequest())).resolves.toMatchObject({
+          outcome: "failed",
+          record: {
+            status: "failed",
+            retryable: false,
+            problem: { code: "webhooks-core/dispatch-failed", status: 500 },
+          },
+        });
+      }
+      expect(handler).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it("records non-retryable reporter failures without re-running the reporter", async () => {
+    const { gateway, reporter } = createGateway({ unknownEventPolicy: "report" });
+    const failure = new FixtureHandlerProblem(ProblemCategory.InternalServerError, {
+      retryable: false,
+    });
+    reporter.reportUnknownEvent.mockRejectedValue(failure);
+
+    const error = await gateway
+      .handle(signedRequest("customer.updated"))
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(WebhookReporterProblem);
+    expect((error as WebhookReporterProblem).extensions).toEqual({
+      provider: "fixture",
+      eventId: "evt-1",
+      eventType: "customer.updated",
+      retryable: false,
+    });
+    expect((error as WebhookReporterProblem).cause).toBe(failure);
+    await expect(gateway.handle(signedRequest("customer.updated"))).resolves.toMatchObject({
+      outcome: "failed",
+      record: {
+        retryable: false,
+        problem: { code: "webhooks-core/reporter-failed", status: 500 },
+      },
+    });
+    expect(reporter.reportUnknownEvent).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-runs the reporter on redelivery after a plain Error", async () => {
+    const { gateway, reporter } = createGateway({ unknownEventPolicy: "report" });
+    reporter.reportUnknownEvent.mockRejectedValue(new Error("reporter unavailable"));
+
+    await expect(gateway.handle(signedRequest("customer.updated"))).rejects.toBeInstanceOf(
+      WebhookReporterProblem,
+    );
+    const error = await gateway
+      .handle(signedRequest("customer.updated"))
+      .catch((caught: unknown) => caught);
+
+    expect((error as WebhookReporterProblem).extensions).toEqual({
+      provider: "fixture",
+      eventId: "evt-1",
+      eventType: "customer.updated",
+    });
+    expect(reporter.reportUnknownEvent).toHaveBeenCalledTimes(2);
   });
 
   it("replays local fixtures through the same verification, idempotency, and dispatch path", async () => {

@@ -243,7 +243,7 @@ function toProblemSummary(error: unknown): {
   };
 }
 
-function isRetryableHandlerFailure(error: unknown): boolean {
+export function isRetryableHandlerFailure(error: unknown): boolean {
   if (typeof error !== "object" || error === null) {
     return true;
   }

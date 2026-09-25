@@ -8,6 +8,7 @@ export {
   createIdempotencyCoordinator,
   createIdempotentHandler,
   IdempotencyCoordinator,
+  isRetryableHandlerFailure,
 } from "./libs/IdempotencyCoordinator";
 export type { IdempotencyCoordinatorOptions } from "./libs/IdempotencyCoordinator";
 export { InMemoryIdempotencyStore } from "./libs/InMemoryIdempotencyStore";

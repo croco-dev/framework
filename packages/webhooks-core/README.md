@@ -79,6 +79,13 @@ therefore fail before a typed handler can run. Completed event ids replay the st
 ignored, or reported result through `@croco/idempotency-core`; same event id with a different
 fingerprint fails with `IdempotencyConflictProblem`.
 
+Handler failures surface as `WebhookDispatchProblem` and unknown-event reporter failures as
+`WebhookReporterProblem`, both with the `InternalServerError` category. When the original error is a
+`Problem`, the wrapper records its retry classification from `isRetryableHandlerFailure()` in
+`extensions.retryable`. A non-retryable failure is stored once, and redeliveries of the same event
+return `outcome: "failed"` without running the handler again. Retryable Problems and other errors
+leave the event open, so the next delivery runs the handler again.
+
 ## Unknown Events
 
 `unknownEventPolicy` is required and explicit:
