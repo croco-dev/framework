@@ -37,6 +37,7 @@ import {
 export type UpstashRateLimitStoreOptions = {
   redis: Redis;
   prefix?: string;
+  now?: () => number;
 };
 
 type MutableRateLimitStats = {
@@ -63,7 +64,7 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
   };
 
   constructor(options: UpstashRateLimitStoreOptions) {
-    super();
+    super(options.now);
     this.redis = requireRedisClient(options.redis);
     this.prefix = options.prefix ?? "ratelimit:sliding";
   }
@@ -98,7 +99,7 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
   }
 
   async checkSlidingWindow(key: string, policy: SlidingWindowPolicy): Promise<RateLimitResult> {
-    const now = Date.now();
+    const now = this.now();
     const windowStart = now - policy.windowMs;
     const redisKey = `${this.prefix}:${key}`;
     const ttlSeconds = Math.ceil(policy.windowMs / 1000) + 1;
@@ -140,7 +141,7 @@ export class UpstashSlidingWindowStore extends SlidingWindowStore {
       throw new InvalidRateLimitPolicyProblem("sliding window refund receipt");
     }
 
-    const now = Date.now();
+    const now = this.now();
     const windowStart = now - policy.windowMs;
     const redisKey = `${this.prefix}:${key}`;
     const ttlSeconds = Math.ceil(policy.windowMs / 1000) + 1;
@@ -207,7 +208,7 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
   };
 
   constructor(options: UpstashRateLimitStoreOptions) {
-    super();
+    super(options.now);
     this.redis = requireRedisClient(options.redis);
     this.prefix = options.prefix ?? "ratelimit:bucket";
   }
@@ -238,7 +239,7 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
   }
 
   async checkTokenBucket(key: string, policy: TokenBucketPolicy): Promise<RateLimitResult> {
-    const now = Date.now();
+    const now = this.now();
     const redisKey = clusteredRateLimitKey(this.prefix, key);
     const receiptKey = `${redisKey}:receipts`;
     const ttlMs = (policy.capacity * policy.refillIntervalMs) / policy.refillRate;
@@ -292,7 +293,7 @@ export class UpstashTokenBucketStore extends TokenBucketStore {
       throw new InvalidRateLimitPolicyProblem("token bucket refund receipt");
     }
 
-    const now = Date.now();
+    const now = this.now();
     const redisKey = clusteredRateLimitKey(this.prefix, key);
     const receiptKey = `${redisKey}:receipts`;
     const ttlSeconds =
@@ -363,7 +364,7 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
   };
 
   constructor(options: UpstashRateLimitStoreOptions) {
-    super();
+    super(options.now);
     this.redis = requireRedisClient(options.redis);
     this.prefix = options.prefix ?? "ratelimit:fixed";
   }
@@ -377,7 +378,7 @@ export class UpstashFixedWindowStore extends FixedWindowStore {
   }
 
   async checkFixedWindow(key: string, policy: FixedWindowPolicy): Promise<RateLimitResult> {
-    const now = Date.now();
+    const now = this.now();
     const windowStart = Math.floor(now / policy.windowMs) * policy.windowMs;
     const redisKey = clusteredRateLimitKey(this.prefix, key);
     const receiptKey = `${redisKey}:receipts`;

@@ -34,7 +34,7 @@ const result = await limiter.check({ ip: "127.0.0.1" }, policy);
 | `UpstashSlidingWindowStore`            | 슬라이딩 윈도우 제한을 수행합니다.                                  |
 | `UpstashTokenBucketStore`              | 토큰 버킷 제한을 수행합니다.                                        |
 | `UpstashFixedWindowStore`              | 고정 윈도우 제한을 수행합니다.                                      |
-| `UpstashRateLimitStoreOptions`         | `redis`와 `prefix`를 받는 공통 옵션 타입입니다.                     |
+| `UpstashRateLimitStoreOptions`         | `redis`, `prefix`, 선택적 `now` clock을 받는 공통 옵션 타입입니다.  |
 | `InvalidRateLimitPolicyProblem`        | 저장소와 정책 타입이 맞지 않을 때 발생하는 terminal Problem입니다.  |
 | `MissingUpstashRateLimitConfigProblem` | Redis 클라이언트 설정 누락을 나타내는 terminal Problem입니다.       |
 | `UpstashRateLimitUpstreamProblem`      | Upstash Redis 오류를 redaction과 retryable evidence로 정규화합니다. |
@@ -46,6 +46,7 @@ const result = await limiter.check({ ip: "127.0.0.1" }, policy);
   손실 없이 합산됩니다. 유한한 음수와 소수 증분을 지원하며, 기존 카운터 TTL은 증분 후에도
   유지됩니다. `expire()`와 `reset()`은 같은 `:increment` 카운터 키에 적용됩니다.
 - 기본 prefix는 저장소별로 `ratelimit:sliding`, `ratelimit:bucket`, `ratelimit:fixed`를 사용합니다.
+- `now`를 주입하면 세 저장소의 윈도우 경계와 Redis 스크립트 타임스탬프가 해당 시각을 사용합니다. 생략하면 시스템 시각을 사용합니다.
 - 고정 윈도우와 토큰 버킷의 상태 키는 `{prefix:key}`, 환불 영수증 키는
   `{prefix:key}:receipts`를 사용해 Redis Cluster의 같은 슬롯에 배치합니다. prefix와 key 안의
   `%`, `{`, `}`는 각각 `%25`, `%7B`, `%7D`로 인코딩합니다. `check()`, `refund()`, `reset()`이

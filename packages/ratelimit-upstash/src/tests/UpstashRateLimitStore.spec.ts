@@ -884,3 +884,80 @@ describe("token bucket Lua refill contract", () => {
     expect(tokenBucketRefundLua).toContain("if tokens == capacity then\n  lastRefill = now");
   });
 });
+
+describe("Upstash store clocks", () => {
+  it("uses the injected clock for sliding check and refund arguments", async () => {
+    const redis = createMockRedis();
+    redis.eval.mockResolvedValue([1, 1, 9, "99000"]);
+    const now = vi.fn().mockReturnValue(100_000);
+    const store = new UpstashSlidingWindowStore({ redis: redis as never, now });
+    const policy = createSlidingWindowPolicy("clock", 10, 60_000);
+
+    const check = await store.check("client", policy);
+    const refund = await store.refund("client", policy, check.refundReceipt);
+
+    expect(now).toHaveBeenCalledTimes(2);
+    expect(check.resetAtMs).toBe(159_000);
+    expect(check.refundReceipt).toMatchObject({ timestamp: 100_000 });
+    expect(refund.resetAtMs).toBe(159_000);
+    expect(redis.eval.mock.calls[0]?.[2]).toEqual([
+      100_000,
+      40_000,
+      10,
+      check.refundReceipt?.id,
+      61,
+    ]);
+    expect(redis.eval.mock.calls[1]?.[2]).toEqual([
+      100_000,
+      40_000,
+      10,
+      check.refundReceipt?.id,
+      61,
+    ]);
+  });
+
+  it("uses the injected clock for token bucket receipts, reset, and refund", async () => {
+    const redis = createMockRedis();
+    redis.eval.mockResolvedValueOnce([1, 1, 1, "1000.5"]).mockResolvedValueOnce([1, 2, 2, "3000"]);
+    const now = vi.fn().mockReturnValueOnce(1_500).mockReturnValueOnce(2_600);
+    const store = new UpstashTokenBucketStore({ redis: redis as never, now });
+    const policy = createTokenBucketPolicy("clock", 2, 1, 1_000);
+
+    const check = await store.check("client", policy);
+    const refund = await store.refund("client", policy, check.refundReceipt);
+
+    expect(now).toHaveBeenCalledTimes(2);
+    expect(check.resetAtMs).toBe(2_000.5);
+    expect(check.refundReceipt).toMatchObject({ expiresAtMs: 3_500 });
+    expect(refund.resetAtMs).toBe(4_000);
+    expect(redis.eval.mock.calls[0]?.[2]).toEqual([
+      1_500,
+      2,
+      1_000,
+      1,
+      3,
+      check.refundReceipt?.id,
+      3_500,
+    ]);
+    expect(redis.eval.mock.calls[1]?.[2]).toEqual([2_600, 2, 1_000, 1, 3, check.refundReceipt?.id]);
+  });
+
+  it("uses the injected clock at a fixed window boundary", async () => {
+    const redis = createMockRedis();
+    redis.eval.mockResolvedValue([1, 1, 9]);
+    const now = vi.fn().mockReturnValueOnce(119_999).mockReturnValueOnce(120_000);
+    const store = new UpstashFixedWindowStore({ redis: redis as never, now });
+    const policy = createFixedWindowPolicy("clock", 10, 60_000);
+
+    const before = await store.check("client", policy);
+    const after = await store.check("client", policy);
+
+    expect(now).toHaveBeenCalledTimes(2);
+    expect(before.resetAtMs).toBe(120_000);
+    expect(after.resetAtMs).toBe(180_000);
+    expect(before.refundReceipt).toMatchObject({ windowStart: 60_000 });
+    expect(after.refundReceipt).toMatchObject({ windowStart: 120_000 });
+    expect(redis.eval.mock.calls[0]?.[2]).toEqual([10, 60, 60_000, before.refundReceipt?.id]);
+    expect(redis.eval.mock.calls[1]?.[2]).toEqual([10, 60, 120_000, after.refundReceipt?.id]);
+  });
+});
