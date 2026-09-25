@@ -10,6 +10,7 @@ marked as non-executable example text.
 
 - `README.md`
 - `docs/**/*.md`
+- `packages/*/README.md` for public packages (`private` packages are excluded)
 - `packages/docs/src/content/docs/en/guides/**/*.{md,mdx}`
 - `packages/docs/src/content/docs/en/reference/**/*.{md,mdx}`
 - `packages/docs/src/content/docs/ko/**/*.{md,mdx}`
@@ -38,6 +39,11 @@ step has produced files outside the docs checker.
 Untyped TypeScript fences are not allowed for new documentation. Existing unmarked legacy blocks are
 tracked in `docs/doc-examples-baseline.json` with a reason so drift is visible. Do not add new
 baseline entries for new docs; either make the fence `typecheck` or mark it `no-check`.
+
+The check also requires each package in `docs/package-catalog.json`'s 1.0 spine to appear in an
+import from a `typecheck` fence. Imports through a package's public subpath count. Packages without
+such an example must have a non-empty reason in `docs/doc-examples-coverage-baseline.json`. Remove
+the reason when a checked example is added; stale coverage exceptions fail the check.
 
 ## Authoring Workflow
 

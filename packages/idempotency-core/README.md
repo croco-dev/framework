@@ -10,7 +10,7 @@ pnpm add @croco/idempotency-core
 
 ## 사용법
 
-```ts
+```ts typecheck
 import {
   IdempotencyCoordinator,
   InMemoryIdempotencyStore,

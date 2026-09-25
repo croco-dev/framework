@@ -29,7 +29,7 @@ Run from any directory inside a Croco workspace. The CLI automatically detects `
 
 `argv` contains only Croco arguments; omit the Node executable and script path.
 
-```typescript
+```typescript typecheck
 import { createCrocoCommand, runCroco } from "@croco/cli";
 
 const output: string[] = [];

@@ -37,6 +37,8 @@ type Baseline = {
 };
 
 const baselinePath = join("docs", "doc-examples-baseline.json");
+const coverageBaselinePath = join("docs", "doc-examples-coverage-baseline.json");
+const packageCatalogPath = join("docs", "package-catalog.json");
 const defaultSkippedReason =
   "Legacy authored docs block is not yet isolated for documentation typechecking.";
 const docsRoots = [
@@ -165,6 +167,7 @@ function run(options: Options): {
     violations.push(...typecheckBlocks(options.rootDir, typecheckedBlocks));
   }
 
+  violations.push(...validateCoverageBaseline(options.rootDir, typecheckedBlocks));
   violations.push(...validateRootEnvironmentTemplate(options.rootDir));
 
   return {
@@ -567,7 +570,38 @@ function parseArgs(args: readonly string[]): Options {
 }
 
 function collectMarkdownFiles(rootDir: string): string[] {
-  return collectMarkdownFilesFromRoots(rootDir, docsRoots);
+  return [
+    ...collectMarkdownFilesFromRoots(rootDir, docsRoots),
+    ...collectPublicPackageReadmes(rootDir),
+  ].sort((left, right) => relative(rootDir, left).localeCompare(relative(rootDir, right)));
+}
+
+function collectPublicPackageReadmes(rootDir: string): string[] {
+  const packagesDir = join(rootDir, "packages");
+  if (!existsSync(packagesDir)) {
+    return [];
+  }
+
+  return readdirSync(packagesDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .flatMap((entry) => {
+      const packageDir = join(packagesDir, entry.name);
+      const manifestPath = join(packageDir, "package.json");
+      const readmePath = join(packageDir, "README.md");
+      if (!existsSync(manifestPath) || !existsSync(readmePath)) {
+        return [];
+      }
+
+      const manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as unknown;
+      if (isRecord(manifest) && manifest.private === true) {
+        return [];
+      }
+      if (!isRecord(manifest) || typeof manifest.name !== "string") {
+        throw new Error(`${normalizeRelativePath(rootDir, manifestPath)} must have a package name`);
+      }
+
+      return [readmePath];
+    });
 }
 
 function collectMarkdownFilesFromRoots(rootDir: string, roots: readonly string[]): string[] {
@@ -730,6 +764,79 @@ function validateBaseline(rootDir: string, unmarkedBlocks: readonly MarkdownCode
   return violations;
 }
 
+function validateCoverageBaseline(rootDir: string, blocks: readonly MarkdownCodeBlock[]): string[] {
+  const catalog = JSON.parse(readFileSync(join(rootDir, packageCatalogPath), "utf-8")) as unknown;
+  if (!isRecord(catalog) || !isRecord(catalog.spine) || !Array.isArray(catalog.spine.packages)) {
+    throw new Error(`${packageCatalogPath} spine.packages must be an array`);
+  }
+
+  const spinePackages = catalog.spine.packages;
+  if (!spinePackages.every((name): name is string => typeof name === "string" && name.length > 0)) {
+    throw new Error(`${packageCatalogPath} spine.packages must contain package names`);
+  }
+
+  const packageNames = new Map<string, string>();
+  for (const slug of spinePackages) {
+    const manifestPath = join(rootDir, "packages", slug, "package.json");
+    const manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as unknown;
+    if (!isRecord(manifest) || typeof manifest.name !== "string") {
+      throw new Error(`${normalizeRelativePath(rootDir, manifestPath)} must have a package name`);
+    }
+    packageNames.set(slug, manifest.name);
+  }
+
+  const baseline = JSON.parse(
+    readFileSync(join(rootDir, coverageBaselinePath), "utf-8"),
+  ) as unknown;
+  if (
+    !isRecord(baseline) ||
+    baseline.schemaVersion !== 1 ||
+    !isRecord(baseline.uncoveredPackages)
+  ) {
+    throw new Error(`${coverageBaselinePath} must have schemaVersion 1 and uncoveredPackages`);
+  }
+
+  const covered = new Set<string>();
+  for (const block of blocks) {
+    const source = ts.createSourceFile(block.file, block.code, ts.ScriptTarget.Latest, true);
+    for (const statement of source.statements) {
+      if (!ts.isImportDeclaration(statement) || !ts.isStringLiteral(statement.moduleSpecifier)) {
+        continue;
+      }
+
+      for (const [slug, packageName] of packageNames) {
+        const importedName = statement.moduleSpecifier.text;
+        if (importedName === packageName || importedName.startsWith(`${packageName}/`)) {
+          covered.add(slug);
+        }
+      }
+    }
+  }
+
+  const violations: string[] = [];
+  const spineSet = new Set(spinePackages);
+  for (const [name, reason] of Object.entries(baseline.uncoveredPackages)) {
+    if (!spineSet.has(name)) {
+      violations.push(`${coverageBaselinePath} ${name} is not a spine package`);
+    } else if (covered.has(name)) {
+      violations.push(`${coverageBaselinePath} ${name} is already covered by a typechecked import`);
+    }
+    if (typeof reason !== "string" || reason.trim().length === 0) {
+      violations.push(`${coverageBaselinePath} ${name} must include a reason`);
+    }
+  }
+
+  for (const name of spinePackages) {
+    if (!covered.has(name) && !(name in baseline.uncoveredPackages)) {
+      violations.push(
+        `${packageNames.get(name)} has no typechecked documentation import or reason in ${coverageBaselinePath}`,
+      );
+    }
+  }
+
+  return violations;
+}
+
 function loadBaseline(rootDir: string): Baseline {
   const path = join(rootDir, baselinePath);
   if (!existsSync(path)) {
@@ -849,8 +956,8 @@ function createCompilerOptions(rootDir: string): ts.CompilerOptions {
     forceConsistentCasingInFileNames: true,
     isolatedModules: true,
     jsx: ts.JsxEmit.ReactJSX,
-    module: ts.ModuleKind.NodeNext,
-    moduleResolution: ts.ModuleResolutionKind.NodeNext,
+    module: ts.ModuleKind.ESNext,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
     noEmit: true,
     noUnusedLocals: false,
     noUnusedParameters: false,

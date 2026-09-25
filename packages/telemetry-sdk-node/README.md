@@ -48,7 +48,7 @@ runtime rejects conflicting configuration rather than selecting a lifecycle owne
 
 ### 기본 초기화
 
-```typescript
+```typescript typecheck
 import { TelemetryRuntime } from "@croco/telemetry-sdk-node";
 
 const telemetry = TelemetryRuntime.getInstance();
