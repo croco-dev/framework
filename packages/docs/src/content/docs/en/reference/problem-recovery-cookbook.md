@@ -461,8 +461,8 @@ This cookbook documents 800 public Croco Problem codes. The deterministic JSON r
 | [`meta-vite/server-action-not-found`](#meta-vite-server-action-not-found)                                                             | NotFound              |    404 | not-retryable | public        | active     |       1 |
 | [`meta-vite/server-action-validation-failed`](#meta-vite-server-action-validation-failed)                                             | ValidationError       |    422 | not-retryable | public        | active     |       1 |
 | [`meter/insert-failed`](#meter-insert-failed)                                                                                         | InternalServerError   |    500 | conditional   | operator-only | active     |       1 |
-| [`metering-drizzle/duplicate-meter-definitions`](#metering-drizzle-duplicate-meter-definitions)                                       | InternalServerError   |    500 | conditional   | operator-only | active     |       1 |
-| [`metering-drizzle/invalid-meter-definition`](#metering-drizzle-invalid-meter-definition)                                             | InternalServerError   |    500 | conditional   | operator-only | active     |       1 |
+| [`metering-drizzle/duplicate-meter-definitions`](#metering-drizzle-duplicate-meter-definitions)                                       | InternalServerError   |    500 | not-retryable | operator-only | active     |       1 |
+| [`metering-drizzle/invalid-meter-definition`](#metering-drizzle-invalid-meter-definition)                                             | InternalServerError   |    500 | not-retryable | operator-only | active     |       1 |
 | [`metering-drizzle/migration-query-result-unsupported`](#metering-drizzle-migration-query-result-unsupported)                         | InternalServerError   |    500 | conditional   | operator-only | active     |       1 |
 | [`metering-drizzle/usage-envelope-not-configured`](#metering-drizzle-usage-envelope-not-configured)                                   | InternalServerError   |    500 | conditional   | operator-only | active     |       1 |
 | [`metering-upstash/missing-config`](#metering-upstash-missing-config)                                                                 | InternalServerError   |    500 | conditional   | operator-only | active     |       1 |
@@ -9054,12 +9054,12 @@ Sources:
 
 - Category: `InternalServerError`
 - HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
+- Retryability: `not-retryable`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Cause: The meters table holds several rows for one (tenant_id, meter_id), so the meter definition migration cannot create its unique index.
+- User action: Do not rerun the migration until the duplicate meter definitions are resolved; it fails the same way each time.
+- Operator action: Use extensions.duplicates to find each duplicated (tenant_id, meter_id), inspect those rows in the meters table to choose one to keep, delete the others, then rerun the migration.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
@@ -9072,17 +9072,17 @@ Sources:
 
 - Category: `InternalServerError`
 - HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
+- Retryability: `not-retryable`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Cause: A meter definition passed to save, or a meter row read from the meters table, has a billing, aggregation, or unit value outside the meter contract.
+- User action: Do not retry with the same meter definition; register the meter with a supported billing, aggregation, and unit.
+- Operator action: Use the tenantId, meterId, field, and receivedValue extensions to correct the registration or the stored row, and confirm that meterTable property names match the MeterTable keys.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
 
-- `packages/metering-drizzle/src/libs/problems/InvalidMeterDefinitionProblem.ts:10:5` (problem-constructor)
+- `packages/metering-drizzle/src/libs/problems/InvalidMeterDefinitionProblem.ts:13:5` (problem-constructor)
 
 <a id="metering-drizzle-migration-query-result-unsupported"></a>
 

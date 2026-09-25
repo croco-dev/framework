@@ -829,6 +829,23 @@ describe("DrizzleMeterRepository", () => {
       ]);
     });
 
+    it("should store explicit null aggregation and unit as omitted", async () => {
+      const saved = await repository.save({
+        tenantId: "tenant-1",
+        meterId: "null-optional-fields",
+        type: "COUNT",
+        aggregation: null,
+        unit: null,
+      } as unknown as MeterRegistrationOptions);
+
+      expect(saved).toMatchObject({ billing: "local", aggregation: undefined, unit: undefined });
+      expect(
+        sqlite
+          .prepare("SELECT aggregation, unit FROM meters WHERE meter_id = ?")
+          .all("null-optional-fields"),
+      ).toEqual([{ aggregation: null, unit: null }]);
+    });
+
     it("should keep billing-required meters required after registration and restart", async () => {
       const registry = new MeterRegistry(repository, 60_000, persistentJournal);
 

@@ -1,6 +1,9 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
-/** A meter definition's billing, aggregation, or unit value is outside the meter contract, so it cannot be stored or restored. */
+/**
+ * A meter definition's billing, aggregation, or unit value is outside the meter contract, so it cannot be stored or
+ * restored.
+ */
 export class InvalidMeterDefinitionProblem extends Problem {
   constructor(
     meter: { readonly tenantId: string; readonly meterId: string },

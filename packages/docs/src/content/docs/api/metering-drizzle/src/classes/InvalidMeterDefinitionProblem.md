@@ -5,7 +5,8 @@ prev: false
 title: "InvalidMeterDefinitionProblem"
 ---
 
-A meter definition's billing, aggregation, or unit value is outside the meter contract, so it cannot be stored or restored.
+A meter definition's billing, aggregation, or unit value is outside the meter contract, so it cannot be stored or
+restored.
 
 ## Extends
 

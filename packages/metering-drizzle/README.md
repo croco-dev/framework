@@ -155,7 +155,8 @@ safe-integer usage 또는 고정 소수점 quota를 사용하려면 `widenMeteri
 `createdAt`은 처음 값을 유지합니다. 앱을 시작할 때마다 `MeterRegistry.register`를 호출해도 행이 늘어나지 않고,
 재시작 후 `loadAll`은 마지막 등록값의 `billing`·`aggregation`·`unit`을 복원합니다. `billing`이 `local`·`required`가
 아니거나, `aggregation`이 `COUNT`·`SUM`이 아니거나, `unit`이 문자열이 아니면 저장 전 입력과 저장된 행 모두
-`InvalidMeterDefinitionProblem`(`metering-drizzle/invalid-meter-definition`)으로 실패합니다.
+`InvalidMeterDefinitionProblem`(`metering-drizzle/invalid-meter-definition`)으로 실패합니다. 입력의 `aggregation: null`과
+`unit: null`은 생략한 것과 같게 저장되지만, `billing: null`은 과금 요구를 잃지 않도록 거부합니다.
 
 `meterTable`의 컬럼 property 이름은 `MeterTable` 키와 같아야 합니다. meter 정의를 읽고 쓸 때는 `meterSchema`
 매핑이 아니라 이 이름을 사용합니다.
