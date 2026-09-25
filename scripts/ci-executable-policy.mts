@@ -585,10 +585,11 @@ function hasLockfileEvidence(rootDir: string, packageName: string, version: stri
 }
 
 function readProjectLockfileDocument(lockfile: string): string {
-  const separatorIndex = lockfile.indexOf(pnpmLockfileDocumentSeparator);
+  const normalized = lockfile.replaceAll("\r\n", "\n");
+  const separatorIndex = normalized.indexOf(pnpmLockfileDocumentSeparator);
   return separatorIndex === -1
-    ? lockfile
-    : lockfile.slice(separatorIndex + pnpmLockfileDocumentSeparator.length);
+    ? normalized
+    : normalized.slice(separatorIndex + pnpmLockfileDocumentSeparator.length);
 }
 
 function isLockfileBackedPnpmExec(

@@ -212,84 +212,96 @@ describe("ci-executable-policy.mts", () => {
     ]);
   });
 
-  it("reads root importer evidence from the project document after a package-manager document", () => {
-    const repo = createRepo(
-      { circular: "pnpm exec madge --circular packages" },
-      { madge: "8.0.0" },
-    );
-    writeFile(
-      repo,
-      "pnpm-lock.yaml",
-      [
-        "---",
-        "lockfileVersion: '9.0'",
-        "",
-        "importers:",
-        "",
-        "  .:",
-        "    configDependencies: {}",
-        "    packageManagerDependencies:",
-        "      pnpm:",
-        "        specifier: 12.6.0",
-        "        version: 12.6.0",
-        "",
-        "packages:",
-        "",
-        "  pnpm@12.6.0:",
-        "    resolution: {integrity: sha512-test}",
-        "",
-        "---",
-        "lockfileVersion: '9.0'",
-        "",
-        "importers:",
-        "",
-        "  .:",
-        "    devDependencies:",
-        "      madge:",
-        "        specifier: 8.0.0",
-        "        version: 8.0.0",
-        "",
-      ].join("\n"),
-    );
+  it.each([
+    ["LF", "\n"],
+    ["CRLF", "\r\n"],
+  ])(
+    "reads root importer evidence from the project document after a package-manager document with %s line endings",
+    (_label, lineEnding) => {
+      const repo = createRepo(
+        { circular: "pnpm exec madge --circular packages" },
+        { madge: "8.0.0" },
+      );
+      writeFile(
+        repo,
+        "pnpm-lock.yaml",
+        [
+          "---",
+          "lockfileVersion: '9.0'",
+          "",
+          "importers:",
+          "",
+          "  .:",
+          "    configDependencies: {}",
+          "    packageManagerDependencies:",
+          "      pnpm:",
+          "        specifier: 12.6.0",
+          "        version: 12.6.0",
+          "",
+          "packages:",
+          "",
+          "  pnpm@12.6.0:",
+          "    resolution: {integrity: sha512-test}",
+          "",
+          "---",
+          "lockfileVersion: '9.0'",
+          "",
+          "importers:",
+          "",
+          "  .:",
+          "    devDependencies:",
+          "      madge:",
+          "        specifier: 8.0.0",
+          "        version: 8.0.0",
+          "",
+        ].join(lineEnding),
+      );
 
-    expect(runCiExecutablePolicy({ checkedPaths: ["package.json"], rootDir: repo })).toEqual(
-      expect.objectContaining({ findings: [], ok: true }),
-    );
-  });
+      expect(runCiExecutablePolicy({ checkedPaths: ["package.json"], rootDir: repo })).toEqual(
+        expect.objectContaining({ findings: [], ok: true }),
+      );
+    },
+  );
 
-  it("rejects package-manager bootstrap entries as root importer evidence", () => {
-    const repo = createRepo({ bootstrap: "pnpm exec pnpm --version" }, { pnpm: "12.6.0" });
-    writeFile(
-      repo,
-      "pnpm-lock.yaml",
-      [
-        "---",
-        "lockfileVersion: '9.0'",
-        "",
-        "importers:",
-        "",
-        "  .:",
-        "    configDependencies: {}",
-        "    packageManagerDependencies:",
-        "      pnpm:",
-        "        specifier: 12.6.0",
-        "        version: 12.6.0",
-        "",
-        "---",
-        "lockfileVersion: '9.0'",
-        "",
-        "importers:",
-        "",
-        "  .:",
-        "    devDependencies: {}",
-        "",
-      ].join("\n"),
-    );
+  it.each([
+    ["LF", "\n"],
+    ["CRLF", "\r\n"],
+  ])(
+    "rejects package-manager bootstrap entries as root importer evidence with %s line endings",
+    (_label, lineEnding) => {
+      const repo = createRepo({ bootstrap: "pnpm exec pnpm --version" }, { pnpm: "12.6.0" });
+      writeFile(
+        repo,
+        "pnpm-lock.yaml",
+        [
+          "---",
+          "lockfileVersion: '9.0'",
+          "",
+          "importers:",
+          "",
+          "  .:",
+          "    configDependencies: {}",
+          "    packageManagerDependencies:",
+          "      pnpm:",
+          "        specifier: 12.6.0",
+          "        version: 12.6.0",
+          "",
+          "---",
+          "lockfileVersion: '9.0'",
+          "",
+          "importers:",
+          "",
+          "  .:",
+          "    devDependencies: {}",
+          "",
+        ].join(lineEnding),
+      );
 
-    expect(
-      runCiExecutablePolicy({ checkedPaths: ["package.json"], rootDir: repo }).findings,
-    ).toEqual([expect.objectContaining({ kind: "ad-hoc-package-execution" })]);
-  });
+      expect(
+        runCiExecutablePolicy({ checkedPaths: ["package.json"], rootDir: repo }).findings,
+      ).toEqual([expect.objectContaining({ kind: "ad-hoc-package-execution" })]);
+    },
+  );
 
   it("requires lockfile evidence from the root importer", () => {
     const repo = createRepo(

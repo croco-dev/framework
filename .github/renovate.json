@@ -13,5 +13,11 @@
       "depNameTemplate": "ghcr.io/gitleaks/gitleaks",
       "versioningTemplate": "semver-coerced"
     }
+  ],
+  "packageRules": [
+    {
+      "matchDepNames": ["pnpm"],
+      "groupName": "pnpm"
+    }
   ]
 }

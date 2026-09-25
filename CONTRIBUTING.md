@@ -7,13 +7,13 @@ Welcome! This guide covers everything you need to start contributing.
 - **[mise](https://mise.jdx.dev)** to install the pinned Node.js and pnpm versions
 - **Git**
 
-The root `mise.toml` pins Node.js and tells mise to read the pnpm version from
-`package.json#packageManager`. CI installs the same versions from the same files.
+The root `mise.toml` pins Node.js and pnpm, and `package.json#packageManager` pins the same pnpm version.
+CI installs the same versions from `mise.toml`.
 
 ```bash
 mise trust    # once per clone
 mise install
-mise ls --current  # node from mise.toml, pnpm from package.json
+mise ls --current
 ```
 
 ## Quick Start

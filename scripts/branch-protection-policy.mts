@@ -14,7 +14,7 @@ const DEFAULT_AUDIT_WORKFLOW_PATH = ".github/workflows/repository-policy-audit.y
 const DEFAULT_WORKFLOW_DIRECTORY = ".github/workflows";
 const CHECKOUT_ACTION = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1";
 const TOOLCHAIN_SETUP_ACTION = "jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c";
-const TOOLCHAIN_SETUP_INPUTS = { version: "2026.9.13", github_token: "" } as const;
+const TOOLCHAIN_SETUP_INPUTS = { version: "2026.9.13" } as const;
 const NODE_SETUP_ACTION = "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020";
 export const REQUIRED_BRANCH_PROTECTION_CHECKS = [
   { context: "benchmark-gate", integrationId: 15368 },

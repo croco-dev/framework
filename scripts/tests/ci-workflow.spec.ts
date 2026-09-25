@@ -329,6 +329,11 @@ describe("Phase B cacheable verification shadow", () => {
 
   it("pins one Node patch release across independent hosted runners", () => {
     expect(MISE_TOML).toMatch(/^node = "\d+\.\d+\.\d+"$/m);
+    expect(/^pnpm = "(\d+\.\d+\.\d+)"$/m.exec(MISE_TOML)?.[1]).toBe(
+      /^pnpm@(\d+\.\d+\.\d+)\+sha512\.[0-9a-f]{128}$/.exec(
+        String(ROOT_PACKAGE_JSON.packageManager),
+      )?.[1],
+    );
     const steps = Object.entries(WORKFLOWS).flatMap(([path, source]) =>
       Object.values(
         (parseDocument(source).toJS() as { jobs: Record<string, { steps?: WorkflowStep[] }> }).jobs,
@@ -337,10 +342,7 @@ describe("Phase B cacheable verification shadow", () => {
     const toolchainSteps = steps.filter(({ step }) => step.uses?.startsWith("jdx/mise-action@"));
     const sharedInputs = toolchainSteps.find(({ path }) => path !== "benchmark.yml")?.step.with;
 
-    expect(sharedInputs).toEqual({
-      version: expect.stringMatching(/^\d+\.\d+\.\d+$/),
-      github_token: "",
-    });
+    expect(sharedInputs).toEqual({ version: expect.stringMatching(/^\d+\.\d+\.\d+$/) });
     for (const { path, step } of toolchainSteps) {
       expect(step.with, path).toEqual(
         path === "benchmark.yml" ? { ...sharedInputs, cache: false } : sharedInputs,
@@ -604,6 +606,11 @@ describe("CI verification profile contract", () => {
         "--base origin/trunk --head HEAD",
       ),
       WORKFLOW.replace("run: pnpm test-inventory:check", "run: echo inventory omitted"),
+      WORKFLOW.replace('          version: "2026.9.13"\n', '          version: "2026.9.12"\n'),
+      WORKFLOW.replace(
+        "          cache: pnpm\n      - name: Install dependencies\n        run: pnpm install --frozen-lockfile --ignore-scripts",
+        '          cache: pnpm\n          node-version: "24"\n      - name: Install dependencies\n        run: pnpm install --frozen-lockfile --ignore-scripts',
+      ),
       WORKFLOW.replace(
         "      - name: Run repository contract tests\n        run:",
         "      - name: Run repository contract tests\n        if: false\n        run:",
