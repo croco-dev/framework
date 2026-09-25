@@ -2,6 +2,7 @@ import type { ConfigService } from "@croco/framework-config";
 import { Context } from "@croco/framework-context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Logger } from "../Logger";
+import { sanitizeLogRecord } from "../sanitizeLogRecord";
 
 type LoggerCtorConfig = Pick<ConfigService, "get" | "isProduction" | "isDevelopment" | "isTest">;
 
@@ -277,19 +278,8 @@ describe("Logger", () => {
       const pinoOptions = mockPino.mock.calls[0][0] as Record<string, unknown>;
 
       expect(pinoOptions.level).toBe("info");
-      expect(pinoOptions.redact).toEqual({
-        paths: [
-          "password",
-          "token",
-          "secret",
-          "*.password",
-          "*.token",
-          "*.secret",
-          "authorization",
-          "cookie",
-        ],
-        remove: true,
-      });
+      expect(pinoOptions.formatters).toEqual({ log: sanitizeLogRecord });
+      expect(pinoOptions.redact).toBeUndefined();
       expect(pinoOptions.base).not.toBeUndefined();
       expect(pinoOptions.transport).not.toBeUndefined();
     });
@@ -318,26 +308,6 @@ describe("Logger", () => {
   });
 
   describe("민감정보 마스킹", () => {
-    it("pino 설정에 redact 경로가 포함되어야 함", () => {
-      vi.clearAllMocks();
-      const mockPino = vi.mocked(pino);
-
-      logger = new Logger(mockConfig as unknown as ConfigService);
-
-      const pinoOptions = mockPino.mock.calls[0][0] as Record<string, unknown>;
-      const redactOptions = pinoOptions.redact as { paths: string[]; remove: boolean };
-
-      expect(redactOptions.paths).toContain("password");
-      expect(redactOptions.paths).toContain("token");
-      expect(redactOptions.paths).toContain("secret");
-      expect(redactOptions.paths).toContain("*.password");
-      expect(redactOptions.paths).toContain("*.token");
-      expect(redactOptions.paths).toContain("*.secret");
-      expect(redactOptions.paths).toContain("authorization");
-      expect(redactOptions.paths).toContain("cookie");
-      expect(redactOptions.remove).toBe(true);
-    });
-
     it("로그 레벨이 ConfigService에서 설정한 값이어야 함", () => {
       vi.clearAllMocks();
       const mockPino = vi.mocked(pino);

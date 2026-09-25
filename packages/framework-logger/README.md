@@ -89,13 +89,15 @@ import { LogLevel } from "@croco/framework-logger";
 
 ## 민감 정보 필터링
 
-기본 Logger는 다음 ASCII 키를 대소문자 구분 없이 비교하여 제거합니다:
+기본 Logger는 키를 소문자로 바꾸고 `-`와 `_`를 제거한 뒤 다음 목록과 정확히 일치하면 제거합니다:
 
-- `password`
-- `token`
-- `secret`
-- `authorization`
-- `cookie`
+- `accesskey`, `accesstoken`, `apikey`, `authorization`, `clientsecret`, `connectionstring`
+- `cookie`, `credential`, `credentials`, `databaseurl`, `dsn`, `idtoken`
+- `password`, `privatekey`, `proxyauthorization`, `redisurl`, `refreshtoken`, `secret`
+- `secretaccesskey`, `setcookie`, `token`, `xapikey`
+
+예를 들어 `accessToken`, `x-api-key`, `set_cookie`는 제거하지만 `tokenCount`, `tokensUsed`,
+`passwordPolicy`는 그대로 기록합니다.
 
 이 계약은 최상위 로그 컨텍스트를 포함한 최대 8단계의 객체와 배열, child logger 바인딩, `Error` 메타데이터에
 동일하게 적용됩니다. 8단계를 넘는 분기는 `[Truncated]`, 순환 참조는 `[Circular]`, 검사할 수 없는 값은

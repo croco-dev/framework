@@ -58,19 +58,6 @@ export class Logger implements ILogger {
               ignore: "pid,hostname",
             },
           },
-      redact: {
-        paths: [
-          "password",
-          "token",
-          "secret",
-          "*.password",
-          "*.token",
-          "*.secret",
-          "authorization",
-          "cookie",
-        ],
-        remove: true,
-      },
       formatters: {
         log: sanitizeLogRecord,
       },

@@ -7,10 +7,33 @@ const UNSERIALIZABLE_VALUE = "[Unserializable]";
 
 export const MAX_LOG_NESTING_DEPTH = 8;
 
-const SENSITIVE_LOG_KEYS = new Set(["authorization", "cookie", "password", "secret", "token"]);
+const SENSITIVE_LOG_KEYS = new Set([
+  "accesskey",
+  "accesstoken",
+  "apikey",
+  "authorization",
+  "clientsecret",
+  "connectionstring",
+  "cookie",
+  "credential",
+  "credentials",
+  "databaseurl",
+  "dsn",
+  "idtoken",
+  "password",
+  "privatekey",
+  "proxyauthorization",
+  "redisurl",
+  "refreshtoken",
+  "secret",
+  "secretaccesskey",
+  "setcookie",
+  "token",
+  "xapikey",
+]);
 
 function isSensitiveKey(key: string): boolean {
-  return SENSITIVE_LOG_KEYS.has(key.toLowerCase());
+  return SENSITIVE_LOG_KEYS.has(key.toLowerCase().replace(/[-_]/g, ""));
 }
 
 function getDataProperty(value: object, key: string): unknown {
