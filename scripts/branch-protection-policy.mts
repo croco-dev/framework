@@ -13,7 +13,8 @@ const DEFAULT_CI_WORKFLOW_PATH = ".github/workflows/ci.yml";
 const DEFAULT_AUDIT_WORKFLOW_PATH = ".github/workflows/repository-policy-audit.yml";
 const DEFAULT_WORKFLOW_DIRECTORY = ".github/workflows";
 const CHECKOUT_ACTION = "actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1";
-const PNPM_SETUP_ACTION = "pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271";
+const TOOLCHAIN_SETUP_ACTION = "jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c";
+const TOOLCHAIN_SETUP_INPUTS = { version: "2026.9.13", github_token: "" } as const;
 const NODE_SETUP_ACTION = "actions/setup-node@820762786026740c76f36085b0efc47a31fe5020";
 export const REQUIRED_BRANCH_PROTECTION_CHECKS = [
   { context: "benchmark-gate", integrationId: 15368 },
@@ -63,8 +64,8 @@ const AUDIT_WORKFLOW_CONCURRENCY = {
 const REPOSITORY_CONTRACT_STEP_NAMES = [
   "Checkout",
   "Verify immutable candidate checkout",
-  "Setup pnpm",
-  "Setup Node.js",
+  "Setup Node.js and pnpm",
+  "Cache pnpm store",
   "Install dependencies",
   "Check authoritative test inventory",
   "Check verification policy",
@@ -124,8 +125,8 @@ const EXPECTED_VALIDATE_RUN = [
 ].join(" ");
 const POLICY_AUDIT_STEP_NAMES = [
   "Checkout",
-  "Setup pnpm",
-  "Setup Node.js",
+  "Setup Node.js and pnpm",
+  "Cache pnpm store",
   "Install dependencies",
   "Audit effective trunk protection",
 ] as const;
@@ -691,28 +692,29 @@ function inspectPolicyAuditJob(job: JsonRecord | undefined, owner: string): read
       ),
     );
   }
-  const pnpm = namedStep(job, "Setup pnpm");
-  if (!hasExactKeys(pnpm, ["name", "uses"]) || pnpm?.uses !== PNPM_SETUP_ACTION) {
-    violations.push(
-      policyDiagnostic(
-        "BRANCH_POLICY_AUDIT_BOOTSTRAP_DRIFT",
-        `${owner} must use the pinned pnpm setup action`,
-      ),
-    );
-  }
-  const node = namedStep(job, "Setup Node.js");
+  const toolchain = namedStep(job, "Setup Node.js and pnpm");
   if (
-    !hasExactKeys(node, ["name", "uses", "with"]) ||
-    node?.uses !== NODE_SETUP_ACTION ||
-    !hasExactRecord(recordValue(node, "with"), {
-      "node-version-file": ".nvmrc",
-      cache: "pnpm",
-    })
+    !hasExactKeys(toolchain, ["name", "uses", "with"]) ||
+    toolchain?.uses !== TOOLCHAIN_SETUP_ACTION ||
+    !hasExactRecord(recordValue(toolchain, "with"), TOOLCHAIN_SETUP_INPUTS)
   ) {
     violations.push(
       policyDiagnostic(
         "BRANCH_POLICY_AUDIT_BOOTSTRAP_DRIFT",
-        `${owner} must use the pinned Node.js setup`,
+        `${owner} must use the pinned mise toolchain setup`,
+      ),
+    );
+  }
+  const storeCache = namedStep(job, "Cache pnpm store");
+  if (
+    !hasExactKeys(storeCache, ["name", "uses", "with"]) ||
+    storeCache?.uses !== NODE_SETUP_ACTION ||
+    !hasExactRecord(recordValue(storeCache, "with"), { cache: "pnpm" })
+  ) {
+    violations.push(
+      policyDiagnostic(
+        "BRANCH_POLICY_AUDIT_BOOTSTRAP_DRIFT",
+        `${owner} must restore the pnpm store through the pinned setup-node cache`,
       ),
     );
   }
@@ -889,8 +891,8 @@ function inspectRepositoryContractJob(job: JsonRecord | undefined): readonly str
   }
   const checkout = namedStep(job, "Checkout");
   const identity = inspectVerificationIdentityAssertion(job, "repository-contracts");
-  const pnpm = namedStep(job, "Setup pnpm");
-  const node = namedStep(job, "Setup Node.js");
+  const toolchain = namedStep(job, "Setup Node.js and pnpm");
+  const storeCache = namedStep(job, "Cache pnpm store");
   const install = namedStep(job, "Install dependencies");
   if (
     !hasExactKeys(checkout, ["name", "uses", "with"]) ||
@@ -899,14 +901,12 @@ function inspectRepositoryContractJob(job: JsonRecord | undefined): readonly str
       "fetch-depth": 0,
       "persist-credentials": false,
     }) ||
-    !hasExactKeys(pnpm, ["name", "uses"]) ||
-    pnpm?.uses !== PNPM_SETUP_ACTION ||
-    !hasExactKeys(node, ["name", "uses", "with"]) ||
-    node?.uses !== NODE_SETUP_ACTION ||
-    !hasExactRecord(recordValue(node, "with"), {
-      "node-version-file": ".nvmrc",
-      cache: "pnpm",
-    }) ||
+    !hasExactKeys(toolchain, ["name", "uses", "with"]) ||
+    toolchain?.uses !== TOOLCHAIN_SETUP_ACTION ||
+    !hasExactRecord(recordValue(toolchain, "with"), TOOLCHAIN_SETUP_INPUTS) ||
+    !hasExactKeys(storeCache, ["name", "uses", "with"]) ||
+    storeCache?.uses !== NODE_SETUP_ACTION ||
+    !hasExactRecord(recordValue(storeCache, "with"), { cache: "pnpm" }) ||
     !hasExactKeys(install, ["name", "run"]) ||
     normalizedRun(install ?? {}) !== "pnpm install --frozen-lockfile --ignore-scripts"
   ) {

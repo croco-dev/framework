@@ -318,8 +318,8 @@ export function findCiPerformanceBudgetViolations(
   }
   const docsSyncHeavySteps = new Set([
     "Checkout",
-    "Setup pnpm",
-    "Setup Node.js",
+    "Setup Node.js and pnpm",
+    "Cache pnpm store",
     "Restore Turbo cache",
     "Install dependencies",
     "Build docs and check for drift",
