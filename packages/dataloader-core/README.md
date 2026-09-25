@@ -147,7 +147,10 @@ Creates a request-scoped batch loader.
 
 #### Options
 
-- **name** (`string`): Unique name for caching the loader in request context
+- **name** (`string`): Unique name for caching the loader in request context. Within one request, a
+  different `createBatchLoader()` result with the same name and scope fails with
+  `DuplicateBatchLoaderNameProblem` (`dataloader-core/duplicate-loader-name`) instead of sharing the first
+  loader's batches and cache.
 - **batchFn** (`BatchFn<K, V>`): Function that loads data for multiple keys. It must return a dense array with
   exactly one result per key; sparse arrays are rejected for the whole batch. An explicitly assigned `undefined`
   is a present result when `V` includes `undefined`.

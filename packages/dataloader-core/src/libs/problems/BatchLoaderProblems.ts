@@ -12,6 +12,19 @@ export class BatchResultLengthMismatchProblem extends Problem {
   }
 }
 
+export class DuplicateBatchLoaderNameProblem extends Problem {
+  readonly code = "dataloader-core/duplicate-loader-name";
+  readonly category = ProblemCategory.InternalServerError;
+  constructor(name: string, scope: string | null, dynamicScope: string | null) {
+    super(
+      undefined,
+      undefined,
+      `BatchLoader: name '${name}' is already used by a different loader for the same scope in this request`,
+      { extensions: { name, scope, dynamicScope } },
+    );
+  }
+}
+
 export class InvalidBatchLoaderConfigurationError extends Error {
   readonly name = "InvalidBatchLoaderConfigurationError";
 

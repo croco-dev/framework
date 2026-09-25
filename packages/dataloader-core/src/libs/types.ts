@@ -3,7 +3,8 @@ export type BatchFn<K, V> = (keys: ReadonlyArray<K>) => Promise<ReadonlyArray<V 
 export type BatchLoaderOptions<K, V> = {
   /**
    * Unique name for the loader.
-   * Used for caching the loader instance in the request context.
+   * Used for caching the loader instance in the request context. A different loader that uses
+   * the same name and scope in one request fails with `DuplicateBatchLoaderNameProblem`.
    */
   name: string;
 

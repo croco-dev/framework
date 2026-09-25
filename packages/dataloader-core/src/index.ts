@@ -81,7 +81,10 @@
  */
 export { BatchLoaderFactory } from "./libs/BatchLoaderFactory";
 export { createBatchLoader } from "./libs/createBatchLoader";
-export { BatchResultLengthMismatchProblem } from "./libs/problems/BatchLoaderProblems";
+export {
+  BatchResultLengthMismatchProblem,
+  DuplicateBatchLoaderNameProblem,
+} from "./libs/problems/BatchLoaderProblems";
 /**
  * Batch function type for loading multiple values.
  *

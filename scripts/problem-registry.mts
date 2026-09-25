@@ -3122,6 +3122,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "dataloader-core/duplicate-loader-name": recovery({
+    cause: "Two different batch loaders use the same name and scope within one request context.",
+    userAction:
+      "Use an application build where every batch loader has a unique name and scope combination.",
+    operatorAction:
+      "Inspect the name, scope, and dynamicScope extensions to find the conflicting batch loader definitions, then rename one loader or give it a distinct scope.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "protocols-trpc/duplicate-procedure-name": recovery({
     cause: "Two controller routes resolve to the same tRPC domain and procedure name.",
     userAction:

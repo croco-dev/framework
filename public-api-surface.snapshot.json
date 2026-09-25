@@ -9134,6 +9134,12 @@
               "exportKind": "named",
               "source": "./libs/createBatchLoader",
               "declarationKind": "function"
+            },
+            {
+              "name": "DuplicateBatchLoaderNameProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BatchLoaderProblems",
+              "declarationKind": "class"
             }
           ],
           "typeExports": [

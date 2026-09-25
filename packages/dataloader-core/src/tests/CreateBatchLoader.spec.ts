@@ -1,6 +1,113 @@
 import { Context } from "@croco/framework-context";
 import { describe, expect, it, vi } from "vitest";
+import { DuplicateBatchLoaderNameProblem } from "../index";
 import { createBatchLoader } from "../libs/createBatchLoader";
+
+describe("createBatchLoader inside a request context", () => {
+  const createEntityLoader = (kind: string, name: string) => {
+    const batchFn = vi.fn(async (ids: readonly number[]) => ids.map((id) => ({ kind, id })));
+    return { batchFn, loader: createBatchLoader({ name, batchFn }) };
+  };
+
+  it("rejects a different loader that reuses a name without touching the first loader", async () => {
+    const users = createEntityLoader("user", "byId");
+    const posts = createEntityLoader("post", "byId");
+
+    await Context.run({ requestId: "duplicate-name" }, async () => {
+      expect(await users.loader.load(1)).toEqual({ kind: "user", id: 1 });
+
+      const duplicate = { name: "byId", scope: null, dynamicScope: null };
+      expect(() => posts.loader.load(2)).toThrow(DuplicateBatchLoaderNameProblem);
+      expect(() => posts.loader.load(1)).toThrow(
+        expect.objectContaining({
+          code: "dataloader-core/duplicate-loader-name",
+          extensions: duplicate,
+        }),
+      );
+      expect(() => posts.loader.loadMany([1])).toThrow(DuplicateBatchLoaderNameProblem);
+      expect(() => posts.loader.prime(1, { kind: "post", id: 1 })).toThrow(
+        DuplicateBatchLoaderNameProblem,
+      );
+      expect(() => posts.loader.clear(1)).toThrow(DuplicateBatchLoaderNameProblem);
+      expect(() => posts.loader.clearAll()).toThrow(DuplicateBatchLoaderNameProblem);
+
+      expect(await users.loader.load(1)).toEqual({ kind: "user", id: 1 });
+    });
+
+    expect(users.batchFn).toHaveBeenCalledExactlyOnceWith([1]);
+    expect(posts.batchFn).not.toHaveBeenCalled();
+  });
+
+  it("reports the static and dynamic scope that collided", async () => {
+    const options = { name: "byId", scope: "tenant-a", resolveScope: () => "tx-1" };
+    const first = createBatchLoader({ ...options, batchFn: async (ids: readonly number[]) => ids });
+    const second = createBatchLoader({
+      ...options,
+      batchFn: async (ids: readonly number[]) => ids,
+    });
+
+    await Context.run({ requestId: "duplicate-scope" }, async () => {
+      expect(await first.load(1)).toBe(1);
+      expect(() => second.load(1)).toThrow(
+        expect.objectContaining({
+          code: "dataloader-core/duplicate-loader-name",
+          extensions: { name: "byId", scope: "tenant-a", dynamicScope: "tx-1" },
+        }),
+      );
+    });
+  });
+
+  it("shares batches and cached results across repeated calls of one factory", async () => {
+    const users = createEntityLoader("user", "byId");
+
+    await Context.run({ requestId: "same-factory" }, async () => {
+      expect(await Promise.all([users.loader.load(1), users.loader.loadMany([2, 1])])).toEqual([
+        { kind: "user", id: 1 },
+        [
+          { kind: "user", id: 2 },
+          { kind: "user", id: 1 },
+        ],
+      ]);
+      expect(await users.loader.load(2)).toEqual({ kind: "user", id: 2 });
+    });
+
+    expect(users.batchFn).toHaveBeenCalledExactlyOnceWith([1, 2]);
+  });
+
+  it("keeps same-name loaders with different static or dynamic scopes independent", async () => {
+    const byScope = (scope: string) =>
+      createBatchLoader({
+        name: "byId",
+        scope,
+        batchFn: async (ids: readonly number[]) => ids.map((id) => `${scope}:${id}`),
+      });
+    const byDynamicScope = (scope: string) =>
+      createBatchLoader({
+        name: "byId",
+        resolveScope: () => scope,
+        batchFn: async (ids: readonly number[]) => ids.map((id) => `${scope}:${id}`),
+      });
+
+    await Context.run({ requestId: "distinct-scopes" }, async () => {
+      expect(await byScope("users").load(1)).toBe("users:1");
+      expect(await byScope("posts").load(1)).toBe("posts:1");
+      expect(await byDynamicScope("tx-a").load(1)).toBe("tx-a:1");
+      expect(await byDynamicScope("tx-b").load(1)).toBe("tx-b:1");
+    });
+  });
+
+  it("allows another request to use the name with a different loader", async () => {
+    const users = createEntityLoader("user", "byId");
+    const posts = createEntityLoader("post", "byId");
+
+    await Context.run({ requestId: "users" }, async () => {
+      expect(await users.loader.load(1)).toEqual({ kind: "user", id: 1 });
+    });
+    await Context.run({ requestId: "posts" }, async () => {
+      expect(await posts.loader.load(1)).toEqual({ kind: "post", id: 1 });
+    });
+  });
+});
 
 describe("createBatchLoader outside a request context", () => {
   it("batches load and loadMany calls and retains cached results across dispatches", async () => {

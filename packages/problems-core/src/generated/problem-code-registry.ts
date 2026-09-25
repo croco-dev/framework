@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 796,
+  problemCount: 797,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -5981,6 +5981,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/dataloader-core/src/libs/problems/BatchLoaderProblems.ts",
           line: 3,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "dataloader-core/duplicate-loader-name",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#dataloader-core-duplicate-loader-name",
+      recovery: {
+        cause:
+          "Two different batch loaders use the same name and scope within one request context.",
+        userAction:
+          "Use an application build where every batch loader has a unique name and scope combination.",
+        operatorAction:
+          "Inspect the name, scope, and dynamicScope extensions to find the conflicting batch loader definitions, then rename one loader or give it a distinct scope.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/dataloader-core/src/libs/problems/BatchLoaderProblems.ts",
+          line: 15,
           column: 1,
           kind: "problem-class",
         },
