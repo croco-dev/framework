@@ -2160,6 +2160,81 @@ describe("TransactionalEventStore conformance", () => {
     });
   });
 
+  it("commits both outbox appends from concurrent sibling savepoints", async () => {
+    const fixture = createOutboxFixture();
+    const firstAppended = createDeferred<void>();
+    const releaseFirst = createDeferred<void>();
+    const root = fixture.txManager.run(async () => {
+      const first = fixture.txManager.run(
+        async () => {
+          await fixture.outbox.append(new AccountCreditedEvent("acct-first", 100), {
+            idempotencyKey: "credit-first",
+          });
+          firstAppended.resolve();
+          await releaseFirst.promise;
+        },
+        { nesting: "savepoint" },
+      );
+      const second = fixture.txManager.run(
+        () =>
+          fixture.outbox.append(new AccountCreditedEvent("acct-second", 200), {
+            idempotencyKey: "credit-second",
+          }),
+        { nesting: "savepoint" },
+      );
+      await Promise.all([first, second]);
+    });
+    await firstAppended.promise;
+    releaseFirst.resolve();
+    await root;
+
+    await expect(fixture.store.listOutboxMessages()).resolves.toMatchObject([
+      { idempotencyKey: "credit-first" },
+      { idempotencyKey: "credit-second" },
+    ]);
+  });
+
+  it("commits a queued sibling outbox append after the first savepoint rolls back", async () => {
+    const fixture = createOutboxFixture();
+    const firstAppended = createDeferred<void>();
+    const releaseFirst = createDeferred<void>();
+    const failure = new Error("first append rolled back");
+    const root = fixture.txManager.run(async () => {
+      await fixture.outbox.append(new AccountCreditedEvent("acct-parent", 50), {
+        idempotencyKey: "credit-parent",
+      });
+      const first = fixture.txManager.run(
+        async () => {
+          await fixture.outbox.append(new AccountCreditedEvent("acct-first", 100), {
+            idempotencyKey: "credit-discarded",
+          });
+          firstAppended.resolve();
+          await releaseFirst.promise;
+          throw failure;
+        },
+        { nesting: "savepoint" },
+      );
+      const second = fixture.txManager.run(
+        () =>
+          fixture.outbox.append(new AccountCreditedEvent("acct-second", 200), {
+            idempotencyKey: "credit-survivor",
+          }),
+        { nesting: "savepoint" },
+      );
+      const results = await Promise.allSettled([first, second]);
+      expect(results[0]).toEqual({ status: "rejected", reason: failure });
+      expect(results[1]).toMatchObject({ status: "fulfilled" });
+    });
+    await firstAppended.promise;
+    releaseFirst.resolve();
+    await root;
+
+    await expect(fixture.store.listOutboxMessages()).resolves.toMatchObject([
+      { idempotencyKey: "credit-parent" },
+      { idempotencyKey: "credit-survivor" },
+    ]);
+  });
+
   it("merges a nested requires-new transaction without deadlocking its outer transaction", async () => {
     const fixture = createOutboxFixture();
 

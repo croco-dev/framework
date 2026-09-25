@@ -58,6 +58,9 @@ if (outcome.afterCommit.status === "failed") {
 루트 callback이 끝날 때 await되지 않은 savepoint가 남아 있어도
 `DetachedTransactionOperationProblem`으로 커밋 전에 거부됩니다.
 
+같은 부모 트랜잭션의 savepoint 자식은 시작 순서대로 하나씩 실행됩니다. 다음 자식은 앞 자식의
+savepoint가 release 또는 rollback된 뒤 시작합니다. 대기 시간은 자식의 `timeout`에 포함되지 않습니다.
+
 `defaultTimeout`과 실행별 `timeout`은 1~2,147,483,647 범위의 정수 밀리초여야 합니다. 제한 시간이 필요하지
 않으면 해당 옵션을 생략합니다. 잘못된 값은 트랜잭션이나 사용자 콜백이 시작되기 전에
 `InvalidTransactionTimeoutProblem`으로 거부됩니다.

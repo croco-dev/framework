@@ -29,6 +29,7 @@ import type {
 interface TxContext<TClient> {
   activeChildOperationCount: number;
   client: TClient;
+  savepointQueue: { tail: Promise<void> };
   afterCommitHooks: AfterCommitHook[];
   afterCommitRegistrationOpen: boolean;
   capturesAfterCommitOutcome: boolean;
@@ -181,6 +182,7 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
           const context: TxContext<TClient> = {
             activeChildOperationCount: 0,
             client,
+            savepointQueue: { tail: Promise.resolve() },
             afterCommitHooks,
             afterCommitRegistrationOpen: true,
             capturesAfterCommitOutcome,
@@ -237,6 +239,7 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
           const nestedContext: TxContext<TClient> = {
             activeChildOperationCount: 0,
             client: nestedClient,
+            savepointQueue: { tail: Promise.resolve() },
             afterCommitHooks: nestedHooks,
             afterCommitRegistrationOpen: true,
             capturesAfterCommitOutcome: currentContext.capturesAfterCommitOutcome,
@@ -276,11 +279,31 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
       return result;
     };
 
-    if (timeout !== undefined) {
-      return executeWithTimeout(executeSavepoint, timeout, controller);
-    }
+    const previousSavepoint = currentContext.savepointQueue.tail;
+    const runSavepoint = async (): Promise<T> => {
+      await previousSavepoint;
+      if (
+        !currentContext.afterCommitRegistrationOpen ||
+        !currentContext.rootGate.registrationOpen
+      ) {
+        const problem =
+          currentContext.rootGate.detachedOperationProblem ??
+          new DetachedTransactionOperationProblem(1);
+        currentContext.rootGate.detachedOperationProblem = problem;
+        throw problem;
+      }
 
-    return executeSavepoint();
+      return timeout === undefined
+        ? await executeSavepoint()
+        : await executeWithTimeout(executeSavepoint, timeout, controller);
+    };
+
+    const result = runSavepoint();
+    currentContext.savepointQueue.tail = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
   }
 
   private async executeJoined<T>(
@@ -290,6 +313,7 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
     const joinedContext: TxContext<TClient> = {
       activeChildOperationCount: 0,
       client: currentContext.client,
+      savepointQueue: currentContext.savepointQueue,
       afterCommitHooks: currentContext.afterCommitHooks,
       afterCommitRegistrationOpen: true,
       capturesAfterCommitOutcome: currentContext.capturesAfterCommitOutcome,
