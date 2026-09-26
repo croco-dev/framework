@@ -16,15 +16,22 @@ import { createVerificationManifest, getVerificationCommand } from "../verificat
 import { parseArgs as parseVerificationArgs } from "../release-spine-evidence.mts";
 import { ensureSarif, GITLEAKS_CORE_ARGS } from "../security-gitleaks-smoke.mts";
 import {
+  ACTIONS_ONLY_WORKFLOW_COMMAND_ALLOWLIST,
   findTrustedGitleaksImageViolations,
   findWorkflowPermissionViolations,
   findWorkflowVerificationViolations,
   TRUSTED_GITLEAKS_IMAGE,
 } from "../workflow-verification-contract.mts";
 
-type WorkflowStep = {
+type WorkflowStep = Readonly<Record<string, unknown>> & {
   readonly uses?: string;
   readonly with?: Readonly<Record<string, unknown>>;
+};
+
+type WorkflowCacheStep = {
+  readonly workflow: string;
+  readonly job: string;
+  readonly step: WorkflowStep;
 };
 
 const ROOT_DIR = resolve(import.meta.dirname, "../..");
@@ -45,6 +52,27 @@ const WORKFLOWS = Object.fromEntries(
   readdirSync(resolve(ROOT_DIR, ".github/workflows"))
     .filter((path) => /\.ya?ml$/.test(path))
     .map((path) => [path, readFileSync(resolve(ROOT_DIR, ".github/workflows", path), "utf8")]),
+);
+const CACHE_ACTION_REVISION = "55cc8345863c7cc4c66a329aec7e433d2d1c52a9";
+const CANONICAL_TURBO_CACHE_PREFIX =
+  "turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-trunk-";
+const CANONICAL_TURBO_CACHE_KEY = `${CANONICAL_TURBO_CACHE_PREFIX}${"${{ github.sha }}"}`;
+const TURBO_CACHE_COMMAND = "node --experimental-strip-types scripts/turbo-canonical-cache.mts";
+const WORKFLOW_CACHE_STEPS: readonly WorkflowCacheStep[] = Object.entries(WORKFLOWS).flatMap(
+  ([workflow, source]) => {
+    const document = parseDocument(source, { uniqueKeys: true });
+    if (document.errors.length > 0) {
+      throw new Error(`${workflow}: ${document.errors.map(({ message }) => message).join("\n")}`);
+    }
+    const { jobs = {} } = document.toJS() as {
+      readonly jobs?: Readonly<Record<string, { readonly steps?: readonly WorkflowStep[] }>>;
+    };
+    return Object.entries(jobs).flatMap(([job, definition]) =>
+      (definition.steps ?? [])
+        .filter((step) => typeof step.uses === "string" && step.uses.startsWith("actions/cache"))
+        .map((step) => ({ workflow, job, step })),
+    );
+  },
 );
 const RENOVATE_CONFIG = JSON.parse(
   readFileSync(resolve(ROOT_DIR, ".github/renovate.json"), "utf8"),
@@ -76,12 +104,31 @@ function workflowJob(id: string): string {
   return WORKFLOW.slice(job.range[0], job.range[1]);
 }
 
-function workflowJobCondition(id: string): unknown {
+function workflowJobDefinition(id: string): Readonly<Record<string, unknown>> {
   const job = (WORKFLOW_JOBS as Readonly<Record<string, unknown>>)[id];
   if (typeof job !== "object" || job === null || Array.isArray(job)) {
     throw new Error(`ci.yml ${id} job must be a mapping`);
   }
-  return (job as Readonly<Record<string, unknown>>).if;
+  return job as Readonly<Record<string, unknown>>;
+}
+
+function workflowJobCondition(id: string): unknown {
+  return workflowJobDefinition(id).if;
+}
+
+function workflowJobSteps(id: string): readonly WorkflowStep[] {
+  const { steps } = workflowJobDefinition(id);
+  if (!Array.isArray(steps)) throw new Error(`ci.yml ${id} job must declare steps`);
+  return steps as readonly WorkflowStep[];
+}
+
+function cacheStepLabel({ workflow, job, step }: WorkflowCacheStep): string {
+  return `${workflow} ${job}: ${String(step.name)}`;
+}
+
+function isTurboCacheStep({ step }: WorkflowCacheStep): boolean {
+  const path = (step.with as Readonly<Record<string, unknown>> | undefined)?.path;
+  return typeof path === "string" && path.startsWith(".turbo");
 }
 
 const VALIDATE_JOB = workflowJob("validate");
@@ -307,11 +354,11 @@ describe("Phase B cacheable verification shadow", () => {
     );
   });
 
-  it("keeps ordinary runs latest-only while giving each manual experiment an independent group", () => {
+  it("cancels only pull request runs while giving each manual experiment an independent group", () => {
     expect(WORKFLOW).toContain(
       "group: ci-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}",
     );
-    expect(WORKFLOW).toContain("cancel-in-progress: true");
+    expect(WORKFLOW).toContain("cancel-in-progress: ${{ github.event_name == 'pull_request' }}");
   });
 
   const producerJobs = [
@@ -556,6 +603,10 @@ describe("CI verification profile contract", () => {
       WORKFLOW.replace(
         "concurrency:\n  group: ci-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}",
         "concurrency:\n  group: ci-global",
+      ),
+      WORKFLOW.replace(
+        "cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
+        "cancel-in-progress: true",
       ),
       WORKFLOW.replace(
         "  pull_request:\n    branches:\n      - trunk",
@@ -1239,9 +1290,8 @@ describe("CI verification profile contract", () => {
     expect(DOCS_BUILD_JOB).not.toContain("TURBO_TOKEN");
     expect(WORKFLOW).not.toContain("secrets.TURBO_TOKEN");
     expect(DOCS_BUILD_JOB).toContain("needs: [changes, docs-sync-check]");
-    expect(DOCS_BUILD_JOB).toContain(
-      "turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-docs-sync-check-${{ github.sha }}",
-    );
+    expect(DOCS_BUILD_JOB).not.toContain("-docs-sync-check-");
+    expect(DOCS_BUILD_JOB).toContain(`key: ${CANONICAL_TURBO_CACHE_KEY}`);
     expect(DOCS_BUILD_JOB).toContain(
       "pnpm turbo run docs:build --cache=local:rw --cache-dir=.turbo/cache",
     );
@@ -1251,8 +1301,8 @@ describe("CI verification profile contract", () => {
   it("runs independent CI surfaces in parallel and restores content-addressed Turbo state", () => {
     expect(WORKFLOW).toContain("docs-sync-check:\n    needs: changes");
     expect(WORKFLOW).not.toContain("docs-sync-check:\n    needs: [validate, changes]");
-    expect(WORKFLOW).toContain("actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9");
-    expect(WORKFLOW).toContain("path: .turbo");
+    expect(WORKFLOW).toContain(`uses: actions/cache/restore@${CACHE_ACTION_REVISION} # v6.1.0`);
+    expect(WORKFLOW).toContain(`key: ${CANONICAL_TURBO_CACHE_KEY}`);
     expect(WORKFLOW).not.toContain("pnpm turbo run build --filter=create-croco-app... --force");
   });
 
@@ -1266,5 +1316,221 @@ describe("CI verification profile contract", () => {
     expect(VALIDATE_JOB).not.toContain("membership-postgres:");
     expect(VALIDATE_JOB).not.toContain("Verify typed TestKernel resources");
     expect((DOCS_SYNC_JOB as Readonly<Record<string, unknown>>).if).toBe("${{ always() }}");
+  });
+});
+
+describe("canonical Turbo cache consumers", () => {
+  const turboCacheSteps = WORKFLOW_CACHE_STEPS.filter(isTurboCacheStep);
+
+  it("restores every Turbo cache from the canonical trunk key without per-job fallbacks", () => {
+    const restores = turboCacheSteps.filter(
+      ({ step }) => step.uses !== `actions/cache/save@${CACHE_ACTION_REVISION}`,
+    );
+
+    expect(restores.map(cacheStepLabel).sort()).toEqual([
+      "ci.yml core-verification: Restore producer Turbo cache",
+      "ci.yml coverage-security: Restore producer Turbo cache",
+      "ci.yml docs-build: Restore Turbo cache",
+      "ci.yml docs-sync-check: Restore Turbo cache",
+      "ci.yml ecosystem-advisory: Restore Turbo cache",
+      "ci.yml generated-apps: Restore producer Turbo cache",
+      "ci.yml package-artifacts: Restore producer Turbo cache",
+      "ci.yml real-resource-tests: Restore Turbo cache",
+      "ci.yml turbo-cache: Restore Turbo cache",
+      "ci.yml validate: Restore Turbo cache",
+      "release.yml release: Restore Turbo cache",
+    ]);
+    for (const { step } of restores) {
+      expect(step.uses).toBe(`actions/cache/restore@${CACHE_ACTION_REVISION}`);
+      expect(step.with).toEqual({
+        path: ".turbo/cache",
+        key: CANONICAL_TURBO_CACHE_KEY,
+        "restore-keys": `${CANONICAL_TURBO_CACHE_PREFIX}\n`,
+      });
+    }
+    expect(
+      workflowJobSteps("docs-sync-check").find(({ name }) => name === "Restore Turbo cache")?.if,
+    ).toBe("needs.changes.outputs.api-source == 'true'");
+  });
+
+  it("rejects per-job, lane-literal, and runner-wide Turbo cache keys in every workflow", () => {
+    const turboKeyReferences = Object.values(WORKFLOWS).flatMap((source) =>
+      source
+        .split("\n")
+        .filter((line) => line.includes("turbo-${{ runner.os }}"))
+        .map((line) => line.trim().replace(/^key:\s*/, "")),
+    );
+
+    expect(turboKeyReferences.length).toBeGreaterThan(0);
+    expect(
+      turboKeyReferences.filter(
+        (reference) =>
+          reference !== CANONICAL_TURBO_CACHE_KEY && reference !== CANONICAL_TURBO_CACHE_PREFIX,
+      ),
+    ).toEqual([]);
+  });
+
+  it("saves the Turbo cache only from the trunk turbo-cache job", () => {
+    expect(
+      WORKFLOW_CACHE_STEPS.filter(({ step }) =>
+        String(step.uses).startsWith("actions/cache/save@"),
+      ).map(cacheStepLabel),
+    ).toEqual(["ci.yml turbo-cache: Save Turbo cache"]);
+    expect(
+      Object.values(WORKFLOWS)
+        .join("\n")
+        .match(/actions\/cache\/save@/g),
+    ).toHaveLength(1);
+  });
+
+  it("keeps the validate job step sequence unchanged", () => {
+    expect(workflowJobSteps("validate").map(({ name }) => name)).toEqual([
+      "Require successful change classification",
+      "Start validate performance measurement",
+      "Checkout",
+      "Verify immutable candidate checkout",
+      "Initialize beta spine promotion evidence",
+      "Setup Node.js and pnpm",
+      "Cache pnpm store",
+      "Restore Turbo cache",
+      "Install dependencies",
+      "Install Playwright Chromium",
+      "Production dependency audit report",
+      "Security Gitleaks acceptance smoke",
+      "Secret scan blocking report",
+      "Assemble security policy summary",
+      "Upload security report",
+      "Reverify immutable candidate worktree",
+      "Run selected verification profile",
+      "Restore observed CI performance history",
+      "Publish verification summary",
+      "Ensure native Vitest evidence",
+      "Run full test suite for changed-test shadow",
+      "Assert changed-test shadow evidence completeness",
+      "Restore changed-test shadow baseline",
+      "Aggregate changed-test shadow full evidence",
+      "Measure changed-test selection misses",
+      "Aggregate executable test evidence",
+      "Upload verification evidence",
+      "Publish spine-blocking generated app smoke summary",
+      "Upload spine-blocking generated app smoke report",
+      "Upload spine-blocking generated app smoke failure artifacts",
+      "Upload package quality dashboard",
+      "Publish core coverage warning summary",
+      "Complete validate performance measurement",
+      "Record observed CI performance budget",
+      "Upload observed CI performance evidence",
+      "Upload core coverage warning report",
+    ]);
+  });
+
+  it("pins every cache restore and save action with a same-line release comment", () => {
+    const references = Object.values(WORKFLOWS).flatMap((source) =>
+      source
+        .split("\n")
+        .filter((line) => /actions\/cache\/(?:restore|save)@/.test(line))
+        .map((line) => line.trim()),
+    );
+
+    expect(references.length).toBeGreaterThan(0);
+    for (const reference of references) {
+      expect(reference).toMatch(
+        /^uses: actions\/cache\/(?:restore|save)@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6\.1\.0$/,
+      );
+    }
+  });
+});
+
+describe("canonical Turbo cache producer", () => {
+  const steps = workflowJobSteps("turbo-cache");
+  const [checkout, , pnpmStoreCache, restore, install, playwright, warm, prune, save, upload] =
+    steps;
+
+  it("runs only after trunk pushes as the final CI job with a read-only token", () => {
+    const job = workflowJobDefinition("turbo-cache");
+
+    expect(Object.keys(WORKFLOW_JOBS as Readonly<Record<string, unknown>>).at(-1)).toBe(
+      "turbo-cache",
+    );
+    expect(job.if).toBe("github.event_name == 'push' && github.ref == 'refs/heads/trunk'");
+    expect(job["runs-on"]).toBe("ubuntu-latest");
+    expect(job["timeout-minutes"]).toBe(60);
+    expect(job.permissions).toEqual({ contents: "read" });
+    expect(job.needs).toBeUndefined();
+  });
+
+  it("warms, prunes, saves, and publishes kept hashes in a fixed order", () => {
+    expect(steps.map(({ name }) => name)).toEqual([
+      "Checkout",
+      "Setup Node.js and pnpm",
+      "Cache pnpm store",
+      "Restore Turbo cache",
+      "Install dependencies",
+      "Install Playwright Chromium",
+      "Warm Turbo cache",
+      "Prune Turbo cache",
+      "Save Turbo cache",
+      "Upload Turbo cache hashes",
+    ]);
+    expect(checkout?.with).toEqual({ "persist-credentials": false });
+    expect(pnpmStoreCache?.with).toEqual({ cache: "pnpm" });
+    expect(restore?.id).toBe("restore");
+    expect(install?.run).toBe("pnpm install --frozen-lockfile");
+    expect(playwright?.run).toBe("pnpm --dir packages/docs run playwright:install");
+    expect(warm).toEqual({
+      name: "Warm Turbo cache",
+      run: `${TURBO_CACHE_COMMAND} warm --cache-dir .turbo/cache`,
+    });
+    expect(prune).toEqual({
+      name: "Prune Turbo cache",
+      id: "prune",
+      if: "${{ !cancelled() }}",
+      run: `${TURBO_CACHE_COMMAND} prune --cache-dir .turbo/cache --hash-list "$RUNNER_TEMP/turbo-cache-hashes.txt"`,
+    });
+    expect(save).toEqual({
+      name: "Save Turbo cache",
+      if: "${{ !cancelled() && steps.prune.outcome == 'success' && steps.restore.outputs.cache-hit != 'true' }}",
+      uses: `actions/cache/save@${CACHE_ACTION_REVISION}`,
+      with: { path: ".turbo/cache", key: CANONICAL_TURBO_CACHE_KEY },
+    });
+    expect(upload).toEqual({
+      name: "Upload Turbo cache hashes",
+      if: "${{ !cancelled() && steps.prune.outcome == 'success' }}",
+      uses: "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a",
+      with: {
+        name: "turbo-cache-hashes-${{ github.run_id }}-${{ github.run_attempt }}",
+        path: "${{ runner.temp }}/turbo-cache-hashes.txt",
+      },
+    });
+  });
+
+  it("publishes kept hashes from the runner temp directory outside verification artifacts", () => {
+    const artifactName = String((upload?.with as Readonly<Record<string, unknown>>).name);
+
+    expect(artifactName).toMatch(/^turbo-cache-hashes-/);
+    expect(artifactName.startsWith("verification-")).toBe(false);
+    expect(prune?.run).toContain('--hash-list "$RUNNER_TEMP/turbo-cache-hashes.txt"');
+  });
+
+  it("keeps test evidence and NODE_ENV out of the producer so pruning sees a clean worktree", () => {
+    const job = workflowJob("turbo-cache");
+
+    expect(workflowJobDefinition("turbo-cache").env).toBeUndefined();
+    expect(job).not.toContain("CROCO_TEST_EVIDENCE_DIR");
+    expect(job).not.toMatch(/\bNODE_ENV\b/);
+  });
+
+  it("allows only registered Actions-owned commands in the producer", () => {
+    expect(findWorkflowVerificationViolations(workflowJob("turbo-cache"), ROOT_DIR)).toEqual([]);
+    expect(
+      findWorkflowVerificationViolations(
+        workflowJob("turbo-cache"),
+        ROOT_DIR,
+        ACTIONS_ONLY_WORKFLOW_COMMAND_ALLOWLIST.filter((entry) => entry !== TURBO_CACHE_COMMAND),
+      ).map(({ reason }) => reason),
+    ).toEqual([
+      "command is not in the Actions-only allowlist",
+      "command is not in the Actions-only allowlist",
+    ]);
   });
 });

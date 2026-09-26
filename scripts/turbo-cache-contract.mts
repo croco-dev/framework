@@ -1,8 +1,18 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { pruneTurboCache } from "./turbo-canonical-cache.mts";
 
 export type CacheStatus = "HIT" | "MISS";
 
@@ -20,8 +30,15 @@ export type TurboCacheScenarioResult = {
   tasks: readonly TurboCacheTaskResult[];
 };
 
+export type TurboCachePruneEvidence = {
+  removedCount: number;
+  keptHashes: readonly string[];
+  remainingStaleEntries: readonly string[];
+};
+
 export type TurboCacheContractResult = {
   scenarios: readonly TurboCacheScenarioResult[];
+  prune: TurboCachePruneEvidence;
 };
 
 type TurboRunSummary = {
@@ -44,6 +61,14 @@ const APP_BUILD_TASK = "@fixture/app#build";
 const APP_TEST_TASK = "@fixture/app#test";
 const DEPENDENCY_BUILD_TASK = "@fixture/dependency#build";
 const DEPENDENCY_TEST_TASK = "@fixture/dependency#test";
+const FIXTURE_TASKS = ["build", "test"] as const;
+const FIXTURE_CACHE_DIR = ".turbo/cache";
+const STALE_CACHE_ENTRIES = [
+  "0000000000000000.tar.zst",
+  "0000000000000000-meta.json",
+  "0000000000000000-manifest.json",
+  "ffffffffffffffff-meta.json",
+] as const;
 export const TURBO_EXECUTION_TIMEOUT_MS = 10 * 60 * 1000;
 
 function writeJson(path: string, value: unknown): void {
@@ -156,6 +181,10 @@ function createFixture(root: string): void {
   );
 }
 
+function fixtureEnvironment(environmentValue = "test"): NodeJS.ProcessEnv {
+  return { ...process.env, NODE_ENV: environmentValue, TURBO_TELEMETRY_DISABLED: "1" };
+}
+
 function summaryFiles(root: string): ReadonlySet<string> {
   const runsDirectory = join(root, ".turbo", "runs");
   try {
@@ -185,11 +214,10 @@ function runTurbo(
   const previousFiles = summaryFiles(root);
   const args = [
     "run",
-    "build",
-    "test",
+    ...FIXTURE_TASKS,
     "--filter=@fixture/app...",
     "--cache=local:rw",
-    "--cache-dir=.turbo/cache",
+    `--cache-dir=${FIXTURE_CACHE_DIR}`,
     "--env-mode=strict",
     "--output-logs=errors-only",
     "--summarize",
@@ -198,11 +226,7 @@ function runTurbo(
   try {
     execFileSync(turboBinary, args, {
       cwd: root,
-      env: {
-        ...process.env,
-        NODE_ENV: options.environmentValue ?? "test",
-        TURBO_TELEMETRY_DISABLED: "1",
-      },
+      env: fixtureEnvironment(options.environmentValue),
       encoding: "utf8",
       stdio: "pipe",
       timeout: TURBO_EXECUTION_TIMEOUT_MS,
@@ -334,6 +358,19 @@ export function assertTurboCacheContract(result: TurboCacheContractResult): void
   }
   expectDependency("direct-dependency-mutation", { build: "MISS", test: "MISS" });
   expectApp("direct-dependency-mutation", { build: "MISS", test: "MISS" });
+
+  const pruneReuse = byName.get("canonical-prune-reuse");
+  if (!pruneReuse) throw new Error("[turbo-cache-contract] missing scenario canonical-prune-reuse");
+  if (pruneReuse.taskCount !== 4 || pruneReuse.missCount !== 0) {
+    throw new Error(
+      `[turbo-cache-contract] scenario canonical-prune-reuse: expected every task to hit after pruning; ${describeResult(pruneReuse)}`,
+    );
+  }
+  if (result.prune.remainingStaleEntries.length > 0) {
+    throw new Error(
+      `[turbo-cache-contract] scenario canonical-prune-reuse: stale cache entries survived pruning: ${result.prune.remainingStaleEntries.join(", ")}`,
+    );
+  }
 }
 
 export function runTurboCacheContract(
@@ -394,7 +431,22 @@ export function runTurboCacheContract(
       "export const value = 'unrelated-mutated';\n",
     );
 
-    const result = { scenarios };
+    scenarios.push(runTurbo(root, turboBinary, "canonical-prune-baseline"));
+    const cacheDir = join(root, FIXTURE_CACHE_DIR);
+    for (const entry of STALE_CACHE_ENTRIES) writeFileSync(join(cacheDir, entry), "stale\n");
+    const { keptHashes, removedCount } = pruneTurboCache({
+      rootDir: root,
+      cacheDir,
+      tasks: FIXTURE_TASKS,
+      env: fixtureEnvironment(),
+      turboBinary,
+    });
+    scenarios.push(runTurbo(root, turboBinary, "canonical-prune-reuse"));
+    const remainingStaleEntries = STALE_CACHE_ENTRIES.filter((entry) =>
+      existsSync(join(cacheDir, entry)),
+    );
+
+    const result = { scenarios, prune: { removedCount, keptHashes, remainingStaleEntries } };
     assertTurboCacheContract(result);
     return result;
   } finally {
@@ -413,4 +465,7 @@ if (isDirectExecution()) {
   for (const scenario of result.scenarios) {
     console.log(`[turbo-cache-contract] ${scenario.name}: ${describeResult(scenario)}`);
   }
+  console.log(
+    `[turbo-cache-contract] canonical-prune: removed=${result.prune.removedCount} kept=${result.prune.keptHashes.length}`,
+  );
 }

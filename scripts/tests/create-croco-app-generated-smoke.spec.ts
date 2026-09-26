@@ -22,11 +22,14 @@ import {
   materializeGeneratedTestEvidence,
   assertGeneratedPresentationProfileMatchesCatalog,
   createSaasMonetizationCanarySource,
+  finalizeSmokeCaseTiming,
   getGeneratedGoalSmokeCaseInputs,
   getGeneratedSmokeDependencyCaseInputs,
   hasCompleteTapTestEvidence,
   isActiveDotenvAssignment,
   isDotenvFileName,
+  LOCAL_PACKAGE_PREPARATION_STEP_LABEL,
+  measureSmokeDurationMs,
   prepareGeneratedUnitEvidenceCapture,
   readCommandOutputSegment,
   readGeneratedSmokeAllowlistMetadata,
@@ -72,6 +75,7 @@ import {
   createGeneratedSmokeMatrixAggregateReport,
   createGeneratedSmokeMatrixTierReport,
   GENERATED_SMOKE_MATRIX_CASES,
+  isGeneratedSmokeMatrixTierReport,
   renderGeneratedSmokeMatrixReport,
   selectGeneratedSmokeMatrixCases,
   type SmokeMatrixCaseDefinition,
@@ -1569,6 +1573,7 @@ describe("create-croco-app generated smoke matrix", () => {
     );
     const aggregate = createGeneratedSmokeMatrixAggregateReport(
       { "spine-blocking": spine, "ecosystem-advisory": advisory },
+      [],
       "2026-07-10T00:03:00.000Z",
     );
 
@@ -1635,6 +1640,7 @@ describe("create-croco-app generated smoke matrix", () => {
         },
         "ecosystem-advisory": advisory,
       },
+      [],
       "2026-07-10T00:01:00.000Z",
     );
 
@@ -1652,6 +1658,7 @@ describe("create-croco-app generated smoke matrix", () => {
           })),
         },
       },
+      [],
       "2026-07-10T00:02:00.000Z",
     );
 
@@ -1659,6 +1666,238 @@ describe("create-croco-app generated smoke matrix", () => {
       tier: "ecosystem-advisory",
       status: "pending",
     });
+  });
+});
+
+describe("create-croco-app generated smoke timing", () => {
+  function readSmokeSource(): string {
+    return readFileSync(
+      join(import.meta.dirname, "../create-croco-app-generated-smoke.mts"),
+      "utf8",
+    );
+  }
+
+  function readFunctionSource(source: string, name: string): string {
+    return new RegExp(`function ${name}\\([\\s\\S]*?\\n\\}\\n`).exec(source)?.[0] ?? "";
+  }
+
+  it("measures integer durations and rejects clock regressions", () => {
+    expect(measureSmokeDurationMs(100.2, 1100.7)).toBe(1001);
+    expect(measureSmokeDurationMs(5, 5)).toBe(0);
+    expect(() => measureSmokeDurationMs(2000, 1000)).toThrow("finished before it started");
+    expect(() => finalizeSmokeCaseTiming([], 1000)).toThrow("requires at least one recorded step");
+  });
+
+  it("finalizes case duration from the first step start and keeps each step duration", () => {
+    expect(
+      finalizeSmokeCaseTiming(
+        [
+          { label: "generate", status: "passed", startedAt: 1000.4, durationMs: 2500 },
+          {
+            label: LOCAL_PACKAGE_PREPARATION_STEP_LABEL,
+            status: "passed",
+            startedAt: 3600,
+            durationMs: 45000,
+          },
+          { label: "install", status: "failed", startedAt: 48700, durationMs: 9000 },
+          { label: "browser journeys", status: "pending", startedAt: 57800 },
+        ],
+        60000.6,
+      ),
+    ).toEqual({
+      durationMs: 59000,
+      steps: [
+        { label: "generate", status: "passed", durationMs: 2500 },
+        { label: LOCAL_PACKAGE_PREPARATION_STEP_LABEL, status: "passed", durationMs: 45000 },
+        { label: "install", status: "failed", durationMs: 9000 },
+        { label: "browser journeys", status: "pending", durationMs: 2201 },
+      ],
+    });
+  });
+
+  it("routes the case loop, REST SPA path, and unhandled failures through one case timing finalizer", () => {
+    const source = readSmokeSource();
+    const unhandledFailure = readFunctionSource(source, "recordUnhandledSmokeCaseFailure");
+    const restSpa = readFunctionSource(source, "runSpaBeSplitContractSmoke");
+    const finalizeCall =
+      "caseResult.timing = finalizeSmokeCaseTiming(caseResult.steps, performance.now());";
+
+    expect(source.split(finalizeCall)).toHaveLength(4);
+    expect(source.match(/finalizeSmokeCaseTiming\(/g)).toHaveLength(4);
+    expect(
+      source.match(
+        /caseResult\.status = "passed";\n\s+caseResult\.timing = finalizeSmokeCaseTiming\(/g,
+      ),
+    ).toHaveLength(2);
+    expect(unhandledFailure).toContain(finalizeCall);
+    expect(unhandledFailure).not.toMatch(/\breturn\b/);
+    expect(restSpa).toContain(finalizeCall);
+    expect(restSpa).toContain(
+      "recordUnhandledSmokeCaseFailure(report, caseResult, projectDir, error)",
+    );
+    expect(readFunctionSource(source, "createSmokeStep")).toContain(
+      "startedAt: performance.now(),",
+    );
+    expect(source).not.toMatch(/\bstep\.status = "(?:passed|failed)"/);
+  });
+
+  it("records memoized local package build and pack as a separate preparation step", () => {
+    const source = readSmokeSource();
+    const preparation = readFunctionSource(source, "prepareLocalWorkspacePackages");
+    const journeyStepLabels = GENERATED_SMOKE_JOURNEY_DEFINITIONS.flatMap(({ selectors }) =>
+      selectors.flatMap(({ stepLabels }) => stepLabels),
+    );
+
+    expect(LOCAL_PACKAGE_PREPARATION_STEP_LABEL).toBe("build and pack local workspace packages");
+    expect(journeyStepLabels).not.toContain(LOCAL_PACKAGE_PREPARATION_STEP_LABEL);
+    expect(preparation).toContain("createSmokeStep(LOCAL_PACKAGE_PREPARATION_STEP_LABEL)");
+    expect(preparation).toContain("getGeneratedSmokeRangeOverrides(");
+    expect(preparation).toContain('completeSmokeStep(step, "passed")');
+    expect(preparation).toContain(
+      "recordSmokeCaseFailure(report, caseResult, step, error, projectDir)",
+    );
+    expect(source.match(/getGeneratedSmokeRangeOverrides\(/g)).toHaveLength(2);
+    expect(source.match(/prepareLocalWorkspacePackages\(/g)).toHaveLength(3);
+  });
+
+  it("writes timing only for cases executed in the current run", () => {
+    const timing = {
+      durationMs: 83_412,
+      steps: [
+        { label: "generate", status: "passed" as const, durationMs: 2_100 },
+        {
+          label: LOCAL_PACKAGE_PREPARATION_STEP_LABEL,
+          status: "passed" as const,
+          durationMs: 61_000,
+        },
+        { label: "install", status: "passed" as const, durationMs: 20_312 },
+      ],
+    };
+    const previous = createGeneratedSmokeMatrixTierReport(
+      "ecosystem-advisory",
+      [{ name: "blank-basic", status: "passed", timing }],
+      { filteredRun: true, generatedAt: "2026-07-10T00:00:00.000Z" },
+    );
+    const advisory = createGeneratedSmokeMatrixTierReport(
+      "ecosystem-advisory",
+      [
+        { name: "graphql-standalone-api", status: "passed", timing },
+        { name: "meta-vite-web", status: "pending" },
+      ],
+      {
+        filteredRun: true,
+        previousReport: JSON.parse(JSON.stringify(previous)) as unknown,
+        generatedAt: "2026-07-10T00:01:00.000Z",
+      },
+    );
+    const casesByName = new Map(advisory.cases.map((smokeCase) => [smokeCase.name, smokeCase]));
+
+    expect(previous.cases.find(({ name }) => name === "blank-basic")).toMatchObject(timing);
+    expect(casesByName.get("graphql-standalone-api")).toMatchObject({
+      status: "passed",
+      durationMs: 83_412,
+      steps: timing.steps,
+    });
+    expect(casesByName.get("blank-basic")?.status).toBe("passed");
+    for (const name of ["blank-basic", "meta-vite-web", "admin-console-starter"]) {
+      expect(casesByName.get(name), name).not.toHaveProperty("durationMs");
+      expect(casesByName.get(name), name).not.toHaveProperty("steps");
+    }
+    expect(
+      isGeneratedSmokeMatrixTierReport(
+        JSON.parse(JSON.stringify(advisory)) as unknown,
+        "ecosystem-advisory",
+      ),
+    ).toBe(true);
+  });
+
+  it("rejects malformed case timing while accepting reports without timing", () => {
+    const withoutTiming = createGeneratedSmokeMatrixTierReport(
+      "spine-blocking",
+      [{ name: "rest-spa-contracts", status: "passed" }],
+      { filteredRun: true, generatedAt: "2026-07-10T00:00:00.000Z" },
+    );
+    const withCaseFields = (fields: Record<string, unknown>): unknown => ({
+      ...withoutTiming,
+      cases: withoutTiming.cases.map((smokeCase) =>
+        smokeCase.name === "rest-spa-contracts" ? { ...smokeCase, ...fields } : smokeCase,
+      ),
+    });
+    const validStep = { label: "install", status: "passed", durationMs: 1_000 };
+
+    expect(isGeneratedSmokeMatrixTierReport(withoutTiming, "spine-blocking")).toBe(true);
+    expect(
+      isGeneratedSmokeMatrixTierReport(
+        withCaseFields({ durationMs: 1_000, steps: [validStep] }),
+        "spine-blocking",
+      ),
+    ).toBe(true);
+    for (const fields of [
+      { durationMs: -1, steps: [validStep] },
+      { durationMs: 1.5, steps: [validStep] },
+      { durationMs: "1000", steps: [validStep] },
+      { durationMs: 1_000 },
+      { steps: [validStep] },
+      { durationMs: 1_000, steps: "install" },
+      { durationMs: 1_000, steps: [null] },
+      { durationMs: 1_000, steps: [{ ...validStep, durationMs: -5 }] },
+      { durationMs: 1_000, steps: [{ ...validStep, durationMs: 2.5 }] },
+      { durationMs: 1_000, steps: [{ ...validStep, durationMs: "5" }] },
+      { durationMs: 1_000, steps: [{ ...validStep, status: "skipped" }] },
+      { durationMs: 1_000, steps: [{ ...validStep, label: 7 }] },
+    ]) {
+      expect(
+        isGeneratedSmokeMatrixTierReport(withCaseFields(fields), "spine-blocking"),
+        JSON.stringify(fields),
+      ).toBe(false);
+    }
+  });
+
+  it("adds in-memory gate durations to the aggregate and a duration column to tier markdown", () => {
+    const caseTiming = {
+      durationMs: 1_234,
+      steps: [{ label: "generate", status: "passed" as const, durationMs: 1_234 }],
+    };
+    const spine = createGeneratedSmokeMatrixTierReport(
+      "spine-blocking",
+      GENERATED_SMOKE_MATRIX_CASES.filter(({ tier }) => tier === "spine-blocking").map(
+        ({ name }) => ({ name, status: "passed" as const, timing: caseTiming }),
+      ),
+      { filteredRun: false, generatedAt: "2026-07-10T00:00:00.000Z" },
+    );
+    const persistedSpine = JSON.parse(JSON.stringify(spine)) as unknown;
+    const gates = [
+      { label: "create-croco-app CLI bootstrap", status: "passed" as const, durationMs: 95_000 },
+      { label: "workspace package build", status: "passed" as const, durationMs: 310_000 },
+      { label: "strict contract typecheck", status: "failed" as const, durationMs: 42_000 },
+      { label: "static misuse check", status: "pending" as const },
+    ];
+    const aggregate = createGeneratedSmokeMatrixAggregateReport(
+      { "spine-blocking": persistedSpine, "ecosystem-advisory": undefined },
+      gates,
+      "2026-07-10T00:01:00.000Z",
+    );
+    const advisory = createGeneratedSmokeMatrixTierReport("ecosystem-advisory", [], {
+      filteredRun: true,
+      generatedAt: "2026-07-10T00:00:00.000Z",
+    });
+
+    expect(isGeneratedSmokeMatrixTierReport(persistedSpine, "spine-blocking")).toBe(true);
+    expect(aggregate.tiers).toContainEqual({ tier: "spine-blocking", status: "passed" });
+    expect(aggregate.release.status).toBe("passed");
+    expect(aggregate.gates).toEqual(gates);
+    expect(aggregate.cases.find(({ name }) => name === "rest-spa-contracts")).toMatchObject(
+      caseTiming,
+    );
+    expect(renderGeneratedSmokeMatrixReport(spine)).toContain(
+      "| Case | Tier | Status | Duration | Advisory owner | Recovery action |",
+    );
+    expect(renderGeneratedSmokeMatrixReport(spine)).toContain(
+      "| `rest-spa-contracts` | spine-blocking | passed | 1.2s | - | - |",
+    );
+    expect(renderGeneratedSmokeMatrixReport(advisory)).toContain(
+      "| `blank-basic` | ecosystem-advisory | pending | - | create-croco-app blank template owner |",
+    );
   });
 });
 

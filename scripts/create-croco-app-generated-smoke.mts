@@ -47,6 +47,7 @@ import {
   withGeneratedSmokeMatrixMetadata,
   type AdvisorySmokeMetadata,
   type SmokeMatrixCaseFailureEvidence,
+  type SmokeMatrixCaseTiming,
   type SmokeMatrixFailure,
   type SmokeMatrixTier,
 } from "./create-croco-app-generated-smoke-matrix.mts";
@@ -86,6 +87,7 @@ const GRAPHQL_RESOLVER_METADATA_DRIFT_CODES = [
   "graphql-resolver-di-scope-changed",
   "graphql-resolver-problems-changed",
 ] as const;
+export const LOCAL_PACKAGE_PREPARATION_STEP_LABEL = "build and pack local workspace packages";
 const GENERATED_SMOKE_WORKSPACE_BUILD_ROOTS = [
   "@croco/auth-better-auth",
   "@croco/auth-clerk",
@@ -195,7 +197,9 @@ type SmokeStepResult = {
   readonly jsonPath?: string;
   artifacts: readonly GeneratedSmokeArtifact[];
   readonly expectFailure?: boolean;
+  readonly startedAt: number;
   status: SmokeStepStatus;
+  durationMs?: number;
   diagnosticCodes: readonly string[];
   executedTestPaths: readonly string[];
   error?: string;
@@ -222,6 +226,7 @@ type SmokeCaseResult = {
   readonly recovery: SmokeCaseRecoverySummary;
   status: SmokeStepStatus;
   steps: SmokeStepResult[];
+  timing?: SmokeMatrixCaseTiming;
   error?: string;
   artifactBundle?: SmokeCaseArtifactBundle;
   failureClassification?: SmokeFailureClassification;
@@ -232,6 +237,7 @@ type SmokeGateResult = {
   readonly command: string;
   readonly tier: SmokeMatrixTier;
   status: SmokeStepStatus;
+  durationMs?: number;
   error?: string;
 };
 
@@ -2318,13 +2324,14 @@ if (isMainModule()) {
           rootDir,
         );
         assertGeneratedSmokeCaseDependencyMapping(smokeCase.name, projectDir, rootDir);
-        const generatedSmokeRangeOverrides = getGeneratedSmokeRangeOverrides(
+        const generatedSmokeRangeOverrides = prepareLocalWorkspacePackages(
+          smokeReport,
+          caseResult,
           projectDir,
           join(activeSmokeRoot, "generated-package-packs"),
           workspacePackageIndex,
           packedWorkspacePackages,
           builtWorkspacePackageNames,
-          (label, result) => appendSmokeCaseOutput(caseResult, label, result),
         );
         rewriteExternalCrocoRanges(
           projectDir,
@@ -2376,6 +2383,7 @@ if (isMainModule()) {
           caseResult.steps.flatMap(({ executedTestPaths }) => executedTestPaths),
         );
         caseResult.status = "passed";
+        caseResult.timing = finalizeSmokeCaseTiming(caseResult.steps, performance.now());
         recordGeneratedTestMaterialization(projectDir, executedGeneratedPaths);
         writeGeneratedSmokeReport(smokeReport);
       } catch (error) {
@@ -2514,6 +2522,7 @@ function writeGeneratedSmokeReport(report: GeneratedSmokeReport): void {
         .map((smokeCase) => ({
           name: smokeCase.name,
           status: smokeCase.status,
+          timing: smokeCase.timing,
           failureEvidence: createSmokeMatrixCaseFailureEvidence(smokeCase),
         })),
       {
@@ -2544,6 +2553,11 @@ function writeGeneratedSmokeReport(report: GeneratedSmokeReport): void {
         join(generatedSmokeReportDir, "ecosystem-advisory-matrix.json"),
       ),
     },
+    report.gates.map(({ label, status, durationMs }) => ({
+      label,
+      status,
+      ...(durationMs === undefined ? {} : { durationMs }),
+    })),
     report.generatedAt,
   );
   writeFileSync(
@@ -2791,12 +2805,15 @@ function runGateCommand(
   };
   report.gates.push(result);
   writeGeneratedSmokeReport(report);
+  const startedAt = performance.now();
 
   try {
     run(command, args, cwd);
+    result.durationMs = measureSmokeDurationMs(startedAt, performance.now());
     result.status = "passed";
     writeGeneratedSmokeReport(report);
   } catch (error) {
+    result.durationMs = measureSmokeDurationMs(startedAt, performance.now());
     result.status = "failed";
     result.error = toErrorMessage(error);
     report.status = "failed";
@@ -2847,7 +2864,7 @@ function runSmokeCaseCommand(
       ...env,
     };
     appendSmokeCaseOutput(caseResult, label, run(command, args, cwd, commandEnv));
-    step.status = "passed";
+    completeSmokeStep(step, "passed");
     writeGeneratedSmokeReport(report);
   } catch (error) {
     const commandResult = getCommandResultFromError(error);
@@ -2880,7 +2897,7 @@ function runExpectedSmokeCaseCommand(
     const commandResult = runExpectFailure(command, args, cwd, expectedOutput);
     appendSmokeCaseOutput(caseResult, label, commandResult);
     step.diagnosticCodes = commandResult.diagnosticCodes;
-    step.status = "passed";
+    completeSmokeStep(step, "passed");
     writeGeneratedSmokeReport(report);
   } catch (error) {
     const commandResult = getCommandResultFromError(error);
@@ -2910,9 +2927,44 @@ function createSmokeStep(
     jsonPath: options.jsonPath,
     artifacts: [],
     expectFailure: options.expectFailure,
+    startedAt: performance.now(),
     status: "pending",
     diagnosticCodes: [],
     executedTestPaths: [],
+  };
+}
+
+function completeSmokeStep(step: SmokeStepResult, status: "passed" | "failed"): void {
+  step.status = status;
+  step.durationMs = measureSmokeDurationMs(step.startedAt, performance.now());
+}
+
+export function measureSmokeDurationMs(startedAt: number, finishedAt: number): number {
+  const durationMs = Math.round(finishedAt - startedAt);
+  if (durationMs < 0) {
+    throw new Error(
+      `Generated smoke timing finished before it started: startedAt=${startedAt} finishedAt=${finishedAt}`,
+    );
+  }
+  return durationMs;
+}
+
+export function finalizeSmokeCaseTiming(
+  steps: readonly Pick<SmokeStepResult, "label" | "status" | "startedAt" | "durationMs">[],
+  finishedAt: number,
+): SmokeMatrixCaseTiming {
+  const [firstStep] = steps;
+  if (!firstStep) {
+    throw new Error("Generated smoke case timing requires at least one recorded step");
+  }
+
+  return {
+    durationMs: measureSmokeDurationMs(firstStep.startedAt, finishedAt),
+    steps: steps.map(({ label, status, startedAt, durationMs }) => ({
+      label,
+      status,
+      durationMs: durationMs ?? measureSmokeDurationMs(startedAt, finishedAt),
+    })),
   };
 }
 
@@ -2923,7 +2975,7 @@ function recordSmokeCaseFailure(
   error: unknown,
   projectDir: string,
 ): void {
-  step.status = "failed";
+  completeSmokeStep(step, "failed");
   step.error = toErrorMessage(error);
   const commandResult = getCommandResultFromError(error);
   step.diagnosticCodes = commandResult
@@ -3072,17 +3124,16 @@ function recordUnhandledSmokeCaseFailure(
   projectDir: string,
   error: unknown,
 ): void {
-  if (caseResult.status === "failed") {
-    return;
+  if (caseResult.status !== "failed") {
+    const commandResult = getCommandResultFromError(error);
+    if (commandResult) {
+      appendSmokeCaseOutput(caseResult, "case setup or assertion", commandResult);
+    }
+    const step = createSmokeStep("case setup or assertion");
+    caseResult.steps.push(step);
+    recordSmokeCaseFailure(report, caseResult, step, error, projectDir);
   }
-
-  const commandResult = getCommandResultFromError(error);
-  if (commandResult) {
-    appendSmokeCaseOutput(caseResult, "case setup or assertion", commandResult);
-  }
-  const step = createSmokeStep("case setup or assertion");
-  caseResult.steps.push(step);
-  recordSmokeCaseFailure(report, caseResult, step, error, projectDir);
+  caseResult.timing = finalizeSmokeCaseTiming(caseResult.steps, performance.now());
 }
 
 function createSmokeFailureMessage(
@@ -3640,7 +3691,7 @@ function runValidation(
       throw new Error(`${smokeCase.name} ${validation.label} has no validation action`);
     }
 
-    step.status = "passed";
+    completeSmokeStep(step, "passed");
     writeGeneratedSmokeReport(report);
   } catch (error) {
     const commandResult = getCommandResultFromError(error);
@@ -3876,7 +3927,7 @@ function runGraphQLContractDriftCanaries(
     step.diagnosticCodes = [
       ...new Set(commandResults.flatMap(({ diagnosticCodes }) => diagnosticCodes)),
     ].sort();
-    step.status = "passed";
+    completeSmokeStep(step, "passed");
     writeGeneratedSmokeReport(report);
   } catch (error) {
     const commandResult = getCommandResultFromError(error);
@@ -4280,13 +4331,14 @@ function runSpaBeSplitContractSmoke(
       "devDependencies",
       "@croco/testing",
     );
-    const contractSmokeRangeOverrides = getGeneratedSmokeRangeOverrides(
+    const contractSmokeRangeOverrides = prepareLocalWorkspacePackages(
+      report,
+      caseResult,
       projectDir,
       join(contractSmokeRoot, "contract-package-packs"),
       workspacePackageIndex,
       packedWorkspacePackages,
       builtWorkspacePackageNames,
-      (label, result) => appendSmokeCaseOutput(caseResult, label, result),
     );
     rewriteExternalCrocoRanges(
       projectDir,
@@ -4471,6 +4523,7 @@ function runSpaBeSplitContractSmoke(
       "REST SPA strict RPC canary wrote artifacts despite ContractGraph errors",
     );
     caseResult.status = "passed";
+    caseResult.timing = finalizeSmokeCaseTiming(caseResult.steps, performance.now());
     writeGeneratedSmokeReport(report);
     console.log("create-croco-app-generated-smoke: rest-spa-contracts contract commands passed");
   } catch (error) {
@@ -4506,6 +4559,41 @@ function removeRestSpaListResponseSchema(projectDir: string): void {
   }
 
   writeFileSync(schemaPath, updated);
+}
+
+function prepareLocalWorkspacePackages(
+  report: GeneratedSmokeReport,
+  caseResult: SmokeCaseResult,
+  projectDir: string,
+  packDir: string,
+  workspacePackageIndex: ReadonlyMap<string, WorkspacePackage>,
+  packedWorkspacePackages: Map<string, string>,
+  builtWorkspacePackageNames: Set<string>,
+): Record<string, string> {
+  const step = createSmokeStep(LOCAL_PACKAGE_PREPARATION_STEP_LABEL);
+  caseResult.steps.push(step);
+  writeGeneratedSmokeReport(report);
+
+  try {
+    const rangeOverrides = getGeneratedSmokeRangeOverrides(
+      projectDir,
+      packDir,
+      workspacePackageIndex,
+      packedWorkspacePackages,
+      builtWorkspacePackageNames,
+      (label, result) => appendSmokeCaseOutput(caseResult, label, result),
+    );
+    completeSmokeStep(step, "passed");
+    writeGeneratedSmokeReport(report);
+    return rangeOverrides;
+  } catch (error) {
+    const commandResult = getCommandResultFromError(error);
+    if (commandResult) {
+      appendSmokeCaseOutput(caseResult, step.label, commandResult);
+    }
+    recordSmokeCaseFailure(report, caseResult, step, error, projectDir);
+    throw createSmokeFailureError(caseResult, step, error);
+  }
 }
 
 function getGeneratedSmokeRangeOverrides(

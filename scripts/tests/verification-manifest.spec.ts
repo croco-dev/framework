@@ -325,7 +325,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("c284a3b539bca69f0f2498cf321dc27415a8db411b0edde8bfc0ea31f3faea07");
+    ).toBe("9a0840456a361324d642b953061ad463d0f52f73d52f6c783e85c9b13a49dec1");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -455,6 +455,26 @@ describe("verification manifest", () => {
     expect(VERIFICATION_DEPENDENCY_CLASSIFICATION["cli-packed-e2e->integration-test-lane"]).toEqual(
       ["physical-local"],
     );
+  });
+
+  it("uploads advisory and aggregate generated smoke matrices as optional artifacts", () => {
+    const optionalMatrixPaths = [
+      "ci-reports/generated-apps/ecosystem-advisory-matrix.json",
+      "ci-reports/generated-apps/matrix.json",
+    ];
+
+    for (const profile of ["publish", "spine"] as const) {
+      const artifacts =
+        createVerificationManifest(profile).find(({ id }) => id === "generated-app-smoke")
+          ?.artifacts ?? [];
+
+      expect(
+        artifacts
+          .filter(({ path }) => optionalMatrixPaths.includes(path))
+          .map(({ path, required }) => ({ path, required })),
+        profile,
+      ).toEqual(optionalMatrixPaths.map((path) => ({ path, required: false })));
+    }
   });
 
   it("treats inventory changes as affecting every declared fidelity lane", () => {
@@ -1331,7 +1351,7 @@ describe("verification manifest", () => {
       readFileSync(resolve(__dirname, "../../package.json"), "utf8"),
     ) as { scripts?: Record<string, string> };
 
-    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(53);
+    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(54);
     expect(RELEASE_GATE_TEST_PATHS).toEqual([...RELEASE_GATE_TEST_PATHS].sort());
     expect(RELEASE_GATE_ENTRYPOINT_PATHS).toEqual([...RELEASE_GATE_ENTRYPOINT_PATHS].sort());
     expect(RELEASE_GATE_FIXTURE_PATHS).toEqual([...RELEASE_GATE_FIXTURE_PATHS].sort());

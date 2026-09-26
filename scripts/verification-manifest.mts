@@ -913,6 +913,16 @@ const spineOnly = (
           required: true,
         },
         {
+          label: "Ecosystem-advisory generated app smoke matrix JSON",
+          path: "ci-reports/generated-apps/ecosystem-advisory-matrix.json",
+          required: false,
+        },
+        {
+          label: "Aggregate generated app smoke matrix JSON",
+          path: "ci-reports/generated-apps/matrix.json",
+          required: false,
+        },
+        {
           label: "Generated app smoke journey bundle",
           path: "ci-reports/generated-apps/spine-blocking-journeys",
           required: generatedAppSmokeFullTier && profile !== "publish",

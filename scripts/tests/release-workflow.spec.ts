@@ -625,6 +625,29 @@ describe("Release verification profile contract", () => {
     expect(playwrightIndex).toBeLessThan(verificationIndex);
   });
 
+  it("restores the canonical trunk Turbo cache without saving a release-scoped copy", () => {
+    const turboCacheStep = stepByName(releaseSteps(parseWorkflow(workflow)), "Restore Turbo cache");
+    const canonicalPrefix =
+      "turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-trunk-";
+
+    expect(turboCacheStep.uses).toBe(
+      "actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9",
+    );
+    expect(turboCacheStep.if).toBe(
+      "steps.release_execution.outputs.should_run_verification == 'true' || steps.release_execution.outputs.should_run_changesets_action == 'true'",
+    );
+    expect(turboCacheStep.with).toEqual({
+      path: ".turbo/cache",
+      key: `${canonicalPrefix}${"${{ github.sha }}"}`,
+      "restore-keys": `${canonicalPrefix}\n`,
+    });
+    expect(workflow).toContain(
+      "uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0",
+    );
+    expect(workflow).not.toContain("actions/cache/save@");
+    expect(workflow).not.toContain("actions/cache@");
+  });
+
   it("preserves release report and artifact compatibility paths", () => {
     expect(workflow).toContain("ci-reports/release/spine-evidence.md");
     expect(workflow).toContain("name: release-spine-evidence");

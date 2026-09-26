@@ -145,14 +145,12 @@ jobs:
 
       - name: Restore Turbo cache
         if: steps.release_execution.outputs.should_run_verification == 'true' || steps.release_execution.outputs.should_run_changesets_action == 'true'
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: .turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-${{ github.sha }}
+          path: .turbo/cache
+          key: turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-trunk-${{ github.sha }}
           restore-keys: |
-            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-${{ github.job }}-
-            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-
-            turbo-${{ runner.os }}-
+            turbo-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml', 'turbo.json') }}-trunk-
 
       - name: Install dependencies
         if: steps.release_execution.outputs.should_run_verification == 'true' || steps.release_execution.outputs.should_run_changesets_action == 'true'

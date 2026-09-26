@@ -82,6 +82,8 @@ describe("release-spine-evidence.mts", () => {
     ).toEqual([
       "ci-reports/generated-apps/spine-blocking-matrix.md",
       "ci-reports/generated-apps/spine-blocking-matrix.json",
+      "ci-reports/generated-apps/ecosystem-advisory-matrix.json",
+      "ci-reports/generated-apps/matrix.json",
       "ci-reports/generated-apps/spine-blocking-journeys",
       "ci-reports/generated-apps/materialization-evidence.json",
       "ci-reports/generated-apps/materialized-tests",
@@ -348,7 +350,7 @@ describe("release-spine-evidence.mts", () => {
 
     expect(report.status).toBe("passed");
     expect(report.checks[0]).toMatchObject({ status: "passed" });
-    expect(report.checks[0]?.artifacts).toHaveLength(5);
+    expect(report.checks[0]?.artifacts).toHaveLength(7);
     expect(report.checks[0]?.artifacts.filter(({ required }) => required)).toHaveLength(4);
     expect(
       report.checks[0]?.artifacts.find(

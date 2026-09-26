@@ -4969,6 +4969,12 @@
       "owner": "repo:ci"
     },
     {
+      "path": "scripts/tests/turbo-canonical-cache.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
       "path": "scripts/tests/turbo-task-contract.spec.ts",
       "lane": "fast",
       "qualifiers": [],

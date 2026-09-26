@@ -10,7 +10,7 @@ import {
   type TurboCacheContractResult,
 } from "../turbo-cache-contract.mts";
 
-const TURBO_CACHE_SCENARIO_COUNT = 10;
+const TURBO_CACHE_SCENARIO_COUNT = 12;
 const REAL_TURBO_TEST_TIMEOUT_MS = TURBO_EXECUTION_TIMEOUT_MS * TURBO_CACHE_SCENARIO_COUNT;
 
 describe("Turbo cache contract", () => {
@@ -102,6 +102,7 @@ describe("Turbo cache contract", () => {
   it("reports stable scenario diagnostics when an expected task is missing", () => {
     expect(() =>
       assertTurboCacheContract({
+        ...result,
         scenarios: result.scenarios.map((candidate) =>
           candidate.name === "identical-second-run"
             ? {
@@ -113,6 +114,28 @@ describe("Turbo cache contract", () => {
       }),
     ).toThrow(
       "[turbo-cache-contract] scenario identical-second-run: expected @fixture/app#build=HIT, observed <missing>",
+    );
+  });
+
+  it("reuses every selected task after pruning stale and partial canonical cache entries", () => {
+    const reuse = scenario("canonical-prune-reuse");
+
+    expect(reuse).toMatchObject({ taskCount: 4, hitCount: 4, missCount: 0 });
+    expect(result.prune.remainingStaleEntries).toEqual([]);
+    expect(result.prune.removedCount).toBeGreaterThanOrEqual(4);
+    expect(result.prune.keptHashes).toEqual(
+      expect.arrayContaining(reuse?.tasks.map(({ hash }) => hash) ?? []),
+    );
+  });
+
+  it("reports surviving stale cache entries after pruning", () => {
+    expect(() =>
+      assertTurboCacheContract({
+        ...result,
+        prune: { ...result.prune, remainingStaleEntries: ["ffffffffffffffff-meta.json"] },
+      }),
+    ).toThrow(
+      "[turbo-cache-contract] scenario canonical-prune-reuse: stale cache entries survived pruning: ffffffffffffffff-meta.json",
     );
   });
 
