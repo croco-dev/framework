@@ -154,6 +154,36 @@ DLQ 항목 목록
 
 ---
 
+### removeHandlerItem()
+
+> **removeHandlerItem**(`eventId`, `handlerId`): `Promise`\<`void`\>
+
+성공한 핸들러의 항목만 DLQ에서 제거합니다. 항목이 없으면 아무 작업도 하지 않습니다.
+
+#### Parameters
+
+##### eventId
+
+`string`
+
+원본 이벤트 ID
+
+##### handlerId
+
+`string` \| `undefined`
+
+저장된 핸들러 ID
+
+#### Returns
+
+`Promise`\<`void`\>
+
+#### Implementation of
+
+[`DeadLetterQueue`](/api/events-core/src/interfaces/deadletterqueue/).[`removeHandlerItem`](/api/events-core/src/interfaces/deadletterqueue/#removehandleritem)
+
+---
+
 ### size()
 
 > **size**(): `Promise`\<`number`\>

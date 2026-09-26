@@ -86,6 +86,13 @@ export interface DeadLetterQueue {
   remove(itemId: string): Promise<void>;
 
   /**
+   * 성공한 핸들러의 항목만 DLQ에서 제거합니다. 항목이 없으면 아무 작업도 하지 않습니다.
+   * @param eventId 원본 이벤트 ID
+   * @param handlerId 저장된 핸들러 ID
+   */
+  removeHandlerItem(eventId: string, handlerId: string | undefined): Promise<void>;
+
+  /**
    * DLQ의 모든 항목을 조회합니다.
    * @returns DLQ 항목 목록
    */

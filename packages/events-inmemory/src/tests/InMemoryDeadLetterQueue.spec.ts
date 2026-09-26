@@ -390,6 +390,129 @@ describe("InMemoryEventBus dead-letter execution", () => {
     EventBusConfig.setStats(new EventBusStats());
   });
 
+  it("does not replay a dead letter after the same event is delivered successfully", async () => {
+    const queue = new InMemoryDeadLetterQueue();
+    const effects: string[] = [];
+    let available = false;
+
+    class RecoveringHandler implements EventHandler<DeadLetterTestEvent> {
+      handle(event: DeadLetterTestEvent): void {
+        if (!available) {
+          throw new Error("temporarily unavailable");
+        }
+        effects.push(event.value);
+      }
+    }
+
+    const bus = createTestEventBus<DeadLetterTestEvent>({
+      deadLetterQueue: queue,
+      deadLetterPolicy: { maxRetries: 0 },
+    });
+    Container.set(RecoveringHandler, new RecoveringHandler());
+    bus.subscribe({
+      eventName: DeadLetterTestEvent.eventName,
+      handlerClass: RecoveringHandler,
+      handlerId: "RecoveringHandler",
+    });
+    const event = new DeadLetterTestEvent("delivered once");
+
+    await expect(bus.publish(event)).rejects.toMatchObject({
+      eventName: DeadLetterTestEvent.eventName,
+    });
+    await expect(queue.size()).resolves.toBe(1);
+
+    available = true;
+    await bus.publish(event);
+
+    await expect(queue.size()).resolves.toBe(0);
+    await expect(bus.replayDeadLetters()).resolves.toEqual({
+      attempted: 0,
+      succeeded: 0,
+      failed: 0,
+      failures: [],
+    });
+    expect(effects).toEqual(["delivered once"]);
+  });
+
+  it("clears only the successful handler's dead letter when publishing the same event again", async () => {
+    const queue = new InMemoryDeadLetterQueue();
+    const event = new DeadLetterTestEvent("redelivery");
+    const failedAt = new Date();
+    await queue.enqueue({
+      event,
+      handlerId: "RecoveredHandler",
+      reason: "handler-retries-exhausted",
+      failedAt,
+      retryCount: 0,
+    });
+    await queue.enqueue({
+      event,
+      handlerId: "StillFailedHandler",
+      reason: "handler-retries-exhausted",
+      failedAt,
+      retryCount: 0,
+    });
+    const [, stillFailedItem] = await queue.peek();
+    assert.isDefined(stillFailedItem);
+
+    class RecoveredHandler implements EventHandler<DeadLetterTestEvent> {
+      handle = vi.fn();
+    }
+
+    const handler = new RecoveredHandler();
+    const bus = createTestEventBus<DeadLetterTestEvent>({ deadLetterQueue: queue });
+    Container.set(RecoveredHandler, handler);
+    bus.subscribe({
+      eventName: DeadLetterTestEvent.eventName,
+      handlerClass: RecoveredHandler,
+      handlerId: "RecoveredHandler",
+    });
+
+    await bus.publish(event);
+
+    expect(handler.handle).toHaveBeenCalledOnce();
+    expect((await queue.peek()).map((item) => item.itemId)).toEqual([stillFailedItem.itemId]);
+  });
+
+  it("rejects a successful redelivery when dead-letter removal fails and clears it on a later publish", async () => {
+    const queue = new InMemoryDeadLetterQueue();
+    const event = new DeadLetterTestEvent("removal-retry");
+    await queue.enqueue({
+      event,
+      handlerId: "RecoveredHandler",
+      reason: "handler-retries-exhausted",
+      failedAt: new Date(),
+      retryCount: 0,
+    });
+    const [item] = await queue.peek();
+    assert.isDefined(item);
+    const storageError = new Error("dead-letter removal unavailable");
+    const remove = vi.spyOn(queue, "removeHandlerItem").mockRejectedValueOnce(storageError);
+
+    class RecoveredHandler implements EventHandler<DeadLetterTestEvent> {
+      handle = vi.fn();
+    }
+
+    const handler = new RecoveredHandler();
+    const bus = createTestEventBus<DeadLetterTestEvent>({ deadLetterQueue: queue });
+    Container.set(RecoveredHandler, handler);
+    bus.subscribe({
+      eventName: DeadLetterTestEvent.eventName,
+      handlerClass: RecoveredHandler,
+      handlerId: "RecoveredHandler",
+    });
+
+    await expect(bus.publish(event)).rejects.toMatchObject({
+      failures: [{ handlerName: "RecoveredHandler", error: storageError }],
+    });
+    expect(remove).toHaveBeenCalledWith(event.eventId, "RecoveredHandler");
+    expect((await queue.peek()).map((stored) => stored.itemId)).toEqual([item.itemId]);
+
+    await expect(bus.publish(event)).resolves.toBeUndefined();
+    expect(handler.handle).toHaveBeenCalledTimes(2);
+    await expect(queue.size()).resolves.toBe(0);
+  });
+
   it("uses a provided handler instance when dead-letter handling is enabled", async () => {
     class ContainerHandler implements EventHandler<DeadLetterTestEvent> {
       handle(): void {
