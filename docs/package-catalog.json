@@ -2064,7 +2064,7 @@
         "contract": "@croco/auth-core/AuthProvider",
         "adapterCategory": "provider",
         "runtimes": ["node", "lambda"],
-        "packageVersion": "0.0.4",
+        "packageVersion": "0.1.0",
         "state": "uncertified",
         "evidence": {
           "conformance": {
@@ -2103,7 +2103,7 @@
         "contract": "@croco/tasks-core/TaskRunner",
         "adapterCategory": "provider",
         "runtimes": ["node", "lambda"],
-        "packageVersion": "0.0.4",
+        "packageVersion": "0.1.0",
         "state": "uncertified",
         "evidence": {
           "conformance": {
@@ -2142,7 +2142,7 @@
         "contract": "@croco/storage-core/StorageProvider",
         "adapterCategory": "provider",
         "runtimes": ["node", "lambda"],
-        "packageVersion": "0.0.4",
+        "packageVersion": "1.0.0",
         "state": "uncertified",
         "evidence": {
           "conformance": {
@@ -2176,7 +2176,7 @@
         "contract": "@croco/billing-core/BillingGateway",
         "adapterCategory": "provider",
         "runtimes": ["node", "lambda"],
-        "packageVersion": "0.0.4",
+        "packageVersion": "1.0.0",
         "state": "uncertified",
         "evidence": {
           "conformance": {
@@ -2215,7 +2215,7 @@
         "contract": "@croco/search-core/SearchEngine",
         "adapterCategory": "provider",
         "runtimes": ["node", "lambda"],
-        "packageVersion": "0.0.4",
+        "packageVersion": "1.0.0",
         "state": "uncertified",
         "evidence": {
           "conformance": {
@@ -2251,7 +2251,7 @@
         "contract": "@croco/telemetry-api/Trace",
         "adapterCategory": "integration",
         "runtimes": ["node", "lambda", "cloudflare-workers", "browser"],
-        "packageVersion": "0.1.0",
+        "packageVersion": "0.1.1",
         "state": "certified",
         "evidence": {
           "conformance": {
@@ -2287,7 +2287,7 @@
         "contract": "@croco/telemetry-sdk-node/TelemetryRuntime",
         "adapterCategory": "integration",
         "runtimes": ["node", "lambda"],
-        "packageVersion": "0.0.4",
+        "packageVersion": "0.1.0",
         "state": "certified",
         "evidence": {
           "conformance": {
@@ -2323,7 +2323,7 @@
         "contract": "@croco/transports-http/HttpTransport",
         "adapterCategory": "transport",
         "runtimes": ["node", "lambda"],
-        "packageVersion": "0.0.4",
+        "packageVersion": "0.1.0",
         "state": "certified",
         "evidence": {
           "conformance": {
