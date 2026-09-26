@@ -23,7 +23,26 @@ export type SmokeMatrixCaseDefinition = {
 
 export type SmokeMatrixCaseState = SmokeMatrixCaseDefinition & {
   readonly status: SmokeMatrixStatus;
+  readonly durationMs?: number;
+  readonly steps?: readonly SmokeMatrixStepTiming[];
   readonly failureEvidence?: SmokeMatrixCaseFailureEvidence;
+};
+
+export type SmokeMatrixStepTiming = {
+  readonly label: string;
+  readonly status: SmokeMatrixStatus;
+  readonly durationMs: number;
+};
+
+export type SmokeMatrixCaseTiming = {
+  readonly durationMs: number;
+  readonly steps: readonly SmokeMatrixStepTiming[];
+};
+
+export type SmokeMatrixGateTiming = {
+  readonly label: string;
+  readonly status: SmokeMatrixStatus;
+  readonly durationMs?: number;
 };
 
 export type SmokeMatrixCaseFailureEvidence = {
@@ -66,6 +85,7 @@ export type SmokeMatrixAggregateReport = {
     readonly tier: SmokeMatrixTier;
     readonly status: SmokeMatrixStatus;
   }[];
+  readonly gates: readonly SmokeMatrixGateTiming[];
   readonly cases: readonly SmokeMatrixCaseState[];
 };
 
@@ -301,7 +321,9 @@ export function selectGeneratedSmokeMatrixCases<T extends SmokeMatrixCaseDefinit
 
 export function createGeneratedSmokeMatrixTierReport(
   tier: SmokeMatrixTier,
-  selectedCases: readonly Pick<SmokeMatrixCaseState, "name" | "status" | "failureEvidence">[],
+  selectedCases: readonly (Pick<SmokeMatrixCaseState, "name" | "status" | "failureEvidence"> & {
+    readonly timing?: SmokeMatrixCaseTiming;
+  })[],
   options: {
     readonly filteredRun: boolean;
     readonly previousReport?: unknown;
@@ -322,6 +344,9 @@ export function createGeneratedSmokeMatrixTierReport(
       return {
         ...definition,
         status: update?.status ?? previousCase?.status ?? "pending",
+        ...(update?.timing
+          ? { durationMs: update.timing.durationMs, steps: update.timing.steps }
+          : {}),
         ...(failureEvidence ? { failureEvidence } : {}),
       };
     },
@@ -347,6 +372,7 @@ export function createGeneratedSmokeMatrixTierReport(
 
 export function createGeneratedSmokeMatrixAggregateReport(
   reports: Readonly<Record<SmokeMatrixTier, unknown>>,
+  gates: readonly SmokeMatrixGateTiming[],
   generatedAt = new Date().toISOString(),
 ): SmokeMatrixAggregateReport {
   const tierReports = SMOKE_MATRIX_TIERS.map((tier) =>
@@ -365,6 +391,7 @@ export function createGeneratedSmokeMatrixAggregateReport(
     status: deriveSmokeMatrixStatus(tiers.map(({ status }) => status)),
     release: { blockingTier: "spine-blocking", status: spineStatus },
     tiers,
+    gates,
     cases,
   };
 }
@@ -411,8 +438,9 @@ export function isGeneratedSmokeMatrixTierReport(
       return false;
     }
     if (
-      smokeCase.failureEvidence !== undefined &&
-      !isSmokeMatrixCaseFailureEvidence(smokeCase.failureEvidence)
+      (smokeCase.failureEvidence !== undefined &&
+        !isSmokeMatrixCaseFailureEvidence(smokeCase.failureEvidence)) ||
+      !hasValidSmokeMatrixCaseTiming(smokeCase)
     ) {
       return false;
     }
@@ -470,11 +498,13 @@ export function renderGeneratedSmokeMatrixReport(
   lines.push(
     "## Cases",
     "",
-    "| Case | Tier | Status | Advisory owner | Recovery action |",
-    "| --- | --- | --- | --- | --- |",
+    "| Case | Tier | Status | Duration | Advisory owner | Recovery action |",
+    "| --- | --- | --- | --- | --- | --- |",
     ...report.cases.map((smokeCase) => {
       const advisory = smokeCase.advisory;
-      return `| \`${smokeCase.name}\` | ${smokeCase.tier} | ${smokeCase.status} | ${advisory ? escapeMarkdown(advisory.owner) : "-"} | ${advisory ? escapeMarkdown(advisory.recoveryAction) : "-"} |`;
+      const duration =
+        smokeCase.durationMs === undefined ? "-" : formatSmokeMatrixDuration(smokeCase.durationMs);
+      return `| \`${smokeCase.name}\` | ${smokeCase.tier} | ${smokeCase.status} | ${duration} | ${advisory ? escapeMarkdown(advisory.owner) : "-"} | ${advisory ? escapeMarkdown(advisory.recoveryAction) : "-"} |`;
     }),
     "",
   );
@@ -632,6 +662,28 @@ function isSmokeMatrixCaseFailureEvidence(value: unknown): value is SmokeMatrixC
   );
 }
 
+function hasValidSmokeMatrixCaseTiming(smokeCase: Record<string, unknown>): boolean {
+  if (smokeCase.durationMs === undefined && smokeCase.steps === undefined) {
+    return true;
+  }
+
+  return (
+    isSmokeMatrixDurationMs(smokeCase.durationMs) &&
+    Array.isArray(smokeCase.steps) &&
+    smokeCase.steps.every(
+      (step) =>
+        isRecord(step) &&
+        typeof step.label === "string" &&
+        isSmokeMatrixStatus(step.status) &&
+        isSmokeMatrixDurationMs(step.durationMs),
+    )
+  );
+}
+
+function isSmokeMatrixDurationMs(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= 0;
+}
+
 function isSmokeCaseArtifactBundle(value: unknown): boolean {
   return (
     isRecord(value) &&
@@ -654,6 +706,10 @@ function escapeMarkdown(value: string): string {
 
 function escapeBackticks(value: string): string {
   return value.replace(/`/g, "\\`");
+}
+
+function formatSmokeMatrixDuration(durationMs: number): string {
+  return `${(durationMs / 1000).toFixed(1)}s`;
 }
 
 function formatSmokeMatrixList(values: readonly string[]): string {
