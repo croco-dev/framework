@@ -460,20 +460,34 @@ export class CrocoRouteRegistrar {
 
   private withContextResponseHeaders(ctx: HttpContext, response: Response): Response {
     const headers = new Headers(response.headers);
+    const cookies = new Set(headers.getSetCookie());
     let hasContextHeaders = false;
+
+    const appendCookie = (value: string) => {
+      if (!cookies.has(value)) {
+        headers.append("set-cookie", value);
+        cookies.add(value);
+      }
+    };
 
     ctx.raw.res.headers.forEach((value, key) => {
       if (key === "vary") {
         mergeVaryHeader(headers, value);
-      } else {
+      } else if (key !== "set-cookie") {
         headers.set(key, value);
       }
       hasContextHeaders = true;
     });
 
+    for (const cookie of ctx.raw.res.headers.getSetCookie()) {
+      appendCookie(cookie);
+    }
+
     for (const [key, value] of Object.entries(ctx.res.headers)) {
       if (key.toLowerCase() === "vary") {
         mergeVaryHeader(headers, value);
+      } else if (key.toLowerCase() === "set-cookie") {
+        appendCookie(value);
       } else {
         headers.set(key, value);
       }

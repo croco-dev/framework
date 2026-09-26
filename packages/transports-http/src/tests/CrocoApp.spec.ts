@@ -39,7 +39,8 @@ import {
   SlidingWindowInMemoryStore,
 } from "@croco/ratelimit-core";
 import { serve, type Http2Bindings, type HttpBindings } from "@hono/node-server";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
+import { setCookie } from "hono/cookie";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp as createCrocoApp } from "../libs/CrocoApp";
 import {
@@ -325,6 +326,31 @@ describe("CrocoApp", () => {
     @Get("/problem")
     getProblem() {
       throw new TestProblem("Lambda transport problem for correlation metadata");
+    }
+  }
+
+  @Controller("/cookies")
+  class CookieController {
+    @Get("/context")
+    contextCookies(@Raw() raw: Context) {
+      setCookie(raw, "session", "abc", { path: "/", httpOnly: true });
+      setCookie(raw, "csrf", "xyz", { path: "/" });
+      return { ok: true };
+    }
+
+    @Get("/plain")
+    plain() {
+      return { ok: true };
+    }
+
+    @Get("/response")
+    response(): Response {
+      return new Response(JSON.stringify({ ok: true }), {
+        headers: [
+          ["content-type", "application/json"],
+          ["set-cookie", "theme=dark; Path=/"],
+        ],
+      });
     }
   }
 
@@ -652,6 +678,153 @@ describe("CrocoApp", () => {
         }),
       ]),
     );
+  });
+
+  describe("response cookies", () => {
+    it("keeps both cookies in a plain Hono response", async () => {
+      const hono = new Hono();
+      hono.get("/cookies/context", (raw) => {
+        setCookie(raw, "session", "abc", { path: "/", httpOnly: true });
+        setCookie(raw, "csrf", "xyz", { path: "/" });
+        return raw.json({ ok: true });
+      });
+
+      const response = await hono.fetch(new Request("http://localhost/cookies/context"));
+
+      expect(response.headers.getSetCookie()).toEqual([
+        "session=abc; Path=/; HttpOnly",
+        "csrf=xyz; Path=/",
+      ]);
+    });
+
+    it("keeps both cookies set by a controller through the raw Hono context", async () => {
+      const app = createApp({ controllers: [CookieController] });
+
+      const response = await app.fetch(new Request("http://localhost/cookies/context"));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.getSetCookie()).toEqual([
+        "session=abc; Path=/; HttpOnly",
+        "csrf=xyz; Path=/",
+      ]);
+    });
+
+    it("keeps both cookies appended by middleware", async () => {
+      const appendCookies: MiddlewareFunction = (ctx, next) => {
+        ctx.raw.header("Set-Cookie", "session=renewed; Path=/", { append: true });
+        ctx.raw.header("Set-Cookie", "refresh=r1; Path=/", { append: true });
+        return next();
+      };
+      const app = createApp({ controllers: [CookieController], middlewares: [appendCookies] });
+
+      const response = await app.fetch(new Request("http://localhost/cookies/plain"));
+
+      expect(response.headers.getSetCookie()).toEqual([
+        "session=renewed; Path=/",
+        "refresh=r1; Path=/",
+      ]);
+    });
+
+    it("keeps a handler Response cookie alongside a middleware cookie", async () => {
+      const appendCookie: MiddlewareFunction = (ctx, next) => {
+        ctx.raw.header("Set-Cookie", "session=renewed; Path=/", { append: true });
+        return next();
+      };
+      const app = createApp({ controllers: [CookieController], middlewares: [appendCookie] });
+
+      const response = await app.fetch(new Request("http://localhost/cookies/response"));
+
+      expect(response.headers.getSetCookie().sort()).toEqual([
+        "session=renewed; Path=/",
+        "theme=dark; Path=/",
+      ]);
+    });
+
+    it("keeps cookies from context and the response header record without duplicating a handler cookie", async () => {
+      const setContextHeaders: MiddlewareFunction = (ctx, next) => {
+        ctx.raw.header("Set-Cookie", "session=renewed; Path=/", { append: true });
+        ctx.res.headers["Set-Cookie"] = "record=one; Path=/";
+        return next();
+      };
+      const app = createApp({ controllers: [CookieController], middlewares: [setContextHeaders] });
+
+      const response = await app.fetch(new Request("http://localhost/cookies/response"));
+
+      expect(response.headers.getSetCookie().sort()).toEqual([
+        "record=one; Path=/",
+        "session=renewed; Path=/",
+        "theme=dark; Path=/",
+      ]);
+    });
+
+    it("does not emit the same cookie twice when the handler Response already has it", async () => {
+      const appendExistingCookie: MiddlewareFunction = (ctx, next) => {
+        ctx.raw.header("Set-Cookie", "theme=dark; Path=/", { append: true });
+        return next();
+      };
+      const app = createApp({
+        controllers: [CookieController],
+        middlewares: [appendExistingCookie],
+      });
+
+      const response = await app.fetch(new Request("http://localhost/cookies/response"));
+
+      expect(response.headers.getSetCookie()).toEqual(["theme=dark; Path=/"]);
+    });
+
+    it("keeps context cookies on a thrown Response", async () => {
+      const throwResponse: MiddlewareFunction = (ctx) => {
+        ctx.raw.header("Set-Cookie", "session=renewed; Path=/", { append: true });
+        ctx.raw.header("Set-Cookie", "refresh=r1; Path=/", { append: true });
+        throw new Response("rejected", {
+          status: 401,
+          headers: { "Set-Cookie": "attempt=blocked; Path=/" },
+        });
+      };
+      const app = createApp({ controllers: [CookieController], middlewares: [throwResponse] });
+
+      const response = await app.fetch(new Request("http://localhost/cookies/plain"));
+
+      expect(response.status).toBe(401);
+      expect(response.headers.getSetCookie().sort()).toEqual([
+        "attempt=blocked; Path=/",
+        "refresh=r1; Path=/",
+        "session=renewed; Path=/",
+      ]);
+    });
+
+    it("keeps context cookies on a Problem response", async () => {
+      const throwProblem: MiddlewareFunction = (ctx) => {
+        ctx.raw.header("Set-Cookie", "session=renewed; Path=/", { append: true });
+        ctx.raw.header("Set-Cookie", "refresh=r1; Path=/", { append: true });
+        throw new TestProblem("cookie response failed");
+      };
+      const app = createApp({ controllers: [CookieController], middlewares: [throwProblem] });
+
+      const response = await app.fetch(new Request("http://localhost/cookies/plain"));
+
+      expect(response.status).toBe(400);
+      expect(response.headers.getSetCookie()).toEqual([
+        "session=renewed; Path=/",
+        "refresh=r1; Path=/",
+      ]);
+    });
+
+    it("maps every context cookie into the API Gateway v2 cookies array", async () => {
+      const app = createApp({ controllers: [CookieController] });
+
+      const response = await app.lambdaHandler()(
+        createLambdaEvent({
+          requestContext: createRequestContext("GET", "/cookies/context"),
+          rawPath: "/cookies/context",
+        }),
+        lambdaContext,
+      );
+
+      expect(response.statusCode).toBe(200);
+      expect(response.cookies).toEqual(["session=abc; Path=/; HttpOnly", "csrf=xyz; Path=/"]);
+      expect(response.headers).not.toHaveProperty("set-cookie");
+    });
   });
 
   it("should preserve built-in CORS preflight short-circuits in the app pipeline", async () => {
