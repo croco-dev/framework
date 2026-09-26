@@ -357,7 +357,7 @@ describe("immutable CI verification identity", () => {
       const sideSha = commit(root, "side.txt", "side\n", "side");
       const candidateSha = mergeCandidate(root, sideSha, headSha);
 
-      const realGitPath = execFileSync("bash", ["-lc", "command -v git"], {
+      const realGitPath = execFileSync("bash", ["-c", "command -v git"], {
         encoding: "utf8",
       }).trim();
       const stubDir = temporaryDirectory();
