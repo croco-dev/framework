@@ -81,6 +81,10 @@ export class InMemoryDeadLetterQueue implements DeadLetterQueue {
     }
   }
 
+  async removeHandlerItem(eventId: string, handlerId: string | undefined): Promise<void> {
+    this.items.delete(buildDeadLetterItemId(eventId, handlerId));
+  }
+
   async peek<TEvent extends DomainEvent>(): Promise<InMemoryDeadLetterItem<TEvent>[]> {
     this.removeExpiredItems();
     return Array.from(this.items.values(), (item) =>

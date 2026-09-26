@@ -74,6 +74,8 @@ DLQ 설정은 명시적으로 opt-in합니다. 설정하지 않으면 기존처�
 `EventPublishFailedError`로 반환합니다. 설정하면 기본 정책을 적용하며, `RetryableEventHandler`가 반환한 값이 버스
 정책보다 우선합니다. 소진된 항목은 원래 `eventId`와 실패한 핸들러 ID를 보존합니다. 재생은 그 핸들러만 다시 실행해
 이미 성공한 핸들러의 부작용을 반복하지 않습니다.
+같은 이벤트를 다시 발행해 핸들러가 성공하면 해당 `(eventId, handlerId)` DLQ 항목을 제거합니다.
+제거에 실패하면 `publish()`가 `EventPublishFailedError`로 거부되므로, 저장소를 복구한 뒤 다시 발행해야 합니다.
 핸들러를 DI에서 생성하지 못한 경우에는 `handler-resolution-failed` 원인과 재시도 횟수 0으로 항목을 저장합니다.
 이때 핸들러 정책은 호출하지 않으며, 버스의 보관 기간을 적용합니다. 의존성 등록 문제를 해결한 뒤 재생할 수 있습니다.
 

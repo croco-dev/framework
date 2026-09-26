@@ -705,6 +705,13 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
         eventName,
       );
       if (!failure) {
+        if (execution.source === "publish") {
+          try {
+            await this.deadLetterQueue.removeHandlerItem(baseEvent.eventId, deadLetterHandlerId);
+          } catch (error) {
+            return { failure: { handlerName, error: this.normalizeError(error) } };
+          }
+        }
         if (attempt > 0 || execution.source === "replay") {
           this.recordRetryInspection("retry.success", "succeeded", baseEvent, deadLetterHandlerId, {
             retryCount: this.calculateRetryCount(execution, attempt),
