@@ -1,4 +1,8 @@
-import { CacheKeyArgumentProblem } from "./problems/CacheDecoratorProblems";
+import { Context } from "@croco/framework-context";
+import {
+  CacheDecoratorConfigProblem,
+  CacheKeyArgumentProblem,
+} from "./problems/CacheDecoratorProblems";
 
 const MAX_CACHE_KEY_GRAPH_DEPTH = 100;
 const MAX_CACHE_KEY_GRAPH_NODES = 10_000;
@@ -18,13 +22,34 @@ type CacheKeyEncodingState = {
   nodeCount: number;
 };
 
-export function createCacheKey(prefix: string, args: readonly unknown[]): string {
+export function createCacheKey(
+  prefix: string,
+  args: readonly unknown[],
+  scope: "tenant" | "global" = "tenant",
+): string {
+  if (scope !== "tenant" && scope !== "global") {
+    throw new CacheDecoratorConfigProblem('Cache scope must be "tenant" or "global"');
+  }
+
   const state: CacheKeyEncodingState = { ancestors: new Set<object>(), nodeCount: 0 };
   const encoded = args.map((value, index) =>
     encodeCacheKeyValue(value, `arguments[${index}]`, state, 0),
   );
+  const tenantId = scope === "tenant" ? Context.getTenantId() : null;
+  const encodedScope =
+    tenantId === null
+      ? ["global"]
+      : [
+          "tenant",
+          encodeCacheKeyValue(
+            tenantId,
+            "tenantId",
+            { ancestors: new Set<object>(), nodeCount: 0 },
+            0,
+          ),
+        ];
 
-  return `${prefix}:${JSON.stringify(encoded)}`;
+  return `${prefix}:${JSON.stringify(encodedScope)}:${JSON.stringify(encoded)}`;
 }
 
 function encodeCacheKeyValue(
