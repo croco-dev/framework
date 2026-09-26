@@ -7,15 +7,22 @@ import {
   Controller,
   Ctx,
   type ExecutionContext,
+  Get,
+  Header,
+  Param,
   Post,
   Query,
   Raw,
+  ResponseSchema,
+  ResponseValidationProblem,
   type PipeTransform,
+  UseFilters,
   UseGuards,
   UseInterceptors,
   UsePipes,
 } from "@croco/protocols-rest";
 import { beforeEach, describe, expect, it } from "vitest";
+import { z } from "zod";
 import { createApp } from "../libs/CrocoApp";
 
 const executionOrder: string[] = [];
@@ -140,6 +147,134 @@ class PipeGraphController {
     return "none";
   }
 }
+
+const availableName = async (name: string): Promise<boolean> => name !== "taken";
+const nameSchema = z.string().refine(availableName, "name is taken");
+const bodySchema = z.object({ name: nameSchema });
+const responseSchema = z.object({ name: nameSchema });
+const responseFilterErrors: unknown[] = [];
+
+class ResponseProblemFilter {
+  catch(error: unknown): undefined {
+    responseFilterErrors.push(error);
+    return undefined;
+  }
+}
+
+@Controller("/async-validation")
+class AsyncValidationController {
+  @Post("/body")
+  body(@Body(bodySchema) body: { name: string }): { name: string } {
+    return body;
+  }
+
+  @Get("/query")
+  query(@Query("name", nameSchema) name: string): { name: string } {
+    return { name };
+  }
+
+  @Get("/param/:name")
+  param(@Param("name", nameSchema) name: string): { name: string } {
+    return { name };
+  }
+
+  @Get("/header")
+  header(@Header("x-name", nameSchema) name: string): { name: string } {
+    return { name };
+  }
+
+  @Get("/response/:name")
+  @ResponseSchema(responseSchema)
+  @UseFilters(ResponseProblemFilter)
+  response(@Param("name") name: string): { name: string } {
+    return { name };
+  }
+}
+
+const asyncValidationCases = [
+  {
+    source: "body",
+    request: (name: string) =>
+      new Request("http://localhost/async-validation/body", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name }),
+      }),
+    issuePath: "body.name",
+  },
+  {
+    source: "query",
+    request: (name: string) => new Request(`http://localhost/async-validation/query?name=${name}`),
+    issuePath: "query.value",
+  },
+  {
+    source: "param",
+    request: (name: string) => new Request(`http://localhost/async-validation/param/${name}`),
+    issuePath: "params.value",
+  },
+  {
+    source: "header",
+    request: (name: string) =>
+      new Request("http://localhost/async-validation/header", { headers: { "x-name": name } }),
+    issuePath: "headers.value",
+  },
+] as const;
+
+describe("async Zod schema validation", () => {
+  beforeEach(() => {
+    Container.reset();
+    responseFilterErrors.length = 0;
+  });
+
+  it.each(asyncValidationCases)("accepts a valid $source", async ({ request }) => {
+    const app = createApp({ controllers: [AsyncValidationController], securityValidation: "off" });
+    const response = await app.fetch(request("ada"));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ name: "ada" });
+  });
+
+  it.each(asyncValidationCases)(
+    "rejects an invalid $source with a 422 Problem",
+    async ({ request, issuePath }) => {
+      const app = createApp({
+        controllers: [AsyncValidationController],
+        securityValidation: "off",
+      });
+      const response = await app.fetch(request("taken"));
+
+      expect(response.status).toBe(422);
+      await expect(response.json()).resolves.toMatchObject({
+        code: "protocols-rest/request-validation-failed",
+        issues: [{ path: issuePath, message: "name is taken" }],
+      });
+    },
+  );
+
+  it("accepts a response validated by an async refinement", async () => {
+    const app = createApp({ controllers: [AsyncValidationController], securityValidation: "off" });
+    const response = await app.fetch(new Request("http://localhost/async-validation/response/ada"));
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ name: "ada" });
+  });
+
+  it("routes an async response validation failure through the Problem filter", async () => {
+    const app = createApp({ controllers: [AsyncValidationController], securityValidation: "off" });
+    const response = await app.fetch(
+      new Request("http://localhost/async-validation/response/taken"),
+    );
+
+    expect(response.status).toBe(500);
+    expect(responseFilterErrors).toHaveLength(1);
+    expect(responseFilterErrors[0]).toBeInstanceOf(ResponseValidationProblem);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "protocols-rest/response-validation-failed",
+      status: 500,
+      detail: "An internal error occurred",
+    });
+  });
+});
 
 describe("HTTP pipe execution", () => {
   beforeEach(() => {

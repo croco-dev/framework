@@ -218,7 +218,7 @@ export class PipelineRunner {
       await this.runGuards(execContext, config.guards);
 
       const result = await this.runInterceptorChain(execContext, handler, config.interceptors);
-      return config.validateResult ? config.validateResult(result) : result;
+      return config.validateResult ? await config.validateResult(result) : result;
     } catch (error) {
       this.recordPipelineError(error);
       const response = await this.runFilters(error, execContext, config.filters);

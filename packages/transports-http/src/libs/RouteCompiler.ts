@@ -17,7 +17,7 @@ import {
   getPipes,
   type Interceptor,
   type PipeTransform,
-  validateResponse,
+  validateResponseAsync,
 } from "@croco/protocols-rest";
 import { HttpExecutionContext } from "./HttpExecutionContext";
 import { isPipeTarget, resolveParamsWithRoutePipes } from "./ParamResolver";
@@ -208,7 +208,7 @@ export class RouteCompiler {
         filters,
         ...(outputSchema
           ? {
-              validateResult: (result: unknown) => validateResponse(outputSchema, result),
+              validateResult: (result: unknown) => validateResponseAsync(outputSchema, result),
             }
           : {}),
       });

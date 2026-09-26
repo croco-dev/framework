@@ -13,7 +13,7 @@ import { RequestValidationProblem } from "./ValidationProblem";
 export class ValidationPipe<T = unknown> implements PipeTransform<unknown, T> {
   constructor(private readonly schema: z.ZodType<T>) {}
 
-  transform(value: unknown, metadata: ArgumentMetadata): T {
+  async transform(value: unknown, metadata: ArgumentMetadata): Promise<T> {
     const repeatedQuerySchema =
       metadata.type === "query" && Array.isArray(value)
         ? getZodArrayInputSchema(this.schema)
@@ -33,7 +33,7 @@ export class ValidationPipe<T = unknown> implements PipeTransform<unknown, T> {
         (metadata.type === "header" && value !== undefined && isZodArraySchema(this.schema)));
 
     if (shouldParseWithoutCatch) {
-      const result = schemaWithoutCatch.safeParse(normalizedValue);
+      const result = await schemaWithoutCatch.safeParseAsync(normalizedValue);
 
       if (result.success) {
         return result.data;
@@ -42,7 +42,7 @@ export class ValidationPipe<T = unknown> implements PipeTransform<unknown, T> {
       throwValidationProblem(result.error.issues, metadata);
     }
 
-    const result = this.schema.safeParse(normalizedValue);
+    const result = await this.schema.safeParseAsync(normalizedValue);
 
     if (!result.success) {
       throwValidationProblem(result.error.issues, metadata);
