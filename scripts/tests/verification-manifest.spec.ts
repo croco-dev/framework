@@ -325,7 +325,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("5d3e2cbd1004b760d203e0b9ba6cc05545d44d06ca1ef458583b03cf885a5d88");
+    ).toBe("9a0840456a361324d642b953061ad463d0f52f73d52f6c783e85c9b13a49dec1");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -1351,7 +1351,7 @@ describe("verification manifest", () => {
       readFileSync(resolve(__dirname, "../../package.json"), "utf8"),
     ) as { scripts?: Record<string, string> };
 
-    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(53);
+    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(54);
     expect(RELEASE_GATE_TEST_PATHS).toEqual([...RELEASE_GATE_TEST_PATHS].sort());
     expect(RELEASE_GATE_ENTRYPOINT_PATHS).toEqual([...RELEASE_GATE_ENTRYPOINT_PATHS].sort());
     expect(RELEASE_GATE_FIXTURE_PATHS).toEqual([...RELEASE_GATE_FIXTURE_PATHS].sort());
