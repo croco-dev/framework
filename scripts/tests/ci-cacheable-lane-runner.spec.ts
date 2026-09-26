@@ -591,7 +591,7 @@ describe("cacheable producer lane evidence", () => {
     expect(hit.cacheHit).toBe(true);
   });
 
-  it("emits seven-case producer facts for 16 executed paths and rejects a missing selected test", async () => {
+  it("emits seven-case producer facts for 18 executed paths and rejects a missing selected test", async () => {
     useCurrentRunEnvironment();
     const rootDir = mkdtempSync(join(tmpdir(), "croco-cacheable-generated-seven-cases-"));
     const selectedPath = (path: string) =>
@@ -613,7 +613,7 @@ describe("cacheable producer lane evidence", () => {
     const facts = JSON.parse(
       readFileSync(join(result.outputDir, "producer-facts.json"), "utf8"),
     ) as { requiredSourcePaths: string[]; executedSourcePaths: string[] };
-    expect(facts.executedSourcePaths).toHaveLength(16);
+    expect(facts.executedSourcePaths).toHaveLength(18);
     expect(facts.requiredSourcePaths).toEqual(facts.executedSourcePaths);
     expect(
       facts.requiredSourcePaths.some((path) => path.includes("/spa-be-split/tests/journeys/")),
