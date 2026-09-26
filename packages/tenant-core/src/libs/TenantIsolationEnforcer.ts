@@ -233,8 +233,10 @@ export class TenantIsolationEnforcer {
       await this.deny(operation, new TenantIsolationContextMissingProblem(operation.name), null);
     }
 
-    const operationTenantId = this.resolveOperationTenantId(operation);
-    if (operationTenantId && operationTenantId !== currentTenantId) {
+    const mismatchedTenantId = [operation.tenantId, operation.requestedTenantId].find(
+      (tenantId) => tenantId != null && tenantId !== currentTenantId,
+    );
+    if (mismatchedTenantId != null) {
       await this.deny(
         operation,
         new TenantUnsafeQueryProblem(
@@ -242,7 +244,7 @@ export class TenantIsolationEnforcer {
           "operation tenant does not match active tenant context",
           {
             activeTenantId: currentTenantId,
-            requestedTenantId: operationTenantId,
+            requestedTenantId: mismatchedTenantId,
           },
         ),
         currentTenantId,

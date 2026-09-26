@@ -161,6 +161,133 @@ describe("TenantIsolationEnforcer", () => {
     );
   });
 
+  describe.each([
+    { tenantId: "tenant-a", requestedTenantId: "tenant-b" },
+    { tenantId: "tenant-b", requestedTenantId: "tenant-a" },
+  ])("conflicting tenant claims $tenantId / $requestedTenantId", (claims) => {
+    it.each(["enforce", "requireOperation", "enforceQuery"] as const)(
+      "%s denies either mismatching claim and records the denial decision",
+      async (entryPoint) => {
+        const operation = markTenantScopedOperation({
+          name: "orders.conflictingClaims",
+          kind: "query",
+          ...claims,
+        });
+        const enforcer = createEnforcer();
+        const work = vi.fn(() => "unreachable");
+        const result =
+          entryPoint === "requireOperation"
+            ? enforcer.requireOperation(operation)
+            : entryPoint === "enforce"
+              ? enforcer.enforce(operation, work)
+              : enforcer.enforceQuery(
+                  {
+                    operation,
+                    predicates: [{ field: "tenantId", operator: "=", value: "tenant-a" }],
+                  },
+                  work,
+                );
+
+        await expect(result).rejects.toBeInstanceOf(TenantUnsafeQueryProblem);
+        await expect(result).rejects.toMatchObject({
+          code: "tenant-core/unsafe-query",
+          extensions: {
+            operation: operation.name,
+            activeTenantId: "tenant-a",
+            requestedTenantId: "tenant-b",
+            decisionId: expect.stringMatching(/^pdt_[a-z0-9]+$/),
+          },
+        });
+        expect(work).not.toHaveBeenCalled();
+        expect(auditEvents).toEqual([
+          expect.objectContaining({
+            type: "tenant-isolation.denied",
+            operation: operation.name,
+            tenantId: "tenant-a",
+            problemCode: "tenant-core/unsafe-query",
+            decisionId: expect.stringMatching(/^pdt_[a-z0-9]+$/),
+            policyDecisionTrace: expect.objectContaining({
+              policyKind: "tenant-isolation",
+              result: "deny",
+              ruleId: `tenant-isolation:query:${operation.name}`,
+            }),
+          }),
+        ]);
+        await expect(result).rejects.toMatchObject({
+          extensions: { decisionId: auditEvents[0]?.policyDecisionTrace?.decisionId },
+        });
+        expect(auditEvents[0]?.decisionId).toBe(auditEvents[0]?.policyDecisionTrace?.decisionId);
+      },
+    );
+  });
+
+  it.each(["read", "write", "query"] as const)(
+    "repository %s denies a requested tenant that conflicts with its default tenant",
+    async (method) => {
+      const boundary = createTenantRepositoryBoundary(createEnforcer(), {
+        tenantId: "tenant-a",
+      });
+      const operation = markTenantScopedOperation({
+        name: `orders.${method}`,
+        kind: method === "query" ? "query" : `repository-${method}`,
+        requestedTenantId: "tenant-b",
+      });
+      const work = vi.fn(() => "unreachable");
+      const result =
+        method === "query"
+          ? boundary.query(
+              {
+                operation,
+                predicates: [{ field: "tenantId", operator: "=", value: "tenant-a" }],
+              },
+              work,
+            )
+          : boundary[method](operation, work);
+
+      await expect(result).rejects.toBeInstanceOf(TenantUnsafeQueryProblem);
+      await expect(result).rejects.toMatchObject({
+        code: "tenant-core/unsafe-query",
+        extensions: {
+          operation: operation.name,
+          activeTenantId: "tenant-a",
+          requestedTenantId: "tenant-b",
+          decisionId: expect.stringMatching(/^pdt_[a-z0-9]+$/),
+        },
+      });
+      expect(work).not.toHaveBeenCalled();
+      expect(auditEvents).toEqual([
+        expect.objectContaining({
+          type: "tenant-isolation.denied",
+          problemCode: "tenant-core/unsafe-query",
+          policyDecisionTrace: expect.objectContaining({ result: "deny" }),
+        }),
+      ]);
+    },
+  );
+
+  it.each([
+    { label: "both claims match", tenantId: "tenant-a", requestedTenantId: "tenant-a" },
+    { label: "only tenantId matches", tenantId: "tenant-a" },
+    { label: "only requestedTenantId matches", requestedTenantId: "tenant-a" },
+    { label: "neither claim is supplied" },
+  ])("allows scoped work when $label", async ({ label: _label, ...claims }) => {
+    const operation = markTenantScopedOperation({
+      name: "orders.allowedClaims",
+      kind: "repository-read",
+      ...claims,
+    });
+    const work = vi.fn(() => "allowed");
+
+    await expect(createEnforcer().enforce(operation, work)).resolves.toBe("allowed");
+    expect(work).toHaveBeenCalledOnce();
+    expect(auditEvents).toEqual([
+      expect.objectContaining({
+        type: "tenant-isolation.allowed",
+        policyDecisionTrace: expect.objectContaining({ result: "allow" }),
+      }),
+    ]);
+  });
+
   it("requires an explicit reason for admin and system bypasses", async () => {
     const operation = markTenantScopedOperation({
       name: "admin.tenants.reindex",
