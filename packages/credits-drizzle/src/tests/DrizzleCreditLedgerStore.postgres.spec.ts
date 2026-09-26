@@ -8,14 +8,15 @@ import {
   CreditLedgerService,
   CreditReservationMismatchProblem,
   CreditRefundMismatchProblem,
+  ExpiredGrantProblem,
   InsufficientCreditsProblem,
 } from "@croco/credits-core";
 import { TxManager } from "@croco/tx-core";
 import { createDrizzleTxAdapter } from "@croco/tx-drizzle";
-import { eq, sql } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import {
   createCreditsSchema,
   creditAccounts,
@@ -77,6 +78,101 @@ describePostgres("DrizzleCreditLedgerStore PostgreSQL conformance", () => {
       restart identity cascade
     `);
   }
+
+  describe.each([
+    { name: "with savepoints", supportsSavepoint: true },
+    { name: "without savepoints", supportsSavepoint: false },
+  ])("failed allocation inside an ambient transaction $name", ({ supportsSavepoint }) => {
+    const ambientManager = supportsSavepoint
+      ? txManager
+      : (new TxManager(
+          createDrizzleTxAdapter(db as unknown as Parameters<typeof createDrizzleTxAdapter>[0], {
+            supportsSavepoint: false,
+          }),
+        ) as unknown as TxManager<DrizzleCreditTransaction>);
+    let service: CreditLedgerService;
+    let accountId: Awaited<ReturnType<CreditLedgerService["openAccount"]>>["account"]["id"];
+    const metadata = (id: string) => ({ idempotencyKey: id, reference: { type: "test", id } });
+
+    beforeEach(async () => {
+      await reset();
+      let sequence = 0;
+      service = new CreditLedgerService({
+        store: new DrizzleCreditLedgerStore(db, ambientManager),
+        clock: () => new Date("2026-07-30T00:00:00.000Z"),
+        idGenerator: () => `ambient-failure-${++sequence}`,
+      });
+      accountId = (await service.openAccount({ tenantId: "tenant-ambient", ...metadata("open") }))
+        .account.id;
+    });
+
+    async function lotAvailability(): Promise<string[]> {
+      const lots = await db
+        .select({ available: creditGrantLots.available })
+        .from(creditGrantLots)
+        .where(eq(creditGrantLots.accountId, accountId))
+        .orderBy(asc(creditGrantLots.position));
+      return lots.map((lot) => lot.available);
+    }
+
+    it("preserves grant lots when a caller handles InsufficientCreditsProblem and commits", async () => {
+      await service.grantCredits({ accountId, amount: creditAmount("30"), ...metadata("grant-a") });
+      await service.grantCredits({ accountId, amount: creditAmount("30"), ...metadata("grant-b") });
+
+      await ambientManager.run(async () => {
+        await expect(
+          service.consumeCredits({
+            accountId,
+            amount: creditAmount("100"),
+            ...metadata("consume-100"),
+          }),
+        ).rejects.toBeInstanceOf(InsufficientCreditsProblem);
+      });
+
+      expect(await service.getBalance(accountId)).toMatchObject({ position: 2, available: "60" });
+      expect(await lotAvailability()).toEqual(["30", "30"]);
+      await expect(
+        service.consumeCredits({
+          accountId,
+          amount: creditAmount("60"),
+          ...metadata("consume-60"),
+        }),
+      ).resolves.toMatchObject({ replayed: false });
+    });
+
+    it("preserves valid lots when a caller handles ExpiredGrantProblem and commits", async () => {
+      await service.grantCredits({
+        accountId,
+        amount: creditAmount("100"),
+        expiresAt: new Date("2026-07-29T00:00:00.000Z"),
+        ...metadata("grant-expired"),
+      });
+      await service.grantCredits({
+        accountId,
+        amount: creditAmount("30"),
+        ...metadata("grant-valid"),
+      });
+
+      await ambientManager.run(async () => {
+        await expect(
+          service.reserveCredits({
+            accountId,
+            amount: creditAmount("50"),
+            ...metadata("reserve-50"),
+          }),
+        ).rejects.toBeInstanceOf(ExpiredGrantProblem);
+      });
+
+      expect(await lotAvailability()).toEqual(["100", "30"]);
+      await expect(
+        service.consumeCredits({
+          accountId,
+          amount: creditAmount("30"),
+          ...metadata("consume-30"),
+        }),
+      ).resolves.toMatchObject({ replayed: false });
+    });
+  });
 
   async function seedClaimIntents(count: number) {
     await reset();
