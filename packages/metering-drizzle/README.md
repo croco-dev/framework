@@ -184,7 +184,9 @@ SQLite 스키마는 기존 호환성을 위해 내부 정수 row ID를 계속 �
 - `save(meter)`, 미터 정의를 `(tenantId, meterId)` 기준으로 저장하거나 갱신합니다.
 - `findAll()`, 모든 미터 정의를 조회합니다.
 - `findByTenant(tenantId)`, 테넌트별 미터를 조회합니다.
-- `saveUsageRecords(records)`, 사용량 기록을 배치 저장합니다.
+- `saveUsageRecords(records)`, 사용량 기록을 bind parameter 상한에 맞춰 여러 문장으로 나눠 저장합니다.
+  호출자 트랜잭션 안에서는 모든 문장이 같은 트랜잭션에 참여하고, 트랜잭션 밖에서는 청크마다 커밋됩니다.
+  일부 청크 저장 후 실패해도 `UsageAggregator`는 원본 기록을 삭제하지 않습니다. 재시도 시 저장된 idempotency key는 중복 삽입하지 않습니다.
 
 ### Schema
 
