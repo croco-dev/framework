@@ -1,5 +1,340 @@
 # @croco/framework-context
 
+## 0.1.0
+
+### Minor Changes
+
+- 868ea09: Let each Croco application own one isolated DI scope and module lifecycle, retry failed startup from
+  the exact pre-attempt provider baseline, inspect one correlated module and dependency graph, and run
+  TestKernel without process-global container resets.
+  Canonical SaaS templates now bind HTTP application calls to their application-owned runtime, and
+  scoped HTTP bootstrap validation ignores unrelated process-global component registrations.
+- 9404839: Reject unsafe runtime inspector retention and redaction limits before collecting operational data.
+- 3342494: Discover Croco components by TypeScript symbol identity and generate deterministic application-scoped factories, dependency manifests, and lifecycle-aware runtime graphs during server builds.
+
+  `@Component`, `@Inject`, REST controllers, and GraphQL resolvers remain the authoring surface, but their imports no longer register services in a process-global container. Applications using custom builds must enable `crocoPlugin()` or pass a generated graph to `ApplicationRuntime`. TypeDI-specific identifiers, runtime fallback, and package dependencies are removed; dynamically computed injection tokens must migrate to concrete class types, statically referenced Croco tokens, or explicit module/plugin factories.
+
+  Business services now receive optional collaborators and loggers through constructors or function options instead of process-global container lookups. Provider inheritance is rejected by the first compiler schema; declare injected constructors and properties directly on the decorated provider. Static `di.bindings` selects token implementations, while `di.modules` defines provider ownership and import/export visibility before generated code is emitted.
+
+  `@Auditable` now requires a receiver dependency selector and `AuditInterceptor` receives its logger through its constructor. `@BatchLoad` requires a receiver factory selector, and `@BlockDuringImpersonation` requires a receiver configuration selector. Inject these collaborators into the owning instance and pass an accessor to the decorator; process-global lookup and missing-provider fallback are no longer supported. `registerBatchLoaderFactory()` is removed; construct or inject `BatchLoaderFactory` into the repository instead.
+
+  RLS adapters with `debug: true` now require an explicitly supplied logger; they no longer resolve one from the process-global container.
+
+  `@Metered` accepts an explicit logger option instead of resolving one globally. Without a reporter, local metering failures propagate rather than being silently ignored; billing-required failures remain fail-closed.
+
+  PostHog configuration is now validated with `createPostHogConfig()` and passed to an application-owned provider; `registerPostHogConfig()` no longer writes to a process-global container.
+
+  Transaction managers are now held by an application-owned `TxManagerRegistry` instance, and `@Transactional` receives a manager selector for its service instance. `EventPublisher` receives its transaction context explicitly for after-commit publication; neither path resolves a process-global transaction service.
+
+  Event subscriptions resolve class handlers through an explicitly supplied resolver; a subscription may also provide its handler directly. In-memory event buses, task runners, and QStash trigger handlers no longer read handlers or loggers from a process-global container. Supply the resolver and other collaborators at the application boundary; missing required class resolution now fails explicitly.
+
+- 7df16bb: Register REST controllers with the DI container automatically while preserving explicit component scopes.
+  Generated applications now use `@Controller` as the single controller registration convention.
+- 6489abb: Expose a shared versioned application intent contract and make `croco doctor` report malformed, unsupported, or workspace-drifted `croco.app.json` manifests while custom workspaces remain explicitly skipped.
+- dda0a50: Generate the Node/Postgres SaaS profile as an executable canonical plugin graph, run the selected graph at application bootstrap, release its application-owned PostgreSQL pool through canonical module shutdown, and expose explicit production, local replacement, unavailable, and documentation-only capability states.
+
+  Register stable Problem codes for provider-profile mismatches and unavailable runtimes.
+
+- 7d248c5: Expose host, transport, and build-target composition as separate runtime metadata, bind host callbacks
+  to their owning application scope, preserve the legacy Cloudflare handler context, and teach generated
+  apps and presentation adapters to use explicit host and build-target entry points. Generated Lambda and
+  Cloudflare SaaS apps now advertise commands that validate their actual deployment targets, including a
+  Wrangler configuration with explicit Node.js compatibility for the generated Worker composition. Raw
+  Hono callbacks must explicitly select raw-Hono dispatch when using the canonical Cloudflare host.
+
+  Generated SaaS hosts await provider initialization and leave telemetry shutdown to the application
+  runtime. Lambda and Workers host artifacts do not enable their documentation-only SaaS provider
+  composition; invoking those profiles still reports `CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE`.
+
+- be7408f: Expose fatal logging through the shared `ILogger` and `LOGGER_TOKEN` contract, including child loggers and Error context,
+  while keeping generated bootstrap and built-in no-op loggers contract-complete.
+- eed5e70: Execute global, class, and method HTTP pipes against handler arguments before controller invocation, route pipe failures through the standard Problem flow, and expose pipe stages in request pipeline graphs.
+- efb33f9: Boot production application definitions in isolated, runner-neutral test kernels with explicit application or adapter fidelity.
+
+  Each kernel now owns its DI instances, event configuration, test transaction evidence, request state, scoped production shutdown hooks, and one-time cleanup lifecycle without replacing the application's production transaction provider. Node and Lambda adapter requests run through their real handler paths without opening a public network port, while the existing lightweight testing app is reported as isolated fidelity.
+
+- 8c1acbd: Keep committed transaction values successful when after-commit hooks fail, and expose structured degraded delivery
+  evidence through `TxManager.runWithOutcome()`. Transactions that schedule after-commit work must now use this
+  outcome-returning contract; invitation acceptance returns the committed transaction outcome, and event publication
+  rejects non-capturing or late hook registration before delivery work can disappear.
+
+### Patch Changes
+
+- 4ca14ab: - test: keep framework-context runtime options behavior-tested
+- 38cba9c: - fix: enforce full strict contract spine
+- 7008727: - fix: lock framework-context compatibility groups
+- 7cdfcae: Declare audited package side effects so bundlers remove pure imports while preserving required initialization and CSS.
+- 26f4b9e: Expose request cancellation signals through runtime context and keep abort-signal capabilities aligned with adapter support.
+- 2cc5438: Reject shutdown hook registration after shutdown starts with lifecycle-state diagnostics.
+- 0fa2546: Generate deterministic DI graph manifests through the CLI and generated app verification scripts.
+- 008f3f0: Reject ambiguous module provider ownership before shared container mutation, require lifecycle writes to use locally declared providers, and keep symbol provider identities consistent between module and context containers.
+- 16cc286: Keep dependency graph source locations diagnostic-only with stable token IDs and explicit generated-code source metadata.
+- cfdc20a: Make every concurrent `ShutdownManager.shutdown()` caller wait for and observe the same hook completion, failure, or timeout result.
+- 67e0cbe: fix: resolve published package types before runtime conditions
+- e3bb85e: Observe signal shutdown failures and bind graceful HTTP draining to the Node listener lifecycle.
+- 1c843a5: Preserve runtime class-decorator metadata in published ESM and CJS bundles so Croco can resolve concrete constructor dependencies from installed packages.
+- 45882f1: Preserve property symbol identity and keep empty-string member metadata separate from class metadata.
+- f0c328e: Preserve original request failure identity when the error lifecycle hook fails, while reporting the hook failure through
+  request diagnostics.
+- 6bac6de: Preserve request-scoped services, loader caches, and request start times while entering or suspending tenant context.
+- 157089a: Remove package-local registry publish commands so releases can only write through the protected Changesets workflow.
+- 5d54fb4: declare Apache-2.0 license across all publishable package manifests and ship LICENSE in published packages
+- 8aa72a1: Lock runtime inspector redaction coverage for request snapshots and scrub cookie, database URL, and connection string assignments in diagnostic messages.
+- f141c18: Contain logger failures during shutdown timeouts so callers still receive the typed timeout result and outstanding hooks are aborted.
+- 99da854: Execute method-form `@OnShutdown()` hooks once on the resolved service instance and reject unsupported decorator targets with stable diagnostics.
+- 76e734f: Reject non-finite and non-positive shutdown timeouts before changing manager state.
+- Updated dependencies [38cba9c]
+- Updated dependencies [6795b4d]
+- Updated dependencies [fe51253]
+- Updated dependencies [c3de6cc]
+- Updated dependencies [868ea09]
+- Updated dependencies [c1d0ed0]
+- Updated dependencies [d7b2bde]
+- Updated dependencies [319d43e]
+- Updated dependencies [269d9df]
+- Updated dependencies [1380ce5]
+- Updated dependencies [64af41f]
+- Updated dependencies [7cdfcae]
+- Updated dependencies [c91a72b]
+- Updated dependencies [30bad55]
+- Updated dependencies [121b830]
+- Updated dependencies [ba1c12d]
+- Updated dependencies [0e658fc]
+- Updated dependencies [34b6c3d]
+- Updated dependencies [cb61f2e]
+- Updated dependencies [13cfab4]
+- Updated dependencies [f05e38e]
+- Updated dependencies [ade3461]
+- Updated dependencies [e9e2d49]
+- Updated dependencies [d0ed66c]
+- Updated dependencies [9404839]
+- Updated dependencies [2d74ff8]
+- Updated dependencies [b07ae3a]
+- Updated dependencies [5d08b1b]
+- Updated dependencies [99ace13]
+- Updated dependencies [08cfa9b]
+- Updated dependencies [1084825]
+- Updated dependencies [3434d4b]
+- Updated dependencies [fb1faf9]
+- Updated dependencies [26f4b9e]
+- Updated dependencies [88c6ce1]
+- Updated dependencies [7c632bb]
+- Updated dependencies [772a244]
+- Updated dependencies [2bbb09f]
+- Updated dependencies [1d12013]
+- Updated dependencies [50c8c7d]
+- Updated dependencies [939af32]
+- Updated dependencies [7dc3a10]
+- Updated dependencies [3853d82]
+- Updated dependencies [935d29f]
+- Updated dependencies [583588d]
+- Updated dependencies [da978b0]
+- Updated dependencies [718ee7d]
+- Updated dependencies [f438532]
+- Updated dependencies [527475f]
+- Updated dependencies [2cc5438]
+- Updated dependencies [0b5a8fa]
+- Updated dependencies [c008825]
+- Updated dependencies [98fcaed]
+- Updated dependencies [f647df2]
+- Updated dependencies [d1a03e6]
+- Updated dependencies [3342494]
+- Updated dependencies [77794c4]
+- Updated dependencies [d99ede2]
+- Updated dependencies [50db523]
+- Updated dependencies [7df16bb]
+- Updated dependencies [ea742a4]
+- Updated dependencies [eb8003d]
+- Updated dependencies [7e46a3d]
+- Updated dependencies [0fa2546]
+- Updated dependencies [077bb26]
+- Updated dependencies [91e7bb6]
+- Updated dependencies [0584573]
+- Updated dependencies [500c048]
+- Updated dependencies [c9c1c1d]
+- Updated dependencies [09c48b3]
+- Updated dependencies [6489abb]
+- Updated dependencies [fd16580]
+- Updated dependencies [cd98718]
+- Updated dependencies [2973efe]
+- Updated dependencies [daef820]
+- Updated dependencies [1f6522c]
+- Updated dependencies [9b997bb]
+- Updated dependencies [6d81e46]
+- Updated dependencies [ec75eb4]
+- Updated dependencies [101a7f1]
+- Updated dependencies [7aabe26]
+- Updated dependencies [3648511]
+- Updated dependencies [dda0a50]
+- Updated dependencies [15e39cc]
+- Updated dependencies [03ea9aa]
+- Updated dependencies [9f681cf]
+- Updated dependencies [7d248c5]
+- Updated dependencies [00ac668]
+- Updated dependencies [9b379dd]
+- Updated dependencies [ba1974d]
+- Updated dependencies [bef753f]
+- Updated dependencies [04ea69c]
+- Updated dependencies [558c255]
+- Updated dependencies [96b6b80]
+- Updated dependencies [969d87e]
+- Updated dependencies [6fa6843]
+- Updated dependencies [6069742]
+- Updated dependencies [7d9c92b]
+- Updated dependencies [210015b]
+- Updated dependencies [1255323]
+- Updated dependencies [1216b88]
+- Updated dependencies [0d662c6]
+- Updated dependencies [b91d384]
+- Updated dependencies [ba6ba75]
+- Updated dependencies [05c9c45]
+- Updated dependencies [76be188]
+- Updated dependencies [fd6ba57]
+- Updated dependencies [2bcfa27]
+- Updated dependencies [d52f81f]
+- Updated dependencies [b228e78]
+- Updated dependencies [eed5e70]
+- Updated dependencies [10f3601]
+- Updated dependencies [bf62995]
+- Updated dependencies [5dac3cc]
+- Updated dependencies [3bb5093]
+- Updated dependencies [6f8080b]
+- Updated dependencies [e039e2d]
+- Updated dependencies [c30879a]
+- Updated dependencies [26bcc38]
+- Updated dependencies [0b5e89b]
+- Updated dependencies [3d9e585]
+- Updated dependencies [37dab98]
+- Updated dependencies [00ec1c5]
+- Updated dependencies [225e48a]
+- Updated dependencies [a4a5a49]
+- Updated dependencies [9a03a84]
+- Updated dependencies [163b65c]
+- Updated dependencies [fb10b5f]
+- Updated dependencies [a7df589]
+- Updated dependencies [8c2b316]
+- Updated dependencies [986ce2d]
+- Updated dependencies [8630cf3]
+- Updated dependencies [31636bb]
+- Updated dependencies [f92404b]
+- Updated dependencies [44fb02d]
+- Updated dependencies [1c843a5]
+- Updated dependencies [a8d733b]
+- Updated dependencies [2a6e12c]
+- Updated dependencies [796290f]
+- Updated dependencies [efb33f9]
+- Updated dependencies [157089a]
+- Updated dependencies [47b942b]
+- Updated dependencies [a458c5c]
+- Updated dependencies [8bf1a44]
+- Updated dependencies [3ae15ed]
+- Updated dependencies [5d54fb4]
+- Updated dependencies [19bdcd1]
+- Updated dependencies [16ff048]
+- Updated dependencies [3f99747]
+- Updated dependencies [6aaafc8]
+- Updated dependencies [badfb5c]
+- Updated dependencies [a2353be]
+- Updated dependencies [affa795]
+- Updated dependencies [72fbcd0]
+- Updated dependencies [fb810a9]
+- Updated dependencies [c7299d2]
+- Updated dependencies [0530556]
+- Updated dependencies [350833d]
+- Updated dependencies [049b25e]
+- Updated dependencies [1884ceb]
+- Updated dependencies [7328ec4]
+- Updated dependencies [d77aedc]
+- Updated dependencies [92f606b]
+- Updated dependencies [b07fb90]
+- Updated dependencies [56f440b]
+- Updated dependencies [f5503fd]
+- Updated dependencies [c57ba6e]
+- Updated dependencies [4505d13]
+- Updated dependencies [f24f196]
+- Updated dependencies [cc8106d]
+- Updated dependencies [ce1a95b]
+- Updated dependencies [753b3cd]
+- Updated dependencies [ab51ace]
+- Updated dependencies [1e313a1]
+- Updated dependencies [dc2c367]
+- Updated dependencies [c11a9b4]
+- Updated dependencies [2678364]
+- Updated dependencies [037c3c4]
+- Updated dependencies [5e64d94]
+- Updated dependencies [344995f]
+- Updated dependencies [c0c9679]
+- Updated dependencies [286a5ad]
+- Updated dependencies [918a960]
+- Updated dependencies [44c16c9]
+- Updated dependencies [7f7ccee]
+- Updated dependencies [25bfb06]
+- Updated dependencies [5feb5b8]
+- Updated dependencies [f0f20c2]
+- Updated dependencies [605d41d]
+- Updated dependencies [6234fdf]
+- Updated dependencies [115ed96]
+- Updated dependencies [952f2f0]
+- Updated dependencies [2742cbc]
+- Updated dependencies [555d5fe]
+- Updated dependencies [95cedd9]
+- Updated dependencies [847ecbf]
+- Updated dependencies [bd95a2c]
+- Updated dependencies [422326b]
+- Updated dependencies [6f3c5b4]
+- Updated dependencies [9163f70]
+- Updated dependencies [fa8eea4]
+- Updated dependencies [be64cc8]
+- Updated dependencies [ae4a089]
+- Updated dependencies [ac94fc6]
+- Updated dependencies [3a9e51d]
+- Updated dependencies [0026f76]
+- Updated dependencies [2c68e9c]
+- Updated dependencies [86eb935]
+- Updated dependencies [fccf65b]
+- Updated dependencies [65f3fdc]
+- Updated dependencies [3cca753]
+- Updated dependencies [28c3ab5]
+- Updated dependencies [97ba64a]
+- Updated dependencies [6542499]
+- Updated dependencies [d808f9d]
+- Updated dependencies [51d2d51]
+- Updated dependencies [7b1505b]
+- Updated dependencies [b0eb7c7]
+- Updated dependencies [8c1acbd]
+- Updated dependencies [683bd47]
+- Updated dependencies [99da854]
+- Updated dependencies [c80ce21]
+- Updated dependencies [589087a]
+- Updated dependencies [b8fdd47]
+- Updated dependencies [9b96858]
+- Updated dependencies [b242060]
+- Updated dependencies [1b201e5]
+- Updated dependencies [713cf3b]
+- Updated dependencies [8a1dad8]
+- Updated dependencies [3bd0a5a]
+- Updated dependencies [e030c39]
+- Updated dependencies [abb5e10]
+- Updated dependencies [facdc89]
+- Updated dependencies [87e0994]
+- Updated dependencies [87a375e]
+- Updated dependencies [4afb5cf]
+- Updated dependencies [62885fe]
+- Updated dependencies [525847a]
+- Updated dependencies [b65ed66]
+- Updated dependencies [76e734f]
+- Updated dependencies [7e88b45]
+- Updated dependencies [70fd27f]
+- Updated dependencies [8e19e13]
+- Updated dependencies [6d10475]
+- Updated dependencies [0e0a46c]
+- Updated dependencies [a144d94]
+- Updated dependencies [973b270]
+- Updated dependencies [913c441]
+- Updated dependencies [377c684]
+  - @croco/problems-core@1.0.0
+  - @croco/diagnostics-core@0.1.0
+
 ## 0.0.4
 
 ### Patch Changes

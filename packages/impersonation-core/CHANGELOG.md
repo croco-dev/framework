@@ -1,5 +1,352 @@
 # @croco/impersonation-core
 
+## 1.0.0
+
+### Major Changes
+
+- d6366e6: Create impersonation sessions through an atomic actor claim so concurrent starts for one actor produce exactly one active session, while expired sessions can be replaced safely. Custom stores must replace `save()` with `commitStart()`, atomically persist its event intent, prevent session ID reuse, and enforce the actor claim with a uniqueness constraint or equivalent compare-and-set.
+- 5dac3cc: Make impersonation end requests idempotent for the original actor by retaining the canonical committed end intent after publication. Custom impersonation stores must implement `findCommittedEndIntent()` and preserve the committed end record for retries.
+- c7299d2: Persist impersonation lifecycle event intents atomically with session start and end transitions, preserve per-session delivery order across replay, expose pending-event diagnostics, and require lifecycle event publishers to deduplicate by stable event identity.
+
+  Custom impersonation stores must implement the new atomic transition and ordered event-intent methods. Applications must provide an `ImpersonationLifecycleEventPublisher` when constructing `ImpersonationService`.
+
+### Minor Changes
+
+- 121b830: Require callers to hold the exact global `impersonation:manage` permission and match the session's original impersonator before ending an impersonation session. Denied termination attempts leave the session unchanged.
+
+  This changes `ImpersonationService.end(sessionId)` to `end(context, sessionId)` so termination can resolve and authorize the caller.
+
+  Custom `ImpersonationStore` implementations must use the atomic `commitEnd(intent, impersonatorId)` operation.
+  It returns `committed`, `committed-start-pending`, `session-not-found`, or `actor-mismatch`, and an actor mismatch
+  must preserve both the session and its pending lifecycle event intent.
+
+- 3342494: Discover Croco components by TypeScript symbol identity and generate deterministic application-scoped factories, dependency manifests, and lifecycle-aware runtime graphs during server builds.
+
+  `@Component`, `@Inject`, REST controllers, and GraphQL resolvers remain the authoring surface, but their imports no longer register services in a process-global container. Applications using custom builds must enable `crocoPlugin()` or pass a generated graph to `ApplicationRuntime`. TypeDI-specific identifiers, runtime fallback, and package dependencies are removed; dynamically computed injection tokens must migrate to concrete class types, statically referenced Croco tokens, or explicit module/plugin factories.
+
+  Business services now receive optional collaborators and loggers through constructors or function options instead of process-global container lookups. Provider inheritance is rejected by the first compiler schema; declare injected constructors and properties directly on the decorated provider. Static `di.bindings` selects token implementations, while `di.modules` defines provider ownership and import/export visibility before generated code is emitted.
+
+  `@Auditable` now requires a receiver dependency selector and `AuditInterceptor` receives its logger through its constructor. `@BatchLoad` requires a receiver factory selector, and `@BlockDuringImpersonation` requires a receiver configuration selector. Inject these collaborators into the owning instance and pass an accessor to the decorator; process-global lookup and missing-provider fallback are no longer supported. `registerBatchLoaderFactory()` is removed; construct or inject `BatchLoaderFactory` into the repository instead.
+
+  RLS adapters with `debug: true` now require an explicitly supplied logger; they no longer resolve one from the process-global container.
+
+  `@Metered` accepts an explicit logger option instead of resolving one globally. Without a reporter, local metering failures propagate rather than being silently ignored; billing-required failures remain fail-closed.
+
+  PostHog configuration is now validated with `createPostHogConfig()` and passed to an application-owned provider; `registerPostHogConfig()` no longer writes to a process-global container.
+
+  Transaction managers are now held by an application-owned `TxManagerRegistry` instance, and `@Transactional` receives a manager selector for its service instance. `EventPublisher` receives its transaction context explicitly for after-commit publication; neither path resolves a process-global transaction service.
+
+  Event subscriptions resolve class handlers through an explicitly supplied resolver; a subscription may also provide its handler directly. In-memory event buses, task runners, and QStash trigger handlers no longer read handlers or loggers from a process-global container. Supply the resolver and other collaborators at the application boundary; missing required class resolution now fails explicitly.
+
+- 91e7bb6: Allow in-memory impersonation session expiry to use an instance-scoped clock, reject invalid clock values, and preserve system time by default.
+- fe072f7: Bind impersonation sessions to verified authorized actors and keep the recorded actor immutable for the session lifetime.
+
+  This changes `ImpersonationService.start(impersonatorId, targetUserId, reason?)` to
+  `start(context, targetUserId, reason?)`. Custom `AuthProvider` implementations must replace
+  `getCurrentUserId(context)` with async `resolvePrincipal(context)` and `targetExists(context, targetUserId)` methods.
+
+### Patch Changes
+
+- a18f45a: Reject nested or invalid impersonation contexts before starting another session.
+- b278729: - fix: block critical test tooling advisories
+- 50db523: Describe invalid impersonation configuration failures accurately in generated API documentation.
+- 7cdfcae: Declare audited package side effects so bundlers remove pure imports while preserving required initialization and CSS.
+- 101a7f1: Enforce configured impersonation action deny lists and reject missing or malformed configuration with stable diagnostics.
+- 67e0cbe: fix: resolve published package types before runtime conditions
+- 1c843a5: Preserve runtime class-decorator metadata in published ESM and CJS bundles so Croco can resolve concrete constructor dependencies from installed packages.
+- 5d54fb4: declare Apache-2.0 license across all publishable package manifests and ship LICENSE in published packages
+- e6cb099: Treat missing or malformed permission collections as denied so impersonation management requests return the standard
+  forbidden response instead of crashing.
+- 9346734: Reject malformed, invalid, future, and expired impersonation state at request-context and audit boundaries.
+- 70fd27f: Reject invalid session durations, malformed blocked action configuration, and blank required reasons before impersonation session side effects.
+- Updated dependencies [f74f7d9]
+- Updated dependencies [4ca14ab]
+- Updated dependencies [38cba9c]
+- Updated dependencies [b278729]
+- Updated dependencies [7008727]
+- Updated dependencies [d53e75a]
+- Updated dependencies [6795b4d]
+- Updated dependencies [fe51253]
+- Updated dependencies [c3de6cc]
+- Updated dependencies [868ea09]
+- Updated dependencies [c1d0ed0]
+- Updated dependencies [d7b2bde]
+- Updated dependencies [319d43e]
+- Updated dependencies [269d9df]
+- Updated dependencies [1380ce5]
+- Updated dependencies [9daa586]
+- Updated dependencies [9c57a51]
+- Updated dependencies [64af41f]
+- Updated dependencies [7cdfcae]
+- Updated dependencies [c91a72b]
+- Updated dependencies [30bad55]
+- Updated dependencies [121b830]
+- Updated dependencies [0e658fc]
+- Updated dependencies [34b6c3d]
+- Updated dependencies [cb61f2e]
+- Updated dependencies [13cfab4]
+- Updated dependencies [f05e38e]
+- Updated dependencies [ade3461]
+- Updated dependencies [e9e2d49]
+- Updated dependencies [d0ed66c]
+- Updated dependencies [9404839]
+- Updated dependencies [2d74ff8]
+- Updated dependencies [b07ae3a]
+- Updated dependencies [5d08b1b]
+- Updated dependencies [99ace13]
+- Updated dependencies [08cfa9b]
+- Updated dependencies [1084825]
+- Updated dependencies [3434d4b]
+- Updated dependencies [fb1faf9]
+- Updated dependencies [26f4b9e]
+- Updated dependencies [88c6ce1]
+- Updated dependencies [7c632bb]
+- Updated dependencies [772a244]
+- Updated dependencies [2bbb09f]
+- Updated dependencies [1d12013]
+- Updated dependencies [50c8c7d]
+- Updated dependencies [939af32]
+- Updated dependencies [7dc3a10]
+- Updated dependencies [3853d82]
+- Updated dependencies [935d29f]
+- Updated dependencies [583588d]
+- Updated dependencies [da978b0]
+- Updated dependencies [718ee7d]
+- Updated dependencies [f438532]
+- Updated dependencies [527475f]
+- Updated dependencies [2cc5438]
+- Updated dependencies [0b5a8fa]
+- Updated dependencies [c008825]
+- Updated dependencies [98fcaed]
+- Updated dependencies [f647df2]
+- Updated dependencies [d1a03e6]
+- Updated dependencies [3342494]
+- Updated dependencies [77794c4]
+- Updated dependencies [d99ede2]
+- Updated dependencies [50db523]
+- Updated dependencies [7df16bb]
+- Updated dependencies [ea742a4]
+- Updated dependencies [eb8003d]
+- Updated dependencies [7e46a3d]
+- Updated dependencies [69dbcff]
+- Updated dependencies [0fa2546]
+- Updated dependencies [077bb26]
+- Updated dependencies [91e7bb6]
+- Updated dependencies [008f3f0]
+- Updated dependencies [0584573]
+- Updated dependencies [500c048]
+- Updated dependencies [c9c1c1d]
+- Updated dependencies [09c48b3]
+- Updated dependencies [6489abb]
+- Updated dependencies [fd16580]
+- Updated dependencies [2973efe]
+- Updated dependencies [daef820]
+- Updated dependencies [1f6522c]
+- Updated dependencies [9b997bb]
+- Updated dependencies [6d81e46]
+- Updated dependencies [ec75eb4]
+- Updated dependencies [101a7f1]
+- Updated dependencies [7aabe26]
+- Updated dependencies [1b39af2]
+- Updated dependencies [dda0a50]
+- Updated dependencies [15e39cc]
+- Updated dependencies [03ea9aa]
+- Updated dependencies [4caf84c]
+- Updated dependencies [7d248c5]
+- Updated dependencies [00ac668]
+- Updated dependencies [9b379dd]
+- Updated dependencies [ba1974d]
+- Updated dependencies [bef753f]
+- Updated dependencies [04ea69c]
+- Updated dependencies [558c255]
+- Updated dependencies [96b6b80]
+- Updated dependencies [be7408f]
+- Updated dependencies [969d87e]
+- Updated dependencies [6fa6843]
+- Updated dependencies [6069742]
+- Updated dependencies [7d9c92b]
+- Updated dependencies [210015b]
+- Updated dependencies [16cc286]
+- Updated dependencies [1255323]
+- Updated dependencies [1216b88]
+- Updated dependencies [0d662c6]
+- Updated dependencies [b91d384]
+- Updated dependencies [ba6ba75]
+- Updated dependencies [05c9c45]
+- Updated dependencies [76be188]
+- Updated dependencies [fd6ba57]
+- Updated dependencies [2bcfa27]
+- Updated dependencies [d52f81f]
+- Updated dependencies [b228e78]
+- Updated dependencies [eed5e70]
+- Updated dependencies [10f3601]
+- Updated dependencies [bf62995]
+- Updated dependencies [5dac3cc]
+- Updated dependencies [3bb5093]
+- Updated dependencies [6f8080b]
+- Updated dependencies [1f3aeb7]
+- Updated dependencies [e039e2d]
+- Updated dependencies [a90659b]
+- Updated dependencies [c30879a]
+- Updated dependencies [26bcc38]
+- Updated dependencies [cfdc20a]
+- Updated dependencies [0b5e89b]
+- Updated dependencies [3d9e585]
+- Updated dependencies [37dab98]
+- Updated dependencies [00ec1c5]
+- Updated dependencies [225e48a]
+- Updated dependencies [a4a5a49]
+- Updated dependencies [9a03a84]
+- Updated dependencies [67e0cbe]
+- Updated dependencies [163b65c]
+- Updated dependencies [e3bb85e]
+- Updated dependencies [fb10b5f]
+- Updated dependencies [a7df589]
+- Updated dependencies [ae26c9d]
+- Updated dependencies [8c2b316]
+- Updated dependencies [986ce2d]
+- Updated dependencies [8630cf3]
+- Updated dependencies [31636bb]
+- Updated dependencies [f92404b]
+- Updated dependencies [44fb02d]
+- Updated dependencies [b097462]
+- Updated dependencies [1c843a5]
+- Updated dependencies [45882f1]
+- Updated dependencies [a8d733b]
+- Updated dependencies [2a6e12c]
+- Updated dependencies [f0c328e]
+- Updated dependencies [6bac6de]
+- Updated dependencies [b94097f]
+- Updated dependencies [796290f]
+- Updated dependencies [efb33f9]
+- Updated dependencies [157089a]
+- Updated dependencies [47b942b]
+- Updated dependencies [a458c5c]
+- Updated dependencies [3ae15ed]
+- Updated dependencies [5d54fb4]
+- Updated dependencies [19bdcd1]
+- Updated dependencies [16ff048]
+- Updated dependencies [3f99747]
+- Updated dependencies [6aaafc8]
+- Updated dependencies [badfb5c]
+- Updated dependencies [a2353be]
+- Updated dependencies [affa795]
+- Updated dependencies [72fbcd0]
+- Updated dependencies [fb810a9]
+- Updated dependencies [c7299d2]
+- Updated dependencies [0530556]
+- Updated dependencies [350833d]
+- Updated dependencies [049b25e]
+- Updated dependencies [1884ceb]
+- Updated dependencies [7328ec4]
+- Updated dependencies [d77aedc]
+- Updated dependencies [92f606b]
+- Updated dependencies [b07fb90]
+- Updated dependencies [56f440b]
+- Updated dependencies [f5503fd]
+- Updated dependencies [e4bfcb2]
+- Updated dependencies [c57ba6e]
+- Updated dependencies [4505d13]
+- Updated dependencies [f24f196]
+- Updated dependencies [cc8106d]
+- Updated dependencies [ce1a95b]
+- Updated dependencies [753b3cd]
+- Updated dependencies [ab51ace]
+- Updated dependencies [1e313a1]
+- Updated dependencies [c11a9b4]
+- Updated dependencies [8aa72a1]
+- Updated dependencies [2678364]
+- Updated dependencies [1d5cfe1]
+- Updated dependencies [4ce0990]
+- Updated dependencies [037c3c4]
+- Updated dependencies [5e64d94]
+- Updated dependencies [344995f]
+- Updated dependencies [c0c9679]
+- Updated dependencies [e6cb099]
+- Updated dependencies [286a5ad]
+- Updated dependencies [918a960]
+- Updated dependencies [44c16c9]
+- Updated dependencies [f141c18]
+- Updated dependencies [7f7ccee]
+- Updated dependencies [25bfb06]
+- Updated dependencies [5feb5b8]
+- Updated dependencies [f0f20c2]
+- Updated dependencies [605d41d]
+- Updated dependencies [6234fdf]
+- Updated dependencies [115ed96]
+- Updated dependencies [952f2f0]
+- Updated dependencies [1b8b1d6]
+- Updated dependencies [2742cbc]
+- Updated dependencies [555d5fe]
+- Updated dependencies [95cedd9]
+- Updated dependencies [847ecbf]
+- Updated dependencies [bd95a2c]
+- Updated dependencies [422326b]
+- Updated dependencies [6f3c5b4]
+- Updated dependencies [9163f70]
+- Updated dependencies [d49daac]
+- Updated dependencies [be7b62e]
+- Updated dependencies [fa8eea4]
+- Updated dependencies [be64cc8]
+- Updated dependencies [ae4a089]
+- Updated dependencies [ac94fc6]
+- Updated dependencies [3a9e51d]
+- Updated dependencies [0026f76]
+- Updated dependencies [2c68e9c]
+- Updated dependencies [86eb935]
+- Updated dependencies [fccf65b]
+- Updated dependencies [92b2a8b]
+- Updated dependencies [65f3fdc]
+- Updated dependencies [3cca753]
+- Updated dependencies [28c3ab5]
+- Updated dependencies [97ba64a]
+- Updated dependencies [6542499]
+- Updated dependencies [d808f9d]
+- Updated dependencies [51d2d51]
+- Updated dependencies [7b1505b]
+- Updated dependencies [b0eb7c7]
+- Updated dependencies [8c1acbd]
+- Updated dependencies [683bd47]
+- Updated dependencies [99da854]
+- Updated dependencies [c80ce21]
+- Updated dependencies [589087a]
+- Updated dependencies [b8fdd47]
+- Updated dependencies [9b96858]
+- Updated dependencies [d2539a0]
+- Updated dependencies [b242060]
+- Updated dependencies [1b201e5]
+- Updated dependencies [713cf3b]
+- Updated dependencies [8a1dad8]
+- Updated dependencies [3bd0a5a]
+- Updated dependencies [abb5e10]
+- Updated dependencies [57b786f]
+- Updated dependencies [facdc89]
+- Updated dependencies [87e0994]
+- Updated dependencies [87a375e]
+- Updated dependencies [3f61772]
+- Updated dependencies [4afb5cf]
+- Updated dependencies [62885fe]
+- Updated dependencies [9346734]
+- Updated dependencies [525847a]
+- Updated dependencies [b65ed66]
+- Updated dependencies [76e734f]
+- Updated dependencies [7e88b45]
+- Updated dependencies [70fd27f]
+- Updated dependencies [8e19e13]
+- Updated dependencies [6d10475]
+- Updated dependencies [4daea01]
+- Updated dependencies [0e0a46c]
+- Updated dependencies [a144d94]
+- Updated dependencies [973b270]
+- Updated dependencies [913c441]
+- Updated dependencies [377c684]
+  - @croco/events-core@0.1.0
+  - @croco/framework-context@0.1.0
+  - @croco/problems-core@1.0.0
+  - @croco/audit-core@0.1.0
+  - @croco/auth-core@0.1.0
+  - @croco/gid-core@0.1.0
+
 ## 0.0.4
 
 ### Patch Changes
