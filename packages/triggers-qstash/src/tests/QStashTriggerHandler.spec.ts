@@ -1330,6 +1330,21 @@ describe("QStashTriggerHandler", () => {
       expected: false,
       signal: "Problem without a structured signal before message fallback",
     },
+    {
+      error: Object.assign(new Error("request timeout"), { retryable: undefined }),
+      expected: true,
+      signal: "undefined top-level value ignored before message fallback",
+    },
+    {
+      error: Object.assign(new Error("request timeout"), { retryable: 0 }),
+      expected: true,
+      signal: "non-boolean top-level value ignored before message fallback",
+    },
+    {
+      error: Object.assign(new Error("upstream unavailable"), { extensions: { retryable: true } }),
+      expected: true,
+      signal: "standard Error extension true before message fallback",
+    },
   ])("$signal 구조화 신호를 실행 실패 기록에 보존해야 한다", async ({ error, expected }) => {
     class StructuredFailureHandler {
       async execute(): Promise<never> {

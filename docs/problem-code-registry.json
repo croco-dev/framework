@@ -22497,7 +22497,7 @@
       "sources": [
         {
           "file": "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
-          "line": 399,
+          "line": 400,
           "column": 13,
           "kind": "problem-metadata"
         }
@@ -22527,7 +22527,7 @@
       "sources": [
         {
           "file": "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
-          "line": 243,
+          "line": 244,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -22587,7 +22587,7 @@
       "sources": [
         {
           "file": "packages/triggers-qstash/src/libs/QStashTriggerHandler.ts",
-          "line": 256,
+          "line": 257,
           "column": 13,
           "kind": "problem-factory"
         }
