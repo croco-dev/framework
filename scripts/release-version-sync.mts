@@ -5,6 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { exit, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
 
+import { formatWithOxfmt } from "./format-with-oxfmt.mts";
 import { formatVerificationProblem, VerificationProblem } from "./verification-problem.mts";
 
 type Mode = "check" | "write";
@@ -301,7 +302,11 @@ function synchronizeCertificationVersions(
       records: synchronizedRecords,
     },
   };
-  const content = `${JSON.stringify(synchronizedCatalog, null, 2)}\n`;
+  const content = formatWithOxfmt(
+    packageCatalogPath,
+    `${JSON.stringify(synchronizedCatalog, null, 2)}\n`,
+    rootDir,
+  );
 
   if (source === content && drift.length > 0) {
     throw new VerificationProblem(

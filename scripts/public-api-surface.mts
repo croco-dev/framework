@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 
-import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
 import { argv, exit, stdout } from "node:process";
-import { fileURLToPath, pathToFileURL } from "node:url";
+import { pathToFileURL } from "node:url";
 import ts from "typescript";
 
+import { formatWithOxfmt } from "./format-with-oxfmt.mts";
 import { readPackages } from "./package-quality-report.mts";
 
 export type PublicApiExport = {
@@ -163,11 +163,9 @@ type PublicApiCompatibilityContract = {
 };
 
 const snapshotFileName = "public-api-surface.snapshot.json";
-const FORMATTER_MAX_BUFFER_BYTES = 16 * 1024 * 1024;
 const reportDirectory = join("ci-reports", "package-quality");
 const reportFileName = "public-api-diff.md";
 const summaryFileName = "public-api-summary.json";
-const scriptRootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 const frameworkContextCompatibilityContract = {
   groups: [
@@ -2072,26 +2070,7 @@ function writeJsonFile(path: string, value: unknown): void {
 
 function writeFormattedSnapshot(path: string, value: PublicApiSnapshot): void {
   const content = `${JSON.stringify(value, null, 2)}\n`;
-  const localOxfmtPath = join(scriptRootDir, "node_modules", ".bin", "oxfmt");
-  const hasLocalOxfmt = existsSync(localOxfmtPath);
-  const result = spawnSync(
-    hasLocalOxfmt ? localOxfmtPath : "pnpm",
-    hasLocalOxfmt ? ["--stdin-filepath", path] : ["exec", "oxfmt", "--stdin-filepath", path],
-    {
-      cwd: scriptRootDir,
-      encoding: "utf-8",
-      input: content,
-      maxBuffer: FORMATTER_MAX_BUFFER_BYTES,
-    },
-  );
-
-  if (result.error)
-    throw new Error(`oxfmt failed for ${path}: ${result.error.message}`, { cause: result.error });
-  if (result.status !== 0) {
-    throw new Error(result.stderr.trim() || result.stdout.trim() || `oxfmt failed for ${path}`);
-  }
-
-  writeFileSync(path, result.stdout, "utf-8");
+  writeFileSync(path, formatWithOxfmt(path, content), "utf-8");
 }
 
 function writePublicApiReport(

@@ -114,6 +114,7 @@ export const RELEASE_GATE_SUPPORT_PATHS = [
   "scripts/create-croco-app-generated-smoke-report.mts",
   "scripts/create-croco-app-generated-smoke-support.mts",
   "scripts/first-success-generated-contract.mts",
+  "scripts/format-with-oxfmt.mts",
   "scripts/internal-croco-compatibility-policy.mjs",
   "scripts/package-manifest-contracts.mjs",
   "scripts/package-roles.mts",

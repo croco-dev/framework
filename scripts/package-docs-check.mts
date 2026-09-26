@@ -5,12 +5,11 @@
  * with package manifests plus the curated group/maturity metadata.
  */
 
-import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { exit, stdout } from "node:process";
-import { fileURLToPath } from "node:url";
 
+import { formatWithOxfmt } from "./format-with-oxfmt.mts";
 import {
   createDefaultCertificationPolicy,
   isCertificationClaimLine,
@@ -287,7 +286,6 @@ const certificationEvidenceKeyOrder = [
 ] as const;
 const artifactFormatOrder = ["esm", "cjs", "dual", "neutral"] as const;
 const artifactTypeOrder = ["code", "types", "config", "asset"] as const;
-const scriptRootDir = dirname(dirname(fileURLToPath(import.meta.url)));
 
 type MaturityKey = (typeof maturityOrder)[number];
 
@@ -339,12 +337,12 @@ function run(options: Options): string[] {
     violations.push(`${roleMapPath} canonical role drift detected; run pnpm docs:catalog:write`);
   }
 
-  const generatedCatalog = formatMarkdown(readmePath, generateReadmeCatalog(state));
-  const generatedExtensionMatrixDocs = formatMarkdown(
+  const generatedCatalog = formatWithOxfmt(readmePath, generateReadmeCatalog(state));
+  const generatedExtensionMatrixDocs = formatWithOxfmt(
     extensionMatrixDocsPath,
     generateExtensionMatrixDocs(state),
   );
-  const generatedReport = formatMarkdown(
+  const generatedReport = formatWithOxfmt(
     docsReportPath,
     generateDocsReport(state, coverage, baseline),
   );
@@ -2773,28 +2771,6 @@ function replaceReadmeCatalog(readme: string, generatedCatalog: string): string 
 function writeGeneratedFile(filePath: string, content: string): void {
   mkdirSync(dirname(filePath), { recursive: true });
   writeFileSync(filePath, content, "utf-8");
-}
-
-function formatMarkdown(filePath: string, content: string): string {
-  const localOxfmtPath = join(scriptRootDir, "node_modules", ".bin", "oxfmt");
-  const hasLocalOxfmt = existsSync(localOxfmtPath);
-  const result = spawnSync(
-    hasLocalOxfmt ? localOxfmtPath : "pnpm",
-    hasLocalOxfmt
-      ? ["--stdin-filepath", filePath]
-      : ["exec", "oxfmt", "--stdin-filepath", filePath],
-    {
-      cwd: scriptRootDir,
-      encoding: "utf-8",
-      input: content,
-    },
-  );
-
-  if (result.status !== 0) {
-    throw new Error(result.stderr.trim() || result.stdout.trim() || `oxfmt failed for ${filePath}`);
-  }
-
-  return result.stdout;
 }
 
 function formatDocsStatus(pkg: PackageRecord): string {
