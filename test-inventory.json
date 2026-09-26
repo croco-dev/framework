@@ -3221,6 +3221,12 @@
       "owner": "@croco/protocols-rest"
     },
     {
+      "path": "packages/protocols-rest/src/tests/SchemaValidator.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/protocols-rest"
+    },
+    {
       "path": "packages/protocols-rest/src/tests/StrictSchemaSourceLocation.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

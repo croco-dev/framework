@@ -25708,6 +25708,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "validateResponseAsync",
+              "exportKind": "named",
+              "source": "./SchemaValidator",
+              "declarationKind": "function"
+            },
+            {
               "name": "ValidationPipe",
               "exportKind": "named",
               "source": "./ValidationPipe",

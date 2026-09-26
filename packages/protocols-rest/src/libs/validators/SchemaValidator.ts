@@ -49,6 +49,27 @@ export function validateResponse<TSchema extends z.ZodType>(
 }
 
 /**
+ * 비동기 효과가 있는 Zod 스키마로 응답 데이터를 검증합니다.
+ */
+export async function validateResponseAsync<TSchema extends z.ZodType>(
+  schema: TSchema,
+  data: unknown,
+): Promise<z.output<TSchema>> {
+  const result = await schema.safeParseAsync(data);
+
+  if (!result.success) {
+    const issues: ValidationIssue[] = result.error.issues.map((issue) => ({
+      path: issue.path.join(".") || "value",
+      message: issue.message,
+    }));
+
+    throw new ResponseValidationProblem(issues);
+  }
+
+  return result.data;
+}
+
+/**
  * 동기, 비동기, 안전 파싱 API를 가진 검증 유틸리티를 생성합니다.
  */
 export function createValidator<TSchema extends z.ZodType>(schema: TSchema) {
