@@ -8,6 +8,7 @@ import { MigrationRunner } from "./libs/MigrationRunner";
 import { DatabaseUrlRequiredProblem } from "./libs/problems/DatabaseUrlRequiredProblem";
 import { UnsupportedDialectProblem } from "./libs/problems/UnsupportedDialectProblem";
 import { parseMigrationCount } from "./libs/validateMigrationCount";
+import { assertValidMigrationTarget } from "./libs/validateMigrationTarget";
 import { getPackageVersion } from "./package-version";
 
 export type MigrationCliPool = {
@@ -95,7 +96,10 @@ export async function runDown(
   let pool: MigrationCliPool | undefined;
   let exitCode = 0;
   try {
-    const count = options.target ? undefined : parseMigrationCount(options.count);
+    if (options.target !== undefined) {
+      assertValidMigrationTarget(options.target);
+    }
+    const count = options.target === undefined ? parseMigrationCount(options.count) : undefined;
     const { db, pool: dbPool } = await runtime.createDbClient(options.connection, options.dialect);
     pool = dbPool;
     const runner = new MigrationRunner(db, options.dir, options.table);

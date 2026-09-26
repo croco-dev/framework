@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 810,
+  "problemCount": 811,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -14701,6 +14701,36 @@
         {
           "file": "packages/migration-runner/src/libs/problems/InvalidMigrationCountProblem.ts",
           "line": 3,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "migration-runner/invalid-target",
+      "category": "BadRequest",
+      "status": 400,
+      "title": "Bad Request",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#migration-runner-invalid-target",
+      "recovery": {
+        "cause": "A rollback target is not a 14-digit migration id or does not appear in the applied checkpoint history.",
+        "userAction": "Use the full 14-digit id of an applied migration; inspect migrate status to confirm the target before retrying.",
+        "operatorAction": "Check migrate status and the checkpoint history, then rerun down with an applied migration id after confirming the intended rollback range.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/migration-runner/src/libs/problems/InvalidMigrationTargetProblem.ts",
+          "line": 5,
           "column": 1,
           "kind": "problem-class"
         }
