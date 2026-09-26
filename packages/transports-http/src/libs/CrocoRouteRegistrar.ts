@@ -484,6 +484,11 @@ export class CrocoRouteRegistrar {
       return response;
     }
 
+    const vary = headers.get("Vary");
+    if (vary) {
+      ctx.raw.header("Vary", vary);
+    }
+
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
@@ -764,6 +769,15 @@ export class CrocoRouteRegistrar {
         loggingErrorName: getErrorName(loggingError),
       });
     }
+  }
+
+  registerPreflight(path: string): void {
+    this.register({
+      method: "OPTIONS",
+      path,
+      methodName: "corsPreflight",
+      handler: async () => new Response(null, { status: 404 }),
+    });
   }
 }
 

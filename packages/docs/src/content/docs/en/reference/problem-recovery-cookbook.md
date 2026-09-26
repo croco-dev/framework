@@ -4250,7 +4250,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:296:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:313:11` (problem-factory)
 
 <a id="croco-http-security-002"></a>
 
@@ -14138,7 +14138,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:338:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:355:11` (problem-factory)
 
 <a id="transports-http-diagnostics-invalid-configuration"></a>
 
