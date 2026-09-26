@@ -193,6 +193,7 @@ export function BatchLoad<TRepository extends object = object>(
     const originalMethod = descriptor.value as BatchLoadMethod<unknown, unknown>;
     const className = target.constructor.name;
     const methodName = String(propertyKey);
+    const usesFindByIds = methodName === "findById";
     const explicitName = options.name || undefined;
     const displayName = explicitName ?? `${className}:${methodName}`;
     const definitionIdentity = {};
@@ -210,8 +211,8 @@ export function BatchLoad<TRepository extends object = object>(
       );
       const batchLoaderFactory = getBatchLoaderFactory(this, options.factory);
       const batchFn = async (keys: ReadonlyArray<unknown>) => {
-        // 1. Try to use findByIds if it exists (Optimization)
-        if (typeof this.findByIds === "function") {
+        // 1. Use findByIds for findById when it exists
+        if (usesFindByIds && typeof this.findByIds === "function") {
           const results = await this.findByIds([...keys]);
 
           const requestedKeys = new Map(keys.map((key) => [key, true]));

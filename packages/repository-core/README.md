@@ -176,6 +176,8 @@ void loadUsers();
 
 ### Batch Load Options
 
+The `findByIds` optimization applies only to `findById`. Other decorated methods call their original method once per key and collect the results.
+
 ```typescript
 interface BatchLoadOptions<TRepository extends object> {
   /** Returns the factory injected into this repository by its application. */
