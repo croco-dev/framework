@@ -37,7 +37,7 @@ title: "ValidationPipe"
 
 ### transform()
 
-> **transform**(`value`, `metadata`): `T`
+> **transform**(`value`, `metadata`): `Promise`\<`T`\>
 
 #### Parameters
 
@@ -51,7 +51,7 @@ title: "ValidationPipe"
 
 #### Returns
 
-`T`
+`Promise`\<`T`\>
 
 #### Implementation of
 
