@@ -2,13 +2,19 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
+import "reflect-metadata";
+import { Container } from "@croco/framework-context";
+import { Logger } from "@croco/framework-logger";
 import { ProblemCategory } from "@croco/problems-core";
+import { Body, Controller, Post } from "@croco/protocols-rest";
 import { createFrontendTelemetryBridge } from "@croco/telemetry-api";
+import { createApp, ErrorHandler, HealthCheckRegistry } from "@croco/transports-http";
 import type { RouteIR } from "@croco/protocols-core";
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { generateClientFiles } from "../libs/generate";
+import { restFormIssueCases } from "../../../../test-fixtures/restFormIssueCases";
 
 const outDir = path.join(os.tmpdir(), "opencode-roundtrip-rpc-codegen");
 const moduleDir = path.join(os.tmpdir(), "opencode-roundtrip-rpc-codegen-modules");
@@ -70,6 +76,68 @@ const REMOVE_SESSION_ROUTE_IRS: RouteIR[] = [
   },
 ];
 
+const FORM_BODY_SCHEMA = z.object({ name: z.string().min(1), email: z.string().email() });
+const FORM_ROUTE_IR: RouteIR = {
+  controllerName: "UserController",
+  methodName: "createUser",
+  httpMethod: "POST",
+  path: "/users",
+  routeContract: null,
+  params: [{ kind: "body", name: "", schema: null }],
+  inputSchema: null,
+  inputSchemas: {
+    body: FORM_BODY_SCHEMA as unknown as RouteIR["inputSchemas"]["body"],
+    path: null,
+    query: null,
+    headers: null,
+  },
+  outputSchema: null,
+  problemResponses: [
+    {
+      code: "protocols-rest/request-validation-failed",
+      category: ProblemCategory.ValidationError,
+      status: 422,
+    },
+  ],
+  domain: "user",
+};
+
+@Controller("")
+class FormUsersController {
+  @Post("/users")
+  createUser(
+    @Body(FORM_BODY_SCHEMA as Parameters<typeof Body>[0]) body: z.infer<typeof FORM_BODY_SCHEMA>,
+  ) {
+    return body;
+  }
+}
+
+type GeneratedFormUserModule = {
+  readonly createUserClient: (config: {
+    readonly fetch: (url: string, init: RequestInit) => Promise<Response>;
+  }) => {
+    readonly createUserResult: (input: {
+      readonly name: string;
+      readonly email: string;
+    }) => Promise<
+      | { readonly ok: true; readonly data: unknown }
+      | { readonly ok: false; readonly kind: "external"; readonly error: unknown }
+      | {
+          readonly ok: false;
+          readonly kind: "problem";
+          readonly problem: unknown;
+          readonly category: string;
+        }
+    >;
+  };
+  readonly mapCreateUserFormProblem: (failure: {
+    readonly ok: false;
+    readonly kind: "problem";
+    readonly problem: unknown;
+    readonly category: string;
+  }) => unknown;
+};
+
 describe("rpc-codegen round trip", () => {
   beforeEach(() => {
     fs.rmSync(outDir, { recursive: true, force: true });
@@ -82,6 +150,104 @@ describe("rpc-codegen round trip", () => {
     vi.unstubAllGlobals();
     fs.rmSync(outDir, { recursive: true, force: true });
     fs.rmSync(moduleDir, { recursive: true, force: true });
+  });
+
+  it.each(restFormIssueCases)(
+    "maps form errors when $name",
+    async ({ name, extensions, expected, fieldNames }) => {
+      generateClientFiles([FORM_ROUTE_IR], outDir);
+      const fileName = `user-form-${name.replace(/\W/g, "-")}.ts`;
+      const userModule = await importGeneratedClient(
+        fileName,
+        fs.readFileSync(path.join(outDir, "user.ts"), "utf-8"),
+      );
+      const formModule = userModule as unknown as GeneratedFormUserModule;
+      const rpcModule = (await import(
+        pathToFileURL(path.join(moduleDir, `rpc-${fileName.replace(/\.ts$/, "")}.mjs`)).href
+      )) as {
+        readonly toRpcFormProblem: (
+          failure: unknown,
+          names: readonly string[],
+        ) => {
+          readonly kind: string;
+          readonly fields: Record<string, readonly string[]>;
+          readonly problem: unknown;
+        };
+      };
+      const problem = {
+        type: "https://croco.dev/problems/protocols-rest/request-validation-failed",
+        title: "Validation Error",
+        status: 422,
+        code: "protocols-rest/request-validation-failed",
+        ...extensions,
+      };
+      const client = formModule.createUserClient({ fetch: async () => jsonResponse(problem, 422) });
+      const result = await client.createUserResult({ name: "", email: "invalid" });
+
+      expect(result).toMatchObject({ ok: false, kind: "problem" });
+      if (result.ok || result.kind !== "problem") {
+        expect.fail("Expected a declared validation problem.");
+      }
+
+      const formProblem = rpcModule.toRpcFormProblem(result, fieldNames);
+      expect(formProblem).toMatchObject({
+        kind: "field-validation",
+        problem,
+      });
+      expect(formProblem.fields).toEqual(expected);
+    },
+  );
+
+  it("maps a real transports-http 422 response to generated form fields", async () => {
+    Container.reset();
+    const logger = {
+      info: () => {},
+      warn: () => {},
+      error: () => {},
+      debug: () => {},
+      fatal: () => {},
+      child: () => logger,
+    } as unknown as Logger;
+    Container.set(Logger, logger);
+    Container.set(ErrorHandler, new ErrorHandler(logger));
+    Container.set(HealthCheckRegistry, new HealthCheckRegistry());
+    const app = createApp({ controllers: [FormUsersController], securityValidation: "off" });
+    generateClientFiles([FORM_ROUTE_IR], outDir);
+    const userModule = (await importGeneratedClient(
+      "user-form-real-http.ts",
+      fs.readFileSync(path.join(outDir, "user.ts"), "utf-8"),
+    )) as unknown as GeneratedFormUserModule;
+    let serverProblem: unknown;
+    const client = userModule.createUserClient({
+      fetch: async (url, init) => {
+        const response = await app.fetch(new Request(new URL(url, "http://localhost"), init));
+        serverProblem = await response.clone().json();
+        return response;
+      },
+    });
+    const result = await client.createUserResult({ name: "", email: "invalid" });
+
+    expect(serverProblem).toMatchObject({
+      status: 422,
+      code: "protocols-rest/request-validation-failed",
+      issues: [
+        expect.objectContaining({ path: "body.name", message: expect.any(String) }),
+        expect.objectContaining({ path: "body.email", message: expect.any(String) }),
+      ],
+    });
+    expect(result).toMatchObject({ ok: false, kind: "problem" });
+    if (result.ok || result.kind !== "problem") {
+      expect.fail("Expected a declared validation problem.");
+    }
+    const formProblem = userModule.mapCreateUserFormProblem(result);
+    expect(formProblem).toMatchObject({
+      kind: "field-validation",
+      fields: {
+        name: [expect.any(String)],
+        email: [expect.any(String)],
+      },
+      problem: serverProblem,
+    });
   });
 
   it("generates domain clients that can call a mocked server", async () => {

@@ -1,11 +1,13 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, expectTypeOf, it } from "vitest";
+import { restFormIssueCases } from "../../../../test-fixtures/restFormIssueCases";
 import {
   ProblemClientError,
   ProblemFetchUnavailableError,
   ProblemResponseError,
   ProblemStatusMismatchError,
   assertProblemExhaustive,
+  extractProblemFormFieldErrors,
   fetchProblemJson,
   handleJsonResponse,
   handleJsonResult,
@@ -702,6 +704,46 @@ describe("frontend Problem client runtime", () => {
     }
 
     throw new Error("Expected validation Problem result.");
+  });
+
+  it("maps REST body issues to form field errors", () => {
+    const problem = {
+      ...validationProblem,
+      fields: undefined,
+      issues: [
+        { path: "body.name", message: "Name is required." },
+        { path: "body.email", message: "Email is invalid." },
+      ],
+    };
+
+    expect(extractProblemFormFieldErrors(problem, ["name", "email"])).toEqual({
+      name: ["Name is required."],
+      email: ["Email is invalid."],
+    });
+  });
+
+  it.each(restFormIssueCases)(
+    "extracts form field errors when $name",
+    ({ extensions, expected, fieldNames }) => {
+      expect(
+        extractProblemFormFieldErrors(
+          { ...validationProblem, fields: undefined, ...extensions },
+          fieldNames,
+        ),
+      ).toEqual(expected);
+    },
+  );
+
+  it("matches a nested issue path only when its full field name is declared", () => {
+    const problem = {
+      ...validationProblem,
+      fields: undefined,
+      issues: [{ path: "body.address.city", message: "City is required." }],
+    };
+
+    expect(extractProblemFormFieldErrors(problem, ["address.city"])).toEqual({
+      "address.city": ["City is required."],
+    });
   });
 
   it("exposes Result and Problem types for frontend consumers", () => {

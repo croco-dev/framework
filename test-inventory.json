@@ -4129,6 +4129,12 @@
       "owner": "@croco/transports-http"
     },
     {
+      "path": "packages/transports-http/src/tests/FormValidationProblem.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/transports-http"
+    },
+    {
       "path": "packages/transports-http/src/tests/FrameworkIntegration.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
