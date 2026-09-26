@@ -19,7 +19,10 @@ export interface RetryPolicy {
  * Options for configuring retry behavior.
  */
 export interface RetryPolicyOptions {
-  /** Exception classes to retry (empty = retry all except noRetryFor); an explicit `retryable` flag on the error wins */
+  /**
+   * Exception classes to always retry. Other Problems follow `retryForCategories`, and other errors
+   * retry only while this list is empty. `noRetryFor` and an explicit `retryable` flag on the error win.
+   */
   retryFor?: Array<new (message?: string) => Error>;
 
   /** Exception classes to never retry, even when the error declares `retryable: true` */

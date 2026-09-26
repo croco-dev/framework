@@ -121,7 +121,8 @@ Recovery method name on the same class
 
 > `optional` **retryFor?**: (`message?`) => `Error`[]
 
-Exception classes to retry (empty = retry all except noRetryFor); an explicit `retryable` flag on the error wins
+Exception classes to always retry. Other Problems follow `retryForCategories`, and other errors
+retry only while this list is empty. `noRetryFor` and an explicit `retryable` flag on the error win.
 
 #### Parameters
 
