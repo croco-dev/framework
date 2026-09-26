@@ -12096,6 +12096,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InboxProcessingInProgressProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/EventsTxProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "InMemoryTransactionalEventStore",
               "exportKind": "named",
               "source": "./libs/InMemoryTransactionalEventStore",

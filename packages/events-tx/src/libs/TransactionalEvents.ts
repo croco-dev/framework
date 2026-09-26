@@ -9,6 +9,7 @@ import {
 import { getActiveTraceInfo, recordError, recordEvent, withSpan } from "@croco/telemetry-api";
 import type { TxManager } from "@croco/tx-core";
 import {
+  InboxProcessingInProgressProblem,
   InvalidTransactionalEventConfigurationProblem,
   OutboxPublishExhaustedProblem,
   OutboxTransactionRequiredProblem,
@@ -116,6 +117,7 @@ export type OutboxFailureInput = OutboxCompletionInput & {
 
 export type OutboxReleaseInput = OutboxCompletionInput & {
   diagnostic: TransactionalEventDiagnostic;
+  visibleAt?: Date;
 };
 
 export type OutboxDeadLetterInput = OutboxCompletionInput & {
@@ -141,6 +143,11 @@ export type InboxStartResult =
   | {
       status: "duplicate";
       record: TransactionalInboxRecord;
+    }
+  | {
+      status: "in_progress";
+      record: TransactionalInboxRecord;
+      lockedUntil: Date | undefined;
     };
 
 export type InboxCompletionInput = {
@@ -342,6 +349,11 @@ export type InboxConsumerResult =
   | {
       status: "duplicate";
       record: TransactionalInboxRecord;
+    }
+  | {
+      status: "in_progress";
+      record: TransactionalInboxRecord;
+      lockedUntil: Date | undefined;
     }
   | {
       status: "failed";
@@ -781,6 +793,9 @@ export class TransactionalOutboxRelay<TClient = unknown> {
           });
           return { status: "published", message: published };
         } catch (error) {
+          if (error instanceof InboxProcessingInProgressProblem) {
+            return this.releaseInboxBlockedClaim(message, error);
+          }
           const normalized = normalizeTransactionalEventError(error);
           recordError(error);
           return this.handlePublishFailure(message, normalized);
@@ -823,6 +838,42 @@ export class TransactionalOutboxRelay<TClient = unknown> {
     recordEvent("events-tx.outbox.claim_released", {
       "events-tx.message_id": message.id,
       "events-tx.event_type": message.eventType,
+    });
+    return { status: "released", message: released };
+  }
+
+  private async releaseInboxBlockedClaim(
+    message: TransactionalOutboxMessage,
+    problem: InboxProcessingInProgressProblem,
+  ): Promise<OutboxRelayMessageResult> {
+    const now = this.now();
+    const released = await this.config.store.releaseOutboxClaim(
+      {
+        id: message.id,
+        expectedAttempts: message.attempts,
+        now,
+        visibleAt: problem.lockedUntil ?? addMs(now, this.visibilityTimeoutMs),
+        diagnostic: createTransactionalEventDiagnostic(
+          "events-tx/outbox-inbox-in-progress",
+          problem.message,
+          now,
+          {
+            eventType: message.eventType,
+            attempts: message.attempts,
+            consumerId: problem.consumerId,
+            inboxKey: problem.inboxKey,
+          },
+        ),
+      },
+      this.context(),
+    );
+    if (!released) {
+      return this.createStaleClaimResult(message, "events-tx/outbox-release-stale-claim");
+    }
+    recordEvent("events-tx.outbox.inbox_in_progress", {
+      "events-tx.message_id": message.id,
+      "events-tx.event_type": message.eventType,
+      "events-tx.consumer_id": problem.consumerId,
     });
     return { status: "released", message: released };
   }
@@ -1063,6 +1114,13 @@ export class TransactionalInboxConsumer<TClient = unknown> {
         status: "duplicate",
         record: start.record,
       };
+    }
+
+    if (start.status === "in_progress") {
+      if (this.throwOnError) {
+        throw new InboxProcessingInProgressProblem(this.consumerId, inboxKey, start.lockedUntil);
+      }
+      return start;
     }
 
     try {

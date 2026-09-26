@@ -3245,6 +3245,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "safe-message",
     severity: "warning",
   }),
+  "events-tx/inbox-processing-in-progress": recovery({
+    cause: "Another delivery owns the inbox processing lease for this consumer and key.",
+    userAction:
+      "Retry after extensions.lockedUntil; if it is absent, wait for operator reconciliation of the legacy processing record.",
+    operatorAction:
+      "Check the inbox lease and outbox claim. Reconcile a processing record without a lease before redelivery.",
+    retryability: "conditional",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
   "search-core/sync-identity-conflict": recovery({
     cause:
       "The event envelope tenant or document identity conflicts with context.tenantId, payload.id, or payload.tenantId.",

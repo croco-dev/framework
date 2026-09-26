@@ -12,3 +12,7 @@ title: "OutboxReleaseInput"
 ### diagnostic
 
 > **diagnostic**: [`TransactionalEventDiagnostic`](/api/events-tx/src/type-aliases/transactionaleventdiagnostic/)
+
+### visibleAt?
+
+> `optional` **visibleAt?**: `Date`

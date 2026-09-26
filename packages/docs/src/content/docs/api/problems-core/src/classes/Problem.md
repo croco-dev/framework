@@ -195,6 +195,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`MissingEventHandlerResolverProblem`](/api/events-inmemory/src/classes/missingeventhandlerresolverproblem/)
 - [`UnsupportedDeadLetterValueProblem`](/api/events-inmemory/src/classes/unsupporteddeadlettervalueproblem/)
 - [`InboxClaimConflictProblem`](/api/events-tx/src/classes/inboxclaimconflictproblem/)
+- [`InboxProcessingInProgressProblem`](/api/events-tx/src/classes/inboxprocessinginprogressproblem/)
 - [`InvalidTransactionalEventConfigurationProblem`](/api/events-tx/src/classes/invalidtransactionaleventconfigurationproblem/)
 - [`OutboxIdempotencyConflictProblem`](/api/events-tx/src/classes/outboxidempotencyconflictproblem/)
 - [`OutboxMessageIdConflictProblem`](/api/events-tx/src/classes/outboxmessageidconflictproblem/)

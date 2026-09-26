@@ -22,6 +22,7 @@ import {
   createEventBusOutboxPublisher,
   DrizzleTransactionalEventStore,
   InboxClaimConflictProblem,
+  InboxProcessingInProgressProblem,
   InMemoryTransactionalEventStore,
   normalizeTransactionalEventError,
   OutboxPublishExhaustedProblem,
@@ -597,6 +598,134 @@ describe("TransactionalOutbox", () => {
 });
 
 describe("TransactionalOutboxRelay", () => {
+  it("defers a legacy inbox claim without a lease by the relay visibility timeout", async () => {
+    const fixture = createOutboxFixture();
+    const message = await appendMessage(fixture, { maxAttempts: 1 });
+    const publish = vi.fn(async () => {
+      throw new InboxProcessingInProgressProblem("ledger", message.idempotencyKey, undefined);
+    });
+    const relay = new TransactionalOutboxRelay({
+      store: fixture.store,
+      now: fixture.clock.now,
+      visibilityTimeoutMs: 7_000,
+      publish,
+    });
+
+    await expect(relay.publishBatch()).resolves.toMatchObject({
+      published: 0,
+      poisoned: 0,
+      deadLettered: 0,
+      results: [{ status: "released" }],
+    });
+    await expect(fixture.store.findOutboxById(message.id)).resolves.toMatchObject({
+      status: "retrying",
+      attempts: 0,
+      visibleAt: new Date("2026-01-01T00:00:07.000Z"),
+    });
+    fixture.clock.advance(6_999);
+    await expect(relay.publishBatch()).resolves.toMatchObject({ claimed: 0 });
+    expect(publish).toHaveBeenCalledTimes(1);
+    fixture.clock.advance(1);
+    await expect(relay.publishBatch()).resolves.toMatchObject({
+      claimed: 1,
+      published: 0,
+      poisoned: 0,
+      results: [{ status: "released" }],
+    });
+    expect(publish).toHaveBeenCalledTimes(2);
+    await expect(fixture.store.findOutboxById(message.id)).resolves.toMatchObject({
+      status: "retrying",
+      attempts: 0,
+      visibleAt: new Date("2026-01-01T00:00:14.000Z"),
+    });
+  });
+
+  it.each(["fails", "hangs"] as const)(
+    "redelivers a message whose first inbox attempt %s after another relay reclaimed it",
+    async (firstAttempt) => {
+      const fixture = createOutboxFixture();
+      await fixture.txManager.run(async () => {
+        await fixture.outbox.append(new AccountCreditedEvent("acct-1", 100), {
+          idempotencyKey: "credit-1",
+        });
+        await fixture.outbox.append(new AccountCreditedEvent("acct-2", 100), {
+          idempotencyKey: "credit-2",
+        });
+      });
+
+      const credited: string[] = [];
+      const secondCreditStarted = createDeferred<void>();
+      let failFirstSecondCredit!: (error: Error) => void;
+      const firstSecondCredit = new Promise<void>((_resolve, reject) => {
+        failFirstSecondCredit = reject;
+      });
+      let secondCreditAttempts = 0;
+      const creditAccount = async (message: TransactionalOutboxMessage) => {
+        if (message.idempotencyKey === "credit-1") {
+          fixture.clock.advance(20_000);
+        } else if (++secondCreditAttempts === 1) {
+          secondCreditStarted.resolve();
+          await firstSecondCredit;
+        }
+        credited.push(message.idempotencyKey);
+      };
+      const createRelay = () => {
+        const consumer = new TransactionalInboxConsumer({
+          store: fixture.store,
+          consumerId: "ledger",
+          now: fixture.clock.now,
+        });
+        return new TransactionalOutboxRelay({
+          store: fixture.store,
+          now: fixture.clock.now,
+          publish: (message) => consumer.handle(message, creditAccount).then(() => undefined),
+        });
+      };
+      const relayA = createRelay();
+      const relayB = createRelay();
+
+      const batchA = relayA.publishBatch();
+      await secondCreditStarted.promise;
+      fixture.clock.advance(10_001);
+      await expect(relayB.publishBatch()).resolves.toMatchObject({
+        published: 0,
+        poisoned: 0,
+        deadLettered: 0,
+      });
+      await expect(fixture.store.findOutboxById("message-2")).resolves.toMatchObject({
+        status: "retrying",
+        attempts: 1,
+        visibleAt: new Date("2026-01-01T00:00:50.000Z"),
+      });
+      fixture.clock.advance(19_998);
+      await expect(relayB.publishBatch()).resolves.toMatchObject({ claimed: 0 });
+      if (firstAttempt === "fails") {
+        failFirstSecondCredit(new Error("ledger database unavailable"));
+        await batchA;
+      }
+      fixture.clock.advance(1);
+      await createRelay().publishBatch();
+
+      if (firstAttempt === "hangs") {
+        failFirstSecondCredit(new Error("abandoned worker stopped"));
+        await batchA;
+      }
+      const secondMessage = (await fixture.store.listOutboxMessages()).find(
+        (message) => message.idempotencyKey === "credit-2",
+      );
+      const secondInboxRecord = await fixture.store.findInboxRecord("ledger", "credit-2");
+      expect({
+        credited,
+        secondMessageStatus: secondMessage?.status,
+        secondInboxStatus: secondInboxRecord?.status,
+      }).toEqual({
+        credited: ["credit-1", "credit-2"],
+        secondMessageStatus: "published",
+        secondInboxStatus: "processed",
+      });
+    },
+  );
+
   it("escapes null bytes before persisting outbox failures", async () => {
     const fixture = createOutboxFixture();
     await appendMessage(fixture);
@@ -1171,6 +1300,86 @@ describe("TransactionalOutboxRelay", () => {
 });
 
 describe("TransactionalInboxConsumer", () => {
+  it.each([true, false])(
+    "reports active inbox processing without running another handler (throwOnError: %s)",
+    async (throwOnError) => {
+      const fixture = createOutboxFixture();
+      const message = await appendMessage(fixture);
+      const consumer = new TransactionalInboxConsumer({
+        store: fixture.store,
+        consumerId: "ledger",
+        now: fixture.clock.now,
+        throwOnError,
+      });
+      const entered = createDeferred<void>();
+      const finish = createDeferred<void>();
+      const first = consumer.handle(message, async () => {
+        entered.resolve();
+        await finish.promise;
+      });
+      await entered.promise;
+      const duplicateHandler = vi.fn(async () => {});
+      try {
+        const second = consumer.handle(message, duplicateHandler);
+        if (throwOnError) {
+          await expect(second).rejects.toBeInstanceOf(InboxProcessingInProgressProblem);
+          await expect(second).rejects.toMatchObject({
+            lockedUntil: new Date("2026-01-01T00:00:30.000Z"),
+          });
+        } else {
+          await expect(second).resolves.toMatchObject({
+            status: "in_progress",
+            lockedUntil: new Date("2026-01-01T00:00:30.000Z"),
+            record: { status: "processing", attempts: 1 },
+          });
+        }
+        expect(duplicateHandler).not.toHaveBeenCalled();
+        await expect(
+          fixture.store.findInboxRecord("ledger", message.idempotencyKey),
+        ).resolves.toMatchObject({
+          status: "processing",
+          attempts: 1,
+        });
+      } finally {
+        finish.resolve();
+        await first;
+      }
+      await expect(consumer.handle(message, duplicateHandler)).resolves.toMatchObject({
+        status: "duplicate",
+        record: { status: "processed", attempts: 1 },
+      });
+      expect(duplicateHandler).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([true, false])(
+    "reports a legacy Drizzle processing record without a lease (throwOnError: %s)",
+    async (throwOnError) => {
+      const fixture = createOutboxFixture();
+      const message = await appendMessage(fixture);
+      const db = createMockDrizzleDb({ selectResults: [[createInboxRow({ lockedUntil: null })]] });
+      const consumer = new TransactionalInboxConsumer({
+        store: new DrizzleTransactionalEventStore({ db }),
+        consumerId: "ledger-projection",
+        now: fixture.clock.now,
+        throwOnError,
+      });
+      const handler = vi.fn(async () => {});
+      const result = consumer.handle(message, handler);
+      if (throwOnError) {
+        await expect(result).rejects.toBeInstanceOf(InboxProcessingInProgressProblem);
+        await expect(result).rejects.toMatchObject({ lockedUntil: undefined });
+      } else {
+        await expect(result).resolves.toMatchObject({
+          status: "in_progress",
+          record: { status: "processing", attempts: 1 },
+        });
+      }
+      expect(handler).not.toHaveBeenCalled();
+      expect(db.updates).toHaveLength(0);
+    },
+  );
+
   it("escapes null bytes before persisting inbox failures", async () => {
     const fixture = createOutboxFixture();
     const message = await appendMessage(fixture);
@@ -1581,7 +1790,7 @@ describe("TransactionalEventStore conformance", () => {
 
     expect(first).toMatchObject({ status: "started", record: firstIdentity });
     expect(second).toMatchObject({ status: "started", record: secondIdentity });
-    expect(exactDuplicate).toMatchObject({ status: "duplicate", record: secondIdentity });
+    expect(exactDuplicate).toMatchObject({ status: "in_progress", record: secondIdentity });
 
     await fixture.store.markInboxProcessed({
       consumerId: firstInput.consumerId,
@@ -1718,7 +1927,7 @@ describe("TransactionalEventStore conformance", () => {
     await expect(fixture.store.listInboxRecords()).resolves.toHaveLength(2);
   });
 
-  it("returns one duplicate when concurrent direct starts target the same inbox key", async () => {
+  it("returns one in-progress result when concurrent direct starts target the same inbox key", async () => {
     const fixture = createOutboxFixture();
     const message = await appendMessage(fixture);
     const input = {
@@ -1734,7 +1943,7 @@ describe("TransactionalEventStore conformance", () => {
       fixture.store.startInboxProcessing(input),
     ]);
 
-    expect(starts.map(({ status }) => status).sort()).toEqual(["duplicate", "started"]);
+    expect(starts.map(({ status }) => status).sort()).toEqual(["in_progress", "started"]);
     expect(starts[0].record).toEqual(starts[1].record);
   });
 
@@ -1762,7 +1971,11 @@ describe("TransactionalEventStore conformance", () => {
       now: fixture.clock.advance(1),
     });
 
-    expect(duplicate).toMatchObject({ status: "duplicate", record: { attempts: 1 } });
+    expect(duplicate).toMatchObject({
+      status: "in_progress",
+      lockedUntil: new Date("2026-01-01T00:00:01.000Z"),
+      record: { attempts: 1 },
+    });
     expect(reclaimed).toMatchObject({
       status: "started",
       record: {
@@ -2349,6 +2562,144 @@ describe("TransactionalEventStore conformance", () => {
 });
 
 describe("DrizzleTransactionalEventStore", () => {
+  it.each(["fails", "hangs"] as const)(
+    "defers a competing Drizzle relay and recovers when the first inbox attempt %s",
+    async (firstAttempt) => {
+      const clock = createClock(new Date("2026-01-01T00:00:00.000Z"));
+      const inboxLease = new Date("2026-01-01T00:00:30.000Z");
+      const firstClaim = outboxRowValues({ status: "publishing", attempts: 1, maxAttempts: 2 });
+      const competingClaim = outboxRowValues({ status: "publishing", attempts: 2, maxAttempts: 2 });
+      const released = outboxRowValues({
+        status: "retrying",
+        attempts: 1,
+        maxAttempts: 2,
+        visibleAt: inboxLease,
+      });
+      const processing = inboxRowValues({ lockedUntil: inboxLease });
+      const failed = inboxRowValues({ status: "failed", lockedUntil: null });
+      const reclaimed = inboxRowValues({
+        attempts: 2,
+        lockedUntil: new Date("2026-01-01T00:01:00.000Z"),
+      });
+      const processed = inboxRowValues({ status: "processed", attempts: 2, lockedUntil: null });
+      const published = outboxRowValues({ status: "published", attempts: 2, maxAttempts: 2 });
+      type QueryStep = {
+        table: "inbox" | "outbox";
+        operation: "select" | "insert" | "update";
+        rows: unknown[][];
+      };
+      const steps: QueryStep[] = [
+        { table: "outbox", operation: "update", rows: [firstClaim] },
+        { table: "inbox", operation: "select", rows: [] },
+        { table: "inbox", operation: "insert", rows: [processing] },
+      ];
+      const queries: CapturedProxyQuery[] = [];
+      const db = createPgProxyDrizzle(async (sql, params, method) => {
+        const step = steps.shift();
+        if (!step) throw new Error(`Unexpected Drizzle query: ${sql}`);
+        expect(sql).toMatch(new RegExp(`^${step.operation} `));
+        expect(sql).toContain(
+          step.table === "inbox" ? '"croco_inbox_records"' : '"croco_outbox_messages"',
+        );
+        queries.push({ sql, params, method });
+        return { rows: step.rows };
+      });
+      const store = new DrizzleTransactionalEventStore({
+        db: db as unknown as DrizzleTransactionalEventStoreDb,
+      });
+      const entered = createDeferred<void>();
+      const stopFirst = createDeferred<void>();
+      let handlerAttempts = 0;
+      const effects: string[] = [];
+      const handle = async (message: TransactionalOutboxMessage) => {
+        if (++handlerAttempts === 1) {
+          entered.resolve();
+          await stopFirst.promise;
+          throw new Error("first worker stopped");
+        }
+        effects.push(message.id);
+      };
+      const createRelay = () => {
+        const consumer = new TransactionalInboxConsumer({
+          store,
+          consumerId: "ledger-projection",
+          now: clock.now,
+        });
+        return new TransactionalOutboxRelay({
+          store,
+          now: clock.now,
+          visibilityTimeoutMs: 1_000,
+          publish: (message) => consumer.handle(message, handle).then(() => undefined),
+        });
+      };
+      const relayA = createRelay();
+      const relayB = createRelay();
+      const batchA = relayA.publishBatch();
+      await entered.promise;
+      clock.advance(1_001);
+      steps.push(
+        { table: "outbox", operation: "update", rows: [competingClaim] },
+        { table: "inbox", operation: "select", rows: [processing] },
+        { table: "outbox", operation: "select", rows: [competingClaim] },
+        { table: "outbox", operation: "update", rows: [released] },
+      );
+      await expect(relayB.publishBatch()).resolves.toMatchObject({
+        published: 0,
+        poisoned: 0,
+        deadLettered: 0,
+      });
+      expect(handlerAttempts).toBe(1);
+      expect(effects).toEqual([]);
+      const releaseQuery = queries[6];
+      expect(releaseQuery.sql).toContain('"visible_at" =');
+      expect(releaseQuery.params).toContain(inboxLease.toISOString());
+      expect(releaseQuery.params).toContain("retrying");
+      expect(releaseQuery.params[0]).toBe(1);
+      expect(releaseQuery.params.slice(-3)).toEqual(["message-1", "publishing", 2]);
+      expect(queries.some(({ params }) => params.includes("published"))).toBe(false);
+      expect(steps).toHaveLength(0);
+
+      if (firstAttempt === "fails") {
+        steps.push(
+          { table: "inbox", operation: "select", rows: [processing] },
+          { table: "inbox", operation: "update", rows: [failed] },
+          { table: "outbox", operation: "select", rows: [released] },
+        );
+        stopFirst.resolve();
+        await batchA;
+      }
+      clock.advance(28_999);
+      steps.push(
+        { table: "outbox", operation: "update", rows: [competingClaim] },
+        {
+          table: "inbox",
+          operation: "select",
+          rows: [firstAttempt === "fails" ? failed : processing],
+        },
+        { table: "inbox", operation: "update", rows: [reclaimed] },
+        { table: "inbox", operation: "select", rows: [reclaimed] },
+        { table: "inbox", operation: "update", rows: [processed] },
+        { table: "outbox", operation: "select", rows: [competingClaim] },
+        { table: "outbox", operation: "update", rows: [published] },
+      );
+      await expect(relayB.publishBatch()).resolves.toMatchObject({ claimed: 1, published: 1 });
+      expect(handlerAttempts).toBe(2);
+      expect(effects).toEqual(["message-1"]);
+      expect(queries.at(-1)?.params).toContain("published");
+      if (firstAttempt === "hangs") {
+        steps.push(
+          { table: "inbox", operation: "select", rows: [processed] },
+          { table: "inbox", operation: "update", rows: [] },
+          { table: "inbox", operation: "select", rows: [processed] },
+          { table: "outbox", operation: "select", rows: [published] },
+        );
+        stopFirst.resolve();
+        await batchA;
+      }
+      expect(steps).toHaveLength(0);
+    },
+  );
+
   it("keeps delimiter-colliding inbox identities independent", async () => {
     const now = new Date("2026-01-01T00:00:00.000Z");
     const firstIdentity = {
@@ -2392,7 +2743,7 @@ describe("DrizzleTransactionalEventStore", () => {
 
     expect(firstStart).toMatchObject({ status: "started", record: firstIdentity });
     expect(secondStart).toMatchObject({ status: "started", record: secondIdentity });
-    expect(exactDuplicate).toMatchObject({ status: "duplicate", record: secondIdentity });
+    expect(exactDuplicate).toMatchObject({ status: "in_progress", record: secondIdentity });
 
     await store.markInboxProcessed({
       consumerId: firstIdentity.consumerId,
@@ -2503,7 +2854,7 @@ describe("DrizzleTransactionalEventStore", () => {
     expect(db.conflictTargets).toEqual([undefined]);
   });
 
-  it("returns duplicate when a concurrent inbox insert wins the unique key", async () => {
+  it("returns in_progress when a concurrent inbox insert wins the unique key", async () => {
     const existing = createInboxRow({
       consumerId: "ledger-projection",
       inboxKey: "credit-acct-1",
@@ -2526,7 +2877,8 @@ describe("DrizzleTransactionalEventStore", () => {
         now: new Date("2026-01-01T00:00:00.000Z"),
       }),
     ).resolves.toMatchObject({
-      status: "duplicate",
+      status: "in_progress",
+      lockedUntil: new Date("2026-01-01T00:00:10.000Z"),
       record: {
         consumerId: "ledger-projection",
         inboxKey: "credit-acct-1",
@@ -2605,7 +2957,7 @@ describe("DrizzleTransactionalEventStore", () => {
       store.startInboxProcessing(input),
     ]);
 
-    expect(starts.map(({ status }) => status).sort()).toEqual(["duplicate", "started"]);
+    expect(starts.map(({ status }) => status).sort()).toEqual(["in_progress", "started"]);
     expect(starts).toMatchObject([{ record: { attempts: 2 } }, { record: { attempts: 2 } }]);
     expect(
       proxy.queries.filter((query) => query.sql.startsWith("update")).map((query) => query.sql),
@@ -2626,7 +2978,7 @@ describe("DrizzleTransactionalEventStore", () => {
       visibilityTimeoutMs: 1_000,
     });
     expect(result).toMatchObject({
-      status: "duplicate",
+      status: "in_progress",
       record: { status: "processing" },
     });
     expect(result.record).not.toHaveProperty("lockedUntil");
@@ -2746,48 +3098,53 @@ describe("DrizzleTransactionalEventStore", () => {
     ]);
   });
 
-  it("releases a Drizzle outbox claim without consuming its publish attempt", async () => {
-    const now = new Date("2026-01-01T00:00:01.000Z");
-    const diagnostic = {
-      code: "events-tx/outbox-claim-released",
-      message: "Outbox claim released before publication started.",
-      at: now,
-    };
-    const db = createMockDrizzleDb({
-      selectResults: [[createOutboxRow({ status: "publishing", attempts: 1 })]],
-      updateResults: [
-        [
-          createOutboxRow({
-            status: "retrying",
-            attempts: 0,
-            visibleAt: now,
-            diagnostics: [diagnostic],
-          }),
+  it.each([false, true])(
+    "releases a Drizzle outbox claim without consuming its publish attempt (delayed: %s)",
+    async (delayed) => {
+      const now = new Date("2026-01-01T00:00:01.000Z");
+      const visibleAt = delayed ? new Date("2026-01-01T00:00:30.000Z") : now;
+      const diagnostic = {
+        code: "events-tx/outbox-claim-released",
+        message: "Outbox claim released before publication started.",
+        at: now,
+      };
+      const db = createMockDrizzleDb({
+        selectResults: [[createOutboxRow({ status: "publishing", attempts: 1 })]],
+        updateResults: [
+          [
+            createOutboxRow({
+              status: "retrying",
+              attempts: 0,
+              visibleAt,
+              diagnostics: [diagnostic],
+            }),
+          ],
         ],
-      ],
-    });
-    const store = new DrizzleTransactionalEventStore({ db });
+      });
+      const store = new DrizzleTransactionalEventStore({ db });
 
-    await expect(
-      store.releaseOutboxClaim({
-        id: "message-1",
-        expectedAttempts: 1,
-        now,
-        diagnostic,
-      }),
-    ).resolves.toMatchObject({
-      status: "retrying",
-      attempts: 0,
-      visibleAt: now,
-      diagnostics: [diagnostic],
-    });
-    expect(db.updates[0]).toMatchObject({
-      status: "retrying",
-      attempts: 0,
-      visibleAt: now,
-      lockedUntil: null,
-    });
-  });
+      await expect(
+        store.releaseOutboxClaim({
+          id: "message-1",
+          expectedAttempts: 1,
+          now,
+          diagnostic,
+          ...(delayed ? { visibleAt } : {}),
+        }),
+      ).resolves.toMatchObject({
+        status: "retrying",
+        attempts: 0,
+        visibleAt,
+        diagnostics: [diagnostic],
+      });
+      expect(db.updates[0]).toMatchObject({
+        status: "retrying",
+        attempts: 0,
+        visibleAt,
+        lockedUntil: null,
+      });
+    },
+  );
 
   it("emits attempt-fenced Drizzle CAS SQL for inbox success and failure", async () => {
     const processing = inboxRowValues({ attempts: 2, status: "processing" });

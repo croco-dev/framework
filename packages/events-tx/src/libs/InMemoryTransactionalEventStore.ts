@@ -418,7 +418,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
       ...cloneOutboxMessage(message),
       attempts: message.attempts - 1,
       status: "retrying",
-      visibleAt: new Date(input.now.getTime()),
+      visibleAt: new Date((input.visibleAt ?? input.now).getTime()),
       updatedAt: new Date(input.now.getTime()),
       diagnostics: [...message.diagnostics.map(cloneDiagnostic), cloneDiagnostic(input.diagnostic)],
     };
@@ -472,10 +472,10 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     const existing = state.inbox.get(storageKey);
 
     if (existing && !this.isReclaimableInboxRecord(existing, input.now)) {
-      return {
-        status: "duplicate",
-        record: cloneInboxRecord(existing),
-      };
+      const record = cloneInboxRecord(existing);
+      return record.status === "processed"
+        ? { status: "duplicate", record }
+        : { status: "in_progress", record, lockedUntil: record.lockedUntil };
     }
 
     if (existing) {
