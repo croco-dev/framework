@@ -31,6 +31,15 @@ type ResolveVerificationIdentityOptions = {
   readonly checkoutRef?: string;
 };
 
+type VerifyRecordedVerificationIdentityOptions = ResolveVerificationIdentityOptions & {
+  readonly eventHeadSha: string;
+  readonly checkoutRef: string;
+  readonly recordedBaseSha: string;
+  readonly recordedHeadSha: string;
+  readonly recordedCandidateSha: string;
+  readonly defaultBranchRef: string;
+};
+
 type AssertVerificationIdentityOptions = {
   readonly rootDir: string;
   readonly eventName: VerificationEventName;
@@ -255,6 +264,61 @@ export function resolveVerificationIdentity(
   });
 }
 
+function assertDefaultBranchContains(
+  rootDir: string,
+  baseSha: string,
+  defaultBranchRef: string,
+): void {
+  const defaultBranchSha = resolveCommit(rootDir, defaultBranchRef, "default branch");
+  gitOutput(
+    rootDir,
+    ["merge-base", "--is-ancestor", baseSha, defaultBranchSha],
+    "VERIFICATION_CANDIDATE_BASE_NOT_IN_DEFAULT_BRANCH",
+    `Checking that pull-request candidate base ${baseSha} is contained in default branch ${defaultBranchRef}`,
+  );
+}
+
+export function verifyRecordedVerificationIdentity(
+  options: VerifyRecordedVerificationIdentityOptions,
+): VerificationIdentity {
+  const recordedBaseSha = fullCommitOid(options.recordedBaseSha, "recorded base SHA");
+  const recordedHeadSha = fullCommitOid(options.recordedHeadSha, "recorded head SHA");
+  const recordedCandidateSha = fullCommitOid(
+    options.recordedCandidateSha,
+    "recorded candidate SHA",
+  );
+  const identity = resolveVerificationIdentity({
+    ...options,
+    eventHeadSha: fullCommitOid(options.eventHeadSha, "event head SHA"),
+  });
+
+  if (identity.candidateSha !== recordedCandidateSha) {
+    throw new VerificationProblem(
+      "RECORDED_VERIFICATION_CANDIDATE_MISMATCH",
+      "contract",
+      `Recorded candidate ${recordedCandidateSha} does not match verified candidate ${identity.candidateSha}`,
+    );
+  }
+  if (options.eventName !== "pull_request") return identity;
+
+  if (recordedHeadSha !== identity.headSha) {
+    throw new VerificationProblem(
+      "RECORDED_VERIFICATION_HEAD_MISMATCH",
+      "contract",
+      `Recorded head ${recordedHeadSha} does not match source run head ${identity.headSha}`,
+    );
+  }
+  if (recordedBaseSha !== identity.baseSha) {
+    throw new VerificationProblem(
+      "RECORDED_VERIFICATION_BASE_MISMATCH",
+      "contract",
+      `Recorded base ${recordedBaseSha} does not match candidate first parent ${identity.baseSha}`,
+    );
+  }
+  assertDefaultBranchContains(options.rootDir, identity.baseSha, options.defaultBranchRef);
+  return identity;
+}
+
 function optionValue(args: readonly string[], option: string): string | undefined {
   const index = args.indexOf(option);
   if (index === -1) return undefined;
@@ -339,10 +403,28 @@ function main(): void {
     );
     return;
   }
+  if (command === "verify-recorded") {
+    writeIdentity(
+      verifyRecordedVerificationIdentity({
+        rootDir,
+        eventName: selectedEvent,
+        eventBaseSha: optionValue(args, "--event-base"),
+        eventHeadSha: requiredOption(args, "--event-head"),
+        candidateRef: requiredOption(args, "--candidate"),
+        checkoutRef: requiredOption(args, "--checkout"),
+        recordedBaseSha: requiredOption(args, "--recorded-base"),
+        recordedHeadSha: requiredOption(args, "--recorded-head"),
+        recordedCandidateSha: requiredOption(args, "--recorded-candidate"),
+        defaultBranchRef: requiredOption(args, "--default-branch"),
+      }),
+      args,
+    );
+    return;
+  }
   throw new VerificationProblem(
     "INVALID_VERIFICATION_IDENTITY_COMMAND",
     "input",
-    "Expected resolve or assert command",
+    "Expected resolve, assert, or verify-recorded command",
   );
 }
 
