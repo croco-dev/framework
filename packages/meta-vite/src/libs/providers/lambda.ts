@@ -60,10 +60,51 @@ function convertApiGatewayEventToRequest(event: unknown): Request {
   const requestContext = evt.requestContext as Record<string, unknown> | undefined;
   const http = requestContext?.http as Record<string, unknown> | undefined;
   const headers = (evt.headers as Record<string, string> | undefined) ?? {};
+  const requestHeaders = new Headers(headers);
+  if (Array.isArray(evt.cookies) && evt.cookies.length > 0) {
+    const cookiesByName = new Map<string, string>();
+    for (const source of [requestHeaders.get("cookie") ?? "", ...evt.cookies]) {
+      for (const part of source.split(";")) {
+        const cookie = part.trim();
+        const separator = cookie.indexOf("=");
+        if (separator <= 0) {
+          continue;
+        }
+        const name = cookie.slice(0, separator).trim();
+        if (!cookiesByName.has(name)) {
+          cookiesByName.set(name, cookie);
+        }
+      }
+    }
+    requestHeaders.set("cookie", [...cookiesByName.values()].join("; "));
+  }
   const method =
     (http?.method as string | undefined) ?? (evt.httpMethod as string | undefined) ?? "GET";
   const path = (evt.rawPath as string | undefined) ?? (evt.path as string | undefined) ?? "/";
-  const queryString = evt.rawQueryString ? `?${evt.rawQueryString}` : "";
+  let queryString = evt.rawQueryString as string | null | undefined;
+  if (queryString == null) {
+    const params = new URLSearchParams();
+    const multiValueParams = evt.multiValueQueryStringParameters as
+      | Record<string, string[] | null>
+      | undefined;
+    if (multiValueParams) {
+      for (const [key, values] of Object.entries(multiValueParams)) {
+        for (const value of values ?? []) {
+          params.append(key, value);
+        }
+      }
+    } else {
+      const singleValueParams = evt.queryStringParameters as
+        | Record<string, string | null>
+        | undefined;
+      for (const [key, value] of Object.entries(singleValueParams ?? {})) {
+        if (value !== null) {
+          params.append(key, value);
+        }
+      }
+    }
+    queryString = params.toString();
+  }
   const body = evt.body as string | undefined;
   const isBase64 = evt.isBase64Encoded as boolean | undefined;
   const baseUrl = headers["x-forwarded-proto"] === "https" ? "https://" : "http://";
@@ -76,9 +117,9 @@ function convertApiGatewayEventToRequest(event: unknown): Request {
     requestBody = body;
   }
 
-  return new Request(`${baseUrl}${host}${path}${queryString}`, {
+  return new Request(`${baseUrl}${host}${path}${queryString ? `?${queryString}` : ""}`, {
     method,
-    headers,
+    headers: requestHeaders,
     body: requestBody,
   });
 }
