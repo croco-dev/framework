@@ -2,6 +2,7 @@ import { ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it } from "vitest";
 import {
   InboxClaimConflictProblem,
+  InboxProcessingInProgressProblem,
   OutboxIdempotencyConflictProblem,
   OutboxMessageIdConflictProblem,
   OutboxPublishExhaustedProblem,
@@ -11,6 +12,22 @@ import {
 } from "../libs/problems/EventsTxProblems";
 
 describe("EventsTxProblems", () => {
+  it.each([new Date("2026-01-01T00:00:30.000Z"), undefined])(
+    "exposes inbox processing evidence with lease %s",
+    (lockedUntil) => {
+      const problem = new InboxProcessingInProgressProblem("ledger", "credit-1", lockedUntil);
+      expect(problem.code).toBe("events-tx/inbox-processing-in-progress");
+      expect(problem.category).toBe(ProblemCategory.Conflict);
+      expect(problem.lockedUntil).toEqual(lockedUntil);
+      expect(problem.extensions).toEqual({
+        consumerId: "ledger",
+        inboxKey: "credit-1",
+        ...(lockedUntil ? { lockedUntil: lockedUntil.toISOString() } : {}),
+      });
+      expect(problem.toJSON()).toMatchObject({ status: 409 });
+    },
+  );
+
   it("should create TransactionStateProblem with expected metadata", () => {
     const problem = new TransactionStateProblem("Transaction 'tx-1' not found");
 
