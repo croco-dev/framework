@@ -1,4 +1,5 @@
 import { runInNewContext } from "node:vm";
+import { PassThrough, Readable } from "node:stream";
 import {
   context,
   type Exception,
@@ -421,6 +422,240 @@ describe("Trace", () => {
 
     const second = getTraceOptions(TestService.prototype, "run");
     expect(second?.attributes).toEqual({ stable: "yes" });
+  });
+});
+
+describe("Trace return value identity", () => {
+  it("should return a Web ReadableStream with its reader API and end its span immediately", async () => {
+    const mockSpan = createMockSpan();
+    vi.spyOn(tracerModule, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+    const source = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode("hello"));
+        controller.close();
+      },
+    });
+    class TestService {
+      stream(): ReadableStream<Uint8Array> {
+        return source;
+      }
+    }
+    decorateMethodWithTrace(TestService.prototype, "stream", {});
+
+    const result = new TestService().stream();
+    expect(result).toBe(source);
+    expect(result).toBeInstanceOf(ReadableStream);
+    expect(mockSpan.end).toHaveBeenCalledOnce();
+    const chunk = await result.getReader().read();
+    expect(new TextDecoder().decode(chunk.value)).toBe("hello");
+    expect(mockSpan.end).toHaveBeenCalledOnce();
+  });
+
+  it("should return a Node Readable that can still be piped and end its span immediately", async () => {
+    const mockSpan = createMockSpan();
+    vi.spyOn(tracerModule, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+    const source = Readable.from(["a", "b"]);
+    class TestService {
+      stream(): Readable {
+        return source;
+      }
+    }
+    decorateMethodWithTrace(TestService.prototype, "stream", {});
+
+    const result = new TestService().stream();
+    expect(result).toBe(source);
+    expect(result).toBeInstanceOf(Readable);
+    expect(mockSpan.end).toHaveBeenCalledOnce();
+    const destination = new PassThrough();
+    result.pipe(destination);
+    const chunks: string[] = [];
+    for await (const chunk of destination) {
+      chunks.push(String(chunk));
+    }
+    expect(chunks.join("")).toBe("ab");
+    expect(mockSpan.end).toHaveBeenCalledOnce();
+  });
+
+  it("should preserve async generator next and end its span once on completion", async () => {
+    const mockSpan = createMockSpan();
+    vi.spyOn(tracerModule, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+    class TestService {
+      async *rows(): AsyncGenerator<number> {
+        yield 1;
+        yield 2;
+      }
+    }
+    decorateMethodWithTrace(TestService.prototype, "rows", {});
+
+    const result = new TestService().rows();
+    expect(result[Symbol.asyncIterator]()).toBe(result);
+    expect(mockSpan.end).not.toHaveBeenCalled();
+    await expect(result.next()).resolves.toEqual({ value: 1, done: false });
+    await expect(result.next()).resolves.toEqual({ value: 2, done: false });
+    expect(mockSpan.end).not.toHaveBeenCalled();
+    await expect(result.next()).resolves.toEqual({ value: undefined, done: true });
+    expect(mockSpan.end).toHaveBeenCalledOnce();
+  });
+
+  it("should pass next(value) through to the async generator and preserve its return value", async () => {
+    const mockSpan = createMockSpan();
+    vi.spyOn(tracerModule, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+    class TestService {
+      async *exchange(): AsyncGenerator<string, string, string> {
+        const received = yield "ready";
+        return received;
+      }
+    }
+    decorateMethodWithTrace(TestService.prototype, "exchange", {});
+
+    const result = new TestService().exchange();
+    await expect(result.next()).resolves.toEqual({ value: "ready", done: false });
+    expect(mockSpan.end).not.toHaveBeenCalled();
+    await expect(result.next("sent value")).resolves.toEqual({ value: "sent value", done: true });
+    expect(mockSpan.end).toHaveBeenCalledOnce();
+  });
+
+  it("should preserve async generator return and end its span once", async () => {
+    const mockSpan = createMockSpan();
+    vi.spyOn(tracerModule, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+    class TestService {
+      async *rows(): AsyncGenerator<number> {
+        yield 1;
+        yield 2;
+      }
+    }
+    decorateMethodWithTrace(TestService.prototype, "rows", {});
+
+    const result = new TestService().rows();
+    await expect(result.next()).resolves.toEqual({ value: 1, done: false });
+    await expect(result.return(42)).resolves.toEqual({ value: 42, done: true });
+    expect(mockSpan.end).toHaveBeenCalledOnce();
+  });
+
+  it("should keep the span open when return(value) yields from finally", async () => {
+    const mockSpan = createMockSpan();
+    vi.spyOn(tracerModule, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+    class TestService {
+      async *rows(): AsyncGenerator<number, number, unknown> {
+        try {
+          yield 1;
+        } finally {
+          yield 2;
+        }
+      }
+    }
+    decorateMethodWithTrace(TestService.prototype, "rows", {});
+
+    const result = new TestService().rows();
+    await expect(result.next()).resolves.toEqual({ value: 1, done: false });
+    await expect(result.return(42)).resolves.toEqual({ value: 2, done: false });
+    expect(mockSpan.end).not.toHaveBeenCalled();
+    await expect(result.next()).resolves.toEqual({ value: 42, done: true });
+    expect(mockSpan.end).toHaveBeenCalledOnce();
+  });
+
+  it("should preserve async generator throw and end its span once", async () => {
+    const mockSpan = createMockSpan();
+    vi.spyOn(tracerModule, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+    class TestService {
+      async *rows(): AsyncGenerator<number> {
+        yield 1;
+        yield 2;
+      }
+    }
+    decorateMethodWithTrace(TestService.prototype, "rows", {});
+
+    const result = new TestService().rows();
+    const error = new Error("consumer stopped iteration");
+    await expect(result.next()).resolves.toEqual({ value: 1, done: false });
+    await expect(result.throw(error)).rejects.toBe(error);
+    expect(mockSpan.recordException).toHaveBeenCalledWith(
+      expect.objectContaining({ message: error.message }),
+    );
+    expect(mockSpan.end).toHaveBeenCalledOnce();
+  });
+
+  it("should pass throw(error) to the async generator and keep tracing a handled error", async () => {
+    const mockSpan = createMockSpan();
+    vi.spyOn(tracerModule, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+    const error = new Error("handled by generator");
+    class TestService {
+      async *rows(): AsyncGenerator<number> {
+        try {
+          yield 1;
+        } catch (caught) {
+          if (caught !== error) {
+            throw caught;
+          }
+          yield 2;
+        }
+      }
+    }
+    decorateMethodWithTrace(TestService.prototype, "rows", {});
+
+    const result = new TestService().rows();
+    await expect(result.next()).resolves.toEqual({ value: 1, done: false });
+    await expect(result.throw(error)).resolves.toEqual({ value: 2, done: false });
+    expect(mockSpan.recordException).not.toHaveBeenCalled();
+    expect(mockSpan.end).not.toHaveBeenCalled();
+    await expect(result.next()).resolves.toEqual({ value: undefined, done: true });
+    expect(mockSpan.end).toHaveBeenCalledOnce();
+  });
+
+  it("should await a thenable that is also an async iterable", async () => {
+    const mockSpan = createMockSpan();
+    vi.spyOn(tracerModule, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+    class OrderQuery implements PromiseLike<{ id: number }[]>, AsyncIterable<{ id: number }> {
+      then<TResult1 = { id: number }[], TResult2 = never>(
+        onfulfilled?: ((value: { id: number }[]) => TResult1 | PromiseLike<TResult1>) | null,
+        onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+      ): PromiseLike<TResult1 | TResult2> {
+        return Promise.resolve([{ id: 1 }]).then(onfulfilled, onrejected);
+      }
+
+      async *[Symbol.asyncIterator]() {
+        yield { id: 1 };
+      }
+    }
+    class TestService {
+      findOrders(): OrderQuery {
+        return new OrderQuery();
+      }
+    }
+    decorateMethodWithTrace(TestService.prototype, "findOrders", {});
+
+    const result = new TestService().findOrders();
+    expect(mockSpan.end).not.toHaveBeenCalled();
+    await expect(result).resolves.toEqual([{ id: 1 }]);
+    expect(mockSpan.end).toHaveBeenCalledOnce();
+  });
+
+  it("should continue tracing plain and null-prototype async iterables through consumption", async () => {
+    for (const prototype of [Object.prototype, null]) {
+      const mockSpan = createMockSpan();
+      vi.spyOn(tracerModule, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+      const source: AsyncIterable<number> = Object.assign(Object.create(prototype), {
+        async *[Symbol.asyncIterator]() {
+          yield 1;
+        },
+      });
+      class TestService {
+        stream(): AsyncIterable<number> {
+          return source;
+        }
+      }
+      decorateMethodWithTrace(TestService.prototype, "stream", {});
+
+      const result = new TestService().stream();
+      expect(mockSpan.end).not.toHaveBeenCalled();
+      const values: number[] = [];
+      for await (const value of result) {
+        values.push(value);
+      }
+      expect(values).toEqual([1]);
+      expect(mockSpan.end).toHaveBeenCalledOnce();
+      vi.restoreAllMocks();
+    }
   });
 });
 

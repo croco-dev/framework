@@ -18,6 +18,18 @@ function isAsyncIterable<ReturnType>(value: unknown): value is AsyncIterable<Ret
   return typeof value === "object" && value !== null && Symbol.asyncIterator in value;
 }
 
+function isAsyncGenerator<ReturnType>(
+  value: AsyncIterable<ReturnType>,
+): value is AsyncGenerator<ReturnType> {
+  const iterator = value as AsyncIterable<ReturnType> & Partial<AsyncIterator<ReturnType>>;
+  return (
+    typeof iterator.next === "function" &&
+    typeof iterator.return === "function" &&
+    typeof iterator.throw === "function" &&
+    Object.is(value[Symbol.asyncIterator](), value)
+  );
+}
+
 function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
   return (
     ((typeof value === "object" && value !== null) || typeof value === "function") &&
@@ -135,6 +147,50 @@ function traceAsyncIterable<ReturnType>(
   };
 }
 
+function traceAsyncGenerator<ReturnType>(
+  generator: AsyncGenerator<ReturnType>,
+  span: Span,
+): AsyncIterableIterator<ReturnType> {
+  const spanContext = trace.setSpan(context.active(), span);
+  let hasEnded = false;
+  const endSpan = (): void => {
+    if (!hasEnded) {
+      hasEnded = true;
+      span.end();
+    }
+  };
+  const call = async (
+    operation: () => Promise<IteratorResult<ReturnType>>,
+  ): Promise<IteratorResult<ReturnType>> => {
+    try {
+      const result = await context.with(spanContext, operation);
+      if (result.done) {
+        endSpan();
+      }
+      return result;
+    } catch (error) {
+      recordError(error, span);
+      endSpan();
+      throw error;
+    }
+  };
+  const tracedIterator: AsyncIterableIterator<ReturnType> = {
+    [Symbol.asyncIterator]() {
+      return tracedIterator;
+    },
+    next(value?: unknown) {
+      return call(() => generator.next(value));
+    },
+    return(value?: unknown) {
+      return call(() => generator.return(value));
+    },
+    throw(error?: unknown) {
+      return call(() => generator.throw(error));
+    },
+  };
+  return tracedIterator;
+}
+
 function cloneOptions(options: TraceDecoratorOptions): TraceDecoratorOptions {
   return {
     ...(options.name === undefined ? {} : { name: options.name }),
@@ -191,23 +247,30 @@ export function Trace<Args extends unknown[] = unknown[], ReturnType = unknown>(
         try {
           const result = originalMethod.apply(this, args);
 
+          if (isPromiseLike(result)) {
+            return Promise.resolve(result)
+              .catch((error) => {
+                recordError(error, span);
+                throw error;
+              })
+              .finally(() => {
+                span.end();
+              });
+          }
+
           if (isAsyncIterable<ReturnType>(result)) {
-            return traceAsyncIterable(result, span);
+            if (isAsyncGenerator(result)) {
+              return traceAsyncGenerator(result, span);
+            }
+
+            const prototype = Object.getPrototypeOf(result);
+            if (prototype === Object.prototype || prototype === null) {
+              return traceAsyncIterable(result, span);
+            }
           }
 
-          if (!isPromiseLike(result)) {
-            span.end();
-            return result;
-          }
-
-          return Promise.resolve(result)
-            .catch((error) => {
-              recordError(error, span);
-              throw error;
-            })
-            .finally(() => {
-              span.end();
-            });
+          span.end();
+          return result;
         } catch (error) {
           recordError(error, span);
           span.end();
