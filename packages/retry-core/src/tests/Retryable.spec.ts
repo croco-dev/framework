@@ -361,6 +361,103 @@ describe("@Retryable", () => {
     expect(recordFailure).toHaveBeenCalledWith(error);
   });
 
+  it("retries an explicitly retryable caller Problem without opening the default circuit", async () => {
+    class RetryableConflictProblem extends Problem {
+      constructor() {
+        super("TEST_RETRYABLE_CONFLICT", ProblemCategory.Conflict, "Retry this conflict", {
+          extensions: { retryable: true },
+        });
+      }
+    }
+    const problem = new RetryableConflictProblem();
+    let attempts = 0;
+
+    class TestService {
+      @Retryable({
+        maxAttempts: 2,
+        backoffPolicy: new NoBackoff(),
+        circuitBreaker: { failureThreshold: 1 },
+      })
+      async doWork(): Promise<string> {
+        attempts++;
+        if (attempts === 1) throw problem;
+        return "success";
+      }
+    }
+
+    await expect(new TestService().doWork()).resolves.toBe("success");
+    expect(attempts).toBe(2);
+  });
+
+  it("counts an explicitly non-retryable server Problem without retrying it", async () => {
+    class NonRetryableServerProblem extends Problem {
+      constructor() {
+        super(
+          "TEST_NONRETRYABLE_SERVER_FAILURE",
+          ProblemCategory.InternalServerError,
+          "Do not retry this server failure",
+          {
+            extensions: { retryable: false },
+          },
+        );
+      }
+    }
+    const problem = new NonRetryableServerProblem();
+    let attempts = 0;
+
+    class TestService {
+      @Retryable({
+        maxAttempts: 3,
+        backoffPolicy: new NoBackoff(),
+        circuitBreaker: { failureThreshold: 1 },
+      })
+      async doWork(): Promise<void> {
+        attempts++;
+        throw problem;
+      }
+    }
+
+    const service = new TestService();
+    await expect(service.doWork()).rejects.toBe(problem);
+    await expect(service.doWork()).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    expect(attempts).toBe(1);
+  });
+
+  it("preserves explicit retries when the custom circuit predicate ignores the failure", async () => {
+    class RetryableServerProblem extends Problem {
+      constructor() {
+        super(
+          "TEST_IGNORED_RETRYABLE_SERVER_FAILURE",
+          ProblemCategory.InternalServerError,
+          "Retry without opening the circuit",
+          {
+            extensions: { retryable: true },
+          },
+        );
+      }
+    }
+    const problem = new RetryableServerProblem();
+    const recordFailure = vi.fn(() => false);
+    let attempts = 0;
+
+    class TestService {
+      @Retryable({
+        maxAttempts: 2,
+        backoffPolicy: new NoBackoff(),
+        circuitBreaker: { failureThreshold: 1, recordFailure },
+      })
+      async doWork(): Promise<string> {
+        attempts++;
+        if (attempts === 1) throw problem;
+        return "success";
+      }
+    }
+
+    await expect(new TestService().doWork()).resolves.toBe("success");
+    expect(attempts).toBe(2);
+    expect(recordFailure).toHaveBeenCalledExactlyOnceWith(problem);
+  });
+
   it("keeps open state for the default circuit id across sequential calls", async () => {
     const attempts: string[] = [];
 
