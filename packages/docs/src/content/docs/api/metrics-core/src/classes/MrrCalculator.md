@@ -8,7 +8,8 @@ title: "MrrCalculator"
 Calculator for Monthly Recurring Revenue (MRR).
 
 MRR measures the predictable monthly revenue generated from subscriptions.
-Annual plans are normalized to monthly equivalents (amount / 12).
+Plan amounts are normalized to monthly equivalents and rounded to whole minor units,
+with exact halves rounded away from zero. Totals sum the rounded amount per subscription.
 
 ## Constructors
 
@@ -118,4 +119,4 @@ Number of intervals per billing cycle
 
 `number`
 
-Normalized monthly MRR amount
+Normalized monthly MRR in whole minor units, rounded half up
