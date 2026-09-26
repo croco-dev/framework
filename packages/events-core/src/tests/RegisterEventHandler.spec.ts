@@ -39,6 +39,12 @@ class OrderCreatedHandler implements EventHandler<OrderCreated> {
   handle(_event: OrderCreated): void {}
 }
 
+@RegisterEventHandler(PaymentCaptured)
+@RegisterEventHandler(OrderCreated)
+class OrderPaymentProjection implements EventHandler<OrderCreated | PaymentCaptured> {
+  handle(_event: OrderCreated | PaymentCaptured): void {}
+}
+
 // @ts-expect-error A PaymentCaptured handler cannot subscribe to OrderCreated events.
 @RegisterEventHandler(OrderCreated)
 class PaymentCapturedHandler implements EventHandler<PaymentCaptured> {
@@ -172,6 +178,14 @@ class GenericThenZeroPriorityOrderCreatedHandler implements EventHandler<Priorit
 }
 
 describe("RegisterEventHandler", () => {
+  it("keeps a subscription for every decorated event", () => {
+    expect(
+      getEventHandlerSubscriptions(OrderPaymentProjection)
+        .map(({ eventName }) => eventName)
+        .sort(),
+    ).toEqual(["order.created", "payment.captured"]);
+  });
+
   it("preserves an explicit handler identity independently of the constructor name", () => {
     class RenamedHandler implements EventHandler<OrderCreated> {
       handle(_event: OrderCreated): void {}

@@ -107,10 +107,16 @@ export function RegisterEventHandler<TEvent extends DomainEvent, TArgs extends u
   options?: { eventName?: string; handlerId?: string },
 ) {
   return <T extends AnyEventHandlerClass>(f: CompatibleEventHandlerClass<T, TEvent>): void => {
-    MetadataStorage.define(EVENT_HANDLER_SUBSCRIPTION_METADATA, f, {
-      eventName: options?.eventName ?? eventClass.eventName ?? eventClass.name,
-      handlerClass: f,
-      ...(options?.handlerId === undefined ? {} : { handlerId: options.handlerId }),
-    });
+    const eventName = options?.eventName ?? eventClass.eventName ?? eventClass.name;
+    MetadataStorage.define(
+      EVENT_HANDLER_SUBSCRIPTION_METADATA,
+      f,
+      {
+        eventName,
+        handlerClass: f,
+        ...(options?.handlerId === undefined ? {} : { handlerId: options.handlerId }),
+      },
+      eventName,
+    );
   };
 }

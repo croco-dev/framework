@@ -5,6 +5,8 @@ import {
   PlanChangedEvent,
   SubscriptionCanceledEvent,
 } from "@croco/billing-core";
+import { EventBusConfig } from "@croco/events-core";
+import type { DomainEvent, EventBus, EventSubscription } from "@croco/events-core";
 import type { MetricsRepository, MRRMovement } from "@croco/metrics-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BillingEventHandler } from "../libs/BillingEventHandler";
@@ -153,6 +155,30 @@ describe("BillingEventHandler", () => {
     metricsRepository = createMetricsRepository();
 
     handler = new BillingEventHandler(planRegistry, billingStore, metricsRepository);
+  });
+
+  it("subscribes to every decorated billing event when the bus starts", async () => {
+    const subscriptions: EventSubscription[] = [];
+    const eventBus = {
+      subscribe: (subscription: EventSubscription) => {
+        subscriptions.push(subscription);
+      },
+      unsubscribe: () => undefined,
+      clear: () => undefined,
+      publish: async (_event: DomainEvent) => undefined,
+    } as unknown as EventBus;
+    const config = new EventBusConfig();
+    config.setEventBus(eventBus);
+
+    await config.start({ handlers: [BillingEventHandler], resolver: { resolve: () => handler } });
+
+    expect(subscriptions.map(({ eventName }) => eventName).sort()).toEqual(
+      [
+        OrderPaidEvent.eventName,
+        PlanChangedEvent.eventName,
+        SubscriptionCanceledEvent.eventName,
+      ].sort(),
+    );
   });
 
   describe("OrderPaidEvent", () => {
