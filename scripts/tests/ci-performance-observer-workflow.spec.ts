@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { parseDocument } from "yaml";
@@ -301,6 +301,104 @@ describe("CI performance observer workflow", () => {
       "execution-commit.json",
     ]) {
       expect(source, forbidden).not.toContain(forbidden);
+    }
+  });
+
+  it("rejects a recorded verification identity that is not a full commit OID before fetching it", () => {
+    const metadata = parsedWorkflow().jobs?.observe?.steps?.find(
+      ({ name }) => name === "Read source run metadata",
+    );
+    expect(metadata?.run).toContain(
+      'for recorded_sha in "$recorded_base_sha" "$recorded_head_sha" "$recorded_candidate_sha"; do',
+    );
+    expect(metadata?.run).toContain('if [[ ! "$source_head_sha" =~ ^[0-9a-f]{40}$ ]]; then');
+    expect(metadata?.run).toContain("Recorded verification identity is not a full commit OID.");
+    expect(
+      metadata?.run?.indexOf("Recorded verification identity is not a full commit OID."),
+    ).toBeLessThan(metadata?.run?.indexOf('case "$source_event" in') ?? -1);
+
+    const workspace = mkdtempSync(join(tmpdir(), "croco-ci-observer-metadata-"));
+    try {
+      const verificationDir = join(workspace, "ci-observer-input/verification");
+      mkdirSync(verificationDir, { recursive: true });
+      writeFileSync(
+        join(verificationDir, "spine-evidence.json"),
+        JSON.stringify({
+          provenance: {
+            verificationIdentity: {
+              baseSha: "1".repeat(40),
+              headSha: "2".repeat(40),
+              candidateSha: `${"3".repeat(40)}:refs/heads/malicious`,
+            },
+          },
+        }),
+      );
+      const ghPath = join(workspace, "gh");
+      writeFileSync(
+        ghPath,
+        `#!/usr/bin/env bash\nprintf '%s\\n' '{"event":"pull_request","head_sha":"${"4".repeat(40)}"}'\n`,
+      );
+      chmodSync(ghPath, 0o755);
+      const result = spawnSync("bash", ["-eo", "pipefail", "-c", metadata?.run ?? ""], {
+        cwd: workspace,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          DEFAULT_BRANCH: "trunk",
+          GH_TOKEN: "test-token",
+          GITHUB_REPOSITORY: "croco/framework",
+          PATH: `${workspace}:${process.env.PATH ?? ""}`,
+          SOURCE_RUN_ID: "1",
+        },
+      });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("Recorded verification identity is not a full commit OID.");
+    } finally {
+      rmSync(workspace, { force: true, recursive: true });
+    }
+  });
+
+  it("fails a non-cancelled run whose split artifact set is missing a lane", () => {
+    const splitDownload = parsedWorkflow().jobs?.observe?.steps?.find(
+      ({ name }) => name === "Download exact split evidence when present",
+    );
+    expect(splitDownload?.run).toContain(
+      "Expected an exact five-artifact Phase B split evidence set.",
+    );
+
+    const workspace = mkdtempSync(join(tmpdir(), "croco-ci-observer-split-"));
+    try {
+      mkdirSync(join(workspace, "ci-observer-input"), { recursive: true });
+      const artifacts = {
+        total_count: 4,
+        artifacts: [
+          { name: "ci-lane-core-verification-1-1", expired: false },
+          { name: "ci-lane-generated-apps-1-1", expired: false },
+          { name: "ci-lane-package-artifacts-1-1", expired: false },
+          { name: "ci-lane-coverage-security-1-1", expired: false },
+        ],
+      };
+      writeFileSync(join(workspace, "ci-observer-input/artifacts.json"), JSON.stringify(artifacts));
+      const ghPath = join(workspace, "gh");
+      writeFileSync(ghPath, "#!/usr/bin/env bash\nexit 99\n");
+      chmodSync(ghPath, 0o755);
+      const result = spawnSync("bash", ["-eo", "pipefail", "-c", splitDownload?.run ?? ""], {
+        cwd: workspace,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          GH_TOKEN: "test-token",
+          PATH: `${workspace}:${process.env.PATH ?? ""}`,
+          SOURCE_RUN_ATTEMPT: "1",
+          SOURCE_RUN_ID: "1",
+        },
+      });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(
+        "Expected an exact five-artifact Phase B split evidence set.",
+      );
+    } finally {
+      rmSync(workspace, { force: true, recursive: true });
     }
   });
 });

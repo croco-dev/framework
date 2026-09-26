@@ -321,7 +321,7 @@ describe("cacheable CI observation collector", () => {
     expect(evaluateDataset(dataset, { contractOnly: true }).failed).toBe(false);
   });
 
-  it("keeps a cancelled non-publish source run classified by its existing profile exclusion", () => {
+  it("keeps a cancelled non-publish source run in the profile exclusion", () => {
     const dataset = collectCacheableCiDataset(fixture({ cancelledNonPublishSourceRun: true }), {
       cutoffAt: CUTOFF,
       cohortStartedAt: COHORT_STARTED_AT,
@@ -335,7 +335,7 @@ describe("cacheable CI observation collector", () => {
     );
   });
 
-  it("classifies non-cancelled runs the same as before", () => {
+  it("classifies non-cancelled runs as eligible, profile-excluded, or missing-artifact operational sources", () => {
     const dataset = collectCacheableCiDataset(fixture(), {
       cutoffAt: CUTOFF,
       cohortStartedAt: COHORT_STARTED_AT,

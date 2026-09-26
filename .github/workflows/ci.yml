@@ -1237,7 +1237,7 @@ jobs:
             --security-artifact ci-reports/security/gitleaks.sarif \
             "${lane_args[@]}" \
             "${failure_args[@]}"
-      - name: Report advisory physical security failures
+      - name: Report physical security results
         if: always()
         env:
           SMOKE_EXIT: ${{ steps.physical_security.outputs.smoke_exit }}

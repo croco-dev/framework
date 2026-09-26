@@ -550,7 +550,7 @@ describe("Phase B cacheable verification shadow", () => {
     expect(security).toContain("Secret scan exit code: ${SCAN_EXIT:-unknown}");
     expect(security).not.toContain('test "$SMOKE_EXIT" = "0"');
     expect(security).not.toContain('test "$SCAN_EXIT" = "0"');
-    expect(security).toContain("name: Report advisory physical security failures");
+    expect(security).toContain("name: Report physical security results");
     expect(security).toContain(
       "This job records these results without failing; split synthesis blocks on them, and validate keeps its own blocking Gitleaks checks.",
     );

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -344,8 +344,57 @@ describe("immutable CI verification identity", () => {
           recorded: { baseSha: sideSha, headSha, candidateSha },
         }),
       ).toThrow(
-        expect.objectContaining({ code: "VERIFICATION_CANDIDATE_BASE_NOT_IN_DEFAULT_BRANCH" }),
+        expect.objectContaining({
+          code: "VERIFICATION_CANDIDATE_BASE_NOT_IN_DEFAULT_BRANCH",
+          category: "contract",
+        }),
       );
+    });
+
+    it("reports a read failure instead of a non-ancestor verdict when the default branch check errors", () => {
+      const { root, baseSha, headSha } = createPullRequestCandidate();
+      git(root, "switch", "--create", "side", baseSha);
+      const sideSha = commit(root, "side.txt", "side\n", "side");
+      const candidateSha = mergeCandidate(root, sideSha, headSha);
+
+      const realGitPath = execFileSync("bash", ["-lc", "command -v git"], {
+        encoding: "utf8",
+      }).trim();
+      const stubDir = temporaryDirectory();
+      const gitStubPath = join(stubDir, "git");
+      writeFileSync(
+        gitStubPath,
+        [
+          "#!/usr/bin/env bash",
+          'if [ "$1" = "merge-base" ] && [ "$2" = "--is-ancestor" ]; then',
+          '  echo "fatal: simulated ancestry read failure" >&2',
+          "  exit 128",
+          "fi",
+          `exec "${realGitPath}" "$@"`,
+          "",
+        ].join("\n"),
+      );
+      chmodSync(gitStubPath, 0o755);
+
+      const originalPath = process.env.PATH;
+      process.env.PATH = `${stubDir}:${originalPath ?? ""}`;
+      try {
+        expect(() =>
+          verifyRecordedRun({
+            root,
+            eventName: "pull_request",
+            runHeadSha: headSha,
+            recorded: { baseSha: sideSha, headSha, candidateSha },
+          }),
+        ).toThrow(
+          expect.objectContaining({
+            code: "VERIFICATION_CANDIDATE_BASE_ANCESTRY_READ_FAILED",
+            category: "input",
+          }),
+        );
+      } finally {
+        process.env.PATH = originalPath;
+      }
     });
 
     it("rejects a recorded base or head that differs from the candidate parents and run head", () => {

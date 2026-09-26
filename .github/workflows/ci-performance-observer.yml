@@ -98,8 +98,18 @@ jobs:
           recorded_base_sha=$(jq -er '.provenance.verificationIdentity.baseSha' "$verification_report")
           recorded_head_sha=$(jq -er '.provenance.verificationIdentity.headSha' "$verification_report")
           recorded_candidate_sha=$(jq -er '.provenance.verificationIdentity.candidateSha' "$verification_report")
+          for recorded_sha in "$recorded_base_sha" "$recorded_head_sha" "$recorded_candidate_sha"; do
+            if [[ ! "$recorded_sha" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "Recorded verification identity is not a full commit OID." >&2
+              exit 1
+            fi
+          done
           source_event=$(jq -er '.event' ci-observer-input/run.json)
           source_head_sha=$(jq -er '.head_sha' ci-observer-input/run.json)
+          if [[ ! "$source_head_sha" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "Recorded verification identity is not a full commit OID." >&2
+            exit 1
+          fi
           case "$source_event" in
             pull_request) candidate_sha="$recorded_candidate_sha" ;;
             push | workflow_dispatch) candidate_sha="$source_head_sha" ;;

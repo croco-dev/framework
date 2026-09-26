@@ -270,12 +270,34 @@ function assertDefaultBranchContains(
   defaultBranchRef: string,
 ): void {
   const defaultBranchSha = resolveCommit(rootDir, defaultBranchRef, "default branch");
-  gitOutput(
-    rootDir,
-    ["merge-base", "--is-ancestor", baseSha, defaultBranchSha],
-    "VERIFICATION_CANDIDATE_BASE_NOT_IN_DEFAULT_BRANCH",
-    `Checking that pull-request candidate base ${baseSha} is contained in default branch ${defaultBranchRef}`,
-  );
+  try {
+    execFileSync("git", ["merge-base", "--is-ancestor", baseSha, defaultBranchSha], {
+      cwd: rootDir,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: GIT_TIMEOUT_MS,
+    });
+  } catch (error) {
+    const exitStatus =
+      typeof error === "object" &&
+      error !== null &&
+      "status" in error &&
+      typeof error.status === "number"
+        ? error.status
+        : null;
+    if (exitStatus === 1) {
+      throw new VerificationProblem(
+        "VERIFICATION_CANDIDATE_BASE_NOT_IN_DEFAULT_BRANCH",
+        "contract",
+        `Pull-request candidate base ${baseSha} must be contained in default branch ${defaultBranchRef}`,
+      );
+    }
+    throw new VerificationProblem(
+      "VERIFICATION_CANDIDATE_BASE_ANCESTRY_READ_FAILED",
+      "input",
+      `Checking that pull-request candidate base ${baseSha} is contained in default branch ${defaultBranchRef} failed: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
 }
 
 export function verifyRecordedVerificationIdentity(
