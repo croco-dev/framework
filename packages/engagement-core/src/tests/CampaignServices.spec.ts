@@ -491,6 +491,53 @@ describe("CampaignServices", () => {
     expect(repeated).toEqual([2]);
   });
 
+  it("preserves outcome persistence failures on the first send error", async () => {
+    const fixture = createFixture(trialMembers(1), new FailOnceCampaignStore());
+    const { snapshot } = await fixture.snapshots.createSnapshot(TrialReminder, {
+      tenantId: "tenant-1",
+    });
+    const execution = await fixture.broadcasts.createExecution(
+      TrialReminder,
+      TENANT_SCOPE,
+      snapshot.id,
+      { pageSize: 1, concurrency: 1, maxAttempts: 2 },
+    );
+    fixture.sender.onSend = async () => {
+      throw new Error("provider temporarily unavailable");
+    };
+
+    const first = await fixture.broadcasts.execute(execution.id).catch((error: unknown) => error);
+
+    expect(first).toMatchObject({ message: "provider temporarily unavailable" });
+    expect(first).toHaveProperty(
+      "campaignFailureRecordError",
+      expect.objectContaining({ message: "campaign outcome store unavailable" }),
+    );
+  });
+
+  it("preserves an undefined send rejection after all workers settle", async () => {
+    const fixture = createFixture(trialMembers(1));
+    const { snapshot } = await fixture.snapshots.createSnapshot(TrialReminder, {
+      tenantId: "tenant-1",
+    });
+    const execution = await fixture.broadcasts.createExecution(
+      TrialReminder,
+      TENANT_SCOPE,
+      snapshot.id,
+      { pageSize: 1, concurrency: 1, maxAttempts: 2 },
+    );
+    fixture.sender.onSend = async () => Promise.reject(undefined);
+
+    let rejected = false;
+    try {
+      await fixture.broadcasts.execute(execution.id);
+    } catch (error) {
+      rejected = true;
+      expect(error).toBeUndefined();
+    }
+    expect(rejected).toBe(true);
+  });
+
   it("retries a transient member failure from the same snapshot and send identity", async () => {
     const fixture = createFixture(trialMembers(1));
     const { snapshot } = await fixture.snapshots.createSnapshot(TrialReminder, {
@@ -537,6 +584,242 @@ describe("CampaignServices", () => {
     expect(sendKey).toBeDefined();
     expect(fixture.sender.commands.map((command) => command.key)).toEqual([sendKey, sendKey]);
     expect(fixture.sender.attempts.get(sendKey as string)).toBe(2);
+  });
+
+  it("settles a failed attempt only after in-flight member sends finish", async () => {
+    const fixture = createFixture(trialMembers(3));
+    const { snapshot } = await fixture.snapshots.createSnapshot(TrialReminder, {
+      tenantId: "tenant-1",
+    });
+    const execution = await fixture.broadcasts.createExecution(
+      TrialReminder,
+      TENANT_SCOPE,
+      snapshot.id,
+      { pageSize: 3, concurrency: 2, maxAttempts: 2 },
+    );
+    let releaseUser1!: () => void;
+    const user1Held = new Promise<void>((resolve) => {
+      releaseUser1 = resolve;
+    });
+    let user1Started!: () => void;
+    const user1Entered = new Promise<void>((resolve) => {
+      user1Started = resolve;
+    });
+    let failUser0 = true;
+    fixture.sender.onSend = async ({ recipientId }) => {
+      if (recipientId === "user-1" && failUser0) {
+        user1Started();
+        await user1Held;
+      }
+      if (recipientId === "user-0" && failUser0) {
+        await user1Entered;
+        failUser0 = false;
+        throw new Error("provider temporarily unavailable");
+      }
+    };
+
+    let firstSettled = false;
+    const first = fixture.broadcasts
+      .execute(execution.id)
+      .catch((error: unknown) => error)
+      .finally(() => {
+        firstSettled = true;
+      });
+    await user1Entered;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const settledWhileUser1InFlight = firstSettled;
+    const sendsBeforeRelease = fixture.sender.commands.map(({ recipientId }) => recipientId);
+    releaseUser1();
+
+    await expect(first).resolves.toMatchObject({ message: "provider temporarily unavailable" });
+    expect(settledWhileUser1InFlight).toBe(false);
+    expect(sendsBeforeRelease).toEqual(["user-0", "user-1"]);
+    expect(fixture.sender.active).toBe(0);
+    await expect(fixture.executionManager.get(execution.id)).resolves.toMatchObject({
+      status: "retrying",
+    });
+    await fixture.broadcasts.execute(execution.id);
+    expect(fixture.sender.commands.map(({ recipientId }) => recipientId)).toEqual([
+      "user-0",
+      "user-1",
+      "user-0",
+      "user-2",
+    ]);
+  });
+
+  it("stops new sends and preserves the first error while outcomes are recorded", async () => {
+    let releaseFailure!: () => void;
+    const failureHeld = new Promise<void>((resolve) => {
+      releaseFailure = resolve;
+    });
+    let failureRecordStarted!: () => void;
+    const failureRecording = new Promise<void>((resolve) => {
+      failureRecordStarted = resolve;
+    });
+    let secondFailureRecorded!: () => void;
+    const secondFailureRecording = new Promise<void>((resolve) => {
+      secondFailureRecorded = resolve;
+    });
+    class HeldOutcomeStore extends RecordingCampaignStore {
+      override async recordMemberOutcome(
+        input: RecordCampaignMemberOutcomeInput,
+      ): Promise<CampaignMemberOutcome> {
+        if (input.memberKey === "subscription-0" && input.status === "failed") {
+          failureRecordStarted();
+          await failureHeld;
+        }
+        const outcome = await super.recordMemberOutcome(input);
+        if (input.memberKey === "subscription-1") secondFailureRecorded();
+        return outcome;
+      }
+    }
+    const fixture = createFixture(trialMembers(3), new HeldOutcomeStore());
+    const { snapshot } = await fixture.snapshots.createSnapshot(TrialReminder, {
+      tenantId: "tenant-1",
+    });
+    const execution = await fixture.broadcasts.createExecution(
+      TrialReminder,
+      TENANT_SCOPE,
+      snapshot.id,
+      { pageSize: 3, concurrency: 2, maxAttempts: 2 },
+    );
+    fixture.sender.onSend = async ({ recipientId }) => {
+      if (recipientId === "user-0") throw new Error("first provider failure");
+      if (recipientId === "user-1") {
+        await failureRecording;
+        throw new Error("second provider failure");
+      }
+    };
+
+    const first = fixture.broadcasts.execute(execution.id).catch((error: unknown) => error);
+    await secondFailureRecording;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const sendsWhileFailureUnrecorded = fixture.sender.commands.map(
+      ({ recipientId }) => recipientId,
+    );
+    releaseFailure();
+
+    await expect(first).resolves.toMatchObject({ message: "first provider failure" });
+    expect(sendsWhileFailureUnrecorded).toEqual(["user-0", "user-1"]);
+  });
+
+  it("does not dispatch a claimed member after another send fails", async () => {
+    let releaseLookup!: () => void;
+    const lookupHeld = new Promise<void>((resolve) => {
+      releaseLookup = resolve;
+    });
+    let lookupStarted!: () => void;
+    const lookupPending = new Promise<void>((resolve) => {
+      lookupStarted = resolve;
+    });
+    let failureRecorded!: () => void;
+    const failureRecording = new Promise<void>((resolve) => {
+      failureRecorded = resolve;
+    });
+    class HeldLookupStore extends RecordingCampaignStore {
+      private holdUser1 = true;
+
+      override async getMemberOutcome(
+        scope: typeof TENANT_SCOPE,
+        snapshotId: string,
+        memberKey: string,
+      ): Promise<CampaignMemberOutcome | undefined> {
+        if (memberKey === "subscription-1" && this.holdUser1) {
+          this.holdUser1 = false;
+          lookupStarted();
+          await lookupHeld;
+        }
+        return super.getMemberOutcome(scope, snapshotId, memberKey);
+      }
+
+      override async recordMemberOutcome(
+        input: RecordCampaignMemberOutcomeInput,
+      ): Promise<CampaignMemberOutcome> {
+        const outcome = await super.recordMemberOutcome(input);
+        if (input.memberKey === "subscription-0" && input.status === "failed") failureRecorded();
+        return outcome;
+      }
+    }
+    const fixture = createFixture(trialMembers(2), new HeldLookupStore());
+    const { snapshot } = await fixture.snapshots.createSnapshot(TrialReminder, {
+      tenantId: "tenant-1",
+    });
+    const execution = await fixture.broadcasts.createExecution(
+      TrialReminder,
+      TENANT_SCOPE,
+      snapshot.id,
+      { pageSize: 2, concurrency: 2, maxAttempts: 2 },
+    );
+    let failUser0 = true;
+    fixture.sender.onSend = async ({ recipientId }) => {
+      if (recipientId === "user-0" && failUser0) {
+        await lookupPending;
+        failUser0 = false;
+        throw new Error("provider temporarily unavailable");
+      }
+    };
+
+    const first = fixture.broadcasts.execute(execution.id).catch((error: unknown) => error);
+    await failureRecording;
+    releaseLookup();
+    await expect(first).resolves.toMatchObject({ message: "provider temporarily unavailable" });
+    expect(fixture.sender.commands.map(({ recipientId }) => recipientId)).toEqual(["user-0"]);
+
+    await fixture.broadcasts.execute(execution.id);
+    expect(fixture.sender.commands.map(({ recipientId }) => recipientId)).toEqual([
+      "user-0",
+      "user-0",
+      "user-1",
+    ]);
+  });
+
+  it("records concurrent member failures and throws the first error", async () => {
+    const fixture = createFixture(trialMembers(3));
+    const { snapshot } = await fixture.snapshots.createSnapshot(TrialReminder, {
+      tenantId: "tenant-1",
+    });
+    const execution = await fixture.broadcasts.createExecution(
+      TrialReminder,
+      TENANT_SCOPE,
+      snapshot.id,
+      { pageSize: 3, concurrency: 2, maxAttempts: 2 },
+    );
+    let releaseUser1!: () => void;
+    const user1Held = new Promise<void>((resolve) => {
+      releaseUser1 = resolve;
+    });
+    let user1Started!: () => void;
+    const user1Entered = new Promise<void>((resolve) => {
+      user1Started = resolve;
+    });
+    fixture.sender.onSend = async ({ recipientId }) => {
+      if (recipientId === "user-0") {
+        await user1Entered;
+        throw new Error("first provider failure");
+      }
+      if (recipientId === "user-1") {
+        user1Started();
+        await user1Held;
+        throw new Error("second provider failure");
+      }
+    };
+
+    const first = fixture.broadcasts.execute(execution.id).catch((error: unknown) => error);
+    await user1Entered;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    releaseUser1();
+
+    await expect(first).resolves.toMatchObject({ message: "first provider failure" });
+    await expect(
+      fixture.store.getMemberOutcome(TENANT_SCOPE, snapshot.id, "subscription-0"),
+    ).resolves.toMatchObject({ status: "failed", retryable: true });
+    await expect(
+      fixture.store.getMemberOutcome(TENANT_SCOPE, snapshot.id, "subscription-1"),
+    ).resolves.toMatchObject({ status: "failed", retryable: true });
+    expect(fixture.sender.commands.map(({ recipientId }) => recipientId)).toEqual([
+      "user-0",
+      "user-1",
+    ]);
   });
 
   it("does not resend terminal member failures when retrying an uncheckpointed page", async () => {

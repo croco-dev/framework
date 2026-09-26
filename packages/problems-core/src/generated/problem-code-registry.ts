@@ -6878,7 +6878,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/CampaignServices.ts",
-          line: 535,
+          line: 544,
           column: 5,
           kind: "problem-constructor",
         },
@@ -6909,7 +6909,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/CampaignServices.ts",
-          line: 510,
+          line: 519,
           column: 5,
           kind: "problem-constructor",
         },
@@ -6940,7 +6940,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/CampaignServices.ts",
-          line: 518,
+          line: 527,
           column: 5,
           kind: "problem-constructor",
         },
@@ -6973,7 +6973,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/CampaignServices.ts",
-          line: 546,
+          line: 555,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7037,7 +7037,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/CampaignServices.ts",
-          line: 499,
+          line: 508,
           column: 5,
           kind: "problem-constructor",
         },
