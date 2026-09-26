@@ -48,8 +48,8 @@ describe("scheduled live test workflow", () => {
 
     for (const name of [
       "Checkout",
-      "Setup pnpm",
-      "Setup Node.js",
+      "Setup Node.js and pnpm",
+      "Cache pnpm store",
       "Install dependencies",
       "Build live test dependency graphs",
     ]) {

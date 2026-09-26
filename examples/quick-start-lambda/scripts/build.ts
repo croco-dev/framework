@@ -43,7 +43,7 @@ const options: BuildOptions = {
   format: "cjs",
   platform: "node",
   packages: "external",
-  target: "node22",
+  target: "node24",
   tsconfig: "tsconfig.json",
   plugins: [crocoPlugin(), ...(watch ? [restartServerPlugin] : [])],
 };

@@ -1,4 +1,5 @@
 import "reflect-metadata";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it, vi } from "vitest";
 import { NoBackoff } from "../libs/BackoffPolicy";
 import { CircuitBreaker } from "../libs/CircuitBreaker";
@@ -47,6 +48,32 @@ describe("@Retryable", () => {
 
     expect(result).toBe("success");
     expect(attempts).toBe(3);
+  });
+
+  it("runs a Problem declaring extensions.retryable=false once under the default policy", async () => {
+    class PermanentProviderProblem extends Problem {
+      constructor() {
+        super(
+          "TEST_PERMANENT_PROVIDER_FAILURE",
+          ProblemCategory.InternalServerError,
+          "Provider rejected permanently",
+          { extensions: { retryable: false } },
+        );
+      }
+    }
+    const problem = new PermanentProviderProblem();
+    let attempts = 0;
+
+    class TestService {
+      @Retryable({ maxAttempts: 3, backoffPolicy: new NoBackoff() })
+      async doWork(): Promise<string> {
+        attempts++;
+        throw problem;
+      }
+    }
+
+    await expect(new TestService().doWork()).rejects.toBe(problem);
+    expect(attempts).toBe(1);
   });
 
   it("forwards caller cancellation to the retry engine", async () => {

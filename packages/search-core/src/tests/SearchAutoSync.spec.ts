@@ -1,5 +1,6 @@
 import type { Constructor, ILogger } from "@croco/framework-context";
 import { Container, Context, LOGGER_TOKEN, MetadataStorage } from "@croco/framework-context";
+import { getEventHandlerSubscriptions } from "@croco/events-core";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { Searchable, type SearchableMetadata } from "../libs/decorators/Searchable";
 import {
@@ -10,6 +11,8 @@ import {
 import { SearchEngine } from "../libs/SearchEngine";
 import { SearchSyncIdentityConflictProblem } from "../libs/problems/SearchProblems";
 import { SearchAutoSync, type SearchSyncFailedEventPublisher } from "../libs/sync/SearchAutoSync";
+
+const declaredSubscriptions = getEventHandlerSubscriptions(SearchAutoSync);
 
 describe("SearchAutoSync", () => {
   let searchAutoSync!: SearchAutoSync;
@@ -75,12 +78,10 @@ describe("SearchAutoSync", () => {
     expect(searchAutoSync).not.toBeNull();
   });
 
-  it("should register both index and delete events with domain event names", async () => {
-    const subscribeCalls: string[] = [];
-    subscribeCalls.push(DocumentIndexedEvent.eventName, DocumentDeletedEvent.eventName);
-
-    expect(subscribeCalls).toContain(DocumentIndexedEvent.eventName);
-    expect(subscribeCalls).toContain(DocumentDeletedEvent.eventName);
+  it("should register both index and delete events with domain event names", () => {
+    expect(declaredSubscriptions.map(({ eventName }) => eventName).sort()).toEqual(
+      [DocumentDeletedEvent.eventName, DocumentIndexedEvent.eventName].sort(),
+    );
   });
 
   it("should compile unique metadata registered before and after the first event", async () => {

@@ -56,7 +56,7 @@ Container.register(BillingEventHandler, {
 - `subscription_reactivation`: `reactivation` MRR 기록
 - `subscription_cycle`: 갱신 결제이므로 MRR movement를 기록하지 않음
 - `subscription_update`, `one_time`: 활성 구독 MRR을 새로 만들지 않으므로 movement를 기록하지 않음
-- 연간 플랜: 월별 MRR로 정규화 (amount / 12)
+- 연간 플랜: 월별 MRR로 정규화한 뒤 구독별로 가장 가까운 정수 minor unit으로 반올림합니다 (정확히 절반이면 0에서 먼 방향).
 
 ### PlanChangedEvent
 

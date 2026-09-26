@@ -75,8 +75,6 @@ import type { MaterializationEvidence, TestInventoryEntry } from "./test-invento
 const DEFAULT_TENANT_MODEL = "org";
 const GENERATED_NODE_VERSION = VERSIONS.node;
 const GENERATED_NODE_ENGINE_RANGE = `>=${GENERATED_NODE_VERSION}`;
-const SAAS_GENERATED_NODE_VERSION = "22.5";
-const SAAS_GENERATED_NODE_ENGINE_RANGE = ">=22.5";
 const GRAPHQL_CONTRACT_CHECK_LABEL = "GraphQL contract check";
 const GRAPHQL_CONTRACT_SNAPSHOT_LABEL = "GraphQL contract snapshot";
 const GRAPHQL_CONTRACT_SNAPSHOT_PATH = "graphql-contract.snapshot.json";
@@ -3341,12 +3339,8 @@ function assertGeneratedNodeRuntimeContract(projectDir: string, smokeCase: Smoke
   };
   const nvmrc = readFileSync(join(projectDir, ".nvmrc"), "utf8");
   const readme = readFileSync(join(projectDir, "README.md"), "utf8");
-  const expectedEngineRange = smokeCase.matrixTargets.includes("saas")
-    ? SAAS_GENERATED_NODE_ENGINE_RANGE
-    : GENERATED_NODE_ENGINE_RANGE;
-  const expectedNodeVersion = smokeCase.matrixTargets.includes("saas")
-    ? SAAS_GENERATED_NODE_VERSION
-    : GENERATED_NODE_VERSION;
+  const expectedEngineRange = GENERATED_NODE_ENGINE_RANGE;
+  const expectedNodeVersion = GENERATED_NODE_VERSION;
 
   if (packageJson.engines?.node !== expectedEngineRange) {
     throw new Error(
@@ -3741,7 +3735,7 @@ function ensureGeneratedVerificationBaseline(validationDir: string): void {
   run("git", ["init", "--quiet"], validationDir);
   run("git", ["config", "user.email", "generated-smoke@croco.local"], validationDir);
   run("git", ["config", "user.name", "Croco Generated Smoke"], validationDir);
-  run("git", ["add", "-A", "--", ".", ":(exclude)**/node_modules/**"], validationDir);
+  run("git", ["add", "-A", "--", ".", ":(glob,exclude)**/node_modules/**"], validationDir);
   run("git", ["commit", "--quiet", "-m", "generated verification baseline"], validationDir);
 }
 

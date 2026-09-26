@@ -1,4 +1,4 @@
-import { Problem, ProblemCategory } from "@croco/problems-core";
+import { Problem, ProblemCategory, readExplicitRetryability } from "@croco/problems-core";
 import { RetrySuccessHookProblem } from "./errors";
 
 /**
@@ -19,13 +19,16 @@ export interface RetryPolicy {
  * Options for configuring retry behavior.
  */
 export interface RetryPolicyOptions {
-  /** Exception classes to retry (empty = retry all except noRetryFor) */
+  /**
+   * Exception classes to always retry. Other Problems follow `retryForCategories`, and other errors
+   * retry only while this list is empty. `noRetryFor` and an explicit `retryable` flag on the error win.
+   */
   retryFor?: Array<new (message?: string) => Error>;
 
-  /** Exception classes to never retry */
+  /** Exception classes to never retry, even when the error declares `retryable: true` */
   noRetryFor?: Array<new (message?: string) => Error>;
 
-  /** ProblemCategory values to retry (croco integration) */
+  /** ProblemCategory values to retry (croco integration); an explicit `retryable` flag on the error wins */
   retryForCategories?: ProblemCategory[];
 
   /** Positive safe-integer maximum attempts (default: 3). */
@@ -47,7 +50,7 @@ export const DEFAULT_NO_RETRY_FOR: Array<new (message?: string) => Error> = [
 ];
 
 /**
- * Default retry policy with ProblemCategory support.
+ * Default retry policy that honors an error's explicit `retryable` classification before ProblemCategory.
  */
 export class DefaultRetryPolicy implements RetryPolicy {
   private readonly retryFor: Array<new (message?: string) => Error>;
@@ -73,6 +76,11 @@ export class DefaultRetryPolicy implements RetryPolicy {
     // Check noRetryFor first (highest priority)
     if (error instanceof Error && this.noRetryFor.some((cls) => error instanceof cls)) {
       return false;
+    }
+
+    const explicitRetryability = readExplicitRetryability(error);
+    if (explicitRetryability !== undefined) {
+      return explicitRetryability;
     }
 
     // Check explicit retryFor

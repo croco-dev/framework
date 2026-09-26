@@ -164,7 +164,7 @@ export function collectCompilerBaselineDiagnostics(rootDir: string): string[] {
       diagnostics,
       `create-croco-app ${templateName} manifest devDependencies.@types/node`,
       nestedString(generatedRootManifest, "devDependencies", "@types/node"),
-      "^22",
+      "^24",
     );
   }
   for (const templateName of ["saas", "spa-be-split"]) {

@@ -131,7 +131,7 @@ describe("verification change classifier", () => {
     [["turbo.json"], "publish"],
     [["vitest.config.ts"], "publish"],
     [["tsconfig.json"], "publish"],
-    [[".nvmrc"], "publish"],
+    [["mise.toml"], "publish"],
     [[".gitignore"], "publish"],
   ] as const)("routes pull request files %j to %s", (files, profile) => {
     expect(classifyVerificationChanges("pull_request", files, "ci")).toMatchObject({

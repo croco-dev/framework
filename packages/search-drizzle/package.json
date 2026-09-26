@@ -49,7 +49,7 @@
   "devDependencies": {
     "@croco/testing": "workspace:*",
     "@croco/tx-drizzle": "workspace:*",
-    "@types/node": "^22",
+    "@types/node": "^24",
     "drizzle-orm": "catalog:",
     "tsup": "8.5.1",
     "typescript": "5.9.3",

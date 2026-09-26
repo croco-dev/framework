@@ -3722,8 +3722,8 @@ Sources:
 - Redaction policy: `public`
 - Lifecycle: `active`
 - Cause: The detected Node.js version is outside the supported generated-app toolchain train.
-- User action: Install and activate Node.js 22 with `nvm install 22 && nvm use 22`, then rerun the command.
-- Operator action: Compare the reported actual Node.js version with the supported Node.js 22 train and verify the active version-manager configuration.
+- User action: Install and activate Node.js 24 with `nvm install 24 && nvm use 24`, then rerun the command.
+- Operator action: Compare the reported actual Node.js version with the supported Node.js 24 train and verify the active version-manager configuration.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
@@ -14552,7 +14552,7 @@ Sources:
 
 Sources:
 
-- `packages/triggers-qstash/src/libs/QStashTriggerHandler.ts:399:13` (problem-metadata)
+- `packages/triggers-qstash/src/libs/QStashTriggerHandler.ts:400:13` (problem-metadata)
 
 <a id="triggers-qstash-invalid-execution-timeout"></a>
 
@@ -14570,7 +14570,7 @@ Sources:
 
 Sources:
 
-- `packages/triggers-qstash/src/libs/QStashTriggerHandler.ts:243:13` (problem-factory)
+- `packages/triggers-qstash/src/libs/QStashTriggerHandler.ts:244:13` (problem-factory)
 
 <a id="triggers-qstash-invalid-sync-mode"></a>
 
@@ -14606,7 +14606,7 @@ Sources:
 
 Sources:
 
-- `packages/triggers-qstash/src/libs/QStashTriggerHandler.ts:256:13` (problem-factory)
+- `packages/triggers-qstash/src/libs/QStashTriggerHandler.ts:257:13` (problem-factory)
 
 <a id="trpc-access-denied"></a>
 

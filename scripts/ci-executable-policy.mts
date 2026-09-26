@@ -104,6 +104,7 @@ const packageBinaryAliases: Readonly<Record<string, string>> = {
 const taggedDigestPattern = /(?:^|\/)[^/@\s]+:[^/@\s]+@sha256:[a-f0-9]{64}\b/i;
 const dockerActionDigestPattern = /^[^@\s]+:[^/@\s]+@sha256:[a-f0-9]{64}$/i;
 const fullCommitShaPattern = /^[a-f0-9]{40}$/;
+const pnpmLockfileDocumentSeparator = "\n---\n";
 const semanticVersionCommentPattern = /^#\s*v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?\s*$/;
 const executableDownloadPattern =
   /(?:\/releases\/download\/|\.(?:AppImage|bin|bz2|exe|gz|msi|sh|tar|tgz|xz|zip)(?:[?#\s]|$))/i;
@@ -570,7 +571,7 @@ function hasLockfileEvidence(rootDir: string, packageName: string, version: stri
   if (!existsSync(lockfilePath)) {
     return false;
   }
-  const lockfile = readFileSync(lockfilePath, "utf-8");
+  const lockfile = readProjectLockfileDocument(readFileSync(lockfilePath, "utf-8"));
   const rootImporter =
     /(?:^|\n) {2}\.:\s*\n([\s\S]*?)(?=\n {2}\S[^\n]*:\s*\n|\npackages:\s*\n|$)/.exec(lockfile)?.[1];
   if (!rootImporter) {
@@ -581,6 +582,14 @@ function hasLockfileEvidence(rootDir: string, packageName: string, version: stri
   return new RegExp(
     `(?:^|\\n)\\s{6}(?:['"]?${escapedName}['"]?):\\s*\\n\\s{8}specifier:\\s*['"]?${escapedVersion}['"]?(?:\\s|$)`,
   ).test(rootImporter);
+}
+
+function readProjectLockfileDocument(lockfile: string): string {
+  const normalized = lockfile.replaceAll("\r\n", "\n");
+  const separatorIndex = normalized.indexOf(pnpmLockfileDocumentSeparator);
+  return separatorIndex === -1
+    ? normalized
+    : normalized.slice(separatorIndex + pnpmLockfileDocumentSeparator.length);
 }
 
 function isLockfileBackedPnpmExec(

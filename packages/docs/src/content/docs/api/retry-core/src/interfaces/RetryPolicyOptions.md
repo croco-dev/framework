@@ -26,7 +26,7 @@ Positive safe-integer maximum attempts (default: 3).
 
 > `optional` **noRetryFor?**: (`message?`) => `Error`[]
 
-Exception classes to never retry
+Exception classes to never retry, even when the error declares `retryable: true`
 
 #### Parameters
 
@@ -44,7 +44,8 @@ Exception classes to never retry
 
 > `optional` **retryFor?**: (`message?`) => `Error`[]
 
-Exception classes to retry (empty = retry all except noRetryFor)
+Exception classes to always retry. Other Problems follow `retryForCategories`, and other errors
+retry only while this list is empty. `noRetryFor` and an explicit `retryable` flag on the error win.
 
 #### Parameters
 
@@ -62,4 +63,4 @@ Exception classes to retry (empty = retry all except noRetryFor)
 
 > `optional` **retryForCategories?**: [`ProblemCategory`](/api/problems-core/src/enumerations/problemcategory/)[]
 
-ProblemCategory values to retry (croco integration)
+ProblemCategory values to retry (croco integration); an explicit `retryable` flag on the error wins

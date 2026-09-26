@@ -28,7 +28,7 @@
   },
   "devDependencies": {
     "@croco/testing": "workspace:*",
-    "@types/node": "^22",
+    "@types/node": "^24",
     "tsx": "^4.19.0",
     "typescript": "^6.0.3",
     "vitest": "4.1.8"

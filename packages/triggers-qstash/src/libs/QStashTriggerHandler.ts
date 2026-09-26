@@ -11,6 +11,7 @@ import {
   ProblemCategory,
   ProblemCategoryMapper,
   ProblemFactory,
+  readExplicitRetryability,
 } from "@croco/problems-core";
 import { triggerRegistry } from "@croco/triggers-core";
 import { QstashError } from "@upstash/qstash";
@@ -897,12 +898,13 @@ export class QStashTriggerHandler {
    * Determine if an error is retryable.
    */
   private isRetryableError(error: unknown): boolean {
-    if (typeof error === "object" && error !== null && "retryable" in error) {
-      return Boolean(error.retryable);
+    const explicitRetryability = readExplicitRetryability(error);
+    if (explicitRetryability !== undefined) {
+      return explicitRetryability;
     }
 
     if (error instanceof Problem) {
-      return error.extensions?.retryable === true;
+      return false;
     }
 
     return (

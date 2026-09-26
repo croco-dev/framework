@@ -3025,6 +3025,12 @@
       "owner": "@croco/problems-core"
     },
     {
+      "path": "packages/problems-core/src/tests/readExplicitRetryability.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/problems-core"
+    },
+    {
       "path": "packages/protocol-codegen/src/tests/ControllerProject.spec.ts",
       "lane": "fast",
       "qualifiers": [],

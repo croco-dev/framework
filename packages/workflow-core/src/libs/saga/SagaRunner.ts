@@ -1,4 +1,4 @@
-import { Problem } from "@croco/problems-core";
+import { Problem, readExplicitRetryability } from "@croco/problems-core";
 import { withSpan } from "@croco/telemetry-api";
 import {
   SagaDefinitionProblem,
@@ -96,19 +96,7 @@ function reportSagaFailureRecordError(
 }
 
 function isRetryableError(error: unknown): boolean {
-  if (
-    error !== null &&
-    (typeof error === "object" || typeof error === "function") &&
-    "retryable" in error
-  ) {
-    return Boolean(error.retryable);
-  }
-
-  if (error instanceof Problem) {
-    return error.extensions?.retryable === true;
-  }
-
-  return error instanceof Error;
+  return readExplicitRetryability(error) ?? (error instanceof Error && !(error instanceof Problem));
 }
 
 function getMaxAttempts(step: SagaStepDefinition): number {

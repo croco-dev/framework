@@ -7,7 +7,8 @@ import { MixedCurrencyMRRProblem } from "./problems/MetricsProblems";
  * Calculator for Monthly Recurring Revenue (MRR).
  *
  * MRR measures the predictable monthly revenue generated from subscriptions.
- * Annual plans are normalized to monthly equivalents (amount / 12).
+ * Plan amounts are normalized to monthly equivalents and rounded to whole minor units,
+ * with exact halves rounded away from zero. Totals sum the rounded amount per subscription.
  */
 export class MrrCalculator {
   /**
@@ -49,14 +50,14 @@ export class MrrCalculator {
    * @param amount - Plan amount in minor units
    * @param interval - Plan interval (month or year)
    * @param intervalCount - Number of intervals per billing cycle
-   * @returns Normalized monthly MRR amount
+   * @returns Normalized monthly MRR in whole minor units, rounded half up
    */
   normalizeMRR(amount: number, interval: "month" | "year", intervalCount: number): number {
-    if (interval === "year") {
-      return amount / intervalCount / 12;
-    }
-
-    return amount / intervalCount;
+    const denominator = BigInt(intervalCount) * BigInt(interval === "year" ? 12 : 1);
+    const numerator = BigInt(amount);
+    const magnitude = numerator < 0 ? -numerator : numerator;
+    const roundedMagnitude = (magnitude + denominator / BigInt(2)) / denominator;
+    return Number(numerator < 0 ? -roundedMagnitude : roundedMagnitude);
   }
 
   /**

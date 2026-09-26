@@ -1930,3 +1930,29 @@ describe.each(["ssr-lambda", "container-fullstack"])("Compatibility fixture: %s"
     checkContainerFullstackStructure();
   });
 });
+
+describe("generated workspace package manager", () => {
+  it("pins every generated workspace to the repository pnpm release", () => {
+    const repositoryPackageManager = JSON.parse(
+      readFileSync(join(TEMPLATES_DIR, "../../../package.json"), "utf8"),
+    ) as { readonly packageManager?: unknown };
+    const repositoryPnpm = /^(pnpm@\d+\.\d+\.\d+)\+sha512\./.exec(
+      String(repositoryPackageManager.packageManager),
+    )?.[1];
+    const templateManifests = [
+      ...["admin-console", "ai-saas", "blank", "saas", "spa-be-split"].map((name) =>
+        join(TEMPLATES_DIR, name, "package.json.hbs"),
+      ),
+      ...[...FIXTURE_TEMPLATE_NAMES].map((name) =>
+        join(FIXTURE_TEMPLATES_DIR, name, "package.json.hbs"),
+      ),
+    ];
+
+    expect(repositoryPnpm).toMatch(/^pnpm@\d+\.\d+\.\d+$/);
+    for (const manifestPath of templateManifests) {
+      expect(JSON.parse(readFileSync(manifestPath, "utf8")).packageManager, manifestPath).toBe(
+        repositoryPnpm,
+      );
+    }
+  });
+});

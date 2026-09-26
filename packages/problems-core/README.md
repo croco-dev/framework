@@ -50,6 +50,7 @@ const json = ProblemSerializer.serialize(
 - `ProblemSerializer`: 직렬화와 역직렬화
 - `HttpStatus`: 상태 코드 상수
 - `ProblemExtensions`, `validateExtensions`, `isValidExtensions`: 확장 필드 검증
+- `readExplicitRetryability`: 오류가 명시한 `retryable`, `extensions.retryable` 재시도 분류 읽기
 
 ## 실패 의미론
 

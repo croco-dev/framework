@@ -1,4 +1,4 @@
-FROM node:22-slim AS base
+FROM node:24-slim AS base
 RUN npm install -g pnpm turbo
 
 FROM base AS pruner
@@ -13,7 +13,7 @@ RUN pnpm install --frozen-lockfile
 COPY --from=pruner /app/out/full/ .
 RUN pnpm turbo build --filter={{apiPackageName}}
 
-FROM node:22-slim AS runner
+FROM node:24-slim AS runner
 WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nodejs
 COPY --from=builder --chown=nodejs:nodejs /app .

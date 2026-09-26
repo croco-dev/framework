@@ -5,6 +5,8 @@ import {
   PlanChangedEvent,
   SubscriptionCanceledEvent,
 } from "@croco/billing-core";
+import { EventBusConfig } from "@croco/events-core";
+import type { DomainEvent, EventBus, EventSubscription } from "@croco/events-core";
 import type { MetricsRepository, MRRMovement } from "@croco/metrics-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BillingEventHandler } from "../libs/BillingEventHandler";
@@ -155,6 +157,30 @@ describe("BillingEventHandler", () => {
     handler = new BillingEventHandler(planRegistry, billingStore, metricsRepository);
   });
 
+  it("subscribes to every decorated billing event when the bus starts", async () => {
+    const subscriptions: EventSubscription[] = [];
+    const eventBus = {
+      subscribe: (subscription: EventSubscription) => {
+        subscriptions.push(subscription);
+      },
+      unsubscribe: () => undefined,
+      clear: () => undefined,
+      publish: async (_event: DomainEvent) => undefined,
+    } as unknown as EventBus;
+    const config = new EventBusConfig();
+    config.setEventBus(eventBus);
+
+    await config.start({ handlers: [BillingEventHandler], resolver: { resolve: () => handler } });
+
+    expect(subscriptions.map(({ eventName }) => eventName).sort()).toEqual(
+      [
+        OrderPaidEvent.eventName,
+        PlanChangedEvent.eventName,
+        SubscriptionCanceledEvent.eventName,
+      ].sort(),
+    );
+  });
+
   describe("OrderPaidEvent", () => {
     it("should record new MRR when order is paid", async () => {
       const event = new OrderPaidEvent("tenant-1", "order-1", 2900, "USD", "subscription_create");
@@ -198,7 +224,7 @@ describe("BillingEventHandler", () => {
       const callArgs = vi.mocked(metricsRepository.recordMRRMovement).mock.calls[0];
       const movement = callArgs[1];
 
-      expect(movement.new.amount).toBeCloseTo(2416.67, 2);
+      expect(movement.new.amount).toBe(2417);
     });
 
     it.each(["subscription_cycle", "subscription_update", "one_time"] as const)(
@@ -639,7 +665,7 @@ describe("BillingEventHandler", () => {
 
     it.each([
       [mockPlan, 2900],
-      [mockPlanYearly, 29000 / 12],
+      [mockPlanYearly, 2417],
       [{ ...mockPlan, amount: 5800, intervalCount: 2 }, 2900],
     ])(
       "should record churn from the event plan after subscription deletion: %j",

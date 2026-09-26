@@ -6,7 +6,7 @@ import { dirname, join, resolve } from "node:path";
 import { gzipSync } from "node:zlib";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { parse } from "yaml";
+import { parse, parseAllDocuments } from "yaml";
 
 import { runDependencyAuditPolicy, runPnpmAudit } from "../dependency-audit-policy.mts";
 
@@ -27,7 +27,11 @@ describe("dependency-audit-policy.mts", () => {
     const workspace = parse(readFileSync(join(repositoryRoot, "pnpm-workspace.yaml"), "utf-8")) as {
       readonly overrides?: Readonly<Record<string, unknown>>;
     };
-    const lockfile = parse(readFileSync(join(repositoryRoot, "pnpm-lock.yaml"), "utf-8")) as {
+    const lockfile = parseAllDocuments(
+      readFileSync(join(repositoryRoot, "pnpm-lock.yaml"), "utf-8"),
+    )
+      .at(-1)
+      ?.toJS() as {
       readonly overrides?: Readonly<Record<string, unknown>>;
       readonly packages?: Readonly<Record<string, unknown>>;
       readonly snapshots?: Readonly<

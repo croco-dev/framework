@@ -1,6 +1,11 @@
 import { postgresResource, type PostgresTestConnection } from "@croco/testing-resources";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import type { MRRMovement } from "@croco/metrics-core";
+import {
+  MrrCalculator,
+  SnapshotScheduler,
+  type MRRMovement,
+  type PlanProvider,
+} from "@croco/metrics-core";
 import {
   PostgresMetricsStore,
   installPostgresMetricsSchema,
@@ -122,6 +127,63 @@ describe.skipIf(!realResourcesEnabled).each(["PostgreSQL", "TimescaleDB"] as con
         activeCustomers: 12,
         totalMRR: { amount: 1200, currency: "USD" },
       });
+    });
+
+    it("stores the daily snapshot of a tenant on a USD 199/year plan", async () => {
+      const [store] = stores();
+      const annualPlanProvider: PlanProvider = {
+        getPlan: async () => ({
+          id: "plan-pro-annual",
+          amount: 19_900,
+          currency: "USD",
+          interval: "year",
+          intervalCount: 1,
+        }),
+      };
+
+      await new SnapshotScheduler(store).captureSnapshot(
+        {
+          subscriptions: [{ id: "sub-1", planId: "plan-pro-annual" }],
+          planProvider: annualPlanProvider,
+          activeCustomers: 1,
+        },
+        new Date("2026-03-15T00:00:00.000Z"),
+        { tenantId: "tenant-1" },
+      );
+
+      const rows = await connection?.query<{ total_mrr_amount: string }>(
+        "SELECT total_mrr_amount::text AS total_mrr_amount FROM metrics_snapshots WHERE tenant_id = 'tenant-1'",
+      );
+      expect(rows?.rows).toEqual([{ total_mrr_amount: "1658" }]);
+    });
+
+    it("stores the new-MRR movement derived from a USD 199/year plan", async () => {
+      const [store] = stores();
+      const zero = { amount: 0, currency: "USD" };
+      const mrr = { amount: new MrrCalculator().normalizeMRR(19_900, "year", 1), currency: "USD" };
+      const annualMovement: MRRMovement = {
+        new: mrr,
+        expansion: zero,
+        contraction: zero,
+        churned: zero,
+        reactivation: zero,
+        net: mrr,
+      };
+
+      await store.recordMRRMovement(
+        "tenant-1",
+        annualMovement,
+        new Date("2026-03-15T10:00:00.000Z"),
+        "billing.order_paid_order-1",
+      );
+
+      await expect(
+        store.getMRRHistory("tenant-1", {
+          from: new Date("2026-03-01T00:00:00.000Z"),
+          to: new Date("2026-04-01T00:00:00.000Z"),
+          granularity: "month",
+        }),
+      ).resolves.toMatchObject([{ new: { amount: 1658, currency: "USD" } }]);
     });
 
     it("provisions only the selected database features", async () => {
