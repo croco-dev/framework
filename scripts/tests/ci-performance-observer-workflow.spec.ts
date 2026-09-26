@@ -36,7 +36,9 @@ type Workflow = {
     };
   };
   readonly permissions?: Readonly<Record<string, unknown>>;
-  readonly jobs?: { readonly observe?: { readonly steps?: readonly Step[] } };
+  readonly jobs?: {
+    readonly observe?: { readonly if?: string; readonly steps?: readonly Step[] };
+  };
 };
 
 function parsedWorkflow(): Workflow {
@@ -53,6 +55,18 @@ describe("CI performance observer workflow", () => {
     expect(workflow.permissions).toEqual({ actions: "read", contents: "read" });
     expect(findWorkflowPermissionViolations({ "ci-performance-observer.yml": source })).toEqual([]);
     expect(findWorkflowVerificationViolations(source, ROOT_DIR)).toEqual([]);
+  });
+
+  it("skips the whole job without failing when the source run was cancelled", () => {
+    const observeJob = parsedWorkflow().jobs?.observe;
+    expect(observeJob?.if).toBe("${{ github.event.workflow_run.conclusion != 'cancelled' }}");
+    const jobIfIndex = source.indexOf(
+      "if: ${{ github.event.workflow_run.conclusion != 'cancelled' }}",
+    );
+    expect(jobIfIndex).toBeGreaterThan(-1);
+    expect(jobIfIndex).toBeLessThan(source.indexOf("Download untrusted performance data"));
+    expect(jobIfIndex).toBeLessThan(source.indexOf("Read source run metadata"));
+    expect(jobIfIndex).toBeLessThan(source.indexOf("Download exact split evidence when present"));
   });
 
   it("checks out only the trusted default branch and never executes downloaded PR code", () => {

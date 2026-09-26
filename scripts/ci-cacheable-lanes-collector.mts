@@ -42,6 +42,7 @@ type WorkflowRun = {
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly status: string;
+  readonly conclusion: string | null;
 };
 
 type Artifact = {
@@ -100,6 +101,16 @@ function timestamp(value: unknown, field: string): string {
   return result;
 }
 
+function requiredNullableString(
+  record: Readonly<Record<string, unknown>>,
+  key: string,
+  field: string,
+): string | null {
+  if (!(key in record)) throw new Error(`${field} must be a string or null`);
+  const value = record[key];
+  return value === null ? null : requiredString(value, field);
+}
+
 function parseWorkflowRun(value: unknown, field: string): WorkflowRun {
   if (!isRecord(value)) throw new Error(`${field} must be an object`);
   return {
@@ -108,6 +119,7 @@ function parseWorkflowRun(value: unknown, field: string): WorkflowRun {
     createdAt: timestamp(value.created_at, `${field}.created_at`),
     updatedAt: timestamp(value.updated_at, `${field}.updated_at`),
     status: requiredString(value.status, `${field}.status`),
+    conclusion: requiredNullableString(value, "conclusion", `${field}.conclusion`),
   };
 }
 
@@ -336,6 +348,10 @@ export function collectCacheableCiDataset(
     }
     if (profile !== "publish") {
       excludedSources.push(sourceRecord(sourceRun, `profile:${profile}`));
+      continue;
+    }
+    if (sourceRun.conclusion === "cancelled") {
+      operationalSources.push(sourceRecord(sourceRun, "source-run-cancelled"));
       continue;
     }
     const jobsResult = collectPages({
