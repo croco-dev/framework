@@ -471,6 +471,8 @@ const app = createApp({
 
 `rateLimitHttpMiddleware`의 `skipSuccessfulRequests`와 `skipFailedRequests`는 응답 상태가 결정된 뒤 성공한 limiter 체크의 refund receipt를 사용해 해당 outcome이 quota를 소비하지 않게 합니다. `skip` predicate는 기존처럼 limiter 체크 자체를 실행하지 않습니다.
 
+Node 서버에서 `clientIdentity`를 생략하면 기본 정책은 연결의 소켓 peer 주소를 사용합니다. 리버스 프록시나 로드 밸런서 뒤에서는 이 주소가 프록시의 주소이므로, 실제 클라이언트별로 제한하려면 신뢰할 수 있는 헤더를 `trustedProxyHeaders`로 지정하거나 커스텀 `clientIdentity` 정책을 제공해야 합니다.
+
 `rateLimitHttpMiddleware({ failOpen })`는 quota 결과 처리와 저장소 장애 시 허용 여부에 사용하는 단일 HTTP 정책입니다.
 이 값은 `RateLimiter` 생성자 기본값보다 우선하며, 저장소가 unavailable이면 runtime inspector에
 `rate-limit.store-unavailable` 진단과 실제 `allowed` 또는 `rejected` 동작을 기록합니다. 기본값은 `false`입니다.
