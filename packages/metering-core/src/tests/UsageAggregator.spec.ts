@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { MeterRepository } from "../libs/MeterRepository";
 import type { MeterDefinition, UsageRecord } from "../libs/types";
 import { UsageAggregator } from "../libs/UsageAggregator";
@@ -30,6 +30,8 @@ describe("UsageAggregator", () => {
   });
 
   beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-15T12:00:00.000Z"));
     mockStorage = {
       replayContract: "idempotent",
       deleteUsageRecords: vi.fn().mockResolvedValue(undefined),
@@ -53,6 +55,10 @@ describe("UsageAggregator", () => {
       usageStorage: mockStorage,
       meterRepository: mockRepository,
     });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("should reject storage without deletion before any persistence", () => {
@@ -98,8 +104,16 @@ describe("UsageAggregator", () => {
 
     it("should delete records from storage only after successful save", async () => {
       const records = [
-        createUsageRecord({ id: "usage-1", value: 5 }),
-        createUsageRecord({ id: "usage-2", value: 3 }),
+        createUsageRecord({
+          id: "usage-1",
+          value: 5,
+          timestamp: new Date("2026-08-31T23:59:59.999Z"),
+        }),
+        createUsageRecord({
+          id: "usage-2",
+          value: 3,
+          timestamp: new Date("2026-08-01T00:00:00.000Z"),
+        }),
       ];
       const callOrder: Array<"fetch" | "save" | "delete"> = [];
 
@@ -132,8 +146,16 @@ describe("UsageAggregator", () => {
 
     it("should remove flushed records from subsequent flushes", async () => {
       const pendingRecords = [
-        createUsageRecord({ id: "usage-1", value: 5 }),
-        createUsageRecord({ id: "usage-2", value: 3 }),
+        createUsageRecord({
+          id: "usage-1",
+          value: 5,
+          timestamp: new Date("2026-08-31T23:59:59.999Z"),
+        }),
+        createUsageRecord({
+          id: "usage-2",
+          value: 3,
+          timestamp: new Date("2026-08-01T00:00:00.000Z"),
+        }),
       ];
 
       vi.mocked(mockStorage.fetchUsageRecords).mockImplementation(async () => [...pendingRecords]);
@@ -154,7 +176,13 @@ describe("UsageAggregator", () => {
     });
 
     it("should keep records in storage when save fails", async () => {
-      const records = [createUsageRecord({ id: "usage-1", value: 5 })];
+      const records = [
+        createUsageRecord({
+          id: "usage-1",
+          value: 5,
+          timestamp: new Date("2026-08-31T23:59:59.999Z"),
+        }),
+      ];
       vi.mocked(mockStorage.fetchUsageRecords).mockResolvedValue(records);
 
       const deleteUsageRecords = vi.fn().mockResolvedValue(undefined);
@@ -166,6 +194,87 @@ describe("UsageAggregator", () => {
         "DB save failed",
       );
       expect(deleteUsageRecords).not.toHaveBeenCalled();
+    });
+
+    it("should preserve current-cycle records across repeated flushes", async () => {
+      const records = [
+        createUsageRecord({ id: "cycle-start", timestamp: new Date("2026-09-01T00:00:00.000Z") }),
+        createUsageRecord({ id: "current" }),
+      ];
+      vi.mocked(mockStorage.fetchUsageRecords).mockResolvedValue(records);
+
+      await expect(aggregator.flushUsageToDB("tenant-1", "api_calls")).resolves.toEqual({
+        recordsFlushed: 2,
+      });
+      await expect(aggregator.flushUsageToDB("tenant-1", "api_calls")).resolves.toEqual({
+        recordsFlushed: 2,
+      });
+
+      expect(mockRepository.saveUsageRecords).toHaveBeenNthCalledWith(1, records);
+      expect(mockRepository.saveUsageRecords).toHaveBeenNthCalledWith(2, records);
+      expect(mockStorage.deleteUsageRecords).not.toHaveBeenCalled();
+    });
+
+    it("should save an explicit closed-cycle range before deleting its records", async () => {
+      const range = {
+        startDate: new Date("2026-08-01T00:00:00.000Z"),
+        endDate: new Date("2026-09-01T00:00:00.000Z"),
+      };
+      const records = [createUsageRecord({ timestamp: range.startDate })];
+      const callOrder: string[] = [];
+      vi.mocked(mockStorage.fetchUsageRecords).mockResolvedValue(records);
+      vi.mocked(mockRepository.saveUsageRecords).mockImplementation(async () => {
+        callOrder.push("save");
+      });
+      const deleteUsageRecords = vi.fn().mockImplementation(async () => {
+        callOrder.push("delete");
+      });
+      mockStorage.deleteUsageRecords = deleteUsageRecords;
+
+      await expect(
+        aggregator.flushUsageToDB("tenant-1", "api_calls", "billing_cycle", range),
+      ).resolves.toEqual({ recordsFlushed: 1 });
+
+      const options = {
+        tenantId: "tenant-1",
+        meterId: "api_calls",
+        period: "billing_cycle",
+        ...range,
+      };
+      expect(mockStorage.fetchUsageRecords).toHaveBeenCalledWith(options);
+      expect(mockRepository.saveUsageRecords).toHaveBeenCalledWith(records);
+      expect(deleteUsageRecords).toHaveBeenCalledWith(options, records);
+      expect(callOrder).toEqual(["save", "delete"]);
+    });
+
+    it("should delete only closed-cycle records in a range spanning the UTC month boundary", async () => {
+      const closed = createUsageRecord({
+        id: "closed",
+        timestamp: new Date("2026-08-31T23:59:59.999Z"),
+      });
+      const current = createUsageRecord({
+        id: "current",
+        timestamp: new Date("2026-09-01T00:00:00.000Z"),
+      });
+      const future = createUsageRecord({
+        id: "future",
+        timestamp: new Date("2026-10-01T00:00:00.000Z"),
+      });
+      const range = {
+        startDate: new Date("2026-08-01T00:00:00.000Z"),
+        endDate: new Date("2026-11-01T00:00:00.000Z"),
+      };
+      vi.mocked(mockStorage.fetchUsageRecords).mockResolvedValue([closed, current, future]);
+
+      await expect(
+        aggregator.flushUsageToDB("tenant-1", "api_calls", "day", range),
+      ).resolves.toEqual({ recordsFlushed: 3 });
+
+      expect(mockRepository.saveUsageRecords).toHaveBeenCalledWith([closed, current, future]);
+      expect(mockStorage.deleteUsageRecords).toHaveBeenCalledWith(
+        { tenantId: "tenant-1", meterId: "api_calls", period: "day", ...range },
+        [closed],
+      );
     });
 
     it("should return 0 when no records to flush", async () => {
@@ -218,6 +327,7 @@ describe("UsageAggregator", () => {
 
       expect(result.recordsFlushed).toBe(3);
       expect(mockStorage.fetchUsageRecords).toHaveBeenCalledTimes(3);
+      expect(mockStorage.deleteUsageRecords).not.toHaveBeenCalled();
     });
 
     it("should return 0 when tenant has no meters", async () => {

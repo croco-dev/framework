@@ -249,7 +249,14 @@ Custom `MeterRepository` adapters must enforce persistent uniqueness on
 overlapping batches, partial writes and process restarts. Declare the contract only after
 implementing this guarantee. `DrizzleMeterRepository` uses its unique index and conflict handling.
 
+Flush saves the selected records but keeps records from the current UTC billing month in Redis, so
+quota checks and `getUsage({ period: "billing_cycle" })` still include them. To persist and remove
+records from a closed month, pass its inclusive range to
+`flushUsageToDB(tenantId, meterId, "billing_cycle", { startDate, endDate })`. Only records older than
+the current UTC billing month are removed after saving. Current-month records are saved again on
+later flushes, so adapters must support idempotent replay of the entire month's batch.
+
 After a save or deletion failure, retry the flush normally. Already persisted records are ignored
-by the repository, and deletion removes only the supplied records. `recordsFlushed` counts records
-successfully processed by the flush, including records persisted by a previous attempt.
+by the repository, and deletion removes only the supplied closed-cycle records. `recordsFlushed`
+counts records successfully processed by the flush, including records persisted by a previous attempt.
 `UsageStorage.deleteUsageRecords` remains optional for storage used without an aggregator.
