@@ -158,3 +158,23 @@ export class InboxClaimConflictProblem extends Problem {
     );
   }
 }
+
+/** Raised when another delivery owns an inbox processing lease. */
+export class InboxProcessingInProgressProblem extends Problem {
+  readonly code = "events-tx/inbox-processing-in-progress";
+  readonly category = ProblemCategory.Conflict;
+
+  constructor(
+    readonly consumerId: string,
+    readonly inboxKey: string,
+    readonly lockedUntil: Date | undefined,
+  ) {
+    super(undefined, undefined, `Inbox claim '${consumerId}:${inboxKey}' is still processing.`, {
+      extensions: {
+        consumerId,
+        inboxKey,
+        ...(lockedUntil ? { lockedUntil: lockedUntil.toISOString() } : {}),
+      },
+    });
+  }
+}

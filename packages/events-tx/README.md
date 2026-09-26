@@ -79,7 +79,9 @@ await consumer.handle(message, async (outboxMessage) => {
 });
 ```
 
-Inbox records are keyed by the exact `(consumerId, message idempotency key)` tuple; punctuation in either field does not change that identity boundary. Processed records and processing records with an active lease return `duplicate`. Failed records and processing records whose `lockedUntil` lease has expired can be claimed again.
+Inbox records are keyed by the exact `(consumerId, message idempotency key)` tuple; punctuation in either field does not change that identity boundary. Processed records return `duplicate` without rerunning the handler. Processing records with an active lease return `in_progress` and their `lockedUntil` time; failed records and processing records whose lease has expired can be claimed again. `TransactionalInboxConsumer.handle()` throws `InboxProcessingInProgressProblem` for `in_progress` by default. With `throwOnError: false`, it returns `{ status: "in_progress", record, lockedUntil }` instead.
+
+When an outbox relay's publish callback calls `consumer.handle()`, let `InboxProcessingInProgressProblem` reach the relay. The relay releases that outbox claim until the inbox lease expires without consuming an attempt, so a failed or interrupted first inbox attempt can be delivered again. A callback using a `throwOnError: false` consumer must throw `InboxProcessingInProgressProblem` when it receives `in_progress`; resolving the callback would tell the relay that publication succeeded.
 
 Each accepted start returns an `attempts` claim. Direct store callers must pass that value as `expectedAttempts` when marking the record processed or failed:
 
@@ -118,7 +120,7 @@ For each non-null `aggregateId`, only the first unfinished message in `(createdA
 
 When a worker is interrupted after claiming the final permitted attempt, the expired message remains `publishing` and is not claimed again. It also continues blocking later messages for the same aggregate. Operators must list expired `publishing` rows, confirm the final publisher's outcome, and complete the exact attempt with `markOutboxPublished` when delivery succeeded or `markOutboxFailed` when it failed; the failed completion moves the exhausted row to `poisoned`, after which it can be dead-lettered according to the application's incident policy.
 
-This orders persisted messages; it cannot infer a causal order for equal creation timestamps beyond the ID tie-breaker or for predecessors that have not committed yet. Producers must preserve their intended creation order and use IDs that preserve that order when timestamps tie. Lease recovery remains at-least-once: a worker that continues publishing after its lease expires can still deliver a duplicate, so consumers need inbox deduplication. MySQL is outside this PostgreSQL adapter's schema and query contract.
+This orders persisted messages; it cannot infer a causal order for equal creation timestamps beyond the ID tie-breaker or for predecessors that have not committed yet. Producers must preserve their intended creation order and use IDs that preserve that order when timestamps tie. Lease recovery remains at-least-once: a worker that continues publishing after its lease expires can still deliver a duplicate. Inbox deduplication treats completed work as `duplicate` and active work as `in_progress`, leaving the latter eligible for later delivery. MySQL is outside this PostgreSQL adapter's schema and query contract.
 
 For rolling deployments, migrate the inbox table before deploying lease-aware consumers:
 
@@ -127,7 +129,7 @@ For rolling deployments, migrate the inbox table before deploying lease-aware co
 3. Deploy lease-aware consumers.
 4. After all old writers are drained, backfill any processing rows they created during the mixed-version window and verify zero null processing leases again.
 
-A null processing lease fails closed as `duplicate`; it is never reclaimed automatically. This keeps old binaries that do not write leases from racing a new worker during rollout. Operators must backfill or otherwise reconcile such rows before redelivery.
+A null processing lease fails closed as `in_progress` without a `lockedUntil` value; it is never reclaimed automatically. The relay releases its outbox claim for another check after its visibility timeout, without consuming an attempt. This keeps old binaries that do not write leases from racing a new worker during rollout. Operators must backfill or otherwise reconcile such rows before redelivery.
 
 ## Validation
 
