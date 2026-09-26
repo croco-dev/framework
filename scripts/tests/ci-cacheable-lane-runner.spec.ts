@@ -9,7 +9,8 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
+import { parseDocument } from "yaml";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
@@ -18,6 +19,7 @@ import {
   collectImmutableCheckOutputs,
   createCacheableLaneExecutionPlan,
   createProducerBundleFromReport,
+  DEFAULT_TOTAL_TIMEOUT_MS,
   runCacheableLane,
 } from "../ci-cacheable-lane-runner.mts";
 import { createReusableReceipt, PRODUCER_LANES } from "../ci-lane-evidence.mts";
@@ -292,6 +294,25 @@ describe("cacheable producer lane planning", () => {
     expect(() =>
       createCacheableLaneExecutionPlan("publish", "split-validation-shadow" as ProducerLane),
     ).toThrow(/must be one of/);
+  });
+});
+
+describe("split producer job timeouts", () => {
+  it("gives each split producer job 30 minutes beyond the lane runner budget", () => {
+    const repositoryRoot = resolve(import.meta.dirname, "..", "..");
+    const workflow = readFileSync(resolve(repositoryRoot, ".github/workflows/ci.yml"), "utf8");
+    const document = parseDocument(workflow, { uniqueKeys: true });
+    if (document.errors.length > 0) {
+      throw new Error(document.errors.map(({ message }) => message).join("\n"));
+    }
+    const { jobs } = document.toJS() as {
+      readonly jobs?: Readonly<Record<string, { readonly ["timeout-minutes"]?: unknown }>>;
+    };
+    const expectedTimeoutMinutes = DEFAULT_TOTAL_TIMEOUT_MS / 60_000 + 30;
+
+    for (const lane of PRODUCER_LANES) {
+      expect(jobs?.[lane]?.["timeout-minutes"]).toBe(expectedTimeoutMinutes);
+    }
   });
 });
 
