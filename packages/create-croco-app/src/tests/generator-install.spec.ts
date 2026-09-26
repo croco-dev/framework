@@ -82,7 +82,7 @@ describe("generate() pnpm install contract", () => {
     ]);
     expect(existsSync(join(testDir, "pnpm-workspace.yaml"))).toBe(true);
     expect(JSON.parse(readFileSync(join(testDir, "package.json"), "utf8")).packageManager).toBe(
-      "pnpm@12.6.0",
+      "pnpm@12.7.0",
     );
     expect(result.postActions.dependencies).toBe("installed");
     expect(result.nextSteps).toEqual([{ command: "pnpm", args: ["dev"], cwd: testDir }]);

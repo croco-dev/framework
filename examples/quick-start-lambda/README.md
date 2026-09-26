@@ -126,5 +126,6 @@ API for applications that separate this boundary.
 
 ## Prerequisites
 
-- Node.js and pnpm at the versions pinned by the repository (run `mise install` at the repository root; see
-  [CONTRIBUTING.md](../../CONTRIBUTING.md#prerequisites))
+- Node.js >=24 (run `nvm install 24 && nvm use 24` if your current version is unsupported, or `mise install` at the
+  repository root; see [CONTRIBUTING.md](../../CONTRIBUTING.md#prerequisites))
+- pnpm at the version pinned by the repository (`mise install` provides it)
