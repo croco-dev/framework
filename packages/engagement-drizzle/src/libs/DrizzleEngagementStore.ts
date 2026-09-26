@@ -123,7 +123,26 @@ export class DrizzleEngagementStore implements EngagementPersistence {
             environment: input.kind === "push" ? input.environment : null,
             tokenReference: input.kind === "push" ? input.tokenReference : null,
             lastSeenAt: input.lastSeenAt,
-            version: sql`${engagementContactEndpoints.version} + 1`,
+            version: sql`case when row(
+              ${engagementContactEndpoints.recipientId},
+              ${engagementContactEndpoints.kind},
+              ${engagementContactEndpoints.address},
+              ${engagementContactEndpoints.provider},
+              ${engagementContactEndpoints.app},
+              ${engagementContactEndpoints.platform},
+              ${engagementContactEndpoints.environment},
+              ${engagementContactEndpoints.tokenReference}
+            ) is distinct from row(
+              excluded.recipient_id,
+              excluded.kind,
+              excluded.address,
+              excluded.provider,
+              excluded.app,
+              excluded.platform,
+              excluded.environment,
+              excluded.token_reference
+            ) then ${engagementContactEndpoints.version} + 1
+              else ${engagementContactEndpoints.version} end`,
             updatedAt: now,
           },
         })
