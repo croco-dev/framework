@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 810,
+  problemCount: 811,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -9126,6 +9126,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
           line: 134,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "events-tx/inbox-processing-in-progress",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#events-tx-inbox-processing-in-progress",
+      recovery: {
+        cause: "Another delivery owns the inbox processing lease for this consumer and key.",
+        userAction:
+          "Retry after extensions.lockedUntil; if it is absent, wait for operator reconciliation of the legacy processing record.",
+        operatorAction:
+          "Check the inbox lease and outbox claim. Reconcile a processing record without a lease before redelivery.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/events-tx/src/libs/problems/EventsTxProblems.ts",
+          line: 163,
           column: 1,
           kind: "problem-class",
         },

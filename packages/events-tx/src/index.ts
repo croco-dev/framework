@@ -3,6 +3,7 @@
  */
 export {
   InboxClaimConflictProblem,
+  InboxProcessingInProgressProblem,
   InvalidTransactionalEventConfigurationProblem,
   OutboxIdempotencyConflictProblem,
   OutboxMessageIdConflictProblem,

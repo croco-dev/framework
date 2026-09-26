@@ -591,7 +591,7 @@ export class DrizzleTransactionalEventStore<
       .set({
         attempts: current.attempts - 1,
         status: "retrying",
-        visibleAt: input.now,
+        visibleAt: input.visibleAt ?? input.now,
         updatedAt: input.now,
         lockedUntil: null,
         diagnostics: appendDiagnostic(current.diagnostics, input.diagnostic),
@@ -645,10 +645,9 @@ export class DrizzleTransactionalEventStore<
     const lockedUntil = resolveInboxLockedUntil(input);
     const existing = await this.findInboxRecord(input.consumerId, input.inboxKey, context);
     if (existing && !this.isReclaimableInboxRecord(existing, input.now)) {
-      return {
-        status: "duplicate",
-        record: existing,
-      };
+      return existing.status === "processed"
+        ? { status: "duplicate", record: existing }
+        : { status: "in_progress", record: existing, lockedUntil: existing.lockedUntil };
     }
 
     if (existing) {
@@ -695,10 +694,9 @@ export class DrizzleTransactionalEventStore<
       }
 
       if (!this.isReclaimableInboxRecord(duplicated, input.now)) {
-        return {
-          status: "duplicate",
-          record: duplicated,
-        };
+        return duplicated.status === "processed"
+          ? { status: "duplicate", record: duplicated }
+          : { status: "in_progress", record: duplicated, lockedUntil: duplicated.lockedUntil };
       }
 
       return this.reclaimInboxRecord(duplicated, input, lockedUntil, context);
@@ -836,10 +834,15 @@ export class DrizzleTransactionalEventStore<
         `Inbox record '${input.consumerId}:${input.inboxKey}' reclaim conflict could not be resolved.`,
       );
     }
-    return {
-      status: "duplicate",
-      record: current,
-    };
+    if (current.status === "processed") {
+      return { status: "duplicate", record: current };
+    }
+    if (!this.isReclaimableInboxRecord(current, input.now)) {
+      return { status: "in_progress", record: current, lockedUntil: current.lockedUntil };
+    }
+    throw new OutboxStorageProblem(
+      `Inbox record '${input.consumerId}:${input.inboxKey}' changed while reclaiming.`,
+    );
   }
 
   private isReclaimableInboxRecord(record: TransactionalInboxRecord, now: Date): boolean {
