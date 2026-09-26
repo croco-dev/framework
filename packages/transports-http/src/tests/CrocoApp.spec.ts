@@ -1961,6 +1961,93 @@ describe("CrocoApp", () => {
     expect(json).toEqual({ id: "icons/logo.svg" });
   });
 
+  it("should prefer concrete routes across controllers regardless of declaration order", async () => {
+    @Controller("/users")
+    class ParameterController {
+      @Get("/:id")
+      byId(@Param("id") id: string) {
+        return { id };
+      }
+    }
+
+    @Controller("/users")
+    class ConcreteController {
+      @Get("/me")
+      me() {
+        return { displayName: "Ada" };
+      }
+    }
+
+    for (const controllers of [
+      [ParameterController, ConcreteController],
+      [ConcreteController, ParameterController],
+    ]) {
+      const app = createApp({ controllers, diValidation: "off" });
+      const concrete = await app.fetch(new Request("http://localhost/users/me"));
+      const templated = await app.fetch(new Request("http://localhost/users/u1"));
+
+      expect(await concrete.json()).toEqual({ displayName: "Ada" });
+      expect(await templated.json()).toEqual({ id: "u1" });
+    }
+  });
+
+  it("should prefer concrete then parameter routes over a catch-all route", async () => {
+    @Controller("/files")
+    class FilesController {
+      @Get("/:...path")
+      catchAll(@Param("path") path: string) {
+        return { route: "catch-all", path };
+      }
+
+      @Get("/:id")
+      byId(@Param("id") id: string) {
+        return { route: "parameter", id };
+      }
+
+      @Get("/status")
+      status() {
+        return { route: "concrete" };
+      }
+    }
+
+    const app = createApp({ controllers: [FilesController], diValidation: "off" });
+
+    expect(await (await app.fetch(new Request("http://localhost/files/status"))).json()).toEqual({
+      route: "concrete",
+    });
+    expect(await (await app.fetch(new Request("http://localhost/files/item"))).json()).toEqual({
+      route: "parameter",
+      id: "item",
+    });
+    expect(
+      await (await app.fetch(new Request("http://localhost/files/icons/logo.svg"))).json(),
+    ).toEqual({
+      route: "catch-all",
+      path: "icons/logo.svg",
+    });
+  });
+
+  it("should prefer a concrete explicit HEAD route over a parameter route", async () => {
+    @Controller("/users")
+    class HeadController {
+      @Head("/:id")
+      byId() {
+        return new Response(null, { headers: { "x-route": "parameter" } });
+      }
+
+      @Head("/me")
+      me() {
+        return new Response(null, { headers: { "x-route": "concrete" } });
+      }
+    }
+
+    const app = createApp({ controllers: [HeadController], diValidation: "off" });
+    const response = await app.fetch(new Request("http://localhost/users/me", { method: "HEAD" }));
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("x-route")).toBe("concrete");
+  });
+
   it("should return GET route headers without a response body for implied HEAD requests", async () => {
     const app = createApp({ controllers: [TestController] });
 

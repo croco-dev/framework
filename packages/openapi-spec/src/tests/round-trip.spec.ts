@@ -96,6 +96,39 @@ class RoundTripWidgetNotFoundProblem extends Problem {
 }
 
 describe("OpenAPI round trip", () => {
+  it("dispatches a concrete path to the operation documented by OpenAPI", async () => {
+    @Controller("/users")
+    class UserController {
+      @Get("/:id")
+      @ResponseSchema(z.object({ id: z.string() }))
+      getById(@Param("id") id: string) {
+        return { id };
+      }
+
+      @Get("/me")
+      @ResponseSchema(z.object({ displayName: z.string() }))
+      me() {
+        return { displayName: "Ada" };
+      }
+    }
+
+    const document = emitOpenAPI([UserController]);
+    expect(Object.keys(document.paths ?? {}).sort()).toEqual(["/users/me", "/users/{id}"]);
+    expect(document.paths?.["/users/me"]?.get?.operationId).toBe("UserController_me");
+
+    const app = createApp({
+      controllers: [UserController],
+      diValidation: "off",
+      securityValidation: "off",
+    });
+    const concrete = await app.fetch(new Request("http://localhost/users/me"));
+    const templated = await app.fetch(new Request("http://localhost/users/u1"));
+
+    expect(concrete.status).toBe(200);
+    expect(await concrete.json()).toEqual({ displayName: "Ada" });
+    expect(await templated.json()).toEqual({ id: "u1" });
+  });
+
   it(
     "should generate a fetch client that can call a matching backend",
     { timeout: 30000 },
