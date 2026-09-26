@@ -1,5 +1,7 @@
 import "reflect-metadata";
 
+import { once } from "node:events";
+import type { AddressInfo } from "node:net";
 import type { RuntimeContext } from "@croco/framework-context";
 import { Container, Context as FrameworkContext } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
@@ -14,6 +16,7 @@ import {
   RateLimitKeyBuilder,
   SlidingWindowInMemoryStore,
 } from "@croco/ratelimit-core";
+import { serve } from "@hono/node-server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../libs/CrocoApp";
 import { ErrorHandler } from "../libs/ErrorHandler";
@@ -23,6 +26,7 @@ import {
   createRuntimeAwareRateLimitClientIdentityPolicy,
   rateLimitHttpMiddleware,
 } from "../libs/middleware/RateLimitMiddleware";
+import type { MiddlewareFunction } from "../libs/types";
 
 type RateLimitTestContext = Parameters<ReturnType<typeof rateLimitHttpMiddleware>>[0];
 
@@ -77,6 +81,40 @@ describe("RateLimitMiddleware", () => {
       return { ok: true };
     }
   }
+
+  const exposeIdentity: MiddlewareFunction = async (ctx, next) => {
+    await next();
+    const identity = ctx.get<{ value: string; source: string }>(
+      RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY,
+    );
+    ctx.raw.header("x-client-identity", identity?.value ?? "missing");
+    ctx.raw.header("x-client-identity-source", identity?.source ?? "missing");
+  };
+
+  function createNodeRateLimitApp(
+    clientIdentity?: ReturnType<typeof createRuntimeAwareRateLimitClientIdentityPolicy>,
+  ) {
+    return createApp({
+      controllers: [RateLimitedController],
+      middlewares: [
+        rateLimitHttpMiddleware({
+          rateLimiter: new RateLimiter(
+            new SlidingWindowInMemoryStore(),
+            new RateLimitKeyBuilder(["ip"]),
+          ),
+          policy: createSlidingWindowPolicy("node-peer", 1, 60000),
+          ...(clientIdentity ? { clientIdentity } : {}),
+        }),
+        exposeIdentity,
+      ],
+      securityValidation: "off",
+    });
+  }
+
+  const nodeEnv = (remoteAddress: string) => ({
+    incoming: { socket: { remoteAddress } },
+    outgoing: {},
+  });
 
   beforeEach(() => {
     Container.reset();
@@ -687,6 +725,64 @@ describe("RateLimitMiddleware", () => {
   });
 
   describe("integration with CrocoApp", () => {
+    it("should isolate default Node quotas by socket peer address", async () => {
+      const handler = createNodeRateLimitApp().nodeHandler();
+      const request = () => new Request("http://localhost/limited/resource");
+
+      const firstClient = await handler(request(), nodeEnv("198.51.100.1"));
+      const secondClient = await handler(request(), nodeEnv("198.51.100.2"));
+      const firstClientAgain = await handler(request(), nodeEnv("198.51.100.1"));
+
+      expect(firstClient.status).toBe(200);
+      expect(secondClient.status).toBe(200);
+      expect(firstClientAgain.status).toBe(429);
+    });
+
+    it("should identify a real Node listener by its socket peer address and source", async () => {
+      const server = serve({
+        fetch: createNodeRateLimitApp().nodeHandler(),
+        hostname: "127.0.0.1",
+        port: 0,
+      });
+
+      try {
+        if (!server.listening) {
+          await once(server, "listening");
+        }
+
+        const { port } = server.address() as AddressInfo;
+        const response = await fetch(`http://127.0.0.1:${port}/limited/resource`);
+
+        expect(response.status).toBe(200);
+        expect(response.headers.get("x-client-identity")).toBe("127.0.0.1");
+        expect(response.headers.get("x-client-identity-source")).toBe(
+          "runtime.node.socket.remoteAddress",
+        );
+      } finally {
+        await new Promise<void>((resolve) => server.close(() => resolve()));
+      }
+    });
+
+    it("should prefer a configured trusted proxy header over the Node socket peer", async () => {
+      const handler = createNodeRateLimitApp(
+        createRuntimeAwareRateLimitClientIdentityPolicy({
+          trustedProxyHeaders: ["x-forwarded-for"],
+        }),
+      ).nodeHandler();
+      const response = await handler(
+        new Request("http://localhost/limited/resource", {
+          headers: { "x-forwarded-for": "203.0.113.5, 198.51.100.3" },
+        }),
+        nodeEnv("192.0.2.4"),
+      );
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("x-client-identity")).toBe("203.0.113.5");
+      expect(response.headers.get("x-client-identity-source")).toBe(
+        "trusted-proxy-header.x-forwarded-for",
+      );
+    });
+
     it("should apply rate limiting to all requests", async () => {
       const app = createApp({
         controllers: [],

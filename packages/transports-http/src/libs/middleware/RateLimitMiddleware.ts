@@ -290,6 +290,18 @@ export function createRuntimeAwareRateLimitClientIdentityPolicy(
       return createClientIdentity(ip, "context.ip", true, runtimeName);
     }
 
+    if (runtimeName === "node") {
+      const remoteAddress = getNodeSocketRemoteAddress(ctx);
+      if (remoteAddress) {
+        return createClientIdentity(
+          remoteAddress,
+          "runtime.node.socket.remoteAddress",
+          true,
+          runtimeName,
+        );
+      }
+    }
+
     return createClientIdentity("unknown", "unknown", false, runtimeName);
   };
 }
@@ -316,6 +328,14 @@ function getLambdaSourceIp(native: Record<string, unknown> | undefined): string 
   const http = asRecord(requestContext?.["http"]);
   const sourceIp = http?.["sourceIp"];
   return typeof sourceIp === "string" ? normalizeClientIdentity(sourceIp) : undefined;
+}
+
+function getNodeSocketRemoteAddress(ctx: CrocoHttpContext): string | undefined {
+  const env = asRecord(ctx.raw.env);
+  const incoming = asRecord(env?.["incoming"]);
+  const socket = asRecord(incoming?.["socket"]);
+  const remoteAddress = socket?.["remoteAddress"];
+  return typeof remoteAddress === "string" ? normalizeClientIdentity(remoteAddress) : undefined;
 }
 
 function readTrustedProxyHeader(
