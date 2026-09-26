@@ -6,9 +6,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { DatabaseClient } from "../libs/db-types";
 import { MigrationRunner } from "../libs/MigrationRunner";
 import { InvalidMigrationCountProblem } from "../libs/problems/InvalidMigrationCountProblem";
+import { InvalidMigrationTargetProblem } from "../libs/problems/InvalidMigrationTargetProblem";
 import type { MigrationHistoryDriftProblem } from "../libs/problems/MigrationHistoryDriftProblem";
 import { MigrationTransactionRequiredProblem } from "../libs/problems/MigrationTransactionRequiredProblem";
 import { UnsupportedMigrationQueryResultProblem } from "../libs/problems/UnsupportedMigrationQueryResultProblem";
+import { createMigrationFixtures } from "./helpers/createMigrationFixtures";
+import { DeterministicMigrationDatabase } from "./helpers/DeterministicMigrationDatabase";
 
 describe("MigrationRunner", () => {
   let runner!: MigrationRunner;
@@ -238,6 +241,76 @@ describe("MigrationRunner", () => {
         expect(committedRemovedIds).toEqual([]);
       } finally {
         rmSync(migrationsDir, { force: true, recursive: true });
+      }
+    });
+  });
+
+  describe.each(["down", "previewDown"] as const)("%s target validation", (operation) => {
+    it.each([
+      ["2026", "malformed"],
+      ["", "malformed"],
+      ["2026071100000x", "malformed"],
+      ["202607110000001", "malformed"],
+      [" 20260711000001", "malformed"],
+      ["20260711000000", "not-applied"],
+      ["20260711000004", "not-applied"],
+    ])("rejects target %j with reason %s and preserves checkpoints", async (target, reason) => {
+      const fixtures = createMigrationFixtures([
+        { id: "20260711000001", name: "create_accounts" },
+        { id: "20260711000002", name: "create_orders" },
+        { id: "20260711000003", name: "create_invoices" },
+        { id: "20260711000004", name: "create_payments" },
+      ]);
+      const db = new DeterministicMigrationDatabase();
+      const candidate = new MigrationRunner(db, fixtures.path);
+
+      try {
+        await candidate.up("20260711000003");
+        const before = db.snapshot();
+        const execute = vi.spyOn(db, "execute");
+        const transaction = vi.spyOn(db, "transaction");
+
+        const result = candidate[operation](target);
+        await expect.soft(result).rejects.toBeInstanceOf(InvalidMigrationTargetProblem);
+        await expect.soft(result).rejects.toMatchObject({
+          code: "migration-runner/invalid-target",
+          category: ProblemCategory.BadRequest,
+          extensions: { target, reason },
+        });
+        expect.soft(db.snapshot()).toEqual(before);
+        if (reason === "malformed") {
+          expect.soft(execute).not.toHaveBeenCalled();
+          expect(transaction).not.toHaveBeenCalled();
+        }
+      } finally {
+        fixtures.cleanup();
+      }
+    });
+
+    it("selects the applied target and later migrations in reverse order", async () => {
+      const fixtures = createMigrationFixtures([
+        { id: "20260711000001", name: "create_accounts" },
+        { id: "20260711000002", name: "create_orders" },
+        { id: "20260711000003", name: "create_invoices" },
+      ]);
+      const db = new DeterministicMigrationDatabase();
+      const candidate = new MigrationRunner(db, fixtures.path);
+
+      try {
+        await candidate.up();
+        const before = db.snapshot();
+
+        await expect(candidate[operation]("20260711000002")).resolves.toEqual([
+          "20260711000003_create_invoices",
+          "20260711000002_create_orders",
+        ]);
+        if (operation === "previewDown") {
+          expect(db.snapshot()).toEqual(before);
+        } else {
+          expect(db.snapshot().checkpoints).toEqual(["20260711000001_create_accounts"]);
+        }
+      } finally {
+        fixtures.cleanup();
       }
     });
   });

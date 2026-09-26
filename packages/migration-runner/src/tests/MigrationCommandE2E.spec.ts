@@ -298,6 +298,51 @@ describe("migration command end-to-end", () => {
     }
   });
 
+  describe.each([false, true])("down target validation with dry-run=%s", (dryRun) => {
+    it.each([
+      ["a truncated id", "2026", "malformed"],
+      ["an empty id", "", "malformed"],
+      ["a nonnumeric id", "2026071100000x", "malformed"],
+      ["an unknown id", "20260711000000", "not-applied"],
+      ["a pending id", "20260711000004", "not-applied"],
+    ])(
+      "rejects %s as a down target without changing applied state",
+      async (_label, target, reason) => {
+        const fixtures = createMigrationFixtures([
+          { id: "20260711000001", name: "create_accounts" },
+          { id: "20260711000002", name: "create_orders" },
+          { id: "20260711000003", name: "create_invoices" },
+          { id: "20260711000004", name: "create_payments" },
+        ]);
+        const harness = createCommandHarness();
+
+        try {
+          await new MigrationRunner(harness.db, fixtures.path).up("20260711000003");
+          const before = harness.db.snapshot();
+
+          await harness.run([
+            ...commandArgs("down", fixtures.path),
+            "--target",
+            target,
+            ...(dryRun ? ["--dry-run"] : []),
+          ]);
+
+          expect.soft(harness.db.snapshot()).toEqual(before);
+          expect.soft(harness.exitCodes).toEqual([1]);
+          expect.soft(harness.stdout).toEqual([]);
+          expect.soft(harness.stderr.join("\n")).toContain("migration-runner/invalid-target");
+          if (reason === "malformed") {
+            expect(harness.lifecycle).toEqual(["exit:1"]);
+          } else {
+            expect(harness.lifecycle).toEqual(["db:open", "pool:end", "exit:1"]);
+          }
+        } finally {
+          fixtures.cleanup();
+        }
+      },
+    );
+  });
+
   it("propagates an unexpected preview failure and closes the pool before reporting failure", async () => {
     const fixtures = createMigrationFixtures([{ id: "20260711000001", name: "create_accounts" }]);
     const harness = createCommandHarness();

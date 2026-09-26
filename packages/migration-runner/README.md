@@ -22,15 +22,15 @@ pnpm exec migrate --help
 
 The CLI currently supports Postgres connections.
 
-| Option                | Default        | Description                                                                                 |
-| --------------------- | -------------- | ------------------------------------------------------------------------------------------- |
-| `--connection <url>`  | `DATABASE_URL` | Postgres connection string. Required for `up`, `down`, and `status`.                        |
-| `--dir <path>`        | `./migrations` | Directory containing migration files.                                                       |
-| `--table <name>`      | `_migrations`  | Checkpoint table used to record executed migrations.                                        |
-| `--dialect <dialect>` | `postgres`     | Supported value: `postgres`. Other values fail with `migration-runner/unsupported-dialect`. |
-| `--target <id>`       | none           | Run or roll back through a specific timestamp id.                                           |
-| `--count <number>`    | `1`            | `down` only. Must be a positive integer when no target is supplied.                         |
-| `--dry-run`           | `false`        | `up` and `down` only. Print the selected migrations without committing changes.             |
+| Option                | Default        | Description                                                                                  |
+| --------------------- | -------------- | -------------------------------------------------------------------------------------------- |
+| `--connection <url>`  | `DATABASE_URL` | Postgres connection string. Required for `up`, `down`, and `status`.                         |
+| `--dir <path>`        | `./migrations` | Directory containing migration files.                                                        |
+| `--table <name>`      | `_migrations`  | Checkpoint table used to record executed migrations.                                         |
+| `--dialect <dialect>` | `postgres`     | Supported value: `postgres`. Other values fail with `migration-runner/unsupported-dialect`.  |
+| `--target <id>`       | none           | Run `up` through an id; for `down`, include an applied 14-digit id and all later migrations. |
+| `--count <number>`    | `1`            | `down` only. Must be a positive integer when no target is supplied.                          |
+| `--dry-run`           | `false`        | `up` and `down` only. Print the selected migrations without committing changes.              |
 
 ## Migration Files
 
@@ -108,6 +108,9 @@ Roll back to a target id:
 pnpm exec migrate down --target 20260615000001 --connection "$DATABASE_URL"
 ```
 
+The target migration is included in the rollback. For `down`, the target must be a 14-digit id present in the applied
+checkpoint history. A malformed or unapplied target fails without running any rollback body.
+
 Preview the rollback selection without changing checkpoint or migration state:
 
 ```bash
@@ -121,8 +124,9 @@ support. Continue to keep database backups or point-in-time restore available fo
 
 ## Destructive Command Safety
 
-Rollback count validation happens before the CLI opens a database connection and before the runner scans or
-executes migration bodies.
+Rollback count and target format validation happen before the CLI opens a database connection and before the runner
+scans or executes migration bodies. A well-formed target is checked against applied history before any rollback body
+runs. The same target checks apply to direct `down` and `previewDown` API calls.
 
 Rejected examples:
 
@@ -131,11 +135,14 @@ pnpm exec migrate down --count 0
 pnpm exec migrate down --count -1
 pnpm exec migrate down --count 1.5
 pnpm exec migrate down --count abc
+pnpm exec migrate down --target 2026
+pnpm exec migrate down --target 20260615000003
 ```
 
-Those inputs fail with `migration-runner/invalid-count`. Direct API calls such as
-`runner.down(undefined, 0)` and `runner.down(undefined, Number.NaN)` fail the same way and cannot fall back to
-the default one-migration rollback path.
+Invalid counts fail with `migration-runner/invalid-count`; malformed or unapplied targets fail with
+`migration-runner/invalid-target`. The last target example is invalid when that id has not been applied. Direct API calls
+such as `runner.down(undefined, 0)` and `runner.down(undefined, Number.NaN)` also reject invalid counts and cannot fall
+back to the default one-migration rollback path.
 
 The default `migrate down` behavior still means `--count 1`. Omit `--count` only when rolling back exactly the
 latest migration is the intended operation.
@@ -155,6 +162,7 @@ Common operator failures:
 | `migration-runner/database-url-required`    | No `--connection` and no `DATABASE_URL`.                                  | Provide a Postgres URL for the target environment.                                        |
 | `migration-runner/unsupported-dialect`      | `--dialect` is not `postgres`.                                            | Use Postgres or provide a direct API `DatabaseClient`.                                    |
 | `migration-runner/invalid-count`            | `down --count` is zero, negative, fractional, non-numeric, or unsafe.     | Choose a positive integer or use `--target`.                                              |
+| `migration-runner/invalid-target`           | A `down --target` id is malformed or absent from applied history.         | Supply the full 14-digit id of an applied migration; check `migrate status` if uncertain. |
 | `migration-runner/history-drift`            | Applied history references a missing, renamed, or duplicate migration.    | Restore the original migration identity or perform an explicitly verified history repair. |
 | `migration-runner/transaction-required`     | Direct API client has no `transaction` function for execution or preview. | Wrap the adapter with transaction support.                                                |
 | `migration-runner/unsupported-query-result` | Adapter returns an unsupported wrapper or malformed migration row.        | Normalize the wrapper and persisted row fields.                                           |

@@ -20967,6 +20967,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidMigrationTargetProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/InvalidMigrationTargetProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "MigrationFileLoadProblem",
               "exportKind": "named",
               "source": "./libs/problems/MigrationFileLoadProblem",

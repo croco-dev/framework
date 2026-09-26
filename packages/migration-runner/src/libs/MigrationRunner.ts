@@ -1,6 +1,7 @@
 import type { DatabaseClient } from "./db-types";
 import { MigrationScanner } from "./MigrationScanner";
 import { MigrationStore } from "./MigrationStore";
+import { InvalidMigrationTargetProblem } from "./problems/InvalidMigrationTargetProblem";
 import { MigrationTransactionRequiredProblem } from "./problems/MigrationTransactionRequiredProblem";
 import { MissingDownFunctionProblem } from "./problems/MissingDownFunctionProblem";
 import { MissingUpFunctionProblem } from "./problems/MissingUpFunctionProblem";
@@ -10,6 +11,7 @@ import {
 } from "./reconcileMigrationHistory";
 import type { MigrationFile, MigrationStatus } from "./types";
 import { assertValidMigrationCount } from "./validateMigrationCount";
+import { assertValidMigrationTarget } from "./validateMigrationTarget";
 
 const PREVIEW_ROLLBACK = Symbol("migration-preview-rollback");
 
@@ -65,7 +67,7 @@ export class MigrationRunner {
   }
 
   async down(targetId?: string, count?: number): Promise<string[]> {
-    this.assertDownCount(targetId, count);
+    this.assertDownSelection(targetId, count);
     await this.init();
     const toRevert = await this.selectDownMigrations(this.db, targetId, count);
 
@@ -94,7 +96,7 @@ export class MigrationRunner {
   }
 
   async previewDown(targetId?: string, count?: number): Promise<string[]> {
-    this.assertDownCount(targetId, count);
+    this.assertDownSelection(targetId, count);
     return this.preview("down", async (db) => {
       const migrations = await this.selectDownMigrations(db, targetId, count);
       for (const migration of migrations) {
@@ -154,9 +156,13 @@ export class MigrationRunner {
   ): Promise<MigrationFile[]> {
     const files = await this.scanner.scan();
     const executed = await this.store.getExecutedMigrations(db);
-    const runFiles = reconcileMigrationHistory(files, executed).executedFiles;
+    const history = reconcileMigrationHistory(files, executed);
+    const runFiles = history.executedFiles;
 
-    if (targetId) {
+    if (targetId !== undefined) {
+      if (!history.executedById.has(targetId)) {
+        throw new InvalidMigrationTargetProblem(targetId, "not-applied");
+      }
       return runFiles.filter((file) => file.id >= targetId).reverse();
     }
     if (count !== undefined) {
@@ -165,8 +171,10 @@ export class MigrationRunner {
     return runFiles.slice(-1).reverse();
   }
 
-  private assertDownCount(targetId?: string, count?: number): void {
-    if (!targetId && count !== undefined) {
+  private assertDownSelection(targetId?: string, count?: number): void {
+    if (targetId !== undefined) {
+      assertValidMigrationTarget(targetId);
+    } else if (count !== undefined) {
       assertValidMigrationCount(count);
     }
   }

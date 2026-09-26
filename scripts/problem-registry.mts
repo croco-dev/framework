@@ -2983,6 +2983,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "public",
     severity: "error",
   }),
+  "migration-runner/invalid-target": recovery({
+    cause:
+      "A rollback target is not a 14-digit migration id or does not appear in the applied checkpoint history.",
+    userAction:
+      "Use the full 14-digit id of an applied migration; inspect migrate status to confirm the target before retrying.",
+    operatorAction:
+      "Check migrate status and the checkpoint history, then rerun down with an applied migration id after confirming the intended rollback range.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "error",
+  }),
   "tx-drizzle/rls-configuration-invalid": recovery({
     cause:
       "A PostgreSQL RLS helper received malformed static identifier or setting-key configuration.",
