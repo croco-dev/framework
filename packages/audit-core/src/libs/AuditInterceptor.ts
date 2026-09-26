@@ -286,8 +286,11 @@ function extractRequestBody(request: Request): unknown {
   return requestLike.body;
 }
 
-function toHttpMetadata(context: AuditExecutionContext, trustedProxyHops: number): HttpMetadata {
-  const request = context.getRequest();
+function toHttpMetadata(
+  context: AuditExecutionContext,
+  request: Request,
+  trustedProxyHops: number,
+): HttpMetadata {
   const method = context.getMethod();
   const path = context.getPath();
   const ip = extractIp(context, request, trustedProxyHops);
@@ -304,6 +307,24 @@ function toHttpMetadata(context: AuditExecutionContext, trustedProxyHops: number
   }
 
   return metadata;
+}
+
+function readRequestAuthField(
+  request: Request,
+  property: "principal" | "user",
+  field: "id" | "tenantId",
+): string | undefined {
+  if (!Object.prototype.hasOwnProperty.call(request, property)) {
+    return undefined;
+  }
+
+  const identity = (request as unknown as Record<string, unknown>)[property];
+  if (typeof identity !== "object" || identity === null) {
+    return undefined;
+  }
+
+  const value = (identity as Record<string, unknown>)[field];
+  return typeof value === "string" ? value : undefined;
 }
 
 function mergeMetadata(
@@ -378,7 +399,8 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
   async intercept(context: AuditExecutionContext, next: CallHandler): Promise<unknown> {
     const target = context.getClass();
     const handler = context.getHandler();
-    const http = toHttpMetadata(context, this.trustedProxyHops);
+    const request = context.getRequest();
+    const http = toHttpMetadata(context, request, this.trustedProxyHops);
     const existingMetadata = Reflect.getMetadata(AUDIT_METADATA_KEY, target, handler) as
       | AuditableMetadata
       | undefined;
@@ -393,7 +415,17 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
     const activeImpersonation = impersonation.status === "active" ? impersonation.state : null;
     const actorId =
       activeImpersonation?.impersonatorId ??
-      (impersonation.status === "invalid" ? "unknown" : (contextData?.user?.id ?? "unknown"));
+      (impersonation.status === "invalid"
+        ? "unknown"
+        : (contextData?.user?.id ??
+          readRequestAuthField(request, "principal", "id") ??
+          readRequestAuthField(request, "user", "id") ??
+          "unknown"));
+    const tenantId =
+      contextData?.tenantId ??
+      readRequestAuthField(request, "principal", "tenantId") ??
+      readRequestAuthField(request, "user", "tenantId") ??
+      "unknown";
     const impersonationMetadata: AuditableMetadata = activeImpersonation
       ? {
           impersonation: true,
@@ -420,7 +452,7 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
 
       try {
         await this.writeAuditLog({
-          tenantId: contextData?.tenantId ?? "unknown",
+          tenantId,
           actorId,
           action: resolveAction(controllerName, handler),
           resourceType: resolveResourceType(controllerName),
@@ -446,7 +478,7 @@ export class AuditInterceptor implements Interceptor<AuditExecutionContext> {
 
     try {
       await this.writeAuditLog({
-        tenantId: contextData?.tenantId ?? "unknown",
+        tenantId,
         actorId,
         action: resolveAction(controllerName, handler),
         resourceType: resolveResourceType(controllerName),

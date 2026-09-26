@@ -25,9 +25,11 @@ type MockHttpRequest = {
   headers?: Headers | Record<string, string | readonly string[] | undefined>;
   body?: unknown;
   header?: Record<string, string | undefined> | ((name: string) => string | undefined);
+  principal?: unknown;
   socket?: {
     remoteAddress?: unknown;
   };
+  user?: unknown;
 };
 
 type ExecutionContextInput = {
@@ -207,6 +209,138 @@ describe("AuditInterceptor", () => {
     );
   });
 
+  it("should record the guard principal before the request user when context has no identity", async () => {
+    class ProjectController {
+      create() {}
+    }
+
+    const context = createExecutionContext({
+      controller: ProjectController,
+      handler: "create",
+      method: "POST",
+      path: "/projects",
+      request: {
+        principal: { id: "principal-7", tenantId: "tenant-principal" },
+        user: { id: "user-7", tenantId: "tenant-user" },
+      },
+    });
+
+    await Context.run({ requestId: "req-authenticated" }, () =>
+      interceptor.intercept(context, createCallHandler({ id: "project-1" })),
+    );
+
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ actorId: "principal-7", tenantId: "tenant-principal" }),
+    );
+  });
+
+  it("should record the request user on handler failure when no principal exists", async () => {
+    class ProjectController {
+      create() {}
+    }
+
+    const context = createExecutionContext({
+      controller: ProjectController,
+      handler: "create",
+      method: "POST",
+      path: "/projects",
+      request: { user: { id: "user-7", tenantId: "tenant-user" } },
+    });
+    const handlerError = new Error("creation denied");
+
+    await expect(
+      Context.run({ requestId: "req-authenticated-failure" }, () =>
+        interceptor.intercept(context, {
+          handle: vi.fn(async () => {
+            throw handlerError;
+          }),
+        }),
+      ),
+    ).rejects.toBe(handlerError);
+
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ actorId: "user-7", tenantId: "tenant-user" }),
+    );
+  });
+
+  it("should use the request user's tenant when the principal has none", async () => {
+    class ProjectController {
+      create() {}
+    }
+
+    const context = createExecutionContext({
+      controller: ProjectController,
+      handler: "create",
+      method: "POST",
+      path: "/projects",
+      request: {
+        principal: { id: "principal-7" },
+        user: { id: "user-7", tenantId: "tenant-user" },
+      },
+    });
+
+    await Context.run({ requestId: "req-partial-principal" }, () =>
+      interceptor.intercept(context, createCallHandler({ id: "project-1" })),
+    );
+
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ actorId: "principal-7", tenantId: "tenant-user" }),
+    );
+  });
+
+  it("should prefer the established context identity and tenant over request fields", async () => {
+    class ProjectController {
+      create() {}
+    }
+
+    const context = createExecutionContext({
+      controller: ProjectController,
+      handler: "create",
+      method: "POST",
+      path: "/projects",
+      request: { principal: { id: "principal-7", tenantId: "tenant-principal" } },
+    });
+
+    await Context.run(
+      {
+        requestId: "req-context-identity",
+        user: { id: "context-user" },
+        tenantId: "tenant-context",
+      },
+      () => interceptor.intercept(context, createCallHandler({ id: "project-1" })),
+    );
+
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ actorId: "context-user", tenantId: "tenant-context" }),
+    );
+  });
+
+  it("should ignore inherited request authentication fields", async () => {
+    class ProjectController {
+      create() {}
+    }
+
+    const request = Object.create({
+      principal: { id: "inherited-principal", tenantId: "inherited-tenant" },
+      user: { id: "inherited-user", tenantId: "inherited-tenant" },
+    }) as MockHttpRequest;
+    const context = createExecutionContext({
+      controller: ProjectController,
+      handler: "create",
+      method: "POST",
+      path: "/projects",
+      request,
+    });
+
+    await Context.run({ requestId: "req-inherited-auth" }, () =>
+      interceptor.intercept(context, createCallHandler({ id: "project-1" })),
+    );
+
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ actorId: "unknown", tenantId: "unknown" }),
+    );
+  });
+
   it("should attribute an impersonated request to the administrator", async () => {
     vi.spyOn(Context, "get").mockReturnValue(
       createActiveImpersonationContext("req-impersonated-success"),
@@ -221,7 +355,7 @@ describe("AuditInterceptor", () => {
       handler: "update",
       method: "PATCH",
       path: "/users/target-user-1",
-      request: { headers: {} },
+      request: { headers: {}, principal: { id: "request-principal" } },
     });
 
     await interceptor.intercept(context, createCallHandler({ updated: true }));
@@ -303,7 +437,7 @@ describe("AuditInterceptor", () => {
       handler: "read",
       method: "GET",
       path: "/users/target-user-1",
-      request: { headers: {} },
+      request: { headers: {}, principal: { id: "request-principal" } },
     });
 
     await interceptor.intercept(context, createCallHandler({ id: "target-user-1" }));
