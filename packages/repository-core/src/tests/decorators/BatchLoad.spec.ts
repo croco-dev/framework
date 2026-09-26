@@ -371,6 +371,46 @@ describe("BatchLoad Decorator", () => {
     });
   });
 
+  it("uses the decorated method instead of findByIds for methods other than findById", async () => {
+    type User = { id: string; email: string; deletedAt?: string };
+    const users: User[] = [
+      { id: "user-1", email: "ada@example.com" },
+      { id: "user-2", email: "lin@example.com", deletedAt: "2026-01-01T00:00:00.000Z" },
+    ];
+
+    class UserRepository {
+      readonly findByIds = vi.fn(
+        async (
+          ids: readonly string[],
+        ): Promise<ReadonlyArray<KeyedRepositoryResult<string, User>>> =>
+          users
+            .filter((user) => ids.includes(user.id))
+            .map((user) => ({ key: user.id, value: user })),
+      );
+
+      @BatchLoad<UserRepository>({ by: "email", factory: () => factory })
+      async findByEmail(email: string): Promise<User | null> {
+        return users.find((user) => user.email === email) ?? null;
+      }
+
+      @BatchLoad<UserRepository>({ by: "id", factory: () => factory })
+      async findActiveById(id: string): Promise<User | null> {
+        return users.find((user) => user.id === id && user.deletedAt === undefined) ?? null;
+      }
+    }
+
+    const repository = new UserRepository();
+    const [byEmail, active] = await Context.run({ requestId: "batch-load-method-routing" }, () =>
+      Promise.all([repository.findByEmail("ada@example.com"), repository.findActiveById("user-2")]),
+    );
+
+    expect({
+      byEmail: byEmail?.id ?? null,
+      active: active?.id ?? null,
+      findByIdsCalls: repository.findByIds.mock.calls,
+    }).toEqual({ byEmail: "user-1", active: null, findByIdsCalls: [] });
+  });
+
   it("isolates same-class repository instances backed by different stores", async () => {
     await Context.run({ requestId: "scope-instance-isolation" }, async () => {
       const firstRepository = new StoreRepository(new Map([["same", "first-store"]]));
