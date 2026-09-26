@@ -31,6 +31,9 @@ export interface CircuitBreakerConfig {
 
   /** 상태 공유 범위를 제어하는 저장소 (기본값: decorated method별 in-memory store) */
   stateStore?: CircuitBreakerStateStore;
+
+  /** Return true when an error should count toward opening the circuit. */
+  recordFailure?: (error: unknown) => boolean;
 }
 
 type CircuitBreakerRegistryEntry = {
@@ -76,6 +79,9 @@ class RetryableCircuitBreakerRegistry {
           circuitId,
           failureThreshold: this.config.failureThreshold,
           stateStore: this.stateStore,
+          ...(this.config.recordFailure === undefined
+            ? {}
+            : { recordFailure: this.config.recordFailure }),
           ...(this.config.timeout === undefined ? {} : { openDuration: this.config.timeout }),
           ...(this.config.successThreshold === undefined
             ? {}

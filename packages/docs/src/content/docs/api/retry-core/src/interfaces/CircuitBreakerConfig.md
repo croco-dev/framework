@@ -17,6 +17,24 @@ CircuitBreaker 설정 옵션.
 
 ---
 
+### recordFailure?
+
+> `optional` **recordFailure?**: (`error`) => `boolean`
+
+Return true when an error should count toward opening the circuit.
+
+#### Parameters
+
+##### error
+
+`unknown`
+
+#### Returns
+
+`boolean`
+
+---
+
 ### stateStore?
 
 > `optional` **stateStore?**: [`CircuitBreakerStateStore`](/api/retry-core/src/classes/circuitbreakerstatestore/)

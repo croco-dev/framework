@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ProblemFactory } from "@croco/problems-core";
 
 import { CircuitBreaker } from "../libs/CircuitBreaker";
 import { CircuitState } from "../libs/CircuitBreakerState";
@@ -136,6 +137,162 @@ describe("RedisCircuitBreakerStore", () => {
 
     await expect(breakerB.execute(async () => "ok")).rejects.toThrow(CircuitBreakerOpenProblem);
     await expect(breakerB.getState()).resolves.toBe(CircuitState.OPEN);
+  });
+
+  it("shares caller-error exclusion and dependency-failure counting across Redis-backed breakers", async () => {
+    const { redis } = createSharedMockRedis();
+    const storeA = new RedisCircuitBreakerStore({ redis: redis as unknown as never });
+    const storeB = new RedisCircuitBreakerStore({ redis: redis as unknown as never });
+    const breakerA = new CircuitBreaker({
+      circuitId: "classified-circuit",
+      failureThreshold: 2,
+      stateStore: storeA,
+    });
+    const breakerB = new CircuitBreaker({
+      circuitId: "classified-circuit",
+      failureThreshold: 2,
+      stateStore: storeB,
+    });
+    const callerProblem = ProblemFactory.notFound("missing");
+    const serverProblem = ProblemFactory.internalServerError("server");
+
+    await expect(breakerA.execute(async () => Promise.reject(callerProblem))).rejects.toBe(
+      callerProblem,
+    );
+    await expect(breakerB.execute(async () => Promise.reject(callerProblem))).rejects.toBe(
+      callerProblem,
+    );
+    await expect(breakerA.getFailureCount()).resolves.toBe(0);
+    await expect(breakerB.execute(async () => Promise.reject(serverProblem))).rejects.toBe(
+      serverProblem,
+    );
+    await expect(breakerA.execute(async () => Promise.reject(serverProblem))).rejects.toBe(
+      serverProblem,
+    );
+    await expect(breakerB.getState()).resolves.toBe(CircuitState.OPEN);
+    await expect(breakerB.getFailureCount()).resolves.toBe(2);
+  });
+
+  it("returns a Redis-backed half-open slot after a caller Problem", async () => {
+    const { redis } = createSharedMockRedis();
+    const storeA = new RedisCircuitBreakerStore({ redis: redis as unknown as never });
+    const storeB = new RedisCircuitBreakerStore({ redis: redis as unknown as never });
+    const breakerA = new CircuitBreaker({ circuitId: "redis-half-open", stateStore: storeA });
+    const breakerB = new CircuitBreaker({ circuitId: "redis-half-open", stateStore: storeB });
+    const problem = ProblemFactory.validationError("invalid");
+    await storeA.setState("redis-half-open", CircuitState.HALF_OPEN);
+
+    await expect(breakerA.execute(async () => Promise.reject(problem))).rejects.toBe(problem);
+    await expect(breakerB.getState()).resolves.toBe(CircuitState.HALF_OPEN);
+    await expect(storeB.getHalfOpenActiveCount("redis-half-open")).resolves.toBe(0);
+    await expect(breakerB.execute(async () => "healthy")).resolves.toBe("healthy");
+    await expect(breakerA.getState()).resolves.toBe(CircuitState.CLOSED);
+  });
+
+  it("does not release a newer Redis-backed half-open cycle's slot from an old probe", async () => {
+    const { redis } = createSharedMockRedis();
+    const storeA = new RedisCircuitBreakerStore({ redis: redis as unknown as never });
+    const storeB = new RedisCircuitBreakerStore({ redis: redis as unknown as never });
+    const breakerA = new CircuitBreaker({
+      circuitId: "redis-cycles",
+      halfOpenRequests: 2,
+      openDuration: 1,
+      stateStore: storeA,
+    });
+    const breakerB = new CircuitBreaker({
+      circuitId: "redis-cycles",
+      halfOpenRequests: 2,
+      openDuration: 1,
+      stateStore: storeB,
+    });
+    const problem = ProblemFactory.notFound("missing");
+    let rejectOld!: (error: Error) => void;
+    let resolveFirst!: (value: string) => void;
+    let resolveSecond!: (value: string) => void;
+    await storeA.setState("redis-cycles", CircuitState.HALF_OPEN);
+
+    const oldProbe = breakerA
+      .execute(() => new Promise<string>((_resolve, reject) => (rejectOld = reject)))
+      .catch((error: unknown) => error);
+    await vi.waitFor(() => expect(rejectOld).toBeDefined());
+    await expect(
+      breakerB.execute(async () => Promise.reject(new Error("dependency failed"))),
+    ).rejects.toThrow("dependency failed");
+    await storeB.setLastFailureTime("redis-cycles", Date.now() - 2);
+
+    const firstNewProbe = breakerA.execute(
+      () => new Promise<string>((resolve) => (resolveFirst = resolve)),
+    );
+    await vi.waitFor(() => expect(resolveFirst).toBeDefined());
+    const secondNewProbe = breakerB.execute(
+      () => new Promise<string>((resolve) => (resolveSecond = resolve)),
+    );
+    await vi.waitFor(() => expect(resolveSecond).toBeDefined());
+    expect(await storeB.getHalfOpenActiveCount("redis-cycles")).toBe(2);
+
+    rejectOld(problem);
+    await expect(oldProbe).resolves.toBe(problem);
+    expect(await storeA.getHalfOpenActiveCount("redis-cycles")).toBe(2);
+    const extraProbe = vi.fn(async () => "unexpected");
+    await expect(breakerA.execute(extraProbe)).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    expect(extraProbe).not.toHaveBeenCalled();
+
+    resolveFirst("first");
+    resolveSecond("second");
+    await expect(firstNewProbe).resolves.toBe("first");
+    await expect(secondNewProbe).resolves.toBe("second");
+  });
+
+  it("keeps the half-open generation available until its Redis state expires", async () => {
+    const { redis, data } = createSharedMockRedis();
+    const expiresAt = new Map<string, number>();
+    let now = 0;
+    vi.spyOn(Date, "now").mockImplementation(() => now);
+    const baseGet = redis.get;
+    const baseSet = redis.set;
+    redis.get = vi.fn(async (key: string) => {
+      if ((expiresAt.get(key) ?? Number.POSITIVE_INFINITY) <= now) {
+        data.delete(key);
+        expiresAt.delete(key);
+      }
+      return baseGet(key);
+    });
+    redis.set = vi.fn(
+      async (key: string, value: string, options?: { ex?: number; nx?: boolean }) => {
+        const result = await baseSet(key, value, options);
+        if (result === "OK" && options?.ex !== undefined) {
+          expiresAt.set(key, now + options.ex * 1000);
+        }
+        now += 1;
+        return result;
+      },
+    );
+    const store = new RedisCircuitBreakerStore({ redis: redis as unknown as never });
+    const breaker = new CircuitBreaker({
+      circuitId: "redis-generation-ttl",
+      failureThreshold: 1,
+      openDuration: 30_000,
+      stateStore: store,
+    });
+    const problem = ProblemFactory.notFound("missing");
+    let rejectProbe!: (error: Error) => void;
+    await store.setLastFailureTime("redis-generation-ttl", 0);
+    await store.setState("redis-generation-ttl", CircuitState.OPEN);
+
+    now = 30_010;
+    const probe = breaker.execute(
+      () => new Promise<string>((_resolve, reject) => (rejectProbe = reject)),
+    );
+    await vi.waitFor(() => expect(rejectProbe).toBeDefined());
+    expect(await breaker.getState()).toBe(CircuitState.HALF_OPEN);
+    expect(await store.getHalfOpenActiveCount("redis-generation-ttl")).toBe(1);
+    now = 60_010;
+    expect(await store.getLastFailureTime("redis-generation-ttl")).toBe(0);
+    rejectProbe(problem);
+    await expect(probe).rejects.toBe(problem);
+    expect(await store.getHalfOpenActiveCount("redis-generation-ttl")).toBe(0);
+    await expect(breaker.execute(async () => "healthy")).resolves.toBe("healthy");
+    expect(await breaker.getState()).toBe(CircuitState.CLOSED);
   });
 
   it("Redis 오류 발생 시 인메모리로 자동 전환되어야 한다", async () => {
