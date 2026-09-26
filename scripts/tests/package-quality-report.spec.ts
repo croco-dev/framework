@@ -1024,6 +1024,12 @@ onlyBuiltDependencies:
 `),
     ).toEqual(["packages/**/*", "examples/*"]);
   });
+
+  it("keeps workspace globs to direct children so nested test fixtures never join the workspace", () => {
+    const workspace = readFileSync(join(import.meta.dirname, "../../pnpm-workspace.yaml"), "utf-8");
+
+    expect(parseWorkspacePackagePatterns(workspace)).toEqual(["packages/*", "examples/*"]);
+  });
 });
 
 function createTempRepo(): string {
