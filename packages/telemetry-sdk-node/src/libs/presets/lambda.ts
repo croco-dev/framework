@@ -19,9 +19,7 @@ function lambdaPreset(options: LambdaPresetOptions): TelemetryConfig {
 
   const probability = options.probability ?? (isDevelopment ? 1.0 : 0.1);
   const exporterUrl =
-    options.exporterUrl ??
-    process.env["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"] ??
-    process.env["OTEL_EXPORTER_OTLP_ENDPOINT"];
+    options.exporterUrl ?? (process.env["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"]?.trim() || undefined);
 
   return {
     serviceName: options.serviceName,

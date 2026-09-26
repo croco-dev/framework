@@ -11,7 +11,10 @@ import type { AutoInstrumentationConfig } from "./libs/instrumentation/AutoInstr
 export type TraceConfig = {
   /** Whether tracing is enabled. Default: true */
   enabled?: boolean;
-  /** OTLP exporter URL. Default: from env or localhost:4318 */
+  /**
+   * Trace-specific OTLP URL. Defaults to OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
+   * or OTEL_EXPORTER_OTLP_ENDPOINT with /v1/traces appended.
+   */
   exporterUrl?: string;
   /** Additional HTTP headers for the exporter */
   exporterHeaders?: Record<string, string>;

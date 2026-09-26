@@ -27,10 +27,11 @@ export function readEnv(env: NodeJS.ProcessEnv = process.env): AppEnv {
 }
 
 export function createTelemetryConfig(env: AppEnv): TelemetryConfig {
-  const exporterUrl = normalizeOptionalEnv(
-    env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT || env.OTEL_EXPORTER_OTLP_ENDPOINT,
-  );
-  const traceEnabled = env.TELEMETRY_ENABLED === "true" || exporterUrl !== undefined;
+  const exporterUrl = normalizeOptionalEnv(env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT);
+  const traceEnabled =
+    env.TELEMETRY_ENABLED === "true" ||
+    exporterUrl !== undefined ||
+    normalizeOptionalEnv(env.OTEL_EXPORTER_OTLP_ENDPOINT) !== undefined;
 
   return {
     serviceName: "{{projectName}}-api-server",

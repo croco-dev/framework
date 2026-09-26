@@ -325,7 +325,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("9a0840456a361324d642b953061ad463d0f52f73d52f6c783e85c9b13a49dec1");
+    ).toBe("149ea9c5e32a7225e7aa029d35e2da906a27ad6bb3d74a74a8e295a4dacadfd2");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -993,7 +993,7 @@ describe("verification manifest", () => {
     const internal = selectGeneratedTestPathsForSmokeCases(["goal-internal-tool"], paths);
     const admin = selectGeneratedTestPathsForSmokeCases(["admin-console-starter"], paths);
 
-    expect(internal).toHaveLength(5);
+    expect(internal).toHaveLength(6);
     expect(internal.some((path) => path.includes("/tests/journeys/"))).toBe(false);
     expect(admin).toEqual(
       [
@@ -1014,7 +1014,7 @@ describe("verification manifest", () => {
         ],
         paths,
       ),
-    ).toHaveLength(16);
+    ).toHaveLength(18);
     expect(selectGeneratedTestPathsForSmokeCases(["rest-spa-contracts"], paths)).toEqual([]);
     expect(() => selectGeneratedTestPathsForSmokeCases(["unknown-smoke-case"], paths)).toThrow(
       "Unknown generated smoke case: unknown-smoke-case",

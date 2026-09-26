@@ -181,7 +181,7 @@ describe("test evidence reconciliation", () => {
     const executedPaths = allPaths.filter(
       (path) => !path.includes("/base-ddd/") && !path.includes("/spa-be-split/tests/journeys/"),
     );
-    expect(executedPaths).toHaveLength(16);
+    expect(executedPaths).toHaveLength(18);
     const requiredGeneratedPaths = selectGeneratedTestPathsForSmokeCases(
       [
         "goal-saas-api",
