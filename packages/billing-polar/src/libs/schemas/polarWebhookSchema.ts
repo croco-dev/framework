@@ -28,6 +28,8 @@ export const PolarSubscriptionDataSchema = z
     prices: z.array(PolarPriceSchema).optional(),
     currentPeriodEnd: z.union([z.string(), z.date()]).nullable().optional(),
     cancelAtPeriodEnd: z.boolean().nullable().optional(),
+    createdAt: z.union([z.string(), z.date()]),
+    modifiedAt: z.union([z.string(), z.date()]).nullable().optional(),
   })
   .passthrough();
 

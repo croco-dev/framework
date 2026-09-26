@@ -4,11 +4,12 @@ import type { BillingStore, PlanRegistry, PlanVersionDefinition } from "@croco/b
 import {
   InMemoryBillingStore,
   OrderPaidEvent,
+  PlanChangedEvent,
   planVersionRef,
   SubscriptionPastDueEvent,
   WebhookAlreadyProcessedProblem,
 } from "@croco/billing-core";
-import type { EventPublisher } from "@croco/events-core";
+import type { DomainEvent, EventPublisher } from "@croco/events-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PolarWebhookHandler } from "../libs/PolarWebhookHandler";
 import type { WebhookDependencies } from "../libs/PolarWebhookHandler";
@@ -67,6 +68,15 @@ const POLAR_PLAN_VERSION = {
       priceIds: [],
     },
   ],
+} satisfies PlanVersionDefinition;
+
+const POLAR_TEAM_PLAN_VERSION = {
+  ...POLAR_PLAN_VERSION,
+  ref: planVersionRef("plan-team@v1"),
+  planId: "plan-team",
+  name: "Team",
+  amount: 9900,
+  providerBindings: [{ provider: "polar", productId: "plan-team", priceIds: [] }],
 } satisfies PlanVersionDefinition;
 
 function createMockPlanRegistry(): PlanRegistry {
@@ -141,6 +151,27 @@ function createSdkSubscriptionPayload(eventId: string) {
       discount: null,
       prices: [],
       meters: [],
+    },
+  };
+}
+
+function createSdkSubscriptionEvent(params: {
+  readonly eventId: string;
+  readonly type: string;
+  readonly status: string;
+  readonly productId: string;
+  readonly modifiedAt: string;
+}) {
+  const payload = createSdkSubscriptionPayload(params.eventId);
+  return {
+    ...payload,
+    type: params.type,
+    data: {
+      ...payload.data,
+      status: params.status,
+      modified_at: params.modifiedAt,
+      product_id: params.productId,
+      product: { ...payload.data.product, id: params.productId },
     },
   };
 }
@@ -375,6 +406,146 @@ describe.each([
     const headers = createSignedHeaders({ body, eventId, secret: signingKey, timestamp });
 
     expect(() => verifyPolarWebhook(body, headers, webhookSecret)).toThrow(SyntaxError);
+  });
+});
+
+describe("PolarWebhookHandler subscription webhook ordering", () => {
+  const now = new Date("2026-01-31T00:00:00Z");
+  const webhookSecret = "test-secret";
+  let store!: InMemoryBillingStore;
+  let published!: DomainEvent[];
+  let handler!: PolarWebhookHandler;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+    store = new InMemoryBillingStore();
+    published = [];
+    const planRegistry = createMockPlanRegistry();
+    vi.mocked(planRegistry.resolveProviderPlanVersion).mockImplementation(async ({ productId }) =>
+      productId === "plan-team" ? POLAR_TEAM_PLAN_VERSION : POLAR_PLAN_VERSION,
+    );
+    const publish = async (event: DomainEvent) => {
+      published.push(event);
+    };
+    handler = new PolarWebhookHandler(
+      { accessToken: "test-token", environment: "sandbox", webhookSecret },
+      {
+        store,
+        eventPublisher: { publishNow: publish, publishIdempotently: publish },
+        planRegistry,
+      },
+    );
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  async function deliver(event: ReturnType<typeof createSdkSubscriptionEvent>) {
+    const body = JSON.stringify(event);
+    const timestamp = Math.floor(now.getTime() / 1000);
+    return handler.handle(
+      body,
+      createSignedHeaders({ body, eventId: event.id, secret: webhookSecret, timestamp }),
+    );
+  }
+
+  it("should reject a subscription payload without created_at", async () => {
+    const eventId = "evt-missing-created-at";
+    const payload = createSdkSubscriptionPayload(eventId);
+    const body = JSON.stringify({
+      ...payload,
+      data: { ...payload.data, created_at: undefined },
+    });
+    const timestamp = Math.floor(now.getTime() / 1000);
+
+    await expect(
+      handler.handle(
+        body,
+        createSignedHeaders({ body, eventId, secret: webhookSecret, timestamp }),
+      ),
+    ).rejects.toSatisfy((problem: unknown) => {
+      expect(problem).toBeInstanceOf(WebhookValidationProblem);
+      expect(problem).toMatchObject({ detail: expect.stringContaining("createdAt") });
+      return true;
+    });
+    expect(await store.findSubscription("tenant-sdk-replay")).toBeNull();
+    expect(published).toEqual([]);
+  });
+
+  it("should keep a newer revocation when an older subscription.updated is redelivered later", async () => {
+    await deliver(
+      createSdkSubscriptionEvent({
+        eventId: "evt-created",
+        type: "subscription.created",
+        status: "active",
+        productId: "plan-pro",
+        modifiedAt: "2026-01-01T00:00:00Z",
+      }),
+    );
+    await deliver(
+      createSdkSubscriptionEvent({
+        eventId: "evt-revoked",
+        type: "subscription.revoked",
+        status: "revoked",
+        productId: "plan-pro",
+        modifiedAt: "2026-01-10T10:00:00Z",
+      }),
+    );
+    const publishedBeforeOlderUpdate = published.length;
+
+    const result = await deliver(
+      createSdkSubscriptionEvent({
+        eventId: "evt-updated-older",
+        type: "subscription.updated",
+        status: "active",
+        productId: "plan-pro",
+        modifiedAt: "2026-01-10T09:00:00Z",
+      }),
+    );
+
+    expect(result).toEqual({ success: true, eventId: "evt-updated-older" });
+    expect((await store.findSubscription("tenant-sdk-replay"))?.status).toBe("revoked");
+    expect(published).toHaveLength(publishedBeforeOlderUpdate);
+  });
+
+  it("should keep a newer plan change when an older subscription.updated is redelivered later", async () => {
+    await deliver(
+      createSdkSubscriptionEvent({
+        eventId: "evt-created",
+        type: "subscription.created",
+        status: "active",
+        productId: "plan-pro",
+        modifiedAt: "2026-01-01T00:00:00Z",
+      }),
+    );
+    await deliver(
+      createSdkSubscriptionEvent({
+        eventId: "evt-upgraded",
+        type: "subscription.updated",
+        status: "active",
+        productId: "plan-team",
+        modifiedAt: "2026-01-10T10:00:00Z",
+      }),
+    );
+
+    await deliver(
+      createSdkSubscriptionEvent({
+        eventId: "evt-updated-older",
+        type: "subscription.updated",
+        status: "active",
+        productId: "plan-pro",
+        modifiedAt: "2026-01-10T09:00:00Z",
+      }),
+    );
+
+    expect((await store.findSubscription("tenant-sdk-replay"))?.planId).toBe("plan-team");
+    expect(
+      published
+        .filter((event): event is PlanChangedEvent => event instanceof PlanChangedEvent)
+        .map(({ previousPlanId, newPlanId }) => [previousPlanId, newPlanId]),
+    ).toEqual([["plan-pro", "plan-team"]]);
   });
 });
 

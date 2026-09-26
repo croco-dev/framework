@@ -86,7 +86,10 @@ returns `claimed`, and a completed delivery returns `completed`.
 Atomically reserves a subscription webhook, reads its previous subscription, saves the new
 subscription, and persists every derived event intent. Repeated calls for the same webhook
 must return the original transition without recomputing intents from current subscription
-state.
+state. For the same external subscription, an input with an older providerModifiedAt than the
+stored value must record an empty-intent transition without saving the input subscription,
+deriving intents, or clearing another webhook reservation. Missing or equal timestamps do not
+suppress the input.
 
 #### Parameters
 
