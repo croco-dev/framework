@@ -285,7 +285,7 @@ function verifyConsumer(
 
   const install = runCommand(
     "pnpm",
-    ["install", "--offline", "--ignore-scripts", "--config.auto-install-peers=false"],
+    ["install", "--prefer-offline", "--ignore-scripts", "--config.auto-install-peers=false"],
     consumerRoot,
   );
   assertSucceeded(
