@@ -48,6 +48,7 @@ export const ACTIONS_ONLY_WORKFLOW_COMMAND_ALLOWLIST = [
   "node --experimental-strip-types scripts/security-gitleaks-smoke.mts --ensure-sarif ci-reports/security/gitleaks.sarif",
   "node --experimental-strip-types scripts/test-evidence-bundle.mts",
   "node --experimental-strip-types scripts/test-lane-runner.mts",
+  "node --experimental-strip-types scripts/turbo-canonical-cache.mts",
   "pnpm install --frozen-lockfile",
   "pnpm --dir packages/docs run playwright:install",
   "pnpm audit:prod",
