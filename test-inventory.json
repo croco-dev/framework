@@ -1227,6 +1227,17 @@
       }
     },
     {
+      "path": "packages/create-croco-app/templates/saas/apps/api-server/src/tests/GeneratedTelemetryEndpoint.spec.ts",
+      "lane": "generated-app",
+      "qualifiers": [],
+      "owner": "create-croco-app",
+      "generated": {
+        "sourcePath": "packages/create-croco-app/templates/saas/apps/api-server/src/tests/GeneratedTelemetryEndpoint.spec.ts",
+        "generatedPath": "apps/api-server/src/tests/GeneratedTelemetryEndpoint.spec.ts",
+        "commandId": "create-croco-app"
+      }
+    },
+    {
       "path": "packages/create-croco-app/templates/saas/apps/api-server/src/tests/ProviderProfileEnv.spec.ts",
       "lane": "generated-app",
       "qualifiers": [],
@@ -1267,6 +1278,17 @@
       "generated": {
         "sourcePath": "packages/create-croco-app/templates/spa-be-split/apps/api-server/src/tests/app.spec.ts",
         "generatedPath": "apps/api-server/src/tests/app.spec.ts",
+        "commandId": "create-croco-app"
+      }
+    },
+    {
+      "path": "packages/create-croco-app/templates/spa-be-split/apps/api-server/src/tests/env.spec.ts",
+      "lane": "generated-app",
+      "qualifiers": [],
+      "owner": "create-croco-app",
+      "generated": {
+        "sourcePath": "packages/create-croco-app/templates/spa-be-split/apps/api-server/src/tests/env.spec.ts",
+        "generatedPath": "apps/api-server/src/tests/env.spec.ts",
         "commandId": "create-croco-app"
       }
     },

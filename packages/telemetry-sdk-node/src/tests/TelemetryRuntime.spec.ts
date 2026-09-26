@@ -1,9 +1,12 @@
+import { createServer } from "node:http";
+import type { AddressInfo } from "node:net";
 import { trace } from "@opentelemetry/api";
 import type { Tracer, TracerProvider } from "@opentelemetry/api";
 import type { Instrumentation } from "@opentelemetry/instrumentation";
 import { ATTR_DEPLOYMENT_ENVIRONMENT_NAME } from "@opentelemetry/semantic-conventions";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TelemetryRuntimeProblem } from "../libs/problems/TelemetryProblems";
+import { lambdaPreset } from "../libs/presets/lambda";
 import { TelemetryRuntime } from "../runtime";
 import type { TelemetryConfig } from "../config";
 
@@ -831,7 +834,7 @@ describe("TelemetryRuntime", () => {
   });
 
   it("should not throw when endpoint is provided via env var", async () => {
-    vi.stubEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318/v1/traces");
+    vi.stubEnv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318");
 
     await expect(
       runtime.init({
@@ -841,6 +844,103 @@ describe("TelemetryRuntime", () => {
     ).resolves.not.toThrow();
 
     vi.unstubAllEnvs();
+  });
+
+  describe("OTEL_EXPORTER_OTLP_ENDPOINT base URL", () => {
+    let server!: ReturnType<typeof createServer>;
+    let origin!: string;
+    let paths!: string[];
+
+    beforeEach(async () => {
+      paths = [];
+      server = createServer((request, response) => {
+        paths.push(request.url ?? "");
+        request.resume();
+        request.on("end", () => {
+          response.writeHead(
+            ["/v1/traces", "/specific", "/configured"].includes(request.url ?? "") ? 200 : 404,
+          );
+          response.end();
+        });
+      });
+      await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+      origin = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+      vi.stubEnv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", undefined);
+    });
+
+    afterEach(async () => {
+      await TelemetryRuntime.reset();
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    });
+
+    it.each(["", "/"])("should export under a base URL with suffix %s", async (suffix) => {
+      vi.stubEnv("OTEL_EXPORTER_OTLP_ENDPOINT", `${origin}${suffix}`);
+      await runtime.init({
+        serviceName: "otlp-base-endpoint",
+        trace: { autoInstrumentation: { enabled: false } },
+      });
+      trace.getTracer("endpoint-test").startSpan("exported").end();
+
+      const flush = await runtime.forceFlush(5000);
+
+      expect(paths).toEqual(["/v1/traces"]);
+      expect(flush.outcome).toBe("completed");
+    });
+
+    it("should use the generic base URL when the trace-specific variable is empty", async () => {
+      vi.stubEnv("OTEL_EXPORTER_OTLP_ENDPOINT", ` ${origin} `);
+      vi.stubEnv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", " ");
+      await runtime.init({
+        serviceName: "otlp-empty-traces-endpoint",
+        trace: { autoInstrumentation: { enabled: false } },
+      });
+      trace.getTracer("endpoint-test").startSpan("exported").end();
+
+      expect((await runtime.forceFlush(5000)).outcome).toBe("completed");
+      expect(paths).toEqual(["/v1/traces"]);
+    });
+
+    it("should complete the lambdaPreset flush with a base URL", async () => {
+      vi.stubEnv("OTEL_EXPORTER_OTLP_ENDPOINT", `${origin}/`);
+      vi.stubEnv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", "");
+      const config = lambdaPreset({ serviceName: "lambda-base-endpoint", probability: 1 });
+      await runtime.init({
+        ...config,
+        trace: { ...config.trace, autoInstrumentation: { enabled: false } },
+      });
+      trace.getTracer("endpoint-test").startSpan("handled").end();
+
+      const flush = await runtime.forceFlush(5000);
+
+      expect(flush.outcome).toBe("completed");
+      expect(paths).toEqual(["/v1/traces"]);
+    });
+
+    it("should use the trace-specific endpoint unchanged before the generic base URL", async () => {
+      vi.stubEnv("OTEL_EXPORTER_OTLP_ENDPOINT", origin);
+      vi.stubEnv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", `${origin}/specific`);
+      await runtime.init({
+        serviceName: "specific-endpoint",
+        trace: { autoInstrumentation: { enabled: false } },
+      });
+      trace.getTracer("endpoint-test").startSpan("exported").end();
+
+      expect((await runtime.forceFlush(5000)).outcome).toBe("completed");
+      expect(paths).toEqual(["/specific"]);
+    });
+
+    it("should use the explicit exporter URL unchanged before either environment endpoint", async () => {
+      vi.stubEnv("OTEL_EXPORTER_OTLP_ENDPOINT", origin);
+      vi.stubEnv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", `${origin}/specific`);
+      await runtime.init({
+        serviceName: "configured-endpoint",
+        trace: { exporterUrl: `${origin}/configured`, autoInstrumentation: { enabled: false } },
+      });
+      trace.getTracer("endpoint-test").startSpan("exported").end();
+
+      expect((await runtime.forceFlush(5000)).outcome).toBe("completed");
+      expect(paths).toEqual(["/configured"]);
+    });
   });
 
   it("should return Problem details when forceFlush fails", async () => {

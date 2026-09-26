@@ -168,10 +168,7 @@ class TelemetryRuntime {
         );
 
         if (traceConfig.enabled !== false) {
-          const endpoint =
-            traceConfig.exporterUrl ??
-            process.env["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"] ??
-            process.env["OTEL_EXPORTER_OTLP_ENDPOINT"];
+          const endpoint = resolveTraceExporterUrl(traceConfig.exporterUrl);
 
           if (!endpoint) {
             throw new OtlpEndpointRequiredProblem();
@@ -531,10 +528,7 @@ class TelemetryRuntime {
       },
       trace: {
         enabled: trace.enabled !== false,
-        exporterUrl:
-          trace.exporterUrl ??
-          process.env["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"] ??
-          process.env["OTEL_EXPORTER_OTLP_ENDPOINT"],
+        exporterUrl: resolveTraceExporterUrl(trace.exporterUrl),
         exporterHeaders: trace.exporterHeaders ?? {},
         sampler: trace.sampler ?? null,
         probability: trace.sampler ? undefined : trace.probability,
@@ -673,6 +667,24 @@ function resolveInstrumentationEnvironment(config: TelemetryConfig): "lambda" | 
     process.env["AWS_EXECUTION_ENV"]?.includes("AWS_Lambda") === true
     ? "lambda"
     : "node";
+}
+
+function resolveTraceExporterUrl(exporterUrl: string | undefined): string | undefined {
+  if (exporterUrl !== undefined) {
+    return exporterUrl;
+  }
+
+  const tracesEndpoint = process.env["OTEL_EXPORTER_OTLP_TRACES_ENDPOINT"]?.trim();
+  if (tracesEndpoint) {
+    return tracesEndpoint;
+  }
+
+  const baseEndpoint = process.env["OTEL_EXPORTER_OTLP_ENDPOINT"]?.trim();
+  if (!baseEndpoint) {
+    return baseEndpoint;
+  }
+  const baseUrl = baseEndpoint.endsWith("/") ? baseEndpoint : `${baseEndpoint}/`;
+  return `${baseUrl}v1/traces`;
 }
 
 function canonicalizeFingerprintValue(

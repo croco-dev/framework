@@ -66,7 +66,8 @@ Additional HTTP headers for the exporter
 
 > `optional` **exporterUrl?**: `string`
 
-OTLP exporter URL. Default: from env or localhost:4318
+Trace-specific OTLP URL. Defaults to OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
+or OTEL_EXPORTER_OTLP_ENDPOINT with /v1/traces appended.
 
 ---
 
