@@ -248,11 +248,11 @@ const webhookValidationFailureCases: readonly {
 ];
 
 describe("PolarOrderDataSchema", () => {
-  it("accepts zero amounts and rejects negative amounts", () => {
+  it("accepts zero net amounts and rejects negative or fractional net amounts", () => {
     expect(() =>
       PolarOrderDataSchema.parse({
         id: "ord-123",
-        amount: 0,
+        netAmount: 0,
         currency: "USD",
         billingReason: "purchase",
       }),
@@ -261,7 +261,24 @@ describe("PolarOrderDataSchema", () => {
     expect(() =>
       PolarOrderDataSchema.parse({
         id: "ord-negative",
-        amount: -1,
+        netAmount: -1,
+        currency: "USD",
+        billingReason: "purchase",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      PolarOrderDataSchema.parse({
+        id: "ord-fractional",
+        netAmount: 2900.5,
+        currency: "USD",
+        billingReason: "purchase",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      PolarOrderDataSchema.parse({
+        id: "ord-missing",
         currency: "USD",
         billingReason: "purchase",
       }),
@@ -314,7 +331,7 @@ describe("PolarWebhookHandler", () => {
       type: "order.paid",
       data: {
         id: "order-conformance",
-        amount: 9900,
+        net_amount: 9900,
         currency: "USD",
         billingReason: "subscription_create",
         customer: { externalId: "tenant-conformance", metadata: {} },
@@ -1403,7 +1420,7 @@ describe("PolarWebhookHandler", () => {
           type: "order.paid",
           data: {
             id: "order-retry",
-            amount: 9900,
+            net_amount: 9900,
             currency: "USD",
             billing_reason: "purchase",
             customer: { externalId: "tenant-123", metadata: {} },
@@ -1453,7 +1470,7 @@ describe("PolarWebhookHandler", () => {
           type: "order.paid",
           data: {
             id: "order-retry",
-            amount: 9900,
+            net_amount: 9900,
             currency: "USD",
             billing_reason: "purchase",
             customer: { externalId: "tenant-123", metadata: {} },
@@ -1495,7 +1512,7 @@ describe("PolarWebhookHandler", () => {
           type: "order.paid",
           data: {
             id: "order-rollback",
-            amount: 9900,
+            net_amount: 9900,
             currency: "USD",
             billing_reason: "purchase",
             customer: { externalId: "tenant-123", metadata: {} },
@@ -1520,7 +1537,7 @@ describe("PolarWebhookHandler", () => {
         type: "order.paid",
         data: {
           id: "order-123",
-          amount: 0,
+          net_amount: 0,
           currency: "USD",
           billing_reason: "subscription_create",
           customer: { externalId: "tenant-123", metadata: {} },
@@ -1563,7 +1580,7 @@ describe("PolarWebhookHandler", () => {
         type: "order.paid",
         data: {
           id: `order-${billingReason}`,
-          amount: 9900,
+          net_amount: 9900,
           currency: "USD",
           billing_reason: billingReason,
           customer: { externalId: "tenant-123", metadata: {} },
@@ -1591,7 +1608,7 @@ describe("PolarWebhookHandler", () => {
           type: "order.paid",
           data: {
             id: "order-invalid-billing-reason",
-            amount: 9900,
+            net_amount: 9900,
             currency: "USD",
             ...(billingReason && { billing_reason: billingReason }),
             customer: { externalId: "tenant-123", metadata: {} },
@@ -1614,7 +1631,7 @@ describe("PolarWebhookHandler", () => {
     it("lifecycle ordering and duplicate delivery cannot persist an unpaid order", async () => {
       const orderData = {
         id: "order-lifecycle",
-        amount: 9900,
+        net_amount: 9900,
         currency: "USD",
         billingReason: "subscription_cycle",
         customer: { externalId: "tenant-lifecycle", metadata: {} },

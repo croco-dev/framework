@@ -83,7 +83,7 @@ export type {
  * const mapper = new PolarEventMapper();
  * const polarEvent = {
  *   type: 'order.paid',
- *   data: { id: 'ord_123', amount: 2999 }
+ *   data: { id: 'ord_123', net_amount: 2999 }
  * };
  *
  * const domainEvent = mapper.toDomainEvent(polarEvent);

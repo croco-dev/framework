@@ -34,7 +34,7 @@ export const PolarSubscriptionDataSchema = z
 export const PolarOrderDataSchema = z
   .object({
     id: z.string(),
-    amount: z.number().finite().nonnegative().optional(),
+    netAmount: z.number().int().nonnegative(),
     currency: z.string().length(3).optional(),
     billingReason: z.enum([
       "purchase",

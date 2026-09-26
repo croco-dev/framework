@@ -1,7 +1,9 @@
 import { createHmac } from "node:crypto";
+import { webhookOrderPaidPayloadFromJSON } from "@polar-sh/sdk/models/components/webhookorderpaidpayload.js";
 import type { BillingStore, PlanRegistry, PlanVersionDefinition } from "@croco/billing-core";
 import {
   InMemoryBillingStore,
+  OrderPaidEvent,
   planVersionRef,
   SubscriptionPastDueEvent,
   WebhookAlreadyProcessedProblem,
@@ -25,6 +27,8 @@ function createMockStore(): BillingStore {
   vi.spyOn(store, "releaseWebhookDelivery");
   vi.spyOn(store, "reserveWebhook");
   vi.spyOn(store, "completeWebhook");
+  vi.spyOn(store, "saveOrder");
+  vi.spyOn(store, "findOrdersByAccount");
   vi.spyOn(store, "failWebhook");
   return store;
 }
@@ -372,6 +376,230 @@ describe.each([
 
     expect(() => verifyPolarWebhook(body, headers, webhookSecret)).toThrow(SyntaxError);
   });
+});
+
+function createSdkOrderPaidPayload(netAmount?: number) {
+  const timestamp = "2026-01-31T00:00:00Z";
+  return {
+    type: "order.paid",
+    timestamp,
+    data: {
+      id: "order-sdk-1",
+      created_at: timestamp,
+      modified_at: null,
+      status: "paid",
+      paid: true,
+      subtotal_amount: 2900,
+      discount_amount: 0,
+      net_amount: netAmount,
+      tax_amount: 290,
+      total_amount: 3190,
+      applied_balance_amount: 0,
+      due_amount: 0,
+      refunded_amount: 0,
+      refunded_tax_amount: 0,
+      currency: "usd",
+      billing_reason: "subscription_create",
+      billing_name: null,
+      billing_address: null,
+      invoice_number: "INV-1",
+      is_invoice_generated: false,
+      receipt_number: null,
+      customer_id: "cus-sdk",
+      product_id: "plan-pro",
+      discount_id: null,
+      subscription_id: "sub-sdk",
+      checkout_id: null,
+      metadata: {},
+      platform_fee_amount: 0,
+      platform_fee_currency: null,
+      customer: {
+        id: "cus-sdk",
+        created_at: timestamp,
+        modified_at: null,
+        metadata: {},
+        external_id: "tenant-sdk",
+        email: "sdk@example.com",
+        email_verified: true,
+        type: "individual",
+        name: null,
+        billing_name: null,
+        billing_address: null,
+        tax_id: null,
+        organization_id: "org-sdk",
+        deleted_at: null,
+        avatar_url: "",
+      },
+      product: {
+        metadata: {},
+        id: "plan-pro",
+        created_at: timestamp,
+        modified_at: null,
+        trial_interval: null,
+        trial_interval_count: null,
+        name: "Pro",
+        description: null,
+        visibility: "public",
+        recurring_interval: "month",
+        recurring_interval_count: 1,
+        meter_interval: null,
+        meter_interval_count: null,
+        is_recurring: true,
+        is_archived: false,
+        organization_id: "org-sdk",
+      },
+      discount: null,
+      subscription: null,
+      items: [
+        {
+          created_at: timestamp,
+          modified_at: null,
+          id: "item-1",
+          label: "Pro",
+          amount: 2900,
+          tax_amount: 290,
+          proration: false,
+          product_price_id: "price-1",
+        },
+      ],
+      description: "Pro",
+      refundable_amount: 2900,
+      refundable_tax_amount: 290,
+    },
+  };
+}
+
+describe("PolarWebhookHandler order.paid with the Polar SDK Order shape", () => {
+  const now = new Date("2026-01-31T00:00:00Z");
+  const webhookSecret = "test-secret";
+  const signingKey = "test-secret";
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function createHandler(
+    store: BillingStore,
+    eventPublisher: WebhookDependencies["eventPublisher"],
+  ): PolarWebhookHandler {
+    const config: PolarConfig = {
+      accessToken: "test-token",
+      environment: "sandbox",
+      webhookSecret,
+    };
+    return new PolarWebhookHandler(config, {
+      store,
+      eventPublisher,
+      planRegistry: createMockPlanRegistry(),
+    });
+  }
+
+  function signPayload(payload: unknown, eventId: string) {
+    const body = JSON.stringify(payload);
+    const timestamp = Math.floor(now.getTime() / 1000);
+    return {
+      body,
+      headers: createSignedHeaders({ body, eventId, secret: signingKey, timestamp }),
+    };
+  }
+
+  it("persists net_amount as the order and OrderPaidEvent amount for an SDK-valid payload without amount", async () => {
+    const payload = createSdkOrderPaidPayload(2900);
+    expect(payload.data).not.toHaveProperty("amount");
+    const store = createMockStore();
+    const eventPublisher = createMockEventPublisher();
+    const handler = createHandler(store, eventPublisher);
+    const { body, headers } = signPayload(payload, "evt-sdk-order-paid");
+
+    expect(webhookOrderPaidPayloadFromJSON(body).ok).toBe(true);
+
+    await expect(handler.handle(body, headers)).resolves.toEqual({
+      success: true,
+      eventId: "evt-sdk-order-paid",
+    });
+
+    const orders = await store.findOrdersByAccount("tenant-sdk");
+    expect(orders.map(({ id, amount }) => ({ id, amount }))).toEqual([
+      { id: "order-sdk-1", amount: 2900 },
+    ]);
+    expect(eventPublisher.publishIdempotently).toHaveBeenCalledWith(expect.any(OrderPaidEvent));
+    expect(eventPublisher.publishIdempotently).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 2900, externalOrderId: "order-sdk-1" }),
+    );
+  });
+
+  it("persists and publishes a zero net_amount order", async () => {
+    const payload = createSdkOrderPaidPayload(0);
+    const store = createMockStore();
+    const eventPublisher = createMockEventPublisher();
+    const handler = createHandler(store, eventPublisher);
+    const { body, headers } = signPayload(payload, "evt-sdk-order-zero");
+
+    expect(webhookOrderPaidPayloadFromJSON(body).ok).toBe(true);
+
+    await expect(handler.handle(body, headers)).resolves.toEqual({
+      success: true,
+      eventId: "evt-sdk-order-zero",
+    });
+
+    expect(await store.findOrdersByAccount("tenant-sdk")).toEqual([
+      expect.objectContaining({ id: "order-sdk-1", amount: 0 }),
+    ]);
+    expect(eventPublisher.publishIdempotently).toHaveBeenCalledWith(
+      expect.objectContaining({ amount: 0, externalOrderId: "order-sdk-1" }),
+    );
+  });
+
+  it.each([
+    { name: "missing net_amount", netAmount: undefined },
+    { name: "negative net_amount", netAmount: -1 },
+    { name: "fractional net_amount", netAmount: 2900.5 },
+    {
+      name: "missing net_amount with a valid camelCase netAmount alias",
+      netAmount: undefined,
+      camelCaseNetAmount: 2900,
+    },
+    {
+      name: "negative net_amount with a valid camelCase netAmount alias",
+      netAmount: -1,
+      camelCaseNetAmount: 2900,
+    },
+    {
+      name: "fractional net_amount with a valid camelCase netAmount alias",
+      netAmount: 2900.5,
+      camelCaseNetAmount: 2900,
+    },
+  ])(
+    "rejects a signed order.paid with $name as a validation Problem without side effects",
+    async ({ netAmount, camelCaseNetAmount }) => {
+      const payload = createSdkOrderPaidPayload(2900);
+      if (netAmount === undefined) {
+        delete payload.data.net_amount;
+      } else {
+        payload.data.net_amount = netAmount;
+      }
+      if (camelCaseNetAmount !== undefined) {
+        (payload.data as Record<string, unknown>).netAmount = camelCaseNetAmount;
+      }
+      const store = createMockStore();
+      const eventPublisher = createMockEventPublisher();
+      const handler = createHandler(store, eventPublisher);
+      const { body, headers } = signPayload(payload, `evt-sdk-order-invalid`);
+
+      await expect(handler.handle(body, headers)).rejects.toSatisfy((problem: unknown) => {
+        expectWebhookValidationProblem(problem, expect.stringContaining("netAmount"));
+        return true;
+      });
+      expect(store.saveOrder).not.toHaveBeenCalled();
+      expect(eventPublisher.publishIdempotently).not.toHaveBeenCalled();
+      expect(store.completeWebhook).not.toHaveBeenCalled();
+    },
+  );
 });
 
 it("should not interpret a legacy prefix-only secret as an empty signing key", () => {

@@ -325,10 +325,6 @@ export class PolarWebhookHandler {
   private parseOrderPayload(data: unknown): ParsedOrderPayload {
     const orderData = PolarOrderDataSchema.parse(data);
 
-    if (typeof orderData.amount !== "number" || Number.isNaN(orderData.amount)) {
-      throw new WebhookProcessingProblem("Order amount is invalid");
-    }
-
     if (!this.isNonEmptyString(orderData.currency)) {
       throw new WebhookProcessingProblem("Order currency is required");
     }
@@ -336,7 +332,7 @@ export class PolarWebhookHandler {
     return {
       id: orderData.id,
       tenantId: this.extractTenantId(orderData.customer),
-      amount: orderData.amount,
+      amount: orderData.netAmount,
       currency: orderData.currency,
       reason: this.mapOrderPaymentReason(orderData.billingReason),
       paidAt: this.resolvePaidAt(orderData.createdAt),
@@ -628,6 +624,7 @@ function normalizeVerifiedEvent(event: unknown): unknown {
       cancelAtPeriodEnd: data.cancelAtPeriodEnd ?? data.cancel_at_period_end,
       billingReason: data.billingReason ?? data.billing_reason,
       createdAt: data.createdAt ?? data.created_at,
+      netAmount: data.net_amount,
     },
   };
 }
