@@ -42,8 +42,9 @@ migration runner.
 
 ## Transaction and concurrency contract
 
-Each command joins the injected `TxManager` transaction or opens one when no transaction is active. The
-adapter:
+Each command runs in a savepoint within an active `TxManager` transaction or opens a transaction when
+none is active. If the transaction adapter cannot create savepoints, `TxManager` joins the active
+transaction; allocation checks eligible availability before changing grant lots in either case. The adapter:
 
 - takes a transaction-scoped advisory lock for the tenant and idempotency key;
 - locks the account row before reading balances, grant lots, or reservations;

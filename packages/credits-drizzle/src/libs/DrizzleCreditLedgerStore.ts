@@ -353,49 +353,52 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
     this.validateCommand(command);
     const fingerprint = stableSerialize(semanticCommand(command));
     return this.persist(command.operation, () =>
-      this.txManager.run(async () => {
-        const tx = this.requireTransactionClient();
-        const tenantId = await this.resolveCommandTenantId(tx, command);
-        await tx.execute(
-          sql`select pg_advisory_xact_lock(hashtextextended(${createCreditIdempotencyIdentity(
-            tenantId,
-            command.idempotencyKey,
-          )}, 0))`,
-        );
-        const existing = await tx
-          .select()
-          .from(creditIdempotencyRecords)
-          .where(
-            and(
-              eq(creditIdempotencyRecords.tenantId, tenantId),
-              eq(creditIdempotencyRecords.key, command.idempotencyKey),
-            ),
-          )
-          .limit(1);
-        if (existing[0]) {
-          if (existing[0].fingerprint !== fingerprint) {
-            throw new CreditDuplicateConflictProblem(command.idempotencyKey);
+      this.txManager.run(
+        async () => {
+          const tx = this.requireTransactionClient();
+          const tenantId = await this.resolveCommandTenantId(tx, command);
+          await tx.execute(
+            sql`select pg_advisory_xact_lock(hashtextextended(${createCreditIdempotencyIdentity(
+              tenantId,
+              command.idempotencyKey,
+            )}, 0))`,
+          );
+          const existing = await tx
+            .select()
+            .from(creditIdempotencyRecords)
+            .where(
+              and(
+                eq(creditIdempotencyRecords.tenantId, tenantId),
+                eq(creditIdempotencyRecords.key, command.idempotencyKey),
+              ),
+            )
+            .limit(1);
+          if (existing[0]) {
+            if (existing[0].fingerprint !== fingerprint) {
+              throw new CreditDuplicateConflictProblem(command.idempotencyKey);
+            }
+            const result = deserializeResult(existing[0].result);
+            await this.insertEventIntent(tx, command, result);
+            return result;
           }
-          const result = deserializeResult(existing[0].result);
+
+          await this.assertCandidateIdsAvailable(tx, command);
+          const result =
+            command.operation === "open"
+              ? await this.openAccount(tx, command)
+              : await this.executeOnAccount(tx, command);
+          await tx.insert(creditIdempotencyRecords).values({
+            tenantId,
+            key: command.idempotencyKey,
+            accountId: result.account.id,
+            fingerprint,
+            result,
+          });
           await this.insertEventIntent(tx, command, result);
           return result;
-        }
-
-        await this.assertCandidateIdsAvailable(tx, command);
-        const result =
-          command.operation === "open"
-            ? await this.openAccount(tx, command)
-            : await this.executeOnAccount(tx, command);
-        await tx.insert(creditIdempotencyRecords).values({
-          tenantId,
-          key: command.idempotencyKey,
-          accountId: result.account.id,
-          fingerprint,
-          result,
-        });
-        await this.insertEventIntent(tx, command, result);
-        return result;
-      }),
+        },
+        { nesting: "savepoint" },
+      ),
     );
   }
 
@@ -1179,18 +1182,43 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
             sql`jsonb_array_length(${creditGrantLots.meterKeys}) = 0`,
             sql`${creditGrantLots.meterKeys} ? ${meterKey}`,
           );
-    while (compareCreditAmounts(remaining, ZERO_CREDIT_AMOUNT) > 0) {
-      const rows = await tx
-        .select()
+    const eligibleCondition = and(
+      eq(creditGrantLots.accountId, account.id),
+      gt(creditGrantLots.available, "0"),
+      or(isNull(creditGrantLots.expiresAt), gt(creditGrantLots.expiresAt, asOf)),
+      meterCondition,
+    );
+    const availableRows = await tx
+      .select({ available: sql<string>`coalesce(sum(${creditGrantLots.available}), 0)::text` })
+      .from(creditGrantLots)
+      .where(eligibleCondition);
+    const available = amount(availableRows[0]?.available ?? "0");
+    if (compareCreditAmounts(available, requested) < 0) {
+      const expiredRows = await tx
+        .select({ available: sql<string>`coalesce(sum(${creditGrantLots.available}), 0)::text` })
         .from(creditGrantLots)
         .where(
           and(
             eq(creditGrantLots.accountId, account.id),
             gt(creditGrantLots.available, "0"),
-            or(isNull(creditGrantLots.expiresAt), gt(creditGrantLots.expiresAt, asOf)),
+            isNotNull(creditGrantLots.expiresAt),
+            lte(creditGrantLots.expiresAt, asOf),
             meterCondition,
           ),
-        )
+        );
+      const expiredAvailable = amount(expiredRows[0]?.available ?? "0");
+      if (
+        compareCreditAmounts(expiredAvailable, subtractCreditAmounts(requested, available)) >= 0
+      ) {
+        throw new ExpiredGrantProblem(account.id);
+      }
+      throw new InsufficientCreditsProblem(account.id, requested, available);
+    }
+    while (compareCreditAmounts(remaining, ZERO_CREDIT_AMOUNT) > 0) {
+      const rows = await tx
+        .select()
+        .from(creditGrantLots)
+        .where(eligibleCondition)
         .orderBy(
           asc(creditGrantLots.expiresAt),
           asc(creditGrantLots.position),
