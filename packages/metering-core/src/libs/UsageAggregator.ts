@@ -15,6 +15,7 @@ export type UsageAggregatorOptions = {
  * Redis의 실시간 Usage 데이터를 주기적으로 DB에 영구 저장합니다.
  * - Lambda 환경에서는 즉시 flush하므로 배치 집계는 선택적
  * - 장기 보관 및 분석을 위한 DB 저장
+ * - 현재 UTC 청구 주기의 기록은 quota와 조회를 위해 Redis에 유지하고, 닫힌 주기만 저장 후 삭제
  */
 export class UsageAggregator {
   private readonly usageStorage: UsageStorage;
@@ -39,12 +40,14 @@ export class UsageAggregator {
    * @param tenantId - 테넌트 ID
    * @param meterId - Meter ID
    * @param period - 집계 기간
+   * @param range - 이전 청구 주기 등 저장할 기간의 양 끝 (포함)
    * @returns 저장된 레코드 수
    */
   async flushUsageToDB(
     tenantId: string,
     meterId: string,
     period: AggregationPeriod = "billing_cycle",
+    range?: { startDate: Date; endDate: Date },
   ): Promise<FlushResult> {
     const deleteUsageRecords = this.usageStorage.deleteUsageRecords;
     if (typeof deleteUsageRecords !== "function") {
@@ -54,6 +57,7 @@ export class UsageAggregator {
       tenantId,
       meterId,
       period,
+      ...range,
     };
 
     // Redis에서 레코드 조회
@@ -66,7 +70,14 @@ export class UsageAggregator {
     // DB에 배치 저장
     await this.meterRepository.saveUsageRecords(records);
 
-    await deleteUsageRecords.call(this.usageStorage, options, records);
+    const now = new Date();
+    const currentBillingCycleStart = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1);
+    const closedCycleRecords = records.filter(
+      (record) => record.timestamp.getTime() < currentBillingCycleStart,
+    );
+    if (closedCycleRecords.length > 0) {
+      await deleteUsageRecords.call(this.usageStorage, options, closedCycleRecords);
+    }
 
     return { recordsFlushed: records.length };
   }
