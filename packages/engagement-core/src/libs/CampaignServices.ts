@@ -326,8 +326,8 @@ export class CampaignBroadcastService {
 
         const members = await reader.readPage();
         if (members.length === 0) break;
-        await processWithConcurrency(members, payload.concurrency, async (member) => {
-          await this.processMember(execution.id, campaign, snapshot, member);
+        await processWithConcurrency(members, payload.concurrency, async (member, controller) => {
+          await this.processMember(execution.id, campaign, snapshot, member, controller);
         });
 
         await this.executions.checkpoint(
@@ -370,6 +370,7 @@ export class CampaignBroadcastService {
     campaign: AnyCampaign,
     snapshot: CampaignSnapshot,
     member: CampaignSnapshotMember,
+    controller: AbortController,
   ): Promise<void> {
     const existing = await this.store.getMemberOutcome(
       snapshot.scope,
@@ -414,6 +415,8 @@ export class CampaignBroadcastService {
       return;
     }
 
+    if (controller.signal.aborted) return;
+
     let result: EngagementSendResult;
     try {
       result = await this.sender.send(campaign.message, {
@@ -424,15 +427,21 @@ export class CampaignBroadcastService {
       });
     } catch (error) {
       const retryable = isRetryable(error);
-      await this.store.recordMemberOutcome({
-        scope: snapshot.scope,
-        snapshotId: snapshot.id,
-        memberKey: member.memberKey,
-        status: "failed",
-        failureCode: errorCode(error),
-        retryable,
-        recordedAt: this.clock(),
-      });
+      if (retryable) controller.abort({ error });
+      try {
+        await this.store.recordMemberOutcome({
+          scope: snapshot.scope,
+          snapshotId: snapshot.id,
+          memberKey: member.memberKey,
+          status: "failed",
+          failureCode: errorCode(error),
+          retryable,
+          recordedAt: this.clock(),
+        });
+      } catch (failureRecordError) {
+        if (retryable) attachFailureRecordError(error, failureRecordError);
+        throw failureRecordError;
+      }
       if (retryable) throw error;
       return;
     }
@@ -818,18 +827,18 @@ function scopeFromKey(scopeKey: string): CampaignScopeRef {
 async function processWithConcurrency<T>(
   values: readonly T[],
   concurrency: number,
-  process: (value: T) => Promise<void>,
+  process: (value: T, controller: AbortController) => Promise<void>,
 ): Promise<void> {
   let nextIndex = 0;
-  let firstFailure: { error: unknown } | undefined;
+  const controller = new AbortController();
   const worker = async (): Promise<void> => {
-    while (firstFailure === undefined && nextIndex < values.length) {
+    while (!controller.signal.aborted && nextIndex < values.length) {
       const currentIndex = nextIndex;
       nextIndex += 1;
       try {
-        await process(values[currentIndex] as T);
+        await process(values[currentIndex] as T, controller);
       } catch (error) {
-        firstFailure ??= { error };
+        controller.abort({ error });
         throw error;
       }
     }
@@ -837,7 +846,7 @@ async function processWithConcurrency<T>(
   await Promise.allSettled(
     Array.from({ length: Math.min(concurrency, values.length) }, () => worker()),
   );
-  if (firstFailure !== undefined) throw firstFailure.error;
+  if (controller.signal.aborted) throw (controller.signal.reason as { error: unknown }).error;
 }
 
 function campaignMemberSendKey(snapshot: CampaignSnapshot, member: CampaignSnapshotMember): string {

@@ -4828,7 +4828,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/CampaignServices.ts:535:5` (problem-constructor)
+- `packages/engagement-core/src/libs/CampaignServices.ts:544:5` (problem-constructor)
 
 <a id="engagement-core-campaign-execution-invalid"></a>
 
@@ -4846,7 +4846,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/CampaignServices.ts:510:5` (problem-constructor)
+- `packages/engagement-core/src/libs/CampaignServices.ts:519:5` (problem-constructor)
 
 <a id="engagement-core-campaign-execution-not-ready"></a>
 
@@ -4864,7 +4864,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/CampaignServices.ts:518:5` (problem-constructor)
+- `packages/engagement-core/src/libs/CampaignServices.ts:527:5` (problem-constructor)
 
 <a id="engagement-core-campaign-execution-publisher-missing"></a>
 
@@ -4882,7 +4882,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/CampaignServices.ts:546:5` (problem-constructor)
+- `packages/engagement-core/src/libs/CampaignServices.ts:555:5` (problem-constructor)
 
 <a id="engagement-core-campaign-not-registered"></a>
 
@@ -4918,7 +4918,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/CampaignServices.ts:499:5` (problem-constructor)
+- `packages/engagement-core/src/libs/CampaignServices.ts:508:5` (problem-constructor)
 
 <a id="engagement-core-campaign-snapshot-incomplete"></a>
 
