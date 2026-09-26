@@ -23,6 +23,10 @@ type FixtureOptions = {
   readonly includeLegacyMismatchedObserver?: boolean;
   readonly duplicateObserverArtifact?: boolean;
   readonly truncateSourcePagination?: boolean;
+  readonly cancelledPublishSourceRun?: boolean;
+  readonly cancelledNonPublishSourceRun?: boolean;
+  readonly omitConclusion?: boolean;
+  readonly inProgressSourceRun?: boolean;
 };
 
 function manifestResults(): readonly ResultRecord[] {
@@ -104,6 +108,7 @@ function fixture(options: FixtureOptions = {}): CacheableCiCollectionClient {
     101,
     ...(options.includeMissingObserverSource ? [104] : []),
     ...(options.includeLegacyMismatchedObserver ? [105] : []),
+    ...(options.cancelledPublishSourceRun ? [106] : []),
   ];
   const sourceRuns = [
     ...publishRuns.map((id, index) => ({
@@ -112,6 +117,9 @@ function fixture(options: FixtureOptions = {}): CacheableCiCollectionClient {
       created_at: `2026-08-1${3 - index}T00:00:00.000Z`,
       updated_at: `2026-08-1${3 - index}T00:30:00.000Z`,
       status: "completed",
+      ...(options.omitConclusion && id === 101
+        ? {}
+        : { conclusion: id === 106 ? "cancelled" : "success" }),
     })),
     {
       id: 102,
@@ -119,6 +127,7 @@ function fixture(options: FixtureOptions = {}): CacheableCiCollectionClient {
       created_at: "2026-08-11T00:00:00.000Z",
       updated_at: "2026-08-11T00:20:00.000Z",
       status: "completed",
+      conclusion: options.cancelledNonPublishSourceRun ? "cancelled" : "success",
     },
     {
       id: 103,
@@ -126,7 +135,20 @@ function fixture(options: FixtureOptions = {}): CacheableCiCollectionClient {
       created_at: "2026-08-10T00:00:00.000Z",
       updated_at: "2026-08-10T00:10:00.000Z",
       status: "completed",
+      conclusion: "success",
     },
+    ...(options.inProgressSourceRun
+      ? [
+          {
+            id: 107,
+            run_attempt: 1,
+            created_at: "2026-08-12T06:00:00.000Z",
+            updated_at: "2026-08-12T06:10:00.000Z",
+            status: "in_progress",
+            conclusion: null,
+          },
+        ]
+      : []),
   ];
   const paginationRuns = options.truncateSourcePagination
     ? Array.from({ length: 101 }, (_, index) => ({
@@ -135,6 +157,7 @@ function fixture(options: FixtureOptions = {}): CacheableCiCollectionClient {
         created_at: "2026-08-09T00:00:00.000Z",
         updated_at: "2026-08-09T00:10:00.000Z",
         status: "completed",
+        conclusion: "success",
       }))
     : sourceRuns;
   const observerArtifacts = [
@@ -169,6 +192,7 @@ function fixture(options: FixtureOptions = {}): CacheableCiCollectionClient {
                   created_at: "2026-08-13T00:31:00.000Z",
                   updated_at: "2026-08-13T00:32:00.000Z",
                   status: "completed",
+                  conclusion: "success",
                 },
               ]
             : [],
@@ -290,5 +314,76 @@ describe("cacheable CI observation collector", () => {
       expect.objectContaining({ sourceRunId: "103", reason: `before-cohort:${cohortStartedAt}` }),
     ]);
     expect(evaluateDataset(dataset, { contractOnly: true }).failed).toBe(false);
+  });
+
+  it("classifies a cancelled publish source run as an operational source with the fixed reason", () => {
+    const dataset = collectCacheableCiDataset(fixture({ cancelledPublishSourceRun: true }), {
+      cutoffAt: CUTOFF,
+      cohortStartedAt: COHORT_STARTED_AT,
+    });
+
+    expect(dataset.inventory.operationalSources).toContainEqual(
+      expect.objectContaining({ sourceRunId: "106", reason: "source-run-cancelled" }),
+    );
+    expect(dataset.inventory.excludedSources).not.toContainEqual(
+      expect.objectContaining({ sourceRunId: "106" }),
+    );
+    const queries = dataset.inventory.pages.map(({ query }) => query);
+    expect(queries).toContain("source-artifacts:106");
+    expect(queries).not.toContain("source-jobs:106");
+    expect(evaluateDataset(dataset, { contractOnly: true }).failed).toBe(false);
+  });
+
+  it("keeps a cancelled non-publish source run in the profile exclusion", () => {
+    const dataset = collectCacheableCiDataset(fixture({ cancelledNonPublishSourceRun: true }), {
+      cutoffAt: CUTOFF,
+      cohortStartedAt: COHORT_STARTED_AT,
+    });
+
+    expect(dataset.inventory.excludedSources).toContainEqual(
+      expect.objectContaining({ sourceRunId: "102", reason: "profile:spine" }),
+    );
+    expect(dataset.inventory.operationalSources).not.toContainEqual(
+      expect.objectContaining({ sourceRunId: "102" }),
+    );
+  });
+
+  it("classifies non-cancelled runs as eligible, profile-excluded, or missing-artifact operational sources", () => {
+    const dataset = collectCacheableCiDataset(fixture(), {
+      cutoffAt: CUTOFF,
+      cohortStartedAt: COHORT_STARTED_AT,
+    });
+
+    expect(dataset.inventory.operationalSources).toEqual([
+      expect.objectContaining({
+        sourceRunId: "103",
+        reason: "source-performance-artifact-missing",
+      }),
+    ]);
+    expect(dataset.inventory.excludedSources).toEqual([
+      expect.objectContaining({ sourceRunId: "102", reason: "profile:spine" }),
+    ]);
+    expect(dataset.observations.map(({ sourceRunId }) => sourceRunId)).toEqual(["101"]);
+  });
+
+  it("accepts a null conclusion on an in-progress source run and records it as not completed", () => {
+    const dataset = collectCacheableCiDataset(fixture({ inProgressSourceRun: true }), {
+      cutoffAt: CUTOFF,
+      cohortStartedAt: COHORT_STARTED_AT,
+    });
+
+    expect(dataset.inventory.operationalSources).toContainEqual(
+      expect.objectContaining({ sourceRunId: "107", reason: "source-run-not-completed-at-cutoff" }),
+    );
+    expect(evaluateDataset(dataset, { contractOnly: true }).failed).toBe(false);
+  });
+
+  it("fails parsing when a source run is missing the conclusion key", () => {
+    expect(() =>
+      collectCacheableCiDataset(fixture({ omitConclusion: true }), {
+        cutoffAt: CUTOFF,
+        cohortStartedAt: COHORT_STARTED_AT,
+      }),
+    ).toThrow(/conclusion must be a string or null/);
   });
 });

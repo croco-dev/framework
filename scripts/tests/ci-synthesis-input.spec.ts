@@ -854,6 +854,71 @@ describe("cacheable CI synthesis input", () => {
     ).toThrow(/not bound by identity.inputDigest/);
   });
 
+  it.each(["repo", "spine", "publish"] as const)(
+    "plans %s synthesis checks with the publish manifest's 21 dependency edges in order",
+    (profile) => {
+      const result = assemble(
+        fixture(undefined, { profile, selectedCheckIds: ["production-ready", "spine-promotion"] }),
+      );
+
+      expect(result.synthesisPlan).toEqual([
+        {
+          id: "test-evidence-reconcile",
+          selection: "not-applicable",
+          dependsOn: [
+            "test",
+            "integration-test-lane",
+            "published-test-lane",
+            "generated-app-smoke",
+          ],
+        },
+        {
+          id: "production-ready",
+          selection: "selected",
+          dependsOn: ["build", "typecheck", "test", "test-evidence-reconcile"],
+        },
+        {
+          id: "spine-promotion",
+          selection: "selected",
+          dependsOn: ["test", "generated-app-smoke", "provider-certification", "production-ready"],
+        },
+        {
+          id: "spine-bundle-size",
+          selection: "not-applicable",
+          dependsOn: [
+            "changeset-required",
+            "lint",
+            "format",
+            "build",
+            "typecheck",
+            "test",
+            "provider-certification",
+            "production-ready",
+            "spine-promotion",
+          ],
+        },
+      ]);
+      expect(parseSynthesisInput(result)).toEqual(result);
+    },
+  );
+
+  it("rejects a synthesis plan whose dependency order drifts from the publish manifest", () => {
+    const result = assemble();
+    const { synthesisInputDigest: _synthesisInputDigest, ...unsigned } = result;
+    const drifted = {
+      ...unsigned,
+      synthesisPlan: unsigned.synthesisPlan.map((entry) =>
+        entry.id === "production-ready"
+          ? { ...entry, dependsOn: [...entry.dependsOn].reverse() }
+          : entry,
+      ),
+    };
+
+    expect(() =>
+      parseSynthesisInput({ ...drifted, synthesisInputDigest: evidenceDigest(drifted) }),
+    ).toThrow(/does not match the manifest dependency contract/);
+  });
+
   it("synthesizes all 54 checks and five security results without legacy workspace inputs", () => {
     const value = fixture();
     const input = assemble(value);
@@ -897,6 +962,34 @@ describe("cacheable CI synthesis input", () => {
         ),
       ),
     ).toEqual(result.evidence);
+  });
+
+  it("fails split synthesis when the Gitleaks acceptance smoke fails", () => {
+    const value = fixture();
+    const current = facts("coverage-security") as Extract<
+      ProducerFacts,
+      { lane: "coverage-security" }
+    >;
+    replaceProducerArtifact(value, "coverage-security", {
+      ...current,
+      securityPhysical: current.securityPhysical.map((result) =>
+        result.id === "gitleaks-acceptance-smoke"
+          ? { ...result, outcome: "failed", diagnostics: ["gitleaks-acceptance-smoke:failed"] }
+          : result,
+      ),
+    });
+    const result = runSplitValidationSynthesis({
+      input: assemble(value),
+      rootDir: value.root,
+      now: () => "2026-08-14T02:00:00.000Z",
+    });
+
+    expect(result.failed).toBe(true);
+    expect(result.evidence.blockingOutcome).toBe("failed");
+    expect(result.evidence.conclusion).toBe("failure");
+    expect(
+      result.evidence.security.find(({ id }) => id === "gitleaks-acceptance-smoke"),
+    ).toMatchObject({ outcome: "failed" });
   });
 
   it("preserves a valid producer failure as a failed shadow outcome", () => {

@@ -35,7 +35,7 @@ import {
   type VerificationProfile,
 } from "./ci-lane-evidence.mts";
 import { parseSecurityPhysicalResults } from "./ci-synthesis-input.mts";
-import { SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
+import { isBlockingSemantics, SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
 import { inventoryDigest, parseStrictTestInventory } from "./test-inventory.mts";
 import { createVerificationManifest } from "./verification-manifest.mts";
 import { VerificationProblem } from "./verification-problem.mts";
@@ -125,6 +125,7 @@ type VerificationReport = {
 
 type FastLaneCommand = {
   readonly owner: string;
+  readonly cwd: string;
   readonly status: string;
   readonly cacheStatus?: string;
 };
@@ -374,6 +375,7 @@ function parseFastLane(value: unknown): FastLaneReport {
     if (!isRecord(candidate)) throw new Error(`fast-lane command ${index} must be an object`);
     return {
       owner: requiredString(candidate.owner, `fast-lane command ${index} owner`),
+      cwd: requiredString(candidate.cwd, `fast-lane command ${index} cwd`),
       status: requiredString(candidate.status, `fast-lane command ${index} status`),
       ...(candidate.cacheStatus === undefined
         ? {}
@@ -450,9 +452,7 @@ function securityResult(job: SourceJob, contract: (typeof SECURITY_STEPS)[number
 function securitySemantics(id: SecurityResultId): ResultRecord["semantics"] {
   const ownership = SECURITY_OWNERSHIP.find((entry) => entry.id === id);
   if (!ownership) throw new Error(`unknown security result ${id}`);
-  return ownership.semantics === "blocking" || ownership.semantics === "acceptance-smoke"
-    ? "blocking"
-    : "advisory";
+  return isBlockingSemantics(ownership.semantics) ? "blocking" : "advisory";
 }
 
 function exactStepConclusion(job: SourceJob, name: string): string | null {
@@ -899,7 +899,7 @@ export function createCiPerformanceObservation(
   ) {
     throw new Error("fast-lane evidence is not a successful current-inventory attestation");
   }
-  const commandIds = fastLane.commands.map(({ owner }) => `${owner}#test`);
+  const commandIds = fastLane.commands.map(({ owner, cwd }) => `${owner}#test@${cwd}`);
   if (new Set(commandIds).size !== commandIds.length)
     throw new Error("fast-lane evidence contains duplicate cache task IDs");
   if (fastLane.commands.some(({ status }) => status !== "passed"))
@@ -979,8 +979,8 @@ export function createCiPerformanceObservation(
     evidenceDigest,
     injectedFailure: failureClass,
     cacheEligibleTaskIds: commandIds,
-    validCacheHitTaskIds: fastLane.commands.flatMap(({ owner, cacheStatus }) =>
-      cacheStatus === "hit" ? [`${owner}#test`] : [],
+    validCacheHitTaskIds: fastLane.commands.flatMap(({ owner, cwd, cacheStatus }) =>
+      cacheStatus === "hit" ? [`${owner}#test@${cwd}`] : [],
     ),
     freshAttestation: sample.cacheEvidenceComplete,
     checkResults,

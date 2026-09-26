@@ -83,7 +83,7 @@ import type { VerificationContext, VerificationLaneManifest } from "./verificati
 
 export const CACHEABLE_LANE_CHECK_SCHEMA = "croco.ci-cacheable-lane-check/v1" as const;
 
-const DEFAULT_TOTAL_TIMEOUT_MS = 150 * 60 * 1000;
+export const DEFAULT_TOTAL_TIMEOUT_MS = 150 * 60 * 1000;
 const DEFAULT_MAX_CONCURRENCY = 2;
 const PRODUCER_BUNDLE_FILE = "producer-bundle.json";
 type NormalizedCheckRecord = {

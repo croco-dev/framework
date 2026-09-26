@@ -442,6 +442,28 @@ describe("cacheable CI lane promotion gates", () => {
     );
   });
 
+  it("keeps a cancelled-run operational source valid and out of the equivalence pair count", () => {
+    const baselinePairCount = evaluateDataset(makeDataset(10)).equivalence?.pairCount;
+    const dataset = mutableDataset(10);
+    const cancelledSourceRunId = "99999";
+    dataset.inventory.sourceRunCount += 1;
+    dataset.inventory.operationalSources.push({
+      sourceRunId: cancelledSourceRunId,
+      sourceAttempt: 1,
+      createdAt: WINDOW_START,
+      reason: "source-run-cancelled",
+    });
+    const closingPage = dataset.inventory.pages.find(
+      (page) => page.query === "source-runs" && page.nextCursor === null,
+    );
+    if (!closingPage) throw new Error("fixture is missing the closing source-runs page");
+    closingPage.sourceRunIds = [...closingPage.sourceRunIds, cancelledSourceRunId];
+    closingPage.itemCount += 1;
+
+    expect(evaluateDataset(dataset, { contractOnly: true }).failed).toBe(false);
+    expect(evaluateDataset(dataset).equivalence?.pairCount).toBe(baselinePairCount);
+  });
+
   it("emits deterministic JSON and exits non-zero for insufficient CLI input", () => {
     const directory = mkdtempSync(join(tmpdir(), "croco-cacheable-evaluator-"));
     DIRECTORIES.push(directory);

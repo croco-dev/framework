@@ -1,6 +1,7 @@
-import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { spawnSync } from "node:child_process";
+import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { parseDocument } from "yaml";
 import { describe, expect, it } from "vitest";
 
@@ -17,6 +18,8 @@ const ROOT_DIR = resolve(import.meta.dirname, "../..");
 const source = readFileSync(WORKFLOW_PATH, "utf8");
 
 type Step = {
+  readonly env?: Readonly<Record<string, unknown>>;
+  readonly id?: string;
   readonly if?: string;
   readonly name?: string;
   readonly run?: string;
@@ -33,7 +36,9 @@ type Workflow = {
     };
   };
   readonly permissions?: Readonly<Record<string, unknown>>;
-  readonly jobs?: { readonly observe?: { readonly steps?: readonly Step[] } };
+  readonly jobs?: {
+    readonly observe?: { readonly if?: string; readonly steps?: readonly Step[] };
+  };
 };
 
 function parsedWorkflow(): Workflow {
@@ -50,6 +55,12 @@ describe("CI performance observer workflow", () => {
     expect(workflow.permissions).toEqual({ actions: "read", contents: "read" });
     expect(findWorkflowPermissionViolations({ "ci-performance-observer.yml": source })).toEqual([]);
     expect(findWorkflowVerificationViolations(source, ROOT_DIR)).toEqual([]);
+  });
+
+  it("skips the whole job without failing when the source run was cancelled", () => {
+    expect(parsedWorkflow().jobs?.observe?.if).toBe(
+      "${{ github.event.workflow_run.conclusion != 'cancelled' }}",
+    );
   });
 
   it("checks out only the trusted default branch and never executes downloaded PR code", () => {
@@ -130,7 +141,6 @@ describe("CI performance observer workflow", () => {
     expect(record?.run).toContain("-name split-validation-shadow.json");
     expect(record?.run).toContain("-name split-security-policy-summary.json");
     expect(record?.run).toContain("-name synthesis-input.json");
-    expect(record?.run).toContain("The source run did not emit normalized performance evidence.");
     expect(record?.run).toContain(
       'if [ "${#producer_reports[@]}" -ne 4 ] || [ "${#shadow_reports[@]}" -ne 1 ]',
     );
@@ -141,55 +151,354 @@ describe("CI performance observer workflow", () => {
     expect(source).toContain("> ci-observer-input/artifacts.json");
   });
 
-  it("uses the run-bound PR base instead of the topic head first parent", () => {
+  it("ends non-publish runs before downloading verification data or re-verifying the source identity", () => {
+    const steps = parsedWorkflow().jobs?.observe?.steps ?? [];
+    const names = steps.map(({ name }) => name);
+    const cohort = steps.find(({ name }) => name === "Select publish observation cohort");
+    expect(cohort?.id).toBe("cohort");
+    expect(names.indexOf("Select publish observation cohort")).toBe(
+      names.indexOf("Download untrusted performance data") + 1,
+    );
+    for (const name of [
+      "Download untrusted verification data",
+      "Read source run metadata",
+      "Download exact split evidence when present",
+      "Record immutable observation",
+    ]) {
+      const step = steps.find((candidate) => candidate.name === name);
+      expect(step?.if, name).toBe("${{ steps.cohort.outputs.publish == 'true' }}");
+    }
+
+    const runCohort = (profile: string | null) => {
+      const workspace = mkdtempSync(join(tmpdir(), "croco-ci-observer-cohort-"));
+      try {
+        if (profile) {
+          mkdirSync(join(workspace, "ci-observer-input/performance"), { recursive: true });
+          writeFileSync(
+            join(workspace, "ci-observer-input/performance/raw-sample.json"),
+            JSON.stringify({ currentSamples: [{ profile }] }),
+          );
+        }
+        const outputPath = join(workspace, "github-output");
+        const summaryPath = join(workspace, "step-summary");
+        writeFileSync(outputPath, "");
+        writeFileSync(summaryPath, "");
+        const result = spawnSync("bash", ["-eo", "pipefail", "-c", cohort?.run ?? ""], {
+          cwd: workspace,
+          encoding: "utf8",
+          env: { ...process.env, GITHUB_OUTPUT: outputPath, GITHUB_STEP_SUMMARY: summaryPath },
+        });
+        return {
+          status: result.status,
+          stderr: result.stderr,
+          output: readFileSync(outputPath, "utf8"),
+          summary: readFileSync(summaryPath, "utf8"),
+        };
+      } finally {
+        rmSync(workspace, { force: true, recursive: true });
+      }
+    };
+
+    expect(runCohort("repo")).toEqual({
+      status: 0,
+      stderr: "",
+      output: "publish=false\n",
+      summary: "Non-publish CI run is outside the cacheable-lanes observation cohort.\n",
+    });
+    expect(runCohort("publish")).toEqual({
+      status: 0,
+      stderr: "",
+      output: "publish=true\n",
+      summary: "",
+    });
+    expect(runCohort(null)).toMatchObject({
+      status: 1,
+      stderr: "The source run did not emit normalized performance evidence.\n",
+      output: "",
+    });
+  });
+
+  it("re-verifies the recorded identity after a tree-less unshallow fetch without reading pull-request state", () => {
     const metadata = parsedWorkflow().jobs?.observe?.steps?.find(
       ({ name }) => name === "Read source run metadata",
     );
+    const run = metadata?.run ?? "";
+    const normalizedRun = run.replace(/^\s+/gm, "");
 
-    expect(metadata?.run).toContain(".pull_requests | select(length == 1) | .[0].base.sha");
-    expect(metadata?.run).toContain(".pull_requests[0].head.sha");
-    expect(metadata?.run).toContain(".parents[0].sha == $expected_base_sha");
-    expect(metadata?.run).toContain(".parents[1].sha == $expected_head_sha");
-    const parentExpression = [
-      "(.parents | length) == 2 and",
-      ".parents[0].sha == $expected_base_sha and",
-      ".parents[1].sha == $expected_head_sha",
+    expect(metadata?.env).toMatchObject({
+      DEFAULT_BRANCH: "${{ github.event.repository.default_branch }}",
+    });
+    expect(run).toContain("source_event=$(jq -r '.event' ci-observer-input/run.json)");
+    expect(run).toContain("source_head_sha=$(jq -r '.head_sha' ci-observer-input/run.json)");
+    expect(run).toContain(
+      "recorded_candidate_sha=$(jq -r '.provenance.verificationIdentity.candidateSha' \"$verification_report\")",
+    );
+    const candidateSelection = [
+      'case "$source_event" in',
+      'pull_request) candidate_sha="$recorded_candidate_sha" ;;',
+      'push | workflow_dispatch) candidate_sha="$source_head_sha" ;;',
+      "*)",
+      'echo "Unsupported source event for cacheable CI observation." >&2',
     ].join("\n");
-    expect(metadata?.run?.replace(/^\s+/gm, "")).toContain(parentExpression);
+    expect(normalizedRun).toContain(candidateSelection);
+
+    const fetch =
+      'git fetch --no-tags --filter=tree:0 --unshallow origin "$candidate_sha" "$DEFAULT_BRANCH"';
+    const eventBranch = [
+      'if [ "$source_event" = "pull_request" ]; then',
+      'identity_args+=(--event-base "$recorded_base_sha")',
+      "fi",
+    ].join("\n");
+    const verification =
+      'node --experimental-strip-types scripts/ci-verification-identity.mts verify-recorded "${identity_args[@]}"';
+    expect(run.match(/\bgit fetch\b/g)).toEqual(["git fetch"]);
+    expect(normalizedRun.indexOf(candidateSelection)).toBeLessThan(normalizedRun.indexOf(fetch));
+    expect(normalizedRun.indexOf(fetch)).toBeLessThan(normalizedRun.indexOf(eventBranch));
+    expect(normalizedRun.indexOf(eventBranch)).toBeLessThan(normalizedRun.indexOf(verification));
+    expect(normalizedRun).toContain(
+      [
+        "identity_args=(",
+        '--event "$source_event"',
+        '--event-head "$source_head_sha"',
+        '--candidate "$candidate_sha"',
+        '--checkout "$candidate_sha"',
+        '--recorded-base "$recorded_base_sha"',
+        '--recorded-head "$recorded_head_sha"',
+        '--recorded-candidate "$recorded_candidate_sha"',
+        '--default-branch "refs/remotes/origin/${DEFAULT_BRANCH}"',
+        "--output ci-observer-input/verification-identity.json",
+        ")",
+      ].join("\n"),
+    );
+    expect(run).toContain(
+      "jq -er '.candidateSha' ci-observer-input/verification-identity.json > ci-observer-input/execution-sha.txt",
+    );
+    expect(run).toContain(
+      "jq -er '.baseSha' ci-observer-input/verification-identity.json > ci-observer-input/base-sha.txt",
+    );
+
+    const identityGuard = '.provenance.verificationIdentity | type == "object"';
+    expect(run).toContain(`if ! jq -e '${identityGuard}' "$verification_report" >/dev/null; then`);
+    expect(run).toContain("Source verification evidence does not record a verification identity.");
+    const guardStatus = (evidence: unknown) =>
+      spawnSync("jq", ["-e", identityGuard], { input: JSON.stringify(evidence) }).status;
     expect(
-      () => execFileSync("jq", ["--version"], { encoding: "utf8" }),
+      spawnSync("jq", ["--version"]).status,
       "jq is required to validate the workflow expression",
-    ).not.toThrow();
-    expect(() =>
-      execFileSync(
-        "jq",
-        [
-          "-e",
-          "--arg",
-          "expected_base_sha",
-          "base",
-          "--arg",
-          "expected_head_sha",
-          "head",
-          parentExpression,
-        ],
-        {
-          encoding: "utf8",
-          input: JSON.stringify({ parents: [{ sha: "base" }, { sha: "head" }] }),
-        },
+    ).toBe(0);
+    expect(
+      guardStatus({
+        provenance: { verificationIdentity: { baseSha: "b", headSha: "h", candidateSha: "c" } },
+      }),
+    ).toBe(0);
+    expect(guardStatus({ provenance: {} })).toBe(1);
+
+    for (const forbidden of [
+      "git/ref/pull/",
+      "SOURCE_PULL_NUMBER",
+      "pull_requests",
+      "--depth=1",
+      "execution-commit.json",
+    ]) {
+      expect(source, forbidden).not.toContain(forbidden);
+    }
+  });
+
+  it("rejects a recorded verification identity that is not a full commit OID before fetching it", () => {
+    const metadata = parsedWorkflow().jobs?.observe?.steps?.find(
+      ({ name }) => name === "Read source run metadata",
+    );
+    expect(metadata?.run).toContain("for recorded_field in baseSha headSha candidateSha; do");
+    expect(metadata?.run).toContain('if [[ ! "$source_head_sha" =~ ^[0-9a-f]{40}$ ]]; then');
+    expect(metadata?.run).toContain(
+      "Recorded verification identity field ${recorded_field} is not a full commit OID.",
+    );
+    expect(metadata?.run).toContain("Source run head_sha is not a full commit OID.");
+    expect(
+      metadata?.run?.indexOf(
+        "Recorded verification identity field ${recorded_field} is not a full commit OID.",
       ),
-    ).not.toThrow();
-    expect(metadata?.run).toContain(
-      '[ "$(jq -er \'.event\' ci-observer-input/run.json)" = "push" ] ||',
+    ).toBeLessThan(metadata?.run?.indexOf('case "$source_event" in') ?? -1);
+    expect(metadata?.run?.indexOf("Source run head_sha is not a full commit OID.")).toBeLessThan(
+      metadata?.run?.indexOf('case "$source_event" in') ?? -1,
     );
-    expect(metadata?.run).toContain(
-      '[ "$(jq -er \'.event\' ci-observer-input/run.json)" = "workflow_dispatch" ]; then',
+
+    const workspace = mkdtempSync(join(tmpdir(), "croco-ci-observer-metadata-"));
+    try {
+      const verificationDir = join(workspace, "ci-observer-input/verification");
+      mkdirSync(verificationDir, { recursive: true });
+      writeFileSync(
+        join(verificationDir, "spine-evidence.json"),
+        JSON.stringify({
+          provenance: {
+            verificationIdentity: {
+              baseSha: "1".repeat(40),
+              headSha: "2".repeat(40),
+              candidateSha: `${"3".repeat(40)}:refs/heads/malicious`,
+            },
+          },
+        }),
+      );
+      const ghPath = join(workspace, "gh");
+      writeFileSync(
+        ghPath,
+        `#!/usr/bin/env bash\nprintf '%s\\n' '{"event":"pull_request","head_sha":"${"4".repeat(40)}"}'\n`,
+      );
+      chmodSync(ghPath, 0o755);
+      const result = spawnSync("bash", ["-eo", "pipefail", "-c", metadata?.run ?? ""], {
+        cwd: workspace,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          DEFAULT_BRANCH: "trunk",
+          GH_TOKEN: "test-token",
+          GITHUB_REPOSITORY: "croco/framework",
+          PATH: `${workspace}:${process.env.PATH ?? ""}`,
+          SOURCE_RUN_ID: "1",
+        },
+      });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(
+        "Recorded verification identity field candidateSha is not a full commit OID.",
+      );
+    } finally {
+      rmSync(workspace, { force: true, recursive: true });
+    }
+  });
+
+  it("reports the source run head_sha check separately from the recorded identity", () => {
+    const metadata = parsedWorkflow().jobs?.observe?.steps?.find(
+      ({ name }) => name === "Read source run metadata",
     );
-    expect(metadata?.run).toContain("jq -er '.parents | select(length >= 1) | .[0].sha'");
-    expect(metadata?.run).toContain("Unsupported source event for cacheable CI observation.");
-    expect(metadata?.run).not.toContain(": > ci-observer-input/base-sha.txt");
-    expect(metadata?.run).not.toMatch(
-      /if \[ -n "\$SOURCE_PULL_NUMBER" \]; then[\s\S]{0,200}\.parents\[0\]\.sha/,
+    const workspace = mkdtempSync(join(tmpdir(), "croco-ci-observer-metadata-"));
+    try {
+      const verificationDir = join(workspace, "ci-observer-input/verification");
+      mkdirSync(verificationDir, { recursive: true });
+      writeFileSync(
+        join(verificationDir, "spine-evidence.json"),
+        JSON.stringify({
+          provenance: {
+            verificationIdentity: {
+              baseSha: "1".repeat(40),
+              headSha: "2".repeat(40),
+              candidateSha: "3".repeat(40),
+            },
+          },
+        }),
+      );
+      const ghPath = join(workspace, "gh");
+      writeFileSync(
+        ghPath,
+        '#!/usr/bin/env bash\nprintf \'%s\\n\' \'{"event":"pull_request","head_sha":"not-a-sha"}\'\n',
+      );
+      chmodSync(ghPath, 0o755);
+      const result = spawnSync("bash", ["-eo", "pipefail", "-c", metadata?.run ?? ""], {
+        cwd: workspace,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          DEFAULT_BRANCH: "trunk",
+          GH_TOKEN: "test-token",
+          GITHUB_REPOSITORY: "croco/framework",
+          PATH: `${workspace}:${process.env.PATH ?? ""}`,
+          SOURCE_RUN_ID: "1",
+        },
+      });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("Source run head_sha is not a full commit OID.");
+    } finally {
+      rmSync(workspace, { force: true, recursive: true });
+    }
+  });
+
+  it("names the recorded field that is null instead of exiting silently", () => {
+    const metadata = parsedWorkflow().jobs?.observe?.steps?.find(
+      ({ name }) => name === "Read source run metadata",
     );
+    const workspace = mkdtempSync(join(tmpdir(), "croco-ci-observer-metadata-"));
+    try {
+      const verificationDir = join(workspace, "ci-observer-input/verification");
+      mkdirSync(verificationDir, { recursive: true });
+      writeFileSync(
+        join(verificationDir, "spine-evidence.json"),
+        JSON.stringify({
+          provenance: {
+            verificationIdentity: {
+              baseSha: "1".repeat(40),
+              headSha: "2".repeat(40),
+              candidateSha: null,
+            },
+          },
+        }),
+      );
+      const ghPath = join(workspace, "gh");
+      writeFileSync(
+        ghPath,
+        `#!/usr/bin/env bash\nprintf '%s\\n' '{"event":"pull_request","head_sha":"${"4".repeat(40)}"}'\n`,
+      );
+      chmodSync(ghPath, 0o755);
+      const result = spawnSync("bash", ["-eo", "pipefail", "-c", metadata?.run ?? ""], {
+        cwd: workspace,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          DEFAULT_BRANCH: "trunk",
+          GH_TOKEN: "test-token",
+          GITHUB_REPOSITORY: "croco/framework",
+          PATH: `${workspace}:${process.env.PATH ?? ""}`,
+          SOURCE_RUN_ID: "1",
+        },
+      });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(
+        "Recorded verification identity field candidateSha is not a full commit OID.",
+      );
+    } finally {
+      rmSync(workspace, { force: true, recursive: true });
+    }
+  });
+
+  it("fails a non-cancelled run whose split artifact set is missing a lane", () => {
+    const splitDownload = parsedWorkflow().jobs?.observe?.steps?.find(
+      ({ name }) => name === "Download exact split evidence when present",
+    );
+    expect(splitDownload?.run).toContain(
+      "Expected an exact five-artifact Phase B split evidence set.",
+    );
+
+    const workspace = mkdtempSync(join(tmpdir(), "croco-ci-observer-split-"));
+    try {
+      mkdirSync(join(workspace, "ci-observer-input"), { recursive: true });
+      const artifacts = {
+        total_count: 4,
+        artifacts: [
+          { name: "ci-lane-core-verification-1-1", expired: false },
+          { name: "ci-lane-generated-apps-1-1", expired: false },
+          { name: "ci-lane-package-artifacts-1-1", expired: false },
+          { name: "ci-lane-coverage-security-1-1", expired: false },
+        ],
+      };
+      writeFileSync(join(workspace, "ci-observer-input/artifacts.json"), JSON.stringify(artifacts));
+      const ghPath = join(workspace, "gh");
+      writeFileSync(ghPath, "#!/usr/bin/env bash\nexit 99\n");
+      chmodSync(ghPath, 0o755);
+      const result = spawnSync("bash", ["-eo", "pipefail", "-c", splitDownload?.run ?? ""], {
+        cwd: workspace,
+        encoding: "utf8",
+        env: {
+          ...process.env,
+          GH_TOKEN: "test-token",
+          PATH: `${workspace}:${process.env.PATH ?? ""}`,
+          SOURCE_RUN_ATTEMPT: "1",
+          SOURCE_RUN_ID: "1",
+        },
+      });
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(
+        "Expected an exact five-artifact Phase B split evidence set.",
+      );
+    } finally {
+      rmSync(workspace, { force: true, recursive: true });
+    }
   });
 });

@@ -41,6 +41,10 @@ const SHA = "c".repeat(40);
 const STARTED_AT = "2026-08-14T01:00:00.000Z";
 const ISSUED_AT = "2026-08-14T01:05:00.000Z";
 const COMPLETED_AT = "2026-08-14T01:10:00.000Z";
+const BLOCKING_SECURITY_IDS: readonly string[] = [
+  "blocking-secret-scan",
+  "gitleaks-acceptance-smoke",
+];
 
 const baseIdentity = {
   architectureVersion: "shadow-split",
@@ -242,6 +246,8 @@ function shadowEvidence(
   const operationalFailure = options.operationalFailure ?? null;
   const hasBlockingFailure =
     options.failedCheck !== undefined && options.failedCheck !== "core-coverage-warning";
+  const hasBlockingSecurityFailure =
+    options.failedSecurity !== undefined && BLOCKING_SECURITY_IDS.includes(options.failedSecurity);
   return createSplitValidationShadowEvidence({
     ...baseIdentity,
     producerBundles: PRODUCER_LANES.map((lane) => ({
@@ -252,7 +258,7 @@ function shadowEvidence(
     security,
     conclusion:
       options.conclusion ??
-      (hasBlockingFailure || options.failedSecurity === "blocking-secret-scan" || operationalFailure
+      (hasBlockingFailure || hasBlockingSecurityFailure || operationalFailure
         ? "failure"
         : "success"),
     operationalFailure,
@@ -851,6 +857,9 @@ describe("split-validation-shadow evidence", () => {
     expect(shadowEvidence({ failedCheck: "core-coverage-warning" }).conclusion).toBe("success");
     expect(shadowEvidence({ failedCheck: "build" }).blockingOutcome).toBe("failed");
     expect(shadowEvidence({ failedSecurity: "blocking-secret-scan" }).conclusion).toBe("failure");
+    expect(shadowEvidence({ failedSecurity: "gitleaks-acceptance-smoke" }).conclusion).toBe(
+      "failure",
+    );
     expectCode(
       () => shadowEvidence({ operationalFailure: "RUNNER_LOST", conclusion: "success" }),
       "OPERATIONAL_FAILURE_MASKED",

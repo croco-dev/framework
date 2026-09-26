@@ -29,7 +29,11 @@ import {
   writeSpinePromotionReport,
 } from "./spine-promotion-check.mts";
 import { parseSynthesisInput } from "./ci-synthesis-input.mts";
-import { ADVISORY_CHECK_IDS, SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
+import {
+  ADVISORY_CHECK_IDS,
+  isBlockingSemantics,
+  SECURITY_OWNERSHIP,
+} from "./ci-verification-contract.mts";
 import { reconcileTestEvidence } from "./test-evidence-reconcile.mts";
 import { VERIFICATION_LANE_OWNERSHIP } from "./verification-manifest.mts";
 import type {
@@ -214,7 +218,7 @@ function createPromotionContext(
             path: artifact.path,
             semanticStatus: artifact.semanticStatus,
           })),
-        blocking: producerResult.semantics === "blocking",
+        blocking: isBlockingSemantics(producerResult.semantics),
         commandId: producerResult.id,
         completedAt: selected && producer?.status === "success" ? completedAt : null,
         outcome:
@@ -493,8 +497,12 @@ export function runSplitValidationSynthesis(options: RunOptions): SplitSynthesis
     bundleDigest,
   }));
   const hasBlockingFailure =
-    checks.some(({ semantics, outcome }) => semantics === "blocking" && outcome === "failed") ||
-    security.some(({ semantics, outcome }) => semantics === "blocking" && outcome === "failed");
+    checks.some(
+      ({ semantics, outcome }) => isBlockingSemantics(semantics) && outcome === "failed",
+    ) ||
+    security.some(
+      ({ semantics, outcome }) => isBlockingSemantics(semantics) && outcome === "failed",
+    );
   const evidence = createSplitValidationShadowEvidence({
     ...input.identity,
     producerBundles,

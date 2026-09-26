@@ -41,6 +41,10 @@ const DIGEST_B = "b".repeat(64);
 const STARTED_AT = "2026-08-14T01:00:00.000Z";
 const ISSUED_AT = "2026-08-14T01:05:00.000Z";
 const COMPLETED_AT = "2026-08-14T01:10:00.000Z";
+const BLOCKING_SECURITY_IDS: readonly string[] = [
+  "blocking-secret-scan",
+  "gitleaks-acceptance-smoke",
+];
 
 const identity = {
   architectureVersion: "shadow-split",
@@ -177,10 +181,7 @@ function shadow(
     })),
     conclusion:
       checks.some(({ outcome, semantics }) => outcome === "failed" && semantics === "blocking") ||
-      SECURITY_OWNERSHIP.some(
-        (entry) =>
-          entry.semantics === "blocking" && securityOverrides[entry.id]?.outcome === "failed",
-      )
+      BLOCKING_SECURITY_IDS.some((id) => securityOverrides[id]?.outcome === "failed")
         ? "failure"
         : "success",
     operationalFailure: null,
@@ -401,6 +402,35 @@ describe("local monolith versus split verification harness", () => {
         "blocking-secret-scan": {
           outcome: "failed",
           diagnostics: ["SECRET_SCAN_FAILED"],
+        },
+      },
+    );
+
+    const report = evaluateLocalEquivalence({
+      ...value,
+      monolithicSecurity: failedSecurity,
+      splitValidationShadow: failedShadow,
+    });
+
+    expect(report.status).toBe("passed");
+    expect(report.monolithicBlockingOutcome).toBe("failed");
+    expect(report.splitBlockingOutcome).toBe("failed");
+  });
+
+  it("treats a failing Gitleaks acceptance smoke as an equivalent blocking failure on both architectures", () => {
+    const value = fixture();
+    const failedSecurity = value.monolithicSecurity.map((result) =>
+      result.id === "gitleaks-acceptance-smoke"
+        ? { ...result, outcome: "failed" as const, diagnostics: ["ACCEPTANCE_SMOKE_FAILED"] }
+        : result,
+    );
+    const failedShadow = shadow(
+      value.producerBundles,
+      {},
+      {
+        "gitleaks-acceptance-smoke": {
+          outcome: "failed",
+          diagnostics: ["ACCEPTANCE_SMOKE_FAILED"],
         },
       },
     );

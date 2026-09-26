@@ -176,8 +176,8 @@ function fastLane(overrides: Readonly<Record<string, unknown>> = {}) {
     diagnostics: [],
     skippedFiles: [],
     commands: [
-      { owner: "@croco/example", status: "passed", cacheStatus: "hit" },
-      { owner: "repo:ci", status: "passed", cacheStatus: "miss" },
+      { owner: "@croco/example", cwd: "packages/example", status: "passed", cacheStatus: "hit" },
+      { owner: "repo:ci", cwd: ".", status: "passed", cacheStatus: "miss" },
     ],
     ...overrides,
   });
@@ -513,8 +513,8 @@ describe("CI performance observer", () => {
       nodeVersion: "v22.23.1",
       pnpmVersion: "11.9.0",
       turboVersion: "2.10.2",
-      cacheEligibleTaskIds: ["@croco/example#test", "repo:ci#test"],
-      validCacheHitTaskIds: ["@croco/example#test"],
+      cacheEligibleTaskIds: ["@croco/example#test@packages/example", "repo:ci#test@."],
+      validCacheHitTaskIds: ["@croco/example#test@packages/example"],
       freshAttestation: true,
       stableDiagnostics: [],
     });
@@ -725,8 +725,8 @@ describe("CI performance observer", () => {
         createInput({
           fastLane: fastLane({
             commands: [
-              { owner: "repo:ci", status: "passed" },
-              { owner: "repo:ci", status: "passed" },
+              { owner: "repo:ci", cwd: ".", status: "passed" },
+              { owner: "repo:ci", cwd: ".", status: "passed" },
             ],
           }),
         }),
@@ -737,6 +737,35 @@ describe("CI performance observer", () => {
         createInput({ jobs: { ...JOBS, total_count: JOBS.total_count + 1 } }),
       ),
     ).toThrow(/incomplete/);
+  });
+
+  it("keeps separate cache tasks for one owner running in two directories", () => {
+    const observation = createCiPerformanceObservation(
+      createInput({
+        fastLane: fastLane({
+          commands: [
+            { owner: "repo:examples", cwd: "examples/a", status: "passed" },
+            { owner: "repo:examples", cwd: "examples/b", status: "passed" },
+          ],
+        }),
+      }),
+    );
+    expect(observation.cacheEligibleTaskIds).toEqual([
+      "repo:examples#test@examples/a",
+      "repo:examples#test@examples/b",
+    ]);
+  });
+
+  it("rejects a fast-lane command missing its working directory", () => {
+    expect(() =>
+      createCiPerformanceObservation(
+        createInput({
+          fastLane: fastLane({
+            commands: [{ owner: "repo:examples", status: "passed" }],
+          }),
+        }),
+      ),
+    ).toThrow("fast-lane command 0 cwd must be a non-empty string");
   });
 
   it("rejects a missing workflow-security responsibility", () => {
@@ -815,7 +844,7 @@ describe("CI performance observer", () => {
           ? { ...result, outcome: "failed", diagnostics: ["acceptance-smoke:failed"] }
           : result,
       ),
-      conclusion: "success",
+      conclusion: "failure",
       operationalFailure: null,
       startedAt: original.startedAt,
       completedAt: original.completedAt,
@@ -839,6 +868,10 @@ describe("CI performance observer", () => {
       diagnostics: ["acceptance-smoke:failed"],
     });
     expect(coverage?.blockingOutcome).toBe("failure");
+    const synthesis = observations.find(
+      ({ jobIdentity }) => jobIdentity === "split-validation-shadow",
+    );
+    expect(synthesis).toMatchObject({ conclusion: "failure", blockingOutcome: "failure" });
   });
 
   it("rejects a source workflow that does not match the observed workflow digest", () => {
