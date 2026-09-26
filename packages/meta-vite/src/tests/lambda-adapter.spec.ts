@@ -142,12 +142,105 @@ describe("lambda adapter", () => {
     expect(request?.method).toBe("PUT");
     expect(request?.url).toBe("http://example.com/v1/items");
   });
+
+  it("forwards HTTP API v2 event cookies to the page handler", async () => {
+    const pageHandler = vi.fn<CrocoFetchHandler>(async () => new Response("page"));
+    const handler = createLambdaComposedHandler({ apiHandlers: [], pageHandler });
+
+    await handler(
+      createHttpApiEvent({
+        rawPath: "/account",
+        cookies: ["session=abc123", "theme=dark"],
+      }),
+      {},
+    );
+
+    expect(pageHandler.mock.calls[0]?.[0].headers.get("cookie")).toBe("session=abc123; theme=dark");
+  });
+
+  it("merges header and HTTP API v2 event cookies by name", async () => {
+    const pageHandler = vi.fn<CrocoFetchHandler>(async () => new Response("page"));
+    const handler = createLambdaHandler(pageHandler);
+
+    await handler(
+      createHttpApiEvent({
+        headers: { host: "example.com", Cookie: "session=header; locale=en" },
+        cookies: ["session=event", "theme=dark"],
+      }),
+      {},
+    );
+
+    expect(pageHandler.mock.calls[0]?.[0].headers.get("cookie")).toBe(
+      "session=header; locale=en; theme=dark",
+    );
+  });
+
+  it("keeps repeated query values from API Gateway payload format 1.0", async () => {
+    const pageHandler = vi.fn<CrocoFetchHandler>(async () => new Response("page"));
+    const handler = createLambdaHandler(pageHandler);
+
+    await handler(
+      {
+        version: "1.0",
+        httpMethod: "GET",
+        path: "/search",
+        headers: { host: "example.com" },
+        queryStringParameters: { q: "croco", tag: "beta" },
+        multiValueQueryStringParameters: { q: ["croco"], tag: ["alpha", "beta"] },
+      },
+      {},
+    );
+
+    const url = new URL(pageHandler.mock.calls[0]?.[0].url ?? "http://invalid");
+    expect(url.searchParams.get("q")).toBe("croco");
+    expect(url.searchParams.getAll("tag")).toEqual(["alpha", "beta"]);
+  });
+
+  it("uses single-value query parameters when API Gateway has no multi-value parameters", async () => {
+    const pageHandler = vi.fn<CrocoFetchHandler>(async () => new Response("page"));
+    const handler = createLambdaHandler(pageHandler);
+
+    await handler(
+      {
+        version: "1.0",
+        httpMethod: "GET",
+        path: "/search",
+        headers: { host: "example.com" },
+        queryStringParameters: { q: "croco", tag: "beta" },
+      },
+      {},
+    );
+
+    const url = new URL(pageHandler.mock.calls[0]?.[0].url ?? "http://invalid");
+    expect(url.searchParams.toString()).toBe("q=croco&tag=beta");
+  });
+
+  it("preserves the raw query string of HTTP API v2 events", async () => {
+    const pageHandler = vi.fn<CrocoFetchHandler>(async () => new Response("page"));
+    const handler = createLambdaHandler(pageHandler);
+
+    await handler(
+      {
+        ...createHttpApiEvent({
+          rawPath: "/search",
+          rawQueryString: "tag=alpha&tag=beta&q=croco%20framework",
+        }),
+        queryStringParameters: { q: "ignored" },
+      },
+      {},
+    );
+
+    expect(pageHandler.mock.calls[0]?.[0].url).toBe(
+      "http://lambda.local/search?tag=alpha&tag=beta&q=croco%20framework",
+    );
+  });
 });
 
 function createHttpApiEvent(options: {
   method?: string;
   rawPath?: string;
   rawQueryString?: string;
+  cookies?: string[];
   headers?: Record<string, string>;
   body?: string;
   isBase64Encoded?: boolean;
@@ -156,6 +249,7 @@ function createHttpApiEvent(options: {
     version: "2.0",
     rawPath: options.rawPath ?? "/",
     rawQueryString: options.rawQueryString ?? "",
+    cookies: options.cookies,
     headers: options.headers ?? { host: "lambda.local" },
     body: options.body,
     isBase64Encoded: options.isBase64Encoded ?? false,
