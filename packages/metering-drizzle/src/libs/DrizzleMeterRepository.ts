@@ -332,21 +332,28 @@ export class DrizzleMeterRepository extends MeterRepository {
       return value;
     });
 
-    const insertQuery = client.insert(this.usageRecordTable).values(values);
+    const MAX_BIND_PARAMETERS_PER_STATEMENT = 32_766;
+    const recordsPerStatement = Math.floor(
+      MAX_BIND_PARAMETERS_PER_STATEMENT / Object.keys(values[0]).length,
+    );
+    for (let offset = 0; offset < values.length; offset += recordsPerStatement) {
+      const insertQuery = client
+        .insert(this.usageRecordTable)
+        .values(values.slice(offset, offset + recordsPerStatement));
 
-    if (isPostgresInsertValuesQuery(insertQuery, this.usageRecordSchema)) {
-      await insertQuery.onConflictDoNothing({
-        target: [
-          this.usageRecordSchema.tenantId,
-          this.usageRecordSchema.meterId,
-          this.usageRecordSchema.idempotencyKey,
-        ],
-        where: sql`${this.usageRecordSchema.idempotencyKey} IS NOT NULL`,
-      });
-      return;
+      if (isPostgresInsertValuesQuery(insertQuery, this.usageRecordSchema)) {
+        await insertQuery.onConflictDoNothing({
+          target: [
+            this.usageRecordSchema.tenantId,
+            this.usageRecordSchema.meterId,
+            this.usageRecordSchema.idempotencyKey,
+          ],
+          where: sql`${this.usageRecordSchema.idempotencyKey} IS NOT NULL`,
+        });
+      } else {
+        await insertQuery.onConflictDoNothing();
+      }
     }
-
-    await insertQuery.onConflictDoNothing();
   }
 
   private encodeJsonColumn(value: unknown, column: unknown): unknown {

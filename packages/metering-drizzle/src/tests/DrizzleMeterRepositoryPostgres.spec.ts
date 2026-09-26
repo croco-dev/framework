@@ -82,6 +82,30 @@ function createRepository(db: NodePgDatabase): DrizzleMeterRepository {
 describe.skipIf(connectionString.length === 0)(
   "DrizzleMeterRepository PostgreSQL round trip",
   () => {
+    it("persists a batch larger than PostgreSQL's bind-parameter limit", async () => {
+      const client = new Client({ connectionString });
+      await client.connect();
+      try {
+        await createUsageRecordsTable(client);
+        const repository = createRepository(drizzle(client));
+        const records = Array.from({ length: 8_000 }, (_, index) => ({
+          id: `usage-${index}`,
+          tenantId: "tenant-1",
+          meterId: "api_calls",
+          value: 1,
+          timestamp: new Date("2026-01-15T00:00:00.000Z"),
+          idempotencyKey: `request-${index}`,
+        }));
+
+        await expect(repository.saveUsageRecords(records)).resolves.toBeUndefined();
+
+        const { rows } = await client.query("SELECT COUNT(*)::int AS count FROM usage_records");
+        expect(rows).toEqual([{ count: 8_000 }]);
+      } finally {
+        await client.end();
+      }
+    });
+
     it("preserves a non-UUID usage ID, timestamp, and nested JSONB metadata", async () => {
       const client = new Client({ connectionString });
       await client.connect();

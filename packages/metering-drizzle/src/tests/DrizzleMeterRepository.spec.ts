@@ -93,6 +93,16 @@ const createLegacyRepositoryConfig = () => ({
   },
 });
 
+const createUsageRecords = (count: number): UsageRecord[] =>
+  Array.from({ length: count }, (_, index) => ({
+    id: `usage-${index}`,
+    tenantId: "tenant-1",
+    meterId: "api_calls",
+    value: 1,
+    timestamp: new Date("2026-01-15T00:00:00.000Z"),
+    idempotencyKey: `request-${index}`,
+  }));
+
 type DrizzleOperationName = "delete" | "insert" | "select" | "update";
 
 function createObservedDrizzleClient(
@@ -1287,9 +1297,83 @@ describe("DrizzleMeterRepository", () => {
         recordsFlushed: 0,
       });
     });
+
+    it("flushes a billing cycle larger than one SQLite statement", async () => {
+      const records = createUsageRecords(5_000);
+      const usageStorage = createStorage(records);
+      const aggregator = new UsageAggregator({ usageStorage, meterRepository: repository });
+
+      await expect(aggregator.flushUsageToDB("tenant-1", "api_calls")).resolves.toEqual({
+        recordsFlushed: 5_000,
+      });
+      expect(sqlite.prepare("SELECT SUM(value) AS total FROM usage_records").get()).toEqual({
+        total: 5_000,
+      });
+      expect(records).toEqual([]);
+    });
   });
 
   describe("saveUsageRecords", () => {
+    it("persists and deduplicates a batch larger than one SQLite statement", async () => {
+      const records = createUsageRecords(5_000);
+
+      await expect(repository.saveUsageRecords(records)).resolves.toBeUndefined();
+      await expect(repository.saveUsageRecords(records)).resolves.toBeUndefined();
+
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM usage_records").get()).toEqual({
+        count: 5_000,
+      });
+    });
+
+    it("replays committed chunks after a later insert fails", async () => {
+      const records = createUsageRecords(5_000);
+      const failure = ProblemFactory.internalServerError(
+        "testing/usage-chunk-failed",
+        "usage chunk failed",
+      );
+      let inserts = 0;
+      const interruptedClient = createObservedDrizzleClient(db, (operation) => {
+        if (operation === "insert" && ++inserts === 2) {
+          throw failure;
+        }
+      });
+      const interruptedRepository = new DrizzleMeterRepository(
+        interruptedClient,
+        txManager,
+        createRepositoryConfig(),
+      );
+
+      await expect(interruptedRepository.saveUsageRecords(records)).rejects.toBe(failure);
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM usage_records").get()).toEqual({
+        count: 4_095,
+      });
+
+      await expect(repository.saveUsageRecords(records)).resolves.toBeUndefined();
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM usage_records").get()).toEqual({
+        count: 5_000,
+      });
+    });
+
+    it("rolls back every chunk in an active transaction", async () => {
+      const transaction = createSqliteTransactionHarness(sqlite, db);
+      const failure = ProblemFactory.internalServerError(
+        "testing/rollback-usage-batch",
+        "rollback usage batch",
+      );
+
+      await expect(
+        transaction.run(async () => {
+          await transaction.repository.saveUsageRecords(createUsageRecords(5_000));
+          throw failure;
+        }),
+      ).rejects.toBe(failure);
+
+      expect(transaction.operations.filter((operation) => operation === "insert")).toHaveLength(2);
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM usage_records").get()).toEqual({
+        count: 0,
+      });
+    });
+
     it("should preserve usage identity and date values with the PostgreSQL schema", async () => {
       const query = vi.fn().mockResolvedValue({ rows: [] });
       const pgDb = drizzlePostgres({ client: { query } as never });
