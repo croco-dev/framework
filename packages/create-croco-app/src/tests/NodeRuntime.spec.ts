@@ -22,18 +22,20 @@ describe("generated Node runtime contract", () => {
       engines?: { node?: unknown };
     };
 
-    const repositoryNodeVersion = readFileSync(join(repositoryRoot, ".nvmrc"), "utf8").trim();
+    const repositoryToolchain = readFileSync(join(repositoryRoot, "mise.toml"), "utf8");
 
-    expect(repositoryNodeVersion.split(".")[0]).toBe(GENERATED_NODE_VERSION);
+    expect(/^node = "(\d+)\.\d+\.\d+"$/m.exec(repositoryToolchain)?.[1]).toBe(
+      GENERATED_NODE_VERSION,
+    );
     expect(GENERATED_NODE_ENGINE_RANGE).toBe(rootPackageJson.engines?.node);
     expect(GENERATED_NODE_ENGINE_RANGE).toBe(generatorPackageJson.engines?.node);
   });
 
-  it.each(["22.0.0", "23.1.0", "v24.0.0"])("accepts supported Node version %s", (version) => {
+  it.each(["24.0.0", "25.1.0", "v26.0.0"])("accepts supported Node version %s", (version) => {
     expect(() => assertSupportedNodeVersion(version)).not.toThrow();
   });
 
-  it.each(["18.20.8", "20.19.0", "invalid"])(
+  it.each(["20.19.0", "22.23.2", "v23.11.0", "invalid"])(
     "rejects unsupported Node version %s with recovery",
     (version) => {
       let error: unknown;
@@ -49,8 +51,8 @@ describe("generated Node runtime contract", () => {
         code: "create-croco-app/unsupported-node-version",
         extensions: expect.objectContaining({
           actualVersion: version,
-          minimumVersion: "22",
-          recovery: expect.stringContaining("nvm install 22 && nvm use 22"),
+          minimumVersion: "24",
+          recovery: expect.stringContaining("nvm install 24 && nvm use 24"),
         }),
       });
     },

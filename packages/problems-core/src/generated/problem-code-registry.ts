@@ -4997,9 +4997,9 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         cause:
           "The detected Node.js version is outside the supported generated-app toolchain train.",
         userAction:
-          "Install and activate Node.js 22 with `nvm install 22 && nvm use 22`, then rerun the command.",
+          "Install and activate Node.js 24 with `nvm install 24 && nvm use 24`, then rerun the command.",
         operatorAction:
-          "Compare the reported actual Node.js version with the supported Node.js 22 train and verify the active version-manager configuration.",
+          "Compare the reported actual Node.js version with the supported Node.js 24 train and verify the active version-manager configuration.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {

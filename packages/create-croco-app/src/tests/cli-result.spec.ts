@@ -19,8 +19,8 @@ describe("CLI result contract", () => {
       projectName: "my-app",
       preset: "blank",
       packageManager: "pnpm",
-      nodeRequirement: ">=22",
-      nodeRecovery: "Run nvm install 22 && nvm use 22.",
+      nodeRequirement: ">=24",
+      nodeRecovery: "Run nvm install 24 && nvm use 24.",
       nextSteps: [
         { command: "pnpm", args: ["install"], cwd: "/tmp/my-app" },
         { command: "pnpm", args: ["dev"], cwd: "/tmp/my-app" },
@@ -29,7 +29,7 @@ describe("CLI result contract", () => {
     expect(formatHumanSuccess(result)).toBe(
       [
         "Project created in /tmp/my-app.",
-        "Node.js >=22 is required for install and build. Recovery: Run nvm install 22 && nvm use 22.",
+        "Node.js >=24 is required for install and build. Recovery: Run nvm install 24 && nvm use 24.",
         "Next steps:",
         "  pnpm --dir /tmp/my-app install",
         "  pnpm --dir /tmp/my-app dev",
@@ -41,15 +41,15 @@ describe("CLI result contract", () => {
     const result = createSuccessResult("/tmp/my-saas", createOptions({ preset: "saas" }));
 
     expect(result.nextSteps).toEqual([{ command: "pnpm", args: ["dev:api"], cwd: "/tmp/my-saas" }]);
-    expect(result.nodeRequirement).toBe(">=22.5");
-    expect(result.nodeRecovery).toBe("Run nvm install 22.5 && nvm use 22.5.");
+    expect(result.nodeRequirement).toBe(">=24");
+    expect(result.nodeRecovery).toBe("Run nvm install 24 && nvm use 24.");
   });
 
-  it("uses the SaaS Node contract for AI SaaS next steps", () => {
+  it("uses the shared Node contract for AI SaaS next steps", () => {
     const result = createSuccessResult("/tmp/my-ai-saas", createOptions({ preset: "ai-saas" }));
 
-    expect(result.nodeRequirement).toBe(">=22.5");
-    expect(result.nodeRecovery).toBe("Run nvm install 22.5 && nvm use 22.5.");
+    expect(result.nodeRequirement).toBe(">=24");
+    expect(result.nodeRecovery).toBe("Run nvm install 24 && nvm use 24.");
   });
 
   it("uses host-specific verification commands for non-Node SaaS templates", () => {

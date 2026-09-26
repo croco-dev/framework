@@ -58,12 +58,13 @@ jobs:
           --head "$VERIFICATION_HEAD"
           --candidate "$VERIFICATION_CANDIDATE"
           --checkout HEAD
-      - name: Setup pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
-      - name: Setup Node.js
+      - name: Setup Node.js and pnpm
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: "2026.9.13"
+      - name: Cache pnpm store
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version-file: ".nvmrc"
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile --ignore-scripts
@@ -135,13 +136,14 @@ jobs:
           mkdir -p ci-reports/package-quality
           node -e 'const fs = require("node:fs"); fs.writeFileSync("ci-reports/package-quality/spine-promotion-run.json", JSON.stringify({ commitSha: process.env.SPINE_PROMOTION_COMMIT_SHA, runId: process.env.SPINE_PROMOTION_RUN_ID, runAttempt: process.env.SPINE_PROMOTION_RUN_ATTEMPT, startedAt: new Date().toISOString() }, null, 2) + "\n")'
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - name: Setup Node.js and pnpm
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: "2026.9.13"
 
-      - name: Setup Node.js
+      - name: Cache pnpm store
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version-file: ".nvmrc"
           cache: "pnpm"
 
       - name: Restore Turbo cache
@@ -641,7 +643,7 @@ jobs:
               - 'packages/docs/**'
             real_resources:
               - '.github/workflows/ci.yml'
-              - '.nvmrc'
+              - 'mise.toml'
               - 'package.json'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
@@ -838,12 +840,13 @@ jobs:
           node --experimental-strip-types scripts/ci-verification-identity.mts assert
           --event "$GITHUB_EVENT_NAME" --base "$VERIFICATION_BASE" --head "$VERIFICATION_HEAD"
           --candidate "$VERIFICATION_CANDIDATE" --checkout HEAD
-      - name: Setup pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
-      - name: Setup Node.js
+      - name: Setup Node.js and pnpm
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: "2026.9.13"
+      - name: Cache pnpm store
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version-file: ".nvmrc"
           cache: pnpm
       - name: Restore producer Turbo cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -953,12 +956,13 @@ jobs:
           node --experimental-strip-types scripts/ci-verification-identity.mts assert
           --event "$GITHUB_EVENT_NAME" --base "$VERIFICATION_BASE" --head "$VERIFICATION_HEAD"
           --candidate "$VERIFICATION_CANDIDATE" --checkout HEAD
-      - name: Setup pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
-      - name: Setup Node.js
+      - name: Setup Node.js and pnpm
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: "2026.9.13"
+      - name: Cache pnpm store
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version-file: ".nvmrc"
           cache: pnpm
       - name: Restore producer Turbo cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -1055,12 +1059,13 @@ jobs:
           node --experimental-strip-types scripts/ci-verification-identity.mts assert
           --event "$GITHUB_EVENT_NAME" --base "$VERIFICATION_BASE" --head "$VERIFICATION_HEAD"
           --candidate "$VERIFICATION_CANDIDATE" --checkout HEAD
-      - name: Setup pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
-      - name: Setup Node.js
+      - name: Setup Node.js and pnpm
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: "2026.9.13"
+      - name: Cache pnpm store
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version-file: ".nvmrc"
           cache: pnpm
       - name: Restore producer Turbo cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -1157,12 +1162,13 @@ jobs:
           node --experimental-strip-types scripts/ci-verification-identity.mts assert
           --event "$GITHUB_EVENT_NAME" --base "$VERIFICATION_BASE" --head "$VERIFICATION_HEAD"
           --candidate "$VERIFICATION_CANDIDATE" --checkout HEAD
-      - name: Setup pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
-      - name: Setup Node.js
+      - name: Setup Node.js and pnpm
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: "2026.9.13"
+      - name: Cache pnpm store
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version-file: ".nvmrc"
           cache: pnpm
       - name: Restore producer Turbo cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
@@ -1280,12 +1286,13 @@ jobs:
           node --experimental-strip-types scripts/ci-verification-identity.mts assert
           --event "$GITHUB_EVENT_NAME" --base "$VERIFICATION_BASE" --head "$VERIFICATION_HEAD"
           --candidate "$VERIFICATION_CANDIDATE" --checkout HEAD
-      - name: Setup pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
-      - name: Setup Node.js
+      - name: Setup Node.js and pnpm
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: "2026.9.13"
+      - name: Cache pnpm store
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version-file: ".nvmrc"
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -1378,13 +1385,14 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - name: Setup Node.js and pnpm
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: "2026.9.13"
 
-      - name: Setup Node.js
+      - name: Cache pnpm store
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version-file: ".nvmrc"
           cache: pnpm
 
       - name: Restore Turbo cache
@@ -1461,13 +1469,14 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - name: Setup Node.js and pnpm
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: "2026.9.13"
 
-      - name: Setup Node.js
+      - name: Cache pnpm store
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version-file: ".nvmrc"
           cache: pnpm
 
       - name: Restore Turbo cache
@@ -1571,14 +1580,15 @@ jobs:
           node --experimental-strip-types scripts/ci-verification-identity.mts assert
           --event "$GITHUB_EVENT_NAME" --base "$VERIFICATION_BASE" --head "$VERIFICATION_HEAD"
           --candidate "$VERIFICATION_CANDIDATE" --checkout HEAD
-      - name: Setup pnpm
+      - name: Setup Node.js and pnpm
         if: needs.changes.outputs.api-source == 'true'
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
-      - name: Setup Node.js
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: "2026.9.13"
+      - name: Cache pnpm store
         if: needs.changes.outputs.api-source == 'true'
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version-file: ".nvmrc"
           cache: pnpm
       - name: Restore Turbo cache
         if: needs.changes.outputs.api-source == 'true'
@@ -1616,13 +1626,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+      - name: Setup Node.js and pnpm
+        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          version: "2026.9.13"
 
-      - name: Setup Node.js
+      - name: Cache pnpm store
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
-          node-version-file: ".nvmrc"
           cache: pnpm
 
       - name: Restore Turbo cache

@@ -4,13 +4,16 @@ Welcome! This guide covers everything you need to start contributing.
 
 ## Prerequisites
 
-- **Node.js** 22+ (see `.nvmrc`)
-- **pnpm** 10+ (`npm install -g pnpm`)
+- **[mise](https://mise.jdx.dev)** to install the pinned Node.js and pnpm versions
 - **Git**
 
+The root `mise.toml` pins Node.js and pnpm, and `package.json#packageManager` pins the same pnpm version.
+CI installs the same versions from `mise.toml`.
+
 ```bash
-node --version  # should be >= 22
-pnpm --version  # should be >= 10
+mise trust    # once per clone
+mise install
+mise ls --current
 ```
 
 ## Quick Start

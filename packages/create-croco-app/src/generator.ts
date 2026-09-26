@@ -37,12 +37,7 @@ import {
   installWebTrpc,
 } from "./installers/index.js";
 import { PnpmCommandProblem } from "./libs/problems/PnpmCommandProblem.js";
-import {
-  SAAS_GENERATED_NODE_ENGINE_RANGE,
-  SAAS_GENERATED_NODE_VERSION,
-  assertSupportedNodeVersion,
-  writeGeneratedNodeRuntimeContract,
-} from "./node-runtime.js";
+import { assertSupportedNodeVersion, writeGeneratedNodeRuntimeContract } from "./node-runtime.js";
 import { isSaasPreset, validateResolvedOptions } from "./options.js";
 import { getGeneratedAppDependencyRange } from "./package-version.js";
 import {
@@ -570,11 +565,7 @@ async function finalize(
 ): Promise<void> {
   rewriteExternalCrocoWorkspaceRanges(targetDir);
   const saasPreset = isSaasPreset(options.preset);
-  writeGeneratedNodeRuntimeContract(
-    targetDir,
-    saasPreset ? SAAS_GENERATED_NODE_ENGINE_RANGE : undefined,
-    saasPreset ? SAAS_GENERATED_NODE_VERSION : undefined,
-  );
+  writeGeneratedNodeRuntimeContract(targetDir);
   writeGoalManifest(targetDir, options);
   writeRuntimeCapabilityManifest(targetDir, options);
 

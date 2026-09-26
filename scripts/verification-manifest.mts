@@ -204,7 +204,7 @@ function isChangeScopedVerification(context: VerificationContext): boolean {
 
 function affectsScaffold(path: string): boolean {
   return (
-    /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc)$/.test(path) ||
+    /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|mise\.toml)$/.test(path) ||
     path.startsWith("packages/create-croco-app/") ||
     /^scripts\/(?:alpha-release-smoke|create-croco-app-[^/]+|first-success-verify|quick-start-lambda-smoke)\.mts$/.test(
       path,
@@ -214,7 +214,7 @@ function affectsScaffold(path: string): boolean {
 
 function affectsPackageEntrypoints(path: string): boolean {
   return (
-    /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc)$/.test(path) ||
+    /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|mise\.toml)$/.test(path) ||
     /^packages\/(?!create-croco-app\/)[^/]+\/(?:package\.json|src\/index\.ts)$/.test(path) ||
     path === "scripts/package-entrypoint-smoke.mts"
   );
@@ -222,7 +222,7 @@ function affectsPackageEntrypoints(path: string): boolean {
 
 function affectsPackedDecoratorConsumers(path: string): boolean {
   return (
-    /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc)$/.test(path) ||
+    /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|mise\.toml)$/.test(path) ||
     path.startsWith("tsconfig/") ||
     /^packages\/(?:diagnostics-core|framework-context|problems-core|protocols-core|protocols-rest)\//.test(
       path,
@@ -234,7 +234,7 @@ function affectsPackedDecoratorConsumers(path: string): boolean {
 
 function affectsPackageBins(path: string): boolean {
   return (
-    /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc)$/.test(path) ||
+    /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|mise\.toml)$/.test(path) ||
     /^packages\/(?:cli|create-croco-app|migration-runner|openapi-spec|rpc-codegen)\/(?:package\.json|src\/)/.test(
       path,
     ) ||
@@ -248,7 +248,7 @@ function affectsCreateCrocoApp(path: string): boolean {
 
 function affectsPackageGraph(path: string): boolean {
   return (
-    /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|\.nvmrc)$/.test(path) ||
+    /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|mise\.toml)$/.test(path) ||
     /^(?:apps|examples|packages)\//.test(path) ||
     path === "docs/package-catalog.json"
   );

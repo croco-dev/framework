@@ -30,7 +30,7 @@ describe("GenerationResult", () => {
       projectName: "my-blank",
       preset: "blank",
       packageManager: "pnpm",
-      nodeRequirement: ">=22",
+      nodeRequirement: ">=24",
       postActions: {
         git: "skipped",
         dependencies: "skipped",

@@ -1,7 +1,7 @@
 {
   "name": "{{projectName}}",
   "private": true,
-  "packageManager": "pnpm@11.9.0",
+  "packageManager": "pnpm@12.7.0",
   "scripts": {
     "dev:api": "pnpm --filter {{scope}}/api-server dev",
     "contract:check": "croco-rpc-codegen --controllers \"apps/api-server/src/controllers/**/*.ts\" --check --strict-schemas --fail-on-diagnostics",
@@ -45,7 +45,7 @@
     "@croco/openapi-spec": "workspace:*",
     "@croco/protocols-rest": "workspace:*",
     "@croco/rpc-codegen": "workspace:*",
-    "@types/node": "^22",
+    "@types/node": "^24",
     "turbo": "2.10.2",
     "typescript": "^6.0.3",
     "zod": "^3.23.8"

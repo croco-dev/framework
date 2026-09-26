@@ -49,7 +49,7 @@ function classifyPath(path: string): PathKind {
   )
     return "repo";
   if (
-    /^(turbo\.json|vitest(?:\.[^/]+)?\.ts|tsconfig(?:\.[^/]+)?\.json|\.nvmrc|croco\.arch\.json)$/.test(
+    /^(turbo\.json|vitest(?:\.[^/]+)?\.ts|tsconfig(?:\.[^/]+)?\.json|mise\.toml|croco\.arch\.json)$/.test(
       path,
     )
   )

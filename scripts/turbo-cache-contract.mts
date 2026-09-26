@@ -65,7 +65,7 @@ function createFixture(root: string): void {
     workspaces: ["packages/*"],
   });
   writeFixtureFile(root, "pnpm-workspace.yaml", "packages:\n  - packages/*\n");
-  writeFixtureFile(root, ".nvmrc", readFileSync(join(REPOSITORY_ROOT, ".nvmrc"), "utf8"));
+  writeFixtureFile(root, "mise.toml", readFileSync(join(REPOSITORY_ROOT, "mise.toml"), "utf8"));
   writeFixtureFile(
     root,
     "pnpm-lock.yaml",
@@ -378,7 +378,11 @@ export function runTurboCacheContract(
         "specifier: workspace:^",
       ),
     );
-    mutateAndRun("node-version-mutation", ".nvmrc", "22.23.3\n");
+    mutateAndRun(
+      "node-version-mutation",
+      "mise.toml",
+      readFileSync(join(root, "mise.toml"), "utf8").replace(/^node = ".*"$/m, 'node = "24.21.1"'),
+    );
     mutateAndRun(
       "direct-dependency-mutation",
       "packages/dependency/src/index.ts",

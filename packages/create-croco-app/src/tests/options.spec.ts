@@ -651,8 +651,8 @@ describe("noninteractive CLI option validation", () => {
         projectName: targetDir.split("/").at(-1),
         preset: "blank",
         packageManager: "pnpm",
-        nodeRequirement: ">=22",
-        nodeRecovery: "Run nvm install 22 && nvm use 22.",
+        nodeRequirement: ">=24",
+        nodeRecovery: "Run nvm install 24 && nvm use 24.",
         nextSteps: [
           { command: "pnpm", args: ["install"], cwd: targetDir },
           { command: "pnpm", args: ["dev"], cwd: targetDir },

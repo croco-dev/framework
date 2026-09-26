@@ -5,8 +5,6 @@ import { UnsupportedNodeVersionProblem } from "./libs/problems/UnsupportedNodeVe
 
 export const GENERATED_NODE_VERSION = VERSIONS.node;
 export const GENERATED_NODE_ENGINE_RANGE = `>=${GENERATED_NODE_VERSION}`;
-export const SAAS_GENERATED_NODE_VERSION = "22.5";
-export const SAAS_GENERATED_NODE_ENGINE_RANGE = ">=22.5";
 
 export function assertSupportedNodeVersion(actualVersion = process.versions.node): void {
   const actualMajor = readNodeMajor(actualVersion);
@@ -17,22 +15,18 @@ export function assertSupportedNodeVersion(actualVersion = process.versions.node
   }
 }
 
-export function writeGeneratedNodeRuntimeContract(
-  projectDir: string,
-  nodeEngineRange = GENERATED_NODE_ENGINE_RANGE,
-  nodeVersion: string = GENERATED_NODE_VERSION,
-): void {
+export function writeGeneratedNodeRuntimeContract(projectDir: string): void {
   const packageJsonPath = join(projectDir, "package.json");
   const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8")) as Record<string, unknown>;
 
   packageJson["engines"] = {
     ...readRecord(packageJson["engines"]),
-    node: nodeEngineRange,
+    node: GENERATED_NODE_ENGINE_RANGE,
   };
 
   writeFileSync(packageJsonPath, `${JSON.stringify(packageJson, null, 2)}\n`);
-  writeFileSync(join(projectDir, ".nvmrc"), `${nodeVersion}\n`);
-  appendGeneratedNodeGuidance(join(projectDir, "README.md"), nodeEngineRange, nodeVersion);
+  writeFileSync(join(projectDir, ".nvmrc"), `${GENERATED_NODE_VERSION}\n`);
+  appendGeneratedNodeGuidance(join(projectDir, "README.md"));
 }
 
 function readNodeMajor(version: string): number {
@@ -52,23 +46,19 @@ function readRecord(value: unknown): Record<string, unknown> {
     : {};
 }
 
-function appendGeneratedNodeGuidance(
-  readmePath: string,
-  nodeEngineRange: string,
-  nodeVersion: string,
-): void {
+function appendGeneratedNodeGuidance(readmePath: string): void {
   const readme = readFileSync(readmePath, "utf8").trimEnd();
   const guidance = [
     "## Node.js Requirement",
     "",
-    `Dependency installation and builds require Node.js ${nodeEngineRange}. The generated \`.nvmrc\` pins Node.js ${nodeVersion}.`,
+    `Dependency installation and builds require Node.js ${GENERATED_NODE_ENGINE_RANGE}. The generated \`.nvmrc\` pins Node.js ${GENERATED_NODE_VERSION}.`,
     "This tooling requirement does not change the deployment runtime recorded in `croco-runtime-capability.manifest.json`; browser and Cloudflare Workers outputs still deploy without a Node.js runtime.",
     "",
     "If `node --version` is unsupported, run:",
     "",
     "```bash",
-    `nvm install ${nodeVersion}`,
-    `nvm use ${nodeVersion}`,
+    `nvm install ${GENERATED_NODE_VERSION}`,
+    `nvm use ${GENERATED_NODE_VERSION}`,
     "```",
   ].join("\n");
 

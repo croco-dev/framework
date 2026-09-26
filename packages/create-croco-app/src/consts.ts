@@ -1,5 +1,5 @@
 export const VERSIONS = {
-  node: "22",
+  node: "24",
   typescript: "^5.8.0",
   tsup: "^8.5.1",
   vitest: "^4.1.8",

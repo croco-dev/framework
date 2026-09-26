@@ -22,6 +22,11 @@ import {
   TRUSTED_GITLEAKS_IMAGE,
 } from "../workflow-verification-contract.mts";
 
+type WorkflowStep = {
+  readonly uses?: string;
+  readonly with?: Readonly<Record<string, unknown>>;
+};
+
 const ROOT_DIR = resolve(import.meta.dirname, "../..");
 const WORKFLOW = readFileSync(resolve(ROOT_DIR, ".github/workflows/ci.yml"), "utf8");
 const WORKFLOW_DOCUMENT = parseDocument(WORKFLOW, { uniqueKeys: true });
@@ -48,7 +53,7 @@ const ROOT_PACKAGE_JSON = JSON.parse(
   readFileSync(resolve(ROOT_DIR, "package.json"), "utf8"),
 ) as Record<string, unknown>;
 const PNPM_LOCK = readFileSync(resolve(ROOT_DIR, "pnpm-lock.yaml"), "utf8");
-const NVMRC = readFileSync(resolve(ROOT_DIR, ".nvmrc"), "utf8").trim();
+const MISE_TOML = readFileSync(resolve(ROOT_DIR, "mise.toml"), "utf8");
 const GITLEAKS_SMOKE = readFileSync(
   resolve(ROOT_DIR, "scripts/security-gitleaks-smoke.mts"),
   "utf8",
@@ -323,11 +328,37 @@ describe("Phase B cacheable verification shadow", () => {
   });
 
   it("pins one Node patch release across independent hosted runners", () => {
-    expect(NVMRC).toMatch(/^\d+\.\d+\.\d+$/);
-    for (const jobId of producerJobs) {
-      expect(workflowJob(jobId)).toContain('node-version-file: ".nvmrc"');
+    expect(MISE_TOML).toMatch(/^node = "\d+\.\d+\.\d+"$/m);
+    const misePnpmVersion = /^pnpm = "(\d+\.\d+\.\d+)"$/m.exec(MISE_TOML)?.[1];
+    expect(misePnpmVersion).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(
+      /^pnpm@(\d+\.\d+\.\d+)\+sha512\.[0-9a-f]{128}$/.exec(
+        String(ROOT_PACKAGE_JSON.packageManager),
+      )?.[1],
+    ).toBe(misePnpmVersion);
+    const steps = Object.entries(WORKFLOWS).flatMap(([path, source]) =>
+      Object.values(
+        (parseDocument(source).toJS() as { jobs: Record<string, { steps?: WorkflowStep[] }> }).jobs,
+      ).flatMap((job) => (job.steps ?? []).map((step) => ({ path, step }))),
+    );
+    const toolchainSteps = steps.filter(({ step }) => step.uses?.startsWith("jdx/mise-action@"));
+    const sharedInputs = toolchainSteps.find(({ path }) => path !== "benchmark.yml")?.step.with;
+
+    expect(sharedInputs).toEqual({ version: expect.stringMatching(/^\d+\.\d+\.\d+$/) });
+    for (const { path, step } of toolchainSteps) {
+      expect(step.with, path).toEqual(
+        path === "benchmark.yml" ? { ...sharedInputs, cache: false } : sharedInputs,
+      );
     }
-    expect(workflowJob("split-validation-shadow")).toContain('node-version-file: ".nvmrc"');
+    for (const { path, step } of steps.filter(({ step }) =>
+      step.uses?.startsWith("actions/setup-node@"),
+    )) {
+      expect(Object.keys(step.with ?? {}), path).not.toContain("node-version");
+      expect(Object.keys(step.with ?? {}), path).not.toContain("node-version-file");
+    }
+    for (const jobId of [...producerJobs, "split-validation-shadow"]) {
+      expect(workflowJob(jobId)).toContain("uses: jdx/mise-action@");
+    }
   });
 
   it("keeps the monolithic validate job authoritative while running cacheable lanes in parallel on pull requests and manual runs", () => {
@@ -565,18 +596,23 @@ describe("CI verification profile contract", () => {
         "      - name: Rebind validate worktree\n        run: git checkout --detach origin/trunk\n\n      - name: Initialize beta spine promotion evidence",
       ),
       WORKFLOW.replace(
-        "      - name: Setup pnpm\n        if: needs.changes.outputs.api-source == 'true'\n        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271",
-        "      - name: Rebind docs checkout\n        if: needs.changes.outputs.api-source == 'true'\n        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1\n        with:\n          fetch-depth: 0\n          persist-credentials: false\n          ref: trunk\n      - name: Setup pnpm\n        if: needs.changes.outputs.api-source == 'true'\n        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271",
+        "      - name: Setup Node.js and pnpm\n        if: needs.changes.outputs.api-source == 'true'\n        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c",
+        "      - name: Rebind docs checkout\n        if: needs.changes.outputs.api-source == 'true'\n        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1\n        with:\n          fetch-depth: 0\n          persist-credentials: false\n          ref: trunk\n      - name: Setup Node.js and pnpm\n        if: needs.changes.outputs.api-source == 'true'\n        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c",
       ),
       WORKFLOW.replace(
-        "      - name: Setup pnpm\n        if: needs.changes.outputs.api-source == 'true'\n        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271",
-        "      - name: Rebind docs worktree\n        if: needs.changes.outputs.api-source == 'true'\n        run: git switch --detach origin/trunk\n      - name: Setup pnpm\n        if: needs.changes.outputs.api-source == 'true'\n        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271",
+        "      - name: Setup Node.js and pnpm\n        if: needs.changes.outputs.api-source == 'true'\n        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c",
+        "      - name: Rebind docs worktree\n        if: needs.changes.outputs.api-source == 'true'\n        run: git switch --detach origin/trunk\n      - name: Setup Node.js and pnpm\n        if: needs.changes.outputs.api-source == 'true'\n        uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c",
       ),
       WORKFLOW.replace(
         '--base "$VERIFICATION_BASE" --head "$VERIFICATION_CANDIDATE"',
         "--base origin/trunk --head HEAD",
       ),
       WORKFLOW.replace("run: pnpm test-inventory:check", "run: echo inventory omitted"),
+      WORKFLOW.replace('          version: "2026.9.13"\n', '          version: "2026.9.12"\n'),
+      WORKFLOW.replace(
+        "          cache: pnpm\n      - name: Install dependencies\n        run: pnpm install --frozen-lockfile --ignore-scripts",
+        '          cache: pnpm\n          node-version: "24"\n      - name: Install dependencies\n        run: pnpm install --frozen-lockfile --ignore-scripts',
+      ),
       WORKFLOW.replace(
         "      - name: Run repository contract tests\n        run:",
         "      - name: Run repository contract tests\n        if: false\n        run:",
@@ -633,6 +669,7 @@ describe("CI verification profile contract", () => {
     ];
 
     for (const [index, mutation] of mutations.entries()) {
+      expect(mutation, `mutation ${index}`).not.toBe(WORKFLOW);
       expect(findRequiredWorkflowPolicyViolations(mutation), `mutation ${index}`).not.toEqual([]);
     }
   });

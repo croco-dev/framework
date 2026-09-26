@@ -136,12 +136,13 @@ function assertReleasePrAuthenticationContract(source: string): void {
   expect(releaseStateStep.run).toContain('echo "is_current=false" >> "$GITHUB_OUTPUT"');
   expect(releaseWorkStep.if).toBe("steps.release_state.outputs.is_current == 'true'");
   const credentialStep = stepByName(steps, "Verify release PR automation credentials");
-  const setupIndex = steps.findIndex((step) => step.name === "Setup pnpm");
+  const setupIndex = steps.findIndex((step) => step.name === "Setup Node.js and pnpm");
   const releaseExecutionIndex = steps.findIndex(
     (step) => step.name === "Resolve cumulative release execution",
   );
   const credentialIndex = steps.indexOf(credentialStep);
   const installIndex = steps.findIndex((step) => step.name === "Install dependencies");
+  expect(setupIndex).toBeGreaterThan(-1);
   expect(releaseExecutionIndex).toBeGreaterThan(setupIndex);
   expect(credentialIndex).toBeGreaterThan(releaseExecutionIndex);
   expect(credentialIndex).toBeLessThan(installIndex);
@@ -563,12 +564,12 @@ describe("Release verification profile contract", () => {
 
   it("keeps provenance authority and Changesets publishing in Actions", () => {
     const steps = releaseSteps(parseWorkflow(workflow));
-    const setupNodeStep = stepByName(steps, "Setup Node.js");
+    const storeCacheStep = stepByName(steps, "Cache pnpm store");
     const npmSetupStep = stepByName(steps, "Configure Node.js for npm publishing");
     expect(workflow).toContain("id-token: write");
     expect(workflow).toContain('NPM_CONFIG_PROVENANCE: "true"');
-    expect(setupNodeStep.with?.["registry-url"]).toBeUndefined();
-    expect(npmSetupStep.with?.["registry-url"]).toBe("https://registry.npmjs.org");
+    expect(storeCacheStep.with?.["registry-url"]).toBeUndefined();
+    expect(npmSetupStep.with).toEqual({ "registry-url": "https://registry.npmjs.org" });
     expect(workflow).toContain("NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}");
     expect(workflow).toContain(
       "uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d # v1.9.0",
@@ -581,7 +582,7 @@ describe("Release verification profile contract", () => {
     const installDependenciesIndex = steps.findIndex(
       (step) => step.name === "Install dependencies",
     );
-    const setupNodeIndex = steps.findIndex((step) => step.name === "Setup Node.js");
+    const setupNodeIndex = steps.findIndex((step) => step.name === "Setup Node.js and pnpm");
     const playwrightStep = stepByName(steps, "Install Playwright Chromium");
     const playwrightIndex = steps.indexOf(playwrightStep);
     const releaseExecutionStep = stepByName(steps, "Resolve cumulative release execution");
@@ -617,6 +618,7 @@ describe("Release verification profile contract", () => {
       "${{ steps.release_work.outputs.allow_pending_release_metadata }}",
     );
     expect(verificationStep.env?.RELEASE_BASE).toBe("${{ steps.release_work.outputs.base }}");
+    expect(setupNodeIndex).toBeGreaterThan(-1);
     expect(releaseExecutionIndex).toBeGreaterThan(setupNodeIndex);
     expect(releaseExecutionIndex).toBeLessThan(installDependenciesIndex);
     expect(playwrightIndex).toBeGreaterThan(releaseExecutionIndex);

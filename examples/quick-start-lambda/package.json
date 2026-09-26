@@ -23,7 +23,7 @@
   },
   "devDependencies": {
     "@croco/esbuild-plugin": "workspace:*",
-    "@types/node": "^22",
+    "@types/node": "^24",
     "esbuild": "^0.20.2",
     "tsx": "^4.19.0",
     "typescript": "^6.0.3"

@@ -147,8 +147,8 @@ describe("benchmark workflow", () => {
   it("uses the repository Node version source for benchmark setup", () => {
     const workflow = readBenchmarkWorkflow();
 
-    expect(workflow).toContain('node-version-file: ".nvmrc"');
-    expect(workflow).not.toMatch(/^\s*node-version\s*:/m);
+    expect(workflow).toContain("uses: jdx/mise-action@");
+    expect(workflow).not.toMatch(/^\s*node-version(?:-file)?\s*:/m);
   });
 
   it("keeps PR-revision benchmark execution read-only and cache-isolated", () => {
@@ -166,6 +166,8 @@ describe("benchmark workflow", () => {
     expect(benchmark).toContain("ref: ${{ github.event.pull_request.head.sha || github.sha }}");
     expect(benchmark).toContain("persist-credentials: false");
     expect(benchmark).not.toContain("actions/cache@");
+    expect(benchmark).not.toContain("cache: pnpm");
+    expect(benchmark).toContain("cache: false");
     expect(workflow).not.toContain("pull-requests: write");
     expect(workflow).toContain(
       "name: benchmark-readiness-report-${{ github.run_id }}-${{ github.run_attempt }}",
