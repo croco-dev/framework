@@ -539,6 +539,116 @@ describe("CampaignServices", () => {
     expect(fixture.sender.attempts.get(sendKey as string)).toBe(2);
   });
 
+  it("settles a failed attempt only after in-flight member sends finish", async () => {
+    const fixture = createFixture(trialMembers(3));
+    const { snapshot } = await fixture.snapshots.createSnapshot(TrialReminder, {
+      tenantId: "tenant-1",
+    });
+    const execution = await fixture.broadcasts.createExecution(
+      TrialReminder,
+      TENANT_SCOPE,
+      snapshot.id,
+      { pageSize: 3, concurrency: 2, maxAttempts: 2 },
+    );
+    let releaseUser1!: () => void;
+    const user1Held = new Promise<void>((resolve) => {
+      releaseUser1 = resolve;
+    });
+    let user1Started!: () => void;
+    const user1Entered = new Promise<void>((resolve) => {
+      user1Started = resolve;
+    });
+    let failUser0 = true;
+    fixture.sender.onSend = async ({ recipientId }) => {
+      if (recipientId === "user-1" && failUser0) {
+        user1Started();
+        await user1Held;
+      }
+      if (recipientId === "user-0" && failUser0) {
+        await user1Entered;
+        failUser0 = false;
+        throw new Error("provider temporarily unavailable");
+      }
+    };
+
+    let firstSettled = false;
+    const first = fixture.broadcasts
+      .execute(execution.id)
+      .catch((error: unknown) => error)
+      .finally(() => {
+        firstSettled = true;
+      });
+    await user1Entered;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const settledWhileUser1InFlight = firstSettled;
+    const sendsBeforeRelease = fixture.sender.commands.map(({ recipientId }) => recipientId);
+    releaseUser1();
+
+    await expect(first).resolves.toMatchObject({ message: "provider temporarily unavailable" });
+    expect(settledWhileUser1InFlight).toBe(false);
+    expect(sendsBeforeRelease).toEqual(["user-0", "user-1"]);
+    expect(fixture.sender.active).toBe(0);
+    await expect(fixture.executionManager.get(execution.id)).resolves.toMatchObject({
+      status: "retrying",
+    });
+    await fixture.broadcasts.execute(execution.id);
+    expect(fixture.sender.commands.map(({ recipientId }) => recipientId)).toEqual([
+      "user-0",
+      "user-1",
+      "user-0",
+      "user-2",
+    ]);
+  });
+
+  it("records concurrent member failures and throws the first error", async () => {
+    const fixture = createFixture(trialMembers(3));
+    const { snapshot } = await fixture.snapshots.createSnapshot(TrialReminder, {
+      tenantId: "tenant-1",
+    });
+    const execution = await fixture.broadcasts.createExecution(
+      TrialReminder,
+      TENANT_SCOPE,
+      snapshot.id,
+      { pageSize: 3, concurrency: 2, maxAttempts: 2 },
+    );
+    let releaseUser1!: () => void;
+    const user1Held = new Promise<void>((resolve) => {
+      releaseUser1 = resolve;
+    });
+    let user1Started!: () => void;
+    const user1Entered = new Promise<void>((resolve) => {
+      user1Started = resolve;
+    });
+    fixture.sender.onSend = async ({ recipientId }) => {
+      if (recipientId === "user-0") {
+        await user1Entered;
+        throw new Error("first provider failure");
+      }
+      if (recipientId === "user-1") {
+        user1Started();
+        await user1Held;
+        throw new Error("second provider failure");
+      }
+    };
+
+    const first = fixture.broadcasts.execute(execution.id).catch((error: unknown) => error);
+    await user1Entered;
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    releaseUser1();
+
+    await expect(first).resolves.toMatchObject({ message: "first provider failure" });
+    await expect(
+      fixture.store.getMemberOutcome(TENANT_SCOPE, snapshot.id, "subscription-0"),
+    ).resolves.toMatchObject({ status: "failed", retryable: true });
+    await expect(
+      fixture.store.getMemberOutcome(TENANT_SCOPE, snapshot.id, "subscription-1"),
+    ).resolves.toMatchObject({ status: "failed", retryable: true });
+    expect(fixture.sender.commands.map(({ recipientId }) => recipientId)).toEqual([
+      "user-0",
+      "user-1",
+    ]);
+  });
+
   it("does not resend terminal member failures when retrying an uncheckpointed page", async () => {
     const fixture = createFixture(trialMembers(2));
     const { snapshot } = await fixture.snapshots.createSnapshot(TrialReminder, {

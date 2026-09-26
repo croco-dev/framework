@@ -821,14 +821,23 @@ async function processWithConcurrency<T>(
   process: (value: T) => Promise<void>,
 ): Promise<void> {
   let nextIndex = 0;
+  let firstFailure: { error: unknown } | undefined;
   const worker = async (): Promise<void> => {
-    while (nextIndex < values.length) {
+    while (firstFailure === undefined && nextIndex < values.length) {
       const currentIndex = nextIndex;
       nextIndex += 1;
-      await process(values[currentIndex] as T);
+      try {
+        await process(values[currentIndex] as T);
+      } catch (error) {
+        firstFailure ??= { error };
+        throw error;
+      }
     }
   };
-  await Promise.all(Array.from({ length: Math.min(concurrency, values.length) }, () => worker()));
+  await Promise.allSettled(
+    Array.from({ length: Math.min(concurrency, values.length) }, () => worker()),
+  );
+  if (firstFailure !== undefined) throw firstFailure.error;
 }
 
 function campaignMemberSendKey(snapshot: CampaignSnapshot, member: CampaignSnapshotMember): string {
