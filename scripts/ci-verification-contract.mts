@@ -11,3 +11,7 @@ export const ADVISORY_CHECK_IDS = ["core-coverage-warning"] as const;
 export type SecurityResultId = (typeof SECURITY_OWNERSHIP)[number]["id"];
 export type SecurityResultOwner = (typeof SECURITY_OWNERSHIP)[number]["owner"];
 export type SecurityResultSemantics = (typeof SECURITY_OWNERSHIP)[number]["semantics"];
+
+export function isBlockingSemantics(semantics: SecurityResultSemantics | "advisory"): boolean {
+  return semantics === "blocking" || semantics === "acceptance-smoke";
+}

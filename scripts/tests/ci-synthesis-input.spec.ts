@@ -899,6 +899,34 @@ describe("cacheable CI synthesis input", () => {
     ).toEqual(result.evidence);
   });
 
+  it("fails split synthesis when the Gitleaks acceptance smoke fails", () => {
+    const value = fixture();
+    const current = facts("coverage-security") as Extract<
+      ProducerFacts,
+      { lane: "coverage-security" }
+    >;
+    replaceProducerArtifact(value, "coverage-security", {
+      ...current,
+      securityPhysical: current.securityPhysical.map((result) =>
+        result.id === "gitleaks-acceptance-smoke"
+          ? { ...result, outcome: "failed", diagnostics: ["gitleaks-acceptance-smoke:failed"] }
+          : result,
+      ),
+    });
+    const result = runSplitValidationSynthesis({
+      input: assemble(value),
+      rootDir: value.root,
+      now: () => "2026-08-14T02:00:00.000Z",
+    });
+
+    expect(result.failed).toBe(true);
+    expect(result.evidence.blockingOutcome).toBe("failed");
+    expect(result.evidence.conclusion).toBe("failure");
+    expect(
+      result.evidence.security.find(({ id }) => id === "gitleaks-acceptance-smoke"),
+    ).toMatchObject({ outcome: "failed" });
+  });
+
   it("preserves a valid producer failure as a failed shadow outcome", () => {
     const value = fixture({ lane: "generated-apps", checkId: "generated-app-smoke" });
     value.selectedCheckIds.push(

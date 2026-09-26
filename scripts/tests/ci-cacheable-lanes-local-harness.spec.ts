@@ -5,6 +5,7 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { LANE_OWNERSHIP, SECURITY_OWNERSHIP } from "../ci-cacheable-lanes-evaluator.mts";
+import { isBlockingSemantics } from "../ci-verification-contract.mts";
 import {
   createCurrentRunAttestation,
   createProducerBundle,
@@ -176,10 +177,12 @@ function shadow(
       ...securityOverrides[entry.id],
     })),
     conclusion:
-      checks.some(({ outcome, semantics }) => outcome === "failed" && semantics === "blocking") ||
+      checks.some(
+        ({ outcome, semantics }) => outcome === "failed" && isBlockingSemantics(semantics),
+      ) ||
       SECURITY_OWNERSHIP.some(
         (entry) =>
-          entry.semantics === "blocking" && securityOverrides[entry.id]?.outcome === "failed",
+          isBlockingSemantics(entry.semantics) && securityOverrides[entry.id]?.outcome === "failed",
       )
         ? "failure"
         : "success",
@@ -401,6 +404,35 @@ describe("local monolith versus split verification harness", () => {
         "blocking-secret-scan": {
           outcome: "failed",
           diagnostics: ["SECRET_SCAN_FAILED"],
+        },
+      },
+    );
+
+    const report = evaluateLocalEquivalence({
+      ...value,
+      monolithicSecurity: failedSecurity,
+      splitValidationShadow: failedShadow,
+    });
+
+    expect(report.status).toBe("passed");
+    expect(report.monolithicBlockingOutcome).toBe("failed");
+    expect(report.splitBlockingOutcome).toBe("failed");
+  });
+
+  it("treats a failing Gitleaks acceptance smoke as an equivalent blocking failure on both architectures", () => {
+    const value = fixture();
+    const failedSecurity = value.monolithicSecurity.map((result) =>
+      result.id === "gitleaks-acceptance-smoke"
+        ? { ...result, outcome: "failed" as const, diagnostics: ["ACCEPTANCE_SMOKE_FAILED"] }
+        : result,
+    );
+    const failedShadow = shadow(
+      value.producerBundles,
+      {},
+      {
+        "gitleaks-acceptance-smoke": {
+          outcome: "failed",
+          diagnostics: ["ACCEPTANCE_SMOKE_FAILED"],
         },
       },
     );

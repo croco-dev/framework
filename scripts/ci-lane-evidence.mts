@@ -1,6 +1,10 @@
 import { createHash } from "node:crypto";
 
-import { ADVISORY_CHECK_IDS, SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
+import {
+  ADVISORY_CHECK_IDS,
+  isBlockingSemantics,
+  SECURITY_OWNERSHIP,
+} from "./ci-verification-contract.mts";
 import { VerificationProblem } from "./verification-problem.mts";
 import type {
   SecurityResultId,
@@ -899,7 +903,7 @@ export function parseProducerBundle(value: unknown, path = "bundle"): ProducerBu
     }
   }
   const expectedStatus = checks.some(
-    ({ semantics, outcome }) => semantics === "blocking" && outcome === "failed",
+    ({ semantics, outcome }) => isBlockingSemantics(semantics) && outcome === "failed",
   )
     ? "failure"
     : "success";
@@ -1078,8 +1082,11 @@ function synthesizedBlockingOutcome(
   security: readonly SynthesisSecurityResult[],
 ): "passed" | "failed" {
   return checks.some(
-    ({ semantics, outcome }) => semantics === "blocking" && outcome === "failed",
-  ) || security.some(({ semantics, outcome }) => semantics === "blocking" && outcome === "failed")
+    ({ semantics, outcome }) => isBlockingSemantics(semantics) && outcome === "failed",
+  ) ||
+    security.some(
+      ({ semantics, outcome }) => isBlockingSemantics(semantics) && outcome === "failed",
+    )
     ? "failed"
     : "passed";
 }

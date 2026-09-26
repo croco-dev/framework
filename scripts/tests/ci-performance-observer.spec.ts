@@ -844,7 +844,7 @@ describe("CI performance observer", () => {
           ? { ...result, outcome: "failed", diagnostics: ["acceptance-smoke:failed"] }
           : result,
       ),
-      conclusion: "success",
+      conclusion: "failure",
       operationalFailure: null,
       startedAt: original.startedAt,
       completedAt: original.completedAt,
@@ -868,6 +868,10 @@ describe("CI performance observer", () => {
       diagnostics: ["acceptance-smoke:failed"],
     });
     expect(coverage?.blockingOutcome).toBe("failure");
+    const synthesis = observations.find(
+      ({ jobIdentity }) => jobIdentity === "split-validation-shadow",
+    );
+    expect(synthesis).toMatchObject({ conclusion: "failure", blockingOutcome: "failure" });
   });
 
   it("rejects a source workflow that does not match the observed workflow digest", () => {

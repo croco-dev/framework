@@ -35,7 +35,7 @@ import {
   type VerificationProfile,
 } from "./ci-lane-evidence.mts";
 import { parseSecurityPhysicalResults } from "./ci-synthesis-input.mts";
-import { SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
+import { isBlockingSemantics, SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
 import { inventoryDigest, parseStrictTestInventory } from "./test-inventory.mts";
 import { createVerificationManifest } from "./verification-manifest.mts";
 import { VerificationProblem } from "./verification-problem.mts";
@@ -452,9 +452,7 @@ function securityResult(job: SourceJob, contract: (typeof SECURITY_STEPS)[number
 function securitySemantics(id: SecurityResultId): ResultRecord["semantics"] {
   const ownership = SECURITY_OWNERSHIP.find((entry) => entry.id === id);
   if (!ownership) throw new Error(`unknown security result ${id}`);
-  return ownership.semantics === "blocking" || ownership.semantics === "acceptance-smoke"
-    ? "blocking"
-    : "advisory";
+  return isBlockingSemantics(ownership.semantics) ? "blocking" : "advisory";
 }
 
 function exactStepConclusion(job: SourceJob, name: string): string | null {

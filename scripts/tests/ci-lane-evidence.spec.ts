@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { ADVISORY_CHECK_IDS, SECURITY_OWNERSHIP } from "../ci-verification-contract.mts";
+import {
+  ADVISORY_CHECK_IDS,
+  isBlockingSemantics,
+  SECURITY_OWNERSHIP,
+} from "../ci-verification-contract.mts";
 import { VerificationProblem } from "../verification-problem.mts";
 import { VERIFICATION_LANE_OWNERSHIP } from "../verification-manifest.mts";
 import {
@@ -242,6 +246,11 @@ function shadowEvidence(
   const operationalFailure = options.operationalFailure ?? null;
   const hasBlockingFailure =
     options.failedCheck !== undefined && options.failedCheck !== "core-coverage-warning";
+  const failedSecurityOwnership = SECURITY_OWNERSHIP.find(
+    ({ id }) => id === options.failedSecurity,
+  );
+  const hasBlockingSecurityFailure =
+    failedSecurityOwnership !== undefined && isBlockingSemantics(failedSecurityOwnership.semantics);
   return createSplitValidationShadowEvidence({
     ...baseIdentity,
     producerBundles: PRODUCER_LANES.map((lane) => ({
@@ -252,7 +261,7 @@ function shadowEvidence(
     security,
     conclusion:
       options.conclusion ??
-      (hasBlockingFailure || options.failedSecurity === "blocking-secret-scan" || operationalFailure
+      (hasBlockingFailure || hasBlockingSecurityFailure || operationalFailure
         ? "failure"
         : "success"),
     operationalFailure,
@@ -851,6 +860,9 @@ describe("split-validation-shadow evidence", () => {
     expect(shadowEvidence({ failedCheck: "core-coverage-warning" }).conclusion).toBe("success");
     expect(shadowEvidence({ failedCheck: "build" }).blockingOutcome).toBe("failed");
     expect(shadowEvidence({ failedSecurity: "blocking-secret-scan" }).conclusion).toBe("failure");
+    expect(shadowEvidence({ failedSecurity: "gitleaks-acceptance-smoke" }).conclusion).toBe(
+      "failure",
+    );
     expectCode(
       () => shadowEvidence({ operationalFailure: "RUNNER_LOST", conclusion: "success" }),
       "OPERATIONAL_FAILURE_MASKED",

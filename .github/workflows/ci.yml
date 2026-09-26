@@ -1243,10 +1243,10 @@ jobs:
           SMOKE_EXIT: ${{ steps.physical_security.outputs.smoke_exit }}
           SCAN_EXIT: ${{ steps.physical_security.outputs.scan_exit }}
         run: |
-          echo "This shadow lane is advisory; validate retains the blocking Gitleaks checks."
+          echo "This job records these results without failing; split synthesis blocks on them, and validate keeps its own blocking Gitleaks checks."
           {
-            echo "- Advisory Gitleaks smoke exit code: ${SMOKE_EXIT:-unknown}"
-            echo "- Advisory secret scan exit code: ${SCAN_EXIT:-unknown}"
+            echo "- Gitleaks acceptance smoke exit code: ${SMOKE_EXIT:-unknown}"
+            echo "- Secret scan exit code: ${SCAN_EXIT:-unknown}"
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Upload coverage and security producer evidence
         if: always()

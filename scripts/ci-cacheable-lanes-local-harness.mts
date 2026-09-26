@@ -12,7 +12,7 @@ import {
   PRODUCER_LANES,
   validateProducerFanIn,
 } from "./ci-lane-evidence.mts";
-import { SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
+import { isBlockingSemantics, SECURITY_OWNERSHIP } from "./ci-verification-contract.mts";
 import { VERIFICATION_LANE_OWNERSHIP } from "./verification-manifest.mts";
 import type {
   ExperimentIdentity,
@@ -294,7 +294,8 @@ function normalizeMonolithicCheck(check: EvidenceCheckResult): NormalizedCheck {
 
 function blockingOutcome(checks: readonly NormalizedCheck[]): "passed" | "failed" {
   return checks.some(
-    ({ semantics, outcome: checkOutcome }) => semantics === "blocking" && checkOutcome === "failed",
+    ({ semantics, outcome: checkOutcome }) =>
+      isBlockingSemantics(semantics) && checkOutcome === "failed",
   )
     ? "failed"
     : "passed";
@@ -304,7 +305,7 @@ function securityBlockingOutcome(results: readonly SynthesisSecurityResult[]): "
   return results.some(
     ({ id, semantics, outcome: resultOutcome }) =>
       LOCALLY_COMPARABLE_SECURITY_IDS.has(id) &&
-      semantics === "blocking" &&
+      isBlockingSemantics(semantics) &&
       resultOutcome === "failed",
   )
     ? "failed"
