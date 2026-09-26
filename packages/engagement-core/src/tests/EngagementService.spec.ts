@@ -35,6 +35,7 @@ import {
   RegistryEngagementMessageRenderer,
   Renders,
   StoredEngagementPolicyEvaluator,
+  StoreBackedRecipientDirectory,
   createEngagementIdempotencyKey,
   type EngagementNotificationDispatcher,
   type EngagementSendCommand,
@@ -1168,6 +1169,57 @@ describe("EngagementService", () => {
     expect(second).toEqual(first);
     expect(dispatcher.dispatch.mock.calls[0]?.[2].idempotencyKey).toBe(
       dispatcher.dispatch.mock.calls[1]?.[2].idempotencyKey,
+    );
+  });
+
+  it("reuses the dispatch idempotency key when retrying failed persistence after an endpoint refresh", async () => {
+    const store = new InMemoryEngagementStore();
+    const endpoint = {
+      id: "email-primary",
+      tenantId: recipient.recipient.tenantId,
+      recipientId: recipient.recipient.userId,
+      kind: "email" as const,
+      address: "user@example.com",
+      lastSeenAt: new Date("2026-01-01T00:00:01.000Z"),
+    };
+    await store.saveEndpoint(endpoint);
+    const storedDirectory = new StoreBackedRecipientDirectory(directory, store, {
+      resolveToken: async () => "unused-push-token",
+    });
+    const dispatcher = createDispatcher();
+    vi.spyOn(store, "recordDispatch").mockRejectedValueOnce(
+      new EngagementPersistenceProblem(
+        "record-dispatch",
+        endpoint.tenantId,
+        new Error("evidence store unavailable"),
+      ),
+    );
+    const engagement = new EngagementService(
+      storedDirectory,
+      createRenderer(),
+      dispatcher.service,
+      undefined,
+      store,
+    );
+    const command = {
+      recipient: recipient.recipient,
+      data: { tenantName: "Croco", secret: "payload-secret" },
+      key: "subscription-refresh",
+    } as const;
+
+    await expect(engagement.send(TrialEnding, command)).rejects.toMatchObject({
+      code: "engagement-core/persistence-failed",
+      extensions: { retryable: true },
+    });
+    await store.saveEndpoint({
+      ...endpoint,
+      lastSeenAt: new Date("2026-01-01T00:00:02.000Z"),
+    });
+    await engagement.send(TrialEnding, command);
+
+    expect(dispatcher.dispatch).toHaveBeenCalledTimes(2);
+    expect(dispatcher.dispatch.mock.calls[1]?.[2].idempotencyKey).toBe(
+      dispatcher.dispatch.mock.calls[0]?.[2].idempotencyKey,
     );
   });
 

@@ -495,6 +495,108 @@ export function createEngagementStoreConformanceSuite(
           );
         },
       },
+      ...(["email", "push"] as const).map((kind) => ({
+        name: `preserves the ${kind} endpoint version when refreshing lastSeenAt`,
+        run: async () => {
+          const store = await options.createStore();
+          const input =
+            kind === "email"
+              ? emailEndpoint("tenant-refresh", "recipient-refresh")
+              : pushEndpoint("tenant-refresh", "recipient-refresh");
+          const first = await store.saveEndpoint(input);
+          const refreshed = await store.saveEndpoint({ ...input, lastSeenAt: instant(3) });
+
+          assert.equal(refreshed.version, first.version);
+          assert.deepEqual(refreshed.lastSeenAt, instant(3));
+          const reopened = await reopen(store);
+          assert.deepEqual(await reopened.getEndpoint(input.tenantId, input.id), refreshed);
+        },
+      })),
+      ...(["recipientId", "address"] as const).map((field) => ({
+        name: `increments the email endpoint version when ${field} changes`,
+        run: async () => {
+          const store = await options.createStore();
+          const input = emailEndpoint("tenant-email-target", "recipient-email-target");
+          const first = await store.saveEndpoint(input);
+          const changed = await store.saveEndpoint({
+            ...input,
+            [field]: `renewed-${input[field]}`,
+          });
+
+          assert.equal(changed.version, first.version + 1);
+        },
+      })),
+      ...(
+        ["recipientId", "provider", "app", "platform", "environment", "tokenReference"] as const
+      ).map((field) => ({
+        name: `increments the push endpoint version when ${field} changes`,
+        run: async () => {
+          const store = await options.createStore();
+          const input = pushEndpoint("tenant-push-target", "recipient-push-target");
+          const first = await store.saveEndpoint(input);
+          const changed = await store.saveEndpoint({
+            ...input,
+            [field]: `renewed-${input[field]}`,
+          });
+
+          assert.equal(changed.version, first.version + 1);
+        },
+      })),
+      ...(["email", "push"] as const).map((kind) => ({
+        name: `increments the endpoint version when its kind changes from ${kind}`,
+        run: async () => {
+          const store = await options.createStore();
+          const email = emailEndpoint("tenant-kind-target", "recipient-kind-target");
+          const push = { ...pushEndpoint(email.tenantId, email.recipientId), id: email.id };
+          const first = await store.saveEndpoint(kind === "email" ? email : push);
+          const changed = await store.saveEndpoint(kind === "email" ? push : email);
+
+          assert.equal(changed.version, first.version + 1);
+        },
+      })),
+      ...(["bounced", "complained", "unsubscribed", "token-invalid"] as const).map((type) => ({
+        name: `invalidates a refreshed endpoint when the dispatched target receives ${type}`,
+        run: async () => {
+          const store = await options.createStore();
+          const input =
+            type === "token-invalid"
+              ? pushEndpoint("tenant-refresh-event", "recipient-refresh-event")
+              : emailEndpoint("tenant-refresh-event", "recipient-refresh-event");
+          const endpoint = await store.saveEndpoint(input);
+          const dispatch = await store.recordDispatch({
+            ...identity(
+              input.tenantId,
+              input.recipientId,
+              "message-refresh",
+              input.kind,
+              "semantic-refresh",
+            ),
+            topic: "system.security",
+            targets: [{ endpointId: endpoint.id, endpointVersion: endpoint.version }],
+            outcome: { kind: "queued", executionIds: ["execution-refresh"] },
+            recordedAt: instant(2),
+          });
+          await store.saveEndpoint({ ...input, lastSeenAt: instant(3) });
+
+          const result = await new EngagementDeliveryEventProcessor(store).process({
+            tenantId: input.tenantId,
+            provider: "fixture-provider",
+            providerEventId: "provider-event-refresh",
+            dispatchId: dispatch.id,
+            endpointId: endpoint.id,
+            type,
+            occurredAt: instant(4),
+            ...(type === "bounced" ? { evidence: { bounceKind: "hard" as const } } : {}),
+            recordedAt: instant(5),
+          });
+
+          assert.equal(result.invalidation?.status, "invalidated");
+          assert.equal(
+            (await store.listActiveEndpoints(input.tenantId, input.recipientId)).length,
+            0,
+          );
+        },
+      })),
       {
         name: "does not let stale delivery evidence invalidate a renewed endpoint",
         run: async () => {

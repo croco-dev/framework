@@ -77,12 +77,22 @@ export class InMemoryEngagementStore implements EngagementPersistence {
       }
       const now = this.clock();
       const existing = this.state.endpoints.get(endpointKey(input.tenantId, input.id));
+      const sameTarget =
+        existing?.recipientId === input.recipientId &&
+        (input.kind === "email"
+          ? existing?.kind === "email" && existing.address === input.address
+          : existing?.kind === "push" &&
+            existing.provider === input.provider &&
+            existing.app === input.app &&
+            existing.platform === input.platform &&
+            existing.environment === input.environment &&
+            existing.tokenReference === input.tokenReference);
       const common = {
         id: input.id,
         tenantId: input.tenantId,
         recipientId: input.recipientId,
         lastSeenAt: cloneDate(input.lastSeenAt),
-        version: (existing?.version ?? 0) + 1,
+        version: (existing?.version ?? 0) + (sameTarget ? 0 : 1),
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,
         ...(existing?.invalidatedAt === undefined
