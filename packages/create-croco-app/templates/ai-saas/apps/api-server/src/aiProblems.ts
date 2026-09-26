@@ -55,7 +55,11 @@ export class AiProviderUnavailableProblem extends Problem {
 
   constructor(modelId: string, cause?: unknown) {
     const causeError =
-      cause === undefined ? undefined : cause instanceof Error ? cause : new Error(String(cause));
+      cause === undefined
+        ? undefined
+        : cause instanceof Error
+          ? cause
+          : new Error("Non-Error AI provider failure");
     super(undefined, undefined, `AI provider for ${modelId} is unavailable.`, {
       cause: causeError,
     });

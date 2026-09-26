@@ -647,7 +647,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts",
-          line: 65,
+          line: 69,
           column: 1,
           kind: "problem-class",
         },

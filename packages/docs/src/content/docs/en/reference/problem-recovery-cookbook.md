@@ -1208,7 +1208,7 @@ Sources:
 
 Sources:
 
-- `packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts:65:1` (problem-class)
+- `packages/create-croco-app/templates/ai-saas/apps/api-server/src/aiProblems.ts:69:1` (problem-class)
 
 <a id="ai-saas-tenant-not-found"></a>
 
