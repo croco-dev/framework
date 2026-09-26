@@ -26,6 +26,7 @@ type FixtureOptions = {
   readonly cancelledPublishSourceRun?: boolean;
   readonly cancelledNonPublishSourceRun?: boolean;
   readonly omitConclusion?: boolean;
+  readonly inProgressSourceRun?: boolean;
 };
 
 function manifestResults(): readonly ResultRecord[] {
@@ -136,6 +137,18 @@ function fixture(options: FixtureOptions = {}): CacheableCiCollectionClient {
       status: "completed",
       conclusion: "success",
     },
+    ...(options.inProgressSourceRun
+      ? [
+          {
+            id: 107,
+            run_attempt: 1,
+            created_at: "2026-08-12T06:00:00.000Z",
+            updated_at: "2026-08-12T06:10:00.000Z",
+            status: "in_progress",
+            conclusion: null,
+          },
+        ]
+      : []),
   ];
   const paginationRuns = options.truncateSourcePagination
     ? Array.from({ length: 101 }, (_, index) => ({
@@ -351,6 +364,18 @@ describe("cacheable CI observation collector", () => {
       expect.objectContaining({ sourceRunId: "102", reason: "profile:spine" }),
     ]);
     expect(dataset.observations.map(({ sourceRunId }) => sourceRunId)).toEqual(["101"]);
+  });
+
+  it("accepts a null conclusion on an in-progress source run and records it as not completed", () => {
+    const dataset = collectCacheableCiDataset(fixture({ inProgressSourceRun: true }), {
+      cutoffAt: CUTOFF,
+      cohortStartedAt: COHORT_STARTED_AT,
+    });
+
+    expect(dataset.inventory.operationalSources).toContainEqual(
+      expect.objectContaining({ sourceRunId: "107", reason: "source-run-not-completed-at-cutoff" }),
+    );
+    expect(evaluateDataset(dataset, { contractOnly: true }).failed).toBe(false);
   });
 
   it("fails parsing when a source run is missing the conclusion key", () => {
