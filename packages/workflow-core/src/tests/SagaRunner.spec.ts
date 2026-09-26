@@ -460,6 +460,143 @@ describe("SagaRunner", () => {
     );
   });
 
+  it("compensates a step whose run succeeded before its completion write failed", async () => {
+    const delegate = new InMemorySagaStore();
+    let rejectChargeCompletion = true;
+    const store: SagaStore = {
+      create: (params) => delegate.create(params),
+      findById: (id) => delegate.findById(id),
+      findByIdempotencyKey: (sagaName, key) => delegate.findByIdempotencyKey(sagaName, key),
+      list: (options) => delegate.list(options),
+      update: (id, data) => {
+        if (
+          rejectChargeCompletion &&
+          data.steps?.some((step) => step.id === "charge-card" && step.status === "completed")
+        ) {
+          rejectChargeCompletion = false;
+          throw new Error("step store write timed out");
+        }
+        return delegate.update(id, data);
+      },
+    };
+    const effects: string[] = [];
+    const publish = vi.fn();
+    let refundCalls = 0;
+    const definition: SagaDefinition = {
+      name: "checkout-completion-write-failure",
+      outbox: { publish },
+      steps: [
+        {
+          id: "reserve-stock",
+          run: () => {
+            effects.push("reserve-stock");
+            return { reservationId: "res_1" };
+          },
+          compensate: (_input, { previousResults }) => {
+            expect(previousResults).toEqual([
+              { stepId: "reserve-stock", result: { reservationId: "res_1" } },
+              { stepId: "charge-card", result: { chargeId: "ch_1" } },
+            ]);
+            effects.push("release-stock");
+          },
+        },
+        {
+          id: "charge-card",
+          run: (_input, { enqueueOutbox }) => {
+            effects.push("charge-card");
+            enqueueOutbox({
+              id: "charged",
+              topic: "billing.charged",
+              payload: { chargeId: "ch_1" },
+            });
+            return { chargeId: "ch_1" };
+          },
+          compensate: (_input, context) => {
+            refundCalls += 1;
+            expect(context.stepInput).toEqual({ orderId: "ord_1" });
+            expect(context.stepResult.result).toEqual({ chargeId: "ch_1" });
+            expect(context.attempt).toBe(1);
+            effects.push("refund-card");
+          },
+        },
+      ],
+    };
+    const runner = new SagaRunner(store);
+
+    const problem = await runner
+      .execute(definition, { orderId: "ord_1" })
+      .catch((error: unknown) => error);
+    const [execution] = await runner.listExecutions({ sagaName: definition.name });
+
+    expect(problem).toBeInstanceOf(SagaExecutionFailedProblem);
+    expect(problem).toHaveProperty(
+      "extensions.originalFailureMessage",
+      "step store write timed out",
+    );
+    expect(effects).toEqual(["reserve-stock", "charge-card", "refund-card", "release-stock"]);
+    expect(refundCalls).toBe(1);
+    expect(publish).not.toHaveBeenCalled();
+    expect(execution.status).toBe("compensated");
+    expect(execution.error?.message).toBe("step store write timed out");
+    expect(execution.steps.map((step) => step.status)).toEqual(["compensated", "compensated"]);
+  });
+
+  it("reports a failed compensation after a successful step's completion write failed", async () => {
+    const delegate = new InMemorySagaStore();
+    let rejectCompletion = true;
+    const store: SagaStore = {
+      create: (params) => delegate.create(params),
+      findById: (id) => delegate.findById(id),
+      findByIdempotencyKey: (sagaName, key) => delegate.findByIdempotencyKey(sagaName, key),
+      list: (options) => delegate.list(options),
+      update: (id, data) => {
+        if (rejectCompletion && data.steps?.some((step) => step.status === "completed")) {
+          rejectCompletion = false;
+          throw new Error("step store write timed out");
+        }
+        return delegate.update(id, data);
+      },
+    };
+    let refundCalls = 0;
+    const definition: SagaDefinition = {
+      name: "failed-compensation-after-completion-write-failure",
+      steps: [
+        {
+          id: "charge-card",
+          run: () => ({ chargeId: "ch_1" }),
+          compensate: (_input, { stepResult }) => {
+            refundCalls += 1;
+            expect(stepResult.result).toEqual({ chargeId: "ch_1" });
+            throw new CompensationProblem("refund provider unavailable");
+          },
+        },
+      ],
+    };
+    const runner = new SagaRunner(store);
+
+    const problem = await runner.execute(definition, {}).catch((error: unknown) => error);
+    const [execution] = await runner.listExecutions({ sagaName: definition.name });
+
+    expect(refundCalls).toBe(1);
+    expect(problem).toBeInstanceOf(SagaExecutionFailedProblem);
+    expect(problem).toHaveProperty(
+      "extensions.originalFailureMessage",
+      "step store write timed out",
+    );
+    expect(problem).toHaveProperty("extensions.compensationFailureCount", 1);
+    expect(execution.status).toBe("failed");
+    expect(execution.error?.message).toBe("step store write timed out");
+    expect(execution.compensationFailures).toEqual([
+      expect.objectContaining({ message: "refund provider unavailable" }),
+    ]);
+    expect(execution.steps[0]).toEqual(
+      expect.objectContaining({
+        status: "compensation_failed",
+        compensationError: expect.objectContaining({ message: "refund provider unavailable" }),
+      }),
+    );
+  });
+
   it("does not compensate successful steps when the final completed-status write fails", async () => {
     const delegate = new InMemorySagaStore();
     let rejectFinalWrite = true;
