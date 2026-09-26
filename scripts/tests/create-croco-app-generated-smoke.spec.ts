@@ -1670,10 +1670,16 @@ describe("create-croco-app generated smoke matrix", () => {
 });
 
 describe("create-croco-app generated smoke timing", () => {
-  const readSmokeSource = () =>
-    readFileSync(join(import.meta.dirname, "../create-croco-app-generated-smoke.mts"), "utf8");
-  const readFunctionSource = (source: string, name: string) =>
-    new RegExp(`function ${name}\\([\\s\\S]*?\\n\\}\\n`).exec(source)?.[0] ?? "";
+  function readSmokeSource(): string {
+    return readFileSync(
+      join(import.meta.dirname, "../create-croco-app-generated-smoke.mts"),
+      "utf8",
+    );
+  }
+
+  function readFunctionSource(source: string, name: string): string {
+    return new RegExp(`function ${name}\\([\\s\\S]*?\\n\\}\\n`).exec(source)?.[0] ?? "";
+  }
 
   it("measures integer durations and rejects clock regressions", () => {
     expect(measureSmokeDurationMs(100.2, 1100.7)).toBe(1001);

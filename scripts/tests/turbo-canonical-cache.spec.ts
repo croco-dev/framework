@@ -40,7 +40,8 @@ if (args.includes("--dry=json")) {
 }
 const attempt = readFileSync(process.env.FAKE_TURBO_LOG, "utf8").trim().split("\\n").length;
 const outcome = (process.env.FAKE_TURBO_WARM_OUTCOMES ?? "").split(",")[attempt - 1];
-const failedTask = outcome === "build-failure" ? "build" : outcome === "test-failure" ? "test:evidence" : undefined;
+const FAILED_TASK_BY_OUTCOME = { "build-failure": "build", "test-failure": "test:evidence" };
+const failedTask = FAILED_TASK_BY_OUTCOME[outcome];
 const runsDirectory = join(process.cwd(), ".turbo", "runs");
 mkdirSync(runsDirectory, { recursive: true });
 const summaryPath = join(runsDirectory, "attempt-" + attempt + ".json");
