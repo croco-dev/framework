@@ -854,6 +854,72 @@ describe("cacheable CI synthesis input", () => {
     ).toThrow(/not bound by identity.inputDigest/);
   });
 
+  it.each(["repo", "spine", "publish"] as const)(
+    "plans %s synthesis checks with the publish manifest's 21 dependency edges in order",
+    (profile) => {
+      const result = assemble(
+        fixture(undefined, { profile, selectedCheckIds: ["production-ready", "spine-promotion"] }),
+      );
+
+      expect(result.synthesisPlan).toEqual([
+        {
+          id: "test-evidence-reconcile",
+          selection: "not-applicable",
+          dependsOn: [
+            "test",
+            "integration-test-lane",
+            "published-test-lane",
+            "generated-app-smoke",
+          ],
+        },
+        {
+          id: "production-ready",
+          selection: "selected",
+          dependsOn: ["build", "typecheck", "test", "test-evidence-reconcile"],
+        },
+        {
+          id: "spine-promotion",
+          selection: "selected",
+          dependsOn: ["test", "generated-app-smoke", "provider-certification", "production-ready"],
+        },
+        {
+          id: "spine-bundle-size",
+          selection: "not-applicable",
+          dependsOn: [
+            "changeset-required",
+            "lint",
+            "format",
+            "build",
+            "typecheck",
+            "test",
+            "provider-certification",
+            "production-ready",
+            "spine-promotion",
+          ],
+        },
+      ]);
+      expect(result.synthesisPlan.flatMap(({ dependsOn }) => dependsOn)).toHaveLength(21);
+      expect(parseSynthesisInput(result)).toEqual(result);
+    },
+  );
+
+  it("rejects a synthesis plan whose dependency order drifts from the publish manifest", () => {
+    const result = assemble();
+    const { synthesisInputDigest: _synthesisInputDigest, ...unsigned } = result;
+    const drifted = {
+      ...unsigned,
+      synthesisPlan: unsigned.synthesisPlan.map((entry) =>
+        entry.id === "production-ready"
+          ? { ...entry, dependsOn: [...entry.dependsOn].reverse() }
+          : entry,
+      ),
+    };
+
+    expect(() =>
+      parseSynthesisInput({ ...drifted, synthesisInputDigest: evidenceDigest(drifted) }),
+    ).toThrow(/does not match the manifest dependency contract/);
+  });
+
   it("synthesizes all 54 checks and five security results without legacy workspace inputs", () => {
     const value = fixture();
     const input = assemble(value);

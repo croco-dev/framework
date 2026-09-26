@@ -923,37 +923,21 @@ export function parseProducerFacts(value: unknown, expectedLane: ProducerLane): 
 
 function synthesisPlan(selection: SynthesisSelection): SynthesisInput["synthesisPlan"] {
   const selected = new Set(selection.selectedCheckIds);
-  const dependencies: Readonly<Record<SynthesisCheckId, readonly string[]>> = {
-    "test-evidence-reconcile": [
-      "test",
-      "integration-test-lane",
-      "published-test-lane",
-      "generated-app-smoke",
-    ],
-    "production-ready": ["build", "typecheck", "test", "test-evidence-reconcile"],
-    "spine-promotion": [
-      "test",
-      "generated-app-smoke",
-      "provider-certification",
-      "production-ready",
-    ],
-    "spine-bundle-size": [
-      "changeset-required",
-      "lint",
-      "format",
-      "build",
-      "typecheck",
-      "test",
-      "provider-certification",
-      "production-ready",
-      "spine-promotion",
-    ],
-  };
-  return SYNTHESIS_CHECK_IDS.map((id) => ({
-    id,
-    selection: selected.has(id) ? "selected" : "not-applicable",
-    dependsOn: dependencies[id],
-  }));
+  const publishManifest = createVerificationManifest("publish");
+  return SYNTHESIS_CHECK_IDS.map((id) => {
+    const dependsOn = publishManifest.find((command) => command.id === id)?.dependsOn;
+    if (!dependsOn) {
+      reject(
+        "SYNTHESIS_PLAN_DEPENDENCIES_MISSING",
+        `${id} has no dependsOn in the publish verification manifest.`,
+      );
+    }
+    return {
+      id,
+      selection: selected.has(id) ? "selected" : "not-applicable",
+      dependsOn,
+    };
+  });
 }
 
 function parseSelection(value: unknown): SynthesisSelection {
