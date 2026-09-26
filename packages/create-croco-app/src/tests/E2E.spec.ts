@@ -1588,7 +1588,9 @@ describe("E2E: generate()", () => {
     expect(apiPackageJson.devDependencies?.["cross-env"]).toBe("^10.1.0");
     expect(apiPackageJson.devDependencies?.typedi).toBeUndefined();
     expect(apiPackageJson.devDependencies?.["@croco/cli"]).toMatch(/^\^[0-9]+\.[0-9]+\.[0-9]+$/);
-    expect(apiPackageJson.devDependencies?.["@croco/testing"]).toBe("^0.0.1");
+    expect(apiPackageJson.devDependencies?.["@croco/testing"]).toBe(
+      externalCrocoRange("@croco/testing"),
+    );
     expect(apiPackageJson.scripts?.["ops:smoke"]).toBe(
       "pnpm di:generate && tsx src/demo/ops-smoke.ts",
     );
@@ -3248,7 +3250,9 @@ describe("E2E: generate()", () => {
         "@croco/tenant-core": externalCrocoRange("@croco/tenant-core"),
       });
       expect(apiPackageJson.dependencies?.["@croco/testing"]).toBeUndefined();
-      expect(apiPackageJson.devDependencies?.["@croco/testing"]).toBe("^0.0.1");
+      expect(apiPackageJson.devDependencies?.["@croco/testing"]).toBe(
+        externalCrocoRange("@croco/testing"),
+      );
       expect(apiPackageJson.devDependencies?.["cross-env"]).toBe("^10.1.0");
       expect(apiPackageJson.scripts?.["ai:smoke"]).toBe(
         "pnpm di:generate && tsx src/demo/ai-smoke.ts",

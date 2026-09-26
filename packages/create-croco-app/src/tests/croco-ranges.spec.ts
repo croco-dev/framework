@@ -9,9 +9,11 @@ import {
 } from "../helpers/croco-ranges.js";
 
 const TEMPLATES_DIR = new URL("../../templates", import.meta.url).pathname;
+const TESTS_DIR = new URL(".", import.meta.url).pathname;
 const REPO_ROOT_DIR = new URL("../../../../", import.meta.url).pathname;
 const CROCO_WORKSPACE_DEPENDENCY_PATTERN = /"(@croco\/[^"]+)":\s*"workspace:[^"]+"/g;
 const INSTALLABLE_VERSION_RANGE_PATTERN = /^\^\d+\.\d+\.\d+$/;
+const LITERAL_CROCO_RANGE = /@croco\/[\w-]+.*\^\d+\.\d+\.\d+/;
 
 function collectFiles(directory: string): string[] {
   return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
@@ -58,6 +60,20 @@ function readSpinePackageNames(): Set<string> {
 }
 
 describe("external Croco package ranges", () => {
+  it("derives generated @croco/* ranges in generator tests from croco-ranges.ts", () => {
+    const literalRanges = readdirSync(TESTS_DIR)
+      .filter((name) => name.endsWith(".spec.ts"))
+      .flatMap((name) =>
+        readFileSync(join(TESTS_DIR, name), "utf8")
+          .split("\n")
+          .flatMap((line, index) =>
+            LITERAL_CROCO_RANGE.test(line) ? [`${name}:${index + 1}`] : [],
+          ),
+      );
+
+    expect(literalRanges).toEqual([]);
+  });
+
   it("covers every external Croco workspace dependency used by templates", () => {
     const templateDependencies = collectTemplateCrocoWorkspaceDependencies();
     const versionSet = getGeneratedAppCrocoVersionSet();

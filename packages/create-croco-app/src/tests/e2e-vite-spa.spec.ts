@@ -2,6 +2,7 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { generate } from "../generator.js";
+import { getExternalCrocoPackageRange } from "../helpers/croco-ranges.js";
 import type { GeneratorOptions, NormalizedGeneratorOptions } from "../types.js";
 
 describe("E2E Vite SPA: generate()", () => {
@@ -98,7 +99,9 @@ describe("E2E Vite SPA: generate()", () => {
           ui: expect.objectContaining({ name: "astryx", maturity: "beta" }),
         }),
       );
-      expect(astryxPackage).toContain('"@croco/ui-astryx": "^0.1.0"');
+      expect(astryxPackage).toContain(
+        `"@croco/ui-astryx": "${getExternalCrocoPackageRange("@croco/ui-astryx")}"`,
+      );
       expect(astryxPackage).toContain('"@astryxdesign/core": "0.1.4"');
       expect(astryxPackage).toContain('"@stylexjs/stylex": "^0.18.3"');
       expect(existsSync(join(astryxDir, "libs", "shared", "ui"))).toBe(false);
