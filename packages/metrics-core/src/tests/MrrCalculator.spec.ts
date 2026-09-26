@@ -147,6 +147,37 @@ describe("MrrCalculator", () => {
       const result = calculator.normalizeMRR(24000, "year", 2);
       expect(result).toBe(1000);
     });
+
+    it("should round fractional monthly amounts to whole minor units", () => {
+      expect(calculator.normalizeMRR(19900, "year", 1)).toBe(1658);
+      expect(calculator.normalizeMRR(29000, "year", 1)).toBe(2417);
+      expect(calculator.normalizeMRR(10000, "month", 3)).toBe(3333);
+      expect(calculator.normalizeMRR(6, "year", 1)).toBe(1);
+      expect(calculator.normalizeMRR(-6, "year", 1)).toBe(-1);
+      expect(calculator.normalizeMRR(Number.MAX_SAFE_INTEGER, "month", 3)).toBe(3002399751580330);
+    });
+
+    it("should sum individually rounded subscription amounts", async () => {
+      const annualPlanProvider: PlanProvider = {
+        getPlan: async () => ({
+          id: "plan_yearly_199",
+          amount: 19900,
+          currency: "USD",
+          interval: "year",
+          intervalCount: 1,
+        }),
+      };
+
+      await expect(
+        calculator.calculateMRR(
+          [
+            { id: "sub-1", planId: "plan_yearly_199" },
+            { id: "sub-2", planId: "plan_yearly_199" },
+          ],
+          annualPlanProvider,
+        ),
+      ).resolves.toEqual({ amount: 3316, currency: "USD" });
+    });
   });
 
   describe("Golden Fixture: MRR 계산 시나리오 종합 테스트", () => {

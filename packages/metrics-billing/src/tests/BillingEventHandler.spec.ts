@@ -198,7 +198,7 @@ describe("BillingEventHandler", () => {
       const callArgs = vi.mocked(metricsRepository.recordMRRMovement).mock.calls[0];
       const movement = callArgs[1];
 
-      expect(movement.new.amount).toBeCloseTo(2416.67, 2);
+      expect(movement.new.amount).toBe(2417);
     });
 
     it.each(["subscription_cycle", "subscription_update", "one_time"] as const)(
@@ -639,7 +639,7 @@ describe("BillingEventHandler", () => {
 
     it.each([
       [mockPlan, 2900],
-      [mockPlanYearly, 29000 / 12],
+      [mockPlanYearly, 2417],
       [{ ...mockPlan, amount: 5800, intervalCount: 2 }, 2900],
     ])(
       "should record churn from the event plan after subscription deletion: %j",
