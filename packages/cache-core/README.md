@@ -146,9 +146,19 @@ class UserService {
 plain object를 타입 태그와 정렬된 object key로 canonical encoding합니다. 따라서 서로 다른 값은 충돌하지 않고,
 삽입 순서만 다른 동등한 plain object는 같은 키를 사용합니다. 순환 참조, class instance, function, symbol, bigint처럼
 지원하지 않는 인자 그래프는 `CacheKeyArgumentProblem`으로 실패합니다. 지원 graph는 최대 100단계와 10,000개 값으로
-제한되며, 이 한도를 넘는 입력도 같은 typed Problem으로 실패합니다. 명시적 `key`가 없는 `@CacheEvict`는 같은
-namespace, method name, 인자 encoder로 단일 cache entry를 제거합니다. 여러 entry를 제거하려면 wildcard `key` 또는
-`allEntries`를 사용합니다.
+제한되며, 이 한도를 넘는 입력도 같은 typed Problem으로 실패합니다.
+
+기본 키는 `namespace:methodName`(또는 `keyPrefix`), JSON scope 세그먼트, 인자 encoding 순서로 구성됩니다.
+scope의 tenantId는 인자와 같은 encoder를 사용합니다. 기본 `scope: "tenant"`는 호출 시점의
+`Context.getTenantId()`가 있으면 `["tenant", tenantId]`, 없으면 `["global"]`을 사용합니다. 따라서 인자에
+tenantId가 없어도 요청 컨텍스트별 캐시 값과 진행 중인 로드가 분리됩니다. 테넌트와 무관하게 공유할 캐시는
+`@Cacheable({ store: cache, namespace: "shared", scope: "global" })`처럼 명시합니다. 해당 항목을 인자 기반으로
+무효화하는 `@CacheEvict`에도 같은 `scope: "global"`을 지정합니다.
+
+명시적 `key`가 없는 `@CacheEvict`는 같은 namespace, method name, scope, 인자 encoder로 현재 scope의 단일
+cache entry를 제거합니다. 명시적 `key: "user-service:getUser:*"` 패턴은 모든 scope의 해당 메서드 항목을
+제거하며, `allEntries`는 기존처럼 전체 저장소 또는 namespace 범위를 제거합니다. 이전 기본 키 형식의 항목은
+새 키에서 한 번 miss가 나며, 외부 저장소의 이전 항목은 TTL까지 남습니다.
 
 ## API 요약
 

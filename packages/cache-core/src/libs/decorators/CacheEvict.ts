@@ -7,6 +7,7 @@ export interface CacheEvictOptions<V = unknown> {
   namespace?: string;
   key?: string;
   allEntries?: boolean;
+  scope?: "tenant" | "global";
 }
 
 function resolveEvictionPrefix(options: CacheEvictOptions<unknown>, methodName: string): string {
@@ -33,7 +34,8 @@ export function CacheEvict<V = unknown>(options: CacheEvictOptions<V>): MethodDe
         : undefined;
 
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
-      const argumentKey = prefix === undefined ? undefined : createCacheKey(prefix, args);
+      const argumentKey =
+        prefix === undefined ? undefined : createCacheKey(prefix, args, options.scope);
       const result = await originalMethod.apply(this, args);
 
       if (options.allEntries === true) {

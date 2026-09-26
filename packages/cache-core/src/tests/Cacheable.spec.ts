@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Context } from "@croco/framework-context";
 import type { CacheStore } from "../libs/CacheStore";
 import { createCacheKey } from "../libs/cacheKey";
 import { Cacheable } from "../libs/decorators/Cacheable";
@@ -642,5 +643,208 @@ describe("@Cacheable with @CacheEvict integration", () => {
     await cached.getData({ first: 1, second: 2 });
 
     expect(fetchCount).toBe(2);
+  });
+});
+
+describe("tenant-scoped cache decorators", () => {
+  let cache!: InMemoryCacheStore<string>;
+
+  beforeEach(() => {
+    cache = new InMemoryCacheStore<string>({ maxEntries: 1000 });
+  });
+
+  const forTenant = <T>(tenantId: string, operation: () => Promise<T>): Promise<T> =>
+    Promise.resolve(Context.run({ requestId: `request-${tenantId}`, tenantId }, operation));
+
+  it("keeps cached results separate when methods read the tenant from context", async () => {
+    let loads = 0;
+
+    class SettingsService {
+      @Cacheable({ store: cache, namespace: "settings" })
+      async getCurrentSettings(): Promise<string> {
+        loads++;
+        return `${Context.getTenantId()}-settings`;
+      }
+    }
+
+    const service = new SettingsService();
+
+    expect(await forTenant("tenant-a", () => service.getCurrentSettings())).toBe(
+      "tenant-a-settings",
+    );
+    expect(await forTenant("tenant-b", () => service.getCurrentSettings())).toBe(
+      "tenant-b-settings",
+    );
+    expect(await forTenant("tenant-a", () => service.getCurrentSettings())).toBe(
+      "tenant-a-settings",
+    );
+    expect(await forTenant("tenant-b", () => service.getCurrentSettings())).toBe(
+      "tenant-b-settings",
+    );
+    expect(loads).toBe(2);
+  });
+
+  it("does not combine in-flight loads from different tenants", async () => {
+    const resolveByTenant = new Map<string, (value: string) => void>();
+
+    class SettingsService {
+      @Cacheable({ store: cache, namespace: "settings" })
+      async getCurrentSettings(): Promise<string> {
+        const tenantId = Context.getTenantId();
+        if (tenantId === null) throw new Error("tenant context is required");
+        return new Promise<string>((resolve) => resolveByTenant.set(tenantId, resolve));
+      }
+    }
+
+    const service = new SettingsService();
+    const tenantA = forTenant("tenant-a", () => service.getCurrentSettings());
+    const tenantB = forTenant("tenant-b", () => service.getCurrentSettings());
+
+    await Promise.resolve();
+    const startedTenants = [...resolveByTenant.keys()].sort();
+
+    resolveByTenant.get("tenant-a")?.("tenant-a-settings");
+    resolveByTenant.get("tenant-b")?.("tenant-b-settings");
+    await expect(Promise.all([tenantA, tenantB])).resolves.toEqual([
+      "tenant-a-settings",
+      "tenant-b-settings",
+    ]);
+    expect(startedTenants).toEqual(["tenant-a", "tenant-b"]);
+  });
+
+  it("evicts only the current tenant with the default argument-based key", async () => {
+    const loadsByTenant = new Map<string, number>();
+
+    class SettingsService {
+      @Cacheable({ store: cache, namespace: "settings" })
+      async getCurrentSettings(): Promise<string> {
+        const tenantId = Context.getTenantId();
+        if (tenantId === null) throw new Error("tenant context is required");
+        const loads = (loadsByTenant.get(tenantId) ?? 0) + 1;
+        loadsByTenant.set(tenantId, loads);
+        return `${tenantId}-${loads}`;
+      }
+    }
+
+    class SettingsEvictionService {
+      @CacheEvict({ store: cache, namespace: "settings" })
+      async getCurrentSettings(): Promise<void> {}
+    }
+
+    const settings = new SettingsService();
+    const eviction = new SettingsEvictionService();
+
+    expect(await forTenant("tenant-a", () => settings.getCurrentSettings())).toBe("tenant-a-1");
+    expect(await forTenant("tenant-b", () => settings.getCurrentSettings())).toBe("tenant-b-1");
+    await forTenant("tenant-a", () => eviction.getCurrentSettings());
+    expect(await forTenant("tenant-a", () => settings.getCurrentSettings())).toBe("tenant-a-2");
+    expect(await forTenant("tenant-b", () => settings.getCurrentSettings())).toBe("tenant-b-1");
+    expect(loadsByTenant.get("tenant-b")).toBe(1);
+  });
+
+  it("shares an explicit global cache across tenant and context-free calls", async () => {
+    let loads = 0;
+
+    class SettingsService {
+      @Cacheable({ store: cache, namespace: "settings", scope: "global" })
+      async getSharedSettings(): Promise<string> {
+        loads++;
+        return `shared-${loads}`;
+      }
+    }
+
+    const service = new SettingsService();
+
+    expect(await forTenant("tenant-a", () => service.getSharedSettings())).toBe("shared-1");
+    expect(await forTenant("tenant-b", () => service.getSharedSettings())).toBe("shared-1");
+    expect(await service.getSharedSettings()).toBe("shared-1");
+    expect(await cache.get(createCacheKey("settings:getSharedSettings", []))).toBe("shared-1");
+    expect(loads).toBe(1);
+  });
+
+  it("uses the global key segment without context and for explicit global scope", async () => {
+    const contextFreeKey = createCacheKey("settings:getSharedSettings", []);
+    const explicitGlobalKey = await forTenant("tenant:a", async () =>
+      createCacheKey("settings:getSharedSettings", [], "global"),
+    );
+
+    expect(explicitGlobalKey).toBe(contextFreeKey);
+    expect(contextFreeKey).toContain('["global"]');
+  });
+
+  it("uses the same global key for population and argument-based eviction", async () => {
+    let loads = 0;
+
+    class SettingsService {
+      @Cacheable({ store: cache, namespace: "settings", scope: "global" })
+      async getSharedSettings(): Promise<string> {
+        loads++;
+        return `shared-${loads}`;
+      }
+    }
+
+    class SettingsEvictionService {
+      @CacheEvict({ store: cache, namespace: "settings", scope: "global" })
+      async getSharedSettings(): Promise<void> {}
+    }
+
+    const settings = new SettingsService();
+    const eviction = new SettingsEvictionService();
+
+    expect(await forTenant("tenant-a", () => settings.getSharedSettings())).toBe("shared-1");
+    await forTenant("tenant-b", () => eviction.getSharedSettings());
+    expect(await settings.getSharedSettings()).toBe("shared-2");
+  });
+
+  it("keeps tenant IDs with separators distinct in encoded key segments", async () => {
+    const tenantWithSeparator = await forTenant("a:b", async () =>
+      createCacheKey("settings:get", []),
+    );
+    const otherTenant = await forTenant("a", async () => createCacheKey("settings:get", []));
+
+    expect(tenantWithSeparator).not.toBe(otherTenant);
+    expect(tenantWithSeparator).toContain('["string","a:b"]');
+  });
+
+  it("rejects an unsupported cache scope instead of sharing tenant values globally", async () => {
+    let loads = 0;
+
+    class SettingsService {
+      @Cacheable({ store: cache, namespace: "settings", scope: "invalid" as "tenant" })
+      async getCurrentSettings(): Promise<string> {
+        loads++;
+        return "settings";
+      }
+    }
+
+    await expect(
+      forTenant("tenant-a", () => new SettingsService().getCurrentSettings()),
+    ).rejects.toMatchObject({
+      code: "cache-core/invalid-decorator-config",
+    });
+    expect(loads).toBe(0);
+  });
+
+  it("applies an explicit wildcard key across tenant segments", async () => {
+    let loads = 0;
+
+    class SettingsService {
+      @Cacheable({ store: cache, namespace: "settings" })
+      async getCurrentSettings(): Promise<string> {
+        loads++;
+        return `${Context.getTenantId()}-${loads}`;
+      }
+
+      @CacheEvict({ store: cache, key: "settings:getCurrentSettings:*" })
+      async clearSettings(): Promise<void> {}
+    }
+
+    const service = new SettingsService();
+
+    expect(await forTenant("tenant-a", () => service.getCurrentSettings())).toBe("tenant-a-1");
+    expect(await forTenant("tenant-b", () => service.getCurrentSettings())).toBe("tenant-b-2");
+    await forTenant("tenant-a", () => service.clearSettings());
+    expect(await forTenant("tenant-a", () => service.getCurrentSettings())).toBe("tenant-a-3");
+    expect(await forTenant("tenant-b", () => service.getCurrentSettings())).toBe("tenant-b-4");
   });
 });

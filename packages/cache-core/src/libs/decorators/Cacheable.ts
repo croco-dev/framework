@@ -7,6 +7,7 @@ export interface CacheableOptions<V = unknown> {
   namespace?: string;
   ttl?: number;
   keyPrefix?: string;
+  scope?: "tenant" | "global";
 }
 
 function resolveCachePrefix(options: CacheableOptions<unknown>, methodName: string): string {
@@ -34,7 +35,7 @@ export function Cacheable<V = unknown>(options: CacheableOptions<V>): MethodDeco
     const prefix = resolveCachePrefix(options, methodName);
 
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<V | undefined> {
-      const cacheKey = createCacheKey(prefix, args);
+      const cacheKey = createCacheKey(prefix, args, options.scope);
 
       return options.store.getOrSet(
         cacheKey,

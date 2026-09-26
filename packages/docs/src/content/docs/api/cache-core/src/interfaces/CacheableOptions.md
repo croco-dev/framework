@@ -25,6 +25,12 @@ title: "CacheableOptions"
 
 ---
 
+### scope?
+
+> `optional` **scope?**: `"tenant"` \| `"global"`
+
+---
+
 ### store
 
 > **store**: [`CacheStore`](/api/cache-core/src/classes/cachestore/)\<`string`, `V`\>
