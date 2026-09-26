@@ -604,11 +604,18 @@ export class SagaRunner {
     completedRecord?: SagaStepExecutionRecord,
   ): Promise<number> {
     const execution = await this.getExecution(executionId);
+    const compensationExecution = completedRecord
+      ? {
+          ...execution,
+          steps: execution.steps.map((record) =>
+            record.id === completedRecord.id ? completedRecord : record,
+          ),
+        }
+      : execution;
     const outboxIdentityRoot = await this.resolveOutboxIdentityRoot(execution);
     let compensatedStepCount = 0;
 
-    for (const persistedRecord of [...execution.steps].reverse()) {
-      const record = persistedRecord.id === completedRecord?.id ? completedRecord : persistedRecord;
+    for (const record of [...compensationExecution.steps].reverse()) {
       if (record.status !== "completed") {
         continue;
       }
@@ -634,7 +641,7 @@ export class SagaRunner {
               executionId,
               payload: execution.payload,
               step,
-              previousResults: this.toStepResults(execution),
+              previousResults: this.toStepResults(compensationExecution),
               stepInput: record.input,
               attempt: record.attempts,
               failure,

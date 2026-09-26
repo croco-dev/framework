@@ -492,7 +492,11 @@ describe("SagaRunner", () => {
             effects.push("reserve-stock");
             return { reservationId: "res_1" };
           },
-          compensate: () => {
+          compensate: (_input, { previousResults }) => {
+            expect(previousResults).toEqual([
+              { stepId: "reserve-stock", result: { reservationId: "res_1" } },
+              { stepId: "charge-card", result: { chargeId: "ch_1" } },
+            ]);
             effects.push("release-stock");
           },
         },
