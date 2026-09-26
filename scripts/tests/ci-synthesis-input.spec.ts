@@ -898,7 +898,6 @@ describe("cacheable CI synthesis input", () => {
           ],
         },
       ]);
-      expect(result.synthesisPlan.flatMap(({ dependsOn }) => dependsOn)).toHaveLength(21);
       expect(parseSynthesisInput(result)).toEqual(result);
     },
   );

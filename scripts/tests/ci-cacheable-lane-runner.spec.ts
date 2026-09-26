@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, relative, resolve } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { parseDocument } from "yaml";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -299,8 +299,10 @@ describe("cacheable producer lane planning", () => {
 
 describe("split producer job timeouts", () => {
   it("gives each split producer job 30 minutes beyond the lane runner budget", () => {
-    const repositoryRoot = resolve(import.meta.dirname, "..", "..");
-    const workflow = readFileSync(resolve(repositoryRoot, ".github/workflows/ci.yml"), "utf8");
+    const workflow = readFileSync(
+      join(import.meta.dirname, "..", "..", ".github/workflows/ci.yml"),
+      "utf8",
+    );
     const document = parseDocument(workflow, { uniqueKeys: true });
     if (document.errors.length > 0) {
       throw new Error(document.errors.map(({ message }) => message).join("\n"));

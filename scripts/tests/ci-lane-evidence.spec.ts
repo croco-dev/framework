@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  ADVISORY_CHECK_IDS,
-  isBlockingSemantics,
-  SECURITY_OWNERSHIP,
-} from "../ci-verification-contract.mts";
+import { ADVISORY_CHECK_IDS, SECURITY_OWNERSHIP } from "../ci-verification-contract.mts";
 import { VerificationProblem } from "../verification-problem.mts";
 import { VERIFICATION_LANE_OWNERSHIP } from "../verification-manifest.mts";
 import {
@@ -45,6 +41,10 @@ const SHA = "c".repeat(40);
 const STARTED_AT = "2026-08-14T01:00:00.000Z";
 const ISSUED_AT = "2026-08-14T01:05:00.000Z";
 const COMPLETED_AT = "2026-08-14T01:10:00.000Z";
+const BLOCKING_SECURITY_IDS: readonly string[] = [
+  "blocking-secret-scan",
+  "gitleaks-acceptance-smoke",
+];
 
 const baseIdentity = {
   architectureVersion: "shadow-split",
@@ -246,11 +246,8 @@ function shadowEvidence(
   const operationalFailure = options.operationalFailure ?? null;
   const hasBlockingFailure =
     options.failedCheck !== undefined && options.failedCheck !== "core-coverage-warning";
-  const failedSecurityOwnership = SECURITY_OWNERSHIP.find(
-    ({ id }) => id === options.failedSecurity,
-  );
   const hasBlockingSecurityFailure =
-    failedSecurityOwnership !== undefined && isBlockingSemantics(failedSecurityOwnership.semantics);
+    options.failedSecurity !== undefined && BLOCKING_SECURITY_IDS.includes(options.failedSecurity);
   return createSplitValidationShadowEvidence({
     ...baseIdentity,
     producerBundles: PRODUCER_LANES.map((lane) => ({

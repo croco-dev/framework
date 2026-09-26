@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import { LANE_OWNERSHIP, SECURITY_OWNERSHIP } from "../ci-cacheable-lanes-evaluator.mts";
-import { isBlockingSemantics } from "../ci-verification-contract.mts";
 import {
   createCurrentRunAttestation,
   createProducerBundle,
@@ -42,6 +41,10 @@ const DIGEST_B = "b".repeat(64);
 const STARTED_AT = "2026-08-14T01:00:00.000Z";
 const ISSUED_AT = "2026-08-14T01:05:00.000Z";
 const COMPLETED_AT = "2026-08-14T01:10:00.000Z";
+const BLOCKING_SECURITY_IDS: readonly string[] = [
+  "blocking-secret-scan",
+  "gitleaks-acceptance-smoke",
+];
 
 const identity = {
   architectureVersion: "shadow-split",
@@ -177,13 +180,8 @@ function shadow(
       ...securityOverrides[entry.id],
     })),
     conclusion:
-      checks.some(
-        ({ outcome, semantics }) => outcome === "failed" && isBlockingSemantics(semantics),
-      ) ||
-      SECURITY_OWNERSHIP.some(
-        (entry) =>
-          isBlockingSemantics(entry.semantics) && securityOverrides[entry.id]?.outcome === "failed",
-      )
+      checks.some(({ outcome, semantics }) => outcome === "failed" && semantics === "blocking") ||
+      BLOCKING_SECURITY_IDS.some((id) => securityOverrides[id]?.outcome === "failed")
         ? "failure"
         : "success",
     operationalFailure: null,
