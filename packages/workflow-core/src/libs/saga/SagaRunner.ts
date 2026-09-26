@@ -43,6 +43,15 @@ type StepExecutionResult = {
   readonly result: SagaStepResult;
 };
 
+class StepCompletionPersistenceError extends Error {
+  constructor(
+    readonly cause: unknown,
+    readonly completedRecord: SagaStepExecutionRecord,
+  ) {
+    super("Saga step completion could not be persisted");
+  }
+}
+
 type SagaOutboxPhase = SagaOutboxRecord["phase"];
 
 function toSagaFailure(error: unknown): SagaFailure {
@@ -313,6 +322,9 @@ export class SagaRunner {
         previousResults.push(executed.result);
       }
     } catch (error) {
+      if (error instanceof StepCompletionPersistenceError) {
+        return this.failExecution(definition, current.id, error.cause, span, error.completedRecord);
+      }
       return this.failExecution(definition, current.id, error, span);
     }
 
@@ -384,6 +396,7 @@ export class SagaRunner {
     executionId: string,
     error: unknown,
     span: SagaTelemetrySpan,
+    completedRecord?: SagaStepExecutionRecord,
   ): Promise<never> {
     const failure = toSagaFailure(error);
     const compensationFailures: SagaFailure[] = [];
@@ -395,6 +408,7 @@ export class SagaRunner {
         executionId,
         failure,
         compensationFailures,
+        completedRecord,
       );
       finalStatus =
         compensatedStepCount > 0 && compensationFailures.length === 0 ? "compensated" : "failed";
@@ -566,7 +580,7 @@ export class SagaRunner {
           error: toSagaFailure(error),
           completedAt: new Date(),
         });
-        throw error;
+        throw new StepCompletionPersistenceError(error, completedRecord);
       }
       return {
         result: {
@@ -587,12 +601,14 @@ export class SagaRunner {
     executionId: string,
     failure: SagaFailure,
     compensationFailures: SagaFailure[],
+    completedRecord?: SagaStepExecutionRecord,
   ): Promise<number> {
     const execution = await this.getExecution(executionId);
     const outboxIdentityRoot = await this.resolveOutboxIdentityRoot(execution);
     let compensatedStepCount = 0;
 
-    for (const record of [...execution.steps].reverse()) {
+    for (const persistedRecord of [...execution.steps].reverse()) {
+      const record = persistedRecord.id === completedRecord?.id ? completedRecord : persistedRecord;
       if (record.status !== "completed") {
         continue;
       }
