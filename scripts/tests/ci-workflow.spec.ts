@@ -302,11 +302,11 @@ describe("Phase B cacheable verification shadow", () => {
     );
   });
 
-  it("keeps ordinary runs latest-only while giving each manual experiment an independent group", () => {
+  it("cancels only pull request runs while giving each manual experiment an independent group", () => {
     expect(WORKFLOW).toContain(
       "group: ci-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}",
     );
-    expect(WORKFLOW).toContain("cancel-in-progress: true");
+    expect(WORKFLOW).toContain("cancel-in-progress: ${{ github.event_name == 'pull_request' }}");
   });
 
   const producerJobs = [
@@ -525,6 +525,10 @@ describe("CI verification profile contract", () => {
       WORKFLOW.replace(
         "concurrency:\n  group: ci-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}",
         "concurrency:\n  group: ci-global",
+      ),
+      WORKFLOW.replace(
+        "cancel-in-progress: ${{ github.event_name == 'pull_request' }}",
+        "cancel-in-progress: true",
       ),
       WORKFLOW.replace(
         "  pull_request:\n    branches:\n      - trunk",
