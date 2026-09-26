@@ -19,12 +19,20 @@ vi.mock("@croco/telemetry-sdk-node", async (importOriginal) => {
   };
 });
 
-const executableProfileTest = generatedSaasProviderProfileManifest.composition.executable
-  ? it
-  : it.skip;
-
 describe("generated SaaS telemetry endpoint", () => {
-  executableProfileTest.each([
+  if (!generatedSaasProviderProfileManifest.composition.executable) {
+    it("rejects telemetry composition for a documentation-only profile", () => {
+      captureTelemetryOptions.mockClear();
+
+      expect(createGeneratedSaasApplicationDefinition).toThrow(
+        "CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE",
+      );
+      expect(captureTelemetryOptions).not.toHaveBeenCalled();
+    });
+    return;
+  }
+
+  it.each([
     ["http://collector:4318", undefined, "http://collector:4318/v1/traces"],
     ["http://collector:4318/", "", "http://collector:4318/v1/traces"],
     ["http://collector:4318", "http://traces:4318/custom", "http://traces:4318/custom"],
