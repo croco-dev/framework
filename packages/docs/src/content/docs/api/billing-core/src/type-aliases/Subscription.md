@@ -59,6 +59,12 @@ billing account, invoice, order, plan, subscription 도메인 타입입니다.
 
 ---
 
+### providerModifiedAt?
+
+> `optional` **providerModifiedAt?**: `Date`
+
+---
+
 ### status
 
 > **status**: [`SubscriptionStatus`](/api/billing-core/src/type-aliases/subscriptionstatus/)

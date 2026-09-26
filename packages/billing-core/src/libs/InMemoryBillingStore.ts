@@ -324,10 +324,18 @@ export class InMemoryBillingStore extends BillingStore {
 
     const previousSubscription = this.subscriptions.get(input.subscription.billingAccountId);
     const previousEvidence = previousSubscription ? cloneSubscription(previousSubscription) : null;
-    const intents = input.createEventIntents(previousEvidence).map((event) => ({
-      event: structuredClone(event),
-      publishedAt: null,
-    }));
+    const isOlder =
+      previousSubscription?.externalSubscriptionId === input.subscription.externalSubscriptionId &&
+      previousSubscription.providerModifiedAt !== undefined &&
+      input.subscription.providerModifiedAt !== undefined &&
+      previousSubscription.providerModifiedAt.getTime() >
+        input.subscription.providerModifiedAt.getTime();
+    const intents = isOlder
+      ? []
+      : input.createEventIntents(previousEvidence).map((event) => ({
+          event: structuredClone(event),
+          publishedAt: null,
+        }));
     const transition: BillingSubscriptionWebhookTransition = {
       eventId: input.eventId,
       eventType: input.eventType,
@@ -337,14 +345,18 @@ export class InMemoryBillingStore extends BillingStore {
       state: "pending",
     };
 
-    const clearedReservationState = input.clearWebhookReservationId
-      ? this.processedWebhooks.get(input.clearWebhookReservationId)
-      : undefined;
-    if (input.clearWebhookReservationId) {
+    const clearedReservationState =
+      !isOlder && input.clearWebhookReservationId
+        ? this.processedWebhooks.get(input.clearWebhookReservationId)
+        : undefined;
+    if (!isOlder && input.clearWebhookReservationId) {
       this.processedWebhooks.delete(input.clearWebhookReservationId);
     }
     this.processedWebhooks.set(input.eventId, { state: "RESERVED" });
     this.subscriptionWebhookTransitions.set(input.eventId, transition);
+    if (isOlder) {
+      return cloneSubscriptionWebhookTransition(transition);
+    }
     try {
       await this.saveSubscription(input.subscription);
     } catch (error) {
@@ -502,6 +514,9 @@ function cloneSubscription(subscription: Subscription): Subscription {
   return {
     ...subscription,
     currentPeriodEnd: new Date(subscription.currentPeriodEnd),
+    ...(subscription.providerModifiedAt
+      ? { providerModifiedAt: new Date(subscription.providerModifiedAt) }
+      : {}),
     lastSyncedAt: new Date(subscription.lastSyncedAt),
   };
 }

@@ -713,6 +713,98 @@ describe("InMemoryBillingStore", () => {
   });
 
   describe("subscription webhook transitions", () => {
+    it("records older same-subscription webhooks without replacing state, intents, or reservations", async () => {
+      const stored: Subscription = {
+        id: "sub-ordered",
+        billingAccountId: "tenant-ordered",
+        externalSubscriptionId: "sub-ordered",
+        planId: "plan-team",
+        planVersionRef: "plan-team@v1" as Subscription["planVersionRef"],
+        status: "revoked",
+        currentPeriodEnd: new Date("2026-02-01T00:00:00.000Z"),
+        cancelAtPeriodEnd: false,
+        providerModifiedAt: new Date("2026-01-10T10:00:00.000Z"),
+        lastSyncedAt: new Date("2026-01-31T00:00:00.000Z"),
+      };
+      await store.saveSubscription(stored);
+      await store.reserveWebhook("past-due-reservation", "subscription.past_due");
+
+      let derivations = 0;
+      const input = {
+        eventId: "older-webhook",
+        eventType: "subscription.updated",
+        subscription: {
+          ...stored,
+          status: "active" as const,
+          planId: "plan-pro",
+          providerModifiedAt: new Date("2026-01-10T09:00:00.000Z"),
+        },
+        clearWebhookReservationId: "past-due-reservation",
+        createEventIntents: () => {
+          derivations += 1;
+          return [];
+        },
+      };
+
+      const first = await store.commitSubscriptionWebhook(input);
+      const repeated = await store.commitSubscriptionWebhook(input);
+
+      expect(first.intents).toEqual([]);
+      expect(repeated).toEqual(first);
+      expect(derivations).toBe(0);
+      expect(await store.findSubscription(stored.billingAccountId)).toEqual(stored);
+      await expect(
+        store.reserveWebhook("past-due-reservation", "subscription.past_due"),
+      ).rejects.toBeInstanceOf(WebhookAlreadyProcessedProblem);
+      await store.completeWebhook(input.eventId);
+      expect((await store.commitSubscriptionWebhook(input)).state).toBe("completed");
+    });
+
+    it("accepts equal, newer, legacy, and replacement subscription timestamps", async () => {
+      const base: Subscription = {
+        id: "sub-timestamp",
+        billingAccountId: "tenant-timestamp",
+        externalSubscriptionId: "sub-timestamp",
+        planId: "plan-pro",
+        planVersionRef: PLAN_VERSION_REF,
+        status: "active",
+        currentPeriodEnd: new Date("2026-02-01T00:00:00.000Z"),
+        cancelAtPeriodEnd: false,
+        providerModifiedAt: new Date("2026-01-10T10:00:00.000Z"),
+        lastSyncedAt: new Date("2026-01-31T00:00:00.000Z"),
+      };
+      await store.saveSubscription(base);
+
+      const cases: Subscription[] = [
+        { ...base, status: "past_due" },
+        { ...base, status: "revoked", providerModifiedAt: new Date("2026-01-10T11:00:00.000Z") },
+        {
+          ...base,
+          externalSubscriptionId: "replacement",
+          providerModifiedAt: new Date("2026-01-09T00:00:00.000Z"),
+        },
+      ];
+      for (const [index, subscription] of cases.entries()) {
+        await store.commitSubscriptionWebhook({
+          eventId: `accepted-${index}`,
+          eventType: "subscription.updated",
+          subscription,
+          createEventIntents: () => [],
+        });
+        expect(await store.findSubscription(base.billingAccountId)).toEqual(subscription);
+      }
+
+      await store.saveSubscription({ ...base, providerModifiedAt: undefined });
+      const fromLegacy = { ...base, status: "canceled" as const };
+      await store.commitSubscriptionWebhook({
+        eventId: "accepted-legacy",
+        eventType: "subscription.updated",
+        subscription: fromLegacy,
+        createEventIntents: () => [],
+      });
+      expect(await store.findSubscription(base.billingAccountId)).toEqual(fromLegacy);
+    });
+
     it("retains previous-state evidence and resumes only unpublished event intents", async () => {
       const previousSubscription: Subscription = {
         id: "sub-transition",

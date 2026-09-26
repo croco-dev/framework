@@ -80,6 +80,7 @@ type ParsedSubscriptionPayload = {
   status: Subscription["status"];
   currentPeriodEnd: Date;
   cancelAtPeriodEnd: boolean;
+  providerModifiedAt: Date;
 };
 
 type ParsedOrderPayload = {
@@ -309,6 +310,10 @@ export class PolarWebhookHandler {
 
   private parseSubscriptionPayload(data: unknown): ParsedSubscriptionPayload {
     const subscriptionData = PolarSubscriptionDataSchema.parse(data);
+    const providerModifiedAt = new Date(subscriptionData.modifiedAt ?? subscriptionData.createdAt);
+    if (Number.isNaN(providerModifiedAt.getTime())) {
+      throw new WebhookValidationProblem("Subscription provider timestamp is invalid");
+    }
 
     const status = this.mapStatus(subscriptionData.status);
     return {
@@ -320,6 +325,7 @@ export class PolarWebhookHandler {
       status,
       currentPeriodEnd: this.resolveCurrentPeriodEnd(subscriptionData.currentPeriodEnd),
       cancelAtPeriodEnd: Boolean(subscriptionData.cancelAtPeriodEnd),
+      providerModifiedAt,
     };
   }
   private parseOrderPayload(data: unknown): ParsedOrderPayload {
@@ -406,6 +412,7 @@ export class PolarWebhookHandler {
       status: payload.status,
       currentPeriodEnd: payload.currentPeriodEnd,
       cancelAtPeriodEnd: payload.cancelAtPeriodEnd,
+      providerModifiedAt: payload.providerModifiedAt,
       lastSyncedAt: new Date(),
     };
     try {
@@ -624,6 +631,7 @@ function normalizeVerifiedEvent(event: unknown): unknown {
       cancelAtPeriodEnd: data.cancelAtPeriodEnd ?? data.cancel_at_period_end,
       billingReason: data.billingReason ?? data.billing_reason,
       createdAt: data.createdAt ?? data.created_at,
+      modifiedAt: data.modifiedAt ?? data.modified_at,
       netAmount: data.net_amount,
     },
   };

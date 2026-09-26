@@ -19,6 +19,7 @@ export type Subscription = {
   status: SubscriptionStatus;
   currentPeriodEnd: Date;
   cancelAtPeriodEnd: boolean;
+  providerModifiedAt?: Date;
   lastSyncedAt: Date;
 };
 
