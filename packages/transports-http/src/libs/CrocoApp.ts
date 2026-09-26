@@ -223,9 +223,9 @@ export class CrocoApp {
       ...(this.config.globalPipes === undefined ? {} : { globalPipes: this.config.globalPipes }),
     });
 
-    const explicitHeadRoutes = this.routes.filter((route) => route.method.toUpperCase() === "HEAD");
+    const registrationRoutes = [...this.routes].sort(compareRoutePathSpecificity);
 
-    for (const route of explicitHeadRoutes) {
+    for (const route of registrationRoutes.filter((r) => r.method.toUpperCase() === "HEAD")) {
       this.explicitHeadRouteRegistrar.register(route, { registerHeadAsGet: true });
     }
     this.explicitHeadHono.get("*", (c) => {
@@ -233,7 +233,7 @@ export class CrocoApp {
       return new Response(null, { status: 404 });
     });
 
-    for (const route of this.routes) {
+    for (const route of registrationRoutes) {
       if (route.method.toUpperCase() !== "HEAD") {
         this.routeRegistrar.register(route);
       }
@@ -787,6 +787,29 @@ export class CrocoApp {
       },
     });
   }
+}
+
+function routeSegmentRank(segment: string): number {
+  if (segment === "*" || (segment.startsWith(":") && segment.endsWith("{.+}"))) return 2;
+  if (segment.startsWith(":")) return 1;
+  return 0;
+}
+
+function compareRoutePathSpecificity(left: CompiledRoute, right: CompiledRoute): number {
+  const leftSegments = left.path.split("/").filter(Boolean);
+  const rightSegments = right.path.split("/").filter(Boolean);
+
+  for (let index = 0; index < Math.max(leftSegments.length, rightSegments.length); index++) {
+    const leftSegment = leftSegments[index];
+    const rightSegment = rightSegments[index];
+    if (leftSegment === undefined) return -1;
+    if (rightSegment === undefined) return 1;
+
+    const difference = routeSegmentRank(leftSegment) - routeSegmentRank(rightSegment);
+    if (difference !== 0) return difference;
+  }
+
+  return 0;
 }
 
 /**

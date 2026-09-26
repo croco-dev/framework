@@ -215,6 +215,16 @@ publish contribution identity or plugin metadata, so profiles and generated appl
 prefer `httpTransport()` and `createHttpAppConfig()`. Host callbacks must re-enter the owning runtime
 with `runtime.run()` as described by `@croco/framework-module`.
 
+### 라우트 매칭 순서
+
+HTTP 라우트는 선언 순서와 관계없이 경로의 각 세그먼트를 앞에서부터 비교해 등록합니다. 정적 세그먼트가
+파라미터 세그먼트보다, 파라미터 세그먼트가 catch-all(`:...path`)보다 먼저 매칭됩니다. 구체성이 같으면
+기존 선언 순서를 유지합니다. 이 순서는 명시적인 `@Head()` 라우트에도 적용되며, ContractGraph의 선언
+순서는 바뀌지 않습니다.
+
+예를 들어 `@Get("/:id")`를 `@Get("/me")`보다 먼저 선언해도 `/users/me`는 정적 라우트가 처리하고,
+`/users/u1`은 파라미터 라우트가 처리합니다.
+
 ### HEAD 요청과 GET 라우트
 
 Croco HTTP 런타임은 GET-only 라우트에 들어온 `HEAD` 요청을 호환 동작으로 지원합니다. 이 경우 GET
