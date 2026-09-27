@@ -293,6 +293,13 @@ function PredicateInputs({
   );
 }
 export function CohortBuilder(props: CohortBuilderProps): ReactElement {
+  const { id, scope, subjectKind } = props.definition;
+  return h(CohortBuilderEditor, {
+    ...props,
+    key: JSON.stringify([scope.appId, scope.environment, scope.tenantId, id, subjectKind]),
+  });
+}
+function CohortBuilderEditor(props: CohortBuilderProps): ReactElement {
   const [definition, setDefinition] = useState(props.definition);
   const [sampleLimit, setSampleLimit] = useState(10);
   const [reason, setReason] = useState("");

@@ -124,3 +124,27 @@ describe("CohortBuilder condition actions", () => {
     );
   });
 });
+
+describe("CohortBuilder editor identity", () => {
+  it("keeps the editor mounted for unrelated rerenders and definition revisions", () => {
+    const first = CohortBuilder(props);
+    const next = CohortBuilder({
+      ...props,
+      actor: "another-operator",
+      definition: { ...props.definition, version: 2, scope: { ...props.definition.scope } },
+      state: { kind: "loading" },
+      onPreview: vi.fn(async () => {}),
+    });
+    expect(next.type).toBe(first.type);
+    expect(next.key).toBe(first.key);
+  });
+  it.each([
+    { ...props.definition, id: "another-cohort" },
+    { ...props.definition, subjectKind: "account" },
+    { ...props.definition, scope: { ...props.definition.scope, tenantId: "another-tenant" } },
+    { ...props.definition, scope: { ...props.definition.scope, appId: "another-app" } },
+    { ...props.definition, scope: { ...props.definition.scope, environment: "production" } },
+  ])("remounts the editor for a different identity: %j", (definition) => {
+    expect(CohortBuilder({ ...props, definition }).key).not.toBe(CohortBuilder(props).key);
+  });
+});
