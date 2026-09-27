@@ -42,6 +42,7 @@
         "@croco/dataloader-core",
         "@croco/engagement-core",
         "@croco/entitlements-core",
+        "@croco/etl-core",
         "@croco/events-core",
         "@croco/execution-core",
         "@croco/features-core",

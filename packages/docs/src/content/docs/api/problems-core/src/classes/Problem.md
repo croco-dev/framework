@@ -170,6 +170,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`EntitlementProviderUnavailableProblem`](/api/entitlements-core/src/classes/entitlementproviderunavailableproblem/)
 - [`EntitlementQuotaExceededProblem`](/api/entitlements-core/src/classes/entitlementquotaexceededproblem/)
 - [`EntitlementRequirementProblem`](/api/entitlements-core/src/classes/entitlementrequirementproblem/)
+- [`SourceDecodeProblem`](/api/etl-core/src/classes/sourcedecodeproblem/)
 - [`DuplicateEventFieldProblem`](/api/events-core/src/classes/duplicateeventfieldproblem/)
 - [`DuplicateEventNameProblem`](/api/events-core/src/classes/duplicateeventnameproblem/)
 - [`EventAfterCommitOutcomeRequiredProblem`](/api/events-core/src/classes/eventaftercommitoutcomerequiredproblem/)

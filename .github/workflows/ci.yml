@@ -716,6 +716,7 @@ jobs:
               - 'packages/entitlements-core/src/**'
               - 'packages/entitlements-drizzle/src/**'
               - 'packages/esbuild-plugin/src/**'
+              - 'packages/etl-core/src/**'
               - 'packages/events-core/src/**'
               - 'packages/events-inmemory/src/**'
               - 'packages/events-tx/src/**'
