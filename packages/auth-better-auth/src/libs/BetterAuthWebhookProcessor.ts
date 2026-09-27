@@ -29,7 +29,8 @@ const SUPPORTED_EVENT_TYPES = new Set<keyof BetterAuthWebhookHandler>([
  */
 export class BetterAuthWebhookProcessor {
   private static readonly SIGNATURE_HEADER = "x-better-auth-signature";
-  private static readonly MAX_EVENT_AGE_MS = 300_000;
+  private static readonly DELIVERY_TIMESTAMP_HEADER = "x-better-auth-timestamp";
+  private static readonly MAX_SIGNATURE_AGE_MS = 300_000;
   private readonly gateway: WebhookGateway;
   private readonly activeDeliveries = new Map<string, Promise<void>>();
 
@@ -45,6 +46,7 @@ export class BetterAuthWebhookProcessor {
           this.verifyEvent(
             typeof rawBody === "string" ? rawBody : Buffer.from(rawBody).toString("utf8"),
             headers[BetterAuthWebhookProcessor.SIGNATURE_HEADER] ?? "",
+            headers[BetterAuthWebhookProcessor.DELIVERY_TIMESTAMP_HEADER] ?? null,
             receivedAt,
           ),
       },
@@ -64,12 +66,20 @@ export class BetterAuthWebhookProcessor {
     });
   }
 
-  private verifySignature(rawBody: string, signature: string): boolean {
+  private verifySignature(
+    rawBody: string,
+    signature: string,
+    deliveryTimestamp: string | null,
+  ): boolean {
     if (!signature) {
       return false;
     }
 
-    const expectedSignature = `sha256=${createHmac("sha256", this.options.signingSecret).update(rawBody).digest("hex")}`;
+    const mac = createHmac("sha256", this.options.signingSecret);
+    const expectedSignature =
+      deliveryTimestamp === null
+        ? `sha256=${mac.update(rawBody).digest("hex")}`
+        : `v1=${mac.update(deliveryTimestamp).update(".").update(rawBody).digest("hex")}`;
     const actualSignatureBuffer = Buffer.from(signature);
     const expectedSignatureBuffer = Buffer.from(expectedSignature);
 
@@ -80,8 +90,13 @@ export class BetterAuthWebhookProcessor {
     return timingSafeEqual(actualSignatureBuffer, expectedSignatureBuffer);
   }
 
-  private verifyEvent(rawBody: string, signature: string, receivedAt: Date): WebhookEvent {
-    if (!this.verifySignature(rawBody, signature)) {
+  private verifyEvent(
+    rawBody: string,
+    signature: string,
+    deliveryTimestamp: string | null,
+    receivedAt: Date,
+  ): WebhookEvent {
+    if (!this.verifySignature(rawBody, signature, deliveryTimestamp)) {
       throw new InvalidWebhookSignatureProblem();
     }
 
@@ -102,9 +117,12 @@ export class BetterAuthWebhookProcessor {
       throw new InvalidWebhookPayloadProblem();
     }
 
+    const freshnessTimestamp =
+      deliveryTimestamp === null ? occurredAt : parseEventTimestamp(deliveryTimestamp);
     if (
-      Math.abs(receivedAt.getTime() - occurredAt.getTime()) >
-      BetterAuthWebhookProcessor.MAX_EVENT_AGE_MS
+      freshnessTimestamp === null ||
+      Math.abs(receivedAt.getTime() - freshnessTimestamp.getTime()) >
+        BetterAuthWebhookProcessor.MAX_SIGNATURE_AGE_MS
     ) {
       throw new InvalidWebhookSignatureProblem();
     }
@@ -125,18 +143,24 @@ export class BetterAuthWebhookProcessor {
 
   async processWebhook(request: { headers: Headers; text: () => Promise<string> }): Promise<void> {
     const signature = request.headers.get(BetterAuthWebhookProcessor.SIGNATURE_HEADER) ?? "";
+    const deliveryTimestamp = request.headers.get(
+      BetterAuthWebhookProcessor.DELIVERY_TIMESTAMP_HEADER,
+    );
     const rawBody = await request.text();
     const deliveryFingerprint = createHash("sha256")
       .update(signature)
+      .update("\0")
+      .update(deliveryTimestamp ?? "")
       .update("\0")
       .update(rawBody)
       .digest("hex");
     const activeDelivery = this.activeDeliveries.get(deliveryFingerprint);
     if (activeDelivery !== undefined) {
+      this.verifyEvent(rawBody, signature, deliveryTimestamp, new Date());
       return activeDelivery;
     }
 
-    const execution = this.processVerifiedDelivery(rawBody, signature);
+    const execution = this.processVerifiedDelivery(rawBody, signature, deliveryTimestamp);
     this.activeDeliveries.set(deliveryFingerprint, execution);
 
     try {
@@ -146,10 +170,19 @@ export class BetterAuthWebhookProcessor {
     }
   }
 
-  private async processVerifiedDelivery(rawBody: string, signature: string): Promise<void> {
+  private async processVerifiedDelivery(
+    rawBody: string,
+    signature: string,
+    deliveryTimestamp: string | null,
+  ): Promise<void> {
     const result = await this.gateway.handle({
       rawBody,
-      headers: { [BetterAuthWebhookProcessor.SIGNATURE_HEADER]: signature },
+      headers: {
+        [BetterAuthWebhookProcessor.SIGNATURE_HEADER]: signature,
+        ...(deliveryTimestamp === null
+          ? {}
+          : { [BetterAuthWebhookProcessor.DELIVERY_TIMESTAMP_HEADER]: deliveryTimestamp }),
+      },
     });
 
     if (result.outcome === "in-flight" || result.outcome === "failed") {

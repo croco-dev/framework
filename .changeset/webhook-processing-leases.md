@@ -6,3 +6,5 @@
 ---
 
 Webhook delivery reservations expire after a separate processing lease, so an abandoned attempt can be retried while completed results retain their configured replay period.
+
+Better Auth senders can retry beyond the legacy five-minute body timestamp window by signing an unchanged event body with a fresh `x-better-auth-timestamp` and a `v1` delivery signature on each attempt.

@@ -54,6 +54,37 @@ function createMockWebhookRequest(
   };
 }
 
+const NativeDate = Date;
+let testTime = 0;
+
+function useTestClock(timestamp: string): void {
+  testTime = NativeDate.parse(timestamp);
+  vi.stubGlobal(
+    "Date",
+    new Proxy(NativeDate, {
+      construct(target, args) {
+        return Reflect.construct(target, args.length === 0 ? [testTime] : args);
+      },
+      get(target, property, receiver) {
+        return property === "now" ? () => testTime : Reflect.get(target, property, receiver);
+      },
+    }),
+  );
+}
+
+function createDeliveryRequest(rawBody: string, timestamp = new Date().toISOString()) {
+  const signature = createHmac("sha256", TEST_SIGNING_SECRET)
+    .update(`${timestamp}.${rawBody}`)
+    .digest("hex");
+  return {
+    headers: new Headers({
+      "x-better-auth-timestamp": timestamp,
+      "x-better-auth-signature": `v1=${signature}`,
+    }),
+    text: () => Promise.resolve(rawBody),
+  };
+}
+
 describe("BetterAuthWebhookProcessor", () => {
   let processor!: BetterAuthWebhookProcessor;
   let mockSessionProvider!: BetterAuthSessionProvider;
@@ -79,6 +110,10 @@ describe("BetterAuthWebhookProcessor", () => {
       mockHandlers,
       mockSessionProvider,
     );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   describe("processWebhook", () => {
@@ -186,10 +221,8 @@ describe("BetterAuthWebhookProcessor", () => {
     });
 
     it("should reclaim a verified delivery on a new worker after its store lease expires", async () => {
-      let storeTime = Date.now();
-      const store = new InMemoryIdempotencyStore<WebhookGatewayStoredResult>({
-        now: () => new Date(storeTime),
-      });
+      useTestClock("2026-09-27T12:00:00.000Z");
+      const store = new InMemoryIdempotencyStore<WebhookGatewayStoredResult>();
       let markFirstHandlerStarted!: () => void;
       const firstHandlerStarted = new Promise<void>((resolve) => {
         markFirstHandlerStarted = resolve;
@@ -213,23 +246,156 @@ describe("BetterAuthWebhookProcessor", () => {
         id: "delivery-123",
         type: "user.created",
         data: { id: "user-123" },
+        timestamp: new Date().toISOString(),
       });
-      const request = () => createMockWebhookRequest(rawBody, createSignature(rawBody));
+      const request = () => createDeliveryRequest(rawBody);
+      const originalRequest = request();
 
-      void firstWorker.processWebhook(request());
+      void firstWorker.processWebhook(originalRequest);
       await firstHandlerStarted;
 
-      storeTime += 15 * 60_000 - 1;
+      testTime = Date.now() + 15 * 60_000 - 1;
       await expect(nextWorker.processWebhook(request())).rejects.toMatchObject({ status: 409 });
       expect(handler).toHaveBeenCalledTimes(1);
 
-      storeTime += 1;
+      testTime = Date.now() + 1;
+      await expect(nextWorker.processWebhook(originalRequest)).rejects.toBeInstanceOf(
+        InvalidWebhookSignatureProblem,
+      );
       await nextWorker.processWebhook(request());
       expect(handler).toHaveBeenCalledTimes(2);
 
-      storeTime += 23 * 60 * 60_000;
+      testTime = Date.now() + 24 * 60 * 60_000 - 1;
       await nextWorker.processWebhook(request());
       expect(handler).toHaveBeenCalledTimes(2);
+
+      testTime = Date.now() + 1;
+      await nextWorker.processWebhook(request());
+      expect(handler).toHaveBeenCalledTimes(3);
+    });
+
+    describe("versioned delivery signatures", () => {
+      const rawBody = JSON.stringify({
+        id: "versioned-delivery",
+        type: "user.created",
+        data: { id: "user-123" },
+        timestamp: "2026-09-01T12:00:00.000Z",
+      });
+
+      beforeEach(() => {
+        useTestClock("2026-09-27T12:00:00.000Z");
+      });
+
+      it.each([-300_000, 300_000])(
+        "should accept a delivery timestamp at the %i ms boundary",
+        async (offset) => {
+          await processor.processWebhook(
+            createDeliveryRequest(rawBody, new Date(Date.now() + offset).toISOString()),
+          );
+          expect(mockHandlers["user.created"]).toHaveBeenCalledExactlyOnceWith({ id: "user-123" });
+        },
+      );
+
+      it.each([-300_001, 300_001])(
+        "should reject a delivery timestamp outside the %i ms boundary",
+        async (offset) => {
+          await expect(
+            processor.processWebhook(
+              createDeliveryRequest(rawBody, new Date(Date.now() + offset).toISOString()),
+            ),
+          ).rejects.toBeInstanceOf(InvalidWebhookSignatureProblem);
+          expect(idempotencyStore.size).toBe(0);
+        },
+      );
+
+      it.each(["", "2026-09-27T12:00:00", "2026-02-30T12:00:00Z", "Sun, 27 Sep 2026 12:00:00 GMT"])(
+        "should reject malformed signed delivery timestamp %s",
+        async (timestamp) => {
+          await expect(
+            processor.processWebhook(createDeliveryRequest(rawBody, timestamp)),
+          ).rejects.toBeInstanceOf(InvalidWebhookSignatureProblem);
+          expect(idempotencyStore.size).toBe(0);
+        },
+      );
+
+      it("should reject a v1 signature without its timestamp header", async () => {
+        const request = createDeliveryRequest(rawBody);
+        request.headers.delete("x-better-auth-timestamp");
+        await expect(processor.processWebhook(request)).rejects.toBeInstanceOf(
+          InvalidWebhookSignatureProblem,
+        );
+        expect(idempotencyStore.size).toBe(0);
+      });
+
+      it("should reject a legacy signature with a delivery timestamp header", async () => {
+        const request = createDeliveryRequest(rawBody);
+        request.headers.set("x-better-auth-signature", createRawSignature(rawBody));
+        await expect(processor.processWebhook(request)).rejects.toBeInstanceOf(
+          InvalidWebhookSignatureProblem,
+        );
+        expect(idempotencyStore.size).toBe(0);
+      });
+
+      it("should still reject malformed occurrence timestamps with a valid delivery signature", async () => {
+        const body = JSON.stringify({ type: "user.created", timestamp: "invalid" });
+        await expect(processor.processWebhook(createDeliveryRequest(body))).rejects.toBeInstanceOf(
+          InvalidWebhookPayloadProblem,
+        );
+        expect(idempotencyStore.size).toBe(0);
+      });
+
+      it("should reject a changed body using the same event id and a fresh valid signature", async () => {
+        await processor.processWebhook(createDeliveryRequest(rawBody));
+        const changedBody = rawBody.replace("user-123", "user-456");
+        testTime = Date.now() + 60_000;
+        await expect(
+          processor.processWebhook(createDeliveryRequest(changedBody)),
+        ).rejects.toBeInstanceOf(IdempotencyConflictProblem);
+        expect(mockHandlers["user.created"]).toHaveBeenCalledTimes(1);
+      });
+
+      it("should verify stale and tampered attempts before joining an active delivery", async () => {
+        let releaseHandler!: () => void;
+        let markHandlerStarted!: () => void;
+        const handlerStarted = new Promise<void>((resolve) => {
+          markHandlerStarted = resolve;
+        });
+        const handlerReleased = new Promise<void>((resolve) => {
+          releaseHandler = resolve;
+        });
+        mockHandlers["user.created"] = vi.fn(async () => {
+          markHandlerStarted();
+          await handlerReleased;
+        });
+        const original = createDeliveryRequest(rawBody);
+        const first = processor.processWebhook(original);
+        await handlerStarted;
+        try {
+          const tamperedTimestamp = createDeliveryRequest(rawBody);
+          tamperedTimestamp.headers.set(
+            "x-better-auth-timestamp",
+            new Date(Date.now() + 1).toISOString(),
+          );
+          await expect(processor.processWebhook(tamperedTimestamp)).rejects.toBeInstanceOf(
+            InvalidWebhookSignatureProblem,
+          );
+          const tamperedBody = {
+            ...createDeliveryRequest(rawBody),
+            text: () => Promise.resolve(rawBody.replace("user-123", "user-456")),
+          };
+          await expect(processor.processWebhook(tamperedBody)).rejects.toBeInstanceOf(
+            InvalidWebhookSignatureProblem,
+          );
+          testTime = Date.now() + 300_001;
+          await expect(processor.processWebhook(original)).rejects.toBeInstanceOf(
+            InvalidWebhookSignatureProblem,
+          );
+        } finally {
+          releaseHandler();
+          await first;
+        }
+        expect(mockHandlers["user.created"]).toHaveBeenCalledTimes(1);
+      });
     });
 
     it("should not let an invalid signature join an active verified delivery", async () => {
