@@ -10,7 +10,8 @@ import {
   RateLimitKeyBuilder,
   SlidingWindowInMemoryStore,
 } from "@croco/ratelimit-core";
-import type { GuardContext, RateLimitResult } from "@croco/ratelimit-core";
+import type { GuardContext, KeySegment, RateLimitResult } from "@croco/ratelimit-core";
+import type { ExecutionContext } from "@croco/protocols-rest";
 import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../libs/CrocoApp";
@@ -106,5 +107,75 @@ describe("RateLimitGuard HTTP integration", () => {
     expect((await request("bob")).status).toBe(200);
     expect(handleResource).toHaveBeenCalledTimes(2);
     expect((await request("alice", "/limited/plain")).status).toBe(200);
+  });
+});
+
+type AuthenticatedRequest = Request & { user?: unknown; principal?: unknown; apiKey?: unknown };
+
+class HeaderAuthGuard {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.getRequest() as AuthenticatedRequest;
+    const apiKey = request.headers.get("x-api-key");
+    if (apiKey) {
+      const principal = { id: apiKey, type: "apikey", keyId: apiKey };
+      request.principal = principal;
+      request.apiKey = principal;
+      return true;
+    }
+
+    const userId = request.headers.get("x-user-id");
+    if (!userId) return false;
+    const user = { id: userId, roles: [], permissions: [] };
+    request.principal = { ...user, type: "user" };
+    request.user = user;
+    return true;
+  }
+}
+
+@Controller("/reports")
+class ReportController {
+  @Get("/export")
+  @RateLimit({ limit: 1, window: "1m" })
+  export() {
+    return { ok: true };
+  }
+}
+
+function createReportApp(segment: KeySegment) {
+  Container.set(
+    RateLimitGuard,
+    new RateLimitGuard(
+      new RateLimiter(new SlidingWindowInMemoryStore(), new RateLimitKeyBuilder([segment])),
+    ),
+  );
+  return createApp({
+    controllers: [ReportController],
+    globalGuards: [new HeaderAuthGuard()],
+    securityValidation: "off",
+    diValidation: "off",
+  });
+}
+
+function exportWith(headers: Record<string, string>): Request {
+  return new Request("http://localhost/reports/export", { headers });
+}
+
+describe("RateLimitGuard principal key segments", () => {
+  beforeEach(() => Container.reset());
+
+  it("keys the user segment by the authenticated user", async () => {
+    const app = createReportApp("user");
+
+    expect((await app.fetch(exportWith({ "x-user-id": "user-1" }))).status).toBe(200);
+    expect((await app.fetch(exportWith({ "x-user-id": "user-2" }))).status).toBe(200);
+    expect((await app.fetch(exportWith({ "x-user-id": "user-1" }))).status).toBe(429);
+  });
+
+  it("keys the apiKey segment by the authenticated API key", async () => {
+    const app = createReportApp("apiKey");
+
+    expect((await app.fetch(exportWith({ "x-api-key": "key-1" }))).status).toBe(200);
+    expect((await app.fetch(exportWith({ "x-api-key": "key-2" }))).status).toBe(200);
+    expect((await app.fetch(exportWith({ "x-api-key": "key-1" }))).status).toBe(429);
   });
 });

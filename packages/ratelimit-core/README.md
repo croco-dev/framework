@@ -32,6 +32,11 @@ class ApiController {
 }
 ```
 
+`@RateLimit`의 `user`/`apiKey` key segment는 앞서 실행된 인증 가드가 요청 객체에 기록한
+`user`/`principal` 또는 `apiKey`/`principal`을 사용합니다. API key segment에는 주체 객체가 아닌
+`keyId`(없으면 `id`) 문자열을 사용합니다. 인증 주체가 없으면 기존 context 변수 값을 사용하며,
+값이 없는 요청은 `null` segment로 기록됩니다.
+
 ## API 레퍼런스
 
 ### 핵심 클래스
