@@ -134,6 +134,8 @@ await handler.handleWebhook(request);
 완료 시점부터 기본 24시간 동안 유지되며, `idempotencyTtlMs`로 provider retry 정책에 맞게
 조정할 수 있습니다. 처리 lease는 자동 연장되지 않으므로 예상 최대 처리 시간보다 길게 설정해야 합니다.
 Lease 만료 후에는 이전 worker도 계속 실행 중일 수 있으므로 mutation 자체의 중복 방지도 필요합니다.
+Durable 저장소는 `leaseMs`를 결과 보존 기간과 독립적으로 구현하고 conformance suite를 통과한 뒤
+`processingLeaseVersion: 1`을 선언해야 합니다. 선언하지 않은 저장소는 handler 구성 시 거부됩니다.
 
 ## Diagnostics와 Conformance
 

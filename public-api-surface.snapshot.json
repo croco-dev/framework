@@ -17416,6 +17416,12 @@
           "sourceEntrypoint": "packages/idempotency-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "assertProcessingLeaseStore",
+              "exportKind": "named",
+              "source": "./libs/assertProcessingLeaseStore",
+              "declarationKind": "function"
+            },
+            {
               "name": "createIdempotencyCoordinator",
               "exportKind": "named",
               "source": "./libs/IdempotencyCoordinator",
@@ -17489,6 +17495,12 @@
             },
             {
               "name": "IdempotencyExecutionIndeterminateProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/IdempotencyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "IdempotencyProcessingLeaseUnsupportedProblem",
               "exportKind": "named",
               "source": "./libs/problems/IdempotencyProblems",
               "declarationKind": "class"
@@ -17717,6 +17729,11 @@
               "name": "InvalidIdempotencyTtlProblemOptions",
               "exportKind": "named",
               "source": "./libs/problems/IdempotencyProblems"
+            },
+            {
+              "name": "LeaseAwareIdempotencyStore",
+              "exportKind": "named",
+              "source": "./libs/types"
             },
             {
               "name": "ProviderEventIdempotencyKeySource",

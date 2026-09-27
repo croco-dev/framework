@@ -46,6 +46,9 @@ structured clone이 `lastIndex`를 초기화하므로 모든 RegExp는 `lastInde
 `leaseMs`를 생략하면 호환성을 위해 `ttlMs`를 리스로 사용하며, 둘 다 생략하면 30초 기본 리스가 적용됩니다.
 완료·실패 레코드는 `ttlMs`를 생략하면 만료되지 않습니다. 리스는 handler의 최대 실행 시간 이상으로 설정해야 합니다.
 리스가 끝나도 실행 중인 handler는 중단되지 않으므로, 너무 짧은 리스는 부수효과의 중복 실행을 허용할 수 있습니다.
+명시적인 `leaseMs`를 사용하는 저장소는 완료 결과의 `ttlMs`와 독립적으로 예약 만료를 처리하고
+`processingLeaseVersion: 1`을 선언해야 합니다. 기존 저장소가 이를 선언하지 않으면 예약 전에
+`IdempotencyProcessingLeaseUnsupportedProblem`으로 실패합니다. `leaseMs`를 생략한 호출은 기존 저장소와 호환됩니다.
 in-flight 예약은 `expiresAt` 직전까지만 완료할 수 있습니다. 만료 시각부터 `commit`과 `fail`은
 `IdempotencyReservationExpiredProblem`으로 거부되며, 새 `reserve`가 발급한 reservation만 상태를 전이할 수 있습니다.
 
@@ -106,6 +109,7 @@ const eventKey = deriveEventConsumerIdempotencyKey({
 저장소 어댑터는 `createIdempotencyStoreConformanceSuite()`가 반환하는 case를 자체 테스트 러너에서 실행해 replay,
 in-flight, conflict, tenant scope, expiration 동작을 검증할 수 있습니다. conformance는 completed 레코드가 이전
 reservation의 `fail` 호출로 덮어써지지 않고 기존 응답을 계속 replay하는지도 검증합니다.
+웹훅에 전달할 durable 저장소는 독립 처리 lease 구현과 capability 선언을 마친 뒤 이 suite를 통과해야 합니다.
 
 ```ts
 import { createIdempotencyStoreConformanceSuite } from "@croco/idempotency-core";

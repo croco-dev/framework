@@ -197,6 +197,8 @@ export type IdempotencyExecutionResult<TResult> =
     };
 
 export type IdempotencyStore<TResult = unknown> = {
+  /** Declared by stores that apply leaseMs independently of ttlMs. */
+  readonly processingLeaseVersion?: 1;
   reserve(
     key: DerivedIdempotencyKey,
     options?: IdempotencyReserveOptions,
@@ -205,6 +207,10 @@ export type IdempotencyStore<TResult = unknown> = {
   replay(key: DerivedIdempotencyKey): Promise<IdempotencyCompletedRecord<TResult> | null>;
   fail(options: IdempotencyFailOptions): Promise<IdempotencyFailedRecord>;
   expire(options: IdempotencyExpireOptions): Promise<boolean>;
+};
+
+export type LeaseAwareIdempotencyStore<TResult = unknown> = IdempotencyStore<TResult> & {
+  readonly processingLeaseVersion: 1;
 };
 
 export type IdempotencyAuditEvent = {

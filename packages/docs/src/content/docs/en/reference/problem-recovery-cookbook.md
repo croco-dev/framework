@@ -397,6 +397,7 @@ This cookbook documents 816 public Croco Problem codes. The deterministic JSON r
 | [`idempotency-core/invalid-snapshot`](#idempotency-core-invalid-snapshot)                                                             | ValidationError       |    422 | not-retryable | public        | active     |       1 |
 | [`idempotency-core/invalid-ttl`](#idempotency-core-invalid-ttl)                                                                       | BadRequest            |    400 | not-retryable | public        | active     |       1 |
 | [`idempotency-core/key-conflict`](#idempotency-core-key-conflict)                                                                     | Conflict              |    409 | conditional   | safe-message  | active     |       1 |
+| [`idempotency-core/processing-lease-unsupported`](#idempotency-core-processing-lease-unsupported)                                     | InternalServerError   |    500 | not-retryable | operator-only | active     |       1 |
 | [`idempotency-core/reservation-expired`](#idempotency-core-reservation-expired)                                                       | Conflict              |    409 | conditional   | safe-message  | active     |       1 |
 | [`idempotency-core/reservation-not-found`](#idempotency-core-reservation-not-found)                                                   | Conflict              |    409 | conditional   | safe-message  | active     |       1 |
 | [`idempotency-core/reservation-state`](#idempotency-core-reservation-state)                                                           | Conflict              |    409 | conditional   | safe-message  | active     |       1 |
@@ -7706,7 +7707,7 @@ Sources:
 
 Sources:
 
-- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:169:11` (problem-metadata)
+- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:181:11` (problem-metadata)
 
 <a id="idempotency-core-invalid-key"></a>
 
@@ -7724,7 +7725,7 @@ Sources:
 
 Sources:
 
-- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:58:11` (problem-metadata)
+- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:59:11` (problem-metadata)
 
 <a id="idempotency-core-invalid-snapshot"></a>
 
@@ -7742,7 +7743,7 @@ Sources:
 
 Sources:
 
-- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:77:11` (problem-metadata)
+- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:78:11` (problem-metadata)
 
 <a id="idempotency-core-invalid-ttl"></a>
 
@@ -7760,7 +7761,7 @@ Sources:
 
 Sources:
 
-- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:101:11` (problem-metadata)
+- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:102:11` (problem-metadata)
 
 <a id="idempotency-core-key-conflict"></a>
 
@@ -7778,7 +7779,25 @@ Sources:
 
 Sources:
 
-- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:42:11` (problem-metadata)
+- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:43:11` (problem-metadata)
+
+<a id="idempotency-core-processing-lease-unsupported"></a>
+
+## `idempotency-core/processing-lease-unsupported`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `not-retryable`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: The configured idempotency store has not declared independent processing lease support.
+- User action: Do not retry until the store supports the processing lease contract.
+- Operator action: Implement leaseMs independently of ttlMs, verify the store conformance suite, and declare processingLeaseVersion: 1.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:117:11` (problem-metadata)
 
 <a id="idempotency-core-reservation-expired"></a>
 
@@ -7796,7 +7815,7 @@ Sources:
 
 Sources:
 
-- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:130:11` (problem-metadata)
+- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:142:11` (problem-metadata)
 
 <a id="idempotency-core-reservation-not-found"></a>
 
@@ -7814,7 +7833,7 @@ Sources:
 
 Sources:
 
-- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:116:11` (problem-metadata)
+- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:128:11` (problem-metadata)
 
 <a id="idempotency-core-reservation-state"></a>
 
@@ -7832,7 +7851,7 @@ Sources:
 
 Sources:
 
-- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:149:11` (problem-metadata)
+- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:161:11` (problem-metadata)
 
 <a id="impersonation-configuration-invalid"></a>
 

@@ -9,6 +9,7 @@ import type {
   IdempotencyHandler,
   IdempotencyStore,
 } from "./types";
+import { assertProcessingLeaseStore } from "./assertProcessingLeaseStore";
 import {
   IdempotencyConflictProblem,
   IdempotencyExecutionIndeterminateProblem,
@@ -34,6 +35,10 @@ export class IdempotencyCoordinator<TResult = unknown> {
     request: IdempotencyExecutionRequest,
     handler: IdempotencyHandler<TResult>,
   ): Promise<IdempotencyExecutionResult<TResult>> {
+    if (request.leaseMs !== undefined) {
+      assertProcessingLeaseStore(this.store);
+    }
+
     const reservation = await this.reserve(request);
 
     if (reservation.outcome === "replay") {

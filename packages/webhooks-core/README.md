@@ -81,6 +81,9 @@ within the lease remain in-flight, and completed deliveries replay until the res
 Set `processingLeaseMs` longer than the provider's response timeout and at least as long as the
 handler's maximum execution time. A live handler that exceeds its lease can overlap a redelivery
 and run side effects twice; the stale handler cannot commit its result over the new reservation.
+Custom idempotency stores must apply `leaseMs` independently of the result TTL, pass the
+idempotency store conformance suite, and declare `processingLeaseVersion: 1`. The gateway rejects
+an incompatible store during construction.
 
 The gateway calls the adapter's `verify()` function before handler resolution. Invalid signatures
 therefore fail before a typed handler can run. Completed event ids replay the stored handled,

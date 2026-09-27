@@ -6,6 +6,7 @@ export const IDEMPOTENCY_DIAGNOSTIC_CODES = {
   invalidKey: "idempotency-core/invalid-key",
   invalidSnapshot: "idempotency-core/invalid-snapshot",
   invalidTtl: "idempotency-core/invalid-ttl",
+  processingLeaseUnsupported: "idempotency-core/processing-lease-unsupported",
   reservationExpired: "idempotency-core/reservation-expired",
   reservationNotFound: "idempotency-core/reservation-not-found",
   reservationState: "idempotency-core/reservation-state",
@@ -107,6 +108,17 @@ export class InvalidIdempotencyTtlProblem extends IdempotencyProblem {
         constraint: options.constraint,
         receivedValue: options.receivedValue,
       },
+    });
+  }
+}
+
+export class IdempotencyProcessingLeaseUnsupportedProblem extends IdempotencyProblem {
+  constructor() {
+    super({
+      code: IDEMPOTENCY_DIAGNOSTIC_CODES.processingLeaseUnsupported,
+      category: ProblemCategory.InternalServerError,
+      detail: "Idempotency store must support independent processing leases",
+      extensions: { requiredCapability: "processingLeaseVersion:1" },
     });
   }
 }

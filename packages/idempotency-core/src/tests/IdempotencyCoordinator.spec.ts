@@ -8,6 +8,7 @@ import {
   deriveWebhookIdempotencyKey,
   IdempotencyConflictProblem,
   IdempotencyExecutionIndeterminateProblem,
+  IdempotencyProcessingLeaseUnsupportedProblem,
   IdempotencyCoordinator,
   type IdempotencyCommitOptions,
   type IdempotencyCompletedRecord,
@@ -19,6 +20,7 @@ import {
   InvalidIdempotencyKeyProblem,
   InvalidIdempotencyTtlProblem,
   type IdempotencyAuditEvent,
+  type IdempotencyStore,
 } from "../index";
 
 const INVALID_TTLS = [
@@ -33,6 +35,32 @@ const INVALID_TTLS = [
 ] as const;
 
 describe("IdempotencyCoordinator", () => {
+  it("rejects an explicit lease before using a store that has not adopted it", async () => {
+    const backing = new InMemoryIdempotencyStore<string>();
+    const legacyStore: IdempotencyStore<string> = {
+      reserve: (key, options) =>
+        backing.reserve(key, { ttlMs: options?.ttlMs, metadata: options?.metadata }),
+      commit: (options) => backing.commit(options),
+      replay: (key) => backing.replay(key),
+      fail: (options) => backing.fail(options),
+      expire: (options) => backing.expire(options),
+    };
+    const reserve = vi.spyOn(legacyStore, "reserve");
+    const handler = vi.fn(() => "stored");
+    const key = deriveWebhookIdempotencyKey({ provider: "test", eventId: "legacy-store" });
+    const coordinator = createIdempotencyCoordinator({ store: legacyStore });
+
+    await expect(
+      coordinator.execute({ key, ttlMs: 86_400_000, leaseMs: 900_000 }, handler),
+    ).rejects.toBeInstanceOf(IdempotencyProcessingLeaseUnsupportedProblem);
+    expect(reserve).not.toHaveBeenCalled();
+    expect(handler).not.toHaveBeenCalled();
+    expect(await coordinator.execute({ key, ttlMs: 86_400_000 }, handler)).toMatchObject({
+      outcome: "executed",
+      response: "stored",
+    });
+  });
+
   it("keeps omitted retention unlimited when an explicit lease is supplied", async () => {
     let current = Date.parse("2026-01-01T00:00:00.000Z");
     const store = new InMemoryIdempotencyStore<string>({ now: () => new Date(current) });

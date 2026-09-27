@@ -191,12 +191,16 @@ function createDeliveryHeaders(rawBody: string, signingSecret: string): Record<s
 생략하면 요청을 거부합니다.
 
 처리기는 검증된 `id`와 본문 fingerprint로 중복 전달을 구분합니다. 중단된 처리의 lease는
-15분 뒤 만료되며, 같은 본문을 새 전달 시각으로 서명한 요청이 처리를 다시 시도할 수 있습니다.
+기본 15분 뒤 만료되며, 같은 본문을 새 전달 시각으로 서명한 요청이 처리를 다시 시도할 수 있습니다.
+핸들러가 오래 실행될 수 있으면 `processingLeaseMs`를 예상 최대 실행 시간보다 길게 설정하세요.
+예를 들어 `processingLeaseMs: 30 * 60_000`은 30분 lease를 사용합니다.
 완료 결과는 24시간 보존합니다. 동일 `id`로 본문을 바꾸면 충돌로 거부합니다.
 같은 processor에 동시에 들어온 동일한 유효 전달은 활성 실행 결과를 함께 기다립니다.
 다른 인스턴스에서 처리 중인 전달은 충돌로 보고합니다. `id`가 없으면 서명된 본문 원문의
 SHA-256 digest가 전달 ID가 됩니다. 여러 프로세스나 인스턴스에서 실행할 때는 공유 durable
 `idempotencyStore`를 제공해야 합니다.
+Custom 저장소는 `leaseMs`를 결과 보존 기간과 독립적으로 처리하고 conformance suite를 통과한 뒤
+`processingLeaseVersion: 1`을 선언해야 합니다. 선언하지 않은 저장소는 processor 구성 시 거부됩니다.
 
 ### 5. 제공 스키마 사용
 

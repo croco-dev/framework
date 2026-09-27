@@ -31,6 +31,7 @@ export type InMemoryIdempotencyStoreOptions = {
 };
 
 export class InMemoryIdempotencyStore<TResult = unknown> implements IdempotencyStore<TResult> {
+  readonly processingLeaseVersion = 1;
   private readonly records = new Map<string, IdempotencyRecord<TResult>>();
   private readonly now: Clock;
   private reservationSequence = 0;

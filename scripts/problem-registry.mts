@@ -2659,6 +2659,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "safe-message",
     severity: "error",
   }),
+  "idempotency-core/processing-lease-unsupported": recovery({
+    cause:
+      "The configured idempotency store has not declared independent processing lease support.",
+    userAction: "Do not retry until the store supports the processing lease contract.",
+    operatorAction:
+      "Implement leaseMs independently of ttlMs, verify the store conformance suite, and declare processingLeaseVersion: 1.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "access-core/invalid-provider-result": recovery({
     cause: "AccessProvider.check() returned a result without a supported authoritative decision.",
     userAction:

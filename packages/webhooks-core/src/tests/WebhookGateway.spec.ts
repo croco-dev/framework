@@ -1,4 +1,7 @@
-import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
+import {
+  IdempotencyProcessingLeaseUnsupportedProblem,
+  InMemoryIdempotencyStore,
+} from "@croco/idempotency-core";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -11,6 +14,7 @@ import {
   WebhookReporterProblem,
   type WebhookEvent,
   WebhookGateway,
+  type WebhookGatewayOptions,
   type WebhookGatewayStoredResult,
   createWebhookEventRouter,
   type WebhookProviderAdapter,
@@ -120,6 +124,20 @@ function signedRequest(type = "subscription.created") {
 }
 
 describe("WebhookGateway", () => {
+  it("rejects a store without processing lease support during construction", () => {
+    const idempotencyStore = {} as unknown as WebhookGatewayOptions["idempotencyStore"];
+
+    expect(
+      () =>
+        new WebhookGateway({
+          adapter: createAdapter(),
+          router: { has: () => false, dispatch: async () => undefined },
+          idempotencyStore,
+          unknownEventPolicy: "fail",
+        }),
+    ).toThrow(IdempotencyProcessingLeaseUnsupportedProblem);
+  });
+
   it("processes a provider retry once the crashed attempt can no longer be running", async () => {
     const start = new Date("2026-07-01T00:00:00.000Z").getTime();
     let current = start;

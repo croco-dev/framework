@@ -1,10 +1,10 @@
+import { deriveIdempotencyKey } from "./deriveIdempotencyKey";
 import {
   IdempotencyConflictProblem,
   IdempotencyReservationStateProblem,
   InvalidIdempotencyTtlProblem,
 } from "./problems/IdempotencyProblems";
-import { deriveIdempotencyKey } from "./deriveIdempotencyKey";
-import type { IdempotencyStore } from "./types";
+import type { LeaseAwareIdempotencyStore } from "./types";
 
 export type IdempotencyStoreConformanceCase = {
   readonly name: string;
@@ -12,7 +12,9 @@ export type IdempotencyStoreConformanceCase = {
 };
 
 export type IdempotencyStoreConformanceOptions<TResult = string> = {
-  readonly createStore: () => IdempotencyStore<TResult> | Promise<IdempotencyStore<TResult>>;
+  readonly createStore: () =>
+    | LeaseAwareIdempotencyStore<TResult>
+    | Promise<LeaseAwareIdempotencyStore<TResult>>;
   readonly createResponse?: () => TResult;
 };
 

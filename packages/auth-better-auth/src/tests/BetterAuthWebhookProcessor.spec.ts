@@ -220,59 +220,69 @@ describe("BetterAuthWebhookProcessor", () => {
       expect(mockHandlers["user.created"]).toHaveBeenCalledTimes(1);
     });
 
-    it("should reclaim a verified delivery on a new worker after its store lease expires", async () => {
-      useTestClock("2026-09-27T12:00:00.000Z");
-      const store = new InMemoryIdempotencyStore<WebhookGatewayStoredResult>();
-      let markFirstHandlerStarted!: () => void;
-      const firstHandlerStarted = new Promise<void>((resolve) => {
-        markFirstHandlerStarted = resolve;
-      });
-      const handler = vi.fn(async () => {
-        if (handler.mock.calls.length === 1) {
-          markFirstHandlerStarted();
-          await new Promise<never>(() => undefined);
+    it.each([undefined, 30 * 60_000])(
+      "should reclaim a verified delivery on a new worker after lease %s expires",
+      async (processingLeaseMs) => {
+        useTestClock("2026-09-27T12:00:00.000Z");
+        const store = new InMemoryIdempotencyStore<WebhookGatewayStoredResult>();
+        let markFirstHandlerStarted!: () => void;
+        const firstHandlerStarted = new Promise<void>((resolve) => {
+          markFirstHandlerStarted = resolve;
+        });
+        const handler = vi.fn(async () => {
+          if (handler.mock.calls.length === 1) {
+            markFirstHandlerStarted();
+            await new Promise<never>(() => undefined);
+          }
+        });
+        mockHandlers["user.created"] = handler;
+        const createWorker = () =>
+          new BetterAuthWebhookProcessor(
+            { signingSecret: TEST_SIGNING_SECRET, idempotencyStore: store, processingLeaseMs },
+            mockHandlers,
+            mockSessionProvider,
+          );
+        const firstWorker = createWorker();
+        const nextWorker = createWorker();
+        const rawBody = JSON.stringify({
+          id: "delivery-123",
+          type: "user.created",
+          data: { id: "user-123" },
+          timestamp: new Date().toISOString(),
+        });
+        const request = () => createDeliveryRequest(rawBody);
+        const originalRequest = request();
+
+        void firstWorker.processWebhook(originalRequest);
+        await firstHandlerStarted;
+
+        const startedAt = Date.now();
+        if (processingLeaseMs !== undefined) {
+          testTime = startedAt + 15 * 60_000;
+          await expect(nextWorker.processWebhook(request())).rejects.toMatchObject({ status: 409 });
+          expect(handler).toHaveBeenCalledTimes(1);
         }
-      });
-      mockHandlers["user.created"] = handler;
-      const createWorker = () =>
-        new BetterAuthWebhookProcessor(
-          { signingSecret: TEST_SIGNING_SECRET, idempotencyStore: store },
-          mockHandlers,
-          mockSessionProvider,
+
+        testTime = startedAt + (processingLeaseMs ?? 15 * 60_000) - 1;
+        await expect(nextWorker.processWebhook(request())).rejects.toMatchObject({ status: 409 });
+        expect(handler).toHaveBeenCalledTimes(1);
+
+        testTime = Date.now() + 1;
+        await expect(nextWorker.processWebhook(originalRequest)).rejects.toBeInstanceOf(
+          InvalidWebhookSignatureProblem,
         );
-      const firstWorker = createWorker();
-      const nextWorker = createWorker();
-      const rawBody = JSON.stringify({
-        id: "delivery-123",
-        type: "user.created",
-        data: { id: "user-123" },
-        timestamp: new Date().toISOString(),
-      });
-      const request = () => createDeliveryRequest(rawBody);
-      const originalRequest = request();
+        await nextWorker.processWebhook(request());
+        expect(handler).toHaveBeenCalledTimes(2);
 
-      void firstWorker.processWebhook(originalRequest);
-      await firstHandlerStarted;
+        testTime = Date.now() + 24 * 60 * 60_000 - 1;
+        await nextWorker.processWebhook(request());
+        expect(handler).toHaveBeenCalledTimes(2);
 
-      testTime = Date.now() + 15 * 60_000 - 1;
-      await expect(nextWorker.processWebhook(request())).rejects.toMatchObject({ status: 409 });
-      expect(handler).toHaveBeenCalledTimes(1);
-
-      testTime = Date.now() + 1;
-      await expect(nextWorker.processWebhook(originalRequest)).rejects.toBeInstanceOf(
-        InvalidWebhookSignatureProblem,
-      );
-      await nextWorker.processWebhook(request());
-      expect(handler).toHaveBeenCalledTimes(2);
-
-      testTime = Date.now() + 24 * 60 * 60_000 - 1;
-      await nextWorker.processWebhook(request());
-      expect(handler).toHaveBeenCalledTimes(2);
-
-      testTime = Date.now() + 1;
-      await nextWorker.processWebhook(request());
-      expect(handler).toHaveBeenCalledTimes(3);
-    });
+        testTime = Date.now() + 1;
+        await nextWorker.processWebhook(request());
+        expect(handler).toHaveBeenCalledTimes(3);
+      },
+    );
 
     describe("versioned delivery signatures", () => {
       const rawBody = JSON.stringify({

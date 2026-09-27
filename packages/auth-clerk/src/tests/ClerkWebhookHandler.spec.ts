@@ -1,12 +1,15 @@
 import { verifyWebhook } from "@clerk/backend/webhooks";
-import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
+import {
+  IdempotencyProcessingLeaseUnsupportedProblem,
+  InMemoryIdempotencyStore,
+} from "@croco/idempotency-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ClerkWebhookHandler } from "../libs/ClerkWebhookHandler";
 import {
   ClerkWebhookDeliveryInFlightProblem,
   InvalidWebhookPayloadProblem,
 } from "../libs/problems/ClerkProblems";
-import type { WebhookEventHandler } from "../libs/types";
+import type { WebhookEventHandler, WebhookHandlerOptions } from "../libs/types";
 
 type VerifiedWebhook = Awaited<ReturnType<typeof verifyWebhook>>;
 type StoredWebhookOutcome = {
@@ -22,6 +25,13 @@ vi.mock("@clerk/backend/webhooks", () => ({
 }));
 
 describe("ClerkWebhookHandler", () => {
+  it("rejects a store without processing lease support during construction", () => {
+    const idempotencyStore = {} as unknown as WebhookHandlerOptions["idempotencyStore"];
+    expect(
+      () => new ClerkWebhookHandler({ signingSecret: "whsec_test", idempotencyStore }, {}),
+    ).toThrow(IdempotencyProcessingLeaseUnsupportedProblem);
+  });
+
   let webhookHandler!: ClerkWebhookHandler;
   let mockHandlers!: MockWebhookHandlers;
   let idempotencyStore!: InMemoryIdempotencyStore<StoredWebhookOutcome>;

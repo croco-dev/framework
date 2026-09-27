@@ -1,5 +1,9 @@
 import type { verifyWebhook } from "@clerk/backend/webhooks";
-import { deriveWebhookIdempotencyKey, IdempotencyCoordinator } from "@croco/idempotency-core";
+import {
+  assertProcessingLeaseStore,
+  deriveWebhookIdempotencyKey,
+  IdempotencyCoordinator,
+} from "@croco/idempotency-core";
 
 import {
   ClerkWebhookDeliveryFailedProblem,
@@ -92,6 +96,7 @@ export class ClerkWebhookHandler {
     private readonly options: WebhookHandlerOptions,
     private readonly handlers: WebhookEventHandler,
   ) {
+    assertProcessingLeaseStore(options.idempotencyStore);
     this.coordinator = new IdempotencyCoordinator({ store: options.idempotencyStore });
   }
 

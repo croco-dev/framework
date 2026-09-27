@@ -1,6 +1,7 @@
 import {
-  IdempotencyCoordinator,
+  assertProcessingLeaseStore,
   deriveWebhookIdempotencyKey,
+  IdempotencyCoordinator,
   type DerivedIdempotencyKey,
   type IdempotencyCompletedRecord,
   type IdempotencyExecutionResult,
@@ -39,6 +40,7 @@ export class WebhookGateway {
 
   constructor(options: WebhookGatewayOptions) {
     assertConfiguration(options);
+    assertProcessingLeaseStore(options.idempotencyStore);
     this.options = options;
     this.coordinator = new IdempotencyCoordinator({ store: options.idempotencyStore });
     this.now = options.now ?? (() => new Date());

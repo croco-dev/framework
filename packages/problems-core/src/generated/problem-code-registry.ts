@@ -11891,7 +11891,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 169,
+          line: 181,
           column: 11,
           kind: "problem-metadata",
         },
@@ -11922,7 +11922,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 58,
+          line: 59,
           column: 11,
           kind: "problem-metadata",
         },
@@ -11952,7 +11952,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 77,
+          line: 78,
           column: 11,
           kind: "problem-metadata",
         },
@@ -11983,7 +11983,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 101,
+          line: 102,
           column: 11,
           kind: "problem-metadata",
         },
@@ -12013,7 +12013,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 42,
+          line: 43,
+          column: 11,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "idempotency-core/processing-lease-unsupported",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#idempotency-core-processing-lease-unsupported",
+      recovery: {
+        cause:
+          "The configured idempotency store has not declared independent processing lease support.",
+        userAction: "Do not retry until the store supports the processing lease contract.",
+        operatorAction:
+          "Implement leaseMs independently of ttlMs, verify the store conformance suite, and declare processingLeaseVersion: 1.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
+          line: 117,
           column: 11,
           kind: "problem-metadata",
         },
@@ -12043,7 +12076,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 130,
+          line: 142,
           column: 11,
           kind: "problem-metadata",
         },
@@ -12073,7 +12106,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 116,
+          line: 128,
           column: 11,
           kind: "problem-metadata",
         },
@@ -12103,7 +12136,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 149,
+          line: 161,
           column: 11,
           kind: "problem-metadata",
         },

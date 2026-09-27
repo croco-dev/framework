@@ -29,6 +29,10 @@ title: "IDEMPOTENCY_DIAGNOSTIC_CODES"
 
 > `readonly` **keyConflict**: `"idempotency-core/key-conflict"` = `"idempotency-core/key-conflict"`
 
+### processingLeaseUnsupported
+
+> `readonly` **processingLeaseUnsupported**: `"idempotency-core/processing-lease-unsupported"` = `"idempotency-core/processing-lease-unsupported"`
+
 ### reservationExpired
 
 > `readonly` **reservationExpired**: `"idempotency-core/reservation-expired"` = `"idempotency-core/reservation-expired"`

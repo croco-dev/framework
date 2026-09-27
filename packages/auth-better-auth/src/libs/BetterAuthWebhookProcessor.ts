@@ -62,6 +62,7 @@ export class BetterAuthWebhookProcessor {
         },
       },
       idempotencyStore: options.idempotencyStore,
+      processingLeaseMs: options.processingLeaseMs,
       unknownEventPolicy: "ignore",
     });
   }

@@ -78,7 +78,7 @@
     {
       "package": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/conformance.ts",
-      "line": 331,
+      "line": 333,
       "excerpt": "throw new Error(\"omitted-ttl reservation must grant a finite in-flight lease\");",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
@@ -87,7 +87,7 @@
     {
       "package": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/conformance.ts",
-      "line": 373,
+      "line": 375,
       "excerpt": "throw new Error(`${message}. Expected ${String(expected)}, got ${String(actual)}.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
@@ -96,7 +96,7 @@
     {
       "package": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/conformance.ts",
-      "line": 385,
+      "line": 387,
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
@@ -105,7 +105,7 @@
     {
       "package": "@croco/idempotency-core",
       "file": "packages/idempotency-core/src/libs/conformance.ts",
-      "line": 390,
+      "line": 392,
       "excerpt": "throw new Error(`Expected ${expected.name} to be thrown.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",

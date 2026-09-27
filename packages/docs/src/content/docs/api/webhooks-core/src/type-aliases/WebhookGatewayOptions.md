@@ -23,7 +23,7 @@ title: "WebhookGatewayOptions"
 
 ### idempotencyStore
 
-> `readonly` **idempotencyStore**: [`IdempotencyStore`](/api/idempotency-core/src/type-aliases/idempotencystore/)\<[`WebhookGatewayStoredResult`](/api/webhooks-core/src/type-aliases/webhookgatewaystoredresult/)\>
+> `readonly` **idempotencyStore**: [`LeaseAwareIdempotencyStore`](/api/idempotency-core/src/type-aliases/leaseawareidempotencystore/)\<[`WebhookGatewayStoredResult`](/api/webhooks-core/src/type-aliases/webhookgatewaystoredresult/)\>
 
 ---
 
