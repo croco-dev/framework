@@ -46,7 +46,8 @@
     "@croco/pagination-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/search-core": "workspace:*",
-    "@croco/tenant-core": "workspace:*"
+    "@croco/tenant-core": "workspace:*",
+    "@croco/warehouse-core": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",

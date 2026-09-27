@@ -3061,20 +3061,6 @@
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
-      "file": "packages/warehouse-postgres/README.md",
-      "blockIndex": 1,
-      "language": "typescript",
-      "openingLine": 15,
-      "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
-    },
-    {
-      "file": "packages/warehouse-postgres/README.md",
-      "blockIndex": 2,
-      "language": "typescript",
-      "openingLine": 39,
-      "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
-    },
-    {
       "file": "packages/webhooks-core/README.md",
       "blockIndex": 1,
       "language": "ts",

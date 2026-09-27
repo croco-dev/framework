@@ -2332,6 +2332,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "DatasetExplorer",
+              "exportKind": "named",
+              "source": "./libs/DatasetExplorer",
+              "declarationKind": "function"
+            },
+            {
               "name": "DeliveryOperationsPanel",
               "exportKind": "named",
               "source": "./libs/EngagementOperationsConsole",
@@ -3053,6 +3059,26 @@
               "name": "Customer360CommunicationPanelProps",
               "exportKind": "named",
               "source": "./libs/EngagementOperationsConsole"
+            },
+            {
+              "name": "DatasetExplorerAction",
+              "exportKind": "named",
+              "source": "./libs/DatasetExplorer"
+            },
+            {
+              "name": "DatasetExplorerProps",
+              "exportKind": "named",
+              "source": "./libs/DatasetExplorer"
+            },
+            {
+              "name": "DatasetExplorerRepublishAction",
+              "exportKind": "named",
+              "source": "./libs/DatasetExplorer"
+            },
+            {
+              "name": "DatasetExplorerState",
+              "exportKind": "named",
+              "source": "./libs/DatasetExplorer"
             },
             {
               "name": "DeliveryOperationsPanelProps",
@@ -34542,6 +34568,11 @@
               "source": "./libs/fixtureImporter"
             },
             {
+              "name": "CatalogStore",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
               "name": "FixtureRow",
               "exportKind": "named",
               "source": "./libs/fixtureImporter"
@@ -34550,6 +34581,141 @@
               "name": "FixtureRunMetadata",
               "exportKind": "named",
               "source": "./libs/fixtureImporter"
+            },
+            {
+              "name": "SourceCoverage",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseAccess",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseAudit",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseCandidate",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseCandidateRequest",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseCreateCandidateRequest",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseDataset",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseExpireRequest",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseFailRequest",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseFilter",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseOrder",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehousePage",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehousePermissionEpochRequest",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehousePublishRequest",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseQuality",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseReader",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseReadRequest",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseReceiptRequest",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseRemovePublicationRequest",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseRole",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseSealRequest",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseSnapshot",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseSnapshotRequest",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseSuppressRequest",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseWriter",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WarehouseWriteRequest",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
+            },
+            {
+              "name": "WriteReceipt",
+              "exportKind": "named",
+              "source": "./libs/warehouseRuntime"
             }
           ]
         }
@@ -34579,6 +34745,74 @@
           "sourceEntrypoint": "packages/warehouse-postgres/src/index.ts",
           "runtimeExports": [],
           "typeExports": []
+        },
+        {
+          "exportPath": "./facts",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/facts.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/facts.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/facts.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/warehouse-postgres/src/facts.ts",
+          "runtimeExports": [
+            {
+              "name": "installPostgresFactSchema",
+              "exportKind": "named",
+              "source": "./facts/schema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "installPostgresWarehouseSchema",
+              "exportKind": "named",
+              "source": "./facts/schema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "PostgresWarehouseCatalog",
+              "exportKind": "named",
+              "source": "./facts/PostgresWarehouseCatalog",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PostgresWarehouseReader",
+              "exportKind": "named",
+              "source": "./facts/PostgresWarehouseReader",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PostgresWarehouseWriter",
+              "exportKind": "named",
+              "source": "./facts/PostgresWarehouseWriter",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "WarehousePostgresClient",
+              "exportKind": "named",
+              "source": "./facts/client"
+            },
+            {
+              "name": "WarehousePostgresConnection",
+              "exportKind": "named",
+              "source": "./facts/client"
+            },
+            {
+              "name": "WarehousePostgresPool",
+              "exportKind": "named",
+              "source": "./facts/client"
+            }
+          ]
         },
         {
           "exportPath": "./metrics",

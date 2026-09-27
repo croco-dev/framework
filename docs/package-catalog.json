@@ -1159,7 +1159,7 @@
       "role": "Plugins",
       "subtype": "provider",
       "runtimes": ["node", "lambda"],
-      "domain": "Metrics"
+      "domain": "Warehouse"
     },
     "webhooks-core": {
       "role": "Contracts",
@@ -1836,11 +1836,14 @@
         ]
       },
       "warehouse-postgres": {
-        "domain": "Metrics",
-        "adapter": "PostgreSQL metrics repository",
+        "domain": "Warehouse",
+        "adapter": "PostgreSQL fact warehouse and legacy metrics repository",
         "runtimes": ["node", "lambda"],
         "requiredEnv": ["database connection supplied by app"],
         "features": [
+          "typed fact tables and explicit migrations",
+          "candidate write receipts and snapshot publication",
+          "bounded pinned fact reads and privacy suppression",
           "legacy metrics persistence",
           "plain PostgreSQL schema installation",
           "optional TimescaleDB hypertables",

@@ -289,3 +289,10 @@ export { FactHistoryPanel } from "./libs/FactHistoryPanel";
 export type { FactHistoryPanelProps } from "./libs/FactHistoryPanel";
 export { CohortBuilder } from "./libs/CohortBuilder";
 export type { CohortBuilderProps } from "./libs/CohortBuilder";
+export { DatasetExplorer } from "./libs/DatasetExplorer";
+export type {
+  DatasetExplorerProps,
+  DatasetExplorerState,
+  DatasetExplorerAction,
+  DatasetExplorerRepublishAction,
+} from "./libs/DatasetExplorer";

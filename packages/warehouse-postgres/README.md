@@ -1,8 +1,7 @@
 # @croco/warehouse-postgres
 
-PostgreSQL-backed warehouse integrations live behind explicit subpaths. The initial `/metrics`
-integration preserves the legacy metrics tables without introducing the warehouse catalog or fact
-pipeline planned separately.
+PostgreSQL-backed warehouse integrations live behind explicit subpaths. `/facts` stores typed fact
+models and publishes validated snapshots. `/metrics` preserves the legacy metrics tables and API.
 
 ## Installation
 
@@ -10,9 +9,92 @@ pipeline planned separately.
 pnpm add @croco/warehouse-postgres @croco/metrics-core
 ```
 
+Install `@croco/warehouse-core` when using the fact provider.
+
+## Fact warehouse
+
+Use `@croco/warehouse-core` to compile a fact descriptor and validate normalized rows. Run
+`installPostgresWarehouseSchema` and `installPostgresFactSchema` in an explicit deployment migration
+before constructing the services. Neither constructors nor application startup perform DDL.
+
+```typescript no-check
+import { compileFact, defineFact, c } from "@croco/warehouse-core";
+import {
+  installPostgresWarehouseSchema,
+  installPostgresFactSchema,
+  PostgresWarehouseCatalog,
+  PostgresWarehouseWriter,
+  PostgresWarehouseReader,
+} from "@croco/warehouse-postgres/facts";
+
+const declaration = defineFact("captures", {
+  version: 1,
+  kind: "transaction",
+  scope: "tenant",
+  grain: { description: "One confirmed capture", key: ["captureId"] },
+  columns: {
+    captureId: c.id(),
+    capturedAt: c.instant({ precision: "millisecond" }),
+    currency: c.currencyCode(),
+    amountMinor: c.moneyMinor({ currency: "currency", min: BigInt(0) }),
+  },
+  time: { event: "capturedAt" },
+  write: { mode: "append", duplicate: "ignore-identical", conflict: "reject" },
+});
+
+const descriptor = await compileFact(declaration);
+await installPostgresWarehouseSchema(migrationClient);
+await installPostgresFactSchema(migrationClient, descriptor);
+
+const resolveAccess = () => serverAuthenticatedWarehouseAccess();
+const catalog = new PostgresWarehouseCatalog(pool, descriptor, resolveAccess);
+const writer = new PostgresWarehouseWriter(pool, descriptor, resolveAccess);
+const reader = new PostgresWarehouseReader(
+  pool,
+  descriptor,
+  resolveAccess,
+  cursorEncryptionSecret,
+  cancellationPool,
+);
+```
+
+The application supplies a transaction pool and a separate cancellation pool with reserved capacity.
+Use the same PostgreSQL database for metadata and facts; the pool and database credentials are explicit application
+configuration. A separate pool controls concurrency but does not isolate PostgreSQL CPU or I/O.
+The resolver must read the current server-authenticated scope, actor, roles, permitted columns,
+permission epoch, and privacy epoch for each operation. Untrusted rows, filters, and cursors cannot
+choose those values. Change the permission epoch when authorization policy changes and call
+`synchronizePermissionEpoch` with an actor, reason, expected revision, and idempotency key before
+serving reads under the new policy.
+
+Create an unpublished candidate with the current head and revision, write stable batch IDs, and
+seal it with an explicit list of durable receipts and complete source coverage. A commit response
+failure returns an indeterminate receipt: call `reconcileReceipt` before retrying the same batch.
+Publication checks the candidate fence, quality, current head, and revision in one transaction.
+Aggregate replacements name a complete date/series range, including a verified empty range.
+Readers pin a snapshot ID and use an encrypted keyset cursor for later pages; an advanced head does not alter
+that snapshot. Changed permission/privacy epochs or expired snapshots fail explicitly. The reader
+limits rows, bytes, time, and concurrent requests and cancels PostgreSQL work on client abort.
+
+Each semantic model generation gets one ordinary typed PostgreSQL table with `BIGINT`, exact
+`NUMERIC`, `DATE`, `TIMESTAMPTZ`, `BOOLEAN`, and `TEXT` columns. No TimescaleDB extension is needed.
+Old row versions remain available while snapshots referencing their revisions are retained.
+Each snapshot references the model's single physical table; its revision selects the visible
+logical rows, so publication metadata does not grow with batch count. `expireSnapshots` marks old
+non-head snapshots unavailable and prunes closed physical rows older than every retained snapshot.
+It also abandons open or sealed candidates older than the cutoff and removes old failed staging,
+receipts, unreferenced candidate records, expired snapshot metadata, and mutation outcomes.
+Call it as an explicit retention job; idempotency keys whose outcomes have aged past the cutoff
+must not be replayed. A retained active snapshot keeps the row versions it needs. The synthetic
+PostgreSQL test publishes 24 batches into one fact table, checks one physical row per new fact
+and one table reference per snapshot, and verifies failed staging cleanup. PostgreSQL CPU and I/O
+remain shared with other work; set pool sizes and read concurrency for the application workload.
+`suppress` deletes matching physical rows, keeps a tombstone against reimport, and advances the
+privacy epoch. These operations require the `drop` role and audited requests.
+
 ## Metrics integration
 
-```typescript
+```typescript no-check
 import {
   installPostgresMetricsSchema,
   PostgresMetricsStore,
@@ -36,7 +118,7 @@ install, or require TimescaleDB.
 
 ### TimescaleDB
 
-```typescript
+```typescript no-check
 import { installTimescaleMetricsSchema } from "@croco/warehouse-postgres/metrics";
 
 await installTimescaleMetricsSchema(db);
