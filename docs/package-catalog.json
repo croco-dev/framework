@@ -573,6 +573,18 @@
       "runtimes": [],
       "domain": "Cache"
     },
+    "cohort-core": {
+      "role": "Contracts",
+      "subtype": "domain",
+      "runtimes": [],
+      "domain": "Cohorts"
+    },
+    "cohort-drizzle": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Cohorts"
+    },
     "cli": {
       "role": "Tooling",
       "subtype": "cli",
@@ -1196,6 +1208,7 @@
         "auth-core",
         "batch-core",
         "billing-core",
+        "cohort-core",
         "credits-core",
         "customer-health-core",
         "engagement-core",
@@ -1231,6 +1244,7 @@
         "auth-drizzle",
         "batch-qstash",
         "billing-polar",
+        "cohort-drizzle",
         "credits-drizzle",
         "customer-health-drizzle",
         "engagement-drizzle",
@@ -1442,6 +1456,8 @@
         "auth-better-auth",
         "auth-clerk",
         "batch-qstash",
+        "cohort-core",
+        "cohort-drizzle",
         "credits-core",
         "credits-drizzle",
         "engagement-drizzle",
@@ -1616,6 +1632,18 @@
           "durable idempotency",
           "bounded grant expiry",
           "deterministic ledger history"
+        ]
+      },
+      "cohort-drizzle": {
+        "domain": "Cohorts",
+        "adapter": "PostgreSQL cohort source and publication store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "registered normalized source mappings",
+          "bounded cohort runs",
+          "checkpointed membership snapshots",
+          "compare-and-set publication"
         ]
       },
       "customer-health-drizzle": {

@@ -22,6 +22,8 @@
   "@croco/billing-polar": "plugins",
   "@croco/cache-core": "contracts",
   "@croco/cli": "tooling",
+  "@croco/cohort-core": "contracts",
+  "@croco/cohort-drizzle": "plugins",
   "create-croco-app": "tooling",
   "@croco/credits-core": "contracts",
   "@croco/credits-drizzle": "plugins",

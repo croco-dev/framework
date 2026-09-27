@@ -6,12 +6,12 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   118 |
+| Public packages                |   120 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
 | Missing generated API docs     |     0 |
 | Missing package test directory |     0 |
-| Extension matrix packages      |    49 |
+| Extension matrix packages      |    50 |
 | Certification records          |     8 |
 | Croco 1.0 spine packages       |    18 |
 
@@ -130,6 +130,8 @@ None.
 | `@croco/billing-polar`                 | Plugins        | provider      | Billing                 | node, lambda                              |
 | `@croco/cache-core`                    | Contracts      | domain        | Cache                   | unclaimed                                 |
 | `@croco/cli`                           | Tooling        | cli           | Cli                     | unclaimed                                 |
+| `@croco/cohort-core`                   | Contracts      | domain        | Cohorts                 | unclaimed                                 |
+| `@croco/cohort-drizzle`                | Plugins        | provider      | Cohorts                 | node, lambda                              |
 | `create-croco-app`                     | Tooling        | cli           | Create Croco App        | unclaimed                                 |
 | `@croco/credits-core`                  | Contracts      | domain        | Credits                 | unclaimed                                 |
 | `@croco/credits-drizzle`               | Plugins        | provider      | Credits                 | node, lambda                              |
@@ -231,8 +233,8 @@ None.
 | Group        | Packages |
 | ------------ | -------: |
 | Core         |       23 |
-| Domain       |       30 |
-| Provider     |       29 |
+| Domain       |       31 |
+| Provider     |       30 |
 | Integration  |        5 |
 | Protocol     |        8 |
 | Transport    |        2 |
@@ -245,7 +247,7 @@ None.
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
 | 🟡 beta             |       78 |
-| 🔴 alpha/WIP        |       17 |
+| 🔴 alpha/WIP        |       19 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix
@@ -254,7 +256,7 @@ Extension matrix metadata is maintained in `docs/package-catalog.json` and rende
 
 | Group        | Packages | Without package tests |
 | ------------ | -------: | --------------------: |
-| Provider     |       29 |                     0 |
+| Provider     |       30 |                     0 |
 | Integration  |        5 |                     0 |
 | Transport    |        2 |                     0 |
 | Host         |        4 |                     0 |

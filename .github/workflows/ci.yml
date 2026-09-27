@@ -700,6 +700,8 @@ jobs:
               - 'packages/billing-polar/src/**'
               - 'packages/cache-core/src/**'
               - 'packages/cli/src/**'
+              - 'packages/cohort-core/src/**'
+              - 'packages/cohort-drizzle/src/**'
               - 'packages/create-croco-app/src/**'
               - 'packages/credits-core/src/**'
               - 'packages/credits-drizzle/src/**'

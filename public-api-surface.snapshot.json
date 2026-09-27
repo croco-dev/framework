@@ -331,6 +331,24 @@
               "declarationKind": "function"
             },
             {
+              "name": "assertCohortAdminRequest",
+              "exportKind": "named",
+              "source": "./libs/CohortOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertCohortPreviewRequest",
+              "exportKind": "named",
+              "source": "./libs/CohortOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertCohortPublishRequest",
+              "exportKind": "named",
+              "source": "./libs/CohortOperations",
+              "declarationKind": "function"
+            },
+            {
               "name": "assertCreateSuppressionValid",
               "exportKind": "named",
               "source": "./libs/EngagementOperations",
@@ -377,6 +395,18 @@
               "exportKind": "named",
               "source": "./libs/WebhookOperations",
               "declarationKind": "function"
+            },
+            {
+              "name": "COHORT_PERMISSIONS",
+              "exportKind": "named",
+              "source": "./libs/CohortOperations",
+              "declarationKind": "const"
+            },
+            {
+              "name": "CohortAdminProblem",
+              "exportKind": "named",
+              "source": "./libs/CohortOperations",
+              "declarationKind": "class"
             },
             {
               "name": "createCreditOperationsActionRequest",
@@ -766,6 +796,51 @@
               "name": "AdminSortDirection",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "CohortAdminAccess",
+              "exportKind": "named",
+              "source": "./libs/CohortOperations"
+            },
+            {
+              "name": "CohortAdminHistory",
+              "exportKind": "named",
+              "source": "./libs/CohortOperations"
+            },
+            {
+              "name": "CohortAdminPreview",
+              "exportKind": "named",
+              "source": "./libs/CohortOperations"
+            },
+            {
+              "name": "CohortBuilderState",
+              "exportKind": "named",
+              "source": "./libs/CohortOperations"
+            },
+            {
+              "name": "CohortExplainRequest",
+              "exportKind": "named",
+              "source": "./libs/CohortOperations"
+            },
+            {
+              "name": "CohortOperationsAdapter",
+              "exportKind": "named",
+              "source": "./libs/CohortOperations"
+            },
+            {
+              "name": "CohortPreviewRequest",
+              "exportKind": "named",
+              "source": "./libs/CohortOperations"
+            },
+            {
+              "name": "CohortPublishRequest",
+              "exportKind": "named",
+              "source": "./libs/CohortOperations"
+            },
+            {
+              "name": "CohortRunRequest",
+              "exportKind": "named",
+              "source": "./libs/CohortOperations"
             },
             {
               "name": "CreditOperationsAction",
@@ -2095,6 +2170,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "CohortBuilder",
+              "exportKind": "named",
+              "source": "./libs/CohortBuilder",
+              "declarationKind": "function"
+            },
+            {
               "name": "createAdminDataTableInvalidRowIdProblemDetails",
               "exportKind": "named",
               "source": "./libs/dataTableSnapshot",
@@ -2957,6 +3038,11 @@
               "name": "BillingProviderStatus",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "CohortBuilderProps",
+              "exportKind": "named",
+              "source": "./libs/CohortBuilder"
             },
             {
               "name": "CreditOperationsConsoleProps",
@@ -8477,6 +8563,263 @@
               "name": "RunOpsStatusOptions",
               "exportKind": "named",
               "source": "./libs/ops"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/cohort-core",
+      "relativeDir": "packages/cohort-core",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/cohort-core/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "CohortAudienceSource",
+              "exportKind": "named",
+              "source": "./libs/publication",
+              "declarationKind": "class"
+            },
+            {
+              "name": "cohortContentHash",
+              "exportKind": "named",
+              "source": "./libs/evaluation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "CohortInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/evaluation",
+              "declarationKind": "class"
+            },
+            {
+              "name": "cohortTimestamp",
+              "exportKind": "named",
+              "source": "./libs/evaluation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "CohortUnavailableProblem",
+              "exportKind": "named",
+              "source": "./libs/evaluation",
+              "declarationKind": "class"
+            },
+            {
+              "name": "createCohortPublication",
+              "exportKind": "named",
+              "source": "./libs/publication",
+              "declarationKind": "function"
+            },
+            {
+              "name": "DEFAULT_COHORT_LIMITS",
+              "exportKind": "named",
+              "source": "./libs/evaluation",
+              "declarationKind": "const"
+            },
+            {
+              "name": "evaluateCohort",
+              "exportKind": "named",
+              "source": "./libs/evaluation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "previewCohort",
+              "exportKind": "named",
+              "source": "./libs/evaluation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "PublishedCohortReader",
+              "exportKind": "named",
+              "source": "./libs/publication",
+              "declarationKind": "class"
+            },
+            {
+              "name": "sameCohortScope",
+              "exportKind": "named",
+              "source": "./libs/evaluation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateCohort",
+              "exportKind": "named",
+              "source": "./libs/evaluation",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "CohortAudienceMember",
+              "exportKind": "named",
+              "source": "./libs/publication"
+            },
+            {
+              "name": "CohortDefinition",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "CohortExplanation",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "CohortFieldRegistration",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "CohortLimits",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "CohortMember",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "CohortOperator",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "CohortPredicate",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "CohortPrivacyReader",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "CohortPublication",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "CohortPublicationStore",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "CohortRegistration",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "CohortResult",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "CohortRun",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "CohortScalar",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "CohortScope",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "CohortSnapshot",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "CohortSubject",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "CohortValidationContext",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/cohort-drizzle",
+      "relativeDir": "packages/cohort-drizzle",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/cohort-drizzle/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "compileCohortPredicate",
+              "exportKind": "named",
+              "source": "./libs/compiler",
+              "declarationKind": "function"
+            },
+            {
+              "name": "PostgresCohortStore",
+              "exportKind": "named",
+              "source": "./libs/PostgresCohortStore",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "CohortMaterialization",
+              "exportKind": "named",
+              "source": "./libs/PostgresCohortStore"
+            },
+            {
+              "name": "CohortPgDatabase",
+              "exportKind": "named",
+              "source": "./libs/PostgresCohortStore"
+            },
+            {
+              "name": "CohortPgExecutor",
+              "exportKind": "named",
+              "source": "./libs/PostgresCohortStore"
+            },
+            {
+              "name": "CohortSourceMapping",
+              "exportKind": "named",
+              "source": "./libs/compiler"
             }
           ]
         }

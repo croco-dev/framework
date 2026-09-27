@@ -14,7 +14,8 @@
       "@croco/problems-core": ["../problems-core/src/index.ts"],
       "@croco/search-core": ["../search-core/src/index.ts"],
       "@croco/tenant-core": ["../tenant-core/src/libs/types.ts"],
-      "@croco/analytics-core": ["../analytics-core/src/index.ts"]
+      "@croco/analytics-core": ["../analytics-core/src/index.ts"],
+      "@croco/cohort-core": ["../cohort-core/src/libs/contracts.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"]

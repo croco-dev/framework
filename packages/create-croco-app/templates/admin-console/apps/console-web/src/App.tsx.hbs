@@ -1,3 +1,4 @@
+import { CohortDemo } from './CohortDemo';
 import { useCallback, useEffect, useState, type CSSProperties, type FormEvent } from 'react';
 import { adminClient, type adminRpc } from '{{scope}}/provider-rpc';
 import type {
@@ -349,7 +350,8 @@ export default function App() {
         />
         <WebhookReliabilityDemo key={`webhooks:${selectedTenantId}`} tenantId={selectedTenantId} />
         <EngagementOperationsDemo key={`engagement:${selectedTenantId}`} tenantId={selectedTenantId} />
-        <LifecycleAutomationDemo key={selectedTenantId} tenantId={selectedTenantId} />
+        <CohortDemo />
+            <LifecycleAutomationDemo key={selectedTenantId} tenantId={selectedTenantId} />
 
         {problem ? (
           <section style={alertStyle} role="alert">

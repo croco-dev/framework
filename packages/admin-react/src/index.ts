@@ -287,3 +287,5 @@ export type {
 
 export { FactHistoryPanel } from "./libs/FactHistoryPanel";
 export type { FactHistoryPanelProps } from "./libs/FactHistoryPanel";
+export { CohortBuilder } from "./libs/CohortBuilder";
+export type { CohortBuilderProps } from "./libs/CohortBuilder";

@@ -5,7 +5,8 @@
     "paths": {
       "@croco/admin-core/fact-history-validation": ["./src/fact-history-validation.ts"],
       "@croco/problems-core": ["../problems-core/src/index.ts"],
-      "@croco/analytics-core": ["../analytics-core/src/index.ts"]
+      "@croco/analytics-core": ["../analytics-core/src/index.ts"],
+      "@croco/cohort-core": ["../cohort-core/src/libs/contracts.ts"]
     }
   },
   "include": ["src/**/*.ts"],

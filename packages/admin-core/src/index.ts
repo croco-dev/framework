@@ -235,3 +235,22 @@ export type {
   FactHistoryCorrectionRequest,
   FactHistoryOperations,
 } from "./libs/FactHistoryValidation";
+
+export {
+  COHORT_PERMISSIONS,
+  CohortAdminProblem,
+  assertCohortAdminRequest,
+  assertCohortPreviewRequest,
+  assertCohortPublishRequest,
+} from "./libs/CohortOperations";
+export type {
+  CohortAdminAccess,
+  CohortExplainRequest,
+  CohortRunRequest,
+  CohortPreviewRequest,
+  CohortPublishRequest,
+  CohortAdminPreview,
+  CohortAdminHistory,
+  CohortBuilderState,
+  CohortOperationsAdapter,
+} from "./libs/CohortOperations";

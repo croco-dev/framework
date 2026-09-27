@@ -146,6 +146,18 @@ export const apiDocPackages = [
     moduleName: "cli/src",
   },
   {
+    packageName: "@croco/cohort-core",
+    directory: "cohort-core",
+    entryPoint: "src/index.ts",
+    moduleName: "cohort-core/src",
+  },
+  {
+    packageName: "@croco/cohort-drizzle",
+    directory: "cohort-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "cohort-drizzle/src",
+  },
+  {
     packageName: "create-croco-app",
     directory: "create-croco-app",
     entryPoint: "src/cli.ts",
