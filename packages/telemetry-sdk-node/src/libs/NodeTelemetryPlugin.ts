@@ -76,6 +76,11 @@ export const nodeTelemetry: PluginFactory<NodeTelemetryPluginOptions> = (options
           required: false,
           description: "Optional process-level telemetry enablement setting.",
         },
+        {
+          key: "OTEL_SDK_DISABLED",
+          required: false,
+          description: "Disables OpenTelemetry SDK startup and trace export when true.",
+        },
       ],
       verification: [
         {

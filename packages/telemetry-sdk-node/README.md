@@ -180,6 +180,14 @@ Telemetry를 구성하지 않은 애플리케이션에서 기본 `TelemetryDiagn
 Telemetry 또는 trace를 의도적으로 끈 상태도 애플리케이션 실패가 아닙니다. `init({ enabled: false })`,
 `init({ trace: { enabled: false } })`, 또는 `TELEMETRY_ENABLED=false`는 설정을 보존하지만 SDK와 exporter를 시작하지
 않으며, diagnostics는 기존과 같이 `degraded`와 `mode: "disabled"`를 반환합니다.
+`OTEL_SDK_DISABLED=true`도 공백과 대소문자에 관계없이 SDK 시작 전에 비활성화하며, 같은 diagnostics mode와
+`skipped`/`sdk-disabled` lifecycle 결과를 반환합니다. 다시 켜려면 `shutdown()` 후 환경 변수를 바꾸고 `init()`을
+호출하세요.
+
+다른 tracer provider가 먼저 전역 등록되어 있으면 Croco의 SDK는 초기화되지만 exporter는 span을 받지 못합니다.
+이때 diagnostics는 `degraded`/`mode: "external_tracer_provider"`, `forceFlush()`는
+`skipped`/`external-tracer-provider`를 반환합니다. 애플리케이션 소유 provider는 `shutdown()` 후에도 유지됩니다.
+Croco exporter로 전송하려면 외부 provider 등록 순서를 조정한 뒤 런타임을 다시 초기화하세요.
 
 Telemetry가 host readiness의 필수 조건이면 provider를
 `new TelemetryDiagnosticsProvider({ requirement: "required" })`로 생성합니다. 필수 telemetry의 설정 누락 또는 초기화
@@ -201,10 +209,12 @@ Exporter나 SDK 시작 실패는 `TelemetryRuntimeProblem`으로 정규화됩니
 
 Lambda에서는 handler 작업이 끝난 뒤 `forceFlush()` 결과를 확인하세요. Trace export 실패를 요청 성공처럼 숨기면 안
 되는 경로에서는 `failed` 결과의 `error`를 throw 하고, `unsupported`는 초기화 누락으로 처리합니다. Telemetry를
-명시적으로 비활성화한 환경은 `skipped`, 실제 processor가 flush를 마친 경우만 `completed`입니다.
+명시적으로 비활성화했거나 외부 tracer provider가 전역 등록된 환경은 `skipped`, Croco tracer provider가 전역
+등록되어 있고 해당 processor가 flush를 마친 경우만 `completed`입니다.
 
 프로세스를 종료하거나 같은 런타임 인스턴스를 새 설정으로 다시 초기화하기 전에는 `shutdown()`을 호출합니다. 실제 SDK
-종료는 `completed`, 명시적 비활성화는 `skipped`, SDK가 없는 pre-init 상태는 `unsupported`입니다. `shutdown()`이
+종료는 `completed`, 설정 또는 `OTEL_SDK_DISABLED`로 비활성화한 경우는 `skipped`, SDK가 없는 pre-init 상태는
+`unsupported`입니다. 외부 tracer provider와 공존한 SDK의 종료는 `completed`입니다. `shutdown()`이
 `completed`를 반환한 뒤에는 새 `init()` 호출로 trace runtime을 다시 시작할 수 있습니다.
 
 `shutdown(timeoutMillis)`은 기본 30초 안에 한 번의 SDK 종료를 완료해야 합니다. 1부터 `2_147_483_647`까지의 정수만

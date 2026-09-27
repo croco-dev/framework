@@ -5,6 +5,7 @@ import type { Tracer, TracerProvider } from "@opentelemetry/api";
 import type { Instrumentation } from "@opentelemetry/instrumentation";
 import { ATTR_DEPLOYMENT_ENVIRONMENT_NAME } from "@opentelemetry/semantic-conventions";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { TelemetryDiagnosticsProvider } from "../libs/diagnostics/TelemetryDiagnosticsProvider";
 import { TelemetryRuntimeProblem } from "../libs/problems/TelemetryProblems";
 import { lambdaPreset } from "../libs/presets/lambda";
 import { TelemetryRuntime } from "../runtime";
@@ -1144,6 +1145,112 @@ describe("TelemetryRuntime", () => {
     } finally {
       trace.disable();
     }
+  });
+
+  it("should not report a completed flush or active diagnostics while an application-owned tracer provider stays global", async () => {
+    const externalTracer = {} as Tracer;
+    const externalProvider = {
+      getTracer: vi.fn(() => externalTracer),
+    } as TracerProvider;
+    expect(trace.setGlobalTracerProvider(externalProvider)).toBe(true);
+
+    try {
+      await runtime.init({
+        serviceName: "external-provider-flush",
+        trace: {
+          exporterUrl: "http://collector:4318/v1/traces",
+          autoInstrumentation: { enabled: false },
+        },
+      });
+      expect(trace.getTracer("external-provider-flush")).toBe(externalTracer);
+
+      await expect(runtime.forceFlush()).resolves.toEqual({
+        outcome: "skipped",
+        reason: "external-tracer-provider",
+        flushedSpans: 0,
+      });
+      const health = await new TelemetryDiagnosticsProvider().getHealth();
+      expect(health).toMatchObject({
+        status: "degraded",
+        details: { mode: "external_tracer_provider" },
+      });
+    } finally {
+      trace.disable();
+    }
+  });
+
+  it("should report OTEL_SDK_DISABLED as a skipped lifecycle and disabled diagnostics", async () => {
+    vi.stubEnv("OTEL_SDK_DISABLED", " TrUe ");
+    const exporterConstructed = vi.fn();
+    const processorConstructed = vi.fn();
+    const sdkConstructed = vi.fn();
+    vi.doMock("@opentelemetry/exporter-trace-otlp-http", () => ({
+      OTLPTraceExporter: class {
+        constructor() {
+          exporterConstructed();
+        }
+      },
+    }));
+    vi.doMock("@opentelemetry/sdk-trace-base", () => ({
+      BatchSpanProcessor: class {
+        constructor() {
+          processorConstructed();
+        }
+        async forceFlush(): Promise<void> {}
+      },
+    }));
+    vi.doMock("@opentelemetry/sdk-node", () => ({
+      NodeSDK: class {
+        constructor() {
+          sdkConstructed();
+        }
+        start(): void {}
+        async shutdown(): Promise<void> {}
+      },
+    }));
+
+    await runtime.init({
+      serviceName: "sdk-disabled",
+      trace: {
+        exporterUrl: "http://collector:4318/v1/traces",
+        autoInstrumentation: { enabled: false },
+      },
+    });
+
+    await expect(runtime.forceFlush()).resolves.toEqual({
+      outcome: "skipped",
+      reason: "sdk-disabled",
+      flushedSpans: 0,
+    });
+    const health = await new TelemetryDiagnosticsProvider().getHealth();
+    expect(health).toMatchObject({ status: "degraded", details: { mode: "disabled" } });
+    expect(health.message).toContain("OTEL_SDK_DISABLED");
+    expect(exporterConstructed).not.toHaveBeenCalled();
+    expect(processorConstructed).not.toHaveBeenCalled();
+    expect(sdkConstructed).not.toHaveBeenCalled();
+    await expect(runtime.shutdown()).resolves.toEqual({
+      outcome: "skipped",
+      reason: "sdk-disabled",
+    });
+  });
+
+  it("should keep Croco trace export active when OTEL_SDK_DISABLED is false", async () => {
+    vi.stubEnv("OTEL_SDK_DISABLED", " False ");
+
+    await runtime.init({
+      serviceName: "sdk-enabled",
+      trace: {
+        exporterUrl: "http://collector:4318/v1/traces",
+        autoInstrumentation: { enabled: false },
+      },
+    });
+
+    expect(runtime.getLifecycleSkipReason()).toBeNull();
+    await expect(runtime.forceFlush()).resolves.toEqual({ outcome: "completed", flushedSpans: -1 });
+    await expect(new TelemetryDiagnosticsProvider().getHealth()).resolves.toMatchObject({
+      status: "healthy",
+      details: { mode: "active" },
+    });
   });
 
   it("should rejoin one stalled SDK shutdown after timeout and reset the singleton", async () => {

@@ -11,6 +11,7 @@ export type TelemetryDiagnosticsRequirement = "optional" | "required";
 export type TelemetryDiagnosticsMode =
   | "active"
   | "disabled"
+  | "external_tracer_provider"
   | "not_configured"
   | "not_initialized"
   | "sampling_disabled"
@@ -33,7 +34,12 @@ export type TelemetryNotConfiguredDiagnosticsDetails = TelemetryDiagnosticsDetai
 export type TelemetryConfiguredDiagnosticsDetails = TelemetryDiagnosticsDetailsBase &
   TelemetryConfigurationDiagnosticsSnapshot & {
     readonly configured: true;
-    readonly mode: "active" | "disabled" | "not_initialized" | "sampling_disabled";
+    readonly mode:
+      | "active"
+      | "disabled"
+      | "external_tracer_provider"
+      | "not_initialized"
+      | "sampling_disabled";
   };
 
 export type TelemetryStartupFailedDiagnosticsDetails = TelemetryDiagnosticsDetailsBase &
@@ -71,13 +77,22 @@ export class TelemetryDiagnosticsProvider implements DiagnosticsProvider {
     const runtime = TelemetryRuntime.getInstance();
     const config = runtime.getConfig();
     const initialized = runtime.isInitialized();
+    const lifecycleSkipReason = runtime.getLifecycleSkipReason();
 
-    if (config?.enabled === false || config?.trace?.enabled === false) {
-      const disabledTarget = config.enabled === false ? "runtime" : "tracing";
+    if (
+      config &&
+      (lifecycleSkipReason === "telemetry-disabled" ||
+        lifecycleSkipReason === "tracing-disabled" ||
+        lifecycleSkipReason === "sdk-disabled")
+    ) {
+      const message =
+        lifecycleSkipReason === "sdk-disabled"
+          ? "Telemetry disabled by OTEL_SDK_DISABLED; SDK startup and export are skipped"
+          : `Telemetry ${lifecycleSkipReason === "telemetry-disabled" ? "runtime" : "tracing"} disabled by configuration; SDK startup and export are skipped`;
       return {
         status: "degraded",
         component: "telemetry",
-        message: `Telemetry ${disabledTarget} disabled by configuration; SDK startup and export are skipped`,
+        message,
         details: createConfiguredTelemetryDetails(
           createTelemetryConfigurationDiagnosticsSnapshot(config),
           initialized,
@@ -138,6 +153,22 @@ export class TelemetryDiagnosticsProvider implements DiagnosticsProvider {
           snapshot,
           initialized,
           "not_initialized",
+          this.requirement,
+          autoInstrumentationModules,
+        ),
+        lastChecked: new Date().toISOString(),
+      };
+    }
+
+    if (lifecycleSkipReason === "external-tracer-provider") {
+      return {
+        status: "degraded",
+        component: "telemetry",
+        message: "An external tracer provider is global; Croco trace export is inactive",
+        details: createConfiguredTelemetryDetails(
+          snapshot,
+          initialized,
+          "external_tracer_provider",
           this.requirement,
           autoInstrumentationModules,
         ),

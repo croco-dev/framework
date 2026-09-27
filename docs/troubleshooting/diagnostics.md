@@ -419,7 +419,9 @@ Provider `name`은 collector 안에서 유일해야 합니다. 같은 인스턴�
 
 - **수집 정보**: telemetry 필수 여부(`requirement`), 설정 여부(`configured`), OTel SDK 초기화 여부(`initialized`),
   lifecycle 상태(`mode`), 초기화 실패 코드(`failureCode`), 현재 샘플링 확률(`probability`)
-- **Optional 기본값**: 설정이 없으면 `degraded`/`not_configured`; 명시적으로 끄면 `degraded`/`disabled`
+- **Optional 기본값**: 설정이 없으면 `degraded`/`not_configured`; 설정이나 `OTEL_SDK_DISABLED=true`로 끄면
+  `degraded`/`disabled`; 다른 tracer provider가 전역 등록되어 Croco exporter가 span을 받지 못하면
+  `degraded`/`external_tracer_provider`
 - **Required 정책**: `new TelemetryDiagnosticsProvider({ requirement: "required" })`로 구성하며, 설정 누락 또는 초기화
   실패는 `unhealthy`; 초기화 실패는 `startup_failed`와 안정적인 `failureCode`로 구분
 - **Readiness 연결**: `DiagnosticsHealthIndicator`의 `degradedStatus`로 optional/degraded 상태를 `up` 또는 `down`에
@@ -474,6 +476,9 @@ Croco는 AWS Lambda에 최적화된 프레임워크입니다. Lambda 환경에�
   `failureCode`를 기준으로 endpoint, instrumentation, SDK 시작 오류를 확인합니다.
 - `details.initialized`가 `false`이고 `mode`가 `not_initialized`라면 설정은 존재하지만 SDK가 아직 활성화되지 않은
   상태입니다.
+- `mode`가 `disabled`이고 메시지에 `OTEL_SDK_DISABLED`가 있으면 환경 변수를 해제한 뒤 런타임을 다시 초기화합니다.
+- `mode`가 `external_tracer_provider`라면 먼저 등록된 tracer provider를 확인하고, Croco exporter를 쓰려면
+  provider 등록 순서를 조정한 뒤 런타임을 다시 초기화합니다.
 - 초기화는 성공했지만 `details.probability`가 `0`으로 되어 있다면, 코드 레벨에서 샘플링 확률이 0%로 강제 드롭되고 있는지 확인해야 합니다.
 
 ### 시나리오 2: "이벤트가 처리되지 않을 때"
