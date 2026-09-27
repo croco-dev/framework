@@ -899,11 +899,16 @@ export function createCiPerformanceObservation(
   ) {
     throw new Error("fast-lane evidence is not a successful current-inventory attestation");
   }
-  const commandIds = fastLane.commands.map(({ owner, cwd }) => `${owner}#test@${cwd}`);
+  const commandIds = fastLane.commands.map(({ owner, cwd }) => JSON.stringify([owner, cwd]));
   if (new Set(commandIds).size !== commandIds.length)
     throw new Error("fast-lane evidence contains duplicate cache task IDs");
   if (fastLane.commands.some(({ status }) => status !== "passed"))
     throw new Error("fast-lane evidence contains a failed command");
+  const cacheHits = new Map<string, boolean>();
+  for (const { owner, cacheStatus } of fastLane.commands) {
+    const taskId = `${owner}#test`;
+    cacheHits.set(taskId, (cacheHits.get(taskId) ?? true) && cacheStatus === "hit");
+  }
 
   const checkResults = verification.checks.map(checkResult);
   const securityResults = SECURITY_STEPS.map((contract) => securityResult(validateJob, contract));
@@ -978,10 +983,8 @@ export function createCiPerformanceObservation(
     verificationExperimentId: experimentIdentity.verificationExperimentId,
     evidenceDigest,
     injectedFailure: failureClass,
-    cacheEligibleTaskIds: commandIds,
-    validCacheHitTaskIds: fastLane.commands.flatMap(({ owner, cwd, cacheStatus }) =>
-      cacheStatus === "hit" ? [`${owner}#test@${cwd}`] : [],
-    ),
+    cacheEligibleTaskIds: [...cacheHits.keys()],
+    validCacheHitTaskIds: [...cacheHits].flatMap(([taskId, hit]) => (hit ? [taskId] : [])),
     freshAttestation: sample.cacheEvidenceComplete,
     checkResults,
     securityResults,

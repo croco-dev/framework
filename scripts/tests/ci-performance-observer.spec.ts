@@ -513,8 +513,8 @@ describe("CI performance observer", () => {
       nodeVersion: "v22.23.1",
       pnpmVersion: "11.9.0",
       turboVersion: "2.10.2",
-      cacheEligibleTaskIds: ["@croco/example#test@packages/example", "repo:ci#test@."],
-      validCacheHitTaskIds: ["@croco/example#test@packages/example"],
+      cacheEligibleTaskIds: ["@croco/example#test", "repo:ci#test"],
+      validCacheHitTaskIds: ["@croco/example#test"],
       freshAttestation: true,
       stableDiagnostics: [],
     });
@@ -739,21 +739,51 @@ describe("CI performance observer", () => {
     ).toThrow(/incomplete/);
   });
 
-  it("keeps separate cache tasks for one owner running in two directories", () => {
+  it("records one cache hit when every workspace for an owner hits", () => {
     const observation = createCiPerformanceObservation(
       createInput({
         fastLane: fastLane({
           commands: [
-            { owner: "repo:examples", cwd: "examples/a", status: "passed" },
-            { owner: "repo:examples", cwd: "examples/b", status: "passed" },
+            { owner: "repo:examples", cwd: "examples/a", status: "passed", cacheStatus: "hit" },
+            { owner: "repo:examples", cwd: "examples/b", status: "passed", cacheStatus: "hit" },
           ],
         }),
       }),
     );
-    expect(observation.cacheEligibleTaskIds).toEqual([
-      "repo:examples#test@examples/a",
-      "repo:examples#test@examples/b",
-    ]);
+    expect(observation.cacheEligibleTaskIds).toEqual(["repo:examples#test"]);
+    expect(observation.validCacheHitTaskIds).toEqual(["repo:examples#test"]);
+  });
+
+  it("records one cache task per owner only when every workspace hits", () => {
+    const observation = createCiPerformanceObservation(
+      createInput({
+        fastLane: fastLane({
+          commands: [
+            {
+              owner: "@croco/example",
+              cwd: "packages/example",
+              status: "passed",
+              cacheStatus: "hit",
+            },
+            {
+              owner: "repo:examples",
+              cwd: "examples/first-party-plugin-composition",
+              status: "passed",
+              cacheStatus: "hit",
+            },
+            {
+              owner: "repo:examples",
+              cwd: "examples/saas-billing-golden-path",
+              status: "passed",
+              cacheStatus: "miss",
+            },
+          ],
+        }),
+      }),
+    );
+
+    expect(observation.cacheEligibleTaskIds).toEqual(["@croco/example#test", "repo:examples#test"]);
+    expect(observation.validCacheHitTaskIds).toEqual(["@croco/example#test"]);
   });
 
   it("rejects a fast-lane command missing its working directory", () => {
