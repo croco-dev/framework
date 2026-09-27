@@ -437,6 +437,70 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
     ).resolves.toBe(10);
   });
 
+  it.each([undefined, 10])(
+    "completes persistence replay after provider acceptance with quota %s",
+    async (quota) => {
+      if (!connection) {
+        throw new Error("Redis test resource did not start");
+      }
+
+      const redis = createRedisClient(connection);
+      const journal = new RedisBillableUsageJournal(redis);
+      const manager = new IdempotencyManager(redis);
+      vi.spyOn(manager, "markMeteringEventsPublishing").mockRejectedValueOnce(
+        new Error("Injected staging failure before Redis commit"),
+      );
+      const meter = createMeter("billable-replay", quota);
+      meter.billing = "required";
+      meter.aggregation = "COUNT";
+      meter.unit = "request";
+      const publish = vi.fn();
+      const service = new MeteringService({
+        idempotencyManager: manager,
+        meterRegistry: {
+          ...createMeterRegistry([meter]),
+          billableUsageJournal: journal,
+        } as unknown as MeterRegistry,
+        usageStorage: new RedisUsageStorage(redis),
+        eventBus: { publish, subscribe: vi.fn() } as unknown as EventBus,
+      });
+      const input = {
+        tenantId: meter.tenantId,
+        meterId: meter.meterId,
+        value: 5,
+        idempotencyKey: "accepted-before-persistence-replay",
+      };
+      await expect(service.record(input)).rejects.toThrow("Injected staging failure");
+      await expect(
+        service.getRecordStatus(input.tenantId, input.meterId, input.idempotencyKey),
+      ).resolves.toBe("persistence-uncertain");
+      expect(publish).not.toHaveBeenCalled();
+
+      const claim = await journal.claimNext({ ownerId: "billing-worker", leaseDurationMs: 10_000 });
+      assert.isNotNull(claim);
+      const accepted = await journal.markAccepted(claim);
+
+      await expect(service.record(input)).resolves.toMatchObject(input);
+      await expect(journal.get(input.idempotencyKey)).resolves.toEqual(accepted);
+      await expect(
+        service.getRecordStatus(input.tenantId, input.meterId, input.idempotencyKey),
+      ).resolves.toBe("completed");
+      await expect(
+        service.getUsage({
+          tenantId: input.tenantId,
+          meterId: input.meterId,
+          period: "billing_cycle",
+        }),
+      ).resolves.toBe(input.value);
+      expect(publish).toHaveBeenCalledTimes(1);
+      expect(publish).toHaveBeenCalledWith(expect.any(UsageRecordedEvent));
+      await expect(service.record(input)).rejects.toThrow(DuplicateRecordProblem);
+      await expect(
+        journal.claimNext({ ownerId: "billing-worker-2", leaseDurationMs: 1_000 }),
+      ).resolves.toBeNull();
+    },
+  );
+
   it("keeps quota rejection retryable while overage remains disallowed", async () => {
     const service = createService();
     const input = {

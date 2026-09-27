@@ -112,6 +112,8 @@ fencing token.
 
 > **markDeliverable**(`eventId`, `now?`): `Promise`\<[`BillableUsageJournalEntry`](/api/metering-core/src/type-aliases/billableusagejournalentry/)\>
 
+Replays of an activated entry preserve its delivery state, claim, and failure evidence.
+
 #### Parameters
 
 ##### eventId
