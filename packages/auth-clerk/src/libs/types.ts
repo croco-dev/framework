@@ -1,4 +1,4 @@
-import type { IdempotencyStore } from "@croco/idempotency-core";
+import type { LeaseAwareIdempotencyStore } from "@croco/idempotency-core";
 
 export type ClerkUserEvent = {
   id: string;
@@ -62,8 +62,9 @@ type WebhookEventData = {
 
 export type WebhookHandlerOptions = {
   readonly signingSecret: string;
-  readonly idempotencyStore: IdempotencyStore<ClerkWebhookDeliveryOutcome>;
+  readonly idempotencyStore: LeaseAwareIdempotencyStore<ClerkWebhookDeliveryOutcome>;
   readonly idempotencyTtlMs?: number;
+  readonly processingLeaseMs?: number;
 };
 
 export type ClerkWebhookDeliveryOutcome = {

@@ -1,4 +1,7 @@
-import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
+import {
+  IdempotencyProcessingLeaseUnsupportedProblem,
+  InMemoryIdempotencyStore,
+} from "@croco/idempotency-core";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -11,6 +14,7 @@ import {
   WebhookReporterProblem,
   type WebhookEvent,
   WebhookGateway,
+  type WebhookGatewayOptions,
   type WebhookGatewayStoredResult,
   createWebhookEventRouter,
   type WebhookProviderAdapter,
@@ -120,6 +124,85 @@ function signedRequest(type = "subscription.created") {
 }
 
 describe("WebhookGateway", () => {
+  it("rejects a store without processing lease support during construction", () => {
+    const idempotencyStore = {} as unknown as WebhookGatewayOptions["idempotencyStore"];
+
+    expect(
+      () =>
+        new WebhookGateway({
+          adapter: createAdapter(),
+          router: { has: () => false, dispatch: async () => undefined },
+          idempotencyStore,
+          unknownEventPolicy: "fail",
+        }),
+    ).toThrow(IdempotencyProcessingLeaseUnsupportedProblem);
+  });
+
+  it("processes a provider retry once the crashed attempt can no longer be running", async () => {
+    const start = new Date("2026-07-01T00:00:00.000Z").getTime();
+    let current = start;
+    const now = () => new Date(current);
+    const store = new InMemoryIdempotencyStore<WebhookGatewayStoredResult>({ now });
+    const adapter: WebhookProviderAdapter = {
+      provider: "svix",
+      verify: (request) => {
+        const payload = JSON.parse(String(request.rawBody)) as { id: string; type: string };
+        return { id: payload.id, type: payload.type, payload, provider: "svix" };
+      },
+    };
+    let handlerCalls = 0;
+    let markFirstAttemptStarted!: () => void;
+    const firstAttemptStarted = new Promise<void>((resolve) => {
+      markFirstAttemptStarted = resolve;
+    });
+    const gateway = new WebhookGateway({
+      adapter,
+      router: {
+        has: (eventType) => eventType === "user.created",
+        dispatch: async () => {
+          handlerCalls += 1;
+          if (handlerCalls === 1) {
+            markFirstAttemptStarted();
+            return new Promise<never>(() => undefined);
+          }
+          return { synced: true };
+        },
+      },
+      idempotencyStore: store,
+      unknownEventPolicy: "fail",
+      now,
+    });
+    const delivery = {
+      rawBody: JSON.stringify({ id: "msg_1", type: "user.created" }),
+      headers: {},
+    };
+
+    void gateway.handle(delivery);
+    await firstAttemptStarted;
+
+    current = start + 15 * 60_000 - 1;
+    const concurrentRetry = await gateway.handle(delivery);
+    expect({ outcome: concurrentRetry.outcome, handlerCalls }).toEqual({
+      outcome: "in-flight",
+      handlerCalls: 1,
+    });
+
+    current = start + 60 * 60_000;
+    const retry = await gateway.handle(delivery);
+
+    expect({ outcome: retry.outcome, handlerCalls }).toEqual({
+      outcome: "handled",
+      handlerCalls: 2,
+    });
+
+    current = start + 23 * 60 * 60_000;
+    const duplicate = await gateway.handle(delivery);
+    expect({ outcome: duplicate.outcome, handlerCalls }).toEqual({
+      outcome: "duplicate",
+      handlerCalls: 2,
+    });
+  });
+
   it("verifies signatures before dispatching to handlers", async () => {
     const { gateway, handler } = createGateway();
 

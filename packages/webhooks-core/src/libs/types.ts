@@ -3,7 +3,7 @@ import type {
   IdempotencyCompletedRecord,
   IdempotencyFailedRecord,
   IdempotencyInFlightRecord,
-  IdempotencyStore,
+  LeaseAwareIdempotencyStore,
 } from "@croco/idempotency-core";
 import type { Problem } from "@croco/problems-core";
 
@@ -158,10 +158,11 @@ export type WebhookGatewayOptions = {
     has(eventType: string): boolean;
     dispatch(event: WebhookEvent, context: WebhookDispatchContext): Promise<unknown>;
   };
-  readonly idempotencyStore: IdempotencyStore<WebhookGatewayStoredResult>;
+  readonly idempotencyStore: LeaseAwareIdempotencyStore<WebhookGatewayStoredResult>;
   readonly unknownEventPolicy: UnknownEventPolicy;
   readonly unknownEventReporter?: WebhookUnknownEventReporter;
   readonly idempotencyTtlMs?: number;
+  readonly processingLeaseMs?: number;
   readonly idempotencyNamespace?: string;
   readonly now?: () => Date;
 };

@@ -11,6 +11,7 @@ export {
   isRetryableHandlerFailure,
 } from "./libs/IdempotencyCoordinator";
 export type { IdempotencyCoordinatorOptions } from "./libs/IdempotencyCoordinator";
+export { assertProcessingLeaseStore } from "./libs/assertProcessingLeaseStore";
 export { InMemoryIdempotencyStore } from "./libs/InMemoryIdempotencyStore";
 export type { InMemoryIdempotencyStoreOptions } from "./libs/InMemoryIdempotencyStore";
 export {
@@ -31,6 +32,7 @@ export {
   IDEMPOTENCY_DIAGNOSTIC_CODES,
   IdempotencyConflictProblem,
   IdempotencyExecutionIndeterminateProblem,
+  IdempotencyProcessingLeaseUnsupportedProblem,
   IdempotencyReservationExpiredProblem,
   IdempotencyReservationNotFoundProblem,
   IdempotencyReservationStateProblem,
@@ -71,6 +73,7 @@ export type {
   IdempotencyScope,
   IdempotencyStore,
   IdempotencyTelemetryAttributes,
+  LeaseAwareIdempotencyStore,
   ProviderEventIdempotencyKeySource,
   RequestFingerprintIdempotencyKeySource,
   TenantScopedIdempotencyKeySource,

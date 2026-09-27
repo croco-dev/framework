@@ -155,13 +155,52 @@ const processor = new BetterAuthWebhookProcessor(
 await processor.processWebhook(request);
 ```
 
-웹훅 본문은 ISO 8601 `timestamp`를 포함해야 하며 전체 원문이 `x-better-auth-signature`로
-서명되어야 합니다. 처리기는 수신 시각에서 5분을 벗어난 이벤트를 거부한 뒤, 제공된 `id`와
-본문 fingerprint를 사용해 중복·동시 전달을 한 번만 실행합니다. 같은 processor에 동시에 들어온
-동일 전달은 활성 실행 결과를 함께 기다리며, 다른 인스턴스의 진행 중 전달은 성공으로 숨기지 않습니다.
-`id`가 없으면 서명된 원문의
+웹훅 본문의 ISO 8601 `timestamp`는 이벤트 발생 시각입니다. 재전송을 지원하는 발신자는
+본문과 이벤트 `id`를 그대로 유지하고, 매 전달마다 현재 시각을 `x-better-auth-timestamp`에
+넣어 다음 형식으로 서명해야 합니다. 이 패키지는 수신 처리기를 제공하며 발신 요청은
+애플리케이션에서 구성합니다.
+
+```typescript typecheck
+import { createHmac } from "node:crypto";
+
+function createDeliveryHeaders(rawBody: string, signingSecret: string): Record<string, string> {
+  const deliveryTimestamp = new Date().toISOString();
+  const signature = createHmac("sha256", signingSecret)
+    .update(`${deliveryTimestamp}.${rawBody}`)
+    .digest("hex");
+
+  return {
+    "content-type": "application/json",
+    "x-better-auth-timestamp": deliveryTimestamp,
+    "x-better-auth-signature": `v1=${signature}`,
+  };
+}
+```
+
+발신자는 HTTP 요청 실패 또는 non-2xx 응답을 성공으로 처리하지 않아야 합니다. 재시도할 때는
+최초 요청과 바이트 단위로 동일한 `rawBody`와 이벤트 `id`를 유지하고, 위 함수를 다시 호출해
+새 전달 시각과 서명을 생성해야 합니다.
+
+`v1` 서명은 전달 시각과 본문 원문을 함께 보호합니다. 처리기는 전달 시각이 수신 시각에서
+과거·미래 어느 방향으로든 5분을 넘으면 거부합니다. 전달 시각과 본문의 발생 시각 모두
+시간대가 명시된 유효한 ISO 8601 문자열이어야 합니다. 본문의 발생 시각은 재전송 때 갱신하지 않습니다.
+
+기존 `sha256=<HMAC-SHA256(secret, rawBody)>` 서명은 `x-better-auth-timestamp` 없이 사용할 수
+있습니다. 이 형식은 본문의 `timestamp`로 5분 유효기간을 확인하므로 오래된 이벤트를 그대로
+재전송할 수 없습니다. `sha256` 서명과 전달 시각 헤더를 섞거나 `v1` 서명에서 전달 시각 헤더를
+생략하면 요청을 거부합니다.
+
+처리기는 검증된 `id`와 본문 fingerprint로 중복 전달을 구분합니다. 중단된 처리의 lease는
+기본 15분 뒤 만료되며, 같은 본문을 새 전달 시각으로 서명한 요청이 처리를 다시 시도할 수 있습니다.
+핸들러가 오래 실행될 수 있으면 `processingLeaseMs`를 예상 최대 실행 시간보다 길게 설정하세요.
+예를 들어 `processingLeaseMs: 30 * 60_000`은 30분 lease를 사용합니다.
+완료 결과는 24시간 보존합니다. 동일 `id`로 본문을 바꾸면 충돌로 거부합니다.
+같은 processor에 동시에 들어온 동일한 유효 전달은 활성 실행 결과를 함께 기다립니다.
+다른 인스턴스에서 처리 중인 전달은 충돌로 보고합니다. `id`가 없으면 서명된 본문 원문의
 SHA-256 digest가 전달 ID가 됩니다. 여러 프로세스나 인스턴스에서 실행할 때는 공유 durable
 `idempotencyStore`를 제공해야 합니다.
+Custom 저장소는 `leaseMs`를 결과 보존 기간과 독립적으로 처리하고 conformance suite를 통과한 뒤
+`processingLeaseVersion: 1`을 선언해야 합니다. 선언하지 않은 저장소는 processor 구성 시 거부됩니다.
 
 ### 5. 제공 스키마 사용
 

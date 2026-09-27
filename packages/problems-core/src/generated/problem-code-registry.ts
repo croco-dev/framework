@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 816,
+  problemCount: 817,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -2252,9 +2252,9 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         cause:
           "Another worker currently owns the Clerk delivery reservation for this deliveryId and eventType.",
         userAction:
-          "Retry the same delivery after the active worker completes or after the configured idempotencyTtlMs expires.",
+          "Retry the same delivery after the active worker completes or after the configured processingLeaseMs expires.",
         operatorAction:
-          "Inspect concurrent worker state for the reported deliveryId and eventType; if the owner was abandoned, wait for idempotencyTtlMs expiry before retrying.",
+          "Inspect concurrent worker state for the reported deliveryId and eventType. Set processingLeaseMs above the handler's maximum runtime; after lease expiry, retry only when the handler prevents duplicate external side effects.",
         retryability: "retryable",
         redactionPolicy: "safe-message",
         telemetry: {
@@ -11891,7 +11891,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 168,
+          line: 181,
           column: 11,
           kind: "problem-metadata",
         },
@@ -11922,7 +11922,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 58,
+          line: 59,
           column: 11,
           kind: "problem-metadata",
         },
@@ -11952,7 +11952,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 77,
+          line: 78,
           column: 11,
           kind: "problem-metadata",
         },
@@ -11983,7 +11983,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 100,
+          line: 102,
           column: 11,
           kind: "problem-metadata",
         },
@@ -12013,7 +12013,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 42,
+          line: 43,
+          column: 11,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "idempotency-core/processing-lease-unsupported",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#idempotency-core-processing-lease-unsupported",
+      recovery: {
+        cause:
+          "The configured idempotency store has not declared independent processing lease support.",
+        userAction: "Do not retry until the store supports the processing lease contract.",
+        operatorAction:
+          "Implement leaseMs independently of ttlMs, verify the store conformance suite, and declare processingLeaseVersion: 1.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
+          line: 117,
           column: 11,
           kind: "problem-metadata",
         },
@@ -12043,7 +12076,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 129,
+          line: 142,
           column: 11,
           kind: "problem-metadata",
         },
@@ -12073,7 +12106,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 115,
+          line: 128,
           column: 11,
           kind: "problem-metadata",
         },
@@ -12103,7 +12136,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
-          line: 148,
+          line: 161,
           column: 11,
           kind: "problem-metadata",
         },

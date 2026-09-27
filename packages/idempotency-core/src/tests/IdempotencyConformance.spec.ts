@@ -18,6 +18,7 @@ describe("idempotency store conformance", () => {
       "rejects invalid ttl before reserve state changes",
       "rejects invalid ttl before commit state changes",
       "rejects invalid ttl before fail state changes",
+      "separates reservation lease from completed retention",
       "grants a finite default lease when ttl is omitted",
     ]);
   });
@@ -26,5 +27,5 @@ describe("idempotency store conformance", () => {
     for (const testCase of suite.cases) {
       await testCase.run();
     }
-  });
+  }, 15_000);
 });

@@ -2659,6 +2659,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "safe-message",
     severity: "error",
   }),
+  "idempotency-core/processing-lease-unsupported": recovery({
+    cause:
+      "The configured idempotency store has not declared independent processing lease support.",
+    userAction: "Do not retry until the store supports the processing lease contract.",
+    operatorAction:
+      "Implement leaseMs independently of ttlMs, verify the store conformance suite, and declare processingLeaseVersion: 1.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "access-core/invalid-provider-result": recovery({
     cause: "AccessProvider.check() returned a result without a supported authoritative decision.",
     userAction:
@@ -2799,9 +2809,9 @@ const recoveryMetadataByCode = {
     cause:
       "Another worker currently owns the Clerk delivery reservation for this deliveryId and eventType.",
     userAction:
-      "Retry the same delivery after the active worker completes or after the configured idempotencyTtlMs expires.",
+      "Retry the same delivery after the active worker completes or after the configured processingLeaseMs expires.",
     operatorAction:
-      "Inspect concurrent worker state for the reported deliveryId and eventType; if the owner was abandoned, wait for idempotencyTtlMs expiry before retrying.",
+      "Inspect concurrent worker state for the reported deliveryId and eventType. Set processingLeaseMs above the handler's maximum runtime; after lease expiry, retry only when the handler prevents duplicate external side effects.",
     retryability: "retryable",
     redactionPolicy: "safe-message",
     severity: "warning",
