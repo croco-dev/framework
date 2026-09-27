@@ -43,6 +43,12 @@ title: "WebhookGatewayOptions"
 
 ---
 
+### processingLeaseMs?
+
+> `readonly` `optional` **processingLeaseMs?**: `number`
+
+---
+
 ### router
 
 > `readonly` **router**: `object`

@@ -162,6 +162,7 @@ export type WebhookGatewayOptions = {
   readonly unknownEventPolicy: UnknownEventPolicy;
   readonly unknownEventReporter?: WebhookUnknownEventReporter;
   readonly idempotencyTtlMs?: number;
+  readonly processingLeaseMs?: number;
   readonly idempotencyNamespace?: string;
   readonly now?: () => Date;
 };

@@ -129,8 +129,11 @@ await handler.handleWebhook(request);
 운영 환경에서는 모든 worker가 공유하는 durable `IdempotencyStore`를 전달해야 합니다. 핸들러는
 서명 검증을 통과한 `svix-id`만 예약하며, 완료된 delivery의 결과를 저장한 뒤에만 이후 재전달을
 중복으로 승인합니다. 처리 중인 중복은 retryable `auth-clerk/webhook-delivery-in-flight` Problem으로
-실패하므로 Clerk가 완료 결과를 다시 확인할 수 있습니다. 예약과 완료 결과는 기본 24시간 동안
-유지되며, `idempotencyTtlMs`로 provider retry 정책에 맞게 조정할 수 있습니다.
+실패하므로 Clerk가 완료 결과를 다시 확인할 수 있습니다. 처리 예약은 기본 15분 뒤 만료되어
+중단된 worker의 delivery를 재시도할 수 있으며, `processingLeaseMs`로 조정합니다. 완료 결과는
+완료 시점부터 기본 24시간 동안 유지되며, `idempotencyTtlMs`로 provider retry 정책에 맞게
+조정할 수 있습니다. 처리 lease는 자동 연장되지 않으므로 예상 최대 처리 시간보다 길게 설정해야 합니다.
+Lease 만료 후에는 이전 worker도 계속 실행 중일 수 있으므로 mutation 자체의 중복 방지도 필요합니다.
 
 ## Diagnostics와 Conformance
 

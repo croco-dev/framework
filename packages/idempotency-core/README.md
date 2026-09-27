@@ -28,7 +28,7 @@ const key = deriveHttpIdempotencyKey({
   bodyFingerprint: "sha256:request-body",
 });
 
-const result = await coordinator.execute({ key, ttlMs: 86_400_000 }, async () => {
+const result = await coordinator.execute({ key, leaseMs: 900_000, ttlMs: 86_400_000 }, async () => {
   return { orderId: "order-1" };
 });
 ```
@@ -42,9 +42,11 @@ structured clone이 `lastIndex`를 초기화하므로 모든 RegExp는 `lastInde
 실행된 global 또는 sticky RegExp에서 이 제한이 주로 드러납니다.
 공유 메모리, Buffer, 사용자 class instance, accessor와 symbol property는 명시적으로 거부합니다.
 
-`ttlMs`를 생략한 in-flight reservation에는 워커 충돌로 인한 영구 교착을 막기 위해 30초 기본 리스가 적용됩니다.
-명시적으로 `ttlMs`를 지정하면 해당 값이 in-flight 리스를 결정하고, 완료·실패 레코드의 보존 기간은 기존처럼 생략 시
-만료되지 않습니다. in-flight reservation은 `expiresAt` 직전까지만 완료할 수 있습니다. 만료 시각부터 `commit`과 `fail`은
+`leaseMs`는 in-flight 예약의 처리 리스이고, `ttlMs`는 완료·실패 레코드의 보존 기간입니다.
+`leaseMs`를 생략하면 호환성을 위해 `ttlMs`를 리스로 사용하며, 둘 다 생략하면 30초 기본 리스가 적용됩니다.
+완료·실패 레코드는 `ttlMs`를 생략하면 만료되지 않습니다. 리스는 handler의 최대 실행 시간 이상으로 설정해야 합니다.
+리스가 끝나도 실행 중인 handler는 중단되지 않으므로, 너무 짧은 리스는 부수효과의 중복 실행을 허용할 수 있습니다.
+in-flight 예약은 `expiresAt` 직전까지만 완료할 수 있습니다. 만료 시각부터 `commit`과 `fail`은
 `IdempotencyReservationExpiredProblem`으로 거부되며, 새 `reserve`가 발급한 reservation만 상태를 전이할 수 있습니다.
 
 handler가 실패하면 첫 호출은 원래 오류를 throw하고, 비재시도 실패는 같은 key의 후속 호출에서 handler를 실행하지 않고
@@ -67,7 +69,7 @@ commit 오류를 다시 throw합니다. 이후 같은 key 호출은 handler를 �
 replay합니다. failed 전이도 실패하면 원래 commit 오류를 유지하면서 보조 오류를 `idempotencyFailureRecordError` 진단으로
 첨부하며, store 상태는 운영자가 확인해야 합니다.
 
-`ttlMs`는 생략하거나 유효한 날짜 범위 안의 양의 정수 밀리초로 지정해야 합니다. `0`, 음수, 소수, `NaN`, 무한대 또는 날짜 범위를 넘는 값은 저장소 상태를 변경하기 전에 `InvalidIdempotencyTtlProblem`으로 실패합니다.
+`leaseMs`와 `ttlMs`는 생략하거나 유효한 날짜 범위 안의 양의 정수 밀리초로 지정해야 합니다. `0`, 음수, 소수, `NaN`, 무한대 또는 날짜 범위를 넘는 값은 저장소 상태를 변경하기 전에 `InvalidIdempotencyTtlProblem`으로 실패합니다.
 
 ## 통합 키 헬퍼
 

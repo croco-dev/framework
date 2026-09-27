@@ -115,6 +115,8 @@ export type IdempotencyReservation = {
 };
 
 export type IdempotencyReserveOptions = {
+  /** In-flight lease; defaults to ttlMs, then the store default. */
+  readonly leaseMs?: number;
   readonly ttlMs?: number;
   readonly metadata?: Record<string, unknown>;
 };
@@ -165,6 +167,8 @@ export type IdempotencyReserveResult<TResult = unknown> =
     };
 
 export type IdempotencyExecutionRequest = {
+  /** In-flight lease; omitted values preserve the legacy ttlMs lease. */
+  readonly leaseMs?: number;
   /** Overrides handler failure retryability; audit and commit recovery are unchanged. */
   readonly isRetryable?: (error: unknown) => boolean;
   readonly key: DerivedIdempotencyKey;

@@ -2799,9 +2799,9 @@ const recoveryMetadataByCode = {
     cause:
       "Another worker currently owns the Clerk delivery reservation for this deliveryId and eventType.",
     userAction:
-      "Retry the same delivery after the active worker completes or after the configured idempotencyTtlMs expires.",
+      "Retry the same delivery after the active worker completes or after the configured processingLeaseMs expires.",
     operatorAction:
-      "Inspect concurrent worker state for the reported deliveryId and eventType; if the owner was abandoned, wait for idempotencyTtlMs expiry before retrying.",
+      "Inspect concurrent worker state for the reported deliveryId and eventType; if the owner was abandoned, wait for processingLeaseMs expiry before retrying.",
     retryability: "retryable",
     redactionPolicy: "safe-message",
     severity: "warning",

@@ -19,6 +19,7 @@ import type {
 
 type VerifyWebhook = typeof verifyWebhook;
 const DEFAULT_IDEMPOTENCY_TTL_MS = 86_400_000;
+const DEFAULT_PROCESSING_LEASE_MS = 900_000;
 
 async function loadVerifyWebhook(): Promise<VerifyWebhook> {
   const module = await import("@clerk/backend/webhooks");
@@ -161,6 +162,7 @@ export class ClerkWebhookHandler {
       {
         key: idempotencyKey,
         ttlMs: this.options.idempotencyTtlMs ?? DEFAULT_IDEMPOTENCY_TTL_MS,
+        leaseMs: this.options.processingLeaseMs ?? DEFAULT_PROCESSING_LEASE_MS,
         metadata: {
           deliveryId,
           eventType: webhookEvent.type,

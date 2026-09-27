@@ -117,6 +117,7 @@ export class IdempotencyCoordinator<TResult = unknown> {
   private async reserve(request: IdempotencyExecutionRequest) {
     try {
       return await this.store.reserve(request.key, {
+        leaseMs: request.leaseMs,
         metadata: request.metadata,
         ttlMs: request.ttlMs,
       });

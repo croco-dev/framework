@@ -2144,8 +2144,8 @@ Sources:
 - Redaction policy: `safe-message`
 - Lifecycle: `active`
 - Cause: Another worker currently owns the Clerk delivery reservation for this deliveryId and eventType.
-- User action: Retry the same delivery after the active worker completes or after the configured idempotencyTtlMs expires.
-- Operator action: Inspect concurrent worker state for the reported deliveryId and eventType; if the owner was abandoned, wait for idempotencyTtlMs expiry before retrying.
+- User action: Retry the same delivery after the active worker completes or after the configured processingLeaseMs expires.
+- Operator action: Inspect concurrent worker state for the reported deliveryId and eventType; if the owner was abandoned, wait for processingLeaseMs expiry before retrying.
 - Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
@@ -7706,7 +7706,7 @@ Sources:
 
 Sources:
 
-- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:168:11` (problem-metadata)
+- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:169:11` (problem-metadata)
 
 <a id="idempotency-core-invalid-key"></a>
 
@@ -7760,7 +7760,7 @@ Sources:
 
 Sources:
 
-- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:100:11` (problem-metadata)
+- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:101:11` (problem-metadata)
 
 <a id="idempotency-core-key-conflict"></a>
 
@@ -7796,7 +7796,7 @@ Sources:
 
 Sources:
 
-- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:129:11` (problem-metadata)
+- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:130:11` (problem-metadata)
 
 <a id="idempotency-core-reservation-not-found"></a>
 
@@ -7814,7 +7814,7 @@ Sources:
 
 Sources:
 
-- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:115:11` (problem-metadata)
+- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:116:11` (problem-metadata)
 
 <a id="idempotency-core-reservation-state"></a>
 
@@ -7832,7 +7832,7 @@ Sources:
 
 Sources:
 
-- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:148:11` (problem-metadata)
+- `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:149:11` (problem-metadata)
 
 <a id="impersonation-configuration-invalid"></a>
 

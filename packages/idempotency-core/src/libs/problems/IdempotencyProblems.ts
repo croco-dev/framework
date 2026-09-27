@@ -90,6 +90,7 @@ export class InvalidIdempotencySnapshotProblem extends IdempotencyProblem {
 export type IdempotencyTtlConstraint = "positive-safe-integer" | "valid-date-range";
 
 export type InvalidIdempotencyTtlProblemOptions = {
+  readonly field?: "ttlMs" | "leaseMs";
   readonly constraint: IdempotencyTtlConstraint;
   readonly receivedValue: number | string;
 };
@@ -100,9 +101,9 @@ export class InvalidIdempotencyTtlProblem extends IdempotencyProblem {
     super({
       code: IDEMPOTENCY_DIAGNOSTIC_CODES.invalidTtl,
       category: ProblemCategory.BadRequest,
-      detail: `Idempotency ttlMs must satisfy ${options.constraint}; received ${String(options.receivedValue)}`,
+      detail: `Idempotency ${options.field ?? "ttlMs"} must satisfy ${options.constraint}; received ${String(options.receivedValue)}`,
       extensions: {
-        field: "ttlMs",
+        field: options.field ?? "ttlMs",
         constraint: options.constraint,
         receivedValue: options.receivedValue,
       },

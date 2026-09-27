@@ -185,6 +185,53 @@ describe("BetterAuthWebhookProcessor", () => {
       expect(mockHandlers["user.created"]).toHaveBeenCalledTimes(1);
     });
 
+    it("should reclaim a verified delivery on a new worker after its store lease expires", async () => {
+      let storeTime = Date.now();
+      const store = new InMemoryIdempotencyStore<WebhookGatewayStoredResult>({
+        now: () => new Date(storeTime),
+      });
+      let markFirstHandlerStarted!: () => void;
+      const firstHandlerStarted = new Promise<void>((resolve) => {
+        markFirstHandlerStarted = resolve;
+      });
+      const handler = vi.fn(async () => {
+        if (handler.mock.calls.length === 1) {
+          markFirstHandlerStarted();
+          await new Promise<never>(() => undefined);
+        }
+      });
+      mockHandlers["user.created"] = handler;
+      const createWorker = () =>
+        new BetterAuthWebhookProcessor(
+          { signingSecret: TEST_SIGNING_SECRET, idempotencyStore: store },
+          mockHandlers,
+          mockSessionProvider,
+        );
+      const firstWorker = createWorker();
+      const nextWorker = createWorker();
+      const rawBody = JSON.stringify({
+        id: "delivery-123",
+        type: "user.created",
+        data: { id: "user-123" },
+      });
+      const request = () => createMockWebhookRequest(rawBody, createSignature(rawBody));
+
+      void firstWorker.processWebhook(request());
+      await firstHandlerStarted;
+
+      storeTime += 15 * 60_000 - 1;
+      await expect(nextWorker.processWebhook(request())).rejects.toMatchObject({ status: 409 });
+      expect(handler).toHaveBeenCalledTimes(1);
+
+      storeTime += 1;
+      await nextWorker.processWebhook(request());
+      expect(handler).toHaveBeenCalledTimes(2);
+
+      storeTime += 23 * 60 * 60_000;
+      await nextWorker.processWebhook(request());
+      expect(handler).toHaveBeenCalledTimes(2);
+    });
+
     it("should not let an invalid signature join an active verified delivery", async () => {
       let releaseHandler!: () => void;
       let markHandlerStarted!: () => void;

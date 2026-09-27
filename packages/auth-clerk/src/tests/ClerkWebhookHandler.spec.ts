@@ -1,5 +1,5 @@
 import { verifyWebhook } from "@clerk/backend/webhooks";
-import { deriveWebhookIdempotencyKey, InMemoryIdempotencyStore } from "@croco/idempotency-core";
+import { InMemoryIdempotencyStore } from "@croco/idempotency-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ClerkWebhookHandler } from "../libs/ClerkWebhookHandler";
 import {
@@ -243,7 +243,7 @@ describe("ClerkWebhookHandler", () => {
     expect(replayedOutcome).toEqual(firstOutcome);
   });
 
-  it("should bound delivery reservations with the default idempotency TTL", async () => {
+  it("should bound delivery reservations with the default processing lease", async () => {
     const reserve = vi.spyOn(idempotencyStore, "reserve");
     vi.mocked(verifyWebhook).mockResolvedValue({
       type: "user.created",
@@ -258,6 +258,7 @@ describe("ClerkWebhookHandler", () => {
         eventType: "user.created",
         provider: "clerk",
       },
+      leaseMs: 900_000,
       ttlMs: 86_400_000,
     });
   });
@@ -329,31 +330,49 @@ describe("ClerkWebhookHandler", () => {
     expect(idempotencyStore.size).toBe(1);
   });
 
-  it("should reclaim an abandoned delivery reservation after the configured TTL", async () => {
-    let now = new Date("2026-08-13T00:00:00.000Z");
-    const store = new InMemoryIdempotencyStore<StoredWebhookOutcome>({ now: () => now });
-    const deliveryId = "msg_abandoned";
-    const key = deriveWebhookIdempotencyKey({
-      provider: "clerk",
-      eventId: deliveryId,
-      namespace: "auth-clerk-webhook",
-    });
-    await store.reserve(key, { ttlMs: 1_000 });
-    now = new Date("2026-08-13T00:00:01.000Z");
-    webhookHandler = new ClerkWebhookHandler(
-      { signingSecret, idempotencyStore: store, idempotencyTtlMs: 1_000 },
-      mockHandlers,
-    );
-    vi.mocked(verifyWebhook).mockResolvedValue({
-      type: "user.created",
-      data: { id: "user_123", email_addresses: [] },
-    } as unknown as VerifiedWebhook);
+  it.each([
+    { processingLeaseMs: undefined, idempotencyTtlMs: undefined },
+    { processingLeaseMs: 1_000, idempotencyTtlMs: undefined },
+    { processingLeaseMs: 1_000, idempotencyTtlMs: 2_000 },
+  ])(
+    "should reclaim an abandoned attempt with lease $processingLeaseMs and retain its result for $idempotencyTtlMs",
+    async ({ processingLeaseMs, idempotencyTtlMs }) => {
+      let now = new Date("2026-08-13T00:00:00.000Z");
+      const store = new InMemoryIdempotencyStore<StoredWebhookOutcome>({ now: () => now });
+      const deliveryId = "msg_abandoned";
+      const leaseMs = processingLeaseMs ?? 900_000;
+      const userCreatedHandler = mockHandlers["user.created"];
+      vi.mocked(userCreatedHandler)
+        .mockImplementationOnce(() => new Promise<void>(() => {}))
+        .mockResolvedValue(undefined);
+      webhookHandler = new ClerkWebhookHandler(
+        { signingSecret, idempotencyStore: store, processingLeaseMs, idempotencyTtlMs },
+        mockHandlers,
+      );
+      vi.mocked(verifyWebhook).mockResolvedValue({
+        type: "user.created",
+        data: { id: "user_123", email_addresses: [] },
+      } as unknown as VerifiedWebhook);
 
-    await webhookHandler.handleWebhook(createRequest(deliveryId));
+      void webhookHandler.handleWebhook(createRequest(deliveryId));
+      await vi.waitFor(() => expect(userCreatedHandler).toHaveBeenCalledTimes(1));
+      now = new Date(now.getTime() + leaseMs - 1);
+      await expect(webhookHandler.handleWebhook(createRequest(deliveryId))).rejects.toThrow(
+        ClerkWebhookDeliveryInFlightProblem,
+      );
+      now = new Date(now.getTime() + 1);
+      const outcome = await webhookHandler.handleWebhook(createRequest(deliveryId));
 
-    expect(mockHandlers["user.created"]).toHaveBeenCalledTimes(1);
-    expect(store.size).toBe(1);
-  });
+      now = new Date(now.getTime() + (idempotencyTtlMs ?? 86_400_000) - 1);
+      await expect(webhookHandler.handleWebhook(createRequest(deliveryId))).resolves.toEqual(
+        outcome,
+      );
+      expect(userCreatedHandler).toHaveBeenCalledTimes(2);
+      now = new Date(now.getTime() + 1);
+      await webhookHandler.handleWebhook(createRequest(deliveryId));
+      expect(userCreatedHandler).toHaveBeenCalledTimes(3);
+    },
+  );
 
   it("should not create idempotency records when verification fails", async () => {
     const reserve = vi.spyOn(idempotencyStore, "reserve");

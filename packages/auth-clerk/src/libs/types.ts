@@ -64,6 +64,7 @@ export type WebhookHandlerOptions = {
   readonly signingSecret: string;
   readonly idempotencyStore: IdempotencyStore<ClerkWebhookDeliveryOutcome>;
   readonly idempotencyTtlMs?: number;
+  readonly processingLeaseMs?: number;
 };
 
 export type ClerkWebhookDeliveryOutcome = {
