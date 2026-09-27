@@ -13,6 +13,7 @@ import type { DomainEvent, EventPublisher } from "@croco/events-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PolarWebhookHandler } from "../libs/PolarWebhookHandler";
 import type { WebhookDependencies } from "../libs/PolarWebhookHandler";
+import { WebhookProcessingProblem } from "../libs/problems/WebhookProcessingProblem";
 import { WebhookValidationProblem } from "../libs/problems/WebhookValidationProblem";
 import { verifyPolarWebhook } from "../libs/verifyPolarWebhook";
 import type { PolarConfig } from "../types";
@@ -702,6 +703,43 @@ describe("PolarWebhookHandler order.paid with the Polar SDK Order shape", () => 
     expect(eventPublisher.publishIdempotently).toHaveBeenCalledWith(
       expect.objectContaining({ amount: 2900, externalOrderId: "order-sdk-1" }),
     );
+  });
+
+  it("rejects an order.paid redelivery while another instance holds the claim, then processes it after release", async () => {
+    const eventId = "evt-sdk-order-in-progress";
+    const store = createMockStore();
+    const eventPublisher = createMockEventPublisher();
+    const handler = createHandler(store, eventPublisher);
+    const { body, headers } = signPayload(createSdkOrderPaidPayload(2900), eventId);
+    const peerClaim = await store.claimWebhookDelivery(eventId, "order.paid", 30_000);
+    if (peerClaim.status !== "claimed") expect.unreachable("peer instance must hold the claim");
+
+    await expect(handler.handle(body, headers)).rejects.toBeInstanceOf(WebhookProcessingProblem);
+    expect(await store.findOrdersByAccount("tenant-sdk")).toEqual([]);
+    expect(eventPublisher.publishIdempotently).not.toHaveBeenCalled();
+
+    expect(await store.releaseWebhookDelivery(eventId, peerClaim.token)).toBe(true);
+    await expect(handler.handle(body, headers)).resolves.toEqual({ success: true, eventId });
+    expect(await store.findOrdersByAccount("tenant-sdk")).toHaveLength(1);
+    expect(eventPublisher.publishIdempotently).toHaveBeenCalledTimes(1);
+    await expect(handler.handle(body, headers)).resolves.toEqual({ success: true, eventId });
+    expect(eventPublisher.publishIdempotently).toHaveBeenCalledTimes(1);
+  });
+
+  it("reclaims an expired order.paid claim left by an interrupted instance", async () => {
+    const eventId = "evt-sdk-order-expired";
+    const store = createMockStore();
+    const eventPublisher = createMockEventPublisher();
+    const handler = createHandler(store, eventPublisher);
+    const { body, headers } = signPayload(createSdkOrderPaidPayload(2900), eventId);
+    const peerClaim = await store.claimWebhookDelivery(eventId, "order.paid", 30_000);
+    if (peerClaim.status !== "claimed") expect.unreachable("peer instance must hold the claim");
+
+    vi.setSystemTime(new Date(now.getTime() + 30_000));
+    await expect(handler.handle(body, headers)).resolves.toEqual({ success: true, eventId });
+    expect(await store.findOrdersByAccount("tenant-sdk")).toHaveLength(1);
+    expect(eventPublisher.publishIdempotently).toHaveBeenCalledTimes(1);
+    expect(await store.releaseWebhookDelivery(eventId, peerClaim.token)).toBe(false);
   });
 
   it("persists and publishes a zero net_amount order", async () => {

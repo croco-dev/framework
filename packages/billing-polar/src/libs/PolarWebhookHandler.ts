@@ -192,6 +192,10 @@ export class PolarWebhookHandler {
       return this.processSubscriptionEventAtomically(eventId, parsedEvent);
     }
 
+    if (parsedEvent.kind === "order") {
+      return this.processOrderEventWithLease(eventId, eventType, parsedEvent);
+    }
+
     const shouldProcess = await this.reserveWebhook(eventId, eventType);
     if (!shouldProcess) {
       return { success: true, eventId };
@@ -209,6 +213,53 @@ export class PolarWebhookHandler {
         rollbackErrorMessage
           ? `${baseErrorMessage}; rollback failed: ${rollbackErrorMessage}`
           : baseErrorMessage,
+        this.getProcessingCause(error),
+      );
+    }
+  }
+
+  private async processOrderEventWithLease(
+    eventId: string,
+    eventType: string,
+    event: Extract<ParsedWebhookEvent, { kind: "order" }>,
+  ): Promise<WebhookHandlerResult> {
+    let claim: Awaited<ReturnType<BillingStore["claimWebhookDelivery"]>>;
+    try {
+      claim = await this.store.claimWebhookDelivery(
+        eventId,
+        eventType,
+        PolarWebhookHandler.DELIVERY_LEASE_MS,
+      );
+    } catch (error) {
+      throw new WebhookProcessingProblem(
+        "Webhook delivery claim failed",
+        this.getProcessingCause(error),
+      );
+    }
+    if (claim.status === "completed") return { success: true, eventId };
+    if (claim.status === "in_progress") {
+      throw new WebhookProcessingProblem("Order delivery is already in progress");
+    }
+
+    try {
+      await this.processParsedEvent(eventId, event);
+      const completed = await this.store.completeWebhookDelivery(eventId, claim.token);
+      if (!completed) {
+        throw new WebhookProcessingProblem("Order delivery claim expired before completion");
+      }
+      return { success: true, eventId };
+    } catch (error) {
+      let releaseFailure: string | null = null;
+      try {
+        if (!(await this.store.releaseWebhookDelivery(eventId, claim.token))) {
+          releaseFailure = "delivery claim expired";
+        }
+      } catch (releaseError) {
+        releaseFailure = this.getErrorMessage(releaseError);
+      }
+      const message = `Event processing failed: ${this.getErrorMessage(error)}`;
+      throw new WebhookProcessingProblem(
+        releaseFailure ? `${message}; release failed: ${releaseFailure}` : message,
         this.getProcessingCause(error),
       );
     }
