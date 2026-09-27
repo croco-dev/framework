@@ -642,9 +642,10 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
   ): Promise<{ result: string }> {
     const resourceType = resolveResourceType(key);
     const timestamp = Math.floor(Date.now() / 1000);
-    const signedFields = { public_id: resolvePublicId(key), timestamp };
+    const signedFields = { invalidate: true, public_id: resolvePublicId(key), timestamp };
     const body = new URLSearchParams({
       api_key: this.apiKey,
+      invalidate: "true",
       public_id: resolvePublicId(key),
       signature: cloudinary.utils.api_sign_request(signedFields, this.apiSecret),
       timestamp: String(timestamp),
