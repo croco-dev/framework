@@ -219,14 +219,16 @@ export class TaskRunner {
     taskId: string,
     payload: unknown,
     options: TaskExecutionOptions = {},
+    onExecutionCreated?: (executionId: string) => void,
   ): Promise<TrackedTaskExecution> {
-    return this.executeTrackedTask(taskId, payload, options);
+    return this.executeTrackedTask(taskId, payload, options, onExecutionCreated);
   }
 
   private async executeTrackedTask(
     taskIdentifier: unknown,
     payload: unknown,
     options: TaskExecutionOptions,
+    onExecutionCreated?: (executionId: string) => void,
   ): Promise<TrackedTaskExecution> {
     if (typeof taskIdentifier !== "string" && !isRuntimeTaskReference(taskIdentifier)) {
       throw new InvalidTaskReferenceProblem(
@@ -282,6 +284,20 @@ export class TaskRunner {
       ...(options.parentId !== undefined ? { parentId: options.parentId } : {}),
       ...(options.metadata !== undefined ? { metadata: options.metadata } : {}),
     });
+
+    try {
+      onExecutionCreated?.(execution.id);
+    } catch (error) {
+      try {
+        this.logger.error("Failed to observe task execution creation", {
+          executionId: execution.id,
+          callbackError: error,
+        });
+      } catch (loggingError) {
+        recordDiagnosticError(loggingError);
+      }
+      recordDiagnosticError(error);
+    }
 
     if (execution.status === "completed") {
       return { executionId: execution.id, result: execution.result };

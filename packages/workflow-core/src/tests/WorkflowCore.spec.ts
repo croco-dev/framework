@@ -31,6 +31,17 @@ class TestWorkflowProblem extends Problem {
   }
 }
 
+class BillingProviderUnavailableProblem extends Problem {
+  constructor(retryable: boolean) {
+    super(
+      "billing/provider-unavailable",
+      ProblemCategory.InternalServerError,
+      "billing provider temporarily unavailable",
+      { extensions: { retryable } },
+    );
+  }
+}
+
 class InMemoryExecutionStore
   extends ExecutionStore
   implements ExecutionLogStore, ExecutionAttemptStore
@@ -1167,6 +1178,269 @@ describe("workflow-core", () => {
     expect(started.status).toBe("running");
     expect(handledSubscriptions).toEqual(["sub_123"]);
     expect(allExecutions).toHaveLength(2);
+  });
+
+  it("resumes an idempotent workflow after a step Problem with extensions.retryable", async () => {
+    let calls = 0;
+
+    @Component()
+    class BillingTasks {
+      @Task({ name: "billing.sync", maxAttempts: 2 })
+      sync(): { synced: true } {
+        calls += 1;
+        if (calls === 1) throw new BillingProviderUnavailableProblem(true);
+        return { synced: true };
+      }
+    }
+
+    @Component()
+    class BillingWorkflows {
+      @OnWebhook("/webhooks/billing", "POST")
+      @Workflow({
+        name: "billing-sync",
+        steps: ["billing.sync"],
+        maxAttempts: 2,
+        idempotencyKey: "billing-sync:sub_123",
+      })
+      run(): void {}
+    }
+
+    instances.set(BillingTasks, new BillingTasks());
+    instances.set(BillingWorkflows, new BillingWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    await expect(runner.execute("billing-sync", {})).rejects.toThrow(
+      "billing provider temporarily unavailable",
+    );
+
+    const [workflow] = await store.list({ type: "workflow" });
+    const [child] = await store.list({ parentId: workflow.id });
+    expect(child).toMatchObject({ status: "retrying", attempts: 1 });
+    expect(workflow).toMatchObject({
+      status: "retrying",
+      attempts: 1,
+      maxAttempts: 2,
+      error: { retryable: true },
+    });
+
+    await expect(runner.execute("billing-sync", {})).resolves.toMatchObject({
+      executionId: workflow.id,
+      reused: false,
+    });
+    expect(calls).toBe(2);
+    expect(await manager.get(child.id)).toMatchObject({ status: "completed", attempts: 2 });
+  });
+
+  it("resumes a keyed workflow when child execution creation fails transiently", async () => {
+    const creationFailure = new BillingProviderUnavailableProblem(true);
+    let calls = 0;
+
+    @Component()
+    class BillingTasks {
+      @Task({ name: "billing.create" })
+      sync(): { synced: true } {
+        calls += 1;
+        return { synced: true };
+      }
+    }
+
+    @Component()
+    class BillingWorkflows {
+      @Workflow({
+        name: "billing-create",
+        steps: ["billing.create"],
+        maxAttempts: 2,
+        idempotencyKey: "billing-create:sub_123",
+      })
+      run(): void {}
+    }
+
+    instances.set(BillingTasks, new BillingTasks());
+    instances.set(BillingWorkflows, new BillingWorkflows());
+    const createExecution = store.create.bind(store);
+    let taskCreationAttempts = 0;
+    vi.spyOn(store, "create").mockImplementation((params) => {
+      if (params.type === "billing.create" && ++taskCreationAttempts === 1) {
+        return Promise.reject(creationFailure);
+      }
+      return createExecution(params);
+    });
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    await expect(runner.execute("billing-create", {})).rejects.toBe(creationFailure);
+    const [workflow] = await store.list({ type: "workflow" });
+    expect(workflow).toMatchObject({
+      status: "retrying",
+      attempts: 1,
+      error: { retryable: true },
+    });
+    expect(await store.list({ parentId: workflow.id })).toHaveLength(0);
+    expect(calls).toBe(0);
+
+    await expect(runner.execute("billing-create", {})).resolves.toMatchObject({
+      executionId: workflow.id,
+      reused: false,
+    });
+    expect(calls).toBe(1);
+    expect(taskCreationAttempts).toBe(2);
+  });
+
+  it("keeps a workflow failed when a step Problem has extensions.retryable false", async () => {
+    @Component()
+    class BillingTasks {
+      @Task({ name: "billing.declined", maxAttempts: 2 })
+      sync(): never {
+        throw new BillingProviderUnavailableProblem(false);
+      }
+    }
+
+    @Component()
+    class BillingWorkflows {
+      @Workflow({
+        name: "billing-declined",
+        steps: ["billing.declined"],
+        maxAttempts: 2,
+        idempotencyKey: "billing-declined:sub_123",
+      })
+      run(): void {}
+    }
+
+    instances.set(BillingTasks, new BillingTasks());
+    instances.set(BillingWorkflows, new BillingWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    await expect(runner.execute("billing-declined", {})).rejects.toThrow(
+      "billing provider temporarily unavailable",
+    );
+    const [workflow] = await store.list({ type: "workflow" });
+    expect(workflow).toMatchObject({
+      status: "failed",
+      attempts: 1,
+      error: { retryable: false },
+    });
+  });
+
+  it("keeps a keyless workflow replayable after a retryable step failure", async () => {
+    @Component()
+    class BillingTasks {
+      @Task({ name: "billing.keyless", maxAttempts: 2 })
+      sync(): never {
+        throw new BillingProviderUnavailableProblem(true);
+      }
+    }
+
+    @Component()
+    class BillingWorkflows {
+      @Workflow({ name: "billing-keyless", steps: ["billing.keyless"], maxAttempts: 2 })
+      run(): void {}
+    }
+
+    instances.set(BillingTasks, new BillingTasks());
+    instances.set(BillingWorkflows, new BillingWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    await expect(runner.execute("billing-keyless", {})).rejects.toThrow(
+      "billing provider temporarily unavailable",
+    );
+    const [workflow] = await store.list({ type: "workflow" });
+    expect(workflow).toMatchObject({
+      status: "failed",
+      error: { message: "billing provider temporarily unavailable", retryable: false },
+    });
+    await expect(runner.replay(workflow.id)).resolves.toMatchObject({
+      status: "pending",
+      replayOf: workflow.id,
+    });
+  });
+
+  it("keeps the step failure when child retryability inspection fails", async () => {
+    const stepFailure = new BillingProviderUnavailableProblem(true);
+    const inspectionFailure = new Error("execution store unavailable");
+
+    @Component()
+    class BillingTasks {
+      @Task({ name: "billing.inspect", maxAttempts: 2 })
+      sync(): never {
+        throw stepFailure;
+      }
+    }
+
+    @Component()
+    class BillingWorkflows {
+      @Workflow({
+        name: "billing-inspect",
+        steps: ["billing.inspect"],
+        maxAttempts: 2,
+        idempotencyKey: "billing-inspect:sub_123",
+      })
+      run(): void {}
+    }
+
+    instances.set(BillingTasks, new BillingTasks());
+    instances.set(BillingWorkflows, new BillingWorkflows());
+    const readExecution = manager.get.bind(manager);
+    vi.spyOn(manager, "get").mockImplementation((id) =>
+      id === "exec-2" ? Promise.reject(inspectionFailure) : readExecution(id),
+    );
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    await expect(runner.execute("billing-inspect", {})).rejects.toBe(stepFailure);
+    expect(stepFailure).toHaveProperty("workflowRetryabilityInspectionError", inspectionFailure);
+    const [workflow] = await store.list({ type: "workflow" });
+    expect(workflow).toMatchObject({
+      status: "failed",
+      error: { message: "billing provider temporarily unavailable", retryable: false },
+    });
+  });
+
+  it("preserves the original failure when the child task has no retry left", async () => {
+    let calls = 0;
+
+    @Component()
+    class BillingTasks {
+      @Task({ name: "billing.once" })
+      sync(): never {
+        calls += 1;
+        throw new BillingProviderUnavailableProblem(true);
+      }
+    }
+
+    @Component()
+    class BillingWorkflows {
+      @Workflow({
+        name: "billing-once",
+        steps: ["billing.once"],
+        maxAttempts: 2,
+        idempotencyKey: "billing-once:sub_123",
+      })
+      run(): void {}
+    }
+
+    instances.set(BillingTasks, new BillingTasks());
+    instances.set(BillingWorkflows, new BillingWorkflows());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+
+    await expect(runner.execute("billing-once", {})).rejects.toThrow(
+      "billing provider temporarily unavailable",
+    );
+    const [workflow] = await store.list({ type: "workflow" });
+    const [child] = await store.list({ parentId: workflow.id });
+    expect(child).toMatchObject({ status: "failed", attempts: 1 });
+    expect(workflow).toMatchObject({
+      status: "failed",
+      attempts: 1,
+      error: { message: "billing provider temporarily unavailable", retryable: false },
+    });
+
+    await expect(runner.execute("billing-once", {})).rejects.toThrow(
+      "billing provider temporarily unavailable",
+    );
+    expect(calls).toBe(1);
+    expect(await manager.get(workflow.id)).toMatchObject({
+      status: "failed",
+      attempts: 1,
+      error: { message: "billing provider temporarily unavailable", retryable: false },
+    });
   });
 
   it("re-enters an idempotent workflow when the existing execution is retrying", async () => {

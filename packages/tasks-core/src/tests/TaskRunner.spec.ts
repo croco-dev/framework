@@ -325,6 +325,76 @@ describe("TaskRunner", () => {
     });
   });
 
+  it("should report the tracked execution id before a handler throws its original error", async () => {
+    const failure = new Error("Tracked task failed");
+    const onExecutionCreated = vi.fn();
+
+    @Component()
+    class TrackedFailureTaskHandler {
+      @Task({ name: "tracked-failure-task" })
+      async handle(): Promise<never> {
+        expect(onExecutionCreated).toHaveBeenCalledExactlyOnceWith("exec-123");
+        throw failure;
+      }
+    }
+
+    Container.set(TrackedFailureTaskHandler, new TrackedFailureTaskHandler());
+    registry.collectFromMetadata();
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(
+      runner.executeTracked("tracked-failure-task", {}, {}, onExecutionCreated),
+    ).rejects.toBe(failure);
+    expect(onExecutionCreated).toHaveBeenCalledExactlyOnceWith("exec-123");
+  });
+
+  it("should not report a tracked execution id when creation fails", async () => {
+    const failure = new Error("Execution creation failed");
+    mockExecutionManager.create = vi.fn().mockRejectedValue(failure);
+    const onExecutionCreated = vi.fn();
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(runner.executeTracked("test-task", {}, {}, onExecutionCreated)).rejects.toBe(
+      failure,
+    );
+    expect(onExecutionCreated).not.toHaveBeenCalled();
+    expect(mockExecutionManager.start).not.toHaveBeenCalled();
+  });
+
+  it("should complete a new execution when its creation callback throws", async () => {
+    const callbackFailure = new Error("Callback failed");
+    const recordErrorSpy = vi.spyOn(telemetry, "recordError").mockImplementation(() => {});
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(
+      runner.executeTracked("test-task", { data: "test" }, {}, () => {
+        throw callbackFailure;
+      }),
+    ).resolves.toEqual({ executionId: "exec-123", result: "processed: test" });
+
+    expect(mockExecutionManager.start).toHaveBeenCalledWith("exec-123");
+    expect(mockExecutionManager.complete).toHaveBeenCalledWith("exec-123", "processed: test");
+    expect(recordErrorSpy).toHaveBeenCalledWith(callbackFailure);
+  });
+
+  it("should return a completed execution when its creation callback throws", async () => {
+    const callbackFailure = new Error("Callback failed");
+    const recordErrorSpy = vi.spyOn(telemetry, "recordError").mockImplementation(() => {});
+    mockExecutionManager.create = vi
+      .fn()
+      .mockResolvedValue(execution({ status: "completed", result: "cached result" }));
+    const runner = new TaskRunner(mockExecutionManager, registry);
+
+    await expect(
+      runner.executeTracked("test-task", { data: "test" }, {}, () => {
+        throw callbackFailure;
+      }),
+    ).resolves.toEqual({ executionId: "exec-123", result: "cached result" });
+
+    expect(mockExecutionManager.start).not.toHaveBeenCalled();
+    expect(recordErrorSpy).toHaveBeenCalledWith(callbackFailure);
+  });
+
   it("should execute typed task references without changing runtime semantics", async () => {
     @Component({ scope: "singleton" })
     class TypedTaskHandler {
