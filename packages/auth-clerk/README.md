@@ -150,8 +150,10 @@ const diagnostics = new ClerkAuthDiagnosticsProvider({
 패키지 테스트는 `@croco/testing`의 `createAuthProviderConformanceSuite()`를 사용해 아래
 계약을 기본 no-credential CI에서 검증합니다.
 
-- 유효한 Bearer token을 `AuthUser`로 변환하고 Clerk `org_id`, `org_role`, `org_slug`,
-  `sid`를 metadata로 보존합니다.
+- 유효한 Bearer token을 `AuthUser`로 변환합니다. v1의 `org_id`, `org_role`,
+  `org_slug`와 v2의 `o.id`, `o.rol`, `o.slg`를 같은 조직 metadata로 보존하고,
+  `sid`를 세션 ID로 보존합니다. v2의 `o.rol`에는 `org:` 접두사를 붙이며,
+  조직 권한은 `fea`의 조직 feature와 `o.per`, `o.fpm` 비트맵에서 복원합니다.
 - 누락 credentials는 `null`을 반환하고, 무효 token과 malformed claim은 stable Clerk
   Problem code로 실패합니다.
 - Clerk upstream 실패는 secret 값을 redaction한 `auth-clerk/token-verification-upstream-failed`
