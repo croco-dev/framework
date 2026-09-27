@@ -175,6 +175,10 @@ pnpm --filter @croco/storage-cloudinary test:live
 
 ## 동작 메모
 
+- `delete()`는 자산 삭제와 함께 원본·변환본의 CDN 캐시 무효화를 요청합니다.
+  [Cloudinary의 무효화 안내](https://cloudinary.com/documentation/invalidate_cached_media_assets_on_the_cdn)에 따르면
+  전파에는 보통 수 초~수 분이 걸립니다. 브라우저 캐시는 별도로 남을 수 있고, signed delivery URL은 기본 설정에서
+  무효화되지 않습니다.
 - `cover`, `contain`, `fill`, `inside`, `outside`를 Cloudinary crop 값으로 변환합니다.
 - 일시적 네트워크 오류와 5xx 응답은 최대 3회 재시도합니다.
 - 업로드 인텐트는 직접 업로드 엔드포인트, 공개 URL, `public_id`, `timestamp`, `api_key`, `signature` multipart 필드를 반환합니다. API secret은 반환하지 않으며 Cloudinary의 서명 유효 시간에 맞춰 TTL은 최대 1시간입니다.

@@ -620,6 +620,37 @@ describe("CloudinaryProvider", () => {
   });
 
   describe("delete()", () => {
+    it.each([
+      ["test-key", "image"],
+      ["clips/intro.mp4", "video"],
+      ["docs/report.pdf", "raw"],
+    ])("asks Cloudinary to invalidate CDN copies when deleting %s", async (key, resourceType) => {
+      vi.mocked(global.fetch).mockResolvedValue(jsonResponse({ result: "ok" }));
+
+      await provider.delete(key);
+
+      const [url, init] = vi.mocked(global.fetch).mock.calls[0] ?? [];
+      expect(url).toBe(`https://api.cloudinary.com/v1_1/test-cloud/${resourceType}/destroy`);
+      expect((init?.body as URLSearchParams).get("invalidate")).toBe("true");
+    });
+
+    it("signs the invalidate flag together with the destroy request", async () => {
+      const now = 1_800_000_000_000;
+      vi.spyOn(Date, "now").mockReturnValue(now);
+      vi.mocked(global.fetch).mockResolvedValue(jsonResponse({ result: "ok" }));
+
+      await provider.delete("test-key");
+
+      const [, init] = vi.mocked(global.fetch).mock.calls[0] ?? [];
+      expect((init?.body as URLSearchParams).get("signature")).toBe(
+        createHash("sha1")
+          .update(
+            `invalidate=true&public_id=test-key&timestamp=${now / 1000}${mockConfig.apiSecret}`,
+          )
+          .digest("hex"),
+      );
+    });
+
     it("should delete resource successfully", async () => {
       const now = 1_800_000_000_000;
       const controller = new AbortController();
@@ -635,13 +666,9 @@ describe("CloudinaryProvider", () => {
       expect(init).toMatchObject({ method: "POST", signal: controller.signal });
       expect(init?.body).toBeInstanceOf(URLSearchParams);
       expect((init?.body as URLSearchParams).get("api_key")).toBe(mockConfig.apiKey);
+      expect((init?.body as URLSearchParams).get("invalidate")).toBe("true");
       expect((init?.body as URLSearchParams).get("public_id")).toBe("test-key");
       expect((init?.body as URLSearchParams).get("timestamp")).toBe(String(now / 1000));
-      expect((init?.body as URLSearchParams).get("signature")).toBe(
-        createHash("sha1")
-          .update(`public_id=test-key&timestamp=${now / 1000}${mockConfig.apiSecret}`)
-          .digest("hex"),
-      );
     });
 
     it("should handle not found result gracefully", async () => {
