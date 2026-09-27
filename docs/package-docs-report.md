@@ -226,7 +226,7 @@ None.
 | `@croco/tx-drizzle`                    | Plugins        | provider      | Tx Drizzle              | unclaimed                                 |
 | `@croco/ui-astryx`                     | Plugins        | presentation  | Astryx UI               | browser, node                             |
 | `@croco/warehouse-core`                | Contracts      | domain        | Warehouse               | browser, node, lambda, cloudflare-workers |
-| `@croco/warehouse-postgres`            | Plugins        | provider      | Metrics                 | node, lambda                              |
+| `@croco/warehouse-postgres`            | Plugins        | provider      | Warehouse               | node, lambda                              |
 | `@croco/webhooks-core`                 | Contracts      | domain        | Webhooks                | unclaimed                                 |
 | `@croco/workflow-core`                 | Contracts      | domain        | Workflow                | unclaimed                                 |
 

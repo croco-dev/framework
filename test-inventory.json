@@ -206,6 +206,12 @@
       "owner": "@croco/admin-react"
     },
     {
+      "path": "packages/admin-react/src/tests/DatasetExplorer.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
       "path": "packages/admin-react/src/tests/EngagementOperationsConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -4553,6 +4559,12 @@
       "owner": "@croco/warehouse-core"
     },
     {
+      "path": "packages/warehouse-core/src/tests/WarehouseRuntime.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-core"
+    },
+    {
       "path": "packages/warehouse-core/src/tests/WarehouseTypes.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -4566,6 +4578,36 @@
     },
     {
       "path": "packages/warehouse-postgres/src/tests/PostgresMetricsStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PostgresWarehouseCatalog.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PostgresWarehouseFacts.integration.spec.ts",
+      "lane": "integration",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PostgresWarehouseReader.integration.spec.ts",
+      "lane": "integration",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PostgresWarehouseReader.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/PostgresWarehouseWriter.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/warehouse-postgres"

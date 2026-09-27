@@ -204,9 +204,8 @@ describe.skipIf(!realResourcesEnabled).each(["PostgreSQL", "TimescaleDB"] as con
       ]);
     });
 
-    it.skipIf(backend !== "TimescaleDB")(
-      "converts populated PostgreSQL tables to hypertables without data loss",
-      async () => {
+    if (backend === "TimescaleDB")
+      it("converts populated PostgreSQL tables to hypertables without data loss", async () => {
         if (!connection) {
           throw new Error("TimescaleDB test resource did not start");
         }
@@ -258,62 +257,63 @@ describe.skipIf(!realResourcesEnabled).each(["PostgreSQL", "TimescaleDB"] as con
           await client.query("DROP SCHEMA IF EXISTS metrics_timescale_upgrade CASCADE");
           client.release();
         }
-      },
-    );
+      });
 
-    it.skipIf(backend !== "PostgreSQL")("preserves caller transaction ownership", async () => {
-      if (!connection) {
-        throw new Error("PostgreSQL test resource did not start");
-      }
+    if (backend === "PostgreSQL")
+      it("preserves caller transaction ownership", async () => {
+        if (!connection) {
+          throw new Error("PostgreSQL test resource did not start");
+        }
 
-      const client = await connection.pool.connect();
-      try {
-        await client.query("CREATE SCHEMA metrics_transaction_ownership");
-        await client.query("SET search_path TO metrics_transaction_ownership, public");
-        await client.query("BEGIN");
-        await client.query("CREATE TABLE caller_marker (id INTEGER PRIMARY KEY)");
-        await client.query("INSERT INTO caller_marker (id) VALUES (1)");
-        await installPostgresMetricsSchema(client);
-        await client.query("ROLLBACK");
+        const client = await connection.pool.connect();
+        try {
+          await client.query("CREATE SCHEMA metrics_transaction_ownership");
+          await client.query("SET search_path TO metrics_transaction_ownership, public");
+          await client.query("BEGIN");
+          await client.query("CREATE TABLE caller_marker (id INTEGER PRIMARY KEY)");
+          await client.query("INSERT INTO caller_marker (id) VALUES (1)");
+          await installPostgresMetricsSchema(client);
+          await client.query("ROLLBACK");
 
-        const relations = await client.query<{ marker: string | null; movements: string | null }>(
-          `SELECT
+          const relations = await client.query<{ marker: string | null; movements: string | null }>(
+            `SELECT
              to_regclass('metrics_transaction_ownership.caller_marker')::text AS marker,
              to_regclass('metrics_transaction_ownership.mrr_movements')::text AS movements`,
-        );
-        expect(relations.rows).toEqual([{ marker: null, movements: null }]);
-      } finally {
-        await client.query("RESET search_path");
-        await client.query("DROP SCHEMA IF EXISTS metrics_transaction_ownership CASCADE");
-        client.release();
-      }
-    });
+          );
+          expect(relations.rows).toEqual([{ marker: null, movements: null }]);
+        } finally {
+          await client.query("RESET search_path");
+          await client.query("DROP SCHEMA IF EXISTS metrics_transaction_ownership CASCADE");
+          client.release();
+        }
+      });
 
-    it.skipIf(backend !== "PostgreSQL")("rolls back a failed standalone schema batch", async () => {
-      if (!connection) {
-        throw new Error("PostgreSQL test resource did not start");
-      }
+    if (backend === "PostgreSQL")
+      it("rolls back a failed standalone schema batch", async () => {
+        if (!connection) {
+          throw new Error("PostgreSQL test resource did not start");
+        }
 
-      const client = await connection.pool.connect();
-      try {
-        await client.query("CREATE SCHEMA metrics_failed_install");
-        await client.query("SET search_path TO metrics_failed_install, public");
-        await client.query(
-          "CREATE VIEW metrics_snapshots AS SELECT 'occupied'::text AS incompatible_column",
-        );
+        const client = await connection.pool.connect();
+        try {
+          await client.query("CREATE SCHEMA metrics_failed_install");
+          await client.query("SET search_path TO metrics_failed_install, public");
+          await client.query(
+            "CREATE VIEW metrics_snapshots AS SELECT 'occupied'::text AS incompatible_column",
+          );
 
-        await expect(installPostgresMetricsSchema(client)).rejects.toThrow();
+          await expect(installPostgresMetricsSchema(client)).rejects.toThrow();
 
-        const relations = await client.query<{ movements: string | null }>(
-          "SELECT to_regclass('metrics_failed_install.mrr_movements')::text AS movements",
-        );
-        expect(relations.rows).toEqual([{ movements: null }]);
-      } finally {
-        await client.query("RESET search_path");
-        await client.query("DROP SCHEMA IF EXISTS metrics_failed_install CASCADE");
-        client.release();
-      }
-    });
+          const relations = await client.query<{ movements: string | null }>(
+            "SELECT to_regclass('metrics_failed_install.mrr_movements')::text AS movements",
+          );
+          expect(relations.rows).toEqual([{ movements: null }]);
+        } finally {
+          await client.query("RESET search_path");
+          await client.query("DROP SCHEMA IF EXISTS metrics_failed_install CASCADE");
+          client.release();
+        }
+      });
 
     it("deduplicates concurrent current-key deliveries across separate pool connections", async () => {
       await expectConcurrentDeliveryKeys("current", [], "current", [], ["current"]);
