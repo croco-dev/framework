@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { Component } from "@croco/framework-context";
 import {
@@ -24,6 +24,7 @@ import {
 import { ResendValidationProblem } from "./problems/ResendNotificationProblem";
 
 const RESEND_BATCH_CONCURRENCY_LIMIT = 5;
+const RESEND_IDEMPOTENCY_KEY_MAX_LENGTH = 256;
 
 const RESEND_RETRY_POLICY: RetryPolicy = {
   shouldRetry(error: unknown, attempt: number, maxAttempts: number): boolean {
@@ -94,10 +95,19 @@ export class ResendProvider implements NotificationProvider {
     }
 
     const { to, subject, content } = payload;
-    const idempotencyKey = providedIdempotencyKey ?? `resend-${randomUUID()}`;
+    const idempotencyKey =
+      providedIdempotencyKey === undefined
+        ? `resend-${randomUUID()}`
+        : providedIdempotencyKey.length > RESEND_IDEMPOTENCY_KEY_MAX_LENGTH
+          ? `croco:v1:${createHash("sha256").update(providedIdempotencyKey).digest("hex")}`
+          : providedIdempotencyKey;
     const idempotencyKeySource: ResendIdempotencyKeySource =
       providedIdempotencyKey === undefined ? "generated" : "provided";
-    const redactionValues = getResendProblemRedactionValues(payload, idempotencyKey);
+    const redactionValues = getResendProblemRedactionValues(
+      payload,
+      providedIdempotencyKey,
+      idempotencyKey,
+    );
 
     try {
       const emailOptions: CreateEmailOptions = {
@@ -205,6 +215,7 @@ export class ResendProvider implements NotificationProvider {
 
 function getResendProblemRedactionValues(
   payload: NotificationPayload,
+  providedIdempotencyKey: string | undefined,
   idempotencyKey: string,
 ): readonly string[] {
   return [
@@ -215,6 +226,7 @@ function getResendProblemRedactionValues(
     payload.text,
     payload.replyTo,
     ...Object.values(payload.headers ?? {}),
+    providedIdempotencyKey,
     idempotencyKey,
   ].filter(isNonEmptyString);
 }
