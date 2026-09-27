@@ -6,6 +6,7 @@ import type {
   ReplayExecutionParams,
 } from "@croco/execution-core";
 import { ExecutionProblems } from "@croco/execution-core";
+import { readExplicitRetryability } from "@croco/problems-core";
 import { TaskRunner } from "@croco/tasks-core";
 import { withSpan } from "@croco/telemetry-api";
 import {
@@ -75,6 +76,38 @@ function reportFailureRecordError(
   }
 }
 
+function reportRetryabilityInspectionError(
+  span: WorkflowTelemetrySpan,
+  executionId: string,
+  stepExecutionId: string,
+  workflowError: unknown,
+  inspectionError: unknown,
+): void {
+  let attachmentFailed = false;
+  if (typeof workflowError === "object" && workflowError !== null) {
+    try {
+      Object.defineProperty(workflowError, "workflowRetryabilityInspectionError", {
+        configurable: true,
+        enumerable: false,
+        value: inspectionError,
+      });
+    } catch {
+      attachmentFailed = true;
+    }
+  }
+
+  try {
+    span.addEvent("workflow.step.retryability_inspection.failed", {
+      "workflow.execution.id": executionId,
+      "workflow.step.execution.id": stepExecutionId,
+      "workflow.error.message": describeError(inspectionError),
+      ...(attachmentFailed ? { "workflow.retryability_inspection.attachment_failed": true } : {}),
+    });
+  } catch {
+    return;
+  }
+}
+
 function supportsRecordLog(manager: ExecutionManager): manager is LoggableExecutionManager {
   return typeof (manager as { recordLog?: unknown }).recordLog === "function";
 }
@@ -121,10 +154,10 @@ async function resolveExecutionIdempotency(
   };
 }
 
-function toExecutionError(error: unknown) {
+function toExecutionError(error: unknown, retryable: boolean) {
   return {
     message: error instanceof Error ? error.message : String(error),
-    retryable: error instanceof Error && "retryable" in error ? Boolean(error.retryable) : false,
+    retryable,
     code: error instanceof Error && "code" in error ? String(error.code) : undefined,
     stack: error instanceof Error ? error.stack : undefined,
   };
@@ -273,6 +306,7 @@ export class WorkflowRunner {
     span.setAttribute("workflow.reused", false);
     span.addEvent("workflow.execution.started", getExecutionTelemetryAttributes(workflow, running));
     const steps: WorkflowStepResult[] = [];
+    let stepExecutionId: string | undefined;
 
     await this.recordLog(span, running.id, "info", "Workflow execution started", {
       workflowName: workflow.name,
@@ -280,6 +314,7 @@ export class WorkflowRunner {
 
     try {
       for (const [stepIndex, step] of workflow.steps.entries()) {
+        stepExecutionId = undefined;
         const stepAttributes = {
           "workflow.name": workflow.name,
           "workflow.execution.id": running.id,
@@ -294,7 +329,7 @@ export class WorkflowRunner {
 
         let result: unknown;
         try {
-          result = await this.taskRunner.execute(
+          const tracked = await this.taskRunner.executeTracked(
             step.task,
             this.resolveStepInput(workflow, running, payload, step, steps),
             {
@@ -306,7 +341,11 @@ export class WorkflowRunner {
                 workflowStep: step.name,
               },
             },
+            (executionId) => {
+              stepExecutionId = executionId;
+            },
           );
+          result = tracked.result;
         } catch (error) {
           span.addEvent("workflow.step.failed", {
             ...stepAttributes,
@@ -355,7 +394,24 @@ export class WorkflowRunner {
       });
       let failed: Execution;
       try {
-        failed = await this.executionManager.fail(running.id, toExecutionError(error));
+        let retryable =
+          idempotency.idempotencyKey !== undefined && readExplicitRetryability(error) === true;
+        if (retryable && stepExecutionId !== undefined) {
+          retryable = false;
+          try {
+            const child = await this.executionManager.get(stepExecutionId);
+            retryable = child.status === "retrying" || child.status === "completed";
+          } catch (inspectionError) {
+            reportRetryabilityInspectionError(
+              span,
+              running.id,
+              stepExecutionId,
+              error,
+              inspectionError,
+            );
+          }
+        }
+        failed = await this.executionManager.fail(running.id, toExecutionError(error, retryable));
       } catch (failureRecordError) {
         reportFailureRecordError(span, running.id, error, failureRecordError);
         throw error;
