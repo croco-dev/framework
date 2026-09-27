@@ -23,6 +23,7 @@ export type MetricReadContext = {
   readonly allowRaw: boolean;
   readonly budget: MetricReadBudget;
   readonly sourceRevisions: readonly SourceRevision[];
+  /** Snapshot references correspond to sourceRevisions in the same order. */
   readonly snapshotRefs: readonly string[];
   readonly signal?: AbortSignal;
 };
@@ -448,6 +449,7 @@ export class MetricReadService {
       const grant = await this.withinDeadline(this.grant(context, action), deadline);
       if (!grant) return { status: (status = "denied") };
       this.checkBudget(context.budget, query.limits, window);
+      const sources = this.scopedSources(query, context);
       const report = await this.report(query, parsed, window, context, grant, definition, deadline);
       if (!(await this.withinDeadline(this.currentGrant(context, action, grant), deadline)))
         return { status: (status = "denied") };
@@ -480,6 +482,7 @@ export class MetricReadService {
         this.active++;
         const effectiveContext: MetricReadContext = {
           ...context,
+          ...sources,
           budget: {
             maxWindowMs: Math.min(context.budget.maxWindowMs, query.limits.maxWindowMs),
             maxRows: Math.min(context.budget.maxRows, query.limits.maxRows),
@@ -683,7 +686,7 @@ export class MetricReadService {
     signal: AbortSignal,
   ): Promise<VerifiedReportOutcome> {
     if (!this.reports) return { status: "unavailable" };
-    this.checkSources(query, context);
+    const sources = this.scopedSources(query, context);
     const key = query.inputKey(input);
     const candidates = await this.reports.readCandidates(query.id, key, context.principal, signal);
     this.checkAbort(signal);
@@ -701,8 +704,8 @@ export class MetricReadService {
         !sameStrings(report.result.fieldRefs, query.requiredFields) ||
         report.result.window.from !== window.from ||
         report.result.window.to !== window.to ||
-        !sameRevisions(report.result.sourceRevisions, context.sourceRevisions) ||
-        !sameStrings(report.result.snapshotRefs, context.snapshotRefs) ||
+        !sameRevisions(report.result.sourceRevisions, sources.sourceRevisions) ||
+        !sameStrings(report.result.snapshotRefs, sources.snapshotRefs) ||
         report.reviewed.definitionHash !== definition.hash ||
         report.reviewed.resultHash !== report.resultHash ||
         !report.reviewed.reviewerId ||
@@ -756,7 +759,7 @@ export class MetricReadService {
     window: MetricWindow,
     context: MetricReadContext,
   ): void {
-    this.checkSources(query, context);
+    const sources = this.scopedSources(query, context);
     this.checkDiagnostics(result.diagnostics);
     if (
       !samePrincipal(result.principal, context.principal) ||
@@ -767,8 +770,8 @@ export class MetricReadService {
       !sameStrings(result.fieldRefs, query.requiredFields) ||
       result.window.from !== window.from ||
       result.window.to !== window.to ||
-      !sameRevisions(result.sourceRevisions, context.sourceRevisions) ||
-      !sameStrings(result.snapshotRefs, context.snapshotRefs)
+      !sameRevisions(result.sourceRevisions, sources.sourceRevisions) ||
+      !sameStrings(result.snapshotRefs, sources.snapshotRefs)
     ) {
       fail(
         "result-contract-mismatch",
@@ -798,13 +801,21 @@ export class MetricReadService {
     }
   }
 
-  private checkSources(query: RegisteredMetricQuery, context: MetricReadContext): void {
+  private scopedSources(
+    query: RegisteredMetricQuery,
+    context: MetricReadContext,
+  ): Pick<MetricReadContext, "sourceRevisions" | "snapshotRefs"> {
     const required = this.definition(query).sourceRefs;
+    if (context.sourceRevisions.length !== context.snapshotRefs.length) {
+      fail(
+        "invalid-read-context",
+        ProblemCategory.ValidationError,
+        "Source revisions and snapshots must correspond",
+      );
+    }
     if (
-      !sameStrings(
-        required,
-        context.sourceRevisions.map((revision) => revision.sourceRef),
-      )
+      new Set(context.sourceRevisions.map((revision) => revision.sourceRef)).size !==
+      context.sourceRevisions.length
     ) {
       fail(
         "source-revision-missing",
@@ -812,6 +823,25 @@ export class MetricReadService {
         "Current source revisions do not match the definition",
       );
     }
+    const sourceRevisions: SourceRevision[] = [];
+    const snapshotRefs: string[] = [];
+    for (const sourceRef of required) {
+      const index = context.sourceRevisions.findIndex(
+        (revision) => revision.sourceRef === sourceRef,
+      );
+      const revision = context.sourceRevisions[index];
+      const snapshot = context.snapshotRefs[index];
+      if (!revision || snapshot === undefined) {
+        fail(
+          "source-revision-missing",
+          ProblemCategory.ValidationError,
+          "Current source revisions do not match the definition",
+        );
+      }
+      sourceRevisions.push(revision);
+      snapshotRefs.push(snapshot);
+    }
+    return { sourceRevisions, snapshotRefs };
   }
 
   private withinResultBudget(

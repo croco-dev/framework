@@ -127,6 +127,46 @@ describe("MetricExpression", () => {
     ]);
   });
 
+  it("rejects ratio operands with different aggregate scales at definition time", () => {
+    const decimalEvents = {
+      ...events,
+      columns: { ...events.columns, latencyFine: { type: "decimal", scale: 3 } },
+    } as const;
+    const latency = project(decimalEvents, "latency");
+    const latencyFine = project(decimalEvents, "latencyFine");
+    for (const measure of [
+      ratio({ numerator: sum(latency), denominator: sum(latencyFine), zeroDenominator: "null" }),
+      ratio({ numerator: sum(latency), denominator: count(), zeroDenominator: "null" }),
+      ratio({ numerator: sum(latency), denominator: count(latency), zeroDenominator: "null" }),
+    ]) {
+      expect(() =>
+        defineMetric("invalid_ratio_scale", {
+          version: 1,
+          from: decimalEvents,
+          measure,
+          time: project(decimalEvents, "at"),
+          unit: "ratio",
+          population: "events",
+        }),
+      ).toThrowError("METRIC_RATIO_UNIT_MISMATCH");
+    }
+
+    expect(() =>
+      defineMetric("count_ratio", {
+        version: 1,
+        from: decimalEvents,
+        measure: ratio({
+          numerator: count(latency),
+          denominator: count(latencyFine),
+          zeroDenominator: "null",
+        }),
+        time: project(decimalEvents, "at"),
+        unit: "ratio",
+        population: "events",
+      }),
+    ).not.toThrow();
+  });
+
   it("calculates a sum/count average and exact distinct from raw rows", () => {
     const averageMetric = defineMetric("latency", {
       version: 1,

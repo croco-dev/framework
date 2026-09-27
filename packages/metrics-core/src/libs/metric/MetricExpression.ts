@@ -257,6 +257,11 @@ function validateAggregate(expression: AggregateExpression, fact: MetricFact): v
   }
 }
 
+function aggregateScale(expression: AggregateExpression): number {
+  if (expression.kind === "count" || expression.kind === "exact-distinct") return 0;
+  return expression.column.column.type === "decimal" ? expression.column.column.scale : 0;
+}
+
 function validateExpression(expression: MetricExpression, fact: MetricFact): void {
   if (expression.kind === "average" || expression.kind === "ratio") {
     if (expression.kind === "ratio") {
@@ -274,6 +279,12 @@ function validateExpression(expression: MetricExpression, fact: MetricFact): voi
     validateAggregate(expression.denominator, fact);
     const numerator = expression.numerator.column;
     const denominator = expression.denominator.column;
+    if (expression.kind === "ratio") {
+      requireCondition(
+        aggregateScale(expression.numerator) === aggregateScale(expression.denominator),
+        "METRIC_RATIO_UNIT_MISMATCH",
+      );
+    }
     if (expression.kind === "ratio" && numerator && denominator) {
       requireCondition(
         numerator.column.type === denominator.column.type,
@@ -541,7 +552,7 @@ function aggregate(
       scale: 0,
     };
   }
-  const scale = expression.column.column.type === "decimal" ? expression.column.column.scale : 0;
+  const scale = aggregateScale(expression);
   let result: bigint | undefined;
   for (const row of rows) {
     const value = numericValue(row, expression.column);

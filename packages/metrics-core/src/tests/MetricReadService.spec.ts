@@ -128,6 +128,7 @@ function fixture(
     ),
     executor,
     reader,
+    query,
   };
 }
 
@@ -153,6 +154,82 @@ function report(overrides: Partial<VerifiedMetricReport> = {}): VerifiedMetricRe
 }
 
 describe("MetricReadService", () => {
+  it("scopes revisions and snapshots to each registered definition", async () => {
+    const sharedContext: MetricReadContext = {
+      ...context,
+      sourceRevisions: [
+        { sourceRef: "refunds", revision: "refunds-2" },
+        { sourceRef: "captures", revision: "snapshot-1" },
+      ],
+      snapshotRefs: ["refunds-snapshot-2", "snapshot-1"],
+    };
+    const refundsDefinition: RegisteredMetricDefinition = {
+      ...definition,
+      id: "refunds_total",
+      hash: "sha256:refunds",
+      sourceRefs: ["refunds"],
+    };
+    const refundsResult: MetricReadResult = {
+      ...result,
+      definition: refundsDefinition,
+      sourceRevisions: [{ sourceRef: "refunds", revision: "refunds-2" }],
+      snapshotRefs: ["refunds-snapshot-2"],
+    };
+    const { query, reader } = fixture({ report: report() });
+    const refundsExecutor = vi.fn(async ({ context: readContext }) => {
+      expect(readContext.sourceRevisions).toEqual(refundsResult.sourceRevisions);
+      expect(readContext.snapshotRefs).toEqual(refundsResult.snapshotRefs);
+      return refundsResult;
+    });
+    const service = new MetricReadService(
+      [definition, refundsDefinition],
+      [
+        query,
+        {
+          ...query,
+          id: "refunds_by_currency",
+          definitionRefs: [refundsDefinition.id],
+          readExecutor: refundsExecutor,
+        },
+      ],
+      {
+        currentContext: () => sharedContext,
+        authorize: async () => ({ permissionEpoch: "permission-1", privacyEpoch: "privacy-1" }),
+      },
+      reader,
+    );
+
+    expect(
+      await service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window),
+    ).toEqual({ status: "verified", source: "report", result });
+    expect(
+      await service.runRegisteredQuery("refunds_by_currency", { currency: "USD" }, window),
+    ).toEqual({ status: "verified", source: "executor", result: refundsResult });
+    expect(refundsExecutor).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    [
+      "missing required source",
+      {
+        sourceRevisions: [{ sourceRef: "refunds", revision: "refunds-2" }],
+        snapshotRefs: ["refunds-2"],
+      },
+      "metrics-core/source-revision-missing",
+    ],
+    [
+      "unaligned snapshots",
+      { sourceRevisions: context.sourceRevisions, snapshotRefs: [] },
+      "metrics-core/invalid-read-context",
+    ],
+  ])("rejects %s before executing", async (_label, sources, code) => {
+    const { service, executor } = fixture({ context: { ...context, ...sources } });
+    await expect(
+      service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window),
+    ).rejects.toMatchObject({ code });
+    expect(executor).not.toHaveBeenCalled();
+  });
+
   it("returns an exact reviewed report without executing a query", async () => {
     const { service, executor } = fixture({ report: report() });
     const answer = await service.runRegisteredQuery(
