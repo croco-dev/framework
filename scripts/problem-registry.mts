@@ -2622,6 +2622,15 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "metrics-core/read-cancelled": recovery({
+    cause: "The metric read was cancelled by its AbortSignal or exceeded its deadline.",
+    userAction:
+      "Retry the read after the cancellation reason is cleared or with a sufficient deadline.",
+    operatorAction: "Inspect the cancellation signal, configured deadline, and read duration.",
+    retryability: "conditional",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
   "workflow-core/workflow-execution-in-progress": recovery({
     cause: "Another invocation owns a pending or running workflow with the same idempotency key.",
     userAction: "Retry the same request after the owning execution finishes.",

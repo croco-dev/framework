@@ -2434,6 +2434,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "MetricInspector",
+              "exportKind": "named",
+              "source": "./libs/MetricInspector",
+              "declarationKind": "function"
+            },
+            {
               "name": "PermissionInspector",
               "exportKind": "named",
               "source": "./libs/components",
@@ -3234,6 +3240,21 @@
               "name": "MessageOperationsPanelProps",
               "exportKind": "named",
               "source": "./libs/EngagementOperationsConsole"
+            },
+            {
+              "name": "MetricInspectorOutcome",
+              "exportKind": "named",
+              "source": "./libs/MetricInspector"
+            },
+            {
+              "name": "MetricInspectorProps",
+              "exportKind": "named",
+              "source": "./libs/MetricInspector"
+            },
+            {
+              "name": "MetricInspectorResult",
+              "exportKind": "named",
+              "source": "./libs/MetricInspector"
             },
             {
               "name": "NonEmptyArray",
@@ -21217,6 +21238,18 @@
           "sourceEntrypoint": "packages/metrics-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "and",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
+            },
+            {
+              "name": "average",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
+            },
+            {
               "name": "CarryingCapacityCalculator",
               "exportKind": "named",
               "source": "./libs/CarryingCapacityCalculator",
@@ -21233,6 +21266,48 @@
               "exportKind": "named",
               "source": "./libs/problems/MetricsProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "compileMetric",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
+            },
+            {
+              "name": "count",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
+            },
+            {
+              "name": "dateBucket",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
+            },
+            {
+              "name": "defineMetric",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
+            },
+            {
+              "name": "eq",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
+            },
+            {
+              "name": "evaluateMetric",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
+            },
+            {
+              "name": "exactDistinct",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
             },
             {
               "name": "GrossMarginRequiredProblem",
@@ -21271,6 +21346,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "max",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
+            },
+            {
+              "name": "MetricExpressionError",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression",
+              "declarationKind": "class"
+            },
+            {
               "name": "MetricsEngine",
               "exportKind": "named",
               "source": "./libs/MetricsEngine",
@@ -21283,6 +21370,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "min",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
+            },
+            {
               "name": "MixedCurrencyMRRProblem",
               "exportKind": "named",
               "source": "./libs/problems/MetricsProblems",
@@ -21293,6 +21386,18 @@
               "exportKind": "named",
               "source": "./libs/MrrCalculator",
               "declarationKind": "class"
+            },
+            {
+              "name": "project",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ratio",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
             },
             {
               "name": "RetentionCalculator",
@@ -21317,6 +21422,12 @@
               "exportKind": "named",
               "source": "./libs/SnapshotScheduler",
               "declarationKind": "class"
+            },
+            {
+              "name": "sum",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -21324,6 +21435,11 @@
               "name": "ActiveUserProvider",
               "exportKind": "named",
               "source": "./libs/interfaces/ActiveUserProvider"
+            },
+            {
+              "name": "AggregateExpression",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression"
             },
             {
               "name": "CCComparisonResult",
@@ -21376,9 +21492,54 @@
               "source": "./libs/LtvCalculator"
             },
             {
+              "name": "MetricColumn",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression"
+            },
+            {
+              "name": "MetricColumnRef",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression"
+            },
+            {
+              "name": "MetricDefinition",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression"
+            },
+            {
+              "name": "MetricDefinitionIdentity",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression"
+            },
+            {
+              "name": "MetricEvaluation",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression"
+            },
+            {
+              "name": "MetricExpression",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression"
+            },
+            {
+              "name": "MetricFact",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression"
+            },
+            {
+              "name": "MetricFilter",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression"
+            },
+            {
               "name": "MetricsSnapshot",
               "exportKind": "named",
               "source": "./types"
+            },
+            {
+              "name": "MetricWindow",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression"
             },
             {
               "name": "Money",
@@ -21454,6 +21615,141 @@
               "name": "UserCCConfig",
               "exportKind": "named",
               "source": "./libs/CarryingCapacityCalculator"
+            }
+          ]
+        },
+        {
+          "exportPath": "./runtime",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/runtime.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/runtime.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/runtime.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/metrics-core/src/runtime.ts",
+          "runtimeExports": [
+            {
+              "name": "MetricReadProblem",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MetricReadService",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "MetricDefinitionExplanation",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "MetricDefinitionIdentity",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "MetricPrincipal",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "MetricReadAction",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "MetricReadAuditEvent",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "MetricReadAuthority",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "MetricReadBudget",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "MetricReadContext",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "MetricReadEvidence",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "MetricReadGrant",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "MetricReadQuality",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "MetricReadResult",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "MetricWindow",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "RegisteredMetricDefinition",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "RegisteredMetricQuery",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "RegisteredQueryOutcome",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "SourceRevision",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "VerifiedMetricReport",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "VerifiedReportOutcome",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "VerifiedReportReader",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
             }
           ]
         }

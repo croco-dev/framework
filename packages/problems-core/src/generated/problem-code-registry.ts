@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 817,
+  problemCount: 820,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -15059,6 +15059,66 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "METRIC_INVALID_ZONE",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metric-invalid-zone",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/metric/MetricExpression.ts",
+          line: 208,
+          column: 11,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "METRIC_UNSUPPORTED_OPERATION",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metric-unsupported-operation",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/metric/MetricExpression.ts",
+          line: 233,
+          column: 11,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "metrics-billing/invalid-order-payment-reason",
       category: "InternalServerError",
       status: 500,
@@ -15369,6 +15429,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 95,
           column: 1,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "metrics-core/read-cancelled",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-read-cancelled",
+      recovery: {
+        cause: "The metric read was cancelled by its AbortSignal or exceeded its deadline.",
+        userAction:
+          "Retry the read after the cancellation reason is cleared or with a sufficient deadline.",
+        operatorAction: "Inspect the cancellation signal, configured deadline, and read duration.",
+        retryability: "conditional",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/read/MetricReadService.ts",
+          line: 173,
+          column: 10,
+          kind: "problem-constructor",
         },
       ],
     },

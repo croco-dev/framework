@@ -468,3 +468,7 @@ export function CreateUserForm() {
 `domain_problem`, `permission_denied`, and `external_failure` render as global
 Problems with explicit recovery actions, so custom visual components can reuse
 the same state model without losing failure evidence.
+
+## Metric Inspector
+
+`MetricInspector` displays the verified result's definition identity, field and snapshot references, numerator and denominator, and separate quality axes. Pass the outcome returned by the application's registered metric read after authorization. Partial and stale outcomes retain authorized provenance, quality, and diagnostic codes while withholding raw result data. Denied and unavailable outcomes show only a recovery message.
