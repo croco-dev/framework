@@ -192,7 +192,8 @@ so apps can show sign-in, request-access, or retry actions without treating unkn
 
 Croco Problem Details can be rendered without collapsing diagnostic evidence into a generic string.
 `ProblemPanel` displays the RFC 7807 fields and typed recovery actions, `ProblemBoundary`
-normalizes thrown Croco Problems, unknown thrown values, and external `Error` objects, and
+normalizes thrown Croco Problems, client errors carrying `error.problem`, unknown thrown values,
+and external `Error` objects, and
 `ProblemToastAdapter` maps the same model to provider-specific toast libraries.
 
 ```typescript
@@ -309,7 +310,8 @@ loading/unavailable 상태와 독립적으로 평가됩니다. tenant-dependent 
 
 ### `ProblemBoundary`
 
-React 자식 트리에서 던져진 Croco Problem, plain Problem Details, 외부 `Error`, unknown 값을
+React 자식 트리에서 던져진 Croco Problem, plain Problem Details, `error.problem`에
+Problem Details를 담은 클라이언트 오류, 외부 `Error`, unknown 값을
 `ProblemDetails`로 정규화하고 fallback 또는 `ProblemPanel`로 렌더링합니다.
 
 ### `ProblemToastAdapter`
