@@ -63,6 +63,22 @@ title: "OnboardingManager"
 
 ---
 
+### handleGoalAchieved()
+
+> **handleGoalAchieved**(`event`): `Promise`\<`boolean`\>
+
+#### Parameters
+
+##### event
+
+[`GoalAchievedEventIntent`](/api/onboarding-core/src/type-aliases/goalachievedeventintent/)
+
+#### Returns
+
+`Promise`\<`boolean`\>
+
+---
+
 ### register()
 
 > **register**(`definition`): `void`
@@ -72,6 +88,36 @@ title: "OnboardingManager"
 ##### definition
 
 [`OnboardingDefinition`](/api/onboarding-core/src/interfaces/onboardingdefinition/)
+
+#### Returns
+
+`void`
+
+---
+
+### registerGoalStepBridge()
+
+> **registerGoalStepBridge**(`input`): `void`
+
+#### Parameters
+
+##### input
+
+###### goalDefinitionId
+
+`string`
+
+###### onboardingId
+
+`string`
+
+###### scope
+
+[`GoalScope`](/api/onboarding-core/src/type-aliases/goalscope/)
+
+###### stepId
+
+`string`
 
 #### Returns
 

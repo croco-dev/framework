@@ -14,6 +14,97 @@ pnpm add @croco/onboarding-core
 
 ## 사용법
 
+### 서버가 확인한 행동으로 목표 진행하기
+
+`GoalManager`는 기존 checklist와 별도로 동작합니다. 게시할 정의에는 `anchor`, `actionId`,
+`windowMs`, `allowedLatenessMs`, `timezone`, `countMode`, `threshold`, `deletedObjectPolicy`를
+명시합니다. `events`는 서로 다른 event ID, `distinct_objects`는 서로 다른 도메인 object ID,
+`distinct_calendar_days`는 episode에 고정된 시간대의 서로 다른 날짜를 셉니다.
+
+```typescript
+import { GoalManager, InMemoryGoalStore } from "@croco/onboarding-core";
+
+const goals = new GoalManager(
+  new InMemoryGoalStore(),
+  receiptVerifier, // 서버의 실제 도메인 저장 결과와 receipt를 대조
+  publicationAuthorizer, // actor의 정의 게시 권한을 확인
+  subjectVerifier, // tenant/app/environment 안의 subject를 확인
+);
+
+await goals.publishDefinition({
+  scope: { tenantId: "tenant-1", appId: "app-1", environmentId: "production" },
+  definition: {
+    id: "first-report",
+    version: "v1",
+    anchor: "signup",
+    actionId: "report.saved",
+    windowMs: 7 * 86_400_000,
+    allowedLatenessMs: 86_400_000,
+    timezone: "Asia/Seoul",
+    countMode: "events",
+    threshold: 1,
+    deletedObjectPolicy: "retract",
+    nextActionHref: "/reports/new",
+  },
+  revision: 1,
+  actorId: "operator-1",
+  reason: "Show the first report goal",
+  idempotencyKey: "first-report-v1",
+  publishedAt: new Date(),
+});
+
+await goals.beginEpisode({
+  id: "signup-1",
+  scope,
+  subject,
+  definitionId: "first-report",
+  anchor: "signup",
+  startedAt: signupTime,
+});
+
+await goals.observeAction({
+  scope,
+  subject,
+  episodeId: "signup-1",
+  receivedAt: new Date(),
+  receipt: {
+    eventId: "report-saved-1",
+    actionId: "report.saved",
+    objectId: "report-1",
+    occurredAt: reportSavedAt,
+    confirmation: { source: "server", evidenceId: "report-transaction-1" },
+  },
+});
+
+const progress = await goals.getProgress({
+  scope,
+  subject,
+  episodeId: "signup-1",
+  asOf: new Date(),
+});
+```
+
+`scope`, `subject`, `signupTime`, `reportSavedAt`와 세 검증기는 호스트가 제공해야 합니다.
+`subject`는 `{ id, verified: true }` 형태이며, 이 표시만 신뢰하지 말고 `subjectVerifier`에서
+서버 권한을 확인합니다. `receiptVerifier`는 클라이언트가 보낸 성공 주장만으로 완료되지 않도록
+실제 저장 결과를 검증합니다. 인메모리 저장소는 테스트용입니다. 운영 저장소는
+`@croco/onboarding-drizzle`의 `DrizzleGoalStore(db, txManager)`와 migration을 사용하고,
+도메인 저장과 `observeAction()`을 같은 `TxManager` 트랜잭션에서 실행합니다. 달성 intent는
+기존 transactional outbox에 기록되므로 별도의 relay/worker가 이를 발행해야 합니다.
+실행 가능한 PostgreSQL·브라우저 예제는 `examples/onboarding-goals`에 있습니다.
+
+행동 시각은 `[startedAt, endsAt)` 안에 있어야 합니다. `endsAt`부터
+`endsAt + allowedLatenessMs` 전까지는 `closing`이고, 그 시점부터 `expired`입니다.
+기한 이후 도착한 증거는 보존하되 진행도나 달성을 재개하지 않습니다. 정의의 version,
+시간대, threshold, 기한은 episode 시작 시 고정됩니다. `delete_object` 정정은 정의의
+`deletedObjectPolicy`가 `retract`일 때 해당 object의 행동을 제외하며, 저장소는 원문 object ID
+대신 digest만 보관합니다.
+
+목표 달성으로 기존 checklist 단계를 완료하려면 `OnboardingManager.registerGoalStepBridge()`로
+scope·goal definition ID·onboarding ID·step ID를 명시적으로 연결한 뒤, outbox consumer에서
+`handleGoalAchieved()`를 호출합니다. `GoalManager`만 사용하면 checklist를 만들거나 완료하지
+않습니다. 기존 `completeStep()`의 수동 완료 계약은 그대로 유지됩니다.
+
 ### OnboardingManager
 
 온보딩 플로우의 orchestration을 담당합니다.
@@ -241,7 +332,7 @@ await Context.run(
 pnpm add @croco/onboarding-drizzle
 ```
 
-```typescript
+```typescript no-check
 import { DrizzleOnboardingStore } from "@croco/onboarding-drizzle";
 
 const store = new DrizzleOnboardingStore(db, txManager);

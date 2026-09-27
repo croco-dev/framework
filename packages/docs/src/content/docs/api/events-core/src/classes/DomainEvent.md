@@ -42,6 +42,7 @@ title: "DomainEvent"
 - [`MembershipUpdatedEvent`](/api/membership-core/src/classes/membershipupdatedevent/)
 - [`QuotaExceededEvent`](/api/metering-core/src/classes/quotaexceededevent/)
 - [`UsageRecordedEvent`](/api/metering-core/src/classes/usagerecordedevent/)
+- [`GoalAchievedDomainEvent`](/api/onboarding-drizzle/src/classes/goalachieveddomainevent/)
 - [`DocumentDeletedEvent`](/api/search-core/src/classes/documentdeletedevent/)
 - [`DocumentIndexedEvent`](/api/search-core/src/classes/documentindexedevent/)
 - [`SearchSyncFailedEvent`](/api/search-core/src/classes/searchsyncfailedevent/)

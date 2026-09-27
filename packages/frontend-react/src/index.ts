@@ -97,3 +97,9 @@ export {
   useRequiredPageData,
 } from "./libs/hooks/usePageData";
 export type { CrocoDataFn, CrocoPageContext } from "./libs/types";
+export { GoalProgress, NextActionCard } from "./libs/GoalProgress";
+export type {
+  GoalProgressProps,
+  GoalProgressState,
+  NextActionCardProps,
+} from "./libs/GoalProgress";

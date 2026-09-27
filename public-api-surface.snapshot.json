@@ -301,6 +301,18 @@
           "sourceEntrypoint": "packages/admin-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "ACTIVATION_GUIDE_PERMISSIONS",
+              "exportKind": "named",
+              "source": "./libs/ActivationGuide",
+              "declarationKind": "const"
+            },
+            {
+              "name": "ActivationGuideValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/ActivationGuide",
+              "declarationKind": "class"
+            },
+            {
               "name": "ADMIN_CORE_DIAGNOSTIC_CODES",
               "exportKind": "named",
               "source": "./libs/AdminResource",
@@ -311,6 +323,24 @@
               "exportKind": "named",
               "source": "./libs/AdminResource",
               "declarationKind": "class"
+            },
+            {
+              "name": "assertActivationGuidePermission",
+              "exportKind": "named",
+              "source": "./libs/ActivationGuide",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertActivationGuidePreviewRequest",
+              "exportKind": "named",
+              "source": "./libs/ActivationGuide",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertActivationGuidePublishRequest",
+              "exportKind": "named",
+              "source": "./libs/ActivationGuide",
+              "declarationKind": "function"
             },
             {
               "name": "assertAdminResourceValid",
@@ -677,6 +707,36 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "ActivationGuideAccess",
+              "exportKind": "named",
+              "source": "./libs/ActivationGuide"
+            },
+            {
+              "name": "ActivationGuideOperations",
+              "exportKind": "named",
+              "source": "./libs/ActivationGuide"
+            },
+            {
+              "name": "ActivationGuidePreviewRequest",
+              "exportKind": "named",
+              "source": "./libs/ActivationGuide"
+            },
+            {
+              "name": "ActivationGuidePublished",
+              "exportKind": "named",
+              "source": "./libs/ActivationGuide"
+            },
+            {
+              "name": "ActivationGuidePublishRequest",
+              "exportKind": "named",
+              "source": "./libs/ActivationGuide"
+            },
+            {
+              "name": "ActivationGuideState",
+              "exportKind": "named",
+              "source": "./libs/ActivationGuide"
+            },
             {
               "name": "AdminAction",
               "exportKind": "named",
@@ -2110,6 +2170,12 @@
           "sourceEntrypoint": "packages/admin-react/src/index.ts",
           "runtimeExports": [
             {
+              "name": "ActivationGuideConsole",
+              "exportKind": "named",
+              "source": "./libs/ActivationGuideConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "AdminActionList",
               "exportKind": "named",
               "source": "./libs/components",
@@ -2531,6 +2597,16 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "ActivationGuideConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/ActivationGuideConsole"
+            },
+            {
+              "name": "ActivationGuideTarget",
+              "exportKind": "named",
+              "source": "./libs/ActivationGuideConsole"
+            },
             {
               "name": "AdminActionContract",
               "exportKind": "named",
@@ -16571,6 +16647,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "GoalProgress",
+              "exportKind": "named",
+              "source": "./libs/GoalProgress",
+              "declarationKind": "function"
+            },
+            {
+              "name": "NextActionCard",
+              "exportKind": "named",
+              "source": "./libs/GoalProgress",
+              "declarationKind": "function"
+            },
+            {
               "name": "normalizeProblemDetails",
               "exportKind": "named",
               "source": "./libs/problemUi",
@@ -16838,9 +16926,24 @@
               "source": "./libs/authBridgeTypes"
             },
             {
+              "name": "GoalProgressProps",
+              "exportKind": "named",
+              "source": "./libs/GoalProgress"
+            },
+            {
+              "name": "GoalProgressState",
+              "exportKind": "named",
+              "source": "./libs/GoalProgress"
+            },
+            {
               "name": "LegacyCrocoPageOptions",
               "exportKind": "named",
               "source": "./libs/createCrocoPages"
+            },
+            {
+              "name": "NextActionCardProps",
+              "exportKind": "named",
+              "source": "./libs/GoalProgress"
             },
             {
               "name": "ProblemBoundaryFallback",
@@ -22609,6 +22712,66 @@
               "declarationKind": "class"
             },
             {
+              "name": "GoalAuthorizationProblem",
+              "exportKind": "named",
+              "source": "./libs/goals/GoalProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "GoalConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/goals/GoalProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "GoalContextInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/goals/GoalProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "GoalDefinitionInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/goals/GoalProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "GoalDefinitionNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/goals/GoalProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "GoalEpisodeNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/goals/GoalProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "GoalManager",
+              "exportKind": "named",
+              "source": "./libs/goals/GoalManager",
+              "declarationKind": "class"
+            },
+            {
+              "name": "GoalReceiptInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/goals/GoalProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "GoalStore",
+              "exportKind": "named",
+              "source": "./libs/goals/GoalStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InMemoryGoalStore",
+              "exportKind": "named",
+              "source": "./libs/goals/GoalStore",
+              "declarationKind": "class"
+            },
+            {
               "name": "InMemoryOnboardingStore",
               "exportKind": "named",
               "source": "./libs/OnboardingStore",
@@ -22661,9 +22824,20 @@
               "exportKind": "named",
               "source": "./libs/OnboardingStore",
               "declarationKind": "class"
+            },
+            {
+              "name": "validateGoalDefinition",
+              "exportKind": "named",
+              "source": "./libs/goals/validateGoalDefinition",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
+            {
+              "name": "ActionReceipt",
+              "exportKind": "named",
+              "source": "./libs/goals/types"
+            },
             {
               "name": "CompleteOnboardingStepInput",
               "exportKind": "named",
@@ -22673,6 +22847,101 @@
               "name": "CompleteOnboardingStepResult",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "GoalAchievedEventIntent",
+              "exportKind": "named",
+              "source": "./libs/goals/types"
+            },
+            {
+              "name": "GoalAnchor",
+              "exportKind": "named",
+              "source": "./libs/goals/types"
+            },
+            {
+              "name": "GoalCorrection",
+              "exportKind": "named",
+              "source": "./libs/goals/types"
+            },
+            {
+              "name": "GoalCountMode",
+              "exportKind": "named",
+              "source": "./libs/goals/types"
+            },
+            {
+              "name": "GoalDefinition",
+              "exportKind": "named",
+              "source": "./libs/goals/types"
+            },
+            {
+              "name": "GoalDefinitionPublication",
+              "exportKind": "named",
+              "source": "./libs/goals/types"
+            },
+            {
+              "name": "GoalDeletedObjectPolicy",
+              "exportKind": "named",
+              "source": "./libs/goals/types"
+            },
+            {
+              "name": "GoalEpisode",
+              "exportKind": "named",
+              "source": "./libs/goals/types"
+            },
+            {
+              "name": "GoalEpisodeKey",
+              "exportKind": "named",
+              "source": "./libs/goals/types"
+            },
+            {
+              "name": "GoalEpisodeStatus",
+              "exportKind": "named",
+              "source": "./libs/goals/types"
+            },
+            {
+              "name": "GoalEvidence",
+              "exportKind": "named",
+              "source": "./libs/goals/types"
+            },
+            {
+              "name": "GoalGuidanceStep",
+              "exportKind": "named",
+              "source": "./libs/goals/types"
+            },
+            {
+              "name": "GoalObservationResult",
+              "exportKind": "named",
+              "source": "./libs/goals/types"
+            },
+            {
+              "name": "GoalProgress",
+              "exportKind": "named",
+              "source": "./libs/goals/types"
+            },
+            {
+              "name": "GoalPublicationAuthorizer",
+              "exportKind": "named",
+              "source": "./libs/goals/GoalManager"
+            },
+            {
+              "name": "GoalReceiptVerifier",
+              "exportKind": "named",
+              "source": "./libs/goals/GoalManager"
+            },
+            {
+              "name": "GoalScope",
+              "exportKind": "named",
+              "source": "./libs/goals/types"
+            },
+            {
+              "name": "GoalSubject",
+              "exportKind": "named",
+              "source": "./libs/goals/types"
+            },
+            {
+              "name": "GoalSubjectVerifier",
+              "exportKind": "named",
+              "source": "./libs/goals/GoalManager"
             },
             {
               "name": "OnboardingContext",
@@ -22740,6 +23009,46 @@
               "source": "./libs/types"
             }
           ]
+        },
+        {
+          "exportPath": "./goal-validation",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/goal-validation.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/goal-validation.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/goal-validation.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/onboarding-core/src/goal-validation.ts",
+          "runtimeExports": [
+            {
+              "name": "GoalDefinitionInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/goals/GoalProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "validateGoalDefinition",
+              "exportKind": "named",
+              "source": "./libs/goals/validateGoalDefinition",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "GoalDefinition",
+              "exportKind": "named",
+              "source": "./libs/goals/types"
+            }
+          ]
         }
       ]
     },
@@ -22773,6 +23082,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "addOnboardingGoals",
+              "exportKind": "named",
+              "source": "./migrations/addOnboardingGoals",
+              "declarationKind": "function"
+            },
+            {
               "name": "addOnboardingLifecycleFields",
               "exportKind": "named",
               "source": "./migrations/addOnboardingLifecycleFields",
@@ -22785,10 +23100,40 @@
               "declarationKind": "const"
             },
             {
+              "name": "DrizzleGoalStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleGoalStore",
+              "declarationKind": "class"
+            },
+            {
               "name": "DrizzleOnboardingStore",
               "exportKind": "named",
               "source": "./libs/DrizzleOnboardingStore",
               "declarationKind": "class"
+            },
+            {
+              "name": "GoalAchievedDomainEvent",
+              "exportKind": "named",
+              "source": "./libs/DrizzleGoalStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "onboardingGoalDefinitions",
+              "exportKind": "named",
+              "source": "./libs/goalSchema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "onboardingGoalEpisodes",
+              "exportKind": "named",
+              "source": "./libs/goalSchema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "onboardingGoalReceipts",
+              "exportKind": "named",
+              "source": "./libs/goalSchema",
+              "declarationKind": "const"
             },
             {
               "name": "onboardingStates",
@@ -22803,6 +23148,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "removeOnboardingGoals",
+              "exportKind": "named",
+              "source": "./migrations/addOnboardingGoals",
+              "declarationKind": "function"
+            },
+            {
               "name": "removeOnboardingLifecycleFields",
               "exportKind": "named",
               "source": "./migrations/addOnboardingLifecycleFields",
@@ -22811,9 +23162,19 @@
           ],
           "typeExports": [
             {
+              "name": "DrizzleGoalClient",
+              "exportKind": "named",
+              "source": "./libs/DrizzleGoalStore"
+            },
+            {
               "name": "DrizzleOnboardingClient",
               "exportKind": "named",
               "source": "./libs/DrizzleOnboardingStore"
+            },
+            {
+              "name": "GoalMigrationClient",
+              "exportKind": "named",
+              "source": "./migrations/addOnboardingGoals"
             },
             {
               "name": "OnboardingMigrationClient",

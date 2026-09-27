@@ -10,12 +10,15 @@ import {
   OnboardingStepNotFoundProblem,
 } from "./problems/OnboardingProblems";
 import type { OnboardingDefinition, OnboardingEvent, OnboardingState } from "./types";
+import { GoalContextInvalidProblem } from "./goals/GoalProblems";
+import type { GoalAchievedEventIntent, GoalScope } from "./goals/types";
 
 const STEP_COMPLETION_MAX_ATTEMPTS = 3;
 
 @Component()
 export class OnboardingManager {
   private readonly definitions = new Map<string, OnboardingDefinition>();
+  private readonly goalStepBridges = new Map<string, { onboardingId: string; stepId: string }>();
 
   constructor(
     private readonly store: OnboardingStore,
@@ -80,6 +83,62 @@ export class OnboardingManager {
     }
 
     this.definitions.set(registeredDefinition.id, registeredDefinition);
+  }
+
+  registerGoalStepBridge(input: {
+    scope: GoalScope;
+    goalDefinitionId: string;
+    onboardingId: string;
+    stepId: string;
+  }): void {
+    const definition = this.definitions.get(input.onboardingId);
+    if (!definition) throw new OnboardingDefinitionNotFoundProblem(input.onboardingId);
+    if (!definition.steps.some((step) => step.id === input.stepId)) {
+      throw new OnboardingStepNotFoundProblem(input.onboardingId, input.stepId);
+    }
+    for (const value of [
+      input.scope.tenantId,
+      input.scope.appId,
+      input.scope.environmentId,
+      input.goalDefinitionId,
+    ]) {
+      if (!value?.trim()) throw new GoalContextInvalidProblem("bridge");
+    }
+    const key = JSON.stringify([
+      input.scope.tenantId,
+      input.scope.appId,
+      input.scope.environmentId,
+      input.goalDefinitionId,
+    ]);
+    if (this.goalStepBridges.has(key)) {
+      throw new OnboardingDefinitionInvalidProblem(
+        input.onboardingId,
+        input.stepId,
+        "duplicate-goal-bridge",
+      );
+    }
+    this.goalStepBridges.set(key, { onboardingId: input.onboardingId, stepId: input.stepId });
+  }
+
+  async handleGoalAchieved(event: GoalAchievedEventIntent): Promise<boolean> {
+    const { tenantId, userId } = this.getContext();
+    if (
+      tenantId !== event.scope.tenantId ||
+      userId !== event.subject.id ||
+      event.subject.verified !== true
+    ) {
+      throw new GoalContextInvalidProblem("goal-achieved-subject");
+    }
+    const key = JSON.stringify([
+      event.scope.tenantId,
+      event.scope.appId,
+      event.scope.environmentId,
+      event.definitionId,
+    ]);
+    const bridge = this.goalStepBridges.get(key);
+    if (!bridge) return false;
+    await this.completeStep(bridge.onboardingId, bridge.stepId);
+    return true;
   }
 
   async getStatus(onboardingId: string): Promise<OnboardingState> {

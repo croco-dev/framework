@@ -71,7 +71,10 @@ describe("scheduled live test workflow", () => {
       expect(step?.["continue-on-error"], owner).toBe(true);
       expect(Object.keys(step?.env ?? {}).sort(), owner).toEqual([...requiredNames].sort());
       for (const name of requiredNames) {
-        const secretName = owner === "@croco/cohort-drizzle" ? "MEMBERSHIP_POSTGRES_URL" : name;
+        const secretName =
+          owner === "@croco/cohort-drizzle" || owner === "@croco/onboarding-drizzle"
+            ? "MEMBERSHIP_POSTGRES_URL"
+            : name;
         const expected = name.startsWith("CROCO_LIVE_") ? "true" : `\${{ secrets.${secretName} }}`;
         expect(step?.env?.[name], `${owner}:${name}`).toBe(expected);
       }

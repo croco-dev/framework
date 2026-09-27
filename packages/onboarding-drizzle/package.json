@@ -40,13 +40,16 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
-    "test": "vitest run",
+    "test": "vitest run --exclude src/tests/DrizzleGoalStore.postgres.spec.ts",
+    "test:live": "vitest run src/tests/DrizzleGoalStore.postgres.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint .",
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
   "dependencies": {
+    "@croco/events-core": "workspace:*",
+    "@croco/events-tx": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/onboarding-core": "workspace:*",
     "@croco/tx-core": "workspace:*",
@@ -56,6 +59,8 @@
   "devDependencies": {
     "@croco/problems-core": "workspace:*",
     "@croco/testing": "workspace:*",
+    "@types/pg": "^8.15.6",
+    "pg": "8.22.0",
     "reflect-metadata": "^0.2.2",
     "tsup": "^8.4.0",
     "typescript": "^5.7.2",
