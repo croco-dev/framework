@@ -55,6 +55,8 @@ key와 enum 값만 허용되며 provider billing dimension과 자유 형식 appl
 envelope를 다시 append하면 duplicate success이고, 다른 envelope는 transition conflict입니다.
 Append된 pending intent는 local usage commit이 성공해 `markDeliverable()`이 저장되기 전에는 worker가 claim할 수
 없습니다. commit 이후 중단된 호출은 같은 `eventId`를 replay해 activation을 idempotent하게 완료할 수 있습니다.
+worker가 먼저 항목을 claim하거나 provider 전달을 완료한 뒤에도 replay는 journal의 전달 상태를 바꾸지 않고
+`record()`를 완료합니다.
 
 ```ts
 declare const journal: BillableUsageJournal;

@@ -83,6 +83,9 @@ return { 1, stored }
 local entryJson = redis.call('GET', KEYS[1])
 if not entryJson then return { 0, 'MISSING', '' } end
 local entry = cjson.decode(entryJson)
+if ARGV[1] == 'deliverable' and entry.deliverableAt and entry.state ~= 'terminal-failed' then
+  return { 1, 'ALREADY_ACTIVATED', entryJson }
+end
 if entry.state ~= 'pending' then return { 0, 'STATUS:' .. tostring(entry.state), entryJson } end
 
 local redisTime = redis.call('TIME')
