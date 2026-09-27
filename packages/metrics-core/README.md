@@ -65,3 +65,43 @@ await retention.calculateRetention(10000, movement, 120, 114);
 - `metrics-billing` 패키지를 사용하면 billing 이벤트를 metrics 흐름으로 연결할 수 있습니다.
 - 스냅샷 저장소는 `MetricsRepository`를 구현해 교체할 수 있습니다.
 - PostgreSQL과 TimescaleDB 구현은 `@croco/warehouse-postgres/metrics`에서 제공합니다.
+
+## 등록 지표와 검증 조회
+
+`defineMetric`은 fact 컬럼의 의미를 명시합니다. 금액은 통화별 그룹이나 통화 필터가 있어야 하며, `int64`와 `decimal` 입력과 결과는 정밀도를 잃지 않도록 문자열로 다룹니다.
+
+```ts typecheck
+import { compileMetric, defineMetric, evaluateMetric, project, sum } from "@croco/metrics-core";
+
+const captures = {
+  name: "captures",
+  kind: "transaction",
+  sourceRefs: ["payments"],
+  columns: {
+    capturedAt: { type: "instant" },
+    amountMinor: { type: "money", currency: "currency" },
+    currency: { type: "currency" },
+  },
+} as const;
+
+const definition = defineMetric("cash_received", {
+  version: 1,
+  from: captures,
+  measure: sum(project(captures, "amountMinor")),
+  groupByRequired: [project(captures, "currency")],
+  time: project(captures, "capturedAt"),
+  population: "captured payments",
+  unit: "minor",
+});
+const identity = await compileMetric(definition);
+const result = evaluateMetric(
+  definition,
+  [{ capturedAt: "2026-09-01T00:00:00.000Z", amountMinor: "9007199254740993", currency: "USD" }],
+  {
+    from: "2026-09-01T00:00:00.000Z",
+    to: "2026-10-01T00:00:00.000Z",
+  },
+);
+```
+
+`@croco/metrics-core/runtime`의 `MetricReadService`는 신뢰된 애플리케이션 코드에서만 정의와 조회 executor를 등록합니다. 권한 제공자가 principal, 필드 권한, source revision, snapshot ref, 예산 및 permission/privacy epoch를 공급합니다. 검수된 보고서가 principal, 정의 hash, 기간, 필터, 출처 revision, 품질, 현재 권한과 일치하면 executor를 호출하지 않습니다. 불완전하거나 오래된 보고서는 승인된 출처·품질·진단 metadata와 함께 명시 상태로 반환하고 원본 결과값은 제외합니다. 권한 거부는 metadata 없이 반환합니다. PostgreSQL fact 읽기와 SnapshotSet 고정은 warehouse provider 구현에 속하며 이 경로가 대신 제공하지 않습니다.

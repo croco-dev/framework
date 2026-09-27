@@ -296,3 +296,9 @@ export type {
   DatasetExplorerAction,
   DatasetExplorerRepublishAction,
 } from "./libs/DatasetExplorer";
+export { MetricInspector } from "./libs/MetricInspector";
+export type {
+  MetricInspectorOutcome,
+  MetricInspectorProps,
+  MetricInspectorResult,
+} from "./libs/MetricInspector";

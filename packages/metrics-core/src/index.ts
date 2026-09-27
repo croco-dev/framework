@@ -46,6 +46,35 @@ export { LtvCalculator } from "./libs/LtvCalculator";
  * 메트릭 계산 기능을 단일 API로 제공하는 파사드 서비스입니다.
  */
 export { MetricsEngine } from "./libs/MetricsEngine";
+export {
+  and,
+  average,
+  compileMetric,
+  count,
+  dateBucket,
+  defineMetric,
+  eq,
+  evaluateMetric,
+  exactDistinct,
+  max,
+  MetricExpressionError,
+  min,
+  project,
+  ratio,
+  sum,
+} from "./libs/metric/MetricExpression";
+export type {
+  AggregateExpression,
+  MetricColumn,
+  MetricColumnRef,
+  MetricDefinition,
+  MetricDefinitionIdentity,
+  MetricEvaluation,
+  MetricExpression,
+  MetricFact,
+  MetricFilter,
+  MetricWindow,
+} from "./libs/metric/MetricExpression";
 // Calculators
 
 /**

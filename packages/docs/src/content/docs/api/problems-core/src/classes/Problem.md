@@ -384,6 +384,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`InvalidCarryingCapacityConfigProblem`](/api/metrics-core/src/classes/invalidcarryingcapacityconfigproblem/)
 - [`InvalidRetentionMovementProblem`](/api/metrics-core/src/classes/invalidretentionmovementproblem/)
 - [`InvalidUserCarryingCapacityMetricProblem`](/api/metrics-core/src/classes/invalidusercarryingcapacitymetricproblem/)
+- [`MetricExpressionError`](/api/metrics-core/src/classes/metricexpressionerror/)
 - [`MixedCurrencyMRRProblem`](/api/metrics-core/src/classes/mixedcurrencymrrproblem/)
 - [`RetentionMetricsUnavailableProblem`](/api/metrics-core/src/classes/retentionmetricsunavailableproblem/)
 - [`SnapshotTenantRequiredProblem`](/api/metrics-core/src/classes/snapshottenantrequiredproblem/)
