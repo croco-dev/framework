@@ -304,8 +304,21 @@ export class InMemoryOutboundWebhookStore implements OutboundWebhookStore {
         deliveryId: input.deliveryId,
       });
     }
-    if (delivery.status !== "pending") {
+    if (delivery.status !== "pending" && delivery.status !== "retrying") {
       throw new OutboundWebhookReplayNotAllowedProblem(delivery.id, delivery.status);
+    }
+    if (delivery.status === "retrying") {
+      if (delivery.nextAttemptAt === undefined) {
+        throw new OutboundWebhookConfigurationProblem(
+          "retrying delivery has no next attempt time",
+          {
+            deliveryId: delivery.id,
+          },
+        );
+      }
+      if (delivery.nextAttemptAt.getTime() > input.scheduledAt.getTime()) {
+        return cloneDelivery(delivery);
+      }
     }
     const intent = createIntent(
       delivery,

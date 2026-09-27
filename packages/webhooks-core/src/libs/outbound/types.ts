@@ -156,6 +156,7 @@ export type OutboundWebhookStore = {
     readonly replayId: string;
     readonly createdAt: Date;
   }): Promise<OutboundWebhookDelivery>;
+  /** Schedules pending or due retrying deliveries; an early retry remains on its existing schedule. */
   scheduleDelivery(input: {
     readonly tenantId: string;
     readonly deliveryId: string;
