@@ -651,6 +651,12 @@
       "runtimes": [],
       "domain": "Entitlements"
     },
+    "etl-core": {
+      "role": "Contracts",
+      "subtype": "domain",
+      "runtimes": [],
+      "domain": "ETL"
+    },
     "entitlements-drizzle": {
       "role": "Plugins",
       "subtype": "provider",
@@ -1213,6 +1219,7 @@
         "customer-health-core",
         "engagement-core",
         "entitlements-core",
+        "etl-core",
         "execution-core",
         "features-core",
         "governance-core",
@@ -1461,6 +1468,7 @@
         "credits-core",
         "credits-drizzle",
         "engagement-drizzle",
+        "etl-core",
         "frontend-problems",
         "metering-upstash",
         "notifications-react-email",

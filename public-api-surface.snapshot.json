@@ -11872,6 +11872,142 @@
       ]
     },
     {
+      "packageName": "@croco/etl-core",
+      "relativeDir": "packages/etl-core",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/etl-core/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "decodeSource",
+              "exportKind": "named",
+              "source": "./source/decodeSource",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SourceDecodeProblem",
+              "exportKind": "named",
+              "source": "./source/SourceDecodeProblem",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "SourceField",
+              "exportKind": "named",
+              "source": "./source/types"
+            },
+            {
+              "name": "SourceLimits",
+              "exportKind": "named",
+              "source": "./source/types"
+            },
+            {
+              "name": "SourcePosition",
+              "exportKind": "named",
+              "source": "./source/types"
+            },
+            {
+              "name": "SourceRow",
+              "exportKind": "named",
+              "source": "./source/types"
+            },
+            {
+              "name": "SourceSchema",
+              "exportKind": "named",
+              "source": "./source/types"
+            },
+            {
+              "name": "SourceValue",
+              "exportKind": "named",
+              "source": "./source/types"
+            }
+          ]
+        },
+        {
+          "exportPath": "./source",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/source.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/source.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/source.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/etl-core/src/source.ts",
+          "runtimeExports": [
+            {
+              "name": "decodeSource",
+              "exportKind": "named",
+              "source": "./source/decodeSource",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SourceDecodeProblem",
+              "exportKind": "named",
+              "source": "./source/SourceDecodeProblem",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "SourceField",
+              "exportKind": "named",
+              "source": "./source/types"
+            },
+            {
+              "name": "SourceLimits",
+              "exportKind": "named",
+              "source": "./source/types"
+            },
+            {
+              "name": "SourcePosition",
+              "exportKind": "named",
+              "source": "./source/types"
+            },
+            {
+              "name": "SourceRow",
+              "exportKind": "named",
+              "source": "./source/types"
+            },
+            {
+              "name": "SourceSchema",
+              "exportKind": "named",
+              "source": "./source/types"
+            },
+            {
+              "name": "SourceValue",
+              "exportKind": "named",
+              "source": "./source/types"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "packageName": "@croco/events-core",
       "relativeDir": "packages/events-core",
       "entrypoints": [

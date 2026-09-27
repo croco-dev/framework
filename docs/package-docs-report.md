@@ -6,7 +6,7 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   120 |
+| Public packages                |   121 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
 | Missing generated API docs     |     0 |
@@ -144,6 +144,7 @@ None.
 | `@croco/entitlements-core`             | Contracts      | domain        | Entitlements            | unclaimed                                 |
 | `@croco/entitlements-drizzle`          | Plugins        | provider      | Entitlements            | node, lambda                              |
 | `@croco/esbuild-plugin`                | Tooling        | build-target  | Esbuild Plugin          | unclaimed                                 |
+| `@croco/etl-core`                      | Contracts      | domain        | ETL                     | unclaimed                                 |
 | `@croco/events-core`                   | Contracts      | domain        | Events                  | unclaimed                                 |
 | `@croco/events-inmemory`               | Plugins        | provider      | Events Inmemory         | unclaimed                                 |
 | `@croco/events-tx`                     | Plugins        | integration   | Events Tx               | unclaimed                                 |
@@ -233,7 +234,7 @@ None.
 | Group        | Packages |
 | ------------ | -------: |
 | Core         |       23 |
-| Domain       |       31 |
+| Domain       |       32 |
 | Provider     |       30 |
 | Integration  |        5 |
 | Protocol     |        8 |
@@ -247,7 +248,7 @@ None.
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
 | 🟡 beta             |       78 |
-| 🔴 alpha/WIP        |       19 |
+| 🔴 alpha/WIP        |       20 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix

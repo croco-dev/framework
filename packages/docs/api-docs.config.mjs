@@ -212,6 +212,12 @@ export const apiDocPackages = [
     moduleName: "entitlements-drizzle/src",
   },
   {
+    packageName: "@croco/etl-core",
+    directory: "etl-core",
+    entryPoint: "src/index.ts",
+    moduleName: "etl-core/src",
+  },
+  {
     packageName: "@croco/esbuild-plugin",
     directory: "esbuild-plugin",
     entryPoint: "src/index.ts",
