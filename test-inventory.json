@@ -110,6 +110,12 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/RetentionWorkbench.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/TenantWorkspace.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -213,6 +219,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/PlanReleaseConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/RetentionWorkbench.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -2649,6 +2661,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/metrics-billing"
+    },
+    {
+      "path": "packages/metrics-core/src/tests/BehaviorMetrics.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
     },
     {
       "path": "packages/metrics-core/src/tests/CarryingCapacity.spec.ts",

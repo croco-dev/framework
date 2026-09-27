@@ -178,3 +178,15 @@ assertAdminResourceValid(userResource);
 `assertAdminResourceValid()` throws `AdminResourceValidationProblem`, preserving
 all diagnostics in RFC 7807 extensions so build-time or codegen checks can fail
 without guessing at runtime.
+
+## Behavioral retention
+
+`createRetentionWorkbenchSource` executes `@croco/metrics-core` calculations on the server over normalized observations. Register versioned behavior definitions, provide a bounded `RetentionWorkbenchAdapter`, and set `maxEvents` and `maxPageSize`. `load` returns aggregate cards; `drilldown` returns a bounded page with denominator/numerator membership, exclusion reasons, action counts and active days.
+
+The adapter authorizes the exact app/environment/tenant and subject kind before any read. Drilldown additionally requires `retention:drilldown`; requests carrying `savedViewId` require `retention:saved-view:read`. Missing tenants fail validation. `subjectLabel` must return a stable opaque reference or masked label, never raw PII; it runs only after drilldown authorization. Aggregate cards contain no subject IDs or event IDs. Keep this adapter on the server and bind authorization to the authenticated caller.
+
+Readers must return complete normalized input within the requested limit. A result above `maxEvents` fails with `admin-core/retention-row-limit`; silently truncating observations and declaring them complete violates the adapter contract. The source does not decode files, run SQL, create a warehouse connection or store reports. Saved view persistence remains owned by the existing host repository: bind its definition/version, input hash and observation cutoff before calling this source. Passing a saved view ID alone does not persist or verify that binding.
+
+Source states distinguish `empty`, `provisional`, `insufficient`, `denied`, `error` and `ready`; the client supplies `loading`. Missing observation completeness never publishes a complete value. Typed Croco Problems retain their diagnostic code; untyped provider errors become `admin-core/retention-source-failed` without exposing provider details.
+
+Each loaded snapshot includes `inputToken`, a SHA-256 digest of the definition, selected windows/options, scope, normalized observations, history/completeness cutoffs and deleted subjects. Pass that token in every `drilldown` page request. The source reauthorizes, rereads and rejects changed input with `admin-core/retention-stale-input` before exposing subject labels. Reload the aggregate snapshot to recover; never retry a page against a new token while displaying old counts. Tokens require Web Crypto (`globalThis.crypto.subtle`) on the server, add no store, and grant no authorization. Input row ordering does not change the token.

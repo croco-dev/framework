@@ -427,6 +427,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createRetentionWorkbenchSource",
+              "exportKind": "named",
+              "source": "./libs/RetentionWorkbench",
+              "declarationKind": "function"
+            },
+            {
               "name": "createTenantWorkspaceLoadingSnapshot",
               "exportKind": "named",
               "source": "./libs/TenantWorkspace",
@@ -616,6 +622,12 @@
               "exportKind": "named",
               "source": "./libs/TenantWorkspace",
               "declarationKind": "function"
+            },
+            {
+              "name": "RetentionWorkbenchProblem",
+              "exportKind": "named",
+              "source": "./libs/RetentionWorkbench",
+              "declarationKind": "class"
             },
             {
               "name": "validateAdminResource",
@@ -1186,6 +1198,51 @@
               "name": "RecipientRef",
               "exportKind": "named",
               "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "RetentionDrilldownPage",
+              "exportKind": "named",
+              "source": "./libs/RetentionWorkbench"
+            },
+            {
+              "name": "RetentionDrilldownRow",
+              "exportKind": "named",
+              "source": "./libs/RetentionWorkbench"
+            },
+            {
+              "name": "RetentionMetricCard",
+              "exportKind": "named",
+              "source": "./libs/RetentionWorkbench"
+            },
+            {
+              "name": "RetentionMetricSelection",
+              "exportKind": "named",
+              "source": "./libs/RetentionWorkbench"
+            },
+            {
+              "name": "RetentionPermission",
+              "exportKind": "named",
+              "source": "./libs/RetentionWorkbench"
+            },
+            {
+              "name": "RetentionWorkbenchAdapter",
+              "exportKind": "named",
+              "source": "./libs/RetentionWorkbench"
+            },
+            {
+              "name": "RetentionWorkbenchRequest",
+              "exportKind": "named",
+              "source": "./libs/RetentionWorkbench"
+            },
+            {
+              "name": "RetentionWorkbenchSnapshot",
+              "exportKind": "named",
+              "source": "./libs/RetentionWorkbench"
+            },
+            {
+              "name": "RetentionWorkbenchState",
+              "exportKind": "named",
+              "source": "./libs/RetentionWorkbench"
             },
             {
               "name": "TenantBusinessSource",
@@ -2377,6 +2434,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "RetentionWorkbench",
+              "exportKind": "named",
+              "source": "./libs/RetentionWorkbench",
+              "declarationKind": "function"
+            },
+            {
               "name": "submitAdminForm",
               "exportKind": "named",
               "source": "./libs/snapshot",
@@ -3312,6 +3375,11 @@
               "name": "PlanReleaseValidationState",
               "exportKind": "named",
               "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "RetentionWorkbenchProps",
+              "exportKind": "named",
+              "source": "./libs/RetentionWorkbench"
             },
             {
               "name": "TenantBusinessWorkspaceProps",
@@ -20713,6 +20781,30 @@
               "declarationKind": "class"
             },
             {
+              "name": "computeCohortRetention",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics",
+              "declarationKind": "function"
+            },
+            {
+              "name": "computeFrequencyDistribution",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics",
+              "declarationKind": "function"
+            },
+            {
+              "name": "computePeriodicRetention",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ConflictingBehaviorEventProblem",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics",
+              "declarationKind": "class"
+            },
+            {
               "name": "GrossMarginRequiredProblem",
               "exportKind": "named",
               "source": "./libs/problems/MetricsProblems",
@@ -20722,6 +20814,12 @@
               "name": "GrowthCalculator",
               "exportKind": "named",
               "source": "./libs/GrowthCalculator",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidBehaviorMetricProblem",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics",
               "declarationKind": "class"
             },
             {
@@ -20802,6 +20900,86 @@
               "name": "ActiveUserProvider",
               "exportKind": "named",
               "source": "./libs/interfaces/ActiveUserProvider"
+            },
+            {
+              "name": "BehaviorAvailability",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics"
+            },
+            {
+              "name": "BehaviorDataset",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics"
+            },
+            {
+              "name": "BehaviorDefinition",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics"
+            },
+            {
+              "name": "BehaviorFrequencyOptions",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics"
+            },
+            {
+              "name": "BehaviorFrequencyResult",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics"
+            },
+            {
+              "name": "BehaviorMetricResult",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics"
+            },
+            {
+              "name": "BehaviorObservation",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics"
+            },
+            {
+              "name": "BehaviorReason",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics"
+            },
+            {
+              "name": "BehaviorResolvedWindow",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics"
+            },
+            {
+              "name": "BehaviorRetentionOptions",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics"
+            },
+            {
+              "name": "BehaviorRetentionResult",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics"
+            },
+            {
+              "name": "BehaviorScope",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics"
+            },
+            {
+              "name": "BehaviorSourceRef",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics"
+            },
+            {
+              "name": "BehaviorSubjectMembership",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics"
+            },
+            {
+              "name": "BehaviorSubjectReason",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics"
+            },
+            {
+              "name": "BehaviorWindow",
+              "exportKind": "named",
+              "source": "./libs/BehaviorMetrics"
             },
             {
               "name": "CCComparisonResult",

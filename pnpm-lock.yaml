@@ -282,6 +282,16 @@ importers:
         specifier: 2.9.0
         version: 2.9.0
 
+  examples/behavior-retention:
+    dependencies:
+      '@croco/metrics-core':
+        specifier: workspace:*
+        version: link:../../packages/metrics-core
+    devDependencies:
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+
   examples/fact-history:
     dependencies:
       '@croco/admin-core':
@@ -569,6 +579,9 @@ importers:
       '@croco/analytics-core':
         specifier: workspace:*
         version: link:../analytics-core
+      '@croco/metrics-core':
+        specifier: workspace:*
+        version: link:../metrics-core
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core

@@ -468,3 +468,11 @@ export function CreateUserForm() {
 `domain_problem`, `permission_denied`, and `external_failure` render as global
 Problems with explicit recovery actions, so custom visual components can reuse
 the same state model without losing failure evidence.
+
+## Retention workbench
+
+`RetentionWorkbench` renders the state from `createRetentionWorkbenchSource` in `@croco/admin-core`. Supply `state` and `onSelectMetric(selectionId, inputToken)`; fetch the selected denominator page from the server and pass it as `drilldown`. Use `drilldownState` for loading, denial or failure and `onNextPage` for bounded pagination. All metric formulas execute through metrics-core on the server; the browser only formats returned values.
+
+Cards distinguish periodic retention, first-behavior cohort retention and frequency distributions. They show observed numerator/denominator counts, definition/version, timezone, source names, windows, completion cutoff and deleted-subject policy. Unestablished values remain explicit rather than displaying zero percent. Native buttons support keyboard selection; the denominator table reports inclusion/exclusion reasons without receiving raw behavior rows.
+
+Pass the callback token to the server unchanged, including `onNextPage(selectionId, offset, inputToken)`. Set `drilldownState="stale"` when the source returns `admin-core/retention-stale-input`. Stale pages are hidden, including pages whose token differs from the displayed snapshot. The required `onReload` callback reloads aggregate results and clears the previous drilldown. Provider errors also expose this reload action; access denial remains explicit.

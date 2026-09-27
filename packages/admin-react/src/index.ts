@@ -287,3 +287,6 @@ export type {
 
 export { FactHistoryPanel } from "./libs/FactHistoryPanel";
 export type { FactHistoryPanelProps } from "./libs/FactHistoryPanel";
+
+export { RetentionWorkbench } from "./libs/RetentionWorkbench";
+export type { RetentionWorkbenchProps } from "./libs/RetentionWorkbench";
