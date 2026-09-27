@@ -1426,9 +1426,97 @@ describe("PolarWebhookHandler", () => {
     beforeEach(() => {
       vi.mocked(mockStore.reserveWebhook).mockResolvedValue(undefined);
       vi.mocked(mockStore.completeWebhook).mockResolvedValue(undefined);
+      vi.mocked(mockStore.claimWebhookDelivery).mockImplementation(async (eventId) => ({
+        status: "claimed",
+        token: `claim:${eventId}`,
+      }));
+      vi.mocked(mockStore.completeWebhookDelivery).mockResolvedValue(true);
+      vi.mocked(mockStore.releaseWebhookDelivery).mockResolvedValue(true);
     });
 
-    it.each(["saveOrder", "publishNow", "completeWebhook"] as const)(
+    function mockPaidOrderDelivery() {
+      const event = {
+        id: "evt-order-claim",
+        type: "order.paid",
+        data: {
+          id: "order-claim",
+          net_amount: 9900,
+          currency: "USD",
+          billing_reason: "purchase",
+          customer: { externalId: "tenant-123", metadata: {} },
+          createdAt: "2026-01-31T00:00:00Z",
+        },
+      };
+      vi.mocked(mockVerifyPolarWebhook).mockReturnValue(event);
+      return event;
+    }
+
+    it("acknowledges completed delivery without repeating order effects", async () => {
+      const event = mockPaidOrderDelivery();
+      vi.mocked(mockStore.claimWebhookDelivery).mockResolvedValueOnce({ status: "completed" });
+
+      await expect(handler.handle("{}", {})).resolves.toEqual({ success: true, eventId: event.id });
+
+      expect(mockStore.saveOrder).not.toHaveBeenCalled();
+      expect(mockEventPublisher.publishIdempotently).not.toHaveBeenCalled();
+      expect(mockStore.completeWebhookDelivery).not.toHaveBeenCalled();
+      expect(mockStore.releaseWebhookDelivery).not.toHaveBeenCalled();
+      expect(mockStore.reserveWebhook).not.toHaveBeenCalled();
+    });
+
+    it("rejects a busy delivery without releasing another worker's claim", async () => {
+      mockPaidOrderDelivery();
+      vi.mocked(mockStore.claimWebhookDelivery).mockResolvedValueOnce({ status: "in_progress" });
+
+      await expect(handler.handle("{}", {})).rejects.toMatchObject({
+        code: "WEBHOOK_PROCESSING_FAILED",
+        status: 500,
+      });
+
+      expect(mockStore.saveOrder).not.toHaveBeenCalled();
+      expect(mockEventPublisher.publishIdempotently).not.toHaveBeenCalled();
+      expect(mockStore.completeWebhookDelivery).not.toHaveBeenCalled();
+      expect(mockStore.releaseWebhookDelivery).not.toHaveBeenCalled();
+    });
+
+    it("preserves claim failures without processing or releasing an unowned delivery", async () => {
+      mockPaidOrderDelivery();
+      const failure = new Error("claim store unavailable");
+      vi.mocked(mockStore.claimWebhookDelivery).mockRejectedValueOnce(failure);
+
+      await expect(handler.handle("{}", {})).rejects.toMatchObject({
+        code: "WEBHOOK_PROCESSING_FAILED",
+        status: 500,
+        cause: failure,
+      });
+
+      expect(mockStore.saveOrder).not.toHaveBeenCalled();
+      expect(mockStore.releaseWebhookDelivery).not.toHaveBeenCalled();
+    });
+
+    it("rejects lost completion ownership and retries with a fresh claim token", async () => {
+      const event = mockPaidOrderDelivery();
+      vi.mocked(mockStore.claimWebhookDelivery)
+        .mockResolvedValueOnce({ status: "claimed", token: "expired-token" })
+        .mockResolvedValueOnce({ status: "claimed", token: "fresh-token" });
+      vi.mocked(mockStore.completeWebhookDelivery).mockResolvedValueOnce(false);
+      vi.mocked(mockStore.releaseWebhookDelivery).mockResolvedValueOnce(false);
+
+      await expect(handler.handle("{}", {})).rejects.toMatchObject({
+        code: "WEBHOOK_PROCESSING_FAILED",
+        status: 500,
+      });
+      expect(mockStore.completeWebhookDelivery).toHaveBeenCalledWith(event.id, "expired-token");
+      expect(mockStore.releaseWebhookDelivery).toHaveBeenCalledWith(event.id, "expired-token");
+
+      await expect(handler.handle("{}", {})).resolves.toEqual({ success: true, eventId: event.id });
+      expect(mockStore.completeWebhookDelivery).toHaveBeenLastCalledWith(event.id, "fresh-token");
+      expect(mockStore.reserveWebhook).not.toHaveBeenCalled();
+      expect(mockStore.completeWebhook).not.toHaveBeenCalled();
+      expect(mockStore.failWebhook).not.toHaveBeenCalled();
+    });
+
+    it.each(["saveOrder", "publishNow", "completeWebhookDelivery"] as const)(
       "rejects %s failures with their cause and allows the same event to retry",
       async (operation) => {
         const failure = new Error(`${operation} unavailable`);
@@ -1456,13 +1544,16 @@ describe("PolarWebhookHandler", () => {
             await expect(attempt).rejects.toMatchObject({ status: 500, cause: failure });
           }),
         );
-        expect(mockStore.reserveWebhook).toHaveBeenCalledTimes(1);
-        expect(mockStore.failWebhook).toHaveBeenCalledExactlyOnceWith(event.id);
+        expect(mockStore.claimWebhookDelivery).toHaveBeenCalledTimes(1);
+        expect(mockStore.releaseWebhookDelivery).toHaveBeenCalledExactlyOnceWith(
+          event.id,
+          `claim:${event.id}`,
+        );
         await expect(handler.handle("{}", { "webhook-id": event.id })).resolves.toEqual({
           success: true,
           eventId: event.id,
         });
-        expect(mockStore.reserveWebhook).toHaveBeenCalledTimes(2);
+        expect(mockStore.claimWebhookDelivery).toHaveBeenCalledTimes(2);
       },
     );
 
@@ -1483,7 +1574,7 @@ describe("PolarWebhookHandler", () => {
             throw failure;
         });
         if (operation === "completion") {
-          vi.spyOn(store, "completeWebhook").mockRejectedValueOnce(failure);
+          vi.spyOn(store, "completeWebhookDelivery").mockRejectedValueOnce(failure);
         }
         const event = {
           id: "evt-order-durable-retry",
@@ -1523,10 +1614,12 @@ describe("PolarWebhookHandler", () => {
     );
 
     it.each([new Error("storage unavailable"), { reason: "storage unavailable" }])(
-      "preserves the processing cause and rollback failure diagnostics",
+      "preserves the processing cause and release failure diagnostics",
       async (failure) => {
         vi.mocked(mockStore.saveOrder).mockRejectedValueOnce(failure);
-        vi.mocked(mockStore.failWebhook).mockRejectedValueOnce(new Error("rollback unavailable"));
+        vi.mocked(mockStore.releaseWebhookDelivery).mockRejectedValueOnce(
+          new Error("release unavailable"),
+        );
         vi.mocked(mockVerifyPolarWebhook).mockReturnValue({
           id: "evt-order-rollback",
           type: "order.paid",
@@ -1545,9 +1638,9 @@ describe("PolarWebhookHandler", () => {
           code: "WEBHOOK_PROCESSING_FAILED",
           status: 500,
           cause: failure instanceof Error ? failure : { cause: failure },
-          detail: expect.stringContaining("rollback failed: rollback unavailable"),
+          detail: expect.stringContaining("release failed: release unavailable"),
         });
-        expect(mockStore.completeWebhook).not.toHaveBeenCalled();
+        expect(mockStore.completeWebhookDelivery).not.toHaveBeenCalled();
       },
     );
 
@@ -1585,8 +1678,12 @@ describe("PolarWebhookHandler", () => {
       expect(mockEventPublisher.publishNow).toHaveBeenCalledWith(
         expect.objectContaining({ reason: "subscription_create" }),
       );
-      expect(mockStore.reserveWebhook).toHaveBeenCalledWith("evt-456", "order.paid");
-      expect(mockStore.completeWebhook).toHaveBeenCalledWith("evt-456");
+      expect(mockStore.claimWebhookDelivery).toHaveBeenCalledWith(
+        "evt-456",
+        "order.paid",
+        expect.any(Number),
+      );
+      expect(mockStore.completeWebhookDelivery).toHaveBeenCalledWith("evt-456", "claim:evt-456");
     });
 
     it.each([
@@ -1621,7 +1718,7 @@ describe("PolarWebhookHandler", () => {
     });
 
     it.each([undefined, "subscription_reactivation"])(
-      "rejects unsupported Polar billing reason %s before reservation",
+      "rejects unsupported Polar billing reason %s before claiming delivery",
       async (billingReason) => {
         const eventData = {
           id: "evt-invalid-billing-reason",
@@ -1643,7 +1740,7 @@ describe("PolarWebhookHandler", () => {
             "webhook-id": eventData.id,
           }),
         ).rejects.toBeInstanceOf(WebhookValidationProblem);
-        expect(mockStore.reserveWebhook).not.toHaveBeenCalled();
+        expect(mockStore.claimWebhookDelivery).not.toHaveBeenCalled();
         expect(mockStore.saveOrder).not.toHaveBeenCalled();
       },
     );
@@ -1667,11 +1764,9 @@ describe("PolarWebhookHandler", () => {
       vi.mocked(mockVerifyPolarWebhook).mockImplementation((body: Buffer | string) => {
         return JSON.parse(Buffer.isBuffer(body) ? body.toString("utf8") : body) as never;
       });
-      vi.mocked(mockStore.reserveWebhook)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce(undefined)
-        .mockRejectedValueOnce(new WebhookAlreadyProcessedProblem("evt-order-paid"));
+      vi.mocked(mockStore.claimWebhookDelivery)
+        .mockResolvedValueOnce({ status: "claimed", token: "claim:evt-order-paid" })
+        .mockResolvedValueOnce({ status: "completed" });
 
       const results = [];
       for (const delivery of deliveries) {
@@ -1698,12 +1793,25 @@ describe("PolarWebhookHandler", () => {
         "evt-order-updated",
         "order.updated",
       );
-      expect(mockStore.reserveWebhook).toHaveBeenNthCalledWith(3, "evt-order-paid", "order.paid");
-      expect(mockStore.reserveWebhook).toHaveBeenNthCalledWith(4, "evt-order-paid", "order.paid");
-      expect(mockStore.completeWebhook).toHaveBeenCalledTimes(3);
+      expect(mockStore.claimWebhookDelivery).toHaveBeenNthCalledWith(
+        1,
+        "evt-order-paid",
+        "order.paid",
+        expect.any(Number),
+      );
+      expect(mockStore.claimWebhookDelivery).toHaveBeenNthCalledWith(
+        2,
+        "evt-order-paid",
+        "order.paid",
+        expect.any(Number),
+      );
+      expect(mockStore.completeWebhook).toHaveBeenCalledTimes(2);
       expect(mockStore.completeWebhook).toHaveBeenCalledWith("evt-order-created");
       expect(mockStore.completeWebhook).toHaveBeenCalledWith("evt-order-updated");
-      expect(mockStore.completeWebhook).toHaveBeenCalledWith("evt-order-paid");
+      expect(mockStore.completeWebhookDelivery).toHaveBeenCalledExactlyOnceWith(
+        "evt-order-paid",
+        "claim:evt-order-paid",
+      );
       expect(mockStore.saveOrder).toHaveBeenCalledTimes(1);
       expect(mockStore.saveOrder).toHaveBeenCalledWith(
         expect.objectContaining({
