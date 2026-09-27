@@ -124,6 +124,17 @@ export class OutboundWebhookRuntime {
     return this.publishIntents(tenantId, intents);
   }
 
+  private async publishDeliveryIntents(
+    tenantId: string,
+    deliveryId: string,
+  ): Promise<OutboundWebhookIntentPublicationOutcome> {
+    const intents = await this.options.store.listUnpublishedIntents(tenantId);
+    return this.publishIntents(
+      tenantId,
+      intents.filter((intent) => intent.deliveryId === deliveryId),
+    );
+  }
+
   private async publishIntents(
     tenantId: string,
     intents: readonly OutboundWebhookDispatchIntent[],
@@ -318,7 +329,7 @@ export class OutboundWebhookRuntime {
         ...(next.nextAttemptAt === undefined ? {} : { nextAttemptAt: next.nextAttemptAt }),
       });
       if (next.status === "retrying") {
-        assertIntentPublicationSucceeded(await this.publishUnpublishedIntents(tenantId));
+        assertIntentPublicationSucceeded(await this.publishDeliveryIntents(tenantId, deliveryId));
       }
       return updated;
     } finally {
@@ -377,7 +388,7 @@ export class OutboundWebhookRuntime {
       replayId,
       createdAt: this.now(),
     });
-    assertIntentPublicationSucceeded(await this.publishUnpublishedIntents(tenantId));
+    assertIntentPublicationSucceeded(await this.publishDeliveryIntents(tenantId, deliveryId));
     return delivery;
   }
 
@@ -401,7 +412,7 @@ export class OutboundWebhookRuntime {
       deliveryId,
       scheduledAt: this.now(),
     });
-    assertIntentPublicationSucceeded(await this.publishUnpublishedIntents(tenantId));
+    assertIntentPublicationSucceeded(await this.publishDeliveryIntents(tenantId, deliveryId));
     return resumed;
   }
 
