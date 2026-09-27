@@ -799,6 +799,62 @@ describe("OutboundWebhookRuntime", () => {
     ).toEqual([1, 2]);
   });
 
+  it("publishes the retained retry intent once when resuming after publication failed", async () => {
+    let now = new Date(START);
+    let failRetryPublication = true;
+    const store = new InMemoryOutboundWebhookStore();
+    const endpointStore = new InMemoryOutboundWebhookEndpointStore([ACTIVE_ENDPOINT]);
+    const publisher: OutboundWebhookTaskPublisher = {
+      publish: vi.fn(async ({ idempotencyKey }) => {
+        if (failRetryPublication && idempotencyKey.endsWith(":attempt:2")) {
+          throw new Error("task broker unavailable");
+        }
+      }),
+    };
+    const runtime = new OutboundWebhookRuntime({
+      store,
+      endpointStore,
+      secretStore: new InMemoryOutboundWebhookSecretStore([ACTIVE_SECRET]),
+      taskPublisher: publisher,
+      transport: new FakeOutboundWebhookTransport([
+        { kind: "http", status: 503 },
+        { kind: "http", status: 204 },
+      ]),
+      urlPolicy: publicTestUrlPolicy(),
+      now: () => new Date(now),
+    });
+    const deliveryId = (await runtime.publish(EVENT)).deliveries[0]?.id ?? "";
+    await expect(runtime.dispatch(EVENT.tenantId, deliveryId)).rejects.toBeInstanceOf(
+      OutboundWebhookRetryableProblem,
+    );
+    const retainedIntent = (await store.listUnpublishedIntents(EVENT.tenantId))[0];
+    expect(retainedIntent?.idempotencyKey).toBe(`${deliveryId}:attempt:2`);
+
+    endpointStore.set({ ...ACTIVE_ENDPOINT, status: "paused" });
+    now = new Date(START.getTime() + 120_000);
+    await expect(runtime.dispatch(EVENT.tenantId, deliveryId)).rejects.toBeInstanceOf(
+      OutboundWebhookReplayNotAllowedProblem,
+    );
+
+    endpointStore.set(ACTIVE_ENDPOINT);
+    failRetryPublication = false;
+    vi.mocked(publisher.publish).mockClear();
+    await expect(runtime.resume(EVENT.tenantId, deliveryId)).resolves.toMatchObject({
+      status: "retrying",
+      attemptCount: 1,
+      nextAttemptAt: new Date(START.getTime() + 60_000),
+    });
+    expect(publisher.publish).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ idempotencyKey: retainedIntent?.idempotencyKey }),
+    );
+    expect(await store.listUnpublishedIntents(EVENT.tenantId)).toEqual([]);
+
+    expect((await runtime.dispatch(EVENT.tenantId, deliveryId)).status).toBe("delivered");
+    expect(
+      (await store.listAttempts(EVENT.tenantId, deliveryId)).map((attempt) => attempt.number),
+    ).toEqual([1, 2]);
+  });
+
   it("enforces tenant isolation when committing endpoint-specific deliveries", async () => {
     const store = new InMemoryOutboundWebhookStore();
     const event = {

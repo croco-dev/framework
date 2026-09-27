@@ -319,6 +319,16 @@ export class InMemoryOutboundWebhookStore implements OutboundWebhookStore {
       if (delivery.nextAttemptAt.getTime() > input.scheduledAt.getTime()) {
         return cloneDelivery(delivery);
       }
+      const hasUnpublishedIntent = [...this.intents.values()].some(
+        (intent) =>
+          intent.tenantId === input.tenantId &&
+          intent.deliveryId === delivery.id &&
+          intent.publishedAt === undefined &&
+          intent.visibleAt.getTime() <= input.scheduledAt.getTime(),
+      );
+      if (hasUnpublishedIntent) {
+        return cloneDelivery(delivery);
+      }
     }
     const intent = createIntent(
       delivery,

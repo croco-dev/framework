@@ -273,6 +273,71 @@ export function createOutboundWebhookStoreConformanceSuite(
             (await store.listUnpublishedIntents(options.event.tenantId)).length === 1,
             "repeated resume at the same time must retain one intent",
           );
+          await store.scheduleDelivery({
+            tenantId: options.event.tenantId,
+            deliveryId: delivery.id,
+            scheduledAt: new Date(scheduledAt.getTime() + 1),
+          });
+          const laterIntents = await store.listUnpublishedIntents(options.event.tenantId);
+          assert(
+            laterIntents.length === 1 &&
+              laterIntents[0]?.id === intents[0]?.id &&
+              laterIntents[0]?.idempotencyKey === intents[0]?.idempotencyKey &&
+              laterIntents[0]?.visibleAt.getTime() === intents[0]?.visibleAt.getTime(),
+            "a later resume must reuse the unpublished resume intent",
+          );
+        },
+      },
+      {
+        name: "reuses an unpublished retry intent when resuming a due delivery",
+        run: async () => {
+          const store = await options.createStore();
+          const committed = await store.commitEvent({
+            event: options.event,
+            endpoints: [options.endpoint],
+          });
+          const delivery = committed.deliveries[0];
+          const initialIntent = committed.intents[0];
+          assert(
+            delivery !== undefined && initialIntent !== undefined,
+            "delivery and intent must exist",
+          );
+          await store.markIntentPublished(
+            options.event.tenantId,
+            initialIntent.id,
+            options.event.committedAt,
+          );
+
+          const nextAttemptAt = new Date(options.event.committedAt.getTime() + 1_000);
+          const retrying = await store.recordAttempt({
+            tenantId: options.event.tenantId,
+            attempt: createAttempt(delivery.id, 1, options, "retryable"),
+            status: "retrying",
+            nextAttemptAt,
+          });
+          const intentsBeforeResume = await store.listUnpublishedIntents(options.event.tenantId);
+          assert(intentsBeforeResume.length === 1, "unpublished retry intent must exist");
+
+          const resumed = await store.scheduleDelivery({
+            tenantId: options.event.tenantId,
+            deliveryId: delivery.id,
+            scheduledAt: nextAttemptAt,
+          });
+          const intentsAfterResume = await store.listUnpublishedIntents(options.event.tenantId);
+          assert(
+            intentsAfterResume.length === 1 &&
+              intentsAfterResume[0]?.id === intentsBeforeResume[0]?.id &&
+              intentsAfterResume[0]?.idempotencyKey === intentsBeforeResume[0]?.idempotencyKey &&
+              intentsAfterResume[0]?.visibleAt.getTime() ===
+                intentsBeforeResume[0]?.visibleAt.getTime(),
+            "due resume must reuse the unpublished retry intent",
+          );
+          assert(
+            resumed.status === retrying.status &&
+              resumed.attemptCount === retrying.attemptCount &&
+              resumed.nextAttemptAt?.getTime() === nextAttemptAt.getTime(),
+            "resume must preserve the retry state, attempt count, and original schedule",
+          );
         },
       },
       {

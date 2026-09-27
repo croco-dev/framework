@@ -317,7 +317,7 @@ Atomically marks an unpublished intent and returns whether this call made the tr
 
 > **scheduleDelivery**(`input`): `Promise`\<[`OutboundWebhookDelivery`](/api/webhooks-core/src/type-aliases/outboundwebhookdelivery/)\>
 
-Schedules pending or due retrying deliveries; an early retry remains on its existing schedule.
+Schedules pending or due retrying deliveries; due unpublished intents and early retries keep their existing schedule.
 
 #### Parameters
 
