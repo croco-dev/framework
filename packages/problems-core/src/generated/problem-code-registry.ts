@@ -3268,7 +3268,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 126,
+          line: 138,
           column: 1,
           kind: "problem-class",
         },
@@ -3363,7 +3363,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 139,
+          line: 151,
           column: 1,
           kind: "problem-class",
         },
@@ -3394,7 +3394,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 147,
+          line: 159,
           column: 1,
           kind: "problem-class",
         },
@@ -3487,7 +3487,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 183,
+          line: 195,
           column: 1,
           kind: "problem-class",
         },
@@ -3518,7 +3518,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 175,
+          line: 187,
           column: 1,
           kind: "problem-class",
         },
@@ -3549,7 +3549,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 242,
+          line: 254,
           column: 1,
           kind: "problem-class",
         },
@@ -3671,7 +3671,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 155,
+          line: 167,
           column: 1,
           kind: "problem-class",
         },
@@ -3702,7 +3702,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 167,
+          line: 179,
           column: 1,
           kind: "problem-class",
         },
@@ -3854,7 +3854,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 191,
+          line: 203,
           column: 1,
           kind: "problem-class",
         },
@@ -3884,7 +3884,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 199,
+          line: 211,
           column: 1,
           kind: "problem-class",
         },
@@ -4008,7 +4008,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 229,
+          line: 241,
           column: 1,
           kind: "problem-class",
         },
@@ -4041,7 +4041,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 288,
+          line: 300,
           column: 1,
           kind: "problem-class",
         },
@@ -4072,7 +4072,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 301,
+          line: 313,
           column: 1,
           kind: "problem-class",
         },
@@ -4103,7 +4103,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 267,
+          line: 279,
           column: 1,
           kind: "problem-class",
         },
@@ -4136,7 +4136,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 277,
+          line: 289,
           column: 1,
           kind: "problem-class",
         },
@@ -4167,7 +4167,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 250,
+          line: 262,
           column: 1,
           kind: "problem-class",
         },
@@ -4198,7 +4198,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 207,
+          line: 219,
           column: 1,
           kind: "problem-class",
         },
@@ -4229,7 +4229,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/billing-core/src/libs/problems/BillingProblems.ts",
-          line: 215,
+          line: 227,
           column: 1,
           kind: "problem-class",
         },

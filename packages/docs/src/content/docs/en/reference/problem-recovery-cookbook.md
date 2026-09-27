@@ -2722,7 +2722,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:126:1` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:138:1` (problem-class)
 
 <a id="billing-checkout-response-lost"></a>
 
@@ -2776,7 +2776,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:139:1` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:151:1` (problem-class)
 
 <a id="billing-invalid-money-currency"></a>
 
@@ -2794,7 +2794,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:147:1` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:159:1` (problem-class)
 
 <a id="billing-invalid-plan-release-schedule"></a>
 
@@ -2848,7 +2848,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:183:1` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:195:1` (problem-class)
 
 <a id="billing-invalid-plan-version-ref"></a>
 
@@ -2866,7 +2866,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:175:1` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:187:1` (problem-class)
 
 <a id="billing-invalid-subscription-quantity"></a>
 
@@ -2884,7 +2884,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:242:1` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:254:1` (problem-class)
 
 <a id="billing-lifecycle-command-conflict"></a>
 
@@ -2956,7 +2956,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:155:1` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:167:1` (problem-class)
 
 <a id="billing-money-division-by-zero"></a>
 
@@ -2974,7 +2974,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:167:1` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:179:1` (problem-class)
 
 <a id="billing-overlapping-plan-effective-period"></a>
 
@@ -3064,7 +3064,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:191:1` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:203:1` (problem-class)
 
 <a id="billing-plan-version-conflict"></a>
 
@@ -3082,7 +3082,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:199:1` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:211:1` (problem-class)
 
 <a id="billing-provider-capability-unavailable"></a>
 
@@ -3154,7 +3154,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:229:1` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:241:1` (problem-class)
 
 <a id="billing-subscription-quantity-provider-mismatch"></a>
 
@@ -3172,7 +3172,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:288:1` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:300:1` (problem-class)
 
 <a id="billing-subscription-quantity-provider-source-ahead"></a>
 
@@ -3190,7 +3190,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:301:1` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:313:1` (problem-class)
 
 <a id="billing-subscription-quantity-reconciliation-conflict"></a>
 
@@ -3208,7 +3208,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:267:1` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:279:1` (problem-class)
 
 <a id="billing-subscription-quantity-reconciliation-failed"></a>
 
@@ -3226,7 +3226,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:277:1` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:289:1` (problem-class)
 
 <a id="billing-subscription-quantity-source-mismatch"></a>
 
@@ -3244,7 +3244,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:250:1` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:262:1` (problem-class)
 
 <a id="billing-unknown-plan-version"></a>
 
@@ -3262,7 +3262,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:207:1` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:219:1` (problem-class)
 
 <a id="billing-unknown-provider-plan-mapping"></a>
 
@@ -3280,7 +3280,7 @@ Sources:
 
 Sources:
 
-- `packages/billing-core/src/libs/problems/BillingProblems.ts:215:1` (problem-class)
+- `packages/billing-core/src/libs/problems/BillingProblems.ts:227:1` (problem-class)
 
 <a id="billing-webhook-already-processed"></a>
 

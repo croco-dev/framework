@@ -1,4 +1,5 @@
 import { IdempotencyConflictProblem, InMemoryIdempotencyStore } from "@croco/idempotency-core";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { BillingGateway, CheckoutResult } from "../libs/BillingGateway";
 import { BillingService, type BillingLifecycleEventPublisher } from "../libs/BillingService";
@@ -212,6 +213,106 @@ describe("BillingService", () => {
   });
 
   describe("createCheckout", () => {
+    const params = {
+      tenantId: "tenant-provider-failure",
+      email: "owner@example.com",
+      productId: "product-1",
+      successUrl: "https://example.com/success",
+      cancelUrl: "https://example.com/cancel",
+      idempotencyKey: "checkout-provider-failure",
+    };
+
+    class ProviderProblem extends Problem {
+      readonly code: string;
+      readonly category: ProblemCategory;
+
+      constructor(code: string, category: ProblemCategory, retryable?: boolean) {
+        super(undefined, undefined, "Provider checkout failed", {
+          extensions: retryable === undefined ? undefined : { retryable },
+        });
+        this.code = code;
+        this.category = category;
+      }
+    }
+
+    it.each([
+      ["billing-polar/validation-failed", ProblemCategory.ValidationError, 422],
+      ["billing-polar/checkout-idempotency-conflict", ProblemCategory.Conflict, 409],
+    ])(
+      "preserves provider %s and allows the same checkout key to retry",
+      async (code, category, status) => {
+        const providerProblem = new ProviderProblem(code, category, false);
+        vi.mocked(mockGateway.ensureCustomer).mockResolvedValue("cus_1");
+        vi.mocked(mockGateway.createCheckout)
+          .mockRejectedValueOnce(providerProblem)
+          .mockResolvedValueOnce({
+            checkoutId: "checkout-1",
+            checkoutUrl: "https://example.com/checkout",
+          });
+
+        await expect(service.createCheckout(params)).rejects.toBe(providerProblem);
+        expect(providerProblem).toMatchObject({ code, status, extensions: { retryable: false } });
+        await expect(service.createCheckout(params)).resolves.toEqual({
+          checkoutUrl: "https://example.com/checkout",
+        });
+        expect(mockGateway.createCheckout).toHaveBeenCalledTimes(2);
+      },
+    );
+
+    it.each([true, false])(
+      "preserves provider 5xx retryable=%s and its cause",
+      async (retryable) => {
+        const providerProblem = new ProviderProblem(
+          "billing-polar/retryable-upstream",
+          ProblemCategory.InternalServerError,
+          retryable,
+        );
+        vi.mocked(mockGateway.ensureCustomer).mockRejectedValue(providerProblem);
+
+        await expect(service.createCheckout(params)).rejects.toMatchObject({
+          code: "billing/checkout-creation-failed",
+          status: 500,
+          extensions: { retryable },
+          cause: providerProblem,
+        });
+      },
+    );
+
+    it.each([true, false])(
+      "prefers provider 5xx top-level retryable=%s over extensions",
+      async (retryable) => {
+        const providerProblem = Object.assign(
+          new ProviderProblem(
+            "billing-polar/retryable-upstream",
+            ProblemCategory.InternalServerError,
+            !retryable,
+          ),
+          { retryable },
+        );
+        vi.mocked(mockGateway.ensureCustomer).mockRejectedValue(providerProblem);
+
+        await expect(service.createCheckout(params)).rejects.toMatchObject({
+          code: "billing/checkout-creation-failed",
+          status: 500,
+          extensions: { retryable },
+          cause: providerProblem,
+        });
+      },
+    );
+
+    it("preserves an ordinary provider error as the checkout creation cause", async () => {
+      const providerError = new Error("socket hang up");
+      vi.mocked(mockGateway.ensureCustomer).mockResolvedValue("cus_1");
+      vi.mocked(mockGateway.createCheckout).mockRejectedValue(providerError);
+
+      await expect(service.createCheckout(params)).rejects.toMatchObject({
+        code: "billing/checkout-creation-failed",
+        status: 500,
+        cause: providerError,
+        extensions: undefined,
+      });
+    });
+
     it("should create one provider checkout for concurrent equivalent requests", async () => {
       const params = {
         tenantId: "tenant-concurrent",

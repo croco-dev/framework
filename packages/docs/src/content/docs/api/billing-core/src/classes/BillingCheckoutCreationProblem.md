@@ -15,7 +15,7 @@ billing 도메인에서 사용하는 Problem 하위 타입들입니다.
 
 ### Constructor
 
-> **new BillingCheckoutCreationProblem**(`billingAccountId`, `detail?`): `BillingCheckoutCreationProblem`
+> **new BillingCheckoutCreationProblem**(`billingAccountId`, `detail?`, `options?`): `BillingCheckoutCreationProblem`
 
 #### Parameters
 
@@ -26,6 +26,16 @@ billing 도메인에서 사용하는 Problem 하위 타입들입니다.
 ##### detail?
 
 `string`
+
+##### options?
+
+###### cause?
+
+`Error`
+
+###### retryable?
+
+`boolean`
 
 #### Returns
 
