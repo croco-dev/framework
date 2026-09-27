@@ -19,6 +19,7 @@ pnpm add @croco/metrics-billing @croco/warehouse-postgres
 | `OrderPaidEvent`            | 주문 결제 완료 | 결제 사유에 따라 `new`, `reactivation`, 또는 없음 |
 | `PlanChangedEvent`          | 플랜 변경      | `expansion` 또는 `contraction`                    |
 | `SubscriptionCanceledEvent` | 구독 취소      | 실제 취소 시 `churned`, 기간 말 예약 시 없음      |
+| `SubscriptionRevokedEvent`  | 구독 접근 종료 | `churned`                                         |
 
 ## 사용법
 
@@ -71,6 +72,12 @@ Container.register(BillingEventHandler, {
 - 이벤트의 `planVersionRef`로 취소 시점에 고정된 플랜 버전을 조회합니다. 즉시 취소로 구독이나 계정이 삭제되어도 해당 버전의 금액으로 집계합니다.
 - `BillingService`와 Polar 이벤트 매퍼는 취소 이벤트에 `planVersionRef`를 포함합니다. 이전 버전의 이벤트처럼 이 값이 없으면 기존 구독에서 플랜 버전을 조회합니다.
 
+### SubscriptionRevokedEvent
+
+- 기간 말 취소가 효력을 갖거나 결제 재시도가 소진되어 구독 접근이 끝나면 `churned` MRR을 기록합니다.
+- Polar 이벤트 매퍼는 `planVersionRef`를 포함합니다. 이전 버전의 이벤트처럼 이 값이 없으면 기존 구독에서 플랜 버전을 조회합니다.
+- 즉시 취소 이벤트와 revoked 이벤트가 모두 도착해도 구독 단위 churn 키를 공유하여 한 번만 기록합니다.
+
 ## 멱등성
 
 이벤트 키를 기반으로 멱등성을 보장합니다:
@@ -81,18 +88,21 @@ eventKey = `${eventName}_${event.eventId}`
 
 동일한 이벤트 키로 중복 호출되면 PostgresMetricsStore의 atomic claim이 처리합니다.
 서로 다른 billing event는 같은 millisecond에 발생해도 `DomainEvent.eventId`가 다르므로
-별도 metric으로 기록됩니다.
+각각의 primary key를 가집니다. 단, 같은 구독의 취소와 revoked는 아래 churn alias를 공유합니다.
 
 이전 버전은 `${eventName}_${timestamp.getTime()}` 형식의 timestamp 기반 키를 사용했습니다.
-`BillingEventHandler`는 primary key로 `eventId` 기반 키를 전달하고, timestamp 기반 키를
-compatibility dedupe alias로 함께 전달합니다. PostgresMetricsStore는 alias가 이미 저장된
+`BillingEventHandler`는 primary key로 `eventId` 기반 키를 전달합니다. 기존에 movement를 기록하던
+이벤트는 timestamp 기반 키를 compatibility dedupe alias로 함께 전달합니다. revoked는 기존
+movement가 없으므로 timestamp alias를 사용하지 않습니다. PostgresMetricsStore는 alias가 이미 저장된
 row를 발견하면 새 primary key insert를 건너뛰어 배포 전후 replay가 중복 MRR을 만들지 않게 합니다.
+취소와 revoked의 churn movement에는 `billing.subscription_churned_${externalSubscriptionId}` 키도
+alias로 전달하여 이벤트 순서와 관계없이 구독당 한 번만 기록합니다.
 
 ## Failure semantics
 
 billing 이벤트가 metric으로 기록되지 못하는 경우를 성공처럼 숨기지 않습니다.
 `BillingEventHandler`는 필요한 account, subscription, plan evidence가 없으면
-`BillingMetricDroppedProblem`을 throw합니다. 취소 이벤트에 `planVersionRef`가 있으면 account나 subscription 조회는 필요하지 않지만, 해당 플랜 버전은 유지되어야 합니다. repository 기록이 실패하면
+`BillingMetricDroppedProblem`을 throw합니다. 취소 또는 revoked 이벤트에 `planVersionRef`가 있으면 account나 subscription 조회는 필요하지 않지만, 해당 플랜 버전은 유지되어야 합니다. repository 기록이 실패하면
 `BillingMetricRecordingProblem`을 throw합니다.
 
 | Problem                         | Code                               | Recovery                                                                                                                        |

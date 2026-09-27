@@ -81,7 +81,9 @@ export class PolarEventMapper {
         break;
 
       case "subscription.revoked":
-        events.push(new SubscriptionRevokedEvent(tenantId, subscription.id));
+        events.push(
+          new SubscriptionRevokedEvent(tenantId, subscription.id, subscription.planVersionRef),
+        );
         break;
     }
 
