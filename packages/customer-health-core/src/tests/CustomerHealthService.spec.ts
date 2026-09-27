@@ -532,6 +532,94 @@ describe("CustomerHealthService", () => {
     expect(await store.listPendingEventIntents("tenant-1")).toHaveLength(0);
   });
 
+  it.each([
+    {
+      name: "does not commit an older calculation over a newer score committed during its CAS retry",
+      freshTime: "2026-03-15T10:06:00Z",
+      expectedStatus: "critical",
+      expectedStatusChanges: [["at_risk", "critical"]],
+      expectedHistoryLength: 2,
+    },
+    {
+      name: "retries when the conflicting score has the same calculation time",
+      freshTime: "2026-03-15T10:05:00Z",
+      expectedStatus: "healthy",
+      expectedStatusChanges: [
+        ["at_risk", "critical"],
+        ["critical", "healthy"],
+      ],
+      expectedHistoryLength: 3,
+    },
+  ])(
+    "$name",
+    async ({ freshTime, expectedStatus, expectedStatusChanges, expectedHistoryLength }) => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      try {
+        const profile: HealthScoreProfile = {
+          id: "profile-1",
+          name: "Default Profile",
+          weights: { usage: 1, business: 0, engagement: 0 },
+          thresholds: { healthy: 80, atRisk: 60 },
+        };
+        const statusChanges: Array<[string, string]> = [];
+        vi.mocked(mockEventPublisher.publishIdempotently).mockImplementation(async (event) => {
+          if (event instanceof HealthStatusChangedEvent) {
+            statusChanges.push([event.oldStatus, event.newStatus]);
+          }
+        });
+        const serviceReturning = (value: number, collectedAt: string) => {
+          const registry = new MockSignalProvider();
+          registry.addProvider("usage", [healthSignal(value, collectedAt)]);
+          return new CustomerHealthService(registry, store, calculator, mockEventPublisher);
+        };
+
+        vi.setSystemTime(new Date("2026-03-15T10:00:00.000Z"));
+        await serviceReturning(70, "2026-03-15T10:00:00Z").calculateAndStore("tenant-1", profile);
+        const listPendingEventIntents = vi.spyOn(store, "listPendingEventIntents");
+
+        let markStaleReadLatest!: () => void;
+        const staleReadLatest = new Promise<void>((resolve) => {
+          markStaleReadLatest = resolve;
+        });
+        let releaseStale!: () => void;
+        const staleReleased = new Promise<void>((resolve) => {
+          releaseStale = resolve;
+        });
+        const readLatest = store.findLatest.bind(store);
+        vi.spyOn(store, "findLatest").mockImplementationOnce(async (tenantId) => {
+          const latest = await readLatest(tenantId);
+          markStaleReadLatest();
+          await staleReleased;
+          return latest;
+        });
+
+        vi.setSystemTime(new Date("2026-03-15T10:05:00.000Z"));
+        const stale = serviceReturning(90, "2026-03-15T10:05:00Z").calculateAndStore(
+          "tenant-1",
+          profile,
+        );
+        await staleReadLatest;
+
+        vi.setSystemTime(new Date(freshTime));
+        const fresh = await serviceReturning(40, freshTime).calculateAndStore("tenant-1", profile);
+
+        releaseStale();
+        const staleResult = await stale;
+
+        const latest = await store.findLatest("tenant-1");
+        expect(latest?.status).toBe(expectedStatus);
+        expect(latest?.calculatedAt.toISOString()).toBe(fresh.calculatedAt.toISOString());
+        expect(statusChanges).toEqual(expectedStatusChanges);
+        expect(await store.findHistory("tenant-1", 10)).toHaveLength(expectedHistoryLength);
+        expect(staleResult.status).toBe(expectedStatus);
+        expect(staleResult.calculatedAt.toISOString()).toBe(fresh.calculatedAt.toISOString());
+        expect(listPendingEventIntents).toHaveBeenCalledTimes(expectedHistoryLength - 1);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
   it("should not publish score dropped event when score drop is below threshold", async () => {
     const initialSignals: HealthSignal[] = [
       {

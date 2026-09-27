@@ -13,6 +13,10 @@ import type { HealthScoreProfile, HealthTrend, TenantHealthScore } from "./types
 const MAX_TRANSITION_PERSISTENCE_ATTEMPTS = 3;
 const TRANSITION_PERSISTENCE_RETRY_BASE_DELAY_MS = 10;
 
+type PersistTransitionResult =
+  | { kind: "committed"; eventPublicationDeferred: boolean }
+  | { kind: "superseded"; latest: TenantHealthScore };
+
 @Component()
 export class CustomerHealthService {
   constructor(
@@ -46,10 +50,11 @@ export class CustomerHealthService {
     score.tenantId = tenantId;
 
     const previous = await this.store.findLatest(tenantId);
-    const eventPublicationDeferred = await this.persistTransition(score, previous);
+    const persistence = await this.persistTransition(score, previous);
+    if (persistence.kind === "superseded") return persistence.latest;
 
     const eventPublisher = this.getEventPublisher();
-    if (eventPublisher && !eventPublicationDeferred) {
+    if (eventPublisher && !persistence.eventPublicationDeferred) {
       const intents = await this.store.listPendingEventIntents(tenantId, 100);
       await this.publishEventIntents(intents, eventPublisher);
     }
@@ -60,14 +65,23 @@ export class CustomerHealthService {
   private async persistTransition(
     score: TenantHealthScore,
     initialPrevious: TenantHealthScore | null,
-  ): Promise<boolean> {
+  ): Promise<PersistTransitionResult> {
     let previous = initialPrevious;
 
     for (let attempt = 1; attempt <= MAX_TRANSITION_PERSISTENCE_ATTEMPTS; attempt += 1) {
       this.applyPreviousScore(score, previous);
       const eventIntents = createHealthTransitionEventIntents(previous, score);
       const commit = await this.store.saveTransition(score, previous, eventIntents);
-      if (commit.committed) return commit.eventPublicationDeferred === true;
+      if (commit.committed) {
+        return {
+          kind: "committed",
+          eventPublicationDeferred: commit.eventPublicationDeferred === true,
+        };
+      }
+
+      if (commit.latest && commit.latest.calculatedAt.getTime() > score.calculatedAt.getTime()) {
+        return { kind: "superseded", latest: commit.latest };
+      }
 
       previous = commit.latest;
       if (attempt < MAX_TRANSITION_PERSISTENCE_ATTEMPTS) {

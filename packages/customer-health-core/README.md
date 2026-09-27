@@ -119,8 +119,10 @@ const score = await service.calculateAndStore("tenant-1", profile);
 `idempotentEventPublisher`는 `event.eventId`를 기준으로 재시도와 동시 발행을 중복 제거해야 합니다.
 `calculateAndStore`는 새 점수와 상태 변경/점수 급락 이벤트 의도를 원자적으로 저장한 뒤, 이전 실패로
 남은 의도를 재발행합니다. 동시 갱신으로 저장이 충돌하면 짧은 지수 백오프와 함께 최대 세 번까지
-시도하고, 계속 커밋되지 않으면 `HealthTransitionPersistenceRetryExhaustedProblem`을 던집니다. 별도 복구
-작업에서는 `publishPendingEvents(tenantId)`를 호출할 수 있습니다.
+시도하고, 계속 커밋되지 않으면 `HealthTransitionPersistenceRetryExhaustedProblem`을 던집니다. 충돌 시
+이미 커밋된 점수가 자신의 계산보다 나중에 계산됐다면 오래된 점수와 이벤트 의도를 저장하거나
+pending 의도를 발행하지 않고 커밋된 최신 점수를 반환합니다. 별도 복구 작업에서는
+`publishPendingEvents(tenantId)`를 호출할 수 있습니다.
 
 저장소가 호출자 트랜잭션에 참여하면 `calculateAndStore`는 커밋 전 외부 발행을 건너뛰고 이벤트 의도를
 pending 상태로 남깁니다. 호출자 커밋 후 `publishPendingEvents` 또는 별도 outbox worker로 발행하세요.
@@ -208,7 +210,7 @@ class MyService {
 
 #### Methods
 
-- `calculateAndStore(tenantId: string, profile: HealthScoreProfile): Promise<TenantHealthScore>` - 신호 수집 및 점수 계산
+- `calculateAndStore(tenantId: string, profile: HealthScoreProfile): Promise<TenantHealthScore>` - 신호 수집 및 점수 계산·저장. 더 나중에 계산된 점수와 충돌하면 커밋된 최신 점수 반환
 - `publishPendingEvents(tenantId: string, limit?: number): Promise<number>` - 저장된 이벤트 의도 재발행
 - `getLatest(tenantId: string): Promise<TenantHealthScore | null>` - 최신 점수 조회
 - `getTrend(tenantId: string, days: number): Promise<{ trend: HealthTrend; changePercentage: number } | null>` - 추세 분석
