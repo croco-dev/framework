@@ -1,6 +1,8 @@
-import { createElement, type ReactElement } from "react";
+import { createElement, type ErrorInfo, type ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+
+import type { ProblemDetails } from "@croco/problems-core";
 
 import {
   ProblemBoundary,
@@ -22,6 +24,18 @@ const problem = createFrontendProblemDetails({
   status: 404,
   title: "Order not found",
 });
+
+class ClientProblemError extends Error {
+  readonly problem: ProblemDetails;
+  readonly response: Response;
+
+  constructor(problem: ProblemDetails, response: Response) {
+    super(problem.detail ?? problem.title);
+    this.name = "ProblemClientError";
+    this.problem = problem;
+    this.response = response;
+  }
+}
 
 describe("Problem UI primitives", () => {
   it("renders Problem Details evidence and recovery actions", () => {
@@ -76,6 +90,48 @@ describe("Problem UI primitives", () => {
     expect(details.status).toBe(500);
     expect(details.detail).toBe("network exploded");
     expect(details.errorName).toBe("TypeError");
+  });
+
+  it("preserves a client Error's server Problem in the boundary state, callback, and fallback", () => {
+    const forbidden: ProblemDetails = {
+      type: "https://docs.example.com/problems/order-forbidden",
+      title: "Forbidden",
+      status: 403,
+      code: "orders/forbidden",
+      detail: "You cannot view order 42.",
+      traceId: "trace-42",
+    };
+    const error = new ClientProblemError(forbidden, new Response(null, { status: 403 }));
+    const onProblem = vi.fn();
+    const fallback = vi.fn((state: ProblemBoundaryFallbackState) =>
+      createElement("aside", null, `${state.problem.code}:${state.problem.traceId}`),
+    );
+    const boundary = new ProblemBoundary({ children: null, fallback, onProblem });
+
+    expect(normalizeProblemDetails(error)).toEqual(forbidden);
+    boundary.state = ProblemBoundary.getDerivedStateFromError(error);
+    boundary.componentDidCatch(error, { componentStack: "" } as ErrorInfo);
+    const html = renderToStaticMarkup(boundary.render() as ReactElement);
+
+    expect(boundary.state.problem).toEqual(forbidden);
+    expect(onProblem).toHaveBeenCalledWith(forbidden, error, expect.any(Object));
+    expect(fallback).toHaveBeenCalledWith(expect.objectContaining({ error, problem: forbidden }));
+    expect(html).toContain("orders/forbidden:trace-42");
+  });
+
+  it("keeps an Error with an invalid problem field on the unhandled-error path", () => {
+    const error = Object.assign(new Error("network exploded"), {
+      problem: { title: "Incomplete Problem", status: 403 },
+    });
+
+    expect(normalizeProblemDetails(error)).toEqual({
+      type: "about:blank",
+      title: "Unexpected error",
+      status: 500,
+      code: "frontend-react/unhandled-error",
+      detail: "network exploded",
+      errorName: "Error",
+    });
   });
 
   it("normalizes Croco Problem objects through serialized Problem Details", () => {
