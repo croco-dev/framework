@@ -114,6 +114,12 @@ export type OutboundWebhookCommitResult = {
   readonly duplicate: boolean;
 };
 
+export type OutboundWebhookDeliveryClaim = {
+  readonly delivery: OutboundWebhookDelivery;
+  readonly claimToken: string;
+  readonly leaseUntil: Date;
+};
+
 export type OutboundWebhookIntentPublicationFailure = {
   readonly intentId: string;
   readonly deliveryId: string;
@@ -142,10 +148,12 @@ export type OutboundWebhookStore = {
     tenantId: string,
     deliveryId: string,
     eligibleAt: Date,
-  ): Promise<OutboundWebhookDelivery | undefined>;
-  releaseDeliveryClaim(tenantId: string, deliveryId: string): Promise<void>;
+    leaseDurationMs: number,
+  ): Promise<OutboundWebhookDeliveryClaim | undefined>;
+  releaseDeliveryClaim(tenantId: string, deliveryId: string, claimToken: string): Promise<boolean>;
   recordAttempt(input: {
     readonly tenantId: string;
+    readonly claimToken: string;
     readonly attempt: OutboundWebhookAttempt;
     readonly status: OutboundWebhookDeliveryStatus;
     readonly nextAttemptAt?: Date;
@@ -249,6 +257,8 @@ export type OutboundWebhookRuntimeOptions = {
   readonly urlPolicy?: OutboundWebhookUrlPolicy;
   readonly pausePolicy?: OutboundWebhookPausePolicy;
   readonly retryPolicy?: OutboundWebhookRetryPolicy;
+  readonly claimLeaseDurationMs?: number;
+  readonly transportTimeoutMs?: number;
   readonly now?: () => Date;
   readonly createId?: () => string;
 };

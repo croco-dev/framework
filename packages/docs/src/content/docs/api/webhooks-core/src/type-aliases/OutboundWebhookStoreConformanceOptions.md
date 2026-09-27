@@ -9,6 +9,22 @@ title: "OutboundWebhookStoreConformanceOptions"
 
 ## Properties
 
+### advanceStoreTime?
+
+> `readonly` `optional` **advanceStoreTime?**: (`milliseconds`) => `void` \| `Promise`\<`void`\>
+
+#### Parameters
+
+##### milliseconds
+
+`number`
+
+#### Returns
+
+`void` \| `Promise`\<`void`\>
+
+---
+
 ### createStore
 
 > `readonly` **createStore**: () => [`OutboundWebhookStore`](/api/webhooks-core/src/type-aliases/outboundwebhookstore/) \| `Promise`\<[`OutboundWebhookStore`](/api/webhooks-core/src/type-aliases/outboundwebhookstore/)\>

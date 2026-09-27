@@ -16,6 +16,7 @@ export type OutboundWebhookStoreConformanceOptions = {
   readonly reopenStore?: (
     store: OutboundWebhookStore,
   ) => OutboundWebhookStore | Promise<OutboundWebhookStore>;
+  readonly advanceStoreTime?: (milliseconds: number) => void | Promise<void>;
   readonly event: OutboundWebhookEvent;
   readonly endpoint: OutboundWebhookEndpoint;
 };
@@ -100,7 +101,7 @@ export function createOutboundWebhookStoreConformanceSuite(
             outcome: { kind: "http", status: 204 },
             classification: "delivered",
           };
-          await store.recordAttempt({
+          await recordClaimedAttempt(store, options, {
             tenantId: options.event.tenantId,
             attempt,
             status: "delivered",
@@ -131,7 +132,7 @@ export function createOutboundWebhookStoreConformanceSuite(
 
           await assertRejectsConfigurationProblem(
             () =>
-              invalidStore.recordAttempt({
+              recordClaimedAttempt(invalidStore, options, {
                 tenantId: options.event.tenantId,
                 attempt: createAttempt(invalidDelivery.id, 1, options, "retryable"),
                 status: "retrying",
@@ -140,7 +141,7 @@ export function createOutboundWebhookStoreConformanceSuite(
           );
           await assertRejectsConfigurationProblem(
             () =>
-              invalidStore.recordAttempt({
+              recordClaimedAttempt(invalidStore, options, {
                 tenantId: options.event.tenantId,
                 attempt: createAttempt(invalidDelivery.id, 1, options, "retryable"),
                 status: "retrying",
@@ -150,7 +151,7 @@ export function createOutboundWebhookStoreConformanceSuite(
           );
           await assertRejectsConfigurationProblem(
             () =>
-              invalidStore.recordAttempt({
+              recordClaimedAttempt(invalidStore, options, {
                 tenantId: options.event.tenantId,
                 attempt: createAttempt(invalidDelivery.id, 1, options, "retryable"),
                 status: "retrying",
@@ -173,7 +174,7 @@ export function createOutboundWebhookStoreConformanceSuite(
             const delivery = committed.deliveries[0];
             assert(delivery !== undefined, "delivery must exist");
             const nextAttemptAt = new Date(options.event.committedAt.getTime() + 1_000);
-            const retrying = await store.recordAttempt({
+            const retrying = await recordClaimedAttempt(store, options, {
               tenantId: options.event.tenantId,
               attempt: createAttempt(delivery.id, 1, options, "retryable"),
               status: "retrying",
@@ -184,7 +185,7 @@ export function createOutboundWebhookStoreConformanceSuite(
               "retrying transition must preserve its schedule",
             );
 
-            const terminal = await store.recordAttempt({
+            const terminal = await recordClaimedAttempt(store, options, {
               tenantId: options.event.tenantId,
               attempt: createAttempt(
                 delivery.id,
@@ -228,7 +229,7 @@ export function createOutboundWebhookStoreConformanceSuite(
           );
 
           const nextAttemptAt = new Date(options.event.committedAt.getTime() + 1_000);
-          await store.recordAttempt({
+          await recordClaimedAttempt(store, options, {
             tenantId: options.event.tenantId,
             attempt: createAttempt(delivery.id, 1, options, "retryable"),
             status: "retrying",
@@ -309,7 +310,7 @@ export function createOutboundWebhookStoreConformanceSuite(
           );
 
           const nextAttemptAt = new Date(options.event.committedAt.getTime() + 1_000);
-          const retrying = await store.recordAttempt({
+          const retrying = await recordClaimedAttempt(store, options, {
             tenantId: options.event.tenantId,
             attempt: createAttempt(delivery.id, 1, options, "retryable"),
             status: "retrying",
@@ -361,7 +362,7 @@ export function createOutboundWebhookStoreConformanceSuite(
           );
 
           const nextAttemptAt = new Date(options.event.committedAt.getTime() + 2_000);
-          const retrying = await store.recordAttempt({
+          const retrying = await recordClaimedAttempt(store, options, {
             tenantId: options.event.tenantId,
             attempt: createAttempt(delivery.id, 1, options, "retryable"),
             status: "retrying",
@@ -408,7 +409,7 @@ export function createOutboundWebhookStoreConformanceSuite(
           );
 
           const firstRetryAt = new Date(options.event.committedAt.getTime() + 2);
-          await store.recordAttempt({
+          await recordClaimedAttempt(store, options, {
             tenantId: options.event.tenantId,
             attempt: createAttempt(delivery.id, 1, options, "retryable"),
             status: "retrying",
@@ -423,7 +424,7 @@ export function createOutboundWebhookStoreConformanceSuite(
             originalRetryIntent.id,
             firstRetryAt,
           );
-          await store.recordAttempt({
+          await recordClaimedAttempt(store, options, {
             tenantId: options.event.tenantId,
             attempt: createAttempt(delivery.id, 2, options, "permanent"),
             status: "dead",
@@ -454,7 +455,7 @@ export function createOutboundWebhookStoreConformanceSuite(
           );
 
           const replayRetryAt = new Date(options.event.committedAt.getTime() + 5);
-          const retryingReplay = await store.recordAttempt({
+          const retryingReplay = await recordClaimedAttempt(store, options, {
             tenantId: options.event.tenantId,
             attempt: {
               ...createAttempt(delivery.id, 1, options, "retryable"),
@@ -475,7 +476,7 @@ export function createOutboundWebhookStoreConformanceSuite(
             "first replay attempt must retain one remaining retry",
           );
 
-          const deadReplay = await store.recordAttempt({
+          const deadReplay = await recordClaimedAttempt(store, options, {
             tenantId: options.event.tenantId,
             attempt: {
               ...createAttempt(delivery.id, 2, options, "permanent"),
@@ -517,6 +518,156 @@ export function createOutboundWebhookStoreConformanceSuite(
         },
       },
       {
+        name: "recovers an abandoned delivery claim after its datastore lease expires",
+        run: async () => {
+          const store = await options.createStore();
+          const committed = await store.commitEvent({
+            event: options.event,
+            endpoints: [options.endpoint],
+          });
+          const delivery = committed.deliveries[0];
+          assert(delivery !== undefined, "delivery must exist");
+          const claim = await store.claimDelivery(
+            options.event.tenantId,
+            delivery.id,
+            options.event.committedAt,
+            1_000,
+          );
+          assert(claim !== undefined, "initial claim must exist");
+          assert(
+            Number.isFinite(claim.leaseUntil.getTime()),
+            "claim lease deadline must be a valid date",
+          );
+          assert(claim.delivery.id === delivery.id, "claim must identify the requested delivery");
+          assert(
+            (await store.claimDelivery(
+              options.event.tenantId,
+              delivery.id,
+              new Date(options.event.committedAt.getTime() + 86_400_000),
+              1_000,
+            )) === undefined,
+            "worker eligibility time must not expire a live datastore lease",
+          );
+          await expireLease(options);
+          const reopened =
+            options.reopenStore === undefined ? store : await options.reopenStore(store);
+          const recovered = await reopened.claimDelivery(
+            options.event.tenantId,
+            delivery.id,
+            options.event.committedAt,
+            60_000,
+          );
+          assert(recovered !== undefined, "expired abandoned claim must be recoverable");
+          assert(
+            recovered.claimToken !== claim.claimToken,
+            "recovered claim must receive a fresh token",
+          );
+          await reopened.recordAttempt({
+            tenantId: options.event.tenantId,
+            claimToken: recovered.claimToken,
+            attempt: createAttempt(delivery.id, 1, options, "delivered"),
+            status: "delivered",
+          });
+          assert(
+            (await reopened.getDelivery(options.event.tenantId, delivery.id))?.status ===
+              "delivered",
+            "recovered worker must complete delivery",
+          );
+        },
+      },
+      {
+        name: "rejects expired and superseded claim tokens without changing delivery evidence",
+        run: async () => {
+          const store = await options.createStore();
+          const committed = await store.commitEvent({
+            event: options.event,
+            endpoints: [options.endpoint],
+          });
+          const delivery = committed.deliveries[0];
+          assert(delivery !== undefined, "delivery must exist");
+          const expired = await store.claimDelivery(
+            options.event.tenantId,
+            delivery.id,
+            options.event.committedAt,
+            1_000,
+          );
+          assert(expired !== undefined, "initial claim must exist");
+          await expireLease(options);
+          const rejectedAttempt = {
+            tenantId: options.event.tenantId,
+            claimToken: expired.claimToken,
+            attempt: createAttempt(delivery.id, 1, options, "retryable"),
+            status: "retrying" as const,
+            nextAttemptAt: new Date(options.event.committedAt.getTime() + 1_000),
+          };
+          await assertRejectsConfigurationProblem(
+            () => store.recordAttempt(rejectedAttempt),
+            "expired token must not record an attempt",
+          );
+          assert(
+            !(await store.releaseDeliveryClaim(
+              options.event.tenantId,
+              delivery.id,
+              expired.claimToken,
+            )),
+            "expired token must not release a claim",
+          );
+          const current = await store.claimDelivery(
+            options.event.tenantId,
+            delivery.id,
+            options.event.committedAt,
+            60_000,
+          );
+          assert(current !== undefined, "new worker must acquire expired claim");
+          await assertRejectsConfigurationProblem(
+            () => store.recordAttempt(rejectedAttempt),
+            "superseded token must not record an attempt",
+          );
+          assert(
+            !(await store.releaseDeliveryClaim(
+              options.event.tenantId,
+              delivery.id,
+              expired.claimToken,
+            )),
+            "superseded token must not release the current claim",
+          );
+          assert(
+            (await store.claimDelivery(
+              options.event.tenantId,
+              delivery.id,
+              options.event.committedAt,
+              60_000,
+            )) === undefined,
+            "stale release must preserve the current claim",
+          );
+          assert(
+            (await store.listAttempts(options.event.tenantId, delivery.id)).length === 0,
+            "rejected writes must not append attempt evidence",
+          );
+          assert(
+            (await store.listUnpublishedIntents(options.event.tenantId)).length === 1,
+            "rejected writes must not append retry intents",
+          );
+          const unchanged = await store.getDelivery(options.event.tenantId, delivery.id);
+          assert(
+            unchanged?.status === "pending" &&
+              unchanged.attemptCount === 0 &&
+              unchanged.nextAttemptAt === undefined,
+            "rejected writes must preserve pending delivery state",
+          );
+          await store.recordAttempt({
+            tenantId: options.event.tenantId,
+            claimToken: current.claimToken,
+            attempt: createAttempt(delivery.id, 1, options, "delivered"),
+            status: "delivered",
+          });
+          assert(
+            (await store.getDelivery(options.event.tenantId, delivery.id))?.status === "delivered",
+            "current token must still complete delivery",
+          );
+        },
+      },
+      {
         name: "claims an eligible delivery only once under concurrency",
         run: async () => {
           const store = await options.createStore();
@@ -526,18 +677,62 @@ export function createOutboundWebhookStoreConformanceSuite(
           });
           const deliveryId = committed.deliveries[0]?.id ?? "";
           const claims = await Promise.all([
-            store.claimDelivery(options.event.tenantId, deliveryId, options.event.committedAt),
-            store.claimDelivery(options.event.tenantId, deliveryId, options.event.committedAt),
+            store.claimDelivery(
+              options.event.tenantId,
+              deliveryId,
+              options.event.committedAt,
+              60_000,
+            ),
+            store.claimDelivery(
+              options.event.tenantId,
+              deliveryId,
+              options.event.committedAt,
+              60_000,
+            ),
           ]);
           assert(
             claims.filter((claim) => claim !== undefined).length === 1,
             "only one concurrent claim may succeed",
           );
-          await store.releaseDeliveryClaim(options.event.tenantId, deliveryId);
+          const claim = claims.find((item) => item !== undefined);
+          assert(claim !== undefined, "winning claim must exist");
+          assert(
+            await store.releaseDeliveryClaim(options.event.tenantId, deliveryId, claim.claimToken),
+            "current claim must release successfully",
+          );
         },
       },
     ],
   };
+}
+
+async function recordClaimedAttempt(
+  store: OutboundWebhookStore,
+  options: OutboundWebhookStoreConformanceOptions,
+  input: Omit<Parameters<OutboundWebhookStore["recordAttempt"]>[0], "claimToken">,
+) {
+  const delivery = await store.getDelivery(input.tenantId, input.attempt.deliveryId);
+  assert(delivery !== undefined, "delivery must exist before recording an attempt");
+  const claim = await store.claimDelivery(
+    input.tenantId,
+    delivery.id,
+    delivery.nextAttemptAt ?? options.event.committedAt,
+    60_000,
+  );
+  assert(claim !== undefined, "attempt must acquire an eligible delivery claim");
+  try {
+    return await store.recordAttempt({ ...input, claimToken: claim.claimToken });
+  } finally {
+    await store.releaseDeliveryClaim(input.tenantId, delivery.id, claim.claimToken);
+  }
+}
+
+async function expireLease(options: OutboundWebhookStoreConformanceOptions): Promise<void> {
+  if (options.advanceStoreTime !== undefined) {
+    await options.advanceStoreTime(1_100);
+    return;
+  }
+  await new Promise<void>((resolve) => setTimeout(resolve, 1_100));
 }
 
 function createAttempt(

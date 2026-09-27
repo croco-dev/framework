@@ -25,6 +25,7 @@ import type {
   OutboundWebhookOutcomeClassification,
   OutboundWebhookRetryPolicy,
   OutboundWebhookRuntimeOptions,
+  OutboundWebhookTransportRequest,
 } from "./types";
 
 const DEFAULT_RETRY_POLICY: OutboundWebhookRetryPolicy = {
@@ -35,6 +36,10 @@ const DEFAULT_RETRY_POLICY: OutboundWebhookRetryPolicy = {
     },
   },
 };
+
+const DEFAULT_CLAIM_LEASE_DURATION_MS = 60_000;
+const DEFAULT_TRANSPORT_TIMEOUT_MS = 30_000;
+const MAX_TRANSPORT_TIMEOUT_MS = 2_147_483_647;
 
 const DEFAULT_PAUSE_POLICY = {
   allowsDispatch(endpoint: { readonly status: string }): boolean {
@@ -47,6 +52,8 @@ export class OutboundWebhookRuntime {
   private readonly retryPolicy: OutboundWebhookRetryPolicy;
   private readonly now: () => Date;
   private readonly createId: () => string;
+  private readonly claimLeaseDurationMs: number;
+  private readonly transportTimeoutMs: number;
 
   constructor(options: OutboundWebhookRuntimeOptions) {
     if (!Number.isInteger(options.retryPolicy?.maxAttempts ?? DEFAULT_RETRY_POLICY.maxAttempts)) {
@@ -59,6 +66,19 @@ export class OutboundWebhookRuntime {
     }
     this.now = options.now ?? (() => new Date());
     this.createId = options.createId ?? randomUUID;
+    this.claimLeaseDurationMs = options.claimLeaseDurationMs ?? DEFAULT_CLAIM_LEASE_DURATION_MS;
+    this.transportTimeoutMs = options.transportTimeoutMs ?? DEFAULT_TRANSPORT_TIMEOUT_MS;
+    if (
+      !Number.isSafeInteger(this.transportTimeoutMs) ||
+      this.transportTimeoutMs < 1 ||
+      this.transportTimeoutMs > MAX_TRANSPORT_TIMEOUT_MS ||
+      !Number.isSafeInteger(this.claimLeaseDurationMs) ||
+      this.claimLeaseDurationMs <= this.transportTimeoutMs
+    ) {
+      throw new OutboundWebhookConfigurationProblem(
+        "claim lease duration must exceed a transport timeout between 1 and 2147483647 milliseconds",
+      );
+    }
   }
 
   async publish<TPayload>(
@@ -235,7 +255,12 @@ export class OutboundWebhookRuntime {
       );
     }
 
-    const claimed = await this.options.store.claimDelivery(tenantId, deliveryId, dispatchAt);
+    const claimed = await this.options.store.claimDelivery(
+      tenantId,
+      deliveryId,
+      dispatchAt,
+      this.claimLeaseDurationMs,
+    );
     if (!claimed) {
       throw new OutboundWebhookConfigurationProblem("delivery is already being dispatched", {
         deliveryId,
@@ -245,23 +270,26 @@ export class OutboundWebhookRuntime {
     try {
       const timestamp = String(Math.floor(startedAt.getTime() / 1_000));
       const signature = signOutboundWebhook(event.payloadBytes, timestamp, secret);
-      const outcome = await this.options.transport.send({
-        url: validatedTarget.url,
-        resolvedAddresses: validatedTarget.resolvedAddresses,
-        body: event.payloadBytes,
-        headers: {
-          "content-type": "application/json",
-          "webhook-id": event.id,
-          "webhook-delivery-id": delivery.id,
-          "webhook-signature": signature,
-          "webhook-signature-version": endpoint.activeSecretVersion,
-          "webhook-timestamp": timestamp,
+      const outcome = await this.sendWithDeadline(
+        deliveryId,
+        {
+          url: validatedTarget.url,
+          resolvedAddresses: validatedTarget.resolvedAddresses,
+          body: event.payloadBytes,
+          headers: {
+            "content-type": "application/json",
+            "webhook-id": event.id,
+            "webhook-delivery-id": delivery.id,
+            "webhook-signature": signature,
+            "webhook-signature-version": endpoint.activeSecretVersion,
+            "webhook-timestamp": timestamp,
+          },
         },
-        ...(signal === undefined ? {} : { signal }),
-      });
+        signal,
+      );
       const completedAt = this.now();
       const classification = classifyOutboundWebhookOutcome(delivery.id, outcome);
-      const attemptNumber = claimed.attemptCount + 1;
+      const attemptNumber = claimed.delivery.attemptCount + 1;
       const terminalByAttempts = attemptNumber >= this.retryPolicy.maxAttempts;
       const next = mapClassificationToState(
         classification,
@@ -284,6 +312,7 @@ export class OutboundWebhookRuntime {
       };
       const updated = await this.options.store.recordAttempt({
         tenantId,
+        claimToken: claimed.claimToken,
         attempt,
         status: next.status,
         ...(next.nextAttemptAt === undefined ? {} : { nextAttemptAt: next.nextAttemptAt }),
@@ -293,7 +322,31 @@ export class OutboundWebhookRuntime {
       }
       return updated;
     } finally {
-      await this.options.store.releaseDeliveryClaim(tenantId, deliveryId);
+      await this.options.store.releaseDeliveryClaim(tenantId, deliveryId, claimed.claimToken);
+    }
+  }
+
+  private async sendWithDeadline(
+    deliveryId: string,
+    request: Omit<OutboundWebhookTransportRequest, "signal">,
+    callerSignal?: AbortSignal,
+  ): Promise<OutboundWebhookAttemptOutcome> {
+    const controller = new AbortController();
+    const signal =
+      callerSignal === undefined
+        ? controller.signal
+        : AbortSignal.any([callerSignal, controller.signal]);
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<never>((_resolve, reject) => {
+      timeout = setTimeout(() => {
+        reject(new OutboundWebhookRetryableProblem(deliveryId, "transport timed out"));
+        controller.abort();
+      }, this.transportTimeoutMs);
+    });
+    try {
+      return await Promise.race([this.options.transport.send({ ...request, signal }), deadline]);
+    } finally {
+      clearTimeout(timeout);
     }
   }
 

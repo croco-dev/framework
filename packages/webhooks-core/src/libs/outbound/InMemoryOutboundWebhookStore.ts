@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import {
   OutboundWebhookConfigurationProblem,
   OutboundWebhookReplayNotAllowedProblem,
@@ -7,6 +8,7 @@ import type {
   OutboundWebhookAttempt,
   OutboundWebhookCommitResult,
   OutboundWebhookDelivery,
+  OutboundWebhookDeliveryClaim,
   OutboundWebhookDeliveryStatus,
   OutboundWebhookDispatchIntent,
   OutboundWebhookEndpoint,
@@ -30,7 +32,7 @@ export class InMemoryOutboundWebhookStore implements OutboundWebhookStore {
   private readonly deliveryIdsByEvent = new Map<string, string[]>();
   private readonly attemptsByDelivery = new Map<string, OutboundWebhookAttempt[]>();
   private readonly intents = new Map<string, OutboundWebhookDispatchIntent>();
-  private readonly claimedDeliveryIds = new Set<string>();
+  private readonly deliveryClaims = new Map<string, { token: string; leaseUntil: Date }>();
   private readonly replayIds = new Map<string, string>();
   private readonly activeReplayIds = new Map<string, string>();
 
@@ -172,28 +174,53 @@ export class InMemoryOutboundWebhookStore implements OutboundWebhookStore {
     tenantId: string,
     deliveryId: string,
     eligibleAt: Date,
-  ): Promise<OutboundWebhookDelivery | undefined> {
+    leaseDurationMs: number,
+  ): Promise<OutboundWebhookDeliveryClaim | undefined> {
+    if (!Number.isSafeInteger(leaseDurationMs) || leaseDurationMs < 1) {
+      throw new OutboundWebhookConfigurationProblem(
+        "claim lease duration must be a positive integer",
+      );
+    }
     const key = deliveryKey(tenantId, deliveryId);
     const delivery = this.deliveries.get(key);
+    const now = Date.now();
+    const existingClaim = this.deliveryClaims.get(key);
     if (
       !delivery ||
-      this.claimedDeliveryIds.has(key) ||
+      (existingClaim !== undefined && existingClaim.leaseUntil.getTime() > now) ||
       (delivery.status !== "pending" && delivery.status !== "retrying") ||
       (delivery.nextAttemptAt !== undefined &&
         delivery.nextAttemptAt.getTime() > eligibleAt.getTime())
     ) {
       return undefined;
     }
-    this.claimedDeliveryIds.add(key);
-    return cloneDelivery(delivery);
+    const leaseUntil = new Date(now + leaseDurationMs);
+    if (!Number.isFinite(leaseUntil.getTime())) {
+      throw new OutboundWebhookConfigurationProblem(
+        "claim lease deadline is outside the Date range",
+      );
+    }
+    const claimToken = randomUUID();
+    this.deliveryClaims.set(key, { token: claimToken, leaseUntil });
+    return { delivery: cloneDelivery(delivery), claimToken, leaseUntil: new Date(leaseUntil) };
   }
 
-  async releaseDeliveryClaim(tenantId: string, deliveryId: string): Promise<void> {
-    this.claimedDeliveryIds.delete(deliveryKey(tenantId, deliveryId));
+  async releaseDeliveryClaim(
+    tenantId: string,
+    deliveryId: string,
+    claimToken: string,
+  ): Promise<boolean> {
+    const key = deliveryKey(tenantId, deliveryId);
+    if (!this.hasActiveClaim(key, claimToken)) {
+      return false;
+    }
+    this.deliveryClaims.delete(key);
+    return true;
   }
 
   async recordAttempt(input: {
     readonly tenantId: string;
+    readonly claimToken: string;
     readonly attempt: OutboundWebhookAttempt;
     readonly status: OutboundWebhookDeliveryStatus;
     readonly nextAttemptAt?: Date;
@@ -202,6 +229,11 @@ export class InMemoryOutboundWebhookStore implements OutboundWebhookStore {
     const current = this.deliveries.get(key);
     if (!current) {
       throw new OutboundWebhookConfigurationProblem("delivery was not found", {
+        deliveryId: input.attempt.deliveryId,
+      });
+    }
+    if (!this.hasActiveClaim(key, input.claimToken)) {
+      throw new OutboundWebhookConfigurationProblem("delivery claim is stale or expired", {
         deliveryId: input.attempt.deliveryId,
       });
     }
@@ -251,6 +283,11 @@ export class InMemoryOutboundWebhookStore implements OutboundWebhookStore {
       this.intents.set(intent.id, intent);
     }
     return cloneDelivery(updated);
+  }
+
+  private hasActiveClaim(key: string, token: string): boolean {
+    const claim = this.deliveryClaims.get(key);
+    return claim !== undefined && claim.token === token && claim.leaseUntil.getTime() > Date.now();
   }
 
   async createReplay(input: {

@@ -209,7 +209,20 @@ failures stop the batch before later tasks are published. Store adapters atomica
 publication once, and task publishers must honor the stable idempotency key so concurrent drains or
 a store-acknowledgement retry cannot create duplicate task, execution, or outbox records.
 Persistent adapters can use `createOutboundWebhookStoreConformanceSuite()` (including its optional
-reopen hook) to verify durability and concurrent-claim behavior.
+reopen and datastore-clock hooks) to verify durability, concurrent claims, lease recovery, and stale
+token rejection. `claimDelivery()` must atomically grant a claim using the datastore's current time,
+return `{ delivery, claimToken, leaseUntil }`, and allow another worker to claim after the lease
+expires. `recordAttempt()` must atomically reject an expired or replaced token before changing the
+delivery, attempts, or retry intent. `releaseDeliveryClaim()` returns `false` for an expired or
+replaced token, without releasing another worker's claim.
+
+`OutboundWebhookRuntime` defaults to a 60-second claim lease and a 30-second transport timeout.
+Set `claimLeaseDurationMs` longer than `transportTimeoutMs` and long enough to include signing,
+transport, attempt recording, and task publication. The runtime passes an abort signal to the
+transport and stops waiting when the timeout expires, even if the transport ignores the signal.
+An expired claim cannot record an attempt; a later dispatch can reclaim the delivery. A timeout
+leaves the delivery state unchanged for a retry and does not establish whether the remote endpoint
+accepted the request.
 
 Each attempt includes `webhook-id`, `webhook-delivery-id`, `webhook-timestamp`,
 `webhook-signature-version`, and `webhook-signature`. HMAC-SHA256 signs

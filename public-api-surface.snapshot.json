@@ -35342,6 +35342,11 @@
               "source": "./libs/outbound/types"
             },
             {
+              "name": "OutboundWebhookDeliveryClaim",
+              "exportKind": "named",
+              "source": "./libs/outbound/types"
+            },
+            {
               "name": "OutboundWebhookDeliveryStatus",
               "exportKind": "named",
               "source": "./libs/outbound/types"
