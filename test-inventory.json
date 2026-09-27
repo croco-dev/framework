@@ -74,6 +74,12 @@
       "owner": "@croco/access-drizzle"
     },
     {
+      "path": "packages/admin-core/src/tests/ActivationGuide.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/AdminResource.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -162,6 +168,18 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-ops"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ActivationGuideConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ActivationGuideConsoleIdentity.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
     },
     {
       "path": "packages/admin-react/src/tests/AdminForm.spec.ts",
@@ -2147,6 +2165,12 @@
       "owner": "@croco/frontend-problems"
     },
     {
+      "path": "packages/frontend-react/src/tests/GoalProgress.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
       "path": "packages/frontend-react/src/tests/authBridge.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -2897,6 +2921,12 @@
       "owner": "@croco/notifications-resend"
     },
     {
+      "path": "packages/onboarding-core/src/tests/GoalManager.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/onboarding-core"
+    },
+    {
       "path": "packages/onboarding-core/src/tests/InMemoryOnboardingStore.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -2913,6 +2943,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/onboarding-core"
+    },
+    {
+      "path": "packages/onboarding-drizzle/src/tests/DrizzleGoalStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/onboarding-drizzle"
     },
     {
       "path": "packages/onboarding-drizzle/src/tests/DrizzleOnboardingStore.spec.ts",

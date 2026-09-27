@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 820,
+  problemCount: 828,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -16822,7 +16822,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 69,
+          line: 70,
           column: 1,
           kind: "problem-class",
         },
@@ -16852,7 +16852,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 28,
+          line: 29,
           column: 1,
           kind: "problem-class",
         },
@@ -16883,7 +16883,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 47,
+          line: 48,
           column: 1,
           kind: "problem-class",
         },
@@ -16923,6 +16923,248 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "onboarding/goal-authorization-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#onboarding-goal-authorization-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/onboarding-core/src/libs/goals/GoalProblems.ts",
+          line: 65,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "onboarding/goal-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#onboarding-goal-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/onboarding-core/src/libs/goals/GoalProblems.ts",
+          line: 54,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "onboarding/goal-context-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#onboarding-goal-context-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/onboarding-core/src/libs/goals/GoalProblems.ts",
+          line: 14,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "onboarding/goal-definition-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#onboarding-goal-definition-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/onboarding-core/src/libs/goals/GoalProblems.ts",
+          line: 3,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "onboarding/goal-definition-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#onboarding-goal-definition-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/onboarding-core/src/libs/goals/GoalProblems.ts",
+          line: 45,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "onboarding/goal-episode-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#onboarding-goal-episode-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/onboarding-core/src/libs/goals/GoalProblems.ts",
+          line: 36,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "onboarding/goal-receipt-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#onboarding-goal-receipt-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/onboarding-core/src/libs/goals/GoalProblems.ts",
+          line: 25,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "onboarding/guide-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#onboarding-guide-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/ActivationGuide.ts",
+          line: 65,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "onboarding/state-snapshot-unsupported",
       category: "ValidationError",
       status: 422,
@@ -16946,7 +17188,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 99,
+          line: 100,
           column: 1,
           kind: "problem-class",
         },
@@ -16976,7 +17218,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 84,
+          line: 85,
           column: 1,
           kind: "problem-class",
         },
@@ -17007,7 +17249,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/onboarding-core/src/libs/problems/OnboardingProblems.ts",
-          line: 58,
+          line: 59,
           column: 1,
           kind: "problem-class",
         },

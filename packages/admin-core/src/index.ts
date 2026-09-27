@@ -254,3 +254,18 @@ export type {
   CohortBuilderState,
   CohortOperationsAdapter,
 } from "./libs/CohortOperations";
+export {
+  ACTIVATION_GUIDE_PERMISSIONS,
+  ActivationGuideValidationProblem,
+  assertActivationGuidePermission,
+  assertActivationGuidePreviewRequest,
+  assertActivationGuidePublishRequest,
+} from "./libs/ActivationGuide";
+export type {
+  ActivationGuideAccess,
+  ActivationGuideOperations,
+  ActivationGuidePreviewRequest,
+  ActivationGuidePublished,
+  ActivationGuidePublishRequest,
+  ActivationGuideState,
+} from "./libs/ActivationGuide";

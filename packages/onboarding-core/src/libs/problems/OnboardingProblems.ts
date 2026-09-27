@@ -23,7 +23,8 @@ export type OnboardingDefinitionInvalidReason =
   | "duplicate-step-id"
   | "unknown-step-dependency"
   | "unsupported-step-dependency"
-  | "unsupported-feature-flag";
+  | "unsupported-feature-flag"
+  | "duplicate-goal-bridge";
 
 export class OnboardingDefinitionInvalidProblem extends Problem {
   readonly code = "onboarding/definition-invalid";

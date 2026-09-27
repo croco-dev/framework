@@ -23,6 +23,11 @@ export {
   UsageQuotaMeter,
 } from "./libs/components";
 export { CreditOperationsConsole } from "./libs/CreditOperationsConsole";
+export { ActivationGuideConsole } from "./libs/ActivationGuideConsole";
+export type {
+  ActivationGuideConsoleProps,
+  ActivationGuideTarget,
+} from "./libs/ActivationGuideConsole";
 export { PlanReleaseConsole } from "./libs/PlanReleaseConsoleView";
 export {
   createPlanReleaseConsoleSnapshot,
