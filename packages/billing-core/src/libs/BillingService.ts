@@ -216,6 +216,10 @@ export class BillingService {
         );
       }
 
+      if (error instanceof Problem && error.status < 500) {
+        throw error;
+      }
+
       throw this.createCheckoutError(params.tenantId, error);
     }
 
@@ -344,6 +348,13 @@ export class BillingService {
       return new BillingCheckoutCreationProblem(
         billingAccountId,
         `Failed to create checkout for tenant ${billingAccountId}: ${error.message}`,
+        {
+          cause: error,
+          retryable:
+            error instanceof Problem && typeof error.extensions?.retryable === "boolean"
+              ? error.extensions.retryable
+              : undefined,
+        },
       );
     }
 
