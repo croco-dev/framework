@@ -68,6 +68,8 @@
     "@croco/events-tx": "workspace:*",
     "@croco/execution-core": "workspace:*",
     "@croco/execution-drizzle": "workspace:*",
+    "@croco/experience-core": "workspace:*",
+    "@croco/experience-drizzle": "workspace:*",
     "@croco/features-core": "workspace:*",
     "@croco/features-posthog": "workspace:*",
     "@croco/framework-config": "workspace:*",

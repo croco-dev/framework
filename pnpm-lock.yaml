@@ -331,6 +331,61 @@ importers:
         specifier: 6.0.3
         version: 6.0.3
 
+  examples/experience-placement:
+    dependencies:
+      '@croco/admin-core':
+        specifier: workspace:*
+        version: link:../../packages/admin-core
+      '@croco/admin-react':
+        specifier: workspace:*
+        version: link:../../packages/admin-react
+      '@croco/cohort-core':
+        specifier: workspace:*
+        version: link:../../packages/cohort-core
+      '@croco/experience-core':
+        specifier: workspace:*
+        version: link:../../packages/experience-core
+      '@croco/experience-drizzle':
+        specifier: workspace:*
+        version: link:../../packages/experience-drizzle
+      '@croco/frontend-react':
+        specifier: workspace:*
+        version: link:../../packages/frontend-react
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.20.0)(@upstash/redis@1.36.1)(better-sqlite3@12.11.1)(kysely@0.28.17)(pg@8.22.0)
+      pg:
+        specifier: 8.22.0
+        version: 8.22.0
+      react:
+        specifier: ^19.0.0
+        version: 19.2.5
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.5(react@19.2.5)
+    devDependencies:
+      '@types/node':
+        specifier: ^24
+        version: 24.13.2
+      '@types/pg':
+        specifier: 8.20.0
+        version: 8.20.0
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.14)
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(patch_hash=ce9dbc714c187cea78868f1e68c1a0e5097ddbceb7e976a564d94f2291b5bcb9)(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.18)(supports-color@10.2.2)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.9.0)
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+
   examples/fact-history:
     dependencies:
       '@croco/admin-core':
@@ -747,6 +802,9 @@ importers:
       '@croco/cohort-core':
         specifier: workspace:*
         version: link:../cohort-core
+      '@croco/experience-core':
+        specifier: workspace:*
+        version: link:../experience-core
       '@croco/onboarding-core':
         specifier: workspace:*
         version: link:../onboarding-core
@@ -825,6 +883,12 @@ importers:
       '@croco/entitlements-core':
         specifier: workspace:*
         version: link:../entitlements-core
+      '@croco/experience-core':
+        specifier: workspace:*
+        version: link:../experience-core
+      '@croco/frontend-react':
+        specifier: workspace:*
+        version: link:../frontend-react
       '@croco/impersonation-core':
         specifier: workspace:*
         version: link:../impersonation-core
@@ -1819,6 +1883,12 @@ importers:
       '@croco/execution-drizzle':
         specifier: workspace:*
         version: link:../execution-drizzle
+      '@croco/experience-core':
+        specifier: workspace:*
+        version: link:../experience-core
+      '@croco/experience-drizzle':
+        specifier: workspace:*
+        version: link:../experience-drizzle
       '@croco/features-core':
         specifier: workspace:*
         version: link:../features-core
@@ -2335,6 +2405,44 @@ importers:
         specifier: 4.1.8
         version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@24.13.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
 
+  packages/experience-core:
+    dependencies:
+      '@croco/cohort-core':
+        specifier: workspace:*
+        version: link:../cohort-core
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+    devDependencies:
+      tsup:
+        specifier: ^8.4.0
+        version: 8.5.1(patch_hash=ce9dbc714c187cea78868f1e68c1a0e5097ddbceb7e976a564d94f2291b5bcb9)(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.18)(supports-color@10.2.2)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.9.0)
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.8
+        version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@24.13.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
+
+  packages/experience-drizzle:
+    dependencies:
+      '@croco/experience-core':
+        specifier: workspace:*
+        version: link:../experience-core
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
+    devDependencies:
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.20.0)(@upstash/redis@1.36.1)(better-sqlite3@12.11.1)(kysely@0.28.17)(pg@8.22.0)
+      pg:
+        specifier: 8.22.0
+        version: 8.22.0
+      vitest:
+        specifier: 4.1.8
+        version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@24.13.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
+
   packages/features-core:
     dependencies:
       '@croco/framework-context':
@@ -2519,6 +2627,9 @@ importers:
 
   packages/frontend-react:
     dependencies:
+      '@croco/experience-core':
+        specifier: workspace:*
+        version: link:../experience-core
       '@croco/meta-vite':
         specifier: workspace:*
         version: link:../meta-vite
@@ -2536,11 +2647,11 @@ importers:
         specifier: ^19.0.0
         version: 19.2.3(@types/react@19.2.14)
       react:
-        specifier: ^19.0.0
-        version: 19.1.1
+        specifier: 19.2.5
+        version: 19.2.5
       react-dom:
-        specifier: ^19.0.0
-        version: 19.1.1(react@19.1.1)
+        specifier: 19.2.5
+        version: 19.2.5(react@19.2.5)
       vitest:
         specifier: 4.1.8
         version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@24.13.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
@@ -10751,11 +10862,6 @@ packages:
     resolution: {integrity: sha512-y3bGgqKj3QBdxLbLkomlohkvsA8gdAiUQlSBJnBhfn+BPxg4bc62d8TcBW15wavDfgexCgccckhcZvywyQYPOw==}
     hasBin: true
 
-  react-dom@19.1.1:
-    resolution: {integrity: sha512-Dlq/5LAZgF0Gaz6yiqZCf6VCcZs1ghAJyrsu84Q/GT0gV+mCxbfmKNoGRKBYMJ8IEdGPqu49YWXD02GCknEDkw==}
-    peerDependencies:
-      react: ^19.1.1
-
   react-dom@19.2.5:
     resolution: {integrity: sha512-J5bAZz+DXMMwW/wV3xzKke59Af6CHY7G4uYLN1OvBcKEsWOs4pQExj86BBKamxl/Ik5bx9whOrvBlSDfWzgSag==}
     peerDependencies:
@@ -10771,10 +10877,6 @@ packages:
     resolution: {integrity: sha512-CPiuKoMFf89B7QlbFfdBD9XmUWiE3qudQputMVZB8GQvPJZRX/gqjDaDWOPDwGinEfpJKEuBCkGt83Tt4efeyA==}
     peerDependencies:
       react: ^18.0.0 || ^19.0.0
-
-  react@19.1.1:
-    resolution: {integrity: sha512-w8nqGImo45dmMIfljjMwOGtbmC/mk4CMYhWIicdSflH91J9TyCyczcPFXJzrZ/ZXcgGRFeP6BU0BEJTw6tZdfQ==}
-    engines: {node: '>=0.10.0'}
 
   react@19.2.5:
     resolution: {integrity: sha512-llUJLzz1zTUBrskt2pwZgLq59AemifIftw4aB7JxOqf1HY2FDaGDxgwpAPVzHU1kdWabH7FauP4i1oEeer2WCA==}
@@ -11001,9 +11103,6 @@ packages:
   sax@1.6.0:
     resolution: {integrity: sha512-6R3J5M4AcbtLUdZmRv2SygeVaM7IhrLXu9BmnOGmmACak8fiUtOsYNWUS4uK7upbmHIBbLBeFeI//477BKLBzA==}
     engines: {node: '>=11.0.0'}
-
-  scheduler@0.26.0:
-    resolution: {integrity: sha512-NlHwttCI/l5gCPR3D1nNXtWABUmBwvZpEQiD4IXSbIDq8BzLIK/7Ir5gTFSGZDUu37K5cMNp0hFtzO38sC7gWA==}
 
   scheduler@0.27.0:
     resolution: {integrity: sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==}
@@ -18866,11 +18965,6 @@ snapshots:
       minimist: 1.2.8
       strip-json-comments: 2.0.1
 
-  react-dom@19.1.1(react@19.1.1):
-    dependencies:
-      react: 19.1.1
-      scheduler: 0.26.0
-
   react-dom@19.2.5(react@19.2.5):
     dependencies:
       react: 19.2.5
@@ -18887,8 +18981,6 @@ snapshots:
       clsx: 2.1.1
       prop-types: 15.8.1
       react: 19.2.5
-
-  react@19.1.1: {}
 
   react@19.2.5: {}
 
@@ -19239,8 +19331,6 @@ snapshots:
       enhanced-resolve: 5.24.2
 
   sax@1.6.0: {}
-
-  scheduler@0.26.0: {}
 
   scheduler@0.27.0: {}
 

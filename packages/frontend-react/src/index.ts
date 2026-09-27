@@ -103,3 +103,5 @@ export type {
   GoalProgressState,
   NextActionCardProps,
 } from "./libs/GoalProgress";
+export { ExperienceSlot } from "./libs/ExperienceSlot";
+export type { ExperienceRenderer, ExperienceSlotProps } from "./libs/ExperienceSlot";

@@ -242,6 +242,18 @@ export const apiDocPackages = [
     moduleName: "events-tx/src",
   },
   {
+    packageName: "@croco/experience-core",
+    directory: "experience-core",
+    entryPoint: "src/index.ts",
+    moduleName: "experience-core/src",
+  },
+  {
+    packageName: "@croco/experience-drizzle",
+    directory: "experience-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "experience-drizzle/src",
+  },
+  {
     packageName: "@croco/execution-core",
     directory: "execution-core",
     entryPoint: "src/index.ts",

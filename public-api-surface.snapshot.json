@@ -595,6 +595,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "ExperienceAdminProblem",
+              "exportKind": "named",
+              "source": "./libs/ExperienceOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ExperienceOperations",
+              "exportKind": "named",
+              "source": "./libs/ExperienceOperations",
+              "declarationKind": "class"
+            },
+            {
               "name": "FactHistoryInputProblem",
               "exportKind": "named",
               "source": "@croco/admin-core/fact-history-validation"
@@ -1261,6 +1273,26 @@
               "name": "EventCatalogState",
               "exportKind": "named",
               "source": "./libs/EventCatalog"
+            },
+            {
+              "name": "ExperienceAdminAccess",
+              "exportKind": "named",
+              "source": "./libs/ExperienceOperations"
+            },
+            {
+              "name": "ExperienceAdminPermission",
+              "exportKind": "named",
+              "source": "./libs/ExperienceOperations"
+            },
+            {
+              "name": "ExperienceAdminPreview",
+              "exportKind": "named",
+              "source": "./libs/ExperienceOperations"
+            },
+            {
+              "name": "ExperienceAdminState",
+              "exportKind": "named",
+              "source": "./libs/ExperienceOperations"
             },
             {
               "name": "FactHistoryComparisonRequest",
@@ -2440,6 +2472,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "ExperienceConsole",
+              "exportKind": "named",
+              "source": "./libs/ExperienceConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "FactHistoryPanel",
               "exportKind": "named",
               "source": "./libs/FactHistoryPanel",
@@ -3183,6 +3221,11 @@
               "source": "./libs/EventCatalogPanel"
             },
             {
+              "name": "ExperienceConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/ExperienceConsole"
+            },
+            {
               "name": "FactHistoryPanelProps",
               "exportKind": "named",
               "source": "./libs/FactHistoryPanel"
@@ -3576,6 +3619,40 @@
               "name": "WebhookReliabilityConsoleProps",
               "exportKind": "named",
               "source": "./libs/WebhookReliabilityConsole"
+            }
+          ]
+        },
+        {
+          "exportPath": "./experience-console",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/experience-console.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/experience-console.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/experience-console.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/admin-react/src/experience-console.ts",
+          "runtimeExports": [
+            {
+              "name": "ExperienceConsole",
+              "exportKind": "named",
+              "source": "./libs/ExperienceConsole",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "ExperienceConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/ExperienceConsole"
             }
           ]
         }
@@ -13458,6 +13535,245 @@
       ]
     },
     {
+      "packageName": "@croco/experience-core",
+      "relativeDir": "packages/experience-core",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/experience-core/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "definePlacement",
+              "exportKind": "named",
+              "source": "./libs/experience",
+              "declarationKind": "function"
+            },
+            {
+              "name": "dismissExperience",
+              "exportKind": "named",
+              "source": "./libs/experience",
+              "declarationKind": "function"
+            },
+            {
+              "name": "evaluatePlacement",
+              "exportKind": "named",
+              "source": "./libs/experience",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ExperienceInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/experience",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ExperienceUnavailableProblem",
+              "exportKind": "named",
+              "source": "./libs/experience",
+              "declarationKind": "class"
+            },
+            {
+              "name": "previewPlacement",
+              "exportKind": "named",
+              "source": "./libs/experience",
+              "declarationKind": "function"
+            },
+            {
+              "name": "readExperienceDecision",
+              "exportKind": "named",
+              "source": "./libs/experience",
+              "declarationKind": "function"
+            },
+            {
+              "name": "recordExposure",
+              "exportKind": "named",
+              "source": "./libs/experience",
+              "declarationKind": "function"
+            },
+            {
+              "name": "sameExperienceScope",
+              "exportKind": "named",
+              "source": "./libs/experience",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateExperienceConfig",
+              "exportKind": "named",
+              "source": "./libs/experience",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "EvaluatePlacementInput",
+              "exportKind": "named",
+              "source": "./libs/experience"
+            },
+            {
+              "name": "ExperienceConfig",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "ExperienceContent",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "ExperienceContext",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "ExperienceContextPredicate",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "ExperienceDecision",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "ExperienceFrequency",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "ExperienceReceiptInput",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "ExperienceReserveInput",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "ExperienceSaveInput",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "ExperienceScalar",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "ExperienceScope",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "ExperienceSourceSnapshotRef",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "ExperienceStore",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "ExperienceSubject",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "ExperienceTargeting",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "ExposureHandle",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PlacementDefinition",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PlacementEvaluation",
+              "exportKind": "named",
+              "source": "./libs/experience"
+            },
+            {
+              "name": "PreviewPlacementInput",
+              "exportKind": "named",
+              "source": "./libs/experience"
+            },
+            {
+              "name": "StoredExperienceDecision",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/experience-drizzle",
+      "relativeDir": "packages/experience-drizzle",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/experience-drizzle/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "PostgresExperienceStore",
+              "exportKind": "named",
+              "source": "./libs/PostgresExperienceStore",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "ExperiencePgDatabase",
+              "exportKind": "named",
+              "source": "./libs/PostgresExperienceStore"
+            },
+            {
+              "name": "ExperiencePgExecutor",
+              "exportKind": "named",
+              "source": "./libs/PostgresExperienceStore"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "packageName": "@croco/features-core",
       "relativeDir": "packages/features-core",
       "entrypoints": [
@@ -16647,6 +16963,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "ExperienceSlot",
+              "exportKind": "named",
+              "source": "./libs/ExperienceSlot",
+              "declarationKind": "function"
+            },
+            {
               "name": "GoalProgress",
               "exportKind": "named",
               "source": "./libs/GoalProgress",
@@ -16814,6 +17136,16 @@
               "name": "CrocoPageOptions",
               "exportKind": "named",
               "source": "./libs/createCrocoPages"
+            },
+            {
+              "name": "ExperienceRenderer",
+              "exportKind": "named",
+              "source": "./libs/ExperienceSlot"
+            },
+            {
+              "name": "ExperienceSlotProps",
+              "exportKind": "named",
+              "source": "./libs/ExperienceSlot"
             },
             {
               "name": "FrontendAuthBridgeSource",
@@ -17009,6 +17341,45 @@
               "name": "RequireSessionProps",
               "exportKind": "named",
               "source": "./libs/authBridgeTypes"
+            }
+          ]
+        },
+        {
+          "exportPath": "./experience-slot",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/experience-slot.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/experience-slot.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/experience-slot.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/frontend-react/src/experience-slot.ts",
+          "runtimeExports": [
+            {
+              "name": "ExperienceSlot",
+              "exportKind": "named",
+              "source": "./libs/ExperienceSlot",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "ExperienceRenderer",
+              "exportKind": "named",
+              "source": "./libs/ExperienceSlot"
+            },
+            {
+              "name": "ExperienceSlotProps",
+              "exportKind": "named",
+              "source": "./libs/ExperienceSlot"
             }
           ]
         }

@@ -307,3 +307,5 @@ export type {
   MetricInspectorProps,
   MetricInspectorResult,
 } from "./libs/MetricInspector";
+export { ExperienceConsole } from "./libs/ExperienceConsole";
+export type { ExperienceConsoleProps } from "./libs/ExperienceConsole";

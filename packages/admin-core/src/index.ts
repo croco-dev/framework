@@ -269,3 +269,10 @@ export type {
   ActivationGuidePublishRequest,
   ActivationGuideState,
 } from "./libs/ActivationGuide";
+export { ExperienceAdminProblem, ExperienceOperations } from "./libs/ExperienceOperations";
+export type {
+  ExperienceAdminAccess,
+  ExperienceAdminPermission,
+  ExperienceAdminPreview,
+  ExperienceAdminState,
+} from "./libs/ExperienceOperations";

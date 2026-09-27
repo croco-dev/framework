@@ -645,6 +645,18 @@
       "runtimes": ["node", "lambda"],
       "domain": "Engagement"
     },
+    "experience-core": {
+      "role": "Contracts",
+      "subtype": "domain",
+      "runtimes": [],
+      "domain": "Experiences"
+    },
+    "experience-drizzle": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Experiences"
+    },
     "entitlements-core": {
       "role": "Contracts",
       "subtype": "domain",
@@ -1224,6 +1236,7 @@
         "credits-core",
         "customer-health-core",
         "engagement-core",
+        "experience-core",
         "entitlements-core",
         "etl-core",
         "execution-core",
@@ -1262,6 +1275,7 @@
         "credits-drizzle",
         "customer-health-drizzle",
         "engagement-drizzle",
+        "experience-drizzle",
         "entitlements-drizzle",
         "execution-drizzle",
         "invitation-drizzle",
@@ -1475,6 +1489,8 @@
         "credits-core",
         "credits-drizzle",
         "engagement-drizzle",
+        "experience-core",
+        "experience-drizzle",
         "etl-core",
         "frontend-problems",
         "metering-upstash",
@@ -1681,6 +1697,17 @@
           "normalized delivery event deduplication",
           "compare-and-set endpoint invalidation",
           "deterministic delivery history"
+        ]
+      },
+      "experience-drizzle": {
+        "domain": "Experiences",
+        "adapter": "PostgreSQL experience configuration and receipt store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "revisioned publication and audit",
+          "atomic exposure reservations",
+          "durable display and dismissal receipts"
         ]
       },
       "entitlements-drizzle": {

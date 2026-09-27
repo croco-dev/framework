@@ -664,6 +664,7 @@ jobs:
               - 'packages/events-tx/**'
               - 'packages/execution-core/**'
               - 'packages/execution-drizzle/**'
+              - 'packages/experience-drizzle/**'
               - 'packages/framework-context/**'
               - 'packages/membership-core/**'
               - 'packages/membership-drizzle/**'
@@ -722,6 +723,8 @@ jobs:
               - 'packages/events-tx/src/**'
               - 'packages/execution-core/src/**'
               - 'packages/execution-drizzle/src/**'
+              - 'packages/experience-core/src/**'
+              - 'packages/experience-drizzle/src/**'
               - 'packages/features-core/src/**'
               - 'packages/features-posthog/src/**'
               - 'packages/framework-config/src/**'
@@ -1497,6 +1500,7 @@ jobs:
           ENGAGEMENT_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           ENTITLEMENTS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           EXECUTION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+          EXPERIENCE_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           METERING_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           ONBOARDING_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
@@ -1517,6 +1521,8 @@ jobs:
           pnpm --filter @croco/membership-drizzle exec vitest run src/tests/DrizzleMembershipStore.postgres.spec.ts
           pnpm build --filter=@croco/execution-drizzle...
           pnpm --filter @croco/execution-drizzle test:postgres
+          pnpm build --filter=@croco/experience-drizzle...
+          pnpm --filter @croco/experience-drizzle test:live
           pnpm build --filter=@croco/metering-drizzle...
           pnpm --filter @croco/metering-drizzle test:postgres
           pnpm build --filter=@croco/onboarding-drizzle...

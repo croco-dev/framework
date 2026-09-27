@@ -42,6 +42,8 @@
   "@croco/events-tx": "plugins",
   "@croco/execution-core": "contracts",
   "@croco/execution-drizzle": "plugins",
+  "@croco/experience-core": "contracts",
+  "@croco/experience-drizzle": "plugins",
   "@croco/features-core": "contracts",
   "@croco/features-posthog": "plugins",
   "@croco/framework-config": "kernel",
