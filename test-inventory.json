@@ -680,6 +680,12 @@
       "owner": "@croco/billing-core"
     },
     {
+      "path": "packages/billing-core/src/tests/SubscriptionRevokedEvent.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/billing-core"
+    },
+    {
       "path": "packages/billing-polar/src/tests/PolarBillingDiagnosticsProvider.spec.ts",
       "lane": "fast",
       "qualifiers": [],

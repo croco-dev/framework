@@ -209,6 +209,7 @@ describe("PolarEventMapper", () => {
       const event = events[0] as SubscriptionRevokedEvent;
       expect(event.tenantId).toBe("tenant-123");
       expect(event.externalSubscriptionId).toBe("sub-123");
+      expect(event.planVersionRef).toBe(planVersionRef("plan-pro@v1"));
     });
 
     it("subscription.canceled (cancelAtPeriodEnd 미지정) → SubscriptionCanceledEvent (기본값 true)", () => {

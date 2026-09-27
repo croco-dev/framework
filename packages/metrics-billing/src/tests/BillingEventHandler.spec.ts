@@ -4,6 +4,7 @@ import {
   planVersionRef,
   PlanChangedEvent,
   SubscriptionCanceledEvent,
+  SubscriptionRevokedEvent,
 } from "@croco/billing-core";
 import { EventBusConfig } from "@croco/events-core";
 import type { DomainEvent, EventBus, EventSubscription } from "@croco/events-core";
@@ -21,6 +22,7 @@ describe("BillingEventHandler", () => {
   let planRegistry!: PlanRegistry;
   let billingStore!: BillingStore;
   let metricsRepository!: MetricsRepository;
+  let recordedMovements: MRRMovement[];
 
   const asPlanVersion = (plan: Plan): PlanVersionDefinition => ({
     ref: planVersionRef(`${plan.id}@v1`),
@@ -111,7 +113,7 @@ describe("BillingEventHandler", () => {
       recordMRRMovement: vi.fn(
         async (
           _tenantId: string,
-          _movement: MRRMovement,
+          movement: MRRMovement,
           _timestamp: Date,
           eventKey?: string,
           dedupeEventKeys: readonly string[] = [],
@@ -124,6 +126,7 @@ describe("BillingEventHandler", () => {
           for (const key of eventKeys) {
             processedEventKeys.add(key);
           }
+          recordedMovements.push(movement);
         },
       ),
       recordSnapshot: vi.fn(),
@@ -152,6 +155,7 @@ describe("BillingEventHandler", () => {
       findOrdersByAccount: vi.fn(),
     } as unknown as BillingStore;
 
+    recordedMovements = [];
     metricsRepository = createMetricsRepository();
 
     handler = new BillingEventHandler(planRegistry, billingStore, metricsRepository);
@@ -177,6 +181,7 @@ describe("BillingEventHandler", () => {
         OrderPaidEvent.eventName,
         PlanChangedEvent.eventName,
         SubscriptionCanceledEvent.eventName,
+        SubscriptionRevokedEvent.eventName,
       ].sort(),
     );
   });
@@ -623,6 +628,163 @@ describe("BillingEventHandler", () => {
     });
   });
 
+  describe("SubscriptionRevokedEvent", () => {
+    beforeEach(() => {
+      vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
+      vi.mocked(planRegistry.getPlanVersion).mockResolvedValue(asPlanVersion(mockPlan));
+    });
+
+    it("records pinned churn once when a period-end cancellation reaches revocation", async () => {
+      const ref = mockSubscription.planVersionRef;
+      vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue({
+        ...mockSubscription,
+        planVersionRef: planVersionRef("plan-pro@v2"),
+      });
+      vi.mocked(planRegistry.getPlanVersion).mockImplementation(async (requestedRef) =>
+        requestedRef === ref
+          ? asPlanVersion(mockPlan)
+          : asPlanVersion({ ...mockPlan, amount: 9900 }),
+      );
+
+      await handler.handle(
+        new SubscriptionCanceledEvent("tenant-1", "sub-stripe", true, undefined, ref),
+      );
+      expect(recordedMovements).toHaveLength(0);
+
+      const event = new SubscriptionRevokedEvent("tenant-1", "sub-stripe", ref);
+      await handler.handle(event);
+      await handler.handle(event);
+
+      expect(recordedMovements).toHaveLength(1);
+      expect(recordedMovements[0]).toMatchObject({
+        churned: { amount: 2900, currency: "USD" },
+        net: { amount: -2900, currency: "USD" },
+      });
+      expect(planRegistry.getPlanVersion).toHaveBeenCalledWith(ref);
+      expect(billingStore.findSubscriptionByExternalId).not.toHaveBeenCalled();
+    });
+
+    it.each([false, true])(
+      "deduplicates immediate cancellation and revocation (revokedFirst=%s)",
+      async (revokedFirst) => {
+        const canceled = new SubscriptionCanceledEvent(
+          "tenant-1",
+          "sub-stripe",
+          false,
+          undefined,
+          mockSubscription.planVersionRef,
+        );
+        const revoked = new SubscriptionRevokedEvent(
+          "tenant-1",
+          "sub-stripe",
+          mockSubscription.planVersionRef,
+        );
+        const events = revokedFirst ? [revoked, canceled] : [canceled, revoked];
+
+        for (const event of events) await handler.handle(event);
+
+        expect(metricsRepository.recordMRRMovement).toHaveBeenCalledTimes(2);
+        expect(recordedMovements).toHaveLength(1);
+        expect(recordedMovements[0]?.churned).toEqual({ amount: 2900, currency: "USD" });
+      },
+    );
+
+    it("records separate churn for distinct subscriptions revoked in the same millisecond", async () => {
+      const [first, second] = (() => {
+        vi.useFakeTimers();
+        vi.setSystemTime(new Date("2026-02-01T00:00:00.000Z"));
+        try {
+          return [
+            new SubscriptionRevokedEvent("tenant-1", "sub-a", mockSubscription.planVersionRef),
+            new SubscriptionRevokedEvent("tenant-1", "sub-b", mockSubscription.planVersionRef),
+          ] as const;
+        } finally {
+          vi.useRealTimers();
+        }
+      })();
+
+      await handler.handle(first);
+      await handler.handle(second);
+
+      expect(first.timestamp).toEqual(second.timestamp);
+      expect(recordedMovements).toHaveLength(2);
+    });
+
+    it("records revoked churn without reading a deleted subscription when the event pins the plan", async () => {
+      vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(null);
+      const event = new SubscriptionRevokedEvent(
+        "tenant-1",
+        "sub-stripe",
+        mockSubscription.planVersionRef,
+      );
+
+      await handler.handle(event);
+
+      expect(billingStore.findSubscriptionByExternalId).not.toHaveBeenCalled();
+      expect(planRegistry.getPlanVersion).toHaveBeenCalledWith(mockSubscription.planVersionRef);
+      expect(recordedMovements).toHaveLength(1);
+      expect(recordedMovements[0]?.churned).toEqual({ amount: 2900, currency: "USD" });
+    });
+
+    it("looks up the pinned subscription plan for legacy revoked events", async () => {
+      await handler.handle(new SubscriptionRevokedEvent("tenant-1", "sub-stripe"));
+
+      expect(billingStore.findSubscriptionByExternalId).toHaveBeenCalledWith("sub-stripe");
+      expect(planRegistry.getPlanVersion).toHaveBeenCalledWith(mockSubscription.planVersionRef);
+      expect(recordedMovements).toHaveLength(1);
+      expect(recordedMovements[0]?.churned).toEqual({ amount: 2900, currency: "USD" });
+    });
+
+    it("reports a missing subscription for legacy revoked events", async () => {
+      vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(null);
+
+      await expect(
+        handler.handle(new SubscriptionRevokedEvent("tenant-1", "sub-stripe")),
+      ).rejects.toMatchObject({
+        code: "metrics-billing/metric-dropped",
+        extensions: expect.objectContaining({
+          reason: "subscription_not_found",
+          resourceId: "sub-stripe",
+        }),
+      });
+      expect(metricsRepository.recordMRRMovement).not.toHaveBeenCalled();
+    });
+
+    it.each([false, true])(
+      "reports a missing revoked plan (eventPinsPlan=%s)",
+      async (eventPinsPlan) => {
+        vi.mocked(planRegistry.getPlanVersion).mockResolvedValue(null);
+        const ref = eventPinsPlan ? mockSubscription.planVersionRef : undefined;
+
+        await expect(
+          handler.handle(new SubscriptionRevokedEvent("tenant-1", "sub-stripe", ref)),
+        ).rejects.toMatchObject({
+          code: "metrics-billing/metric-dropped",
+          extensions: expect.objectContaining({
+            reason: "plan_not_found",
+            resourceId: ref ?? mockSubscription.planId,
+          }),
+        });
+        expect(billingStore.findSubscriptionByExternalId).toHaveBeenCalledTimes(
+          eventPinsPlan ? 0 : 1,
+        );
+        expect(metricsRepository.recordMRRMovement).not.toHaveBeenCalled();
+      },
+    );
+
+    it("preserves repository failure evidence for revoked churn", async () => {
+      vi.mocked(metricsRepository.recordMRRMovement).mockRejectedValue(
+        new Error("repository unavailable"),
+      );
+
+      await expect(
+        handler.handle(
+          new SubscriptionRevokedEvent("tenant-1", "sub-stripe", mockSubscription.planVersionRef),
+        ),
+      ).rejects.toBeInstanceOf(BillingMetricRecordingProblem);
+    });
+  });
+
   describe("SubscriptionCanceledEvent", () => {
     it("should not record churned MRR when cancellation is scheduled for period end", async () => {
       const event = new SubscriptionCanceledEvent("tenant-1", "sub-stripe", true);
@@ -659,7 +821,7 @@ describe("BillingEventHandler", () => {
         expectedMovement,
         event.timestamp,
         primaryEventKey(event),
-        [legacyTimestampEventKey(event)],
+        [legacyTimestampEventKey(event), "billing.subscription_churned_sub-stripe"],
       );
     });
 
@@ -693,7 +855,7 @@ describe("BillingEventHandler", () => {
           }),
           event.timestamp,
           primaryEventKey(event),
-          [legacyTimestampEventKey(event)],
+          [legacyTimestampEventKey(event), "billing.subscription_churned_sub-stripe"],
         );
       },
     );
@@ -757,7 +919,7 @@ describe("BillingEventHandler", () => {
         expect.any(Object),
         event.timestamp,
         primaryEventKey(event),
-        [legacyTimestampEventKey(event)],
+        [legacyTimestampEventKey(event), "billing.subscription_churned_sub-stripe"],
       );
     });
 

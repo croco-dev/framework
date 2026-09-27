@@ -6,6 +6,7 @@ import {
   type PlanVersionRef,
   type OrderPaymentReason,
   SubscriptionCanceledEvent,
+  SubscriptionRevokedEvent,
 } from "@croco/billing-core";
 import { type DomainEvent, type EventHandler, RegisterEventHandler } from "@croco/events-core";
 import type { MetricsRepository, Money, PlanProvider } from "@croco/metrics-core";
@@ -18,14 +19,21 @@ import {
 } from "./problems/BillingMetricsProblems";
 import type { BillingMetricDropReason } from "./problems/BillingMetricsProblems";
 
-type BillingMetricEvent = OrderPaidEvent | PlanChangedEvent | SubscriptionCanceledEvent;
+type BillingMetricEvent =
+  | OrderPaidEvent
+  | PlanChangedEvent
+  | SubscriptionCanceledEvent
+  | SubscriptionRevokedEvent;
 
 @RegisterEventHandler(OrderPaidEvent)
 @RegisterEventHandler(PlanChangedEvent)
 @RegisterEventHandler(SubscriptionCanceledEvent)
+@RegisterEventHandler(SubscriptionRevokedEvent)
 export class BillingEventHandler
   implements
-    EventHandler<OrderPaidEvent | PlanChangedEvent | SubscriptionCanceledEvent>,
+    EventHandler<
+      OrderPaidEvent | PlanChangedEvent | SubscriptionCanceledEvent | SubscriptionRevokedEvent
+    >,
     PlanProvider
 {
   private readonly calculator = new MrrCalculator();
@@ -79,6 +87,11 @@ export class BillingEventHandler
 
     if (event instanceof SubscriptionCanceledEvent) {
       await this.handleSubscriptionCanceled(event);
+      return;
+    }
+
+    if (event instanceof SubscriptionRevokedEvent) {
+      await this.recordChurn(event);
     }
   }
 
@@ -181,6 +194,12 @@ export class BillingEventHandler
       return;
     }
 
+    await this.recordChurn(event);
+  }
+
+  private async recordChurn(
+    event: SubscriptionCanceledEvent | SubscriptionRevokedEvent,
+  ): Promise<void> {
     let planVersionRef = event.planVersionRef;
     let planResourceId: string = planVersionRef ?? event.externalSubscriptionId;
     if (planVersionRef === undefined) {
@@ -207,7 +226,9 @@ export class BillingEventHandler
     const mrr: Money = { amount: mrrAmount, currency: plan.currency };
     const movement = this.createMRRMovement(mrr, "churned");
 
-    await this.recordMRRMovement(event, movement);
+    await this.recordMRRMovement(event, movement, [
+      `billing.subscription_churned_${event.externalSubscriptionId}`,
+    ]);
   }
 
   private createMRRMovement(
@@ -282,9 +303,16 @@ export class BillingEventHandler
     return `${event.eventName}_${event.timestamp.getTime()}`;
   }
 
-  private async recordMRRMovement(event: BillingMetricEvent, movement: MRRMovement): Promise<void> {
+  private async recordMRRMovement(
+    event: BillingMetricEvent,
+    movement: MRRMovement,
+    dedupeEventKeys: readonly string[] = [],
+  ): Promise<void> {
     const eventKey = this.getEventKey(event);
-    const legacyEventKeys = [this.getLegacyTimestampEventKey(event)];
+    const allDedupeEventKeys =
+      event instanceof SubscriptionRevokedEvent
+        ? dedupeEventKeys
+        : [this.getLegacyTimestampEventKey(event), ...dedupeEventKeys];
 
     try {
       await this.metricsRepository.recordMRRMovement(
@@ -292,7 +320,7 @@ export class BillingEventHandler
         movement,
         event.timestamp,
         eventKey,
-        legacyEventKeys,
+        allDedupeEventKeys,
       );
     } catch (error) {
       throw new BillingMetricRecordingProblem({
