@@ -1,0 +1,6 @@
+CREATE TABLE croco_cohort_definitions (scope_key text NOT NULL, id text NOT NULL, version integer NOT NULL, definition jsonb NOT NULL, PRIMARY KEY (scope_key,id,version));
+CREATE TABLE croco_cohort_runs (id text PRIMARY KEY, scope_key text NOT NULL, definition jsonb NOT NULL, run jsonb NOT NULL, fingerprint text NOT NULL, checkpoint text, revision integer NOT NULL DEFAULT 0, status text NOT NULL CHECK (status IN ('running','complete','failed','canceled')), UNIQUE(id,scope_key));
+CREATE TABLE croco_cohort_members (run_id text NOT NULL REFERENCES croco_cohort_runs(id) ON DELETE CASCADE, subject_id text NOT NULL, member jsonb NOT NULL, PRIMARY KEY(run_id,subject_id));
+CREATE TABLE croco_cohort_publications (snapshot_id text PRIMARY KEY, scope_key text NOT NULL, definition_id text NOT NULL, revision integer NOT NULL, publication jsonb NOT NULL, actor text NOT NULL, reason text NOT NULL, idempotency_key text NOT NULL, UNIQUE(scope_key,definition_id,revision), UNIQUE(scope_key,definition_id,idempotency_key));
+CREATE TABLE croco_cohort_current (scope_key text NOT NULL, definition_id text NOT NULL, revision integer NOT NULL, snapshot_id text NOT NULL REFERENCES croco_cohort_publications(snapshot_id), PRIMARY KEY(scope_key,definition_id));
+CREATE TABLE croco_cohort_erased (scope_key text NOT NULL, subject_id text NOT NULL, PRIMARY KEY(scope_key,subject_id));

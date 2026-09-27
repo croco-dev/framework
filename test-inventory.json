@@ -80,6 +80,12 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/CohortOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/CreditOperations.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -171,6 +177,18 @@
     },
     {
       "path": "packages/admin-react/src/tests/AdminPanel.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/CohortBuilder.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/CohortBuilderInteraction.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -984,6 +1002,24 @@
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/cli"
+    },
+    {
+      "path": "packages/cohort-core/src/tests/Cohort.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/cohort-core"
+    },
+    {
+      "path": "packages/cohort-drizzle/src/tests/PostgresCohortStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/cohort-drizzle"
+    },
+    {
+      "path": "packages/cohort-drizzle/src/tests/PostgresCohortStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/cohort-drizzle"
     },
     {
       "path": "packages/create-croco-app/src/tests/E2E.spec.ts",

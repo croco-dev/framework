@@ -65,6 +65,7 @@
   },
   "dependencies": {
     "@croco/analytics-core": "workspace:*",
+    "@croco/cohort-core": "workspace:*",
     "@croco/problems-core": "workspace:*"
   },
   "devDependencies": {

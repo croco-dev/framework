@@ -1003,6 +1003,8 @@ describe("CI verification profile contract", () => {
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/credits-drizzle test:postgres");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/analytics-drizzle...");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/analytics-drizzle test:postgres");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/cohort-drizzle...");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/cohort-drizzle test:live");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/engagement-drizzle...");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/engagement-drizzle test:postgres");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/entitlements-drizzle...");
@@ -1019,6 +1021,11 @@ describe("CI verification profile contract", () => {
     expect(WORKFLOW).toContain("              - 'packages/entitlements-core/**'");
     expect(WORKFLOW).toContain("              - 'packages/entitlements-drizzle/**'");
     expect(WORKFLOW).toContain("              - 'packages/entitlements-drizzle/src/**'");
+  });
+
+  it("routes cohort persistence changes to the real PostgreSQL suite", () => {
+    expect(WORKFLOW).toContain("              - 'packages/cohort-core/**'");
+    expect(WORKFLOW).toContain("              - 'packages/cohort-drizzle/**'");
   });
 
   it("routes credit persistence changes to the real PostgreSQL conformance suite", () => {
