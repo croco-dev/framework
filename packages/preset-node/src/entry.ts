@@ -1,4 +1,5 @@
 import type { Server as HTTPServer, ServerResponse } from "node:http";
+import type { Socket } from "node:net";
 import { serve } from "@hono/node-server";
 import type { Hono } from "hono";
 
@@ -44,7 +45,7 @@ export function createNodeHost(
   let startPromise: Promise<void> | null = null;
   let closePromise: Promise<void> | null = null;
   let serverClosePromise: Promise<void> | null = null;
-  const activeResponses = new Set<ServerResponse>();
+  const activeResponses = new Map<Socket, Set<ServerResponse>>();
 
   const start = (): Promise<void> => {
     if (state === "closing" || state === "closed") {
@@ -87,17 +88,34 @@ export function createNodeHost(
           handleListening,
         ) as unknown as HTTPServer;
         server = createdServer;
-        createdServer.prependListener("request", (_request, response: ServerResponse) => {
-          activeResponses.add(response);
-          response.once("close", () => activeResponses.delete(response));
-          response.once("finish", () => {
-            if (state === "closing") {
-              createdServer?.closeIdleConnections?.();
+        createdServer.prependListener("request", (request, response: ServerResponse) => {
+          const socket = request.socket;
+          let responses = activeResponses.get(socket);
+          if (!responses) {
+            responses = new Set<ServerResponse>();
+            activeResponses.set(socket, responses);
+          }
+          responses.add(response);
+          const releaseResponse = () => {
+            if (!responses.delete(response)) {
+              return;
             }
-          });
+            if (responses.size === 0) {
+              activeResponses.delete(socket);
+              if (state === "closing" && !socket.destroyed) {
+                socket.destroySoon();
+              }
+            }
+          };
+          response.once("close", releaseResponse);
+          response.once("finish", releaseResponse);
           const writeHead = response.writeHead;
           response.writeHead = ((...args: unknown[]) => {
-            if (state === "closing" && !response.headersSent) {
+            if (
+              state === "closing" &&
+              !response.headersSent &&
+              [...responses].at(-1) === response
+            ) {
               response.setHeader("Connection", "close");
               const headersIndex = args[2] === undefined && typeof args[1] !== "string" ? 1 : 2;
               const headers = args[headersIndex];
@@ -120,9 +138,6 @@ export function createNodeHost(
             }
             return Reflect.apply(writeHead, response, args) as ServerResponse;
           }) as ServerResponse["writeHead"];
-          if (state === "closing" && !response.headersSent) {
-            response.setHeader("Connection", "close");
-          }
         });
         createdServer.once("error", handleStartError);
 
@@ -206,12 +221,9 @@ export function createNodeHost(
               }
               resolve();
             });
-            for (const response of activeResponses) {
-              if (!response.headersSent) {
-                response.setHeader("Connection", "close");
-              }
+            if (activeResponses.size === 0) {
+              activeServer.closeIdleConnections?.();
             }
-            activeServer.closeIdleConnections?.();
           } catch (error) {
             reject(new NodeEntryLifecycleIoProblem("close", asError(error)));
           }
