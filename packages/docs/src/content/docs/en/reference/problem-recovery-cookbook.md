@@ -2146,7 +2146,7 @@ Sources:
 - Lifecycle: `active`
 - Cause: Another worker currently owns the Clerk delivery reservation for this deliveryId and eventType.
 - User action: Retry the same delivery after the active worker completes or after the configured processingLeaseMs expires.
-- Operator action: Inspect concurrent worker state for the reported deliveryId and eventType; if the owner was abandoned, wait for processingLeaseMs expiry before retrying.
+- Operator action: Inspect concurrent worker state for the reported deliveryId and eventType. Set processingLeaseMs above the handler's maximum runtime; after lease expiry, retry only when the handler prevents duplicate external side effects.
 - Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:

@@ -320,14 +320,14 @@
       "file": "packages/auth-better-auth/README.md",
       "blockIndex": 9,
       "language": "typescript",
-      "openingLine": 203,
+      "openingLine": 207,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
       "file": "packages/auth-better-auth/README.md",
       "blockIndex": 10,
       "language": "typescript",
-      "openingLine": 214,
+      "openingLine": 218,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {

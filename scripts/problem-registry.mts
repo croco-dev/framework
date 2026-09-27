@@ -2811,7 +2811,7 @@ const recoveryMetadataByCode = {
     userAction:
       "Retry the same delivery after the active worker completes or after the configured processingLeaseMs expires.",
     operatorAction:
-      "Inspect concurrent worker state for the reported deliveryId and eventType; if the owner was abandoned, wait for processingLeaseMs expiry before retrying.",
+      "Inspect concurrent worker state for the reported deliveryId and eventType. Set processingLeaseMs above the handler's maximum runtime; after lease expiry, retry only when the handler prevents duplicate external side effects.",
     retryability: "retryable",
     redactionPolicy: "safe-message",
     severity: "warning",

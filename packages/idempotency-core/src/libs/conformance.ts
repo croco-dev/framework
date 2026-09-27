@@ -293,10 +293,10 @@ export function createIdempotencyStoreConformanceSuite<TResult = string>(
         run: async () => {
           const store = await options.createStore();
           const key = createConformanceKey("separate-lease");
-          const reserveOptions = { leaseMs: 100, ttlMs: 60_000 };
+          const reserveOptions = { leaseMs: 3_000, ttlMs: 60_000 };
           const abandoned = await store.reserve(key, reserveOptions);
           assertEqual(abandoned.outcome, "reserved", "first attempt must reserve");
-          await new Promise((resolve) => setTimeout(resolve, 120));
+          await new Promise((resolve) => setTimeout(resolve, 4_100));
           const recovered = await store.reserve(key, reserveOptions);
           assertEqual(recovered.outcome, "reserved", "expired lease must allow a new reservation");
           if (recovered.outcome !== "reserved") {
@@ -309,7 +309,7 @@ export function createIdempotencyStoreConformanceSuite<TResult = string>(
             response,
             ttlMs: reserveOptions.ttlMs,
           });
-          await new Promise((resolve) => setTimeout(resolve, 120));
+          await new Promise((resolve) => setTimeout(resolve, 4_100));
           const replay = await store.reserve(key, reserveOptions);
           assertEqual(replay.outcome, "replay", "completed retention must outlast the lease");
           if (replay.outcome === "replay") {

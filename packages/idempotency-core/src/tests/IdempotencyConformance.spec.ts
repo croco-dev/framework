@@ -27,5 +27,5 @@ describe("idempotency store conformance", () => {
     for (const testCase of suite.cases) {
       await testCase.run();
     }
-  });
+  }, 15_000);
 });
