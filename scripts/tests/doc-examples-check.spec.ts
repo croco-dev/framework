@@ -584,6 +584,7 @@ function writeOperationalEnvironmentTemplate(
     NODE_ENV: "development",
     OTEL_EXPORTER_OTLP_ENDPOINT: "http://localhost:4318",
     OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: "http://localhost:4318/v1/traces",
+    OTEL_SDK_DISABLED: "false",
     OTEL_SAMPLING_PROBABILITY: "1.0",
     OTEL_SERVICE_NAME: "test-service",
     TELEMETRY_ENABLED: "false",

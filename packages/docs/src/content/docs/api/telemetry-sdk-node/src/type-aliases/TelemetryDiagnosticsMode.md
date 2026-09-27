@@ -5,4 +5,4 @@ prev: false
 title: "TelemetryDiagnosticsMode"
 ---
 
-> **TelemetryDiagnosticsMode** = `"active"` \| `"disabled"` \| `"not_configured"` \| `"not_initialized"` \| `"sampling_disabled"` \| `"startup_failed"`
+> **TelemetryDiagnosticsMode** = `"active"` \| `"disabled"` \| `"external_tracer_provider"` \| `"not_configured"` \| `"not_initialized"` \| `"sampling_disabled"` \| `"startup_failed"`

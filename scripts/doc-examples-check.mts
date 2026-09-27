@@ -73,6 +73,7 @@ const publicOperationalEnvironmentVariables = {
   NODE_ENV: { sensitive: false },
   OTEL_EXPORTER_OTLP_ENDPOINT: { sensitive: false },
   OTEL_EXPORTER_OTLP_TRACES_ENDPOINT: { sensitive: false },
+  OTEL_SDK_DISABLED: { sensitive: false },
   OTEL_SAMPLING_PROBABILITY: { sensitive: false },
   OTEL_SERVICE_NAME: { sensitive: false },
   TELEMETRY_ENABLED: { sensitive: false },
@@ -433,7 +434,7 @@ function collectDocumentedOperationalEnvironmentVariableSources(
 ): ReadonlyMap<string, readonly string[]> {
   const locationsByVariable = new Map<string, Set<string>>();
   const tokenPattern =
-    /\b(?:CROCO_[A-Z0-9_]+|NODE_ENV|OTEL_EXPORTER_OTLP(?:_TRACES)?_ENDPOINT|OTEL_SAMPLING_PROBABILITY|OTEL_SERVICE_NAME|PUBLIC_ORIGIN|SERVICE_NAME|TELEMETRY_ENABLED|TRACE_SAMPLE_RATE)\b/g;
+    /\b(?:CROCO_[A-Z0-9_]+|NODE_ENV|OTEL_EXPORTER_OTLP(?:_TRACES)?_ENDPOINT|OTEL_SAMPLING_PROBABILITY|OTEL_SDK_DISABLED|OTEL_SERVICE_NAME|PUBLIC_ORIGIN|SERVICE_NAME|TELEMETRY_ENABLED|TRACE_SAMPLE_RATE)\b/g;
 
   for (const file of collectMarkdownFilesFromRoots(
     rootDir,
