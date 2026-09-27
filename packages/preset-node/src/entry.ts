@@ -1,4 +1,4 @@
-import type { Server as HTTPServer } from "node:http";
+import type { Server as HTTPServer, ServerResponse } from "node:http";
 import { serve } from "@hono/node-server";
 import type { Hono } from "hono";
 
@@ -44,6 +44,7 @@ export function createNodeHost(
   let startPromise: Promise<void> | null = null;
   let closePromise: Promise<void> | null = null;
   let serverClosePromise: Promise<void> | null = null;
+  const activeResponses = new Set<ServerResponse>();
 
   const start = (): Promise<void> => {
     if (state === "closing" || state === "closed") {
@@ -86,6 +87,43 @@ export function createNodeHost(
           handleListening,
         ) as unknown as HTTPServer;
         server = createdServer;
+        createdServer.prependListener("request", (_request, response: ServerResponse) => {
+          activeResponses.add(response);
+          response.once("close", () => activeResponses.delete(response));
+          response.once("finish", () => {
+            if (state === "closing") {
+              createdServer?.closeIdleConnections?.();
+            }
+          });
+          const writeHead = response.writeHead;
+          response.writeHead = ((...args: unknown[]) => {
+            if (state === "closing" && !response.headersSent) {
+              response.setHeader("Connection", "close");
+              const headersIndex = args[2] === undefined && typeof args[1] !== "string" ? 1 : 2;
+              const headers = args[headersIndex];
+              if (Array.isArray(headers)) {
+                const remaining: unknown[] = [];
+                for (let index = 0; index < headers.length; index += 2) {
+                  if (String(headers[index]).toLowerCase() !== "connection") {
+                    remaining.push(headers[index], headers[index + 1]);
+                  }
+                }
+                args[headersIndex] = [...remaining, "Connection", "close"];
+              } else if (headers && typeof headers === "object") {
+                args[headersIndex] = {
+                  ...Object.fromEntries(
+                    Object.entries(headers).filter(([name]) => name.toLowerCase() !== "connection"),
+                  ),
+                  Connection: "close",
+                };
+              }
+            }
+            return Reflect.apply(writeHead, response, args) as ServerResponse;
+          }) as ServerResponse["writeHead"];
+          if (state === "closing" && !response.headersSent) {
+            response.setHeader("Connection", "close");
+          }
+        });
         createdServer.once("error", handleStartError);
 
         if (listening) {
@@ -168,6 +206,11 @@ export function createNodeHost(
               }
               resolve();
             });
+            for (const response of activeResponses) {
+              if (!response.headersSent) {
+                response.setHeader("Connection", "close");
+              }
+            }
             activeServer.closeIdleConnections?.();
           } catch (error) {
             reject(new NodeEntryLifecycleIoProblem("close", asError(error)));
