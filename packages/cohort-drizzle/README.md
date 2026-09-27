@@ -16,6 +16,6 @@ Register a `CohortSourceMapping` for an application-owned normalized snapshot ta
 
 All AST operators compile from the same allowlisted mapping. SQL NULL preserves unknown through NOT. Event coverage uses unioned half-open intervals; distinct days use UTC. Every scanned result is checked against the shared evaluator, and a mismatch aborts its transaction. Provider failures propagate and do not become empty membership.
 
-`pnpm test` runs compiler safety checks. To run the real PostgreSQL two-connection/restart/migration suite, set `COHORT_TEST_DATABASE_URL` to an isolated disposable test database. The integration test replaces its named fixture tables; never point it at customer or production data.
+`pnpm test` runs compiler safety checks. To run the real PostgreSQL two-connection/restart/migration suite, set `COHORT_TEST_DATABASE_URL` to an isolated disposable test database and run `pnpm test:live`. The integration test replaces its named fixture tables; never point it at customer or production data.
 
 Warehouse and CSV/JSONL profiles are not supplied: their prerequisite shared readers/query authorization/parser packages must land separately. This adapter directly supports normalized PostgreSQL source mappings.

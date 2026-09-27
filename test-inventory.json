@@ -1010,6 +1010,12 @@
       "owner": "@croco/cohort-core"
     },
     {
+      "path": "packages/cohort-drizzle/src/tests/PostgresCohortStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/cohort-drizzle"
+    },
+    {
       "path": "packages/cohort-drizzle/src/tests/PostgresCohortStore.spec.ts",
       "lane": "fast",
       "qualifiers": [],

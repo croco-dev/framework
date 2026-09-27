@@ -64,6 +64,15 @@ jobs:
           --lane live --allow-live --owner @croco/billing-polar
           --output ci-reports/package-quality/live-test-lanes/billing-polar.json
 
+      - name: Run @croco/cohort-drizzle live tests
+        continue-on-error: true
+        env:
+          COHORT_TEST_DATABASE_URL: ${{ secrets.MEMBERSHIP_POSTGRES_URL }}
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/cohort-drizzle
+          --output ci-reports/package-quality/live-test-lanes/cohort-drizzle.json
+
       - name: Run @croco/credits-drizzle live tests
         continue-on-error: true
         env:
@@ -195,6 +204,7 @@ jobs:
           --profile scheduled-live
           --lane-report ci-reports/package-quality/live-test-lanes/auth-drizzle.json
           --lane-report ci-reports/package-quality/live-test-lanes/billing-polar.json
+          --lane-report ci-reports/package-quality/live-test-lanes/cohort-drizzle.json
           --lane-report ci-reports/package-quality/live-test-lanes/credits-drizzle.json
           --lane-report ci-reports/package-quality/live-test-lanes/execution-drizzle.json
           --lane-report ci-reports/package-quality/live-test-lanes/membership-drizzle.json

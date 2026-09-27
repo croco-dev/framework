@@ -3,6 +3,7 @@
 "@croco/cohort-drizzle": minor
 "@croco/admin-core": minor
 "@croco/admin-react": minor
+"@croco/problems-core": patch
 "create-croco-app": minor
 ---
 
