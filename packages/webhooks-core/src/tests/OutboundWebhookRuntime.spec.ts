@@ -164,6 +164,131 @@ describe("OutboundWebhookRuntime", () => {
     expect(await store.listUnpublishedIntents(EVENT.tenantId)).toHaveLength(1);
   });
 
+  describe("delivery intent publication", () => {
+    const poisonedPublisher = (): OutboundWebhookTaskPublisher => ({
+      publish: vi.fn(async ({ contracts }) => {
+        if (contracts.outbox.source?.eventId === "event_poisoned") {
+          throw new OutboundWebhookPermanentProblem("poisoned", "task rejected");
+        }
+      }),
+    });
+
+    async function publishHealthyBehindPoisoned(runtime: OutboundWebhookRuntime): Promise<string> {
+      await expect(runtime.publish({ ...EVENT, id: "event_poisoned" })).rejects.toBeInstanceOf(
+        OutboundWebhookPermanentProblem,
+      );
+      const healthy = await runtime.publish({ ...EVENT, id: "event_healthy" });
+      return healthy.deliveries[0]?.id ?? "";
+    }
+
+    it("isolates retry dispatch from another delivery's failed intent", async () => {
+      const store = new InMemoryOutboundWebhookStore();
+      const runtime = createRuntime({
+        store,
+        publisher: poisonedPublisher(),
+        transport: new FakeOutboundWebhookTransport([{ kind: "http", status: 503 }]),
+      });
+      const deliveryId = await publishHealthyBehindPoisoned(runtime);
+
+      await expect(runtime.dispatch(EVENT.tenantId, deliveryId)).resolves.toMatchObject({
+        id: deliveryId,
+        status: "retrying",
+      });
+      expect(await store.listUnpublishedIntents(EVENT.tenantId)).toEqual([
+        expect.objectContaining({
+          deliveryId: `${EVENT.tenantId}:event_poisoned:${ACTIVE_ENDPOINT.id}`,
+        }),
+      ]);
+    });
+
+    it("isolates replay from another delivery's failed intent", async () => {
+      const store = new InMemoryOutboundWebhookStore();
+      const runtime = createRuntime({ store, publisher: poisonedPublisher() });
+      const deliveryId = await publishHealthyBehindPoisoned(runtime);
+      await runtime.dispatch(EVENT.tenantId, deliveryId);
+
+      await expect(runtime.replay(EVENT.tenantId, deliveryId, "replay_1")).resolves.toMatchObject({
+        id: deliveryId,
+        status: "pending",
+      });
+      expect(await store.listUnpublishedIntents(EVENT.tenantId)).toEqual([
+        expect.objectContaining({
+          deliveryId: `${EVENT.tenantId}:event_poisoned:${ACTIVE_ENDPOINT.id}`,
+        }),
+      ]);
+    });
+
+    it("isolates resume from another delivery's failed intent", async () => {
+      const store = new InMemoryOutboundWebhookStore();
+      const runtime = createRuntime({ store, publisher: poisonedPublisher() });
+      const deliveryId = await publishHealthyBehindPoisoned(runtime);
+
+      await expect(runtime.resume(EVENT.tenantId, deliveryId)).resolves.toMatchObject({
+        id: deliveryId,
+        status: "pending",
+      });
+      expect(await store.listUnpublishedIntents(EVENT.tenantId)).toEqual([
+        expect.objectContaining({
+          deliveryId: `${EVENT.tenantId}:event_poisoned:${ACTIVE_ENDPOINT.id}`,
+        }),
+      ]);
+    });
+
+    it.each([
+      ["dispatch", "retryable"],
+      ["dispatch", "permanent"],
+      ["replay", "retryable"],
+      ["replay", "permanent"],
+      ["resume", "retryable"],
+      ["resume", "permanent"],
+    ] as const)(
+      "reports the target delivery's %s publication failure as %s",
+      async (operation, classification) => {
+        let failPublication = false;
+        const publisher: OutboundWebhookTaskPublisher = {
+          publish: vi.fn(async ({ deliveryId }) => {
+            if (failPublication) {
+              if (classification === "permanent") {
+                throw new OutboundWebhookPermanentProblem(deliveryId, "task rejected");
+              }
+              throw new Error("broker unavailable");
+            }
+          }),
+        };
+        const runtime = createRuntime({
+          store: new InMemoryOutboundWebhookStore(),
+          publisher,
+          transport: new FakeOutboundWebhookTransport([
+            { kind: "http", status: operation === "dispatch" ? 503 : 204 },
+          ]),
+        });
+        const deliveryId = (await runtime.publish(EVENT)).deliveries[0]?.id ?? "";
+        if (operation === "replay") {
+          await runtime.dispatch(EVENT.tenantId, deliveryId);
+        }
+        failPublication = true;
+
+        const result =
+          operation === "dispatch"
+            ? runtime.dispatch(EVENT.tenantId, deliveryId)
+            : operation === "replay"
+              ? runtime.replay(EVENT.tenantId, deliveryId, "replay_1")
+              : runtime.resume(EVENT.tenantId, deliveryId);
+        const failure: unknown = await result.then(
+          () => undefined,
+          (error: unknown) => error,
+        );
+
+        expect(failure).toBeInstanceOf(
+          classification === "permanent"
+            ? OutboundWebhookPermanentProblem
+            : OutboundWebhookRetryableProblem,
+        );
+        expect(failure).toMatchObject({ extensions: { deliveryId } });
+      },
+    );
+  });
+
   it("retries only unpublished intents when publishing a duplicate event", async () => {
     const store = new InMemoryOutboundWebhookStore();
     let unavailable = true;
