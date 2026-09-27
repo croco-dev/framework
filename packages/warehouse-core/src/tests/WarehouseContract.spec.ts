@@ -213,11 +213,13 @@ describe("warehouse declarations and codec", () => {
 
   it("rejects malformed descriptor enums and fixed-offset calendar zones", async () => {
     const descriptor = await compileFact(search);
-    const invalidZone = {
-      ...search,
-      columns: { ...search.columns, day: c.date({ zone: "+01:00" }) },
-    };
-    await expect(compileFact(invalidZone as never)).rejects.toThrow("WAREHOUSE_INVALID_ZONE");
+    for (const zone of ["+01:00", "Etc/GMT+1", "Etc/GMT-2"]) {
+      const invalidZone = {
+        ...search,
+        columns: { ...search.columns, day: c.date({ zone }) },
+      };
+      await expect(compileFact(invalidZone as never)).rejects.toThrow("WAREHOUSE_INVALID_ZONE");
+    }
     const invalid = JSON.parse(serializeDescriptor(descriptor)) as {
       columns: Record<string, Record<string, unknown>>;
     };

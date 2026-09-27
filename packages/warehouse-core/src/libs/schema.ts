@@ -156,7 +156,7 @@ export function assertFact(value: unknown): asserts value is FactDeclaration {
     if (column.type === "date") {
       assertContract(text(column.zone), "WAREHOUSE_INVALID_ZONE", key);
       assertContract(
-        !/^(?:[+-]|(?:GMT|UTC)[+-])/i.test(column.zone),
+        !/^(?:[+-]|(?:GMT|UTC|Etc\/GMT)[+-])/i.test(column.zone),
         "WAREHOUSE_INVALID_ZONE",
         key,
       );

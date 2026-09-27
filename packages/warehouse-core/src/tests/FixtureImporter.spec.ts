@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { c, compileFact, defineFact, WarehouseContractError } from "../index";
+import { c, compileFact, defineFact, encodeIdentity, WarehouseContractError } from "../index";
 import { FixtureImporter } from "../runtime";
 
 const captures = defineFact("capture", {
@@ -62,6 +62,13 @@ describe("bounded fixture importer", () => {
       identical: 1,
     });
     expect(importer.snapshot()[0].metadata.executionId).toBe("first");
+    expect(importer.snapshot()[0].identity).toBe(
+      encodeIdentity(descriptor, capture, {
+        application: "app",
+        environment: "test",
+        tenant: "tenant-a",
+      }),
+    );
     expect(() =>
       importer.importRows([
         { ...capture, id: "b" },
@@ -78,6 +85,20 @@ describe("bounded fixture importer", () => {
     expect(importer.snapshot()).toHaveLength(1);
     tenant = "tenant-a";
     expect(importer.snapshot()).toHaveLength(1);
+  });
+
+  it("sorts snapshots by canonical identity code points", async () => {
+    const descriptor = await compileFact(captures);
+    const importer = new FixtureImporter(descriptor, () => ({
+      application: "app",
+      environment: "test",
+      tenant: "tenant-a",
+    }));
+    importer.importRows([
+      { ...capture, id: "a" },
+      { ...capture, id: "B" },
+    ]);
+    expect(importer.snapshot().map(({ row }) => row.id)).toEqual(["B", "a"]);
   });
 
   it("replaces only one scope, date range, and series, including an empty replacement", async () => {
