@@ -20,6 +20,8 @@ import { UsageRecordedEvent } from "../libs/events/UsageRecordedEvent";
 import { IdempotencyManager } from "../libs/IdempotencyManager";
 import type { IdempotencyClaim, PendingMeteringDelivery } from "../libs/IdempotencyManager";
 import type { BillableUsageClaim, BillableUsageEvent } from "../libs/BillableUsageJournal";
+import type { MeterRepository } from "../libs/MeterRepository";
+import { UsageAggregator } from "../libs/UsageAggregator";
 import { MeteringService } from "../libs/MeteringService";
 import { defineMeter, dimension } from "../libs/MeterRef";
 import type { MeterRegistry } from "../libs/MeterRegistry";
@@ -162,6 +164,74 @@ describe.skipIf(!realResourcesEnabled)("Redis metering composition", () => {
       usageStorage: new RedisUsageStorage(redis),
     });
   }
+
+  function createFlushingService() {
+    if (!connection) {
+      throw new Error("Redis test resource did not start");
+    }
+
+    const redis = createRedisClient(connection);
+    const usageStorage = new RedisUsageStorage(redis);
+    const saved = new Map<string, UsageRecord>();
+    const meterRepository: MeterRepository = {
+      replayContract: "idempotent",
+      findByMeterIdAndTenant: vi.fn(),
+      save: vi.fn(),
+      findAll: vi.fn(),
+      findByTenant: vi.fn(),
+      saveUsageRecords: vi.fn(async (records: UsageRecord[]) => {
+        for (const record of records) {
+          saved.set(
+            JSON.stringify([record.tenantId, record.meterId, record.idempotencyKey]),
+            record,
+          );
+        }
+      }),
+    };
+
+    return {
+      service: new MeteringService({
+        idempotencyManager: new IdempotencyManager(redis),
+        meterRegistry: createMeterRegistry([createMeter("quota", 10)]),
+        usageStorage,
+      }),
+      aggregator: new UsageAggregator({ usageStorage, meterRepository }),
+      saved,
+    };
+  }
+
+  it("keeps rejecting over-quota usage after the current billing cycle is flushed", async () => {
+    const { service, aggregator } = createFlushingService();
+    const usage = { tenantId: "tenant-1", meterId: "quota" };
+
+    await service.record({ ...usage, value: 10, idempotencyKey: "request-1" });
+    await expect(
+      service.record({ ...usage, value: 1, idempotencyKey: "request-2" }),
+    ).rejects.toBeInstanceOf(QuotaExceededProblem);
+
+    await expect(aggregator.flushUsageToDB("tenant-1", "quota")).resolves.toEqual({
+      recordsFlushed: 1,
+    });
+
+    await expect(
+      service.record({ ...usage, value: 10, idempotencyKey: "request-3" }),
+    ).rejects.toBeInstanceOf(QuotaExceededProblem);
+  });
+
+  it("reports current billing cycle usage after repeated idempotent flushes", async () => {
+    const { service, aggregator, saved } = createFlushingService();
+    const usage = { tenantId: "tenant-1", meterId: "quota" };
+
+    await service.record({ ...usage, value: 7, idempotencyKey: "request-1" });
+    await expect(service.getUsage({ ...usage, period: "billing_cycle" })).resolves.toBe(7);
+    await aggregator.flushUsageToDB("tenant-1", "quota");
+    await expect(service.getUsage({ ...usage, period: "billing_cycle" })).resolves.toBe(7);
+    await expect(aggregator.flushUsageToDB("tenant-1", "quota")).resolves.toEqual({
+      recordsFlushed: 1,
+    });
+    await expect(service.getUsage({ ...usage, period: "billing_cycle" })).resolves.toBe(7);
+    expect(saved.size).toBe(1);
+  });
 
   async function expectSeparateIdempotencyKeys(
     meterId: string,
