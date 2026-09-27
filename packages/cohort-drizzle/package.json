@@ -8,7 +8,8 @@
     "directory": "packages/cohort-drizzle"
   },
   "files": [
-    "dist"
+    "dist",
+    "migrations/*.sql"
   ],
   "type": "commonjs",
   "sideEffects": false,
