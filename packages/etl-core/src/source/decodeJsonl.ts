@@ -36,7 +36,15 @@ export async function* decodeJsonl(
       );
     }
     const object = parsed as Record<string, unknown>;
-    const tokens = topLevelFieldTokens(line);
+    const { fields: tokens, duplicate } = topLevelFieldTokens(line);
+    if (duplicate) {
+      throw new SourceDecodeProblem(
+        "invalid-jsonl",
+        fieldPosition(duplicate.offset),
+        `Duplicate JSONL field '${duplicate.name}'`,
+        duplicate.name,
+      );
+    }
     const allowed = new Set(schema.fields.map((field) => field.name));
     for (const key of Object.keys(object)) {
       if (!allowed.has(key))
@@ -126,7 +134,10 @@ export async function* decodeJsonl(
 
 type FieldToken = { readonly offset: number; readonly number?: string };
 
-function topLevelFieldTokens(line: string): ReadonlyMap<string, FieldToken> {
+function topLevelFieldTokens(line: string): {
+  fields: ReadonlyMap<string, FieldToken>;
+  duplicate?: { name: string; offset: number };
+} {
   const fields = new Map<string, FieldToken>();
   let depth = 0;
   let expectingKey = false;
@@ -145,6 +156,7 @@ function topLevelFieldTokens(line: string): ReadonlyMap<string, FieldToken> {
       }
       if (depth === 1 && expectingKey) {
         const name = JSON.parse(line.slice(start, index + 1)) as string;
+        if (fields.has(name)) return { fields, duplicate: { name, offset: start } };
         let valueStart = index + 1;
         while (/\s/.test(line[valueStart] ?? "")) valueStart++;
         valueStart++;
@@ -166,5 +178,5 @@ function topLevelFieldTokens(line: string): ReadonlyMap<string, FieldToken> {
       expectingKey = true;
     }
   }
-  return fields;
+  return { fields };
 }

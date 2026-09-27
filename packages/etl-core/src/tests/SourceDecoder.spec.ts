@@ -139,6 +139,16 @@ describe("source decoder", () => {
     ).toBe("extra");
   });
 
+  it("rejects duplicate JSONL keys before emitting a row", async () => {
+    const duplicate = await errorFor(
+      '{"id":1,"\\u0069d":2,"name":"a","created":"2024-01-01"}',
+      jsonlSchema,
+    );
+    expect(duplicate.reason).toBe("invalid-jsonl");
+    expect(duplicate.field).toBe("id");
+    expect(duplicate.position).toEqual({ byteOffset: 8, line: 1, column: 9 });
+  });
+
   it("locates a JSONL key after a matching string value and an optional BOM", async () => {
     const schema: SourceSchema = {
       format: "jsonl",
@@ -173,6 +183,22 @@ describe("source decoder", () => {
       { date: new Date("0000-02-29T00:00:00.000Z") },
       { date: new Date("0099-12-31T22:00:00.000Z") },
     ]);
+  });
+
+  it("accepts millisecond timestamps and rejects fractional seconds beyond millisecond precision", async () => {
+    const schema: SourceSchema = {
+      format: "jsonl",
+      encoding: "utf-8",
+      fields: [{ name: "date", type: "date" }],
+      limits,
+    };
+    expect(await collect(chunks('{"date":"2024-01-01T00:00:00.123Z"}', 1), schema)).toEqual([
+      { date: new Date("2024-01-01T00:00:00.123Z") },
+    ]);
+    const error = await errorFor('{"date":"2024-01-01T00:00:00.1234Z"}', schema);
+    expect(error.reason).toBe("invalid-field");
+    expect(error.field).toBe("date");
+    expect(error.message).toContain("up to three fractional-second digits");
   });
 
   it("rejects JSON numbers that underflow or lose decimal precision", async () => {

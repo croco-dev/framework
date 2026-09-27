@@ -46,7 +46,12 @@ export function normalizeValue(
     return utcCalendarDate(year, month, day);
   }
   const timestamp = TIMESTAMP_PATTERN.exec(raw);
-  if (!timestamp) throw invalid(field, position, "Expected an ISO date or RFC 3339 timestamp");
+  if (!timestamp)
+    throw invalid(
+      field,
+      position,
+      "Expected YYYY-MM-DD or a timestamp with up to three fractional-second digits and an explicit UTC offset",
+    );
   const year = Number(timestamp[1]);
   const month = Number(timestamp[2]);
   const day = Number(timestamp[3]);
