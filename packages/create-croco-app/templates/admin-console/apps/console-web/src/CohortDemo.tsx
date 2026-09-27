@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { ComponentProps } from "react";
 import { CohortBuilder } from "@croco/admin-react";
 import type { CohortAdminPreview, CohortAdminHistory, CohortBuilderState } from "@croco/admin-core";
 import type { CohortDefinition, CohortRegistration } from "@croco/cohort-core";
@@ -43,6 +44,33 @@ export function CohortDemo() {
         {state.kind === "failed" ? state.code : "Loading cohort demo…"}
       </p>
     );
+  const onPreview: NonNullable<ComponentProps<typeof CohortBuilder>["onPreview"]> = async (
+    input,
+  ) => {
+    const preview = await request<CohortAdminPreview>("/preview", input);
+    setState((current) => ({
+      kind: "ready",
+      preview,
+      history: current.kind === "ready" ? current.history : [],
+    }));
+  };
+  const onPublish: NonNullable<ComponentProps<typeof CohortBuilder>["onPublish"]> = async (
+    input,
+  ) => {
+    const publication = await request<CohortAdminHistory>("/publish", input);
+    setState((current) => ({
+      kind: "ready",
+      preview: current.kind === "ready" ? current.preview : undefined,
+      history: [
+        publication,
+        ...(current.kind === "ready"
+          ? current.history.filter(
+              (entry) => entry.snapshot.snapshotId !== publication.snapshot.snapshotId,
+            )
+          : []),
+      ],
+    }));
+  };
   return (
     <>
       <p>
@@ -57,29 +85,8 @@ export function CohortDemo() {
         actor="demo-operator"
         canPreview
         canPublish
-        onPreview={async (input) => {
-          const preview = await request<CohortAdminPreview>("/preview", input);
-          setState((current) => ({
-            kind: "ready",
-            preview,
-            history: current.kind === "ready" ? current.history : [],
-          }));
-        }}
-        onPublish={async (input) => {
-          const publication = await request<CohortAdminHistory>("/publish", input);
-          setState((current) => ({
-            kind: "ready",
-            preview: current.kind === "ready" ? current.preview : undefined,
-            history: [
-              publication,
-              ...(current.kind === "ready"
-                ? current.history.filter(
-                    (entry) => entry.snapshot.snapshotId !== publication.snapshot.snapshotId,
-                  )
-                : []),
-            ],
-          }));
-        }}
+        onPreview={onPreview}
+        onPublish={onPublish}
       />
     </>
   );
