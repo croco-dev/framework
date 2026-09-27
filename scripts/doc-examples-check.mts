@@ -1006,6 +1006,15 @@ function createPackagePaths(rootDir: string): ts.MapLike<string[]> {
     }
 
     paths[packageJson.name] = [normalizePath(sourceIndexPath)];
+    if (isRecord(packageJson.exports)) {
+      for (const subpath of Object.keys(packageJson.exports)) {
+        if (!subpath.startsWith("./") || subpath.includes("*")) continue;
+        const sourcePath = join(packageDir, "src", `${subpath.slice(2)}.ts`);
+        if (existsSync(sourcePath)) {
+          paths[`${packageJson.name}/${subpath.slice(2)}`] = [normalizePath(sourcePath)];
+        }
+      }
+    }
   }
 
   return paths;

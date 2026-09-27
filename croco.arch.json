@@ -71,6 +71,7 @@
         "@croco/tenant-core",
         "@croco/triggers-core",
         "@croco/tx-core",
+        "@croco/warehouse-core",
         "@croco/webhooks-core",
         "@croco/workflow-core"
       ]

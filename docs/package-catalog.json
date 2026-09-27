@@ -1149,6 +1149,12 @@
       "runtimes": ["browser", "node"],
       "domain": "Astryx UI"
     },
+    "warehouse-core": {
+      "role": "Contracts",
+      "subtype": "domain",
+      "runtimes": ["browser", "node", "lambda", "cloudflare-workers"],
+      "domain": "Warehouse"
+    },
     "warehouse-postgres": {
       "role": "Plugins",
       "subtype": "provider",
@@ -1230,6 +1236,7 @@
         "storage-core",
         "tasks-core",
         "triggers-core",
+        "warehouse-core",
         "workflow-core"
       ]
     },
@@ -1468,7 +1475,8 @@
         "ratelimit-upstash",
         "storage-cloudflare",
         "tasks-qstash",
-        "triggers-qstash"
+        "triggers-qstash",
+        "warehouse-core"
       ]
     },
     "deprecated": {

@@ -142,6 +142,7 @@
     "@croco/tx-core": "workspace:*",
     "@croco/tx-drizzle": "workspace:*",
     "@croco/ui-astryx": "workspace:*",
+    "@croco/warehouse-core": "workspace:*",
     "@croco/warehouse-postgres": "workspace:*",
     "@croco/webhooks-core": "workspace:*",
     "@croco/workflow-core": "workspace:*",
