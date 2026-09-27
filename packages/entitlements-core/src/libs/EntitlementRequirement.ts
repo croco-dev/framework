@@ -49,7 +49,13 @@ export function appendEntitlementRequirement(
   propertyKey?: string | symbol,
 ): void {
   const normalized = defineEntitlementRequirement(requirement);
-  const existing = getOwnEntitlementRequirements(target, propertyKey);
+  const hasOwnRequirements =
+    propertyKey === undefined
+      ? Reflect.hasOwnMetadata(ENTITLEMENT_REQUIREMENTS_KEY, target)
+      : Reflect.hasOwnMetadata(ENTITLEMENT_REQUIREMENTS_KEY, target, propertyKey);
+  const existing = hasOwnRequirements
+    ? getOwnEntitlementRequirements(target, propertyKey)
+    : readEntitlementRequirements(target, propertyKey);
 
   if (propertyKey === undefined) {
     Reflect.defineMetadata(ENTITLEMENT_REQUIREMENTS_KEY, [...existing, normalized], target);
