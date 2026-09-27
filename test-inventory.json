@@ -4541,6 +4541,24 @@
       "owner": "@croco/ui-astryx"
     },
     {
+      "path": "packages/warehouse-core/src/tests/FixtureImporter.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-core"
+    },
+    {
+      "path": "packages/warehouse-core/src/tests/WarehouseContract.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-core"
+    },
+    {
+      "path": "packages/warehouse-core/src/tests/WarehouseTypes.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-core"
+    },
+    {
       "path": "packages/warehouse-postgres/src/tests/PostgresMetricsStore.integration.spec.ts",
       "lane": "live",
       "qualifiers": [],

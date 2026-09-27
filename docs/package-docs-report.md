@@ -6,7 +6,7 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   121 |
+| Public packages                |   122 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
 | Missing generated API docs     |     0 |
@@ -225,6 +225,7 @@ None.
 | `@croco/tx-core`                       | Contracts      | domain        | Tx                      | unclaimed                                 |
 | `@croco/tx-drizzle`                    | Plugins        | provider      | Tx Drizzle              | unclaimed                                 |
 | `@croco/ui-astryx`                     | Plugins        | presentation  | Astryx UI               | browser, node                             |
+| `@croco/warehouse-core`                | Contracts      | domain        | Warehouse               | browser, node, lambda, cloudflare-workers |
 | `@croco/warehouse-postgres`            | Plugins        | provider      | Metrics                 | node, lambda                              |
 | `@croco/webhooks-core`                 | Contracts      | domain        | Webhooks                | unclaimed                                 |
 | `@croco/workflow-core`                 | Contracts      | domain        | Workflow                | unclaimed                                 |
@@ -234,7 +235,7 @@ None.
 | Group        | Packages |
 | ------------ | -------: |
 | Core         |       23 |
-| Domain       |       32 |
+| Domain       |       33 |
 | Provider     |       30 |
 | Integration  |        5 |
 | Protocol     |        8 |
@@ -248,7 +249,7 @@ None.
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
 | 🟡 beta             |       78 |
-| 🔴 alpha/WIP        |       20 |
+| 🔴 alpha/WIP        |       21 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix

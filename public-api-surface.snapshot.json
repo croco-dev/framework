@@ -34505,6 +34505,193 @@
       ]
     },
     {
+      "packageName": "@croco/warehouse-core",
+      "relativeDir": "packages/warehouse-core",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/warehouse-core/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "c",
+              "exportKind": "named",
+              "source": "./libs/columns",
+              "declarationKind": "const"
+            },
+            {
+              "name": "canonicalPayload",
+              "exportKind": "named",
+              "source": "./libs/codec",
+              "declarationKind": "function"
+            },
+            {
+              "name": "compileFact",
+              "exportKind": "named",
+              "source": "./libs/compiler",
+              "declarationKind": "function"
+            },
+            {
+              "name": "defineFact",
+              "exportKind": "named",
+              "source": "./libs/compiler",
+              "declarationKind": "function"
+            },
+            {
+              "name": "encodeIdentity",
+              "exportKind": "named",
+              "source": "./libs/codec",
+              "declarationKind": "function"
+            },
+            {
+              "name": "parseDescriptor",
+              "exportKind": "named",
+              "source": "./libs/compiler",
+              "declarationKind": "function"
+            },
+            {
+              "name": "serializeDescriptor",
+              "exportKind": "named",
+              "source": "./libs/compiler",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateRow",
+              "exportKind": "named",
+              "source": "./libs/codec",
+              "declarationKind": "function"
+            },
+            {
+              "name": "WarehouseContractError",
+              "exportKind": "named",
+              "source": "./libs/diagnostics",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "CanonicalRow",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "Column",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ColumnKeyOfType",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ColumnMetadata",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "Columns",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "FactDeclaration",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "FactDescriptor",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "FactOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "FactRow",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "Measure",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "RequiredColumnKey",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "TrustedScope",
+              "exportKind": "named",
+              "source": "./libs/types"
+            }
+          ]
+        },
+        {
+          "exportPath": "./runtime",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/runtime.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/runtime.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/runtime.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/warehouse-core/src/runtime.ts",
+          "runtimeExports": [
+            {
+              "name": "FixtureImporter",
+              "exportKind": "named",
+              "source": "./libs/fixtureImporter",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "AggregateRange",
+              "exportKind": "named",
+              "source": "./libs/fixtureImporter"
+            },
+            {
+              "name": "FixtureRow",
+              "exportKind": "named",
+              "source": "./libs/fixtureImporter"
+            },
+            {
+              "name": "FixtureRunMetadata",
+              "exportKind": "named",
+              "source": "./libs/fixtureImporter"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "packageName": "@croco/warehouse-postgres",
       "relativeDir": "packages/warehouse-postgres",
       "entrypoints": [
