@@ -12,6 +12,7 @@ export type RateLimitMetadata = {
 };
 
 export type GuardContext = KeyContext & {
+  getRequest?(): unknown;
   set<T>(key: string, value: T): void;
 } & (
     | { getHandler(): (...args: unknown[]) => unknown }
@@ -40,7 +41,7 @@ export class RateLimitGuard {
 
     const result = metadata.customKey
       ? await this.rateLimiter.checkWithKey(metadata.customKey(context), metadata.policy)
-      : await this.rateLimiter.check(context, metadata.policy);
+      : await this.rateLimiter.check(this.keyContext(context), metadata.policy);
 
     context.set("rateLimitResult", result);
 
@@ -50,4 +51,53 @@ export class RateLimitGuard {
 
     return true;
   }
+
+  private keyContext(context: GuardContext): KeyContext {
+    const request = context.getRequest?.();
+    if (!isRecord(request)) return context;
+
+    return {
+      get: <T>(key: string): T | undefined => {
+        if (key === "user") {
+          const user = ownProperty(request, "user");
+          if (isIdentified(user)) return user as T;
+
+          const principal = ownProperty(request, "principal");
+          if (isIdentified(principal) && principal.type === "user") return principal as T;
+        }
+
+        if (key === "apiKey") {
+          const apiKey = ownProperty(request, "apiKey");
+          const apiKeyValue = apiKeyId(apiKey);
+          if (apiKeyValue !== undefined) return apiKeyValue as T;
+
+          const principal = ownProperty(request, "principal");
+          if (isRecord(principal) && principal.type === "apikey") {
+            const principalValue = apiKeyId(principal);
+            if (principalValue !== undefined) return principalValue as T;
+          }
+        }
+
+        return context.get<T>(key);
+      },
+    };
+  }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function ownProperty(record: Record<string, unknown>, key: string): unknown {
+  return Object.prototype.hasOwnProperty.call(record, key) ? record[key] : undefined;
+}
+
+function isIdentified(value: unknown): value is Record<string, unknown> & { id: string } {
+  return isRecord(value) && typeof value.id === "string";
+}
+
+function apiKeyId(value: unknown): string | undefined {
+  if (!isIdentified(value)) return undefined;
+  if (value.keyId === undefined) return value.id;
+  return typeof value.keyId === "string" ? value.keyId : undefined;
 }

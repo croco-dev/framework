@@ -9,6 +9,7 @@ import {
 import { RateLimit } from "../libs/decorators/RateLimit";
 import { RateLimitExceededProblem } from "../libs/problems/RateLimitExceededProblem";
 import type { RateLimiter } from "../libs/RateLimiter";
+import { RateLimitKeyBuilder } from "../libs/RateLimitKeyBuilder";
 import type { RateLimitPolicy, RateLimitResult } from "../libs/types";
 
 describe("RateLimitGuard", () => {
@@ -87,13 +88,73 @@ describe("RateLimitGuard", () => {
     });
     const metadata: RateLimitMetadata = { policy, customKey };
     Reflect.defineMetadata(RATE_LIMIT_METADATA_KEY, metadata, handler);
-    const context = createContext(handler, { tenantId: "tenant-42" });
+    const context = {
+      ...createContext(handler, { tenantId: "tenant-42" }),
+      getRequest: () => ({ user: { id: "user-1" } }),
+    };
 
     await expect(guard.canActivate(context)).resolves.toBe(true);
 
     expect(customKey).toHaveBeenCalledWith(context);
     expect(mockRateLimiter.checkWithKey).toHaveBeenCalledWith("tenant:tenant-42", policy);
     expect(mockRateLimiter.check).not.toHaveBeenCalled();
+  });
+
+  it("keeps authenticated and anonymous user keys separate", async () => {
+    const handler = () => {};
+    Reflect.defineMetadata(RATE_LIMIT_METADATA_KEY, { policy }, handler);
+    const builder = new RateLimitKeyBuilder(["user"]);
+    const keys: string[] = [];
+
+    for (const request of [{ user: { id: "user-1" } }, {}]) {
+      const context = { ...createContext(handler), getRequest: () => request };
+      await guard.canActivate(context);
+      const keyContext = vi.mocked(mockRateLimiter.check).mock.lastCall?.[0];
+      if (keyContext) keys.push(builder.build(keyContext, policy.name));
+    }
+
+    expect(keys).toEqual([
+      'rl2:[["policy","test-policy"],["user","user-1"]]',
+      'rl2:[["policy","test-policy"],["user",null]]',
+    ]);
+  });
+
+  it.each([
+    [{ principal: { type: "user", id: "user-id" } }, "user", { type: "user", id: "user-id" }],
+    [{ principal: { type: "apikey", id: "principal-id", keyId: "key-id" } }, "apiKey", "key-id"],
+    [{ principal: { type: "apikey", id: "principal-id" } }, "apiKey", "principal-id"],
+  ])(
+    "reads a typed principal when the %s request field is absent",
+    async (request, key, expected) => {
+      const handler = () => {};
+      Reflect.defineMetadata(RATE_LIMIT_METADATA_KEY, { policy }, handler);
+      const context = { ...createContext(handler), getRequest: () => request };
+
+      await guard.canActivate(context);
+
+      const keyContext = vi.mocked(mockRateLimiter.check).mock.lastCall?.[0];
+      expect(keyContext?.get(key)).toEqual(expected);
+    },
+  );
+
+  it("uses context variables when the request has no principal", async () => {
+    const handler = () => {};
+    Reflect.defineMetadata(RATE_LIMIT_METADATA_KEY, { policy }, handler);
+    const context = {
+      ...createContext(handler, {
+        userId: "context-user",
+        apiKey: "context-key",
+        route: "context-route",
+      }),
+      getRequest: () => ({}),
+    };
+
+    await guard.canActivate(context);
+
+    const keyContext = vi.mocked(mockRateLimiter.check).mock.lastCall?.[0];
+    expect(keyContext?.get("userId")).toBe("context-user");
+    expect(keyContext?.get("apiKey")).toBe("context-key");
+    expect(keyContext?.get("route")).toBe("context-route");
   });
 
   it("should throw RateLimitExceededProblem when limit exceeded", async () => {

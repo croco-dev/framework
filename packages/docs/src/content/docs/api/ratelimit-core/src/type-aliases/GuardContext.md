@@ -11,6 +11,14 @@ title: "GuardContext"
 
 ## Type Declaration
 
+### getRequest()?
+
+> `optional` **getRequest**(): `unknown`
+
+#### Returns
+
+`unknown`
+
 ### set()
 
 > **set**\<`T`\>(`key`, `value`): `void`
