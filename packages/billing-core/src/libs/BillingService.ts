@@ -4,7 +4,7 @@ import {
   type DerivedIdempotencyKey,
   type IdempotencyStore,
 } from "@croco/idempotency-core";
-import { Problem } from "@croco/problems-core";
+import { Problem, readExplicitRetryability } from "@croco/problems-core";
 import { Trace } from "@croco/telemetry-api";
 import type {
   BillingAccount,
@@ -350,10 +350,7 @@ export class BillingService {
         `Failed to create checkout for tenant ${billingAccountId}: ${error.message}`,
         {
           cause: error,
-          retryable:
-            error instanceof Problem && typeof error.extensions?.retryable === "boolean"
-              ? error.extensions.retryable
-              : undefined,
+          retryable: error instanceof Problem ? readExplicitRetryability(error) : undefined,
         },
       );
     }

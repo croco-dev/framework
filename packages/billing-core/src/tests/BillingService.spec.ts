@@ -278,6 +278,28 @@ describe("BillingService", () => {
       },
     );
 
+    it.each([true, false])(
+      "prefers provider 5xx top-level retryable=%s over extensions",
+      async (retryable) => {
+        const providerProblem = Object.assign(
+          new ProviderProblem(
+            "billing-polar/retryable-upstream",
+            ProblemCategory.InternalServerError,
+            !retryable,
+          ),
+          { retryable },
+        );
+        vi.mocked(mockGateway.ensureCustomer).mockRejectedValue(providerProblem);
+
+        await expect(service.createCheckout(params)).rejects.toMatchObject({
+          code: "billing/checkout-creation-failed",
+          status: 500,
+          extensions: { retryable },
+          cause: providerProblem,
+        });
+      },
+    );
+
     it("preserves an ordinary provider error as the checkout creation cause", async () => {
       const providerError = new Error("socket hang up");
       vi.mocked(mockGateway.ensureCustomer).mockResolvedValue("cus_1");
