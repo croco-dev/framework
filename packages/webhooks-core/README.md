@@ -221,8 +221,10 @@ material is never included in Problems or diagnostics.
 
 Replay schedules a new attempt on the existing endpoint delivery and is allowed only from
 `delivered`, `dead`, `canceled`, or `acceptance-unknown`; it never creates a second logical delivery.
-Paused endpoints retain a pending delivery without a dispatch intent, and `resume(tenantId,
-deliveryId)` schedules that evidence after activation. Disabled endpoints retain canceled evidence.
+Paused endpoints retain pending deliveries without dispatch intents. After activation,
+`resume(tenantId, deliveryId)` schedules a pending delivery or a retrying delivery whose
+`nextAttemptAt` has passed. A retrying delivery that is not due keeps its existing schedule.
+Disabled endpoints retain canceled evidence.
 `dispatch`, `replay`, `resume`, diagnostics, and all store lookups require tenant context.
 
 The default URL policy requires HTTPS, resolves DNS, and rejects embedded credentials, localhost,

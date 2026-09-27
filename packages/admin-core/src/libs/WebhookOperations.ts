@@ -243,7 +243,7 @@ export function createWebhookEndpointActions(
       writeAllowed,
       writeAllowed
         ? endpoint.status === "paused"
-          ? "New delivery dispatch can resume; already accepted work is unchanged"
+          ? "After activation, resume can schedule pending deliveries and retrying deliveries whose retry time has passed"
           : "New delivery dispatch can be paused; already accepted work is not canceled"
         : "Missing webhooks:write permission",
     ),
