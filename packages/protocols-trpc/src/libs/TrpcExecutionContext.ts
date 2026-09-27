@@ -14,7 +14,11 @@ export class TrpcExecutionContext<TContext = unknown> implements ExecutionContex
   ) {}
 
   getRequest(): Request {
-    return readRequest(this.trpcContext);
+    const request = readTrpcRequest(this.trpcContext);
+    if (!request) {
+      throw new TrpcRequestUnavailableProblem();
+    }
+    return request;
   }
 
   getClass(): Constructor {
@@ -56,7 +60,9 @@ class TrpcRequestNormalizationProblem extends Problem {
   }
 }
 
-function readRequest(context: unknown): Request {
+const normalizedNodeRequests = new WeakMap<object, Request>();
+
+export function readTrpcRequest(context: unknown): Request | undefined {
   if (context instanceof Request) {
     return context;
   }
@@ -77,7 +83,7 @@ function readRequest(context: unknown): Request {
     }
   }
 
-  throw new TrpcRequestUnavailableProblem();
+  return undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -89,6 +95,11 @@ function normalizeNodeRequest(
 ): Request | TrpcRequestNormalizationProblem | undefined {
   if (!isRecord(value) || typeof value.url !== "string" || typeof value.method !== "string") {
     return undefined;
+  }
+
+  const cachedRequest = normalizedNodeRequests.get(value);
+  if (cachedRequest) {
+    return cachedRequest;
   }
 
   try {
@@ -119,7 +130,9 @@ function normalizeNodeRequest(
     const encrypted = isRecord(value.socket) && value.socket.encrypted === true;
     const url = new URL(value.url, `${encrypted ? "https" : "http"}://${host}`);
 
-    return new Request(url, { method: value.method, headers });
+    const request = new Request(url, { method: value.method, headers });
+    normalizedNodeRequests.set(value, request);
+    return request;
   } catch (error) {
     return new TrpcRequestNormalizationProblem(toError(error));
   }

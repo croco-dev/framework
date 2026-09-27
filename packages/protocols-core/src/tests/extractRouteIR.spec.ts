@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { extractRouteIR } from "../libs/extractRouteIR";
 import {
+  ParamType,
   REST_PARAMS_KEY,
   REST_ROUTES_KEY,
   type ParamMetadata,
@@ -85,6 +86,39 @@ describe("extractRouteIR", () => {
     expect(routes[0]?.params).toEqual([
       { index: 0, kind: "body", name: "", schema: createOrderSchema },
     ]);
+  });
+
+  it("should preserve auth injection kinds and argument positions without request schemas", () => {
+    @Controller("/identity")
+    class IdentityController {
+      @Get("/")
+      identity(): void {}
+    }
+
+    Reflect.defineMetadata(
+      REST_PARAMS_KEY,
+      new Map<string, ParamMetadata[]>([
+        [
+          "identity",
+          [
+            { index: 3, type: ParamType.API_KEY },
+            { index: 0, type: ParamType.PRINCIPAL },
+            { index: 2, type: ParamType.USER },
+          ],
+        ],
+      ]),
+      IdentityController,
+    );
+
+    const [route] = extractRouteIR(IdentityController);
+
+    expect(route?.params).toEqual([
+      { index: 0, kind: "principal", name: "", schema: null },
+      { index: 2, kind: "user", name: "", schema: null },
+      { index: 3, kind: "apiKey", name: "", schema: null },
+    ]);
+    expect(route?.inputSchema).toBeNull();
+    expect(route?.inputSchemas).toEqual({ body: null, path: null, query: null, headers: null });
   });
 
   it("should preserve raw parameter positions as context parameters", () => {

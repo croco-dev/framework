@@ -22,6 +22,9 @@ export enum ParamType {
   BODY = "body",
   CTX = "ctx",
   RAW = "raw",
+  PRINCIPAL = "principal",
+  USER = "user",
+  API_KEY = "apikey",
 }
 
 export type Constructor<T = unknown> = new (...args: never[]) => T;

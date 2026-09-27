@@ -11636,7 +11636,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-trpc/src/libs/TrpcParamResolver.ts:71:13` (problem-factory)
+- `packages/protocols-trpc/src/libs/TrpcParamResolver.ts:72:13` (problem-factory)
 
 <a id="protocols-trpc-duplicate-procedure-name"></a>
 
@@ -11690,7 +11690,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-trpc/src/libs/TrpcExecutionContext.ts:50:1` (problem-class)
+- `packages/protocols-trpc/src/libs/TrpcExecutionContext.ts:54:1` (problem-class)
 
 <a id="protocols-trpc-request-unavailable"></a>
 
@@ -11708,7 +11708,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-trpc/src/libs/TrpcExecutionContext.ts:41:1` (problem-class)
+- `packages/protocols-trpc/src/libs/TrpcExecutionContext.ts:45:1` (problem-class)
 
 <a id="protocols-trpc-route-handler-not-callable"></a>
 

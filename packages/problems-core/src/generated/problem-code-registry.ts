@@ -18476,7 +18476,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/TrpcParamResolver.ts",
-          line: 71,
+          line: 72,
           column: 13,
           kind: "problem-factory",
         },
@@ -18574,7 +18574,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/TrpcExecutionContext.ts",
-          line: 50,
+          line: 54,
           column: 1,
           kind: "problem-class",
         },
@@ -18606,7 +18606,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/TrpcExecutionContext.ts",
-          line: 41,
+          line: 45,
           column: 1,
           kind: "problem-class",
         },

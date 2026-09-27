@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ProblemFactory } from "@croco/problems-core";
+import { readTrpcRequest } from "./TrpcExecutionContext";
 import type { ParamIR, RouteIR } from "@croco/protocols-core";
 
 type TrpcRouteInputEnvelope = {
@@ -106,7 +107,31 @@ function resolveParam(param: ParamIR, envelope: TrpcRouteInputEnvelope, context:
       return getNamedLocationValue(envelope.headers, param.name);
     case "ctx":
       return context;
+    case "principal":
+    case "user":
+    case "apiKey":
+      return resolveAuthProperty(context, param.kind);
   }
+}
+
+function resolveAuthProperty(context: unknown, property: "principal" | "user" | "apiKey"): unknown {
+  const request = readTrpcRequest(context);
+  const requestValue = readAuthProperty(request, property);
+  return requestValue === undefined ? readAuthProperty(context, property) : requestValue;
+}
+
+function readAuthProperty(value: unknown, property: "principal" | "user" | "apiKey"): unknown {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+
+  if (Object.prototype.hasOwnProperty.call(value, property)) {
+    return Reflect.get(value, property);
+  }
+  if (property === "apiKey" && Object.prototype.hasOwnProperty.call(value, "apikey")) {
+    return Reflect.get(value, "apikey");
+  }
+  return undefined;
 }
 
 function getNamedLocationValue(location: unknown, name: string): unknown {

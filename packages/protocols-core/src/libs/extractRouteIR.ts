@@ -272,6 +272,12 @@ function mapParamKind(type: ParamType): ParamIR["kind"] {
       return "ctx";
     case ParamType.RAW:
       return "ctx";
+    case ParamType.PRINCIPAL:
+      return "principal";
+    case ParamType.USER:
+      return "user";
+    case ParamType.API_KEY:
+      return "apiKey";
   }
 }
 

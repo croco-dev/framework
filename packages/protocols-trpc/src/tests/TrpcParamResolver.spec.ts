@@ -28,6 +28,27 @@ function createRoute(overrides: Partial<RouteIR> = {}): RouteIR {
 }
 
 describe("createTrpcInputSchema", () => {
+  it("does not put auth injection parameters in the client input envelope", () => {
+    const authParams: ParamIR[] = [
+      { index: 0, kind: "principal", name: "", schema: null },
+      { index: 1, kind: "user", name: "", schema: null },
+      { index: 2, kind: "apiKey", name: "", schema: null },
+    ];
+
+    expect(
+      createTrpcInputSchema(
+        createRoute({
+          params: authParams,
+          inputSchema: null,
+          inputSchemas: { body: null, path: null, query: null, headers: null },
+        }),
+      ),
+    ).toBeNull();
+
+    const schema = createTrpcInputSchema(createRoute({ params: authParams }));
+    expect(schema?.safeParse({ query: { page: 1 }, user: { id: "injected" } }).success).toBe(false);
+  });
+
   const parameterCases: { name: string; params: ParamIR[] }[] = [
     {
       name: "context-only parameters",

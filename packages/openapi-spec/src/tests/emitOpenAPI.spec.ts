@@ -38,6 +38,34 @@ import { emitOpenAPI, emitOpenAPIFromContractGraph } from "../libs/emitOpenAPI";
 describe("emitOpenAPI", () => {
   beforeEach(() => {});
 
+  it("does not expose auth injection parameters as client input", () => {
+    @Controller("/identity")
+    class IdentityController {
+      @Get("/")
+      getIdentity(): void {}
+    }
+
+    Reflect.defineMetadata(
+      Symbol.for("croco:rest:params"),
+      new Map([
+        [
+          "getIdentity",
+          [
+            { index: 0, type: "principal" },
+            { index: 1, type: "user" },
+            { index: 2, type: "apikey" },
+          ],
+        ],
+      ]),
+      IdentityController,
+    );
+
+    const operation = emitOpenAPI([IdentityController]).paths?.["/identity"]?.get;
+
+    expect(operation?.parameters).toBeUndefined();
+    expect(operation?.requestBody).toBeUndefined();
+  });
+
   it("should emit a GET operation with a path parameter", () => {
     @Controller("/users")
     class UsersController {
