@@ -1,5 +1,6 @@
 ---
 "@croco/idempotency-core": patch
+"@croco/problems-core": patch
 "@croco/webhooks-core": patch
 "@croco/auth-clerk": patch
 "@croco/auth-better-auth": patch
