@@ -9,6 +9,12 @@ title: "OutboundWebhookRuntimeOptions"
 
 ## Properties
 
+### claimLeaseDurationMs?
+
+> `readonly` `optional` **claimLeaseDurationMs?**: `number`
+
+---
+
 ### createId?
 
 > `readonly` `optional` **createId?**: () => `string`
@@ -68,6 +74,12 @@ title: "OutboundWebhookRuntimeOptions"
 ### transport
 
 > `readonly` **transport**: [`OutboundWebhookTransport`](/api/webhooks-core/src/type-aliases/outboundwebhooktransport/)
+
+---
+
+### transportTimeoutMs?
+
+> `readonly` `optional` **transportTimeoutMs?**: `number`
 
 ---
 

@@ -23,7 +23,7 @@ title: "InMemoryOutboundWebhookStore"
 
 ### claimDelivery()
 
-> **claimDelivery**(`tenantId`, `deliveryId`, `eligibleAt`): `Promise`\<[`OutboundWebhookDelivery`](/api/webhooks-core/src/type-aliases/outboundwebhookdelivery/) \| `undefined`\>
+> **claimDelivery**(`tenantId`, `deliveryId`, `eligibleAt`, `leaseDurationMs`): `Promise`\<[`OutboundWebhookDeliveryClaim`](/api/webhooks-core/src/type-aliases/outboundwebhookdeliveryclaim/) \| `undefined`\>
 
 #### Parameters
 
@@ -39,9 +39,13 @@ title: "InMemoryOutboundWebhookStore"
 
 `Date`
 
+##### leaseDurationMs
+
+`number`
+
 #### Returns
 
-`Promise`\<[`OutboundWebhookDelivery`](/api/webhooks-core/src/type-aliases/outboundwebhookdelivery/) \| `undefined`\>
+`Promise`\<[`OutboundWebhookDeliveryClaim`](/api/webhooks-core/src/type-aliases/outboundwebhookdeliveryclaim/) \| `undefined`\>
 
 #### Implementation of
 
@@ -267,6 +271,10 @@ Atomically marks an unpublished intent and returns whether this call made the tr
 
 [`OutboundWebhookAttempt`](/api/webhooks-core/src/type-aliases/outboundwebhookattempt/)
 
+###### claimToken
+
+`string`
+
 ###### nextAttemptAt?
 
 `Date`
@@ -291,7 +299,7 @@ Atomically marks an unpublished intent and returns whether this call made the tr
 
 ### releaseDeliveryClaim()
 
-> **releaseDeliveryClaim**(`tenantId`, `deliveryId`): `Promise`\<`void`\>
+> **releaseDeliveryClaim**(`tenantId`, `deliveryId`, `claimToken`): `Promise`\<`boolean`\>
 
 #### Parameters
 
@@ -303,9 +311,13 @@ Atomically marks an unpublished intent and returns whether this call made the tr
 
 `string`
 
+##### claimToken
+
+`string`
+
 #### Returns
 
-`Promise`\<`void`\>
+`Promise`\<`boolean`\>
 
 #### Implementation of
 
