@@ -10,6 +10,7 @@ import {
   defineGeneratedDiGraph,
   type ILogger,
   LOGGER_TOKEN,
+  Token,
   type RuntimeInspectorSnapshot,
 } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
@@ -508,6 +509,66 @@ describe("CrocoApp", () => {
     expect(Container.has(LOGGER_TOKEN)).toBe(true);
     expect(Container.has(ErrorHandler)).toBe(true);
     expect(Container.has(HealthCheckRegistry)).toBe(true);
+  });
+
+  it("should fail bootstrap when the registered logger has a missing dependency", () => {
+    const missing = new Token<ILogger>("bootstrap.logger.required");
+    Container.installGeneratedGraph(
+      defineGeneratedDiGraph({
+        version: GENERATED_DI_GRAPH_VERSION,
+        graphId: "broken-bootstrap-logger",
+        compilerVersion: "test",
+        inputHash: "broken-bootstrap-logger",
+        providers: [
+          {
+            token: LOGGER_TOKEN,
+            tokenId: "test:bootstrap-logger",
+            debugName: "BrokenBootstrapLogger",
+            scope: "singleton",
+            sourceLocation: { file: "CrocoApp.spec.ts", line: 1, column: 1 },
+            dependencies: [{ token: missing, tokenId: "test:bootstrap-logger-required" }],
+            factory: (resolver) => resolver.get(missing),
+          },
+        ],
+        roots: [LOGGER_TOKEN],
+      }),
+    );
+
+    expect(() => createApp({ controllers: [] })).toThrow(
+      expect.objectContaining({
+        code: "framework-context/di-resolution-failed",
+        reason: "missing-provider",
+        detail: expect.stringContaining("bootstrap.logger.required"),
+      }),
+    );
+  });
+
+  it("should fail bootstrap when the registered error handler has a missing dependency", () => {
+    const missing = new Token<ErrorHandler>("bootstrap.error-handler.required");
+    Container.remove(ErrorHandler);
+    Container.registerLazy(ErrorHandler, () => Container.get(missing));
+
+    expect(() => createApp({ controllers: [] })).toThrow(
+      expect.objectContaining({
+        code: "framework-context/di-resolution-failed",
+        reason: "missing-provider",
+        detail: expect.stringContaining("bootstrap.error-handler.required"),
+      }),
+    );
+  });
+
+  it("should fail bootstrap when the registered health registry has a missing dependency", () => {
+    const missing = new Token<HealthCheckRegistry>("bootstrap.health-registry.required");
+    Container.remove(HealthCheckRegistry);
+    Container.registerLazy(HealthCheckRegistry, () => Container.get(missing));
+
+    expect(() => createApp({ controllers: [] })).toThrow(
+      expect.objectContaining({
+        code: "framework-context/di-resolution-failed",
+        reason: "missing-provider",
+        detail: expect.stringContaining("bootstrap.health-registry.required"),
+      }),
+    );
   });
 
   it("should handle GET request", async () => {

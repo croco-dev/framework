@@ -551,15 +551,7 @@ export class Container {
   }
 
   static getOptional<T>(token: TokenIdentifier<T>): T | undefined {
-    try {
-      return Container.get(token);
-    } catch (error) {
-      if (Container.isOptionalResolutionError(error)) {
-        return undefined;
-      }
-
-      throw error;
-    }
+    return Container.isOptionalProviderRegistered(token) ? Container.get(token) : undefined;
   }
 
   static getResolutionTrace<T>(token: TokenIdentifier<T>): DependencyResolutionTrace {
@@ -1755,11 +1747,10 @@ export class Container {
     return token as unknown as RuntimeConstructable<T>;
   }
 
-  private static isOptionalResolutionError(error: unknown): error is Error {
+  private static isOptionalProviderRegistered<T>(token: TokenIdentifier<T>): boolean {
     return (
-      (error instanceof ContainerResolutionProblem && error.reason === "missing-provider") ||
-      (error instanceof Error &&
-        (error.name === "ServiceNotFoundError" || error.name === "CannotInstantiateValueError"))
+      Container.has(token) ||
+      (Container.isConstructorToken(token) && Container.getComponentMetadata(token) !== undefined)
     );
   }
 
@@ -1841,16 +1832,10 @@ export class Container {
     const resolver: GeneratedProviderResolver = {
       get: (token) => Container.resolveWithTrace(token, trace, nextStack),
       getMany: (token) => Container.resolveGeneratedMany(token, trace, nextStack),
-      getOptional: (token) => {
-        try {
-          return Container.resolveWithTrace(token, trace, nextStack);
-        } catch (error) {
-          if (Container.isOptionalResolutionError(error)) {
-            return undefined;
-          }
-          throw error;
-        }
-      },
+      getOptional: (token) =>
+        Container.isOptionalProviderRegistered(token)
+          ? Container.resolveWithTrace(token, trace, nextStack)
+          : undefined,
     };
     const instance = provider.factory(resolver);
     if (provider.scope === "singleton") {
