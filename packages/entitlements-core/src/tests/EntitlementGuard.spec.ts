@@ -180,6 +180,38 @@ describe("EntitlementGuard", () => {
     );
   });
 
+  it("should deny a subclass route when its inherited entitlement is denied", async () => {
+    @RequireEntitlement({ feature: "api-access" })
+    class TenantApiController {
+      list() {}
+    }
+
+    @RequireEntitlement({ feature: "reports" })
+    class ReportsController extends TenantApiController {}
+
+    const checkSpy = vi
+      .spyOn(mockManager, "check")
+      .mockImplementation(async (_tenantId, featureKey) =>
+        featureKey === "api-access"
+          ? {
+              granted: false,
+              status: "denied",
+              featureKey,
+              type: "boolean",
+              reason: "not_entitled",
+            }
+          : { granted: true, status: "allowed", featureKey, type: "boolean", planId: "pro" },
+      );
+    const context = createContext({
+      target: ReportsController,
+      handler: "list",
+      request: { tenantId: "tenant-123", user: createUser("tenant-123") },
+    });
+
+    await expect(guard.canActivate(context)).rejects.toThrow(EntitlementDeniedProblem);
+    expect(checkSpy).toHaveBeenCalledWith("tenant-123", "api-access", expect.any(Object));
+  });
+
   it("should throw EntitlementDeniedProblem with decision id when entitlement is denied", async () => {
     class TestController {
       testMethod() {}
