@@ -112,11 +112,29 @@ function typedTuple(fact: FactDeclaration, row: CanonicalRow, keys: readonly str
   return keys.map((key) => [key, fact.columns[key].type, row[key]]);
 }
 
-export function canonicalPayload(fact: FactDeclaration, row: unknown): string {
+export function canonicalPayloadFromRow(fact: FactDeclaration, row: CanonicalRow): string {
   return canonicalJson([
     "warehouse-payload",
     1,
-    typedTuple(fact, validateRow(fact, row), Object.keys(fact.columns).sort()),
+    typedTuple(fact, row, Object.keys(fact.columns).sort()),
+  ]);
+}
+
+export function canonicalPayload(fact: FactDeclaration, row: unknown): string {
+  return canonicalPayloadFromRow(fact, validateRow(fact, row));
+}
+
+export function encodeIdentityFromRow(
+  fact: FactDeclaration,
+  row: CanonicalRow,
+  scope: TrustedScope,
+): string {
+  return canonicalJson([
+    "warehouse-identity",
+    1,
+    [scope.application, scope.environment, scope.tenant ?? null],
+    fact.name,
+    typedTuple(fact, row, fact.grain.key),
   ]);
 }
 
@@ -133,11 +151,5 @@ export function encodeIdentity(fact: FactDeclaration, row: unknown, scope: Trust
         : scope.tenant === undefined),
     "WAREHOUSE_INVALID_SCOPE",
   );
-  return canonicalJson([
-    "warehouse-identity",
-    1,
-    [scope.application, scope.environment, scope.tenant ?? null],
-    fact.name,
-    typedTuple(fact, validateRow(fact, row), fact.grain.key),
-  ]);
+  return encodeIdentityFromRow(fact, validateRow(fact, row), scope);
 }

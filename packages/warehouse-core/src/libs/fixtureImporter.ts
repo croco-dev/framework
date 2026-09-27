@@ -1,8 +1,8 @@
 import {
   canonicalJson,
-  canonicalPayload,
+  canonicalPayloadFromRow,
   canonicalizeColumn,
-  encodeIdentity,
+  encodeIdentityFromRow,
   isRecord,
   validateRow,
 } from "./codec";
@@ -65,8 +65,8 @@ export class FixtureImporter {
     let identical = 0;
     for (const value of input) {
       const row = validateRow(this.descriptor, value);
-      const identity = encodeIdentity(this.descriptor, row, scope);
-      const payload = canonicalPayload(this.descriptor, row);
+      const identity = encodeIdentityFromRow(this.descriptor, row, scope);
+      const payload = canonicalPayloadFromRow(this.descriptor, row);
       const previous = staged.get(identity);
       if (previous) {
         if (previous.payload !== payload)
@@ -133,8 +133,8 @@ export class FixtureImporter {
         aggregate.series.map((key) => [key, this.descriptor.columns[key].type, row[key]]),
       );
       assertContract(rowSeries === seriesKey, "WAREHOUSE_ROW_OUTSIDE_SERIES");
-      const identity = encodeIdentity(this.descriptor, row, scope);
-      const payload = canonicalPayload(this.descriptor, row);
+      const identity = encodeIdentityFromRow(this.descriptor, row, scope);
+      const payload = canonicalPayloadFromRow(this.descriptor, row);
       const previous = incoming.get(identity);
       if (previous) {
         if (previous.payload !== payload)
@@ -167,7 +167,9 @@ export class FixtureImporter {
     const scopeKey = this.scopeKey(this.trustedScope());
     return [...this.rows.values()]
       .filter((stored) => stored.scopeKey === scopeKey)
-      .sort((left, right) => left.identity.localeCompare(right.identity))
+      .sort((left, right) =>
+        left.identity < right.identity ? -1 : left.identity > right.identity ? 1 : 0,
+      )
       .map(({ identity, row, metadata }) => ({ identity, row, metadata }));
   }
 
