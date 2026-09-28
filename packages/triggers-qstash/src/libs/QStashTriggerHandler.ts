@@ -544,7 +544,18 @@ export class QStashTriggerHandler {
         timeoutClaimed = true;
         if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
         controller.abort();
-        void this.claimTimeout(attemptManager, attemptToken).then(resolve, reject);
+        void this.claimTimeout(attemptManager, attemptToken)
+          .then((claimed) => {
+            if (
+              claimed.status === "timed_out" &&
+              claimed.attempts === attemptToken.attempt &&
+              claimed.attempts < claimed.maxAttempts
+            ) {
+              return this.recoverTimedOutExecution(claimed, attemptManager);
+            }
+            return claimed;
+          })
+          .then(resolve, reject);
       };
 
       const scheduleTimeout = () => {
@@ -736,6 +747,13 @@ export class QStashTriggerHandler {
       }
     }
     const reconciled = await this.executionManager.get(execution.id);
+    return this.recoverTimedOutExecution(reconciled, attemptManager);
+  }
+
+  private async recoverTimedOutExecution(
+    reconciled: Execution,
+    attemptManager: ExecutionAttemptManager | undefined,
+  ): Promise<Execution> {
     if (reconciled.status !== "timed_out" || this.timeoutRetryPolicy === "indeterminate") {
       return reconciled;
     }
