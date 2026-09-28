@@ -468,6 +468,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ResponseValidationProblem`](/api/protocols-rest/src/classes/responsevalidationproblem/)
 - [`ValidationProblem`](/api/protocols-rest/src/classes/validationproblem/)
 - [`TrpcRouteHandlerError`](/api/protocols-trpc/src/classes/trpcroutehandlererror/)
+- [`RateLimitDuplicateDefaultPolicyProblem`](/api/ratelimit-core/src/classes/ratelimitduplicatedefaultpolicyproblem/)
 - [`RateLimitExceededProblem`](/api/ratelimit-core/src/classes/ratelimitexceededproblem/)
 - [`RateLimitKeyBuilderProblem`](/api/ratelimit-core/src/classes/ratelimitkeybuilderproblem/)
 - [`RateLimitPruneIntervalProblem`](/api/ratelimit-core/src/classes/ratelimitpruneintervalproblem/)

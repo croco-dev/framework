@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 833,
+  problemCount: 834,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -18951,6 +18951,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 15,
           column: 1,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "ratelimit-core/duplicate-default-policy",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#ratelimit-core-duplicate-default-policy",
+      recovery: {
+        cause: "Unrelated controllers declared the same implicit rate-limit policy name.",
+        userAction:
+          "Assign a distinct explicit @RateLimit policy to each unrelated handler, or explicitly share one policy.",
+        operatorAction:
+          "Inspect the named classes and policy, then add explicit policy names before restarting the application.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts",
+          line: 62,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },

@@ -8,7 +8,8 @@ import {
 } from "../libs/guards/RateLimitGuard";
 import { RateLimit } from "../libs/decorators/RateLimit";
 import { RateLimitExceededProblem } from "../libs/problems/RateLimitExceededProblem";
-import type { RateLimiter } from "../libs/RateLimiter";
+import { RateLimiter } from "../libs/RateLimiter";
+import { SlidingWindowInMemoryStore } from "../libs/InMemoryRateLimitStore";
 import { RateLimitKeyBuilder } from "../libs/RateLimitKeyBuilder";
 import type { RateLimitPolicy, RateLimitResult } from "../libs/types";
 
@@ -78,6 +79,51 @@ describe("RateLimitGuard", () => {
 
     expect(result).toBe(true);
     expect(mockRateLimiter.check).toHaveBeenCalledWith(context, policy);
+  });
+
+  it("shares a budget when unrelated controllers explicitly name the same policy", async () => {
+    class UsersController {
+      @RateLimit({ policy: "shared-create", limit: 1 })
+      create() {}
+    }
+    class OrdersController {
+      @RateLimit({ policy: "shared-create", limit: 1 })
+      create() {}
+    }
+    const store = new SlidingWindowInMemoryStore({ now: () => 1000, pruneIntervalMs: 0 });
+    const sharedGuard = new RateLimitGuard(
+      new RateLimiter(store, new RateLimitKeyBuilder(["user"])),
+    );
+    const data = { user: { id: "user-1" } };
+
+    await expect(
+      sharedGuard.canActivate(createContext(UsersController.prototype.create, data)),
+    ).resolves.toBe(true);
+    await expect(
+      sharedGuard.canActivate(createContext(OrdersController.prototype.create, data)),
+    ).rejects.toThrow(RateLimitExceededProblem);
+  });
+
+  it("preserves the policy name and storage key for a unique default declaration", async () => {
+    class UniqueController {
+      @RateLimit({ limit: 1 })
+      uniqueDefault() {}
+    }
+    const store = new SlidingWindowInMemoryStore({ now: () => 1000, pruneIntervalMs: 0 });
+    const check = vi.spyOn(store, "check");
+    const uniqueGuard = new RateLimitGuard(
+      new RateLimiter(store, new RateLimitKeyBuilder(["user"])),
+    );
+    const context = createContext(UniqueController.prototype.uniqueDefault, {
+      user: { id: "user-1" },
+    });
+
+    await expect(uniqueGuard.canActivate(context)).resolves.toBe(true);
+    expect(check).toHaveBeenCalledWith(
+      'rl2:[["policy","uniqueDefault-default"],["user","user-1"]]',
+      expect.objectContaining({ name: "uniqueDefault-default", limit: 1 }),
+    );
+    await expect(uniqueGuard.canActivate(context)).rejects.toThrow(RateLimitExceededProblem);
   });
 
   it("should evaluate and use a custom rate limit key", async () => {
@@ -188,7 +234,7 @@ describe("RateLimitGuard", () => {
 
   it.each(["limited", Symbol("limited")])("should resolve named handler %s", async (name) => {
     class Controller {
-      @RateLimit({ limit: 1, window: "1m" })
+      @RateLimit({ policy: "named-handler", limit: 1, window: "1m" })
       [name]() {}
     }
     const context = {
@@ -208,7 +254,7 @@ describe("RateLimitGuard", () => {
 
   it("should use inherited metadata without applying it to an undecorated override", async () => {
     class Parent {
-      @RateLimit({ limit: 1 })
+      @RateLimit({ policy: "inherited-handler", limit: 1 })
       limited() {}
     }
     class Child extends Parent {}

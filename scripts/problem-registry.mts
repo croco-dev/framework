@@ -2631,6 +2631,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "ratelimit-core/duplicate-default-policy": recovery({
+    cause: "Unrelated controllers declared the same implicit rate-limit policy name.",
+    userAction:
+      "Assign a distinct explicit @RateLimit policy to each unrelated handler, or explicitly share one policy.",
+    operatorAction:
+      "Inspect the named classes and policy, then add explicit policy names before restarting the application.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "error",
+  }),
   "metrics-core/read-cancelled": recovery({
     cause: "The metric read was cancelled by its AbortSignal or exceeded its deadline.",
     userAction:
