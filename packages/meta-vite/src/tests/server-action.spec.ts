@@ -134,6 +134,37 @@ describe("Server Actions", () => {
     });
   });
 
+  it("preserves field and form validation errors in the Problem response", async () => {
+    const schema = z.object({ email: z.string() }).superRefine((_data, context) => {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["email"],
+        message: "Email is invalid",
+      });
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Form is invalid",
+      });
+    });
+
+    createServerAction({
+      name: "validate-form",
+      schema,
+      handler: async () => new Response("ok"),
+    });
+
+    const response = await dispatchServerAction("validate-form", { email: "test@example.com" });
+    expect(response.status).toBe(422);
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      kind: "validation",
+      code: "meta-vite/server-action-validation-failed",
+      fields: { email: ["Email is invalid"] },
+      formErrors: ["Form is invalid"],
+    });
+  });
+
   it("returns Problem result when action is not registered", async () => {
     const response = await dispatchServerAction("nonexistent-action", {});
     expect(response.status).toBe(404);
