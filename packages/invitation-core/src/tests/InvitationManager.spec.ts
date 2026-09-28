@@ -1124,6 +1124,54 @@ describe("InvitationManager", () => {
     expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationRevokedEvent));
   });
 
+  it("should reject revoking an expired invitation without changing its audit state", async () => {
+    const expired = createInvitation("expired-revoke-token", {
+      id: "inv-expired-revoke",
+      status: "expired",
+      expiresAt: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    await store.save(expired);
+
+    await expect(manager.revokeInvitation(expired.id)).rejects.toMatchObject({
+      code: "INVITATION_INVALID_STATUS",
+      extensions: {
+        invitationId: expired.id,
+        invitationStatus: "expired",
+        operation: "revoke",
+      },
+    });
+    expect(await store.findById(expired.id)).toEqual(expired);
+    expect(publishNow).not.toHaveBeenCalled();
+  });
+
+  it("should keep accepted invitations protected from revocation", async () => {
+    const accepted = createInvitation("accepted-revoke-token", {
+      id: "inv-accepted-revoke",
+      status: "accepted",
+      acceptedAt: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    await store.save(accepted);
+
+    await expect(manager.revokeInvitation(accepted.id)).rejects.toBeInstanceOf(
+      InvitationInvalidStatusProblem,
+    );
+    expect(await store.findById(accepted.id)).toEqual(accepted);
+    expect(publishNow).not.toHaveBeenCalled();
+  });
+
+  it("should return an already revoked invitation without publishing again", async () => {
+    const revoked = createInvitation("revoked-revoke-token", {
+      id: "inv-revoked-revoke",
+      status: "revoked",
+      revokedAt: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    await store.save(revoked);
+
+    await expect(manager.revokeInvitation(revoked.id)).resolves.toEqual(revoked);
+    expect(await store.findById(revoked.id)).toEqual(revoked);
+    expect(publishNow).not.toHaveBeenCalled();
+  });
+
   it("should resend invitation by revoking old one and issuing a new token", async () => {
     await store.save(createInvitation("old-token", { id: "inv-old" }));
 
@@ -1160,6 +1208,32 @@ describe("InvitationManager", () => {
     );
     expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationRevokedEvent));
     expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationCreatedEvent));
+  });
+
+  it("should resend an expired invitation without revoking or changing the original", async () => {
+    const expired = createInvitation("expired-resend-token", {
+      id: "inv-expired-resend",
+      status: "expired",
+      expiresAt: new Date("2026-01-01T00:00:00.000Z"),
+    });
+    await store.save(expired);
+
+    const token = await manager.resendInvitation(expired.id, "resend-expired-1");
+    const replacement = await store.findByTokenHash(hashToken(token));
+
+    expect(await store.findById(expired.id)).toEqual(expired);
+    expect(replacement).toMatchObject({
+      tenantId: expired.tenantId,
+      inviterId: expired.inviterId,
+      email: expired.email,
+      role: expired.role,
+      status: "pending",
+    });
+    expect(replacement?.id).not.toBe(expired.id);
+    expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationCreatedEvent));
+    expect(publishNow.mock.calls.some(([event]) => event instanceof InvitationRevokedEvent)).toBe(
+      false,
+    );
   });
 
   it("should resume a failed link resend with the original token and event identity", async () => {

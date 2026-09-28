@@ -348,7 +348,7 @@ export class InvitationManager {
       throw new InvitationNotFoundProblem("");
     }
 
-    if (invitation.status === "accepted") {
+    if (invitation.status === "accepted" || invitation.status === "expired") {
       throw new InvitationInvalidStatusProblem(invitation.id, invitation.status, "revoke");
     }
 
@@ -384,7 +384,9 @@ export class InvitationManager {
       throw new InvitationInvalidStatusProblem(invitation.id, invitation.status, "resend");
     }
 
-    await this.revokeInvitation(invitation.id);
+    if (invitation.status !== "expired") {
+      await this.revokeInvitation(invitation.id);
+    }
 
     if (invitation.type === "email") {
       const token = await this.createEmailInvitation({
