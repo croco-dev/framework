@@ -77,6 +77,43 @@ function normalizeTenantId(value: unknown): string | null {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
+function readAuditErrorAttribute(error: Error, key: "name" | "code"): string | undefined {
+  try {
+    const value = key === "name" ? error.name : "code" in error ? error.code : undefined;
+    const pattern = key === "name" ? /^[A-Za-z][A-Za-z0-9]{0,63}$/ : /^[A-Z][A-Z0-9_/-]{0,63}$/;
+    const sensitive =
+      /token|secret|password|credential|authorization|cookie|api.?key|private.?key|connection.?string|dsn/i;
+    return typeof value === "string" && pattern.test(value) && !sensitive.test(value)
+      ? value
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function auditErrorIdentity(error: unknown): Record<string, string> {
+  let cause: Error | undefined;
+  try {
+    cause = error instanceof Error ? error : undefined;
+  } catch {
+    return {};
+  }
+  if (!cause) {
+    return {};
+  }
+
+  const attributes: Record<string, string> = {};
+  const name = readAuditErrorAttribute(cause, "name");
+  if (name) {
+    attributes["audit.error.name"] = name;
+  }
+  const code = readAuditErrorAttribute(cause, "code");
+  if (code) {
+    attributes["audit.error.code"] = code;
+  }
+  return attributes;
+}
+
 function tenantMismatch(
   authenticatedTenantId: string,
   source: string,
@@ -396,13 +433,14 @@ export class EntitlementGuard implements Guard<RouteExecutionContext> {
 
     try {
       await auditSink.recordEntitlementGuard(event);
-    } catch {
+    } catch (error) {
       recordEvent("entitlement.guard.audit_failed", {
         "entitlement.feature": event.feature,
         "entitlement.status": event.status,
         "tenant.id": event.tenantId,
         "route.id": event.route?.routeId ?? "unknown",
         "audit.event": event.type,
+        ...auditErrorIdentity(error),
       });
     }
   }
