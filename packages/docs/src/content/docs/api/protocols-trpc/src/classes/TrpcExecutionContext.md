@@ -51,6 +51,28 @@ Adapts a tRPC procedure invocation to Croco's controller execution context.
 
 ## Methods
 
+### get()
+
+> **get**\<`T`\>(`key`): `T` \| `undefined`
+
+#### Type Parameters
+
+##### T
+
+`T`
+
+#### Parameters
+
+##### key
+
+`string`
+
+#### Returns
+
+`T` \| `undefined`
+
+---
+
 ### getClass()
 
 > **getClass**(): [`Constructor`](/api/protocols-rest/src/type-aliases/constructor/)
@@ -99,6 +121,16 @@ HTTP 메서드 (GET, POST 등)
 
 ---
 
+### getOptionalRequest()
+
+> **getOptionalRequest**(): `Request` \| `undefined`
+
+#### Returns
+
+`Request` \| `undefined`
+
+---
+
 ### getPath()
 
 > **getPath**(): `string`
@@ -138,3 +170,29 @@ HTTP 메서드 (GET, POST 등)
 #### Returns
 
 `TContext`
+
+---
+
+### set()
+
+> **set**\<`T`\>(`key`, `value`): `void`
+
+#### Type Parameters
+
+##### T
+
+`T`
+
+#### Parameters
+
+##### key
+
+`string`
+
+##### value
+
+`T`
+
+#### Returns
+
+`void`

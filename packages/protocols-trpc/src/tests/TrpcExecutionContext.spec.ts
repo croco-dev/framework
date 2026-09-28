@@ -1,10 +1,37 @@
 import "reflect-metadata";
+import { Context } from "@croco/framework-context";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { HttpExceptionFilter } from "@croco/protocols-rest";
 import { describe, expect, it } from "vitest";
 import { TrpcExecutionContext } from "../libs/TrpcExecutionContext";
 
 class TestController {}
+
+describe("TrpcExecutionContext invocation values", () => {
+  it("reads route and Croco request values while preserving explicitly stored values", () => {
+    const user = { id: "user-1" };
+
+    Context.run({ requestId: "request-1", tenantId: "tenant-1", user }, () => {
+      const context = new TrpcExecutionContext({}, TestController, "users", "/users", "GET");
+
+      expect(context.get<string>("method")).toBe("GET");
+      expect(context.get<string>("path")).toBe("/users");
+      expect(context.get<{ id: string }>("tenant")).toEqual({ id: "tenant-1" });
+      expect(context.get<string>("tenantId")).toBe("tenant-1");
+      expect(context.get<{ id: string }>("user")).toBe(user);
+      expect(context.get<string>("userId")).toBe("user-1");
+      expect(context.get<string>("ip")).toBeUndefined();
+      expect(context.get<string>("clientIp")).toBeUndefined();
+      expect(context.get<string>("apiKey")).toBeUndefined();
+      expect(context.getOptionalRequest()).toBeUndefined();
+
+      context.set("method", "POST");
+      context.set<string | undefined>("userId", undefined);
+      expect(context.get<string>("method")).toBe("POST");
+      expect(context.get<string>("userId")).toBeUndefined();
+    });
+  });
+});
 
 describe("TrpcExecutionContext exception filtering", () => {
   it("preserves the original Problem and route instance without an HTTP request", () => {

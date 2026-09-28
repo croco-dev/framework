@@ -1,6 +1,6 @@
 import { Container, Context } from "@croco/framework-context";
 import type { RequestContext } from "@croco/framework-context";
-import { Problem, ProblemCategory } from "@croco/problems-core";
+import { Problem, ProblemCategory, ProblemFactory } from "@croco/problems-core";
 import type { RouteContractSourceLocation, RouteIR } from "@croco/protocols-core";
 import { extractRouteIR } from "@croco/protocols-core";
 import { getFilters, getGuards, getInterceptors, type Constructor } from "@croco/protocols-rest";
@@ -166,6 +166,7 @@ function createProcedure(
 ): AnyProcedure {
   const createExecutionContext = (ctx: Record<string, unknown>) =>
     new TrpcExecutionContext(ctx, controller, route.methodName, route.path, route.httpMethod);
+  const executionContextKey = Symbol("trpcExecutionContext");
   const guardProviders = getGuards(controller, route.methodName);
   const filterProviders = getFilters(controller, route.methodName);
   const interceptorProviders = getInterceptors(controller, route.methodName);
@@ -179,6 +180,7 @@ function createProcedure(
   const lifecycleProcedure = t.procedure.use(async ({ ctx, next }) =>
     Context.run(createCrocoRequestContext(ctx, options), async () => {
       const context = createExecutionContext(ctx);
+      Context.getCache()?.set(executionContextKey, context);
       const filters = createFilters();
 
       try {
@@ -209,9 +211,16 @@ function createProcedure(
     readonly input: unknown;
   }) => {
     const controllerInstance = instantiateProvider(controller, options);
+    const context = Context.getCache()?.get(executionContextKey);
+    if (!(context instanceof TrpcExecutionContext)) {
+      throw ProblemFactory.internalServerError(
+        "protocols-trpc/execution-context-missing",
+        "The tRPC procedure execution context is unavailable",
+      );
+    }
 
     return executionPipeline.runInterceptors(
-      createExecutionContext(ctx),
+      context,
       async () => callRoute(controllerInstance, route, input, ctx),
       createInterceptors(),
     );
