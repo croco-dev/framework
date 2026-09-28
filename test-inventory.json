@@ -1142,6 +1142,12 @@
       "owner": "create-croco-app"
     },
     {
+      "path": "packages/create-croco-app/src/tests/WebAppNaming.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
       "path": "packages/create-croco-app/src/tests/cli-result.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

@@ -272,6 +272,13 @@ export function validateResolvedOptions(options: NormalizedGeneratorOptions): Ge
         "--api-hosting",
       );
     }
+    if (apiHosting === "nextjs" && webApps[0] !== "web") {
+      throwInvalidCliOption(
+        "--api-hosting nextjs requires the web app name 'web'",
+        "Use --web-apps web or --api-hosting standalone.",
+        "--web-apps",
+      );
+    }
     if (options.apiHosting === "nextjs" && options.backendDeploy) {
       throwInvalidCliOption(
         "--backend-deploy is only supported with standalone API hosting",
@@ -551,6 +558,13 @@ function normalizeApiHosting(
       "--api-hosting nextjs requires exactly one web app",
       "Pass exactly one --web-apps value or use --api-hosting standalone.",
       "--api-hosting",
+    );
+  }
+  if (resolvedApiHosting === "nextjs" && webApps[0] !== "web") {
+    throwInvalidCliOption(
+      "--api-hosting nextjs requires the web app name 'web'",
+      "Use --web-apps web or --api-hosting standalone.",
+      "--web-apps",
     );
   }
 
