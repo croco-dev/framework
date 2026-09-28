@@ -647,6 +647,16 @@ describe("classification, CLI, and repository migration", () => {
     ).toEqual(["coverage"]);
   });
 
+  it("maps add-on template tests to their generated app paths", () => {
+    const root = createRepository();
+    expect(
+      classifyDiscoveredTest(
+        root,
+        "packages/create-croco-app/templates/addons/graphql-standalone/apps/graphql-api/src/formatGraphQLError.spec.ts",
+      ).generated?.generatedPath,
+    ).toBe("apps/graphql-api/src/formatGraphQLError.spec.ts");
+  });
+
   it("derives every core coverage test qualifier from the shared package ownership", () => {
     for (const packageName of CORE_COVERAGE_PACKAGES) {
       const packageDirectory = toCoreCoveragePackageDirectory(packageName);

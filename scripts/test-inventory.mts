@@ -1150,8 +1150,8 @@ export function validateGeneratedMaterialization(
 
 function generatedPathForTemplate(path: string): string {
   const prefix = "packages/create-croco-app/templates/";
-  const remainder = path.slice(prefix.length);
-  return remainder.slice(remainder.indexOf("/") + 1);
+  const segments = path.slice(prefix.length).split("/");
+  return segments.slice(segments[0] === "addons" ? 2 : 1).join("/");
 }
 
 export function classifyDiscoveredTest(rootDir: string, path: string): TestInventoryEntry {
