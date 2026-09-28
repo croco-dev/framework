@@ -2622,6 +2622,17 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "tx-core/join-timeout-unsupported": recovery({
+    cause:
+      "The nested operation would join its enclosing transaction, which cannot enforce an independent timeout.",
+    userAction:
+      "Remove every source of the joined timeout, including the per-run timeout and TxManager.defaultTimeout when configured; use a supported savepoint or set the deadline on the enclosing transaction if a timeout is required.",
+    operatorAction:
+      "Check the effective timeout source, nesting strategy, and adapter savepoint support; configure the manager without defaultTimeout for untimed joins.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
   "metering-upstash/automatic-deserialization-enabled": recovery({
     cause: "The injected Upstash Redis client deserialized a Lua-returned JSON string.",
     userAction: "Retry after the Redis client is configured with automaticDeserialization: false.",

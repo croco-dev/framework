@@ -16,6 +16,7 @@ export {
   AfterCommitHooksProblem,
   DetachedTransactionOperationProblem,
   InvalidTransactionTimeoutProblem,
+  JoinedTransactionTimeoutProblem,
   TransactionContextProblem,
   TransactionDecoratorProblem,
   TransactionOutcomeContextProblem,

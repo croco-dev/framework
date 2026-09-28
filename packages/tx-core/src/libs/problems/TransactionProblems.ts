@@ -97,6 +97,22 @@ export class InvalidTransactionTimeoutProblem extends Problem {
 }
 
 /**
+ * 공유 트랜잭션에 독립적인 제한 시간을 설정할 수 없을 때 발생하는 Problem입니다.
+ */
+export class JoinedTransactionTimeoutProblem extends Problem {
+  readonly code = "tx-core/join-timeout-unsupported";
+  readonly category = ProblemCategory.ValidationError;
+
+  constructor(timeoutMs: number) {
+    super(
+      undefined,
+      undefined,
+      `A joined transaction cannot enforce a ${timeoutMs}ms timeout; use a supported savepoint or set the deadline on the enclosing transaction`,
+    );
+  }
+}
+
+/**
  * after-commit 훅 중 하나 이상이 실패했을 때 발생하는 Problem입니다.
  */
 export class AfterCommitHooksProblem extends Problem {

@@ -65,6 +65,12 @@ savepoint가 release 또는 rollback된 뒤 시작합니다. 대기 시간은 �
 않으면 해당 옵션을 생략합니다. 잘못된 값은 트랜잭션이나 사용자 콜백이 시작되기 전에
 `InvalidTransactionTimeoutProblem`으로 거부됩니다.
 
+이미 실행 중인 트랜잭션에 `join`으로 참여할 때는 독립적인 제한 시간을 적용할 수 없습니다.
+`timeout`이나 `defaultTimeout`이 설정되어 있으면 사용자 콜백을 실행하기 전에
+`JoinedTransactionTimeoutProblem`으로 거부됩니다. 제한 시간이 필요한 중첩 작업은 savepoint를 지원하는
+어댑터에서 `nesting: "savepoint"`를 사용하거나, 바깥 트랜잭션에 제한 시간을 설정합니다.
+요청한 savepoint를 어댑터가 지원하지 않아 `join`으로 대체되는 경우에도 제한 시간이 있으면 거부됩니다.
+
 타임아웃은 어댑터의 트랜잭션/세이브포인트 경계에만 적용되며 after-commit 훅 실행 시간은 포함하지 않습니다.
 어댑터가 제한 시간 이후에도 성공을 반환하면 이미 커밋된 결과로 처리합니다. 제한 시간 이후 취소 사유와 다른
 오류가 반환되어 커밋 여부를 확정할 수 없으면 `TransactionOutcomeUnknownProblem`이 발생하며
@@ -102,7 +108,7 @@ class OrderService {
 - `TxManagerRegistry`, `DEFAULT_TX_MANAGER_KEY`: 다중 매니저 등록과 조회
 - 타입: `TxRunOptions`, `TxRunOutcome`, `AfterCommitOutcome`, `TxManagerConfig`, `TransactionalOptions`,
   `Propagation`, `NestingStrategy`
-- Problem: `TransactionTimeoutProblem`, `InvalidTransactionTimeoutProblem`, `TransactionContextProblem`,
+- Problem: `TransactionTimeoutProblem`, `InvalidTransactionTimeoutProblem`, `JoinedTransactionTimeoutProblem`, `TransactionContextProblem`,
   `AfterCommitHooksProblem`, `AfterCommitOutcomeRequiredProblem`, `AfterCommitRegistrationClosedProblem`,
   `DetachedTransactionOperationProblem`, `TransactionOutcomeUnknownProblem`, `TransactionRollbackConfirmedProblem`,
   `TxPropagationError`
