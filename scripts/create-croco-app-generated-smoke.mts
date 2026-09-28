@@ -938,6 +938,11 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     matrixTargets: ["saas"],
     validations: [
       {
+        label: "build",
+        args: ["build"],
+        paths: ["apps/api-server/dist/index.js", "apps/api-server/dist/index.mjs"],
+      },
+      {
         label: "manifest",
         json: {
           path: "croco.app.json",
@@ -993,11 +998,6 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
       },
       { label: "doctor", args: ["doctor"] },
       { label: "typecheck", args: ["typecheck"] },
-      {
-        label: "build",
-        args: ["build"],
-        paths: ["apps/api-server/dist/index.js", "apps/api-server/dist/index.mjs"],
-      },
       { label: "test", args: ["test"] },
       { label: "demo:smoke", args: ["demo:smoke"] },
       {
@@ -2094,8 +2094,8 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     runtimeTarget: "node",
     matrixTargets: ["ai-saas", "saas"],
     validations: [
-      { label: "typecheck", args: ["typecheck"] },
       { label: "build", args: ["build"] },
+      { label: "typecheck", args: ["typecheck"] },
       {
         label: "Contract snapshot",
         args: ["contract:snapshot"],
