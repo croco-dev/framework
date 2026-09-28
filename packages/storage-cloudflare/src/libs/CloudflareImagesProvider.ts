@@ -751,7 +751,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
   }
 
   private buildManagementImageUrl(key: string, operation: string): string {
-    this.validateImageId(key, operation);
+    this.validateImageIdUnicode(key, operation);
     return `${this.apiBaseUrl}/${encodeURIComponent(key)}`;
   }
 
@@ -782,7 +782,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
   }
 
   private encodeDeliveryImageId(key: string, operation: string): string {
-    this.validateImageId(key, operation);
+    this.validateImageIdUnicode(key, operation);
     return key
       .split("/")
       .map((segment) => encodeURIComponent(segment))
@@ -790,7 +790,7 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
   }
 
   private validateUploadImageId(key: string, operation = "put"): void {
-    this.validateImageId(key, operation);
+    this.validateImageIdUnicode(key, operation);
 
     if (Array.from(key).length <= MAX_CLOUDFLARE_IMAGE_ID_CODE_POINTS) {
       return;
@@ -805,22 +805,6 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
       },
       `Cloudflare Images image id must not exceed ${MAX_CLOUDFLARE_IMAGE_ID_CODE_POINTS} Unicode code points`,
     );
-  }
-
-  private validateImageId(key: string, operation: string): void {
-    this.validateImageIdUnicode(key, operation);
-
-    if (key.split("/").some((segment) => segment === "." || segment === "..")) {
-      throw new CloudflareImagesValidationProblem(
-        {
-          provider: "cloudflare-images",
-          operation,
-          key,
-          upstreamCode: "image-id-dot-segment",
-        },
-        "Cloudflare Images image id must not contain dot path segments",
-      );
-    }
   }
 
   private validateImageIdUnicode(key: string, operation: string): void {

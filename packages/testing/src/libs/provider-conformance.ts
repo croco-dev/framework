@@ -152,7 +152,16 @@ export function createStorageProviderConformanceSuite(
         name: "rejects invalid storage keys consistently",
         run: async () => {
           const provider = await createProvider();
-          const invalidKeys = ["", "/leading-slash", "trailing-slash/", "double//slash"];
+          const invalidKeys = [
+            "",
+            "/leading-slash",
+            "trailing-slash/",
+            "double//slash",
+            ".",
+            "..",
+            "folder/./file.txt",
+            "folder/../file.txt",
+          ];
 
           for (const key of invalidKeys) {
             await assert.rejects(() => provider.put(key, encodeText("invalid")), InvalidKeyProblem);

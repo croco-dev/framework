@@ -26,6 +26,9 @@ export abstract class BaseStorageProvider implements StorageProvider {
     if (key.includes("//")) {
       throw new InvalidKeyProblem(key, "Key must not contain //");
     }
+    if (key.split("/").some((segment) => segment === "." || segment === "..")) {
+      throw new InvalidKeyProblem(key, "Key must not contain . or .. path segments");
+    }
   }
 
   async get(key: string, options?: StorageOperationOptions): Promise<Uint8Array> {

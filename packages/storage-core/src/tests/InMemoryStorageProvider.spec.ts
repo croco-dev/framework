@@ -367,6 +367,17 @@ describe("InMemoryStorageProvider", () => {
       expect(() => provider.getPublicUrl("/invalid")).toThrow(InvalidKeyProblem);
     });
 
+    it.each([".", "..", "tenant/./file.txt", "tenant/../file.txt", "a/b/../file.txt"])(
+      "dot-segment 키 %s를 URL 생성 전에 거부",
+      (key) => {
+        expect(() => provider.getPublicUrl(key)).toThrow(InvalidKeyProblem);
+      },
+    );
+
+    it.each(["...", ".hidden", "a.b/c"])("일반 점 포함 키 %s는 허용", (key) => {
+      expect(provider.getPublicUrl(key)).toBe(`https://cdn.example.com/${key}`);
+    });
+
     it("기본 baseUrl 사용", () => {
       const defaultProvider = new InMemoryStorageProvider();
       const url = defaultProvider.getPublicUrl("test/file.txt");

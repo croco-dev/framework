@@ -619,6 +619,28 @@ describe("CloudinaryProvider", () => {
     });
   });
 
+  describe("dot-segment keys", () => {
+    it.each([".", "..", "tenant/./image.png", "tenant/../image.png"])(
+      "rejects %s before fetching a delivery URL",
+      async (key) => {
+        await expect(provider.get(key)).rejects.toThrow(InvalidKeyProblem);
+        await expect(provider.getStream(key)).rejects.toThrow(InvalidKeyProblem);
+        await expect(provider.exists(key)).rejects.toThrow(InvalidKeyProblem);
+
+        expect(global.fetch).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(["...", ".hidden", "a.b/c"])("allows non-dot-segment key %s", async (key) => {
+      vi.mocked(global.fetch).mockImplementation(async () => new Response(new Uint8Array([1])));
+
+      await expect(provider.get(key)).resolves.toBeInstanceOf(Uint8Array);
+      await expect(provider.getStream(key)).resolves.toBeInstanceOf(ReadableStream);
+      await expect(provider.exists(key)).resolves.toBe(true);
+      expect(global.fetch).toHaveBeenCalledTimes(3);
+    });
+  });
+
   describe("delete()", () => {
     it.each([
       ["test-key", "image"],

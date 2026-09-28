@@ -1,6 +1,7 @@
 import { Container } from "@croco/framework-context";
 import {
   FileNotFoundProblem,
+  InvalidKeyProblem,
   MAX_SIGNED_URL_EXPIRY_SECONDS,
   storageStreamFromBytes,
   StorageOperationAbortedProblem,
@@ -1585,27 +1586,15 @@ describe("CloudflareImagesProvider", () => {
     it.each([".", "..", "folder/../image.jpg", "folder/./image.jpg"])(
       "should reject dot-segment key %s before URL construction",
       async (key) => {
-        expect(() => provider.getPublicUrl(key)).toThrow(CloudflareImagesValidationProblem);
-        await expect(provider.delete(key)).rejects.toMatchObject({
-          code: "storage-cloudflare/validation-failed",
-          extensions: {
-            operation: "delete",
-            upstreamCode: "image-id-dot-segment",
-          },
-        });
+        expect(() => provider.getPublicUrl(key)).toThrow(InvalidKeyProblem);
+        await expect(provider.delete(key)).rejects.toThrow(InvalidKeyProblem);
         expect(mockFetch).not.toHaveBeenCalled();
       },
     );
 
     it("should reject a dot-segment upload key before creating a request", async () => {
-      await expect(provider.put("folder/../image.jpg", Buffer.from("image"))).rejects.toMatchObject(
-        {
-          code: "storage-cloudflare/validation-failed",
-          extensions: {
-            operation: "put",
-            upstreamCode: "image-id-dot-segment",
-          },
-        },
+      await expect(provider.put("folder/../image.jpg", Buffer.from("image"))).rejects.toThrow(
+        InvalidKeyProblem,
       );
       expect(mockFetch).not.toHaveBeenCalled();
     });
