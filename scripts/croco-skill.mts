@@ -497,6 +497,7 @@ function deriveVerificationCommands(
   if (examples.some((path) => path.startsWith("examples/first-party-plugin-composition/"))) {
     commands.add("pnpm --filter @croco-example/first-party-plugin-composition... build");
     commands.add("pnpm --filter @croco-example/first-party-plugin-composition test");
+    commands.add("pnpm --filter @croco-example/first-party-plugin-composition start");
   }
   if (examples.some((path) => path.startsWith("examples/quick-start-lambda/"))) {
     commands.add("pnpm quick-start-lambda:smoke");
