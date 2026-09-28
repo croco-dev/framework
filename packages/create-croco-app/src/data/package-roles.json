@@ -37,6 +37,7 @@
   "@croco/entitlements-drizzle": "plugins",
   "@croco/esbuild-plugin": "tooling",
   "@croco/etl-core": "contracts",
+  "@croco/etl-events-tx": "plugins",
   "@croco/events-core": "contracts",
   "@croco/events-inmemory": "plugins",
   "@croco/events-tx": "plugins",

@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 835,
+  problemCount: 836,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -8251,6 +8251,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/entitlements-core/src/libs/problems/EntitlementProblems.ts",
           line: 103,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "etl-core/invalid-event-envelope",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#etl-core-invalid-event-envelope",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/etl-core/src/source/EventSourceEnvelope.ts",
+          line: 14,
           column: 1,
           kind: "problem-class",
         },

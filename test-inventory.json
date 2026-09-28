@@ -1756,10 +1756,28 @@
       "owner": "@croco/esbuild-plugin"
     },
     {
+      "path": "packages/etl-core/src/tests/EventSourceEnvelope.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/etl-core"
+    },
+    {
       "path": "packages/etl-core/src/tests/SourceDecoder.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/etl-core"
+    },
+    {
+      "path": "packages/etl-events-tx/src/tests/AnalyticsOutboxConsumer.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/etl-events-tx"
+    },
+    {
+      "path": "packages/etl-events-tx/src/tests/OutboxFactSource.integration.spec.ts",
+      "lane": "integration",
+      "qualifiers": [],
+      "owner": "@croco/etl-events-tx"
     },
     {
       "path": "packages/events-core/src/tests/BehavioralEvidence.spec.ts",
@@ -1877,6 +1895,12 @@
     },
     {
       "path": "packages/events-tx/src/tests/EventsTxProblems.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/events-tx"
+    },
+    {
+      "path": "packages/events-tx/src/tests/InMemoryTransactionalEventStore.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/events-tx"

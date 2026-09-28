@@ -63,6 +63,7 @@
     "@croco/entitlements-drizzle": "workspace:*",
     "@croco/esbuild-plugin": "workspace:*",
     "@croco/etl-core": "workspace:*",
+    "@croco/etl-events-tx": "workspace:*",
     "@croco/events-core": "workspace:*",
     "@croco/events-inmemory": "workspace:*",
     "@croco/events-tx": "workspace:*",

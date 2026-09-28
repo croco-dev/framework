@@ -1087,6 +1087,12 @@ describe("CI verification profile contract", () => {
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/warehouse-postgres test:real");
   });
 
+  it("runs outbox fact source integration against real PostgreSQL", () => {
+    expect(WORKFLOW).toContain("              - 'packages/etl-events-tx/**'");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/etl-events-tx...");
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/etl-events-tx test:real");
+  });
+
   it("runs fresh migration status against real PostgreSQL", () => {
     expect(WORKFLOW).toContain("              - 'packages/migration-runner/**'");
     expect(REAL_RESOURCE_JOB).toContain(
