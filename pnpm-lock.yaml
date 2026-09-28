@@ -3616,6 +3616,9 @@ importers:
       '@croco/impersonation-core':
         specifier: workspace:*
         version: link:../impersonation-core
+      '@croco/ratelimit-core':
+        specifier: workspace:*
+        version: link:../ratelimit-core
       '@trpc/client':
         specifier: 11.17.0
         version: 11.17.0(@trpc/server@11.17.0(typescript@6.0.3))(typescript@6.0.3)

@@ -13,6 +13,7 @@ export type RateLimitMetadata = {
 
 export type GuardContext = KeyContext & {
   getRequest?(): unknown;
+  getOptionalRequest?(): unknown;
   set<T>(key: string, value: T): void;
 } & (
     | { getHandler(): (...args: unknown[]) => unknown }
@@ -53,7 +54,9 @@ export class RateLimitGuard {
   }
 
   private keyContext(context: GuardContext): KeyContext {
-    const request = context.getRequest?.();
+    const request = context.getOptionalRequest
+      ? context.getOptionalRequest()
+      : context.getRequest?.();
     if (!isRecord(request)) return context;
 
     return {

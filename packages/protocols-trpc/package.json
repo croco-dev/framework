@@ -46,6 +46,7 @@
   "devDependencies": {
     "@croco/auth-core": "workspace:*",
     "@croco/impersonation-core": "workspace:*",
+    "@croco/ratelimit-core": "workspace:*",
     "@trpc/client": "11.17.0",
     "reflect-metadata": "^0.2.2"
   }

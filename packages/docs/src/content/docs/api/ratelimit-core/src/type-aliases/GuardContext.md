@@ -11,6 +11,14 @@ title: "GuardContext"
 
 ## Type Declaration
 
+### getOptionalRequest()?
+
+> `optional` **getOptionalRequest**(): `unknown`
+
+#### Returns
+
+`unknown`
+
 ### getRequest()?
 
 > `optional` **getRequest**(): `unknown`

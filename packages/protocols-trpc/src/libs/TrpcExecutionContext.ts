@@ -1,3 +1,4 @@
+import { Context } from "@croco/framework-context";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { Constructor, ExecutionContext } from "@croco/protocols-rest";
 
@@ -5,6 +6,8 @@ import type { Constructor, ExecutionContext } from "@croco/protocols-rest";
  * Adapts a tRPC procedure invocation to Croco's controller execution context.
  */
 export class TrpcExecutionContext<TContext = unknown> implements ExecutionContext {
+  private readonly values = new Map<string, unknown>();
+
   constructor(
     private readonly trpcContext: TContext,
     private readonly controllerClass: Constructor,
@@ -19,6 +22,42 @@ export class TrpcExecutionContext<TContext = unknown> implements ExecutionContex
       throw new TrpcRequestUnavailableProblem();
     }
     return request;
+  }
+
+  getOptionalRequest(): Request | undefined {
+    return readTrpcRequest(this.trpcContext);
+  }
+
+  get<T>(key: string): T | undefined {
+    if (this.values.has(key)) {
+      return this.values.get(key) as T | undefined;
+    }
+
+    const requestContext = Context.get();
+    const value: unknown = (() => {
+      switch (key) {
+        case "method":
+          return this.method;
+        case "path":
+          return this.path;
+        case "tenant":
+          return requestContext?.tenantId ? { id: requestContext.tenantId } : undefined;
+        case "tenantId":
+          return requestContext?.tenantId;
+        case "user":
+          return requestContext?.user;
+        case "userId":
+          return requestContext?.user?.id;
+        default:
+          return undefined;
+      }
+    })();
+
+    return value as T | undefined;
+  }
+
+  set<T>(key: string, value: T): void {
+    this.values.set(key, value);
   }
 
   getClass(): Constructor {
