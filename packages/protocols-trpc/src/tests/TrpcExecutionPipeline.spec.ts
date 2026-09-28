@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import type { AddressInfo } from "node:net";
+import { CurrentApiKey, CurrentPrincipal, User } from "@croco/auth-core";
 import {
   Container,
   DEV_INSPECTOR_TOKEN,
@@ -442,6 +443,103 @@ class TrpcGuardProviderFailureController {
     return "unreachable";
   }
 }
+
+type AuthenticatedRequest = Request & {
+  principal?: unknown;
+  user?: unknown;
+  apiKey?: unknown;
+};
+
+class TrpcAuthGuard implements Guard<ExecutionContext> {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.getRequest() as AuthenticatedRequest;
+    const userId = request.headers.get("x-user-id");
+    if (!userId) return false;
+
+    request.principal = { id: userId, type: "user" };
+    request.user = { id: userId };
+    request.apiKey = { id: `key-${userId}` };
+    return true;
+  }
+}
+
+@Controller("/trpc/auth")
+class TrpcAuthController {
+  @Get("/me")
+  @UseGuards(TrpcAuthGuard)
+  me(
+    @CurrentPrincipal() principal: { id: string } | undefined,
+    @User() user: { id: string } | undefined,
+    @CurrentApiKey() apiKey: { id: string } | undefined,
+  ) {
+    return {
+      principalId: principal?.id ?? null,
+      userId: user?.id ?? null,
+      apiKeyId: apiKey?.id ?? null,
+    };
+  }
+}
+
+@Controller("/trpc/context-user")
+class TrpcContextUserController {
+  @Get("/me")
+  me(@User() user: { id: string } | undefined) {
+    return { userId: user?.id ?? null };
+  }
+}
+
+type TrpcAuthCaller = {
+  trpcAuth: { me: () => Promise<unknown> };
+};
+
+type TrpcContextUserCaller = {
+  trpcContextUser: { me: () => Promise<unknown> };
+};
+
+describe("tRPC auth parameters", () => {
+  beforeEach(() => Container.reset());
+
+  it("passes guard-authenticated principals from a Fetch Request to the handler", async () => {
+    const request = new Request("http://localhost/trpc/auth.me", {
+      headers: { "x-user-id": "fetch-user" },
+    });
+    const caller = createTrpcRouter([TrpcAuthController]).createCaller({
+      request,
+      user: { id: "context-user" },
+    }) as unknown as TrpcAuthCaller;
+
+    await expect(caller.trpcAuth.me()).resolves.toEqual({
+      principalId: "fetch-user",
+      userId: "fetch-user",
+      apiKeyId: "key-fetch-user",
+    });
+  });
+
+  it("passes guard-authenticated principals from a Node request to the handler", async () => {
+    const req = {
+      url: "/trpc/auth.me",
+      method: "GET",
+      headers: { host: "localhost", "x-user-id": "node-user" },
+    };
+    const caller = createTrpcRouter([TrpcAuthController]).createCaller({
+      req,
+    }) as unknown as TrpcAuthCaller;
+
+    await expect(caller.trpcAuth.me()).resolves.toEqual({
+      principalId: "node-user",
+      userId: "node-user",
+      apiKeyId: "key-node-user",
+    });
+  });
+
+  it("resolves a user supplied only by the tRPC context", async () => {
+    const caller = createTrpcRouter([TrpcContextUserController]).createCaller({
+      user: { id: "context-user" },
+    }) as unknown as TrpcContextUserCaller;
+
+    await expect(caller.trpcContextUser.me()).resolves.toEqual({ userId: "context-user" });
+  });
+});
 
 describe("tRPC Croco execution pipeline", () => {
   beforeEach(() => {

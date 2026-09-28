@@ -94,6 +94,50 @@ describe("buildContractGraph", () => {
     );
   });
 
+  it("should preserve auth injection in snapshots without requiring request schemas", () => {
+    @Controller("/identity")
+    class IdentityController {
+      @Get("/")
+      @ResponseSchema(z.object({ id: z.string() }))
+      identity(): void {}
+    }
+
+    Reflect.defineMetadata(
+      REST_PARAMS_KEY,
+      new Map<string, ParamMetadata[]>([
+        [
+          "identity",
+          [
+            { index: 0, type: ParamType.PRINCIPAL, name: "principal" },
+            { index: 1, type: ParamType.USER, name: "user" },
+            { index: 2, type: ParamType.API_KEY, name: "apiKey" },
+          ],
+        ],
+      ]),
+      IdentityController,
+    );
+
+    const graph = buildContractGraph([IdentityController], { strictSchemas: true });
+    const snapshot = createContractGraphSnapshot(graph);
+    const serialized = JSON.parse(stringifyContractGraphSnapshot(snapshot));
+
+    expect(graph.diagnostics).toEqual([]);
+    expect(snapshot.routes[0]?.params.map((param) => param.kind)).toEqual([
+      "principal",
+      "user",
+      "apiKey",
+    ]);
+    expect(snapshot.routes[0]?.request).toEqual({
+      body: null,
+      path: null,
+      query: null,
+      headers: null,
+    });
+    expect(isContractGraphSnapshot(serialized)).toBe(true);
+    expect(parseContractGraphSnapshot(serialized)).toEqual(snapshot);
+    expect(isContractGraphV1(createContractGraphV1(graph))).toBe(true);
+  });
+
   it("should build stable controller, route id, operation id, and schema graph nodes", () => {
     const createUserSchema = z.object({ name: z.string() });
 

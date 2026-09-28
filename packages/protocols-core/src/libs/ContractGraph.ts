@@ -513,7 +513,12 @@ function validateStrictSchemas(
   }
 
   for (const param of route.params) {
-    if (param.kind === "ctx") {
+    if (
+      param.kind === "ctx" ||
+      param.kind === "principal" ||
+      param.kind === "user" ||
+      param.kind === "apiKey"
+    ) {
       continue;
     }
 
@@ -1315,6 +1320,9 @@ function isParamSchemaCoveredByRouteSchema(
       return getNamedSchemaShape(schema)[param.name] === param.schema;
     }
     case "ctx":
+    case "principal":
+    case "user":
+    case "apiKey":
       return false;
   }
 }
@@ -1392,6 +1400,12 @@ function getParamDecoratorName(kind: ContractGraphRoute["params"][number]["kind"
       return "Body";
     case "ctx":
       return "Ctx";
+    case "principal":
+      return "CurrentPrincipal";
+    case "user":
+      return "User";
+    case "apiKey":
+      return "CurrentApiKey";
   }
 }
 

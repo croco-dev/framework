@@ -901,7 +901,10 @@ function isContractGraphSnapshotParamKind(value: unknown): value is ParamIR["kin
     value === "query" ||
     value === "path" ||
     value === "header" ||
-    value === "ctx"
+    value === "ctx" ||
+    value === "principal" ||
+    value === "user" ||
+    value === "apiKey"
   );
 }
 

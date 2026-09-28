@@ -54,7 +54,7 @@ export interface ParamIR {
    * pre-existing serialized RouteIR artifacts that only preserve declaration order.
    */
   index?: number;
-  kind: "body" | "query" | "path" | "header" | "ctx";
+  kind: "body" | "query" | "path" | "header" | "ctx" | "principal" | "user" | "apiKey";
   name: string;
   schema: z.ZodType | null;
   contractSchema?: z.ZodType;
