@@ -299,6 +299,29 @@ describe("TaskRegistry", () => {
     ).toThrow(DuplicateTaskRegistrationProblem);
   });
 
+  it("should reject duplicate registrations with different timeout retry policies", () => {
+    class TaskHandler {
+      async handle(): Promise<void> {}
+    }
+
+    const registry = new TaskRegistry();
+    const metadata: TaskMetadata = {
+      name: "timeout-retry-task",
+      target: TaskHandler,
+      methodName: "handle",
+      options: { timeoutRetry: "idempotent" },
+    };
+    registry.register(metadata.name, TaskHandler, "handle", metadata);
+
+    expect(() =>
+      registry.register(metadata.name, TaskHandler, "handle", {
+        ...metadata,
+        options: { timeoutRetry: "fenced" },
+      }),
+    ).toThrow(DuplicateTaskRegistrationProblem);
+    expect(registry.get(metadata.name)?.metadata).toBe(metadata);
+  });
+
   it("should allow collecting cloned metadata when task definition is identical", () => {
     class TaskHandler {
       async handle(): Promise<void> {}
@@ -315,6 +338,7 @@ describe("TaskRegistry", () => {
         isRetryable,
         timeout: 1_000,
         idempotencyKey: "dedupe-key",
+        timeoutRetry: "fenced",
       },
     };
 
@@ -327,6 +351,7 @@ describe("TaskRegistry", () => {
         isRetryable: metadata.options?.isRetryable,
         timeout: metadata.options?.timeout,
         idempotencyKey: metadata.options?.idempotencyKey,
+        timeoutRetry: metadata.options?.timeoutRetry,
       },
     };
 
