@@ -8,6 +8,12 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/first-party-plugin-composition/src/tests/StartCommand.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/saas-billing-golden-path/src/tests/golden-path.spec.ts",
       "lane": "fast",
       "qualifiers": [],
