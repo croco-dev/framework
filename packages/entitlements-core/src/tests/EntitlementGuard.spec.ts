@@ -49,8 +49,12 @@ class MockEntitlementAuditSink extends EntitlementAuditSink {
 }
 
 class FailingEntitlementAuditSink extends EntitlementAuditSink {
-  recordEntitlementGuard(_event: EntitlementGuardAuditEvent): void {
-    throw new Error("audit sink unavailable");
+  constructor(private readonly failure: unknown) {
+    super();
+  }
+
+  async recordEntitlementGuard(_event: EntitlementGuardAuditEvent): Promise<void> {
+    throw this.failure;
   }
 }
 
@@ -900,9 +904,13 @@ describe("EntitlementGuard", () => {
 
   it("should not let audit sink failures override allowed guard decisions", async () => {
     const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {});
+    const auditError = Object.assign(new Error("token=super-secret"), {
+      name: "StorageTransportError",
+      code: "ETIMEDOUT",
+    });
     guard = new EntitlementGuard(
       mockManager as unknown as EntitlementManager,
-      new FailingEntitlementAuditSink(),
+      new FailingEntitlementAuditSink(auditError),
     );
 
     class TestController {
@@ -927,15 +935,24 @@ describe("EntitlementGuard", () => {
         "tenant.id": "tenant-123",
         "route.id": "TestController.testMethod",
         "audit.event": "entitlement.guard.allowed",
+        "audit.error.name": "StorageTransportError",
+        "audit.error.code": "ETIMEDOUT",
       }),
     );
+    expect(JSON.stringify(recordEventSpy.mock.calls)).not.toContain("super-secret");
   });
 
   it("should not let audit sink failures override denied guard decisions", async () => {
     const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {});
+    const auditError = Object.assign(new Error("audit sink unavailable"), {
+      code: "TOKEN=super-secret",
+    });
+    const unsafeName = ["private-credential-value"];
+    unsafeName.toString = () => "StorageTransportError";
+    Object.defineProperty(auditError, "name", { value: unsafeName });
     guard = new EntitlementGuard(
       mockManager as unknown as EntitlementManager,
-      new FailingEntitlementAuditSink(),
+      new FailingEntitlementAuditSink(auditError),
     );
 
     class TestController {
@@ -970,5 +987,49 @@ describe("EntitlementGuard", () => {
         "audit.event": "entitlement.guard.denied",
       }),
     );
+    const failureEvent = recordEventSpy.mock.calls.find(
+      ([name]) => name === "entitlement.guard.audit_failed",
+    );
+    expect(failureEvent?.[1]).not.toHaveProperty("audit.error.name");
+    expect(failureEvent?.[1]).not.toHaveProperty("audit.error.code");
+    expect(JSON.stringify(recordEventSpy.mock.calls)).not.toContain("private-credential-value");
+    expect(JSON.stringify(recordEventSpy.mock.calls)).not.toContain("super-secret");
+  });
+
+  it("should keep guard decisions when an audit rejection cannot be inspected", async () => {
+    const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {});
+    const rejection = Proxy.revocable(new Error("token=super-secret"), {});
+    rejection.revoke();
+    guard = new EntitlementGuard(
+      mockManager as unknown as EntitlementManager,
+      new FailingEntitlementAuditSink(rejection.proxy),
+    );
+
+    class TestController {
+      @RequireEntitlement({ feature: "reports.export" })
+      testMethod() {}
+    }
+
+    const context = createContext({
+      target: TestController,
+      request: {
+        tenantId: "tenant-123",
+        user: createUser("tenant-123"),
+      },
+    });
+
+    await expect(guard.canActivate(context)).resolves.toBe(true);
+    mockManager.checkResult = {
+      granted: false,
+      status: "denied",
+      featureKey: "reports.export",
+      type: "boolean",
+      reason: "not_entitled",
+    };
+    await expect(guard.canActivate(context)).rejects.toThrow(EntitlementDeniedProblem);
+    expect(
+      recordEventSpy.mock.calls.filter(([name]) => name === "entitlement.guard.audit_failed"),
+    ).toHaveLength(2);
+    expect(JSON.stringify(recordEventSpy.mock.calls)).not.toContain("super-secret");
   });
 });
