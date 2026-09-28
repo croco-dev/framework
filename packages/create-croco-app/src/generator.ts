@@ -544,17 +544,17 @@ const SAAS_HOST_ARTIFACTS = {
   node: {
     source: "index.ts",
     entry: "./src/index.ts",
-    build: "tsup src/index.ts --format esm,cjs --clean --dts",
+    build: "pnpm di:generate && tsup src/index.ts --format esm,cjs --clean --dts",
   },
   lambda: {
     source: "lambda.ts",
     entry: "./src/lambda.ts",
-    build: "tsup src/lambda.ts --format cjs --clean --dts",
+    build: "pnpm di:generate && tsup src/lambda.ts --format cjs --clean --dts",
   },
   "cloudflare-workers": {
     source: "worker.ts",
     entry: "./src/worker.ts",
-    build: "tsup src/worker.ts --format esm --platform browser --clean --dts",
+    build: "pnpm di:generate && tsup src/worker.ts --format esm --platform browser --clean --dts",
   },
 } as const;
 
