@@ -21592,6 +21592,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "InvalidUpstashMeteringDeserializationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/UpstashMeteringProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "isRetryableUpstashMeteringError",
               "exportKind": "named",
               "source": "./libs/problems/UpstashMeteringProblems",

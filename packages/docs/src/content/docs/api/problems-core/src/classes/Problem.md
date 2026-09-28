@@ -378,6 +378,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`DuplicateMeterDefinitionsProblem`](/api/metering-drizzle/src/classes/duplicatemeterdefinitionsproblem/)
 - [`InvalidMeterDefinitionProblem`](/api/metering-drizzle/src/classes/invalidmeterdefinitionproblem/)
 - [`UsageEnvelopeConfigurationProblem`](/api/metering-drizzle/src/classes/usageenvelopeconfigurationproblem/)
+- [`InvalidUpstashMeteringDeserializationProblem`](/api/metering-upstash/src/classes/invalidupstashmeteringdeserializationproblem/)
 - [`MissingUpstashMeteringConfigProblem`](/api/metering-upstash/src/classes/missingupstashmeteringconfigproblem/)
 - [`UpstashMeteringUpstreamProblem`](/api/metering-upstash/src/classes/upstashmeteringupstreamproblem/)
 - [`BillingMetricDroppedProblem`](/api/metrics-billing/src/classes/billingmetricdroppedproblem/)

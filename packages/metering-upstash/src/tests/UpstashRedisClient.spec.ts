@@ -1,11 +1,59 @@
+import {
+  IdempotencyManager,
+  RedisBillableUsageJournal,
+  RedisUsageStorage,
+} from "@croco/metering-core";
 import { createUpstashRedisMeteringConformanceSuite } from "@croco/testing";
-import type { Redis } from "@upstash/redis";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Redis } from "@upstash/redis";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createUpstashRedisClient,
   createUpstashRedisClientFromEnv,
   UpstashRedisClient,
 } from "../libs/UpstashRedisClient";
+import { InvalidUpstashMeteringDeserializationProblem } from "../libs/problems/UpstashMeteringProblems";
+
+type EvalHandler = (script: string, keys: string[], args: string[]) => unknown;
+
+function encodeUpstashResult(value: unknown): unknown {
+  if (typeof value === "string") {
+    return Buffer.from(value, "utf8").toString("base64");
+  }
+  return Array.isArray(value) ? value.map(encodeUpstashResult) : value;
+}
+
+function stubUpstashRest(handler: EvalHandler): void {
+  const execute = (command: unknown[], base64: boolean) => {
+    const [name, script, numKeys, ...rest] = command as [string, string, number, ...unknown[]];
+    if (name !== "eval") {
+      throw new Error(`unexpected command ${String(name)}`);
+    }
+    const result = handler(
+      script,
+      rest.slice(0, numKeys).map(String),
+      rest.slice(numKeys).map(String),
+    );
+    return { result: base64 ? encodeUpstashResult(result) : result };
+  };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (url: string, init: { body: string; headers: Record<string, string> }) => {
+      const base64 = init.headers["Upstash-Encoding"] === "base64";
+      const body = JSON.parse(init.body) as unknown[];
+      const payload = url.endsWith("/pipeline")
+        ? (body as unknown[][]).map((command) => execute(command, base64))
+        : execute(body, base64);
+      return new Response(JSON.stringify(payload), { status: 200 });
+    }),
+  );
+}
+
+function createEnvClient(): UpstashRedisClient {
+  return createUpstashRedisClientFromEnv({
+    UPSTASH_REDIS_REST_URL: "https://example-test.upstash.io",
+    UPSTASH_REDIS_REST_TOKEN: "test-token",
+  });
+}
 
 type ConformanceScenario =
   | "success"
@@ -83,6 +131,7 @@ async function runUpstashMeteringLiveSmoke(): Promise<void> {
   const redis = new Redis({
     token: readRequiredEnv("UPSTASH_REDIS_REST_TOKEN"),
     url: readRequiredEnv("UPSTASH_REDIS_REST_URL"),
+    automaticDeserialization: false,
   });
   const client = createUpstashRedisClient(redis);
   const key = `croco:metering-upstash:smoke:${Date.now()}`;
@@ -238,5 +287,92 @@ describe("UpstashRedisClient", () => {
 
       expect(instance).toBeInstanceOf(UpstashRedisClient);
     });
+  });
+});
+
+describe("UpstashRedisClient with metering-core JSON-returning scripts", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("returns appended and duplicate billable usage entries", async () => {
+    let appendCount = 0;
+    stubUpstashRest((_script, _keys, args) => [appendCount++ === 0 ? 1 : 0, args[1]]);
+    const journal = new RedisBillableUsageJournal(createEnvClient());
+    const event = {
+      eventId: "evt-1",
+      tenantId: "tenant-a",
+      meterId: "ai.tokens",
+      aggregation: "SUM" as const,
+      unit: "token",
+      value: 42,
+      dimensions: {},
+    };
+
+    const appended = await journal.append(event);
+    const duplicate = await journal.append(event);
+
+    expect(appended.outcome).toBe("appended");
+    expect(appended.entry.event.eventId).toBe("evt-1");
+    expect(duplicate.outcome).toBe("duplicate");
+    expect(duplicate.entry.event.eventId).toBe("evt-1");
+  });
+
+  it("returns the staged delivery when a metering claim is recovered", async () => {
+    const delivery = {
+      usageRecord: {
+        id: "usage-1",
+        tenantId: "tenant-a",
+        meterId: "api.calls",
+        value: 3,
+        idempotencyKey: "idem-1",
+        timestamp: "2026-01-01T00:00:00.000Z",
+      },
+    };
+    stubUpstashRest(() => [1, JSON.stringify(delivery), "01JOPERATION", ""]);
+    const manager = new IdempotencyManager(createEnvClient());
+
+    const claim = await manager.claimMeteringProcessingOrThrow("tenant-a", "api.calls", "idem-1");
+
+    expect(claim.operationId).toBe("01JOPERATION");
+    expect(claim.delivery).toEqual(delivery);
+  });
+
+  it("passes through a scalar Lua result", async () => {
+    stubUpstashRest(() => 1);
+
+    await expect(createEnvClient().eval<[number]>("return 1", [], [])).resolves.toBe(1);
+  });
+
+  it("resets billing-cycle usage after a scalar Lua result", async () => {
+    stubUpstashRest(() => 1);
+    const storage = new RedisUsageStorage(createEnvClient());
+
+    await expect(storage.resetBillingCycle("tenant-a", "api.calls")).resolves.toBeUndefined();
+  });
+
+  it("reports an injected Redis client with automatic deserialization enabled", async () => {
+    stubUpstashRest((_script, _keys, args) => [1, args[1]]);
+    const redis = new Redis({
+      url: "https://example-test.upstash.io",
+      token: "test-token",
+    });
+    const journal = new RedisBillableUsageJournal(createUpstashRedisClient(redis));
+    const event = {
+      eventId: "evt-1",
+      tenantId: "tenant-a",
+      meterId: "ai.tokens",
+      aggregation: "SUM" as const,
+      unit: "token",
+      value: 42,
+      dimensions: {},
+    };
+
+    await expect(journal.append(event)).rejects.toMatchObject({
+      code: "metering-upstash/automatic-deserialization-enabled",
+      message: expect.stringContaining("automaticDeserialization: false"),
+      extensions: { retryable: false },
+    });
+    await expect(journal.append(event)).rejects.toBeInstanceOf(
+      InvalidUpstashMeteringDeserializationProblem,
+    );
   });
 });

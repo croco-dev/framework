@@ -1,3 +1,4 @@
+import { Problem } from "@croco/problems-core";
 import { MeteringTransitionProblem } from "./problems/MeteringTransitionProblem";
 import { RedisProblem } from "./problems/RedisProblem";
 import { buildMeteringRedisKey, encodeRedisKeySegment } from "./redisKey";
@@ -412,7 +413,7 @@ return {
     try {
       return await command();
     } catch (error) {
-      if (error instanceof MeteringTransitionProblem || error instanceof RedisProblem) {
+      if (error instanceof Problem) {
         throw error;
       }
       throw new RedisProblem(
