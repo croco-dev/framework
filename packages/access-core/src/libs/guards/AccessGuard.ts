@@ -142,7 +142,7 @@ export class AccessGuard implements Guard<AccessExecutionContext> {
     const params = accessRequest.params ?? this.getHttpContext(context)?.req.params;
 
     const objectTypeIdKey = `${objectType}Id`;
-    const byParams = params?.id ?? params?.[objectTypeIdKey];
+    const byParams = params?.[objectTypeIdKey] ?? params?.id;
     if (typeof byParams === "string" && byParams.length > 0) {
       return `${objectType}:${byParams}`;
     }
@@ -152,7 +152,7 @@ export class AccessGuard implements Guard<AccessExecutionContext> {
       return undefined;
     }
 
-    const paramValue = httpContext.param("id") ?? httpContext.param(objectTypeIdKey);
+    const paramValue = httpContext.param(objectTypeIdKey) ?? httpContext.param("id");
     if (typeof paramValue === "string" && paramValue.length > 0) {
       return `${objectType}:${paramValue}`;
     }

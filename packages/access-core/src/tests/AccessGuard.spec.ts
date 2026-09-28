@@ -45,6 +45,7 @@ describe("AccessGuard", () => {
       tenantId?: string;
       params?: Record<string, string>;
       rawParams?: Record<string, string>;
+      contextParams?: Record<string, string>;
       ctxTenantId?: string;
     } = {},
   ): AccessExecutionContext => {
@@ -59,7 +60,7 @@ describe("AccessGuard", () => {
       req: {
         params: options.rawParams ?? {},
       },
-      param: (name: string) => options.rawParams?.[name],
+      param: (name: string) => (options.contextParams ?? options.rawParams)?.[name],
       get: <T>(key: string) => {
         if (key === "tenantId") {
           return options.ctxTenantId as T;
@@ -241,14 +242,14 @@ describe("AccessGuard", () => {
     );
   });
 
-  it("should prioritize params.id over params.{objectType}Id", async () => {
+  it("should prioritize params.{objectType}Id over params.id", async () => {
     class TestController {
       @Access("document", "viewer")
       protectedMethod() {}
     }
     const context = createMockContext(TestController, "protectedMethod", mockUser, mockTenantId, {
-      id: "doc-from-id",
-      documentId: "doc-from-documentId",
+      id: "child-1",
+      documentId: "parent-1",
     });
 
     vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ decision: "allow", allowed: true });
@@ -260,9 +261,31 @@ describe("AccessGuard", () => {
         tenantId: mockTenantId,
         subject: `user:${mockUser.id}`,
         relation: "viewer",
-        object: "document:doc-from-id",
+        object: "document:parent-1",
         ruleId: "access:document:viewer",
       }),
+    );
+  });
+
+  it("should deny a nested route when access exists only for the child id", async () => {
+    class TestController {
+      @Access("project", "viewer")
+      protectedMethod() {}
+    }
+    const context = createMockContext(TestController, "protectedMethod", mockUser, mockTenantId, {
+      projectId: "parent-1",
+      id: "child-1",
+    });
+
+    vi.spyOn(mockAccessEngine, "check").mockImplementation(async ({ object }) =>
+      object === "project:child-1"
+        ? { decision: "allow", allowed: true }
+        : { decision: "deny", allowed: false },
+    );
+
+    await expect(accessGuard.canActivate(context)).rejects.toThrow(ForbiddenProblem);
+    expect(mockAccessEngine.check).toHaveBeenCalledWith(
+      expect.objectContaining({ object: "project:parent-1" }),
     );
   });
 
@@ -304,6 +327,45 @@ describe("AccessGuard", () => {
         object: "document:doc-from-http",
         ruleId: "access:document:viewer",
       }),
+    );
+  });
+
+  it("should prioritize the object type id in HTTP context params", async () => {
+    class TestController {
+      @Access("project", "viewer")
+      protectedMethod() {}
+    }
+    const context = createMockContextWithHttp(TestController, "protectedMethod", {
+      user: mockUser,
+      tenantId: mockTenantId,
+      rawParams: { projectId: "parent-1", id: "child-1" },
+    });
+
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ decision: "allow", allowed: true });
+
+    await expect(accessGuard.canActivate(context)).resolves.toBe(true);
+    expect(mockAccessEngine.check).toHaveBeenCalledWith(
+      expect.objectContaining({ object: "project:parent-1" }),
+    );
+  });
+
+  it("should prioritize the object type id from the HTTP context param accessor", async () => {
+    class TestController {
+      @Access("project", "viewer")
+      protectedMethod() {}
+    }
+    const context = createMockContextWithHttp(TestController, "protectedMethod", {
+      user: mockUser,
+      tenantId: mockTenantId,
+      rawParams: {},
+      contextParams: { projectId: "parent-1", id: "child-1" },
+    });
+
+    vi.spyOn(mockAccessEngine, "check").mockResolvedValue({ decision: "allow", allowed: true });
+
+    await expect(accessGuard.canActivate(context)).resolves.toBe(true);
+    expect(mockAccessEngine.check).toHaveBeenCalledWith(
+      expect.objectContaining({ object: "project:parent-1" }),
     );
   });
 

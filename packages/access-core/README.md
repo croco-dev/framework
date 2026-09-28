@@ -144,6 +144,9 @@ const permissions = await accessEngine.list({
 ### @Access(objectType: string, relation: string)
 
 메서드에 접근 제어를 적용하는 데코레이터입니다.
+가드는 요청 경로에서 `{objectType}Id`를 먼저 사용하고, 해당 파라미터가 없으면 `id`를 사용합니다.
+예를 들어 `@Access("project", "viewer")`를 적용한 `/projects/:projectId/tasks/:id`에서는
+`project:<projectId>`에 대한 접근 권한을 검사합니다.
 
 ### AccessGuard
 
