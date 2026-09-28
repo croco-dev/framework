@@ -715,14 +715,6 @@
     },
     {
       "packageName": "@croco/transports-http",
-      "file": "packages/transports-http/src/libs/middleware/CompressionMiddleware.ts",
-      "line": 85,
-      "column": 17,
-      "code": "TS2532",
-      "message": "Object is possibly 'undefined'."
-    },
-    {
-      "packageName": "@croco/transports-http",
       "file": "packages/transports-http/src/libs/middleware/telemetry.ts",
       "line": 295,
       "column": 3,

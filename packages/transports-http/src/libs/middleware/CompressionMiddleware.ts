@@ -87,7 +87,10 @@ function selectEncoding(
     );
     if (!match) continue;
 
-    const encoding = match[1].toLowerCase() as CompressionEncoding | "*";
+    const coding = match[1];
+    if (!coding) continue;
+
+    const encoding = coding.toLowerCase() as CompressionEncoding | "*";
     const quality = match[2] === undefined ? 1 : Number(match[2]);
     accepted.set(encoding, Math.min(accepted.get(encoding) ?? 1, quality));
   }
