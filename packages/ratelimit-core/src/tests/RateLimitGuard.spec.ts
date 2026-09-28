@@ -203,14 +203,16 @@ describe("RateLimitGuard", () => {
     expect(keyContext?.get("route")).toBe("context-route");
   });
 
-  it("should throw RateLimitExceededProblem when limit exceeded", async () => {
+  it("throws RateLimitExceededProblem without an HTTP context when the limit is exceeded", async () => {
     vi.mocked(mockRateLimiter.check).mockResolvedValue(failedResult);
     const handler = () => {};
     const metadata: RateLimitMetadata = { policy };
     Reflect.defineMetadata(RATE_LIMIT_METADATA_KEY, metadata, handler);
     const context = createContext(handler);
+    const set = vi.spyOn(context, "set");
 
     await expect(guard.canActivate(context)).rejects.toThrow(RateLimitExceededProblem);
+    expect(set).toHaveBeenCalledWith("rateLimitResult", failedResult);
   });
 
   it("should store rate limit result in context", async () => {

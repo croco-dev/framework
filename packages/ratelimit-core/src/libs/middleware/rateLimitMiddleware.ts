@@ -1,7 +1,10 @@
 import { RateLimitExceededProblem } from "../problems/RateLimitExceededProblem";
+import { buildRateLimitHeaders } from "../RateLimitHeaders";
 import type { RateLimiter } from "../RateLimiter";
 import { type KeyContext, RateLimitKeyBuilder } from "../RateLimitKeyBuilder";
-import type { KeySegment, RateLimitPolicy, RateLimitResult } from "../types";
+import type { KeySegment, RateLimitPolicy } from "../types";
+
+export type { RateLimitHeaders } from "../RateLimitHeaders";
 
 export interface HttpContext {
   readonly req: {
@@ -24,13 +27,6 @@ export type CreateMiddlewareOptions = {
   keySegments?: KeySegment[];
   failOpen?: boolean;
   addHeaders?: boolean;
-};
-
-export type RateLimitHeaders = {
-  "X-RateLimit-Limit": string;
-  "X-RateLimit-Remaining": string;
-  "X-RateLimit-Reset": string;
-  "Retry-After"?: string;
 };
 
 export const RATE_LIMIT_CLIENT_IDENTITY_CONTEXT_KEY = "rateLimitClientIdentity";
@@ -72,7 +68,7 @@ export function createRateLimitMiddleware(options: CreateMiddlewareOptions): Mid
     }
 
     if (addHeaders) {
-      ctx.set("rateLimitHeaders", buildHeaders(result));
+      ctx.set("rateLimitHeaders", buildRateLimitHeaders(result));
     }
 
     if (!result.success) {
@@ -141,19 +137,4 @@ function createKeyContextAdapter(
 function normalizeClientIdentity(value: string | undefined): string | undefined {
   const normalized = value?.trim();
   return normalized || undefined;
-}
-
-function buildHeaders(result: RateLimitResult): RateLimitHeaders {
-  const headers: RateLimitHeaders = {
-    "X-RateLimit-Limit": String(result.limit),
-    "X-RateLimit-Remaining": String(result.remaining),
-    "X-RateLimit-Reset": String(Math.ceil(result.resetAtMs / 1000)),
-  };
-
-  if (!result.success) {
-    const retryAfter = Math.ceil((result.resetAtMs - Date.now()) / 1000);
-    headers["Retry-After"] = String(Math.max(0, retryAfter));
-  }
-
-  return headers;
 }

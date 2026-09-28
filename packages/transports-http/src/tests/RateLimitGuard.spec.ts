@@ -9,6 +9,7 @@ import {
   RateLimiter,
   RateLimitKeyBuilder,
   SlidingWindowInMemoryStore,
+  createSlidingWindowPolicy,
 } from "@croco/ratelimit-core";
 import type { GuardContext, KeySegment, RateLimitResult } from "@croco/ratelimit-core";
 import type { ExecutionContext } from "@croco/protocols-rest";
@@ -19,6 +20,7 @@ import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
 import { HttpContext } from "../libs/HttpContext";
 import { HttpExecutionContext } from "../libs/HttpExecutionContext";
+import { rateLimitHttpMiddleware } from "../libs/middleware/RateLimitMiddleware";
 
 const handleResource = vi.fn(() => ({ ok: true }));
 
@@ -32,6 +34,15 @@ class LimitedController {
 
   @Get("/plain")
   plain() {
+    return { ok: true };
+  }
+}
+
+@Controller("/guarded")
+class GuardedController {
+  @Get("/resource")
+  @RateLimit({ policy: "guarded-resource", limit: 1, window: "1m", key: () => "guarded-resource" })
+  resource() {
     return { ok: true };
   }
 }
@@ -107,6 +118,69 @@ describe("RateLimitGuard HTTP integration", () => {
     expect((await request("bob")).status).toBe(200);
     expect(handleResource).toHaveBeenCalledTimes(2);
     expect((await request("alice", "/limited/plain")).status).toBe(200);
+  });
+
+  it("includes retry and quota headers only when a guarded route rejects", async () => {
+    Container.set(
+      RateLimitGuard,
+      new RateLimitGuard(
+        new RateLimiter(new SlidingWindowInMemoryStore(), new RateLimitKeyBuilder(["custom"])),
+      ),
+    );
+    const app = createApp({ controllers: [GuardedController], securityValidation: "off" });
+    const request = () => app.fetch(new Request("http://localhost/guarded/resource"));
+
+    const allowed = await request();
+    expect(allowed.status).toBe(200);
+    expect(allowed.headers.get("X-RateLimit-Limit")).toBeNull();
+    expect(allowed.headers.get("Retry-After")).toBeNull();
+
+    const denied = await request();
+    const body = (await denied.json()) as Record<string, unknown>;
+    expect(denied.status).toBe(429);
+    expect(body).toMatchObject({ status: 429, code: "RATE_LIMIT_EXCEEDED" });
+    expect(denied.headers.get("Content-Type")).toBe("application/problem+json");
+    expect(denied.headers.get("Retry-After")).toBe(String(body.retryAfterSeconds));
+    expect(denied.headers.get("X-RateLimit-Limit")).toBe("1");
+    expect(denied.headers.get("X-RateLimit-Remaining")).toBe("0");
+    expect(denied.headers.get("X-RateLimit-Reset")).toBe(
+      String(Math.ceil(Date.parse(String(body.resetAt)) / 1000)),
+    );
+  });
+
+  it("keeps the rejected route quota when an outer rate limit middleware also runs", async () => {
+    Container.set(
+      RateLimitGuard,
+      new RateLimitGuard(
+        new RateLimiter(new SlidingWindowInMemoryStore(), new RateLimitKeyBuilder(["custom"])),
+      ),
+    );
+    const app = createApp({
+      controllers: [GuardedController],
+      middlewares: [
+        rateLimitHttpMiddleware({
+          rateLimiter: new RateLimiter(
+            new SlidingWindowInMemoryStore(),
+            new RateLimitKeyBuilder(["ip"]),
+          ),
+          policy: createSlidingWindowPolicy("outer", 10, 60_000),
+        }),
+      ],
+      securityValidation: "off",
+    });
+    const request = () => app.fetch(new Request("http://localhost/guarded/resource"));
+
+    expect((await request()).status).toBe(200);
+    const denied = await request();
+    const body = (await denied.json()) as Record<string, unknown>;
+
+    expect(denied.status).toBe(429);
+    expect(denied.headers.get("Retry-After")).toBe(String(body.retryAfterSeconds));
+    expect(denied.headers.get("X-RateLimit-Limit")).toBe("1");
+    expect(denied.headers.get("X-RateLimit-Remaining")).toBe("0");
+    expect(denied.headers.get("X-RateLimit-Reset")).toBe(
+      String(Math.ceil(Date.parse(String(body.resetAt)) / 1000)),
+    );
   });
 });
 

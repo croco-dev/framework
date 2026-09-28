@@ -30,6 +30,7 @@ describe("RateLimitExceededProblem", () => {
 
     expect(problem.retryAfterMs).toBe(60000);
     expect(problem.retryAfterSeconds).toBe(60);
+    expect(problem.extensions?.retryAfterSeconds).toBe(problem.retryAfterSeconds);
 
     vi.useRealTimers();
   });
@@ -53,6 +54,7 @@ describe("RateLimitExceededProblem", () => {
 
     expect(problem.retryAfterMs).toBe(0);
     expect(problem.retryAfterSeconds).toBe(0);
+    expect(problem.extensions?.retryAfterSeconds).toBe(problem.retryAfterSeconds);
   });
 
   it("should have descriptive detail message", () => {
