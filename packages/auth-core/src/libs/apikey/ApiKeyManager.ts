@@ -108,8 +108,13 @@ export class ApiKeyManager {
     if (!this.hasher.verify(longToken, keyData.hash)) return null;
     if (keyData.revokedAt) return null;
     if (keyData.expiresAt && keyData.expiresAt < new Date()) return null;
-    if (ip && keyData.allowedIps && !keyData.allowedIps.includes(ip)) {
-      throw new ForbiddenProblem("API key is not allowed from this IP address");
+    if (keyData.allowedIps) {
+      if (!ip) {
+        throw new ForbiddenProblem("API key requires a client IP address");
+      }
+      if (!keyData.allowedIps.includes(ip)) {
+        throw new ForbiddenProblem("API key is not allowed from this IP address");
+      }
     }
 
     const degradedStates = await Promise.all([

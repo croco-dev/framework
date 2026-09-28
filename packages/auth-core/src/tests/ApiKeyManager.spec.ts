@@ -378,27 +378,57 @@ describe("ApiKeyManager", () => {
         allowedIps: ["192.168.1.1"],
       });
 
-      await expect(manager.verify(restrictedKey.key, "10.0.0.1")).rejects.toThrow(ForbiddenProblem);
-    });
-
-    it("should skip allowed IP checks when no IP address is provided", async () => {
-      const restrictedKey = await manager.create({
-        name: "Restricted Key",
-        tenantId: "tenant_123",
-        permissions: ["read:users"],
-        allowedIps: ["192.168.1.1"],
+      await expect(manager.verify(restrictedKey.key, "10.0.0.1")).rejects.toMatchObject({
+        code: "FORBIDDEN",
+        detail: "API key is not allowed from this IP address",
       });
-
-      const principal = await manager.verify(restrictedKey.key);
-
-      expect(principal?.id).toBe(restrictedKey.id);
     });
 
-    it("should skip allowed IP checks when key has no allowed IP restrictions", async () => {
-      const principal = await manager.verify(createdKey.key, "10.0.0.1");
+    it.each([undefined, ""])(
+      "should reject a restricted key without an IP address (%s)",
+      async (ip) => {
+        const restrictedKey = await manager.create({
+          name: "Restricted Key",
+          tenantId: "tenant_123",
+          permissions: ["read:users"],
+          allowedIps: ["192.168.1.1"],
+        });
 
-      expect(principal?.id).toBe(createdKey.id);
-    });
+        mockEventBus.publish.mockClear();
+        await expect(manager.verify(restrictedKey.key, ip)).rejects.toMatchObject({
+          code: "FORBIDDEN",
+          detail: "API key requires a client IP address",
+        });
+
+        expect(mockStore.updateLastUsed).not.toHaveBeenCalled();
+        expect(mockEventBus.publish).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([undefined, "", "10.0.0.1"])(
+      "should verify an unrestricted key regardless of the IP address (%s)",
+      async (ip) => {
+        const principal = await manager.verify(createdKey.key, ip);
+
+        expect(principal?.id).toBe(createdKey.id);
+      },
+    );
+
+    it.each([undefined, "", "192.168.1.1"])(
+      "should reject every IP address when the allowlist is empty (%s)",
+      async (ip) => {
+        const restrictedKey = await manager.create({
+          name: "Restricted Key",
+          tenantId: "tenant_123",
+          permissions: ["read:users"],
+          allowedIps: [],
+        });
+
+        await expect(manager.verify(restrictedKey.key, ip)).rejects.toBeInstanceOf(
+          ForbiddenProblem,
+        );
+      },
+    );
 
     it("should publish ApiKeyUsedEvent on successful verification", async () => {
       mockEventBus.publish.mockClear();
