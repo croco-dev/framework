@@ -29,10 +29,13 @@ type ContextStorage = {
 };
 
 let nextContextValue = 0;
+let customRateLimitKey = "reports-export-a";
 
 class ContextWritingGuard {
   canActivate(context: ExecutionContext): boolean {
-    (context as ExecutionContext & ContextStorage).set("shared-value", ++nextContextValue);
+    const storage = context as ExecutionContext & ContextStorage;
+    expect(storage.get<number>("shared-value")).toBeUndefined();
+    storage.set("shared-value", ++nextContextValue);
     return true;
   }
 }
@@ -55,7 +58,7 @@ class ReportController {
   }
 
   @Get("/export")
-  @RateLimit({ limit: 1, window: "1m", key: () => "reports-export" })
+  @RateLimit({ limit: 1, window: "1m", key: () => customRateLimitKey })
   export(): { ok: boolean } {
     return { ok: true };
   }
@@ -82,6 +85,7 @@ describe("tRPC procedures decorated with @RateLimit", () => {
 
   beforeEach(async () => {
     nextContextValue = 0;
+    customRateLimitKey = "reports-export-a";
     Container.reset();
     Container.set(
       RateLimitGuard,
@@ -107,6 +111,7 @@ describe("tRPC procedures decorated with @RateLimit", () => {
   it("allows the first default-key call and rejects the second with a Croco rate-limit problem", async () => {
     await expect(client.report.summary.query()).resolves.toEqual({ ok: true });
     await expect(client.report.summary.query()).rejects.toMatchObject({
+      meta: { response: { status: 429 } },
       data: expect.objectContaining({
         code: "TOO_MANY_REQUESTS",
         httpStatus: 429,
@@ -115,9 +120,21 @@ describe("tRPC procedures decorated with @RateLimit", () => {
     });
   });
 
-  it("applies a custom key to the first and second calls", async () => {
+  it("applies each custom key's limit independently", async () => {
     await expect(client.report.export.query()).resolves.toEqual({ ok: true });
     await expect(client.report.export.query()).rejects.toMatchObject({
+      meta: { response: { status: 429 } },
+      data: expect.objectContaining({
+        code: "TOO_MANY_REQUESTS",
+        httpStatus: 429,
+        croco: expect.objectContaining({ code: "RATE_LIMIT_EXCEEDED", status: 429 }),
+      }),
+    });
+
+    customRateLimitKey = "reports-export-b";
+    await expect(client.report.export.query()).resolves.toEqual({ ok: true });
+    await expect(client.report.export.query()).rejects.toMatchObject({
+      meta: { response: { status: 429 } },
       data: expect.objectContaining({
         code: "TOO_MANY_REQUESTS",
         httpStatus: 429,
