@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { DomainEvent } from "@croco/events-core";
 import type { AiUsageRecord } from "../types";
 
@@ -8,6 +9,10 @@ export class AiUsageRecordedEvent extends DomainEvent {
     public readonly tenantId: string,
     public readonly usage: AiUsageRecord,
   ) {
-    super();
+    super(
+      createHash("sha256")
+        .update(JSON.stringify([AiUsageRecordedEvent.eventName, tenantId, usage.idempotencyKey]))
+        .digest("hex"),
+    );
   }
 }

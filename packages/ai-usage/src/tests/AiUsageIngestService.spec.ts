@@ -48,6 +48,68 @@ describe("AiUsageIngestService", () => {
   });
 
   describe("ingestGenerationUsage", () => {
+    const replayedUsage = {
+      tenantId: "tenant-123",
+      modelId: "gpt-4",
+      provider: "openai",
+      usage: { inputTokens: 100, outputTokens: 50, totalTokens: 150 },
+      idempotencyKey: "replayed-key",
+    };
+
+    function completeMeterWritesOnRecord(): void {
+      const completedKeys = new Set<string>();
+      vi.mocked(mockMeteringCore.getRecordStatus).mockImplementation(
+        async (_tenantId, _meterId, key) => (completedKeys.has(key) ? "completed" : "missing"),
+      );
+      vi.mocked(mockMeteringCore.record).mockImplementation(async (options) => {
+        completedKeys.add((options as { idempotencyKey: string }).idempotencyKey);
+        return {} as Awaited<ReturnType<MeteringService["record"]>>;
+      });
+    }
+
+    function publishedEventIds(): string[] {
+      return vi
+        .mocked(mockEventBus.publish)
+        .mock.calls.map(([event]) => (event as AiUsageRecordedEvent).eventId);
+    }
+
+    it("should keep the usage event identity when a completed ingestion is replayed", async () => {
+      completeMeterWritesOnRecord();
+
+      await meteringService.ingestGenerationUsage(replayedUsage);
+      await meteringService.ingestGenerationUsage(replayedUsage);
+
+      const [first, second] = publishedEventIds();
+      expect(mockMeteringCore.record).toHaveBeenCalledTimes(3);
+      expect(second).toBe(first);
+    });
+
+    it("should keep the usage event identity when a failed publish is retried", async () => {
+      completeMeterWritesOnRecord();
+      vi.mocked(mockEventBus.publish).mockRejectedValueOnce(new Error("subscriber failed"));
+
+      await expect(meteringService.ingestGenerationUsage(replayedUsage)).rejects.toThrow(
+        "subscriber failed",
+      );
+      await meteringService.ingestGenerationUsage(replayedUsage);
+
+      const [first, second] = publishedEventIds();
+      expect(mockMeteringCore.record).toHaveBeenCalledTimes(3);
+      expect(second).toBe(first);
+    });
+
+    it("should use different event identities for different tenants or idempotency keys", async () => {
+      await meteringService.ingestGenerationUsage(replayedUsage);
+      await meteringService.ingestGenerationUsage({
+        ...replayedUsage,
+        idempotencyKey: "another-key",
+      });
+      await meteringService.ingestGenerationUsage({ ...replayedUsage, tenantId: "another-tenant" });
+
+      const [first, differentKey, differentTenant] = publishedEventIds();
+      expect(new Set([first, differentKey, differentTenant]).size).toBe(3);
+    });
+
     it("should record prompt, completion, and cost meters", async () => {
       const usageEvent = {
         tenantId: "tenant-123",

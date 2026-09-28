@@ -66,6 +66,8 @@ tokens and their cost using the model's input-token price.
   Existing idempotency-key suffixes (`:prompt`, `:completion`, `:tokens`,
   `:cost`) are preserved so a package migration does not duplicate usage.
 - `AiUsageRecordedEvent` publishes after successful generation meter writes.
+  Replaying the same tenant and ingestion idempotency key publishes the same
+  `eventId`, so consumers can deduplicate delivery retries.
   `AiCostBudgetExceededEvent` and `AiCostLimitExceededProblem` model application
   budget enforcement. Event names and Problem codes use the `ai-usage/` namespace.
 - `AiTelemetryBridge` maps usage records to the existing GenAI telemetry
