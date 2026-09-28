@@ -123,6 +123,70 @@ describe("compressionMiddleware", () => {
     expect(JSON.parse(decoded)).toEqual({ payload: LARGE_PAYLOAD });
   });
 
+  it.each([
+    { name: "rejects a preferred encoding with q=0", header: "gzip; q=0, br; q=1", expected: "br" },
+    {
+      name: "leaves all rejected encodings uncompressed",
+      header: "gzip;q=0, br;q=0",
+      expected: null,
+    },
+    {
+      name: "keeps a duplicate q=0 exclusion",
+      header: "gzip;q=0, gzip;q=1, br;q=0.5",
+      expected: "br",
+    },
+    { name: "selects the higher quality encoding", header: "gzip;q=0.2, br;q=0.8", expected: "br" },
+    {
+      name: "uses configured preference for equal quality",
+      header: "br;q=0.8, gzip;q=0.8",
+      expected: "gzip",
+    },
+    {
+      name: "uses a wildcard for an unlisted encoding",
+      header: "gzip;q=0, *;q=0.7",
+      expected: "br",
+    },
+    {
+      name: "keeps an explicit encoding above a rejected wildcard",
+      header: "*;q=0, br;q=0.5",
+      expected: "br",
+    },
+    { name: "uses configured preference for a wildcard", header: "*", expected: "gzip" },
+    { name: "does not compress for an empty header", header: "", expected: null },
+    { name: "does not compress without a header", header: undefined, expected: null },
+    { name: "ignores an invalid quality value", header: "gzip;q=1.5, br;q=0.4", expected: "br" },
+  ])("$name", async ({ header, expected }) => {
+    const app = createApp({
+      controllers: [CompressionController],
+      middlewares: [compressionMiddleware({ threshold: 64, encodings: ["gzip", "br"] })],
+      securityValidation: "off",
+    });
+
+    const response = await app.fetch(
+      new Request("http://localhost/compression/large-json", {
+        headers: header === undefined ? undefined : { "Accept-Encoding": header },
+      }),
+    );
+
+    expect(response.headers.get("Content-Encoding")).toBe(expected);
+  });
+
+  it("keeps header order when configured preference omits both encodings", async () => {
+    const app = createApp({
+      controllers: [CompressionController],
+      middlewares: [compressionMiddleware({ threshold: 64, encodings: ["gzip"] })],
+      securityValidation: "off",
+    });
+
+    const response = await app.fetch(
+      new Request("http://localhost/compression/large-json", {
+        headers: { "Accept-Encoding": "deflate, br" },
+      }),
+    );
+
+    expect(response.headers.get("Content-Encoding")).toBe("deflate");
+  });
+
   it("removes stale content length from compressed responses", async () => {
     const app = createApp({
       controllers: [CompressionController],
