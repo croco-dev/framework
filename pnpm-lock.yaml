@@ -3613,6 +3613,9 @@ importers:
       '@croco/auth-core':
         specifier: workspace:*
         version: link:../auth-core
+      '@croco/impersonation-core':
+        specifier: workspace:*
+        version: link:../impersonation-core
       '@trpc/client':
         specifier: 11.17.0
         version: 11.17.0(@trpc/server@11.17.0(typescript@6.0.3))(typescript@6.0.3)

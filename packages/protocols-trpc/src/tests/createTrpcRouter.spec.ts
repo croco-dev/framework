@@ -8,6 +8,10 @@ import {
   Inject,
   defineGeneratedDiGraph,
 } from "@croco/framework-context";
+import {
+  BlockDuringImpersonation,
+  BlockedDuringImpersonationProblem,
+} from "@croco/impersonation-core";
 import { ProblemCategory } from "@croco/problems-core";
 import type { RouteIR } from "@croco/protocols-core";
 import { createTRPCClient, httpBatchLink } from "@trpc/client";
@@ -719,6 +723,103 @@ describe("createTrpcRouter", () => {
       });
     }
     expect(Context.isActive()).toBe(false);
+  });
+
+  it.each(["top-level", "crocoRequestContext"])(
+    "should block impersonated procedures with %s metadata",
+    async (placement) => {
+      const now = Date.now();
+      const impersonation = {
+        sessionId: "imp-1",
+        impersonatorId: "admin-1",
+        targetUserId: "user-1",
+        startedAt: new Date(now - 1_000),
+        expiresAt: new Date(now + 60_000),
+      };
+      const metadata = { requestId: "impersonated-request", user: { id: "user-1" }, impersonation };
+      const context = placement === "top-level" ? metadata : { crocoRequestContext: metadata };
+      const sensitiveOperation = vi.fn(() => "completed");
+
+      @Controller("/protected")
+      class ProtectedController {
+        @Get("/context")
+        inspect(): unknown {
+          return Context.get();
+        }
+
+        @Post("/sensitive")
+        @BlockDuringImpersonation<ProtectedController>(() => ({
+          maxDurationMs: 60_000,
+          requireReason: false,
+          blockedActions: ["sensitiveOperation"],
+        }))
+        sensitiveOperation(): string {
+          return sensitiveOperation();
+        }
+      }
+
+      const caller = createCaller(createTrpcRouter([ProtectedController]), context);
+
+      await expect(caller.protected.inspect()).resolves.toMatchObject({ impersonation });
+      const error = await captureRejectedValue(caller.protected.sensitiveOperation());
+      expect((error as { readonly cause?: unknown }).cause).toBeInstanceOf(
+        BlockedDuringImpersonationProblem,
+      );
+      expect(sensitiveOperation).not.toHaveBeenCalled();
+      expect(Context.isActive()).toBe(false);
+    },
+  );
+
+  it("should allow protected procedures without impersonation", async () => {
+    const sensitiveOperation = vi.fn(() => "completed");
+
+    @Controller("/protected")
+    class ProtectedController {
+      @Post("/sensitive")
+      @BlockDuringImpersonation<ProtectedController>(() => ({
+        maxDurationMs: 60_000,
+        requireReason: false,
+        blockedActions: ["sensitiveOperation"],
+      }))
+      sensitiveOperation(): string {
+        return sensitiveOperation();
+      }
+    }
+
+    const caller = createCaller(createTrpcRouter([ProtectedController]), {
+      requestId: "ordinary-request",
+    });
+
+    await expect(caller.protected.sensitiveOperation()).resolves.toBe("completed");
+    expect(sensitiveOperation).toHaveBeenCalledOnce();
+  });
+
+  it("should reject malformed impersonation metadata", async () => {
+    const sensitiveOperation = vi.fn(() => "completed");
+
+    @Controller("/protected")
+    class ProtectedController {
+      @Post("/sensitive")
+      @BlockDuringImpersonation<ProtectedController>(() => ({
+        maxDurationMs: 60_000,
+        requireReason: false,
+        blockedActions: ["sensitiveOperation"],
+      }))
+      sensitiveOperation(): string {
+        return sensitiveOperation();
+      }
+    }
+
+    const caller = createCaller(createTrpcRouter([ProtectedController]), {
+      requestId: "invalid-impersonation",
+      impersonation: undefined,
+    });
+
+    const error = await captureRejectedValue(caller.protected.sensitiveOperation());
+    expect((error as { readonly cause?: unknown }).cause).toBeInstanceOf(
+      BlockedDuringImpersonationProblem,
+    );
+    expect(sensitiveOperation).not.toHaveBeenCalled();
   });
 
   it("should clean up request context after procedure failure", async () => {

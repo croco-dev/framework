@@ -351,6 +351,7 @@ function createCrocoRequestContext(context: unknown, options: TrpcRouterOptions)
       ? { inspectionId: readString(metadata.inspectionId) }
       : {}),
     ...(user ? { user } : {}),
+    ...("impersonation" in metadata ? { impersonation: metadata.impersonation } : {}),
     ...(readString(metadata.tenantId) ? { tenantId: readString(metadata.tenantId) } : {}),
     ...(traceId ? { traceId } : {}),
     ...(spanId ? { spanId } : {}),
