@@ -69,6 +69,7 @@ export const DIRECT_DIST_ENTRYPOINT_PACKAGES = new Set(DIRECT_DIST_ENTRYPOINT_EX
 export const EXPECTED_FILES_BY_PACKAGE = new Map([
   ["create-croco-app", ["dist", "templates"]],
   ["@croco/cohort-drizzle", ["dist", "migrations/*.sql"]],
+  ["@croco/experience-drizzle", ["dist", "migrations/*.sql"]],
   ["@croco/utils-next-font-pretendard", ["dist", "PretendardVariable.woff2"]],
 ]);
 

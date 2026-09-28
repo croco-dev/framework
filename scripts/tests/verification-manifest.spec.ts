@@ -981,7 +981,7 @@ describe("verification manifest", () => {
     expect(requiredPaths).toContain(
       "packages/create-croco-app/templates/base-ddd/libs/shared/utils-env/src/tests/createEnv.spec.ts",
     );
-    expect(requiredPaths).not.toContain(
+    expect(requiredPaths).toContain(
       "packages/create-croco-app/templates/admin-console/apps/api-server/src/tests/AdminConsole.spec.ts",
     );
   });

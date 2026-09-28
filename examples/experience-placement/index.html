@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>In-app experience example</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        color: #172436;
+        background: #f3f6fb;
+        font: 16px/1.5 system-ui;
+      }
+      main {
+        max-width: 1120px;
+        margin: 28px auto;
+        padding: 20px;
+        display: grid;
+        gap: 20px;
+      }
+      .panel {
+        background: white;
+        border: 1px solid #c9d3df;
+        border-radius: 12px;
+        padding: 20px;
+        min-width: 0;
+      }
+      .checkout {
+        border: 2px solid #315c91;
+        border-radius: 10px;
+        padding: 20px;
+        min-height: 200px;
+      }
+      .notice {
+        background: #e6f1ff;
+        border: 1px solid #83b4e8;
+        border-radius: 8px;
+        padding: 16px;
+      }
+      body:has(.checkout [role="dialog"])::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background: #17243699;
+        z-index: 9;
+      }
+      .checkout [role="dialog"] {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        width: min(480px, calc(100vw - 32px));
+        padding: 18px;
+        background: white;
+        border: 1px solid #315c91;
+        border-radius: 12px;
+        box-shadow: 0 20px 60px #17243666;
+      }
+      input,
+      textarea,
+      select,
+      button {
+        font: inherit;
+        max-width: 100%;
+      }
+      input,
+      textarea {
+        padding: 6px;
+        margin: 4px;
+      }
+      textarea {
+        width: min(100%, 420px);
+        min-height: 80px;
+        display: block;
+      }
+      button {
+        padding: 6px 10px;
+        margin: 4px;
+        cursor: pointer;
+      }
+      fieldset {
+        min-width: 0;
+        border: 1px solid #aebbc8;
+        border-radius: 8px;
+        margin: 14px 0;
+        padding: 12px;
+      }
+      @media (max-width: 600px) {
+        main {
+          margin: 0;
+          padding: 8px;
+        }
+        .panel {
+          padding: 12px;
+          border-radius: 0;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"><!--APP--></div>
+    <!--BOOTSTRAP-->
+    <script src="/browser.js" defer></script>
+  </body>
+</html>
