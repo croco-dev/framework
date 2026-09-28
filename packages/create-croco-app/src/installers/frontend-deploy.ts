@@ -42,15 +42,21 @@ export function installFrontendDeploy(
   }
 
   if (options.frontendDeploy === "docker") {
+    const dockerTemplateDir = join(TEMPLATES_DIR, "addons", "docker", "web");
     const dockerDir = join(targetDir, resolvedWebAppName);
     mkdirSync(dockerDir, { recursive: true });
     writeFileSync(
       join(dockerDir, "Dockerfile"),
-      renderHandlebars(join(TEMPLATES_DIR, "addons", "docker", "web", "Dockerfile"), {
+      renderHandlebars(join(dockerTemplateDir, "Dockerfile"), {
         ...vars,
         webPackageName: `${options.scope}/${resolvedWebAppName}`,
       }),
     );
+    writeFileSync(
+      join(appTargetDir, "next.config.ts"),
+      renderHandlebars(join(dockerTemplateDir, "next.config.ts"), {}),
+    );
+    mergeInto(join(dockerTemplateDir, "public"), join(appTargetDir, "public"), {});
     return;
   }
 
