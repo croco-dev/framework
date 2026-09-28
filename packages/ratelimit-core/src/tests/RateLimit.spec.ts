@@ -42,6 +42,23 @@ describe("@RateLimit decorator", () => {
     expect((thrown as Problem).message).toContain("OrdersController");
   });
 
+  it("rejects null policy values that select the default policy name", () => {
+    const options = { policy: null } as unknown as NonNullable<Parameters<typeof RateLimit>[0]>;
+    class NullUsersController {
+      @RateLimit(options)
+      createWithNullPolicy() {}
+    }
+
+    expect(NullUsersController.prototype.createWithNullPolicy).toBeTypeOf("function");
+    expect(() => {
+      class NullOrdersController {
+        @RateLimit(options)
+        createWithNullPolicy() {}
+      }
+      new NullOrdersController();
+    }).toThrow(/createWithNullPolicy-default/);
+  });
+
   it("allows a subclass to redeclare its parent's default policy", () => {
     class ParentController {
       @RateLimit({ limit: 10 })

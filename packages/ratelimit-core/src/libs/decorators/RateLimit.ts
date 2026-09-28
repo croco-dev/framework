@@ -40,7 +40,7 @@ export function RateLimit(options: RateLimitDecoratorOptions = {}): MethodDecora
     const algorithm = options.algorithm ?? DEFAULTS.algorithm;
     const policy = createWindowPolicy(algorithm, name, limit, windowMs);
 
-    if (options.policy === undefined) {
+    if (options.policy === undefined || options.policy === null) {
       const prototype: object = typeof _target === "function" ? _target.prototype : _target;
       const className = typeof _target === "function" ? _target.name : _target.constructor.name;
       const existing = defaultPolicyOwners.get(name);
