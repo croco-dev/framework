@@ -1,4 +1,5 @@
 import { RateLimitExceededProblem } from "../problems/RateLimitExceededProblem";
+import { buildRateLimitHeaders } from "../RateLimitHeaders";
 import type { RateLimiter } from "../RateLimiter";
 import type { KeyContext } from "../RateLimitKeyBuilder";
 import type { RateLimitPolicy } from "../types";
@@ -9,6 +10,10 @@ export const ROUTE_GUARDS_METADATA_KEY = Symbol.for("croco:rest:guards");
 export type RateLimitMetadata = {
   policy: RateLimitPolicy;
   customKey?: (context: unknown) => string;
+};
+
+type HttpResponseContext = {
+  res: { headers: Record<string, string> };
 };
 
 export type GuardContext = KeyContext & {
@@ -47,7 +52,19 @@ export class RateLimitGuard {
     context.set("rateLimitResult", result);
 
     if (!result.success) {
-      throw new RateLimitExceededProblem(result);
+      const problem = new RateLimitExceededProblem(result);
+      const httpContext = context as GuardContext & {
+        getHttpContext?: () => HttpResponseContext | null;
+      };
+      if (typeof httpContext.getHttpContext === "function") {
+        const response = httpContext.getHttpContext();
+        if (response) {
+          const headers = buildRateLimitHeaders(result, problem.retryAfterSeconds);
+          context.set("rateLimitHeaders", headers);
+          Object.assign(response.res.headers, headers);
+        }
+      }
+      throw problem;
     }
 
     return true;
