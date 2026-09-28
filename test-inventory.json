@@ -1100,6 +1100,12 @@
       "owner": "create-croco-app"
     },
     {
+      "path": "packages/create-croco-app/src/tests/LambdaScaffold.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
       "path": "packages/create-croco-app/src/tests/NextTemplateSecurity.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
