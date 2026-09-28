@@ -1,4 +1,4 @@
-import { Problem, ProblemCategory } from "@croco/problems-core";
+import { OPERATOR_ONLY_PROBLEM_DETAIL, Problem, ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
 import {
@@ -28,6 +28,31 @@ class SignupClosedProblem extends Problem {
   constructor() {
     super("test/signup-closed", ProblemCategory.BusinessRuleViolation, "Signup is closed", {
       extensions: { recoveryAction: "join_waitlist" },
+    });
+  }
+}
+
+class PaymentGatewayProblem extends Problem {
+  readonly code = "test/gateway-failed";
+  readonly category = ProblemCategory.InternalServerError;
+
+  constructor() {
+    super(
+      "test/gateway-failed",
+      ProblemCategory.InternalServerError,
+      "Stripe request failed for customer cus_123 at postgres://db.internal/prod",
+      { extensions: { upstreamRequestId: "req_internal_9f2", sqlState: "57P01" } },
+    );
+  }
+}
+
+class SeatLimitProblem extends Problem {
+  readonly code = "test/seat-limit";
+  readonly category = ProblemCategory.Conflict;
+
+  constructor() {
+    super("test/seat-limit", ProblemCategory.Conflict, "Seat limit reached", {
+      extensions: { max: 5, internalAccountId: "acct_internal_42" },
     });
   }
 }
@@ -173,6 +198,52 @@ describe("Server Actions", () => {
       code: "test/signup-closed",
       detail: "Signup is closed",
       recoveryAction: "join_waitlist",
+    });
+  });
+
+  it("redacts operator-only Problem details and extensions", async () => {
+    const registry = createServerActionRegistry();
+    registry.register({
+      name: "checkout",
+      handler: async () => {
+        throw new PaymentGatewayProblem();
+      },
+    });
+
+    const response = await registry.dispatch("checkout", {});
+    expect(response.status).toBe(500);
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+    await expect(response.json()).resolves.toEqual({
+      type: "about:blank",
+      title: "Internal Server Error",
+      status: 500,
+      code: "test/gateway-failed",
+      detail: OPERATOR_ONLY_PROBLEM_DETAIL,
+      ok: false,
+      kind: "domain_problem",
+    });
+  });
+
+  it("keeps public extensions and removes private 4xx extensions", async () => {
+    const registry = createServerActionRegistry();
+    registry.register({
+      name: "reserve-seat",
+      handler: async () => {
+        throw new SeatLimitProblem();
+      },
+    });
+
+    const response = await registry.dispatch("reserve-seat", {});
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toEqual({
+      type: "about:blank",
+      title: "Conflict",
+      status: 409,
+      code: "test/seat-limit",
+      detail: "Seat limit reached",
+      max: 5,
+      ok: false,
+      kind: "domain_problem",
     });
   });
 
