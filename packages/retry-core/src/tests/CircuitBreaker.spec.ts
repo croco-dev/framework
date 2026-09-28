@@ -227,6 +227,48 @@ describe("CircuitBreaker", () => {
     expect(fallbackSpy).toHaveBeenCalled();
   });
 
+  it("uses fallback when a HALF_OPEN trial occupies the only slot", async () => {
+    const stateStore = new InMemoryCircuitBreakerStateStore();
+    const fallback = vi.fn(async () => "fallback");
+    const breaker = createBreaker({ stateStore, halfOpenRequests: 1, fallback });
+    await stateStore.setState("test-circuit", CircuitState.HALF_OPEN);
+
+    let releaseTrial!: (value: string) => void;
+    const trial = breaker.execute(() => new Promise<string>((resolve) => (releaseTrial = resolve)));
+    await vi.waitFor(() => expect(releaseTrial).toBeTypeOf("function"));
+
+    const rejectedWork = vi.fn(async () => "unexpected");
+    await expect(breaker.execute(rejectedWork)).resolves.toBe("fallback");
+    expect(rejectedWork).not.toHaveBeenCalled();
+    expect(fallback).toHaveBeenCalledTimes(1);
+    expect(await stateStore.getHalfOpenActiveCount("test-circuit")).toBe(1);
+    expect(await breaker.getState()).toBe(CircuitState.HALF_OPEN);
+
+    releaseTrial("recovered");
+    await expect(trial).resolves.toBe("recovered");
+    expect(await breaker.getState()).toBe(CircuitState.CLOSED);
+    expect(await stateStore.getHalfOpenActiveCount("test-circuit")).toBe(0);
+  });
+
+  it("rejects without fallback when a HALF_OPEN trial occupies the only slot", async () => {
+    const stateStore = new InMemoryCircuitBreakerStateStore();
+    const breaker = createBreaker({ stateStore, halfOpenRequests: 1 });
+    await stateStore.setState("test-circuit", CircuitState.HALF_OPEN);
+
+    let releaseTrial!: (value: string) => void;
+    const trial = breaker.execute(() => new Promise<string>((resolve) => (releaseTrial = resolve)));
+    await vi.waitFor(() => expect(releaseTrial).toBeTypeOf("function"));
+
+    const rejectedWork = vi.fn(async () => "unexpected");
+    await expect(breaker.execute(rejectedWork)).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    expect(rejectedWork).not.toHaveBeenCalled();
+    expect(await stateStore.getHalfOpenActiveCount("test-circuit")).toBe(1);
+
+    releaseTrial("recovered");
+    await expect(trial).resolves.toBe("recovered");
+    expect(await breaker.getState()).toBe(CircuitState.CLOSED);
+  });
+
   it("openDuration 후 HALF_OPEN으로 전환되어야 한다", async () => {
     const breaker = createBreaker({ failureThreshold: 1, openDuration: 50 });
     const fn = vi.fn().mockRejectedValue(new Error("fail"));

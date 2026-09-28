@@ -131,7 +131,7 @@ export class CircuitBreaker {
   private async handleHalfOpen<T>(fn: () => Promise<T>): Promise<T> {
     const slot = await this.tryAcquireHalfOpenSlot();
     if (!slot) {
-      throw new CircuitBreakerOpenProblem(this.circuitId);
+      return this.rejectOpenCircuit();
     }
 
     let result: T;
