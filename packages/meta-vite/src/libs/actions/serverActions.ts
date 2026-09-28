@@ -1,4 +1,10 @@
-import { Problem, ProblemCategory } from "@croco/problems-core";
+import {
+  createProblemResponseDetail,
+  createProblemResponseExtensions,
+  Problem,
+  ProblemCategory,
+  resolveProblemResponseRedactionPolicy,
+} from "@croco/problems-core";
 import type { ProblemDetails } from "@croco/problems-core";
 import type { FrontendActionInvalidationHint } from "@croco/presentation-preset";
 import type { ZodSchema } from "zod";
@@ -404,8 +410,21 @@ function createServerActionProblemResponse(
   problem: Problem,
   kind: ServerActionProblemKind,
 ): Response {
+  const redactionPolicy = resolveProblemResponseRedactionPolicy(problem);
+  const detail = createProblemResponseDetail(problem.detail, redactionPolicy);
   const body: ServerActionFailureResult = {
-    ...problem.toJSON(),
+    type: problem.type,
+    title: problem.title,
+    status: problem.status,
+    code: problem.code,
+    ...(detail !== undefined ? { detail } : {}),
+    ...createProblemResponseExtensions(problem.extensions, redactionPolicy),
+    ...(problem instanceof ServerActionNotFoundProblem
+      ? { actionName: problem.extensions?.["actionName"] as string }
+      : {}),
+    ...(problem instanceof ServerActionInvalidPathProblem
+      ? { path: problem.extensions?.["path"] as string }
+      : {}),
     ok: false,
     kind,
   };

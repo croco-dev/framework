@@ -14541,7 +14541,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 79,
+          line: 85,
           column: 1,
           kind: "problem-class",
         },
@@ -14572,7 +14572,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 65,
+          line: 71,
           column: 1,
           kind: "problem-class",
         },
@@ -14603,7 +14603,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 93,
+          line: 99,
           column: 1,
           kind: "problem-class",
         },
