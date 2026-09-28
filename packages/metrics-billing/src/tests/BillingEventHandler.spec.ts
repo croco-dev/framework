@@ -420,6 +420,37 @@ describe("BillingEventHandler", () => {
   });
 
   describe("PlanChangedEvent", () => {
+    it.each([800, 1000])(
+      "rejects a USD-to-EUR plan change to %i minor units without recording MRR",
+      async (newAmount) => {
+        const event = createPlanChangedEvent("plan-usd", "plan-eur");
+        const previousPlan = asPlanVersion({
+          ...mockPlan,
+          id: "plan-usd",
+          amount: 1000,
+        });
+        const newPlan = asPlanVersion({
+          ...mockPlan,
+          id: "plan-eur",
+          amount: newAmount,
+          currency: "EUR",
+        });
+
+        vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
+        vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
+        vi.mocked(planRegistry.getPlanVersion).mockImplementation(async (ref) => {
+          if (ref === previousPlan.ref) return previousPlan;
+          if (ref === newPlan.ref) return newPlan;
+          return null;
+        });
+
+        await expect(handler.handle(event)).rejects.toMatchObject({
+          code: "metrics-core/mixed-currency-mrr",
+        });
+        expect(metricsRepository.recordMRRMovement).not.toHaveBeenCalled();
+      },
+    );
+
     it("uses the exact version references carried by a version-aware event", async () => {
       const basicVersion = asPlanVersion({
         id: "plan-basic",
