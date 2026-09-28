@@ -98,7 +98,10 @@ const CASE_TEST_PATH_PREFIXES = {
   "trpc-nextjs-docker-frontend": [],
   "graphql-vite-spa-docker": [],
   "graphql-vite-spa-astryx": [],
-  "meta-vite-web": ["base-ddd/libs/shared/utils-env/"],
+  "meta-vite-web": [
+    "base-ddd/libs/shared/utils-env/",
+    "addons/graphql-standalone/apps/graphql-api/",
+  ],
   "meta-vite-fullstack-workers": ["base-ddd/libs/shared/utils-env/"],
   "production-app-starter": ["spa-be-split/apps/", "spa-be-split/tests/journeys/"],
   "admin-console-starter": [

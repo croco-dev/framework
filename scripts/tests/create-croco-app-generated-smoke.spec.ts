@@ -1399,20 +1399,23 @@ describe("create-croco-app generated smoke matrix", () => {
     expect(journeyValidation?.paths).toEqual(["tests/journeys/plan-release.spec.ts"]);
   });
 
-  it("executes generated tests for Meta Vite smoke cases", () => {
+  it("executes both generated unit test packages for the Meta Vite web smoke case", () => {
     const cases = new Map(
       getGeneratedSmokeDependencyCaseInputs().map((smokeCase) => [smokeCase.name, smokeCase]),
     );
-    const generatedTestValidation = {
+    expect(cases.get("meta-vite-web")?.validations).toContainEqual({
+      args: ["test"],
+      label: "test",
+      packagePath: undefined,
+      paths: undefined,
+    });
+
+    expect(cases.get("meta-vite-fullstack-workers")?.validations).toContainEqual({
       args: ["test"],
       label: "test",
       packagePath: ["libs", "shared", "utils-env"],
-    };
-
-    expect(cases.get("meta-vite-web")?.validations).toContainEqual(generatedTestValidation);
-    expect(cases.get("meta-vite-fullstack-workers")?.validations).toContainEqual(
-      generatedTestValidation,
-    );
+      paths: undefined,
+    });
   });
 
   it("invokes representative Node, Lambda, and Workers host artifacts", () => {

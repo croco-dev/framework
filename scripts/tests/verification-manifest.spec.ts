@@ -1021,6 +1021,17 @@ describe("verification manifest", () => {
     );
   });
 
+  it("requires both generated unit tests for the Meta Vite web smoke case", () => {
+    const paths = readTestInventory()
+      .inventory.tests.filter(({ lane }) => lane === "generated-app")
+      .map(({ path }) => path);
+
+    expect(selectGeneratedTestPathsForSmokeCases(["meta-vite-web"], paths)).toEqual([
+      "packages/create-croco-app/templates/addons/graphql-standalone/apps/graphql-api/src/formatGraphQLError.spec.ts",
+      "packages/create-croco-app/templates/base-ddd/libs/shared/utils-env/src/tests/createEnv.spec.ts",
+    ]);
+  });
+
   it.each(["saas-cloudflare-profile", "saas-lambda-profile"])(
     "keeps Node lifecycle evidence scoped to Node cases alongside %s",
     (caseName) => {
