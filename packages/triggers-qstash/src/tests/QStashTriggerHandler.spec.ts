@@ -1742,6 +1742,141 @@ describe("QStashTriggerHandler", () => {
     }
   });
 
+  it("idempotent timeout 정책은 제한 시간을 넘긴 attempt를 같은 실행에서 재시도해야 한다", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    vi.setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
+    try {
+      const attempts: number[] = [];
+      class NightlySync {
+        run(_payload: unknown, context: QStashTriggerExecutionContext): Promise<string> {
+          attempts.push(context.attempt);
+          if (context.attempt === 2) return Promise.resolve("synced");
+          return new Promise((_resolve, reject) => {
+            context.signal.addEventListener("abort", () => reject(new Error("aborted")), {
+              once: true,
+            });
+          });
+        }
+      }
+      triggerRegistry.register({
+        type: "cron",
+        expression: "0 3 * * *",
+        methodName: "run",
+        target: NightlySync.prototype,
+        options: {},
+      });
+
+      const { manager } = createIdempotentExecutionManager();
+      const handler = new QStashTriggerHandlerBase({
+        receiver: { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver,
+        deliveryIdentityVerifier: vi.fn().mockResolvedValue(true),
+        executionManager: manager,
+        executionTimeout: 1_000,
+        maxAttempts: 2,
+        timeoutRetryPolicy: "idempotent",
+        serviceResolver: () => new NightlySync(),
+      });
+      const body = JSON.stringify({
+        scheduleId: "schedule-idempotent-timeout",
+        className: "NightlySync",
+        methodName: "run",
+        cronExpression: "0 3 * * *",
+        timestamp: "2026-09-01T00:00:00.000Z",
+      });
+      const delivery = { messageId: "msg-idempotent-timeout" };
+
+      const first = handler.handle(body, "valid-signature", delivery);
+      while (vi.getTimerCount() === 0) await new Promise((resolve) => setImmediate(resolve));
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      await expect(first).resolves.toMatchObject({ success: false, statusCode: 503 });
+      await expect(manager.get("exec-1")).resolves.toMatchObject({
+        status: "retrying",
+        attempts: 1,
+      });
+      await expect(handler.handle(body, "valid-signature", delivery)).resolves.toMatchObject({
+        success: true,
+        statusCode: 200,
+        body: { result: "synced" },
+      });
+      expect(attempts).toEqual([1, 2]);
+      await expect(manager.get("exec-1")).resolves.toMatchObject({
+        status: "completed",
+        attempts: 2,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([1, undefined])(
+    "idempotent timeout 정책은 시도가 소진되면 terminal timed_out을 유지해야 한다 (%s)",
+    async (maxAttempts) => {
+      vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+      vi.setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
+      try {
+        class ExhaustedHandler {
+          run(_payload: unknown, context: QStashTriggerExecutionContext): Promise<void> {
+            return new Promise((_resolve, reject) => {
+              context.signal.addEventListener("abort", () => reject(new Error("aborted")), {
+                once: true,
+              });
+            });
+          }
+        }
+        triggerRegistry.register({
+          type: "cron",
+          expression: "0 3 * * *",
+          methodName: "run",
+          target: ExhaustedHandler.prototype,
+          options: {},
+        });
+
+        const { manager } = createIdempotentExecutionManager();
+        const handler = new QStashTriggerHandlerBase({
+          receiver: { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver,
+          deliveryIdentityVerifier: vi.fn().mockResolvedValue(true),
+          executionManager: manager,
+          executionTimeout: 1_000,
+          maxAttempts,
+          timeoutRetryPolicy: "idempotent",
+          serviceResolver: () => new ExhaustedHandler(),
+        });
+        const body = JSON.stringify({
+          scheduleId: "schedule-exhausted-timeout",
+          className: "ExhaustedHandler",
+          methodName: "run",
+          cronExpression: "0 3 * * *",
+          timestamp: "2026-09-01T00:00:00.000Z",
+        });
+        const delivery = { messageId: "msg-exhausted-timeout" };
+
+        const first = handler.handle(body, "valid-signature", delivery);
+        while (vi.getTimerCount() === 0) await new Promise((resolve) => setImmediate(resolve));
+        await vi.advanceTimersByTimeAsync(1_000);
+
+        await expect(first).resolves.toMatchObject({
+          success: false,
+          statusCode: 200,
+          body: { status: "timed_out" },
+        });
+        await expect(manager.get("exec-1")).resolves.toMatchObject({
+          status: "timed_out",
+          attempts: 1,
+          error: { indeterminate: true, retryable: false },
+        });
+        expect(manager.resolveIndeterminateTimeout).not.toHaveBeenCalled();
+        await expect(handler.handle(body, "valid-signature", delivery)).resolves.toMatchObject({
+          success: false,
+          statusCode: 200,
+          body: { status: "timed_out" },
+        });
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
   it("idempotent timeout 정책은 버려진 running attempt를 fence한 뒤 같은 실행에서 복구해야 한다", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-13T00:00:00.000Z"));
