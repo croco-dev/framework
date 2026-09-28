@@ -21,7 +21,7 @@ const router = createTrpcRouter(routes);
 Every procedure runs inside an isolated Croco request context. Registered controllers and
 lifecycle providers are resolved from the Croco container inside that boundary, so constructor
 injection and request-scoped components work for concurrent calls. The adapter propagates
-`requestId`, `tenantId`, `user`, trace fields, runtime metadata, and runtime-inspector metadata
+`requestId`, `tenantId`, `user`, `impersonation`, trace fields, runtime metadata, and runtime-inspector metadata
 from the tRPC context. It also reads `x-request-id` and `traceparent` from `request` or `req`
 headers when those fields are not provided directly.
 
