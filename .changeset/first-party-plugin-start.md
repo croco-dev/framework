@@ -1,4 +1,5 @@
 ---
+"create-croco-app": patch
 ---
 
-The first-party plugin composition example prints its plugin and module graph through the documented start command.
+Generated Croco skill guidance includes the working first-party plugin composition start command.
