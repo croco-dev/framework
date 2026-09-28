@@ -32,6 +32,12 @@ class ApiController {
 }
 ```
 
+`policy`를 생략하면 정책명은 `${methodName}-default`입니다. 서로 다른 클래스에서 같은 메서드 이름을
+사용한다면 각 핸들러에 고유한 `policy`를 지정하세요. 이름이 다른 클래스가 같은 기본 정책명을 선언하면
+모듈 로드 시 `ratelimit-core/duplicate-default-policy` Problem이 발생합니다. 여러 핸들러가 하나의
+bucket을 공유하려면 같은 `policy` 이름을 명시하세요. 이름까지 같은 서로 다른 클래스는 재평가와
+구분할 수 없어 이 충돌 검사에서 제외됩니다.
+
 `@RateLimit`의 `user`/`apiKey` key segment는 앞서 실행된 인증 가드가 요청 객체에 기록한
 `user`/`principal` 또는 `apiKey`/`principal`을 사용합니다. API key segment에는 주체 객체가 아닌
 `keyId`(없으면 `id`) 문자열을 사용합니다. 인증 주체가 없으면 기존 context 변수 값을 사용하며,
@@ -85,7 +91,7 @@ rate-limited 트래픽을 중단하세요. 그 기간이 지나 기존 limiter s
 
 - `RateLimitPolicy`, `LegacyFixedWindowPolicy`, `RateLimitResult`, `RateLimitRefundReceipt`, `RateLimitRefundResult`, `RateLimitStats`, `RateLimitAlgorithm`
 - `RateLimitDecoratorOptions`, `RateLimitMetadata`, `RateLimitHeaders`, `HttpContext`
-- 문제 타입: `RateLimitExceededProblem`, `RateLimitWindowProblem`, `RateLimitKeyBuilderProblem`
+- 문제 타입: `RateLimitExceededProblem`, `RateLimitWindowProblem`, `RateLimitKeyBuilderProblem`, `RateLimitDuplicateDefaultPolicyProblem`
 - refund 미지원 저장소 문제 타입: `RateLimitRefundUnsupportedProblem`
 
 ## 구현 포인트

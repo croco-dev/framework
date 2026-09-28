@@ -27828,6 +27828,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "RateLimitDuplicateDefaultPolicyProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/RateLimitConfigProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "RateLimiter",
               "exportKind": "named",
               "source": "./libs/RateLimiter",

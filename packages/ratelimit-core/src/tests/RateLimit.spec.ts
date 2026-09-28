@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import { describe, expect, it } from "vitest";
+import { Problem } from "@croco/problems-core";
 import { RateLimit } from "../libs/decorators/RateLimit";
 import {
   RATE_LIMIT_METADATA_KEY,
@@ -10,6 +11,99 @@ import {
 import { isSlidingWindowPolicy } from "../libs/types";
 
 describe("@RateLimit decorator", () => {
+  it("rejects unrelated controllers that reuse a default policy name", () => {
+    class UsersController {
+      @RateLimit({ limit: 1 })
+      create() {}
+    }
+
+    let thrown: unknown;
+    try {
+      class OrdersController {
+        @RateLimit({ limit: 1 })
+        create() {}
+      }
+      new OrdersController();
+    } catch (error) {
+      thrown = error;
+    }
+    expect(UsersController.prototype.create).toBeTypeOf("function");
+    expect(thrown).toBeInstanceOf(Problem);
+    expect(thrown).toMatchObject({
+      code: "ratelimit-core/duplicate-default-policy",
+      message: expect.stringMatching(/create-default.*policy/),
+      extensions: {
+        policyName: "create-default",
+        firstClassName: "UsersController",
+        secondClassName: "OrdersController",
+      },
+    });
+    expect((thrown as Problem).message).toContain("UsersController");
+    expect((thrown as Problem).message).toContain("OrdersController");
+  });
+
+  it("rejects null policy values that select the default policy name", () => {
+    const options = { policy: null } as unknown as NonNullable<Parameters<typeof RateLimit>[0]>;
+    class NullUsersController {
+      @RateLimit(options)
+      createWithNullPolicy() {}
+    }
+
+    expect(NullUsersController.prototype.createWithNullPolicy).toBeTypeOf("function");
+    expect(() => {
+      class NullOrdersController {
+        @RateLimit(options)
+        createWithNullPolicy() {}
+      }
+      new NullOrdersController();
+    }).toThrow(/createWithNullPolicy-default/);
+  });
+
+  it("allows a subclass to redeclare its parent's default policy", () => {
+    class ParentController {
+      @RateLimit({ limit: 10 })
+      overriddenDefault() {}
+    }
+    class ChildController extends ParentController {
+      @RateLimit({ limit: 2 })
+      override overriddenDefault() {}
+    }
+
+    const parent = Reflect.getMetadata(
+      RATE_LIMIT_METADATA_KEY,
+      ParentController.prototype.overriddenDefault,
+    ) as RateLimitMetadata;
+    const child = Reflect.getMetadata(
+      RATE_LIMIT_METADATA_KEY,
+      ChildController.prototype.overriddenDefault,
+    ) as RateLimitMetadata;
+    expect(parent.policy).toMatchObject({ name: "overriddenDefault-default", limit: 10 });
+    expect(child.policy).toMatchObject({ name: "overriddenDefault-default", limit: 2 });
+  });
+
+  it("replaces the registered class when a same-named class is re-evaluated", () => {
+    const evaluate = () => {
+      class ReloadedController {
+        @RateLimit()
+        reloadableDefault() {}
+      }
+      return ReloadedController;
+    };
+    const original = evaluate();
+    const replacement = evaluate();
+    class ReplacementChild extends replacement {
+      @RateLimit({ limit: 3 })
+      override reloadableDefault() {}
+    }
+
+    expect(replacement).not.toBe(original);
+    const metadata = Reflect.getMetadata(
+      RATE_LIMIT_METADATA_KEY,
+      ReplacementChild.prototype.reloadableDefault,
+    ) as RateLimitMetadata;
+    expect(metadata.policy).toMatchObject({ name: "reloadableDefault-default", limit: 3 });
+  });
+
   it("should store metadata with default values", () => {
     class TestController {
       @RateLimit()

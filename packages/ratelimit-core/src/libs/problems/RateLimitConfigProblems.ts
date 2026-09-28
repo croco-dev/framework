@@ -56,3 +56,14 @@ export class RateLimitUnexpectedPolicyProblem extends Problem {
     super(undefined, undefined, `Unexpected rate-limit ${source} value: ${String(value)}`);
   }
 }
+
+export class RateLimitDuplicateDefaultPolicyProblem extends Problem {
+  constructor(policyName: string, firstClassName: string, secondClassName: string) {
+    super(
+      "ratelimit-core/duplicate-default-policy",
+      ProblemCategory.ValidationError,
+      `Default rate-limit policy '${policyName}' is already declared by ${firstClassName}; ${secondClassName} must specify an explicit @RateLimit({ policy: '...' }).`,
+      { extensions: { policyName, firstClassName, secondClassName } },
+    );
+  }
+}
