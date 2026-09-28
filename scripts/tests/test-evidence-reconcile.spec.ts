@@ -181,7 +181,7 @@ describe("test evidence reconciliation", () => {
     const executedPaths = allPaths.filter(
       (path) => !path.includes("/base-ddd/") && !path.includes("/spa-be-split/tests/journeys/"),
     );
-    expect(executedPaths).toHaveLength(18);
+    expect(executedPaths).toHaveLength(19);
     const requiredGeneratedPaths = selectGeneratedTestPathsForSmokeCases(
       [
         "goal-saas-api",
@@ -204,8 +204,11 @@ describe("test evidence reconciliation", () => {
       });
 
     expect(reconcile(executedPaths).diagnostics).toEqual([]);
-    expect(reconcile(executedPaths.slice(1)).diagnostics).toEqual([
-      expect.objectContaining({ code: "TEST_EVIDENCE_MISSING_REQUIRED", path: executedPaths[0] }),
+    const firstRequiredPath = requiredGeneratedPaths[0];
+    expect(
+      reconcile(executedPaths.filter((path) => path !== firstRequiredPath)).diagnostics,
+    ).toEqual([
+      expect.objectContaining({ code: "TEST_EVIDENCE_MISSING_REQUIRED", path: firstRequiredPath }),
     ]);
     const fullTierPaths = selectGeneratedTestPathsForSmokeCases(
       PUBLISH_REQUIRED_GENERATED_SMOKE_CASES,

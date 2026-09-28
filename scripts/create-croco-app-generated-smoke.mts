@@ -1230,6 +1230,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
         args: ["exec", "tsx", "--eval", graphqlStandaloneProtectedRouteSmokeScript],
       },
       { label: "build", args: ["build"], paths: ["apps/graphql-api/dist/index.js"] },
+      { label: "test", args: ["test"] },
     ],
   },
   {

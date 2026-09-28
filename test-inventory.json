@@ -1190,6 +1190,17 @@
       "owner": "create-croco-app"
     },
     {
+      "path": "packages/create-croco-app/templates/addons/graphql-standalone/apps/graphql-api/src/formatGraphQLError.spec.ts",
+      "lane": "generated-app",
+      "qualifiers": [],
+      "owner": "create-croco-app",
+      "generated": {
+        "sourcePath": "packages/create-croco-app/templates/addons/graphql-standalone/apps/graphql-api/src/formatGraphQLError.spec.ts",
+        "generatedPath": "apps/graphql-api/src/formatGraphQLError.spec.ts",
+        "commandId": "create-croco-app"
+      }
+    },
+    {
       "path": "packages/create-croco-app/templates/admin-console/apps/api-server/src/tests/AdminConsole.spec.ts",
       "lane": "generated-app",
       "qualifiers": [],

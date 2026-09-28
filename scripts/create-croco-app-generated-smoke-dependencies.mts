@@ -85,8 +85,14 @@ const CASE_TEST_PATH_PREFIXES = {
   "goal-spa-backend-split": ["spa-be-split/apps/"],
   "goal-worker": [],
   "goal-internal-tool": ["spa-be-split/apps/", "admin-console/apps/"],
-  "graphql-standalone-api": [],
-  "graphql-lambda-api": ["base-ddd/libs/shared/utils-env/"],
+  "graphql-standalone-api": [
+    "base-ddd/libs/shared/utils-env/",
+    "addons/graphql-standalone/apps/graphql-api/",
+  ],
+  "graphql-lambda-api": [
+    "base-ddd/libs/shared/utils-env/",
+    "addons/graphql-standalone/apps/graphql-api/",
+  ],
   "trpc-nextjs-vercel-fullstack": [],
   "graphql-nextjs-opennext": [],
   "trpc-nextjs-docker-frontend": [],
