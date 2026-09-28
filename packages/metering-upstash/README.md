@@ -32,27 +32,35 @@ import { createUpstashRedisClient } from "@croco/metering-upstash";
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL,
   token: process.env.UPSTASH_REDIS_REST_TOKEN,
+  automaticDeserialization: false,
 });
 
 const client = createUpstashRedisClient(redis);
 ```
 
+Existing Redis instances must use `automaticDeserialization: false` so Lua-returned JSON remains a string.
+The adapter detects deserialized objects in `EVAL` responses and reports a configuration Problem.
+The SDK can also turn numeric-looking strings into numbers, which this check cannot detect.
+
 ## Public API
 
-| API                                   | Description                                                                 |
-| ------------------------------------- | --------------------------------------------------------------------------- |
-| `UpstashRedisClient`                  | Implements `zadd`, `zrangebyscore`, `set`, and `eval` for metering storage. |
-| `createUpstashRedisClient()`          | Wraps an existing Upstash Redis SDK instance.                               |
-| `createUpstashRedisClientFromEnv()`   | Builds a Redis SDK instance from explicit Upstash REST env values.          |
-| `UpstashRedisClientEnv`               | Environment shape accepted by the env factory.                              |
-| `MissingUpstashMeteringConfigProblem` | Terminal Problem for missing Redis client, URL, or token configuration.     |
-| `UpstashMeteringUpstreamProblem`      | Redacted upstream Redis failure with retryability and status evidence.      |
-| `isRetryableUpstashMeteringError()`   | Classifies transient Upstash Redis failures for diagnostics/tests.          |
+| API                                            | Description                                                                 |
+| ---------------------------------------------- | --------------------------------------------------------------------------- |
+| `UpstashRedisClient`                           | Implements `zadd`, `zrangebyscore`, `set`, and `eval` for metering storage. |
+| `createUpstashRedisClient()`                   | Wraps an existing Upstash Redis SDK instance.                               |
+| `createUpstashRedisClientFromEnv()`            | Builds a Redis SDK instance from explicit Upstash REST env values.          |
+| `UpstashRedisClientEnv`                        | Environment shape accepted by the env factory.                              |
+| `MissingUpstashMeteringConfigProblem`          | Terminal Problem for missing Redis client, URL, or token configuration.     |
+| `InvalidUpstashMeteringDeserializationProblem` | Terminal Problem for deserialized `EVAL` objects.                           |
+| `UpstashMeteringUpstreamProblem`               | Redacted upstream Redis failure with retryability and status evidence.      |
+| `isRetryableUpstashMeteringError()`            | Classifies transient Upstash Redis failures for diagnostics/tests.          |
 
 ## Failure Modes
 
 - Missing Redis client, REST URL, or REST token throws `MissingUpstashMeteringConfigProblem` with
   `extensions.retryable: false`.
+- Deserialized `EVAL` objects throw `InvalidUpstashMeteringDeserializationProblem` with
+  `extensions.retryable: false` and the required SDK option.
 - Redis command failures throw `UpstashMeteringUpstreamProblem`.
 - Upstream status `408`, `429`, and `5xx` are marked retryable. Terminal upstream failures are marked
   non-retryable.

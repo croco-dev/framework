@@ -2622,6 +2622,15 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "metering-upstash/automatic-deserialization-enabled": recovery({
+    cause: "The injected Upstash Redis client deserialized a Lua-returned JSON string.",
+    userAction: "Retry after the Redis client is configured with automaticDeserialization: false.",
+    operatorAction:
+      "Construct the injected @upstash/redis instance with automaticDeserialization: false.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "metrics-core/read-cancelled": recovery({
     cause: "The metric read was cancelled by its AbortSignal or exceeded its deadline.",
     userAction:

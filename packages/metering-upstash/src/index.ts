@@ -14,6 +14,7 @@ export {
   type UpstashRedisClientEnv,
 } from "./libs/UpstashRedisClient";
 export {
+  InvalidUpstashMeteringDeserializationProblem,
   isRetryableUpstashMeteringError,
   MissingUpstashMeteringConfigProblem,
   UpstashMeteringUpstreamProblem,

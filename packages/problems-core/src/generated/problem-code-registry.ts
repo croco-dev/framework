@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 832,
+  problemCount: 833,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -14772,6 +14772,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 6,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "metering-upstash/automatic-deserialization-enabled",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#metering-upstash-automatic-deserialization-enabled",
+      recovery: {
+        cause: "The injected Upstash Redis client deserialized a Lua-returned JSON string.",
+        userAction:
+          "Retry after the Redis client is configured with automaticDeserialization: false.",
+        operatorAction:
+          "Construct the injected @upstash/redis instance with automaticDeserialization: false.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts",
+          line: 17,
+          column: 1,
+          kind: "problem-class",
         },
       ],
     },
