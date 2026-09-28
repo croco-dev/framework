@@ -188,6 +188,81 @@ describe("TaskRunner integration", () => {
     });
   });
 
+  it("resumes an execution left in retrying after a retryable failure", async () => {
+    let calls = 0;
+
+    @Component()
+    class FlakyTask {
+      @Task({ name: "flaky-task", maxAttempts: 3 })
+      async handle(): Promise<string> {
+        calls += 1;
+        if (calls === 1) throw new Error("Temporary network failure");
+        return "done";
+      }
+    }
+
+    Container.set(FlakyTask, new FlakyTask());
+    const store = new MemoryExecutionStore();
+    const manager = new ExecutionManagerImpl(store);
+    const runner = new TaskRunner(manager, TaskRegistry.fromMetadata());
+
+    await expect(runner.execute("flaky-task", {})).rejects.toThrow("Temporary network failure");
+    const [execution] = await store.list({ type: "flaky-task" });
+    expect(execution).toMatchObject({ status: "retrying", attempts: 1, maxAttempts: 3 });
+
+    await expect(runner.retry(execution.id)).resolves.toBe("done");
+    expect(await manager.get(execution.id)).toMatchObject({
+      status: "completed",
+      attempts: 2,
+      result: "done",
+    });
+    expect(calls).toBe(2);
+  });
+
+  it("starts only one attempt when retrying executions are retried concurrently", async () => {
+    let calls = 0;
+    let releaseSecondAttempt: (() => void) | undefined;
+    let signalSecondAttempt: (() => void) | undefined;
+    const secondAttemptStarted = new Promise<void>((resolve) => {
+      signalSecondAttempt = resolve;
+    });
+
+    @Component()
+    class FlakyTask {
+      @Task({ name: "concurrent-retry-task", maxAttempts: 3 })
+      async handle(): Promise<string> {
+        calls += 1;
+        if (calls === 1) throw new Error("Temporary network failure");
+        signalSecondAttempt?.();
+        await new Promise<void>((resolve) => {
+          releaseSecondAttempt = resolve;
+        });
+        return "done";
+      }
+    }
+
+    Container.set(FlakyTask, new FlakyTask());
+    const manager = new ExecutionManagerImpl(new MemoryExecutionStore());
+    const runner = new TaskRunner(manager, TaskRegistry.fromMetadata());
+    await expect(runner.execute("concurrent-retry-task", {})).rejects.toThrow(
+      "Temporary network failure",
+    );
+    const [execution] = await manager.list({ type: "concurrent-retry-task" });
+
+    const retries = Promise.allSettled([runner.retry(execution.id), runner.retry(execution.id)]);
+    await secondAttemptStarted;
+    releaseSecondAttempt?.();
+
+    const outcomes = await retries;
+    expect(outcomes).toContainEqual({ status: "fulfilled", value: "done" });
+    expect(outcomes).toContainEqual({
+      status: "rejected",
+      reason: expect.objectContaining({ code: "execution/invalid-state-transition" }),
+    });
+    expect(calls).toBe(2);
+    expect(await manager.get(execution.id)).toMatchObject({ status: "completed", attempts: 2 });
+  });
+
   it("fails immediately when an error is explicitly non-retryable", async () => {
     @Component()
     class PermanentFailureTask {

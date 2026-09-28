@@ -140,6 +140,9 @@ retry() remains blocked until the attempt-fenced recovery record has been commit
 
 > **retry**(`executionId`): `Promise`\<`unknown`\>
 
+Resumes a retrying execution or retries a failed or safely resolved timed-out execution.
+Indeterminate timeouts require recoverTimeout() before retrying.
+
 #### Parameters
 
 ##### executionId

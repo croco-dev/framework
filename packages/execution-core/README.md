@@ -236,7 +236,12 @@ console.log(first.id === second.id); // true
 
 ### 재시도 처리
 
+`fail()`이 실행을 `retrying` 상태로 전이했다면 `start()`로 다음 시도를 시작합니다.
+`retry()`는 `failed` 또는 안전하게 해소된 `timed_out` 실행을 다시 시도할 때 사용합니다.
+
 ```typescript
+const execution = await manager.create({ type: "payment", maxAttempts: 3 });
+
 // 1. 실행 시작
 await manager.start(execution.id);
 
@@ -245,14 +250,11 @@ try {
 } catch (error) {
   // 2. 실패 처리 (retryable=true면 자동으로 'retrying' 상태로)
   await manager.fail(execution.id, {
-    message: error.message,
+    message: error instanceof Error ? error.message : String(error),
     retryable: true,
   });
 
-  // 3. 명시적 재시도 상태 전이
-  await manager.retry(execution.id);
-
-  // 4. 재시도 실행
+  // 3. retrying 상태에서 다음 시도 실행
   await manager.start(execution.id); // attempts가 1 증가
 }
 ```

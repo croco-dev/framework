@@ -315,6 +315,10 @@ export class TaskRunner {
     return { executionId: execution.id, result };
   }
 
+  /**
+   * Resumes a retrying execution or retries a failed or safely resolved timed-out execution.
+   * Indeterminate timeouts require recoverTimeout() before retrying.
+   */
   async retry(executionId: string): Promise<unknown> {
     const execution = await this.executionManager.get(executionId);
     const task = this.registry.get(execution.type);
@@ -328,7 +332,8 @@ export class TaskRunner {
       );
     }
 
-    const retryingExecution = await this.executionManager.retry(executionId);
+    const retryingExecution =
+      execution.status === "retrying" ? execution : await this.executionManager.retry(executionId);
     return this.runExecution(
       task.target,
       task.methodName,
