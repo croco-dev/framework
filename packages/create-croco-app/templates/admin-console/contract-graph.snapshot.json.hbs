@@ -1,0 +1,3915 @@
+{
+  "snapshotVersion": "croco.contract-graph.snapshot.v1",
+  "graphVersion": "croco.contract-graph.v1",
+  "controllerCount": 2,
+  "routeCount": 12,
+  "operationIds": [
+    "createAdminUser",
+    "createUser",
+    "deleteUser",
+    "executeAdminCreditOperation",
+    "getAdminCreditOperations",
+    "getAdminSnapshot",
+    "getAdminUser",
+    "getUserById",
+    "listAdminOperations",
+    "listAdminUsers",
+    "listUsers",
+    "updateUser"
+  ],
+  "consumerCoverage": {
+    "version": "croco.contract-consumer-coverage.v1",
+    "routeCount": 12,
+    "consumers": [
+      {
+        "consumerId": "admin-generated",
+        "label": "Admin resource config",
+        "generatedArtifact": "admin resource config files",
+        "routeCount": 12,
+        "requiredRouteFields": [
+          "routeId",
+          "operationId",
+          "httpMethod",
+          "path",
+          "request.body",
+          "request.path",
+          "request.query",
+          "request.headers",
+          "response",
+          "problems",
+          "entitlements",
+          "access.guards",
+          "access.roles"
+        ],
+        "unsupportedRouteFields": [],
+        "routes": [
+          {
+            "routeId": "AdminController.createUser",
+            "operationId": "createAdminUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "AdminController.creditOperations",
+            "operationId": "getAdminCreditOperations",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "AdminController.executeCreditOperation",
+            "operationId": "executeAdminCreditOperation",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "AdminController.getUser",
+            "operationId": "getAdminUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "AdminController.listOperations",
+            "operationId": "listAdminOperations",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "AdminController.listUsers",
+            "operationId": "listAdminUsers",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "AdminController.snapshot",
+            "operationId": "getAdminSnapshot",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.create",
+            "operationId": "createUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.delete",
+            "operationId": "deleteUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.getById",
+            "operationId": "getUserById",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.list",
+            "operationId": "listUsers",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.update",
+            "operationId": "updateUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          }
+        ],
+        "diagnostics": []
+      },
+      {
+        "consumerId": "openapi",
+        "label": "OpenAPI specification",
+        "generatedArtifact": "openapi.json",
+        "routeCount": 12,
+        "requiredRouteFields": [
+          "routeId",
+          "operationId",
+          "httpMethod",
+          "path",
+          "request.body",
+          "request.path",
+          "request.query",
+          "request.headers",
+          "response",
+          "problems",
+          "entitlements"
+        ],
+        "unsupportedRouteFields": [
+          "access.guards",
+          "access.roles"
+        ],
+        "routes": [
+          {
+            "routeId": "AdminController.createUser",
+            "operationId": "createAdminUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "AdminController.creditOperations",
+            "operationId": "getAdminCreditOperations",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "AdminController.executeCreditOperation",
+            "operationId": "executeAdminCreditOperation",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "AdminController.getUser",
+            "operationId": "getAdminUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "AdminController.listOperations",
+            "operationId": "listAdminOperations",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "AdminController.listUsers",
+            "operationId": "listAdminUsers",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "AdminController.snapshot",
+            "operationId": "getAdminSnapshot",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.create",
+            "operationId": "createUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.delete",
+            "operationId": "deleteUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.getById",
+            "operationId": "getUserById",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.list",
+            "operationId": "listUsers",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.update",
+            "operationId": "updateUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          }
+        ],
+        "diagnostics": []
+      },
+      {
+        "consumerId": "rpc-client",
+        "label": "RPC fetch client",
+        "generatedArtifact": "provider-rpc client files",
+        "routeCount": 12,
+        "requiredRouteFields": [
+          "routeId",
+          "operationId",
+          "httpMethod",
+          "path",
+          "request.body",
+          "request.path",
+          "request.query",
+          "request.headers",
+          "response",
+          "problems"
+        ],
+        "unsupportedRouteFields": [
+          "access.guards",
+          "access.roles",
+          "entitlements"
+        ],
+        "routes": [
+          {
+            "routeId": "AdminController.createUser",
+            "operationId": "createAdminUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "AdminController.creditOperations",
+            "operationId": "getAdminCreditOperations",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "AdminController.executeCreditOperation",
+            "operationId": "executeAdminCreditOperation",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "AdminController.getUser",
+            "operationId": "getAdminUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "AdminController.listOperations",
+            "operationId": "listAdminOperations",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "AdminController.listUsers",
+            "operationId": "listAdminUsers",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "AdminController.snapshot",
+            "operationId": "getAdminSnapshot",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.create",
+            "operationId": "createUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.delete",
+            "operationId": "deleteUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.getById",
+            "operationId": "getUserById",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.list",
+            "operationId": "listUsers",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.update",
+            "operationId": "updateUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          }
+        ],
+        "diagnostics": []
+      }
+    ],
+    "diagnostics": []
+  },
+  "controllers": [
+    {
+      "name": "AdminController",
+      "path": "/admin",
+      "guards": [],
+      "roles": [],
+      "routeIds": [
+        "AdminController.createUser",
+        "AdminController.creditOperations",
+        "AdminController.executeCreditOperation",
+        "AdminController.getUser",
+        "AdminController.listOperations",
+        "AdminController.listUsers",
+        "AdminController.snapshot"
+      ]
+    },
+    {
+      "name": "UserController",
+      "path": "/users",
+      "guards": [],
+      "roles": [],
+      "routeIds": [
+        "UserController.create",
+        "UserController.delete",
+        "UserController.getById",
+        "UserController.list",
+        "UserController.update"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "routeId": "AdminController.createUser",
+      "operationId": "createAdminUser",
+      "controllerName": "AdminController",
+      "methodName": "createUser",
+      "httpMethod": "POST",
+      "path": "/admin/users",
+      "controllerPath": "/admin",
+      "domain": null,
+      "routeContract": {
+        "id": "admin.users.create",
+        "method": "POST",
+        "path": "/admin/users",
+        "operationId": "createAdminUser"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "body",
+          "name": "",
+          "schema": {
+            "kind": "object",
+            "typeName": "ZodObject",
+            "jsonSafe": true,
+            "fields": [
+              {
+                "name": "email",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              },
+              {
+                "name": "name",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              },
+              {
+                "name": "role",
+                "required": true,
+                "schema": {
+                  "kind": "enum",
+                  "typeName": "ZodEnum",
+                  "jsonSafe": true,
+                  "values": [
+                    "admin",
+                    "owner",
+                    "viewer"
+                  ]
+                }
+              },
+              {
+                "name": "tenantId",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "request": {
+        "body": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "email",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "name",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "role",
+              "required": true,
+              "schema": {
+                "kind": "enum",
+                "typeName": "ZodEnum",
+                "jsonSafe": true,
+                "values": [
+                  "admin",
+                  "owner",
+                  "viewer"
+                ]
+              }
+            },
+            {
+              "name": "tenantId",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        },
+        "path": null,
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "email",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "lastSeenAt",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "name",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "role",
+            "required": true,
+            "schema": {
+              "kind": "enum",
+              "typeName": "ZodEnum",
+              "jsonSafe": true,
+              "values": [
+                "admin",
+                "owner",
+                "viewer"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": true,
+            "schema": {
+              "kind": "enum",
+              "typeName": "ZodEnum",
+              "jsonSafe": true,
+              "values": [
+                "active",
+                "invited",
+                "suspended"
+              ]
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          }
+        ]
+      },
+      "problems": []
+    },
+    {
+      "routeId": "AdminController.creditOperations",
+      "operationId": "getAdminCreditOperations",
+      "controllerName": "AdminController",
+      "methodName": "creditOperations",
+      "httpMethod": "GET",
+      "path": "/admin/credits",
+      "controllerPath": "/admin",
+      "domain": null,
+      "routeContract": {
+        "id": "admin.credits.snapshot",
+        "method": "GET",
+        "path": "/admin/credits",
+        "operationId": "getAdminCreditOperations"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "query",
+          "name": "tenantId",
+          "schema": {
+            "kind": "string",
+            "typeName": "ZodString",
+            "jsonSafe": true
+          }
+        }
+      ],
+      "request": {
+        "body": null,
+        "path": null,
+        "query": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "tenantId",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        },
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "accountId",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "balance",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "accountId",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "available",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "consumed",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "expired",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "expiringSoon",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "expiringSoonBefore",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "ledgerPosition",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "lifetimeGranted",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "netAdjusted",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "reserved",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "generatedAt",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "grantLots",
+            "required": true,
+            "schema": {
+              "kind": "array",
+              "typeName": "ZodArray",
+              "jsonSafe": true,
+              "element": {
+                "kind": "object",
+                "typeName": "ZodObject",
+                "jsonSafe": true,
+                "fields": [
+                  {
+                    "name": "amount",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "expiresAt",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    }
+                  },
+                  {
+                    "name": "meterKeys",
+                    "required": true,
+                    "schema": {
+                      "kind": "array",
+                      "typeName": "ZodArray",
+                      "jsonSafe": true,
+                      "element": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    }
+                  },
+                  {
+                    "name": "remaining",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "source",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "object",
+                        "typeName": "ZodObject",
+                        "jsonSafe": true,
+                        "fields": [
+                          {
+                            "name": "maskedValue",
+                            "required": false,
+                            "schema": {
+                              "kind": "optional",
+                              "typeName": "ZodOptional",
+                              "jsonSafe": true,
+                              "inner": {
+                                "kind": "string",
+                                "typeName": "ZodString",
+                                "jsonSafe": true
+                              }
+                            }
+                          },
+                          {
+                            "name": "requiredPermissions",
+                            "required": false,
+                            "schema": {
+                              "kind": "optional",
+                              "typeName": "ZodOptional",
+                              "jsonSafe": true,
+                              "inner": {
+                                "kind": "array",
+                                "typeName": "ZodArray",
+                                "jsonSafe": true,
+                                "element": {
+                                  "kind": "string",
+                                  "typeName": "ZodString",
+                                  "jsonSafe": true
+                                }
+                              }
+                            }
+                          },
+                          {
+                            "name": "type",
+                            "required": true,
+                            "schema": {
+                              "kind": "string",
+                              "typeName": "ZodString",
+                              "jsonSafe": true
+                            }
+                          },
+                          {
+                            "name": "value",
+                            "required": false,
+                            "schema": {
+                              "kind": "optional",
+                              "typeName": "ZodOptional",
+                              "jsonSafe": true,
+                              "inner": {
+                                "kind": "string",
+                                "typeName": "ZodString",
+                                "jsonSafe": true
+                              }
+                            }
+                          },
+                          {
+                            "name": "visibility",
+                            "required": true,
+                            "schema": {
+                              "kind": "enum",
+                              "typeName": "ZodEnum",
+                              "jsonSafe": true,
+                              "values": [
+                                "denied",
+                                "masked",
+                                "visible"
+                              ]
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "name": "status",
+                    "required": true,
+                    "schema": {
+                      "kind": "enum",
+                      "typeName": "ZodEnum",
+                      "jsonSafe": true,
+                      "values": [
+                        "available",
+                        "consumed",
+                        "expired",
+                        "reserved"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "transactionId",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "history",
+            "required": true,
+            "schema": {
+              "kind": "union",
+              "typeName": "ZodUnion",
+              "jsonSafe": true,
+              "options": [
+                {
+                  "kind": "object",
+                  "typeName": "ZodObject",
+                  "jsonSafe": true,
+                  "fields": [
+                    {
+                      "name": "earliestPosition",
+                      "required": true,
+                      "schema": {
+                        "kind": "number",
+                        "typeName": "ZodNumber",
+                        "jsonSafe": true
+                      }
+                    },
+                    {
+                      "name": "kind",
+                      "required": true,
+                      "schema": {
+                        "kind": "literal",
+                        "typeName": "ZodLiteral",
+                        "jsonSafe": true,
+                        "value": "partial"
+                      }
+                    },
+                    {
+                      "name": "reason",
+                      "required": true,
+                      "schema": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    }
+                  ]
+                },
+                {
+                  "kind": "object",
+                  "typeName": "ZodObject",
+                  "jsonSafe": true,
+                  "fields": [
+                    {
+                      "name": "kind",
+                      "required": true,
+                      "schema": {
+                        "kind": "literal",
+                        "typeName": "ZodLiteral",
+                        "jsonSafe": true,
+                        "value": "complete"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "name": "reservations",
+            "required": true,
+            "schema": {
+              "kind": "array",
+              "typeName": "ZodArray",
+              "jsonSafe": true,
+              "element": {
+                "kind": "object",
+                "typeName": "ZodObject",
+                "jsonSafe": true,
+                "fields": [
+                  {
+                    "name": "allocations",
+                    "required": true,
+                    "schema": {
+                      "kind": "array",
+                      "typeName": "ZodArray",
+                      "jsonSafe": true,
+                      "element": {
+                        "kind": "object",
+                        "typeName": "ZodObject",
+                        "jsonSafe": true,
+                        "fields": [
+                          {
+                            "name": "amount",
+                            "required": true,
+                            "schema": {
+                              "kind": "string",
+                              "typeName": "ZodString",
+                              "jsonSafe": true
+                            }
+                          },
+                          {
+                            "name": "grantTransactionId",
+                            "required": true,
+                            "schema": {
+                              "kind": "string",
+                              "typeName": "ZodString",
+                              "jsonSafe": true
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "name": "amount",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "createdAt",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "id",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "meterKey",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    }
+                  },
+                  {
+                    "name": "release",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "object",
+                        "typeName": "ZodObject",
+                        "jsonSafe": true,
+                        "fields": [
+                          {
+                            "name": "allowed",
+                            "required": true,
+                            "schema": {
+                              "kind": "boolean",
+                              "typeName": "ZodBoolean",
+                              "jsonSafe": true
+                            }
+                          },
+                          {
+                            "name": "reason",
+                            "required": true,
+                            "schema": {
+                              "kind": "string",
+                              "typeName": "ZodString",
+                              "jsonSafe": true
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "name": "settledAt",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    }
+                  },
+                  {
+                    "name": "status",
+                    "required": true,
+                    "schema": {
+                      "kind": "enum",
+                      "typeName": "ZodEnum",
+                      "jsonSafe": true,
+                      "values": [
+                        "active",
+                        "committed",
+                        "released"
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "transactions",
+            "required": true,
+            "schema": {
+              "kind": "array",
+              "typeName": "ZodArray",
+              "jsonSafe": true,
+              "element": {
+                "kind": "object",
+                "typeName": "ZodObject",
+                "jsonSafe": true,
+                "fields": [
+                  {
+                    "name": "actorId",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    }
+                  },
+                  {
+                    "name": "adjustmentDirection",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "enum",
+                        "typeName": "ZodEnum",
+                        "jsonSafe": true,
+                        "values": [
+                          "credit",
+                          "debit"
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "name": "allocations",
+                    "required": true,
+                    "schema": {
+                      "kind": "array",
+                      "typeName": "ZodArray",
+                      "jsonSafe": true,
+                      "element": {
+                        "kind": "object",
+                        "typeName": "ZodObject",
+                        "jsonSafe": true,
+                        "fields": [
+                          {
+                            "name": "amount",
+                            "required": true,
+                            "schema": {
+                              "kind": "string",
+                              "typeName": "ZodString",
+                              "jsonSafe": true
+                            }
+                          },
+                          {
+                            "name": "grantTransactionId",
+                            "required": true,
+                            "schema": {
+                              "kind": "string",
+                              "typeName": "ZodString",
+                              "jsonSafe": true
+                            }
+                          }
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "name": "amount",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "correlationId",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    }
+                  },
+                  {
+                    "name": "id",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "kind",
+                    "required": true,
+                    "schema": {
+                      "kind": "enum",
+                      "typeName": "ZodEnum",
+                      "jsonSafe": true,
+                      "values": [
+                        "adjustment",
+                        "commit",
+                        "consume",
+                        "expire",
+                        "grant",
+                        "refund",
+                        "release",
+                        "reserve"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "meterKey",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    }
+                  },
+                  {
+                    "name": "occurredAt",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "position",
+                    "required": true,
+                    "schema": {
+                      "kind": "number",
+                      "typeName": "ZodNumber",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "reference",
+                    "required": true,
+                    "schema": {
+                      "kind": "object",
+                      "typeName": "ZodObject",
+                      "jsonSafe": true,
+                      "fields": [
+                        {
+                          "name": "maskedValue",
+                          "required": false,
+                          "schema": {
+                            "kind": "optional",
+                            "typeName": "ZodOptional",
+                            "jsonSafe": true,
+                            "inner": {
+                              "kind": "string",
+                              "typeName": "ZodString",
+                              "jsonSafe": true
+                            }
+                          }
+                        },
+                        {
+                          "name": "requiredPermissions",
+                          "required": false,
+                          "schema": {
+                            "kind": "optional",
+                            "typeName": "ZodOptional",
+                            "jsonSafe": true,
+                            "inner": {
+                              "kind": "array",
+                              "typeName": "ZodArray",
+                              "jsonSafe": true,
+                              "element": {
+                                "kind": "string",
+                                "typeName": "ZodString",
+                                "jsonSafe": true
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "name": "type",
+                          "required": true,
+                          "schema": {
+                            "kind": "string",
+                            "typeName": "ZodString",
+                            "jsonSafe": true
+                          }
+                        },
+                        {
+                          "name": "value",
+                          "required": false,
+                          "schema": {
+                            "kind": "optional",
+                            "typeName": "ZodOptional",
+                            "jsonSafe": true,
+                            "inner": {
+                              "kind": "string",
+                              "typeName": "ZodString",
+                              "jsonSafe": true
+                            }
+                          }
+                        },
+                        {
+                          "name": "visibility",
+                          "required": true,
+                          "schema": {
+                            "kind": "enum",
+                            "typeName": "ZodEnum",
+                            "jsonSafe": true,
+                            "values": [
+                              "denied",
+                              "masked",
+                              "visible"
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "refundableAmount",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    }
+                  },
+                  {
+                    "name": "relatedTransactionId",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    }
+                  },
+                  {
+                    "name": "reservationId",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "problems": [
+        {
+          "code": "admin-core/credit-operations-permission-denied",
+          "category": "Forbidden",
+          "status": 403,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#admin-core-credit-operations-permission-denied",
+          "description": "The operator lacks a permission required for tenant credit operations."
+        },
+        {
+          "code": "admin-core/credit-operations-validation-failed",
+          "category": "ValidationError",
+          "status": 422,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#admin-core-credit-operations-validation-failed",
+          "description": "The requested tenant credit operation failed semantic validation."
+        }
+      ]
+    },
+    {
+      "routeId": "AdminController.executeCreditOperation",
+      "operationId": "executeAdminCreditOperation",
+      "controllerName": "AdminController",
+      "methodName": "executeCreditOperation",
+      "httpMethod": "POST",
+      "path": "/admin/credits/actions",
+      "controllerPath": "/admin",
+      "domain": null,
+      "routeContract": {
+        "id": "admin.credits.execute",
+        "method": "POST",
+        "path": "/admin/credits/actions",
+        "operationId": "executeAdminCreditOperation"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "body",
+          "name": "",
+          "schema": {
+            "kind": "object",
+            "typeName": "ZodObject",
+            "jsonSafe": true,
+            "fields": [
+              {
+                "name": "accountId",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              },
+              {
+                "name": "actionKind",
+                "required": true,
+                "schema": {
+                  "kind": "enum",
+                  "typeName": "ZodEnum",
+                  "jsonSafe": true,
+                  "values": [
+                    "adjustment",
+                    "grant",
+                    "refund",
+                    "release-reservation"
+                  ]
+                }
+              },
+              {
+                "name": "actorId",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              },
+              {
+                "name": "amount",
+                "required": false,
+                "schema": {
+                  "kind": "optional",
+                  "typeName": "ZodOptional",
+                  "jsonSafe": true,
+                  "inner": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              },
+              {
+                "name": "auditReason",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              },
+              {
+                "name": "consumptionTransactionId",
+                "required": false,
+                "schema": {
+                  "kind": "optional",
+                  "typeName": "ZodOptional",
+                  "jsonSafe": true,
+                  "inner": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              },
+              {
+                "name": "direction",
+                "required": false,
+                "schema": {
+                  "kind": "optional",
+                  "typeName": "ZodOptional",
+                  "jsonSafe": true,
+                  "inner": {
+                    "kind": "enum",
+                    "typeName": "ZodEnum",
+                    "jsonSafe": true,
+                    "values": [
+                      "credit",
+                      "debit"
+                    ]
+                  }
+                }
+              },
+              {
+                "name": "expectedPosition",
+                "required": true,
+                "schema": {
+                  "kind": "number",
+                  "typeName": "ZodNumber",
+                  "jsonSafe": true
+                }
+              },
+              {
+                "name": "expiresAt",
+                "required": false,
+                "schema": {
+                  "kind": "optional",
+                  "typeName": "ZodOptional",
+                  "jsonSafe": true,
+                  "inner": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              },
+              {
+                "name": "idempotencyKey",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              },
+              {
+                "name": "inputKind",
+                "required": true,
+                "schema": {
+                  "kind": "enum",
+                  "typeName": "ZodEnum",
+                  "jsonSafe": true,
+                  "values": [
+                    "adjustment",
+                    "grant",
+                    "refund",
+                    "release-reservation"
+                  ]
+                }
+              },
+              {
+                "name": "meterKeys",
+                "required": false,
+                "schema": {
+                  "kind": "optional",
+                  "typeName": "ZodOptional",
+                  "jsonSafe": true,
+                  "inner": {
+                    "kind": "array",
+                    "typeName": "ZodArray",
+                    "jsonSafe": true,
+                    "element": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  }
+                }
+              },
+              {
+                "name": "referenceId",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              },
+              {
+                "name": "referenceType",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              },
+              {
+                "name": "reservationId",
+                "required": false,
+                "schema": {
+                  "kind": "optional",
+                  "typeName": "ZodOptional",
+                  "jsonSafe": true,
+                  "inner": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              },
+              {
+                "name": "source",
+                "required": false,
+                "schema": {
+                  "kind": "optional",
+                  "typeName": "ZodOptional",
+                  "jsonSafe": true,
+                  "inner": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              },
+              {
+                "name": "targetId",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              },
+              {
+                "name": "tenantId",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "request": {
+        "body": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "accountId",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "actionKind",
+              "required": true,
+              "schema": {
+                "kind": "enum",
+                "typeName": "ZodEnum",
+                "jsonSafe": true,
+                "values": [
+                  "adjustment",
+                  "grant",
+                  "refund",
+                  "release-reservation"
+                ]
+              }
+            },
+            {
+              "name": "actorId",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "amount",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            },
+            {
+              "name": "auditReason",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "consumptionTransactionId",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            },
+            {
+              "name": "direction",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "enum",
+                  "typeName": "ZodEnum",
+                  "jsonSafe": true,
+                  "values": [
+                    "credit",
+                    "debit"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "expectedPosition",
+              "required": true,
+              "schema": {
+                "kind": "number",
+                "typeName": "ZodNumber",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "expiresAt",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            },
+            {
+              "name": "idempotencyKey",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "inputKind",
+              "required": true,
+              "schema": {
+                "kind": "enum",
+                "typeName": "ZodEnum",
+                "jsonSafe": true,
+                "values": [
+                  "adjustment",
+                  "grant",
+                  "refund",
+                  "release-reservation"
+                ]
+              }
+            },
+            {
+              "name": "meterKeys",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "array",
+                  "typeName": "ZodArray",
+                  "jsonSafe": true,
+                  "element": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              }
+            },
+            {
+              "name": "referenceId",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "referenceType",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "reservationId",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            },
+            {
+              "name": "source",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            },
+            {
+              "name": "targetId",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "tenantId",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        },
+        "path": null,
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "union",
+        "typeName": "ZodUnion",
+        "jsonSafe": true,
+        "options": [
+          {
+            "kind": "object",
+            "typeName": "ZodObject",
+            "jsonSafe": true,
+            "fields": [
+              {
+                "name": "kind",
+                "required": true,
+                "schema": {
+                  "kind": "literal",
+                  "typeName": "ZodLiteral",
+                  "jsonSafe": true,
+                  "value": "problem"
+                }
+              },
+              {
+                "name": "ledgerCommitted",
+                "required": false,
+                "schema": {
+                  "kind": "optional",
+                  "typeName": "ZodOptional",
+                  "jsonSafe": true,
+                  "inner": {
+                    "kind": "boolean",
+                    "typeName": "ZodBoolean",
+                    "jsonSafe": true
+                  }
+                }
+              },
+              {
+                "name": "problem",
+                "required": true,
+                "schema": {
+                  "kind": "object",
+                  "typeName": "ZodObject",
+                  "jsonSafe": true,
+                  "fields": [
+                    {
+                      "name": "code",
+                      "required": true,
+                      "schema": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    },
+                    {
+                      "name": "detail",
+                      "required": false,
+                      "schema": {
+                        "kind": "optional",
+                        "typeName": "ZodOptional",
+                        "jsonSafe": true,
+                        "inner": {
+                          "kind": "string",
+                          "typeName": "ZodString",
+                          "jsonSafe": true
+                        }
+                      }
+                    },
+                    {
+                      "name": "retryable",
+                      "required": false,
+                      "schema": {
+                        "kind": "optional",
+                        "typeName": "ZodOptional",
+                        "jsonSafe": true,
+                        "inner": {
+                          "kind": "boolean",
+                          "typeName": "ZodBoolean",
+                          "jsonSafe": true
+                        }
+                      }
+                    },
+                    {
+                      "name": "status",
+                      "required": false,
+                      "schema": {
+                        "kind": "optional",
+                        "typeName": "ZodOptional",
+                        "jsonSafe": true,
+                        "inner": {
+                          "kind": "number",
+                          "typeName": "ZodNumber",
+                          "jsonSafe": true
+                        }
+                      }
+                    },
+                    {
+                      "name": "title",
+                      "required": false,
+                      "schema": {
+                        "kind": "optional",
+                        "typeName": "ZodOptional",
+                        "jsonSafe": true,
+                        "inner": {
+                          "kind": "string",
+                          "typeName": "ZodString",
+                          "jsonSafe": true
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              {
+                "name": "recovery",
+                "required": true,
+                "schema": {
+                  "kind": "enum",
+                  "typeName": "ZodEnum",
+                  "jsonSafe": true,
+                  "values": [
+                    "change-input",
+                    "refresh-ledger",
+                    "retry-event-publication",
+                    "reuse-idempotency-result"
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "kind": "object",
+            "typeName": "ZodObject",
+            "jsonSafe": true,
+            "fields": [
+              {
+                "name": "kind",
+                "required": true,
+                "schema": {
+                  "kind": "literal",
+                  "typeName": "ZodLiteral",
+                  "jsonSafe": true,
+                  "value": "succeeded"
+                }
+              },
+              {
+                "name": "ledgerPosition",
+                "required": true,
+                "schema": {
+                  "kind": "number",
+                  "typeName": "ZodNumber",
+                  "jsonSafe": true
+                }
+              },
+              {
+                "name": "replayed",
+                "required": true,
+                "schema": {
+                  "kind": "boolean",
+                  "typeName": "ZodBoolean",
+                  "jsonSafe": true
+                }
+              },
+              {
+                "name": "transactionIds",
+                "required": true,
+                "schema": {
+                  "kind": "array",
+                  "typeName": "ZodArray",
+                  "jsonSafe": true,
+                  "element": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "problems": [
+        {
+          "code": "admin-core/credit-operations-permission-denied",
+          "category": "Forbidden",
+          "status": 403,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#admin-core-credit-operations-permission-denied",
+          "description": "The operator lacks a permission required for tenant credit operations."
+        },
+        {
+          "code": "admin-core/credit-operations-validation-failed",
+          "category": "ValidationError",
+          "status": 422,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#admin-core-credit-operations-validation-failed",
+          "description": "The requested tenant credit operation failed semantic validation."
+        },
+        {
+          "code": "credits-core/duplicate-conflict",
+          "category": "Conflict",
+          "status": 409,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#credits-core-duplicate-conflict",
+          "description": "The idempotency key was already used for a different credit command."
+        },
+        {
+          "code": "credits-core/event-publication-failed",
+          "category": "InternalServerError",
+          "status": 500,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#credits-core-event-publication-failed",
+          "description": "The ledger committed but its post-commit event could not be published."
+        },
+        {
+          "code": "credits-core/stale-ledger-position",
+          "category": "Conflict",
+          "status": 409,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#credits-core-stale-ledger-position",
+          "description": "The credit ledger advanced beyond the operator's expected position."
+        },
+        {
+          "code": "protocols-rest/request-validation-failed",
+          "category": "ValidationError",
+          "status": 422,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#protocols-rest-request-validation-failed",
+          "description": "The credit operation request does not match the declared route schema."
+        }
+      ]
+    },
+    {
+      "routeId": "AdminController.getUser",
+      "operationId": "getAdminUser",
+      "controllerName": "AdminController",
+      "methodName": "getUser",
+      "httpMethod": "GET",
+      "path": "/admin/users/:id",
+      "controllerPath": "/admin",
+      "domain": null,
+      "routeContract": {
+        "id": "admin.users.get",
+        "method": "GET",
+        "path": "/admin/users/:id",
+        "operationId": "getAdminUser"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "path",
+          "name": "id",
+          "schema": {
+            "kind": "string",
+            "typeName": "ZodString",
+            "jsonSafe": true
+          }
+        },
+        {
+          "kind": "query",
+          "name": "tenantId",
+          "schema": {
+            "kind": "optional",
+            "typeName": "ZodOptional",
+            "jsonSafe": true,
+            "inner": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          }
+        }
+      ],
+      "request": {
+        "body": null,
+        "path": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "id",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        },
+        "query": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "tenantId",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            }
+          ]
+        },
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "email",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "lastSeenAt",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "name",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "role",
+            "required": true,
+            "schema": {
+              "kind": "enum",
+              "typeName": "ZodEnum",
+              "jsonSafe": true,
+              "values": [
+                "admin",
+                "owner",
+                "viewer"
+              ]
+            }
+          },
+          {
+            "name": "status",
+            "required": true,
+            "schema": {
+              "kind": "enum",
+              "typeName": "ZodEnum",
+              "jsonSafe": true,
+              "values": [
+                "active",
+                "invited",
+                "suspended"
+              ]
+            }
+          },
+          {
+            "name": "tenantId",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          }
+        ]
+      },
+      "problems": [
+        {
+          "code": "admin-console/user-not-found",
+          "category": "NotFound",
+          "status": 404,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#admin-console-user-not-found",
+          "description": "The requested admin user does not exist in the selected tenant context."
+        }
+      ]
+    },
+    {
+      "routeId": "AdminController.listOperations",
+      "operationId": "listAdminOperations",
+      "controllerName": "AdminController",
+      "methodName": "listOperations",
+      "httpMethod": "GET",
+      "path": "/admin/operations",
+      "controllerPath": "/admin",
+      "domain": null,
+      "routeContract": {
+        "id": "admin.operations.list",
+        "method": "GET",
+        "path": "/admin/operations",
+        "operationId": "listAdminOperations"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "query",
+          "name": "tenantId",
+          "schema": {
+            "kind": "optional",
+            "typeName": "ZodOptional",
+            "jsonSafe": true,
+            "inner": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          }
+        }
+      ],
+      "request": {
+        "body": null,
+        "path": null,
+        "query": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "tenantId",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            }
+          ]
+        },
+        "headers": null
+      },
+      "response": {
+        "kind": "array",
+        "typeName": "ZodArray",
+        "jsonSafe": true,
+        "element": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "action",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "actor",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "id",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "occurredAt",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "resource",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "status",
+              "required": true,
+              "schema": {
+                "kind": "enum",
+                "typeName": "ZodEnum",
+                "jsonSafe": true,
+                "values": [
+                  "blocked",
+                  "needs-review",
+                  "succeeded"
+                ]
+              }
+            },
+            {
+              "name": "summary",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "tenantId",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        }
+      },
+      "problems": []
+    },
+    {
+      "routeId": "AdminController.listUsers",
+      "operationId": "listAdminUsers",
+      "controllerName": "AdminController",
+      "methodName": "listUsers",
+      "httpMethod": "GET",
+      "path": "/admin/users",
+      "controllerPath": "/admin",
+      "domain": null,
+      "routeContract": {
+        "id": "admin.users.list",
+        "method": "GET",
+        "path": "/admin/users",
+        "operationId": "listAdminUsers"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "query",
+          "name": "tenantId",
+          "schema": {
+            "kind": "optional",
+            "typeName": "ZodOptional",
+            "jsonSafe": true,
+            "inner": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          }
+        }
+      ],
+      "request": {
+        "body": null,
+        "path": null,
+        "query": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "tenantId",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            }
+          ]
+        },
+        "headers": null
+      },
+      "response": {
+        "kind": "array",
+        "typeName": "ZodArray",
+        "jsonSafe": true,
+        "element": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "email",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "id",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "lastSeenAt",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "name",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "role",
+              "required": true,
+              "schema": {
+                "kind": "enum",
+                "typeName": "ZodEnum",
+                "jsonSafe": true,
+                "values": [
+                  "admin",
+                  "owner",
+                  "viewer"
+                ]
+              }
+            },
+            {
+              "name": "status",
+              "required": true,
+              "schema": {
+                "kind": "enum",
+                "typeName": "ZodEnum",
+                "jsonSafe": true,
+                "values": [
+                  "active",
+                  "invited",
+                  "suspended"
+                ]
+              }
+            },
+            {
+              "name": "tenantId",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        }
+      },
+      "problems": []
+    },
+    {
+      "routeId": "AdminController.snapshot",
+      "operationId": "getAdminSnapshot",
+      "controllerName": "AdminController",
+      "methodName": "snapshot",
+      "httpMethod": "GET",
+      "path": "/admin/snapshot",
+      "controllerPath": "/admin",
+      "domain": null,
+      "routeContract": {
+        "id": "admin.snapshot",
+        "method": "GET",
+        "path": "/admin/snapshot",
+        "operationId": "getAdminSnapshot"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "query",
+          "name": "tenantId",
+          "schema": {
+            "kind": "optional",
+            "typeName": "ZodOptional",
+            "jsonSafe": true,
+            "inner": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          }
+        }
+      ],
+      "request": {
+        "body": null,
+        "path": null,
+        "query": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "tenantId",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            }
+          ]
+        },
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "operations",
+            "required": true,
+            "schema": {
+              "kind": "array",
+              "typeName": "ZodArray",
+              "jsonSafe": true,
+              "element": {
+                "kind": "object",
+                "typeName": "ZodObject",
+                "jsonSafe": true,
+                "fields": [
+                  {
+                    "name": "action",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "actor",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "id",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "occurredAt",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "resource",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "status",
+                    "required": true,
+                    "schema": {
+                      "kind": "enum",
+                      "typeName": "ZodEnum",
+                      "jsonSafe": true,
+                      "values": [
+                        "blocked",
+                        "needs-review",
+                        "succeeded"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "summary",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "tenantId",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "tenant",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "name",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "permissionMode",
+                  "required": true,
+                  "schema": {
+                    "kind": "enum",
+                    "typeName": "ZodEnum",
+                    "jsonSafe": true,
+                    "values": [
+                      "owner-managed",
+                      "support-managed"
+                    ]
+                  }
+                },
+                {
+                  "name": "tenantId",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "users",
+            "required": true,
+            "schema": {
+              "kind": "array",
+              "typeName": "ZodArray",
+              "jsonSafe": true,
+              "element": {
+                "kind": "object",
+                "typeName": "ZodObject",
+                "jsonSafe": true,
+                "fields": [
+                  {
+                    "name": "email",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "id",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "lastSeenAt",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "name",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "role",
+                    "required": true,
+                    "schema": {
+                      "kind": "enum",
+                      "typeName": "ZodEnum",
+                      "jsonSafe": true,
+                      "values": [
+                        "admin",
+                        "owner",
+                        "viewer"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "status",
+                    "required": true,
+                    "schema": {
+                      "kind": "enum",
+                      "typeName": "ZodEnum",
+                      "jsonSafe": true,
+                      "values": [
+                        "active",
+                        "invited",
+                        "suspended"
+                      ]
+                    }
+                  },
+                  {
+                    "name": "tenantId",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "problems": []
+    },
+    {
+      "routeId": "UserController.create",
+      "operationId": "createUser",
+      "controllerName": "UserController",
+      "methodName": "create",
+      "httpMethod": "POST",
+      "path": "/users",
+      "controllerPath": "/users",
+      "domain": null,
+      "routeContract": {
+        "id": "users.create",
+        "method": "POST",
+        "path": "/users",
+        "operationId": "createUser"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "body",
+          "name": "",
+          "schema": {
+            "kind": "object",
+            "typeName": "ZodObject",
+            "jsonSafe": true,
+            "fields": [
+              {
+                "name": "email",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              },
+              {
+                "name": "name",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "request": {
+        "body": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "email",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "name",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        },
+        "path": null,
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "email",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "name",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          }
+        ]
+      },
+      "problems": []
+    },
+    {
+      "routeId": "UserController.delete",
+      "operationId": "deleteUser",
+      "controllerName": "UserController",
+      "methodName": "delete",
+      "httpMethod": "DELETE",
+      "path": "/users/:id",
+      "controllerPath": "/users",
+      "domain": null,
+      "routeContract": {
+        "id": "users.delete",
+        "method": "DELETE",
+        "path": "/users/:id",
+        "operationId": "deleteUser"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "path",
+          "name": "id",
+          "schema": {
+            "kind": "string",
+            "typeName": "ZodString",
+            "jsonSafe": true
+          }
+        }
+      ],
+      "request": {
+        "body": null,
+        "path": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "id",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        },
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "deleted",
+            "required": true,
+            "schema": {
+              "kind": "boolean",
+              "typeName": "ZodBoolean",
+              "jsonSafe": true
+            }
+          }
+        ]
+      },
+      "problems": [
+        {
+          "code": "starter/user-not-found",
+          "category": "NotFound",
+          "status": 404,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#starter-user-not-found",
+          "description": "The requested user does not exist."
+        }
+      ]
+    },
+    {
+      "routeId": "UserController.getById",
+      "operationId": "getUserById",
+      "controllerName": "UserController",
+      "methodName": "getById",
+      "httpMethod": "GET",
+      "path": "/users/:id",
+      "controllerPath": "/users",
+      "domain": null,
+      "routeContract": {
+        "id": "users.get",
+        "method": "GET",
+        "path": "/users/:id",
+        "operationId": "getUserById"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "path",
+          "name": "id",
+          "schema": {
+            "kind": "string",
+            "typeName": "ZodString",
+            "jsonSafe": true
+          }
+        }
+      ],
+      "request": {
+        "body": null,
+        "path": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "id",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        },
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "email",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "name",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          }
+        ]
+      },
+      "problems": [
+        {
+          "code": "starter/user-not-found",
+          "category": "NotFound",
+          "status": 404,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#starter-user-not-found",
+          "description": "The requested user does not exist."
+        }
+      ]
+    },
+    {
+      "routeId": "UserController.list",
+      "operationId": "listUsers",
+      "controllerName": "UserController",
+      "methodName": "list",
+      "httpMethod": "GET",
+      "path": "/users",
+      "controllerPath": "/users",
+      "domain": null,
+      "routeContract": {
+        "id": "users.list",
+        "method": "GET",
+        "path": "/users",
+        "operationId": "listUsers"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [],
+      "request": {
+        "body": null,
+        "path": null,
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "array",
+        "typeName": "ZodArray",
+        "jsonSafe": true,
+        "element": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "email",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "id",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "name",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        }
+      },
+      "problems": []
+    },
+    {
+      "routeId": "UserController.update",
+      "operationId": "updateUser",
+      "controllerName": "UserController",
+      "methodName": "update",
+      "httpMethod": "PUT",
+      "path": "/users/:id",
+      "controllerPath": "/users",
+      "domain": null,
+      "routeContract": {
+        "id": "users.update",
+        "method": "PUT",
+        "path": "/users/:id",
+        "operationId": "updateUser"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "path",
+          "name": "id",
+          "schema": {
+            "kind": "string",
+            "typeName": "ZodString",
+            "jsonSafe": true
+          }
+        },
+        {
+          "kind": "body",
+          "name": "",
+          "schema": {
+            "kind": "object",
+            "typeName": "ZodObject",
+            "jsonSafe": true,
+            "fields": [
+              {
+                "name": "email",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              },
+              {
+                "name": "name",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "request": {
+        "body": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "email",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "name",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        },
+        "path": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "id",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        },
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "email",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "name",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          }
+        ]
+      },
+      "problems": [
+        {
+          "code": "starter/user-not-found",
+          "category": "NotFound",
+          "status": 404,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#starter-user-not-found",
+          "description": "The requested user does not exist."
+        }
+      ]
+    }
+  ],
+  "monetization": {
+    "verification": {
+      "mode": "credential-free-structural",
+      "remoteProviderConfigurationInspected": false
+    },
+    "nodes": [],
+    "edges": []
+  },
+  "diagnostics": []
+}
