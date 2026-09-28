@@ -376,6 +376,21 @@ describe("R2StorageProvider", () => {
 
       expect(customProvider.getPublicUrl("test/file.txt")).toBe(expected);
     });
+
+    it.each(["https://cdn.example.com/assets///", "https://pub-example.r2.dev"])(
+      "encodes each key segment with the public URL base %s",
+      (publicUrlBase) => {
+        vi.mocked(configService.get).mockImplementation((key: string) =>
+          key === "R2_PUBLIC_URL_BASE" ? publicUrlBase : defaultEnvs[key],
+        );
+        const publicProvider = new R2StorageProvider(configService, logger);
+        const key = "docs/a b?#%.png";
+        const url = publicProvider.getPublicUrl(key);
+
+        expect(url).toBe(`${publicUrlBase.replace(/\/+$/, "")}/docs/a%20b%3F%23%25.png`);
+        expect(decodeURIComponent(new URL(url).pathname.split("/").slice(-2).join("/"))).toBe(key);
+      },
+    );
   });
 
   describe("dot-segment keys", () => {
