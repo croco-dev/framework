@@ -11,7 +11,7 @@ import {
 import { type DomainEvent, type EventHandler, RegisterEventHandler } from "@croco/events-core";
 import type { MetricsRepository, Money, PlanProvider } from "@croco/metrics-core";
 import type { MRRMovement } from "@croco/metrics-core";
-import { MrrCalculator } from "@croco/metrics-core";
+import { MixedCurrencyMRRProblem, MrrCalculator } from "@croco/metrics-core";
 import {
   BillingMetricDroppedProblem,
   BillingMetricRecordingProblem,
@@ -163,6 +163,9 @@ export class BillingEventHandler
         "plan_not_found",
         previousPlan === null ? event.previousPlanId : event.newPlanId,
       );
+    }
+    if (previousPlan.currency !== newPlan.currency) {
+      throw new MixedCurrencyMRRProblem(previousPlan.currency, newPlan.currency);
     }
 
     const previousMrrAmount = this.calculator.normalizeMRR(
