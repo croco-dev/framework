@@ -1088,6 +1088,12 @@
       "owner": "create-croco-app"
     },
     {
+      "path": "packages/create-croco-app/src/tests/FreshScaffoldArtifacts.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
       "path": "packages/create-croco-app/src/tests/FrontendDockerDeploy.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

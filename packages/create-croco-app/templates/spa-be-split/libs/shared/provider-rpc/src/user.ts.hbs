@@ -1,0 +1,327 @@
+import { useMutation, useQuery } from '@tanstack/react-query';
+import type { UseMutationOptions, UseQueryOptions } from '@tanstack/react-query';
+import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, encodeRpcPathSegment, serializeRpcQueryKeyInput } from './rpc';
+import type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcDomainProblem, RpcFormFieldProblem, RpcFormGlobalProblem, RpcFormModel, RpcProblemDetailsFor, RpcValidationProblem } from './rpc';
+export type GetByIdInput = { path: { id: string; }; };
+export type CreateInput = { email: string; name: string; };
+export type UpdateInput = { body: { email: string; name: string; }; path: { id: string; }; };
+export type DeleteInput = { path: { id: string; }; };
+export type ListOutput = { email: string; id: string; name: string; }[];
+export type GetByIdOutput = { email: string; id: string; name: string; };
+export type CreateOutput = { email: string; id: string; name: string; };
+export type UpdateOutput = { email: string; id: string; name: string; };
+export type DeleteOutput = { deleted: boolean; };
+export type ListProblem = never;
+export type ListProblemDetails = RpcProblemDetailsFor<ListProblem>;
+export type ListResult = RpcClientResult<ListOutput, ListProblem>;
+export type GetByIdProblem = RpcDeclaredProblem<'starter/user-not-found', 'NotFound', 404>;
+export type GetByIdProblemDetails = RpcProblemDetailsFor<GetByIdProblem>;
+export type GetByIdResult = RpcClientResult<GetByIdOutput, GetByIdProblem>;
+export type CreateProblem = never;
+export type CreateProblemDetails = RpcProblemDetailsFor<CreateProblem>;
+export type CreateResult = RpcClientResult<CreateOutput, CreateProblem>;
+export type UpdateProblem = RpcDeclaredProblem<'starter/user-not-found', 'NotFound', 404>;
+export type UpdateProblemDetails = RpcProblemDetailsFor<UpdateProblem>;
+export type UpdateResult = RpcClientResult<UpdateOutput, UpdateProblem>;
+export type DeleteProblem = RpcDeclaredProblem<'starter/user-not-found', 'NotFound', 404>;
+export type DeleteProblemDetails = RpcProblemDetailsFor<DeleteProblem>;
+export type DeleteResult = RpcClientResult<DeleteOutput, DeleteProblem>;
+export const listProblemDeclarations = [
+
+] as const satisfies readonly RpcDeclaredProblem[];
+export const getByIdProblemDeclarations = [
+  { code: 'starter/user-not-found', category: 'NotFound', status: 404, description: 'The requested user does not exist.', cookbookPath: '/reference/problem-recovery-cookbook/#starter-user-not-found' }
+] as const satisfies readonly RpcDeclaredProblem[];
+export const createProblemDeclarations = [
+
+] as const satisfies readonly RpcDeclaredProblem[];
+export const updateProblemDeclarations = [
+  { code: 'starter/user-not-found', category: 'NotFound', status: 404, description: 'The requested user does not exist.', cookbookPath: '/reference/problem-recovery-cookbook/#starter-user-not-found' }
+] as const satisfies readonly RpcDeclaredProblem[];
+export const deleteProblemDeclarations = [
+  { code: 'starter/user-not-found', category: 'NotFound', status: 404, description: 'The requested user does not exist.', cookbookPath: '/reference/problem-recovery-cookbook/#starter-user-not-found' }
+] as const satisfies readonly RpcDeclaredProblem[];
+export type CreateFormFieldName = 'name' | 'email';
+export type CreateFormValues = { name: string; email: string; };
+export type CreateSubmitPayload = CreateInput;
+export type CreateValidationProblem = RpcValidationProblem<CreateProblem>;
+export type CreateDomainProblem = RpcDomainProblem<CreateProblem>;
+export type CreateFormProblem = RpcFormFieldProblem<CreateFormFieldName, CreateValidationProblem> | RpcFormGlobalProblem<CreateDomainProblem>;
+
+export const createFormModel = {
+  routeId: 'UserController.create',
+  operationId: 'createUser',
+  methodName: 'create',
+  method: 'POST',
+  path: '/users',
+  fieldNames: ['name', 'email'],
+  fields: [
+    { name: 'name', label: 'Name', control: 'text', valueKind: 'string', required: true, initialValue: '' },
+    { name: 'email', label: 'Email', control: 'text', valueKind: 'string', required: true, initialValue: '' }
+  ],
+  initialValues: { name: '', email: '' },
+} as const satisfies RpcFormModel<CreateFormValues, CreateFormFieldName>;
+
+export function buildCreateFormPayload(values: CreateFormValues): CreateSubmitPayload {
+  return { name: values.name, email: values.email };
+}
+
+export function mapCreateFormProblem(failure: Extract<CreateResult, { ok: false; kind: 'problem' }>): CreateFormProblem {
+  return toRpcFormProblem<CreateFormFieldName, CreateProblem>(failure, createFormModel.fieldNames);
+}
+export type UpdateFormFieldName = 'name' | 'email';
+export type UpdateFormValues = { name: string; email: string; };
+export type UpdateSubmitPayload = UpdateInput;
+export type UpdateValidationProblem = RpcValidationProblem<UpdateProblem>;
+export type UpdateDomainProblem = RpcDomainProblem<UpdateProblem>;
+export type UpdateFormProblem = RpcFormFieldProblem<UpdateFormFieldName, UpdateValidationProblem> | RpcFormGlobalProblem<UpdateDomainProblem>;
+
+export const updateFormModel = {
+  routeId: 'UserController.update',
+  operationId: 'updateUser',
+  methodName: 'update',
+  method: 'PUT',
+  path: '/users/:id',
+  fieldNames: ['name', 'email'],
+  fields: [
+    { name: 'name', label: 'Name', control: 'text', valueKind: 'string', required: true, initialValue: '' },
+    { name: 'email', label: 'Email', control: 'text', valueKind: 'string', required: true, initialValue: '' }
+  ],
+  initialValues: { name: '', email: '' },
+} as const satisfies RpcFormModel<UpdateFormValues, UpdateFormFieldName>;
+
+export function buildUpdateFormPayload(context: Omit<UpdateInput, 'body'>, values: UpdateFormValues): UpdateSubmitPayload {
+  return { ...context, body: { name: values.name, email: values.email } };
+}
+
+export function mapUpdateFormProblem(failure: Extract<UpdateResult, { ok: false; kind: 'problem' }>): UpdateFormProblem {
+  return toRpcFormProblem<UpdateFormFieldName, UpdateProblem>(failure, updateFormModel.fieldNames);
+}
+export const userContractRoutes = [
+  { routeId: 'UserController.list', operationId: 'listUsers', methodName: 'list', method: 'GET', path: '/users' },
+  { routeId: 'UserController.getById', operationId: 'getUserById', methodName: 'getById', method: 'GET', path: '/users/:id' },
+  { routeId: 'UserController.create', operationId: 'createUser', methodName: 'create', method: 'POST', path: '/users' },
+  { routeId: 'UserController.update', operationId: 'updateUser', methodName: 'update', method: 'PUT', path: '/users/:id' },
+  { routeId: 'UserController.delete', operationId: 'deleteUser', methodName: 'delete', method: 'DELETE', path: '/users/:id' }
+] as const;
+export const userKeys = {
+  all: () => ['user'] as const,
+  list: () => [...userKeys.all(), 'list'] as const,
+  getById: (input: GetByIdInput) => [...userKeys.all(), 'getById', serializeRpcQueryKeyInput(input)] as const,
+  create: (input: CreateInput) => [...userKeys.all(), 'create', serializeRpcQueryKeyInput(input)] as const,
+  update: (input: UpdateInput) => [...userKeys.all(), 'update', serializeRpcQueryKeyInput(input)] as const,
+  delete: (input: DeleteInput) => [...userKeys.all(), 'delete', serializeRpcQueryKeyInput(input)] as const,
+};
+export const userInvalidationManifest = {
+  create: { route: userContractRoutes[2], invalidates: [userKeys.all()] },
+  update: { route: userContractRoutes[3], invalidates: [userKeys.all()] },
+  delete: { route: userContractRoutes[4], invalidates: [userKeys.all()] },
+} as const;
+
+export function createUserClient(config: RpcClientConfig = {}) {
+  return {
+    list: (options?: RpcClientRequestOptions): Promise<ListOutput> => {
+      const request = createRpcClientRequest(userContractRoutes[0], 'query', '/users', { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<ListOutput>(response, request.telemetry));
+    },
+    listResult: (options?: RpcClientRequestOptions): Promise<ListResult> => {
+      const request = createRpcClientRequest(userContractRoutes[0], 'query', '/users', { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<ListOutput, ListProblem>(response, listProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+    getById: (input: GetByIdInput, options?: RpcClientRequestOptions): Promise<GetByIdOutput> => {
+      const path = (): string => `/users/${encodeRpcPathSegment(userContractRoutes[1], 'id', input.path.id)}`;
+      const request = createRpcClientRequest(userContractRoutes[1], 'query', path, { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<GetByIdOutput>(response, request.telemetry));
+    },
+    getByIdResult: (input: GetByIdInput, options?: RpcClientRequestOptions): Promise<GetByIdResult> => {
+      const path = (): string => `/users/${encodeRpcPathSegment(userContractRoutes[1], 'id', input.path.id)}`;
+      const request = createRpcClientRequest(userContractRoutes[1], 'query', path, { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<GetByIdOutput, GetByIdProblem>(response, getByIdProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+    create: (input: CreateInput, options?: RpcClientRequestOptions): Promise<CreateOutput> => {
+      const request = createRpcClientRequest(userContractRoutes[2], 'mutation', '/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<CreateOutput>(response, request.telemetry));
+    },
+    createResult: (input: CreateInput, options?: RpcClientRequestOptions): Promise<CreateResult> => {
+      const request = createRpcClientRequest(userContractRoutes[2], 'mutation', '/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<CreateOutput, CreateProblem>(response, createProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+    update: (input: UpdateInput, options?: RpcClientRequestOptions): Promise<UpdateOutput> => {
+      const path = (): string => `/users/${encodeRpcPathSegment(userContractRoutes[3], 'id', input.path.id)}`;
+      const request = createRpcClientRequest(userContractRoutes[3], 'mutation', path, { method: 'PUT', body: JSON.stringify(input.body), headers: { 'Content-Type': 'application/json' } }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<UpdateOutput>(response, request.telemetry));
+    },
+    updateResult: (input: UpdateInput, options?: RpcClientRequestOptions): Promise<UpdateResult> => {
+      const path = (): string => `/users/${encodeRpcPathSegment(userContractRoutes[3], 'id', input.path.id)}`;
+      const request = createRpcClientRequest(userContractRoutes[3], 'mutation', path, { method: 'PUT', body: JSON.stringify(input.body), headers: { 'Content-Type': 'application/json' } }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<UpdateOutput, UpdateProblem>(response, updateProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+    delete: (input: DeleteInput, options?: RpcClientRequestOptions): Promise<DeleteOutput> => {
+      const path = (): string => `/users/${encodeRpcPathSegment(userContractRoutes[4], 'id', input.path.id)}`;
+      const request = createRpcClientRequest(userContractRoutes[4], 'mutation', path, { method: 'DELETE' }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<DeleteOutput>(response, request.telemetry));
+    },
+    deleteResult: (input: DeleteInput, options?: RpcClientRequestOptions): Promise<DeleteResult> => {
+      const path = (): string => `/users/${encodeRpcPathSegment(userContractRoutes[4], 'id', input.path.id)}`;
+      const request = createRpcClientRequest(userContractRoutes[4], 'mutation', path, { method: 'DELETE' }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<DeleteOutput, DeleteProblem>(response, deleteProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+  };
+}
+
+export type UserClient = ReturnType<typeof createUserClient>;
+
+export const userClient = createUserClient();
+
+export type ListQueryKey = ReturnType<typeof userKeys.list>;
+export type ListResultQueryKey = readonly [...ReturnType<typeof userKeys.list>, 'result'];
+export type ListQueryFactory = {
+  readonly queryKey: ListQueryKey;
+  readonly queryFn: () => Promise<ListOutput>;
+};
+export type ListResultQueryFactory = {
+  readonly queryKey: ListResultQueryKey;
+  readonly queryFn: () => Promise<ListResult>;
+};
+export type ListQueryOptions<TData = ListOutput> = Omit<UseQueryOptions<ListOutput, Error, TData, ListQueryKey>, 'queryKey' | 'queryFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type ListResultQueryOptions<TData = ListResult> = Omit<UseQueryOptions<ListResult, Error, TData, ListResultQueryKey>, 'queryKey' | 'queryFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type GetByIdQueryKey = ReturnType<typeof userKeys.getById>;
+export type GetByIdResultQueryKey = readonly [...ReturnType<typeof userKeys.getById>, 'result'];
+export type GetByIdQueryFactory = {
+  readonly queryKey: GetByIdQueryKey;
+  readonly queryFn: () => Promise<GetByIdOutput>;
+};
+export type GetByIdResultQueryFactory = {
+  readonly queryKey: GetByIdResultQueryKey;
+  readonly queryFn: () => Promise<GetByIdResult>;
+};
+export type GetByIdQueryOptions<TData = GetByIdOutput> = Omit<UseQueryOptions<GetByIdOutput, Error, TData, GetByIdQueryKey>, 'queryKey' | 'queryFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type GetByIdResultQueryOptions<TData = GetByIdResult> = Omit<UseQueryOptions<GetByIdResult, Error, TData, GetByIdResultQueryKey>, 'queryKey' | 'queryFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type CreateMutationVariables = CreateInput;
+export type CreateMutationFactory = {
+  readonly mutationFn: (input: CreateInput) => Promise<CreateOutput>;
+};
+export type CreateResultMutationFactory = {
+  readonly mutationFn: (input: CreateInput) => Promise<CreateResult>;
+};
+export type CreateMutationOptions<TContext = unknown> = Omit<UseMutationOptions<CreateOutput, Error, CreateMutationVariables, TContext>, 'mutationFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type CreateResultMutationOptions<TContext = unknown> = Omit<UseMutationOptions<CreateResult, Error, CreateMutationVariables, TContext>, 'mutationFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type UpdateMutationVariables = UpdateInput;
+export type UpdateMutationFactory = {
+  readonly mutationFn: (input: UpdateInput) => Promise<UpdateOutput>;
+};
+export type UpdateResultMutationFactory = {
+  readonly mutationFn: (input: UpdateInput) => Promise<UpdateResult>;
+};
+export type UpdateMutationOptions<TContext = unknown> = Omit<UseMutationOptions<UpdateOutput, Error, UpdateMutationVariables, TContext>, 'mutationFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type UpdateResultMutationOptions<TContext = unknown> = Omit<UseMutationOptions<UpdateResult, Error, UpdateMutationVariables, TContext>, 'mutationFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type DeleteMutationVariables = DeleteInput;
+export type DeleteMutationFactory = {
+  readonly mutationFn: (input: DeleteInput) => Promise<DeleteOutput>;
+};
+export type DeleteResultMutationFactory = {
+  readonly mutationFn: (input: DeleteInput) => Promise<DeleteResult>;
+};
+export type DeleteMutationOptions<TContext = unknown> = Omit<UseMutationOptions<DeleteOutput, Error, DeleteMutationVariables, TContext>, 'mutationFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type DeleteResultMutationOptions<TContext = unknown> = Omit<UseMutationOptions<DeleteResult, Error, DeleteMutationVariables, TContext>, 'mutationFn'> & { readonly rpc?: RpcClientRequestOptions };
+export function createUserQueries(client: UserClient = userClient) {
+  return {
+  list: (rpc?: RpcClientRequestOptions): ListQueryFactory => ({
+    queryKey: userKeys.list(),
+    queryFn: () => client.list(rpc),
+  }),
+  listResult: (rpc?: RpcClientRequestOptions): ListResultQueryFactory => ({
+    queryKey: [...userKeys.list(), 'result'] as const,
+    queryFn: () => client.listResult(rpc),
+  }),
+  getById: (input: GetByIdInput, rpc?: RpcClientRequestOptions): GetByIdQueryFactory => ({
+    queryKey: userKeys.getById(input),
+    queryFn: () => client.getById(input, rpc),
+  }),
+  getByIdResult: (input: GetByIdInput, rpc?: RpcClientRequestOptions): GetByIdResultQueryFactory => ({
+    queryKey: [...userKeys.getById(input), 'result'] as const,
+    queryFn: () => client.getByIdResult(input, rpc),
+  }),
+  };
+}
+
+export const userQueries = createUserQueries();
+export function createUserMutations(client: UserClient = userClient) {
+  return {
+  create: (rpc?: RpcClientRequestOptions): CreateMutationFactory => ({
+    mutationFn: (input: CreateInput) => client.create(input, rpc),
+  }),
+  createResult: (rpc?: RpcClientRequestOptions): CreateResultMutationFactory => ({
+    mutationFn: (input: CreateInput) => client.createResult(input, rpc),
+  }),
+  update: (rpc?: RpcClientRequestOptions): UpdateMutationFactory => ({
+    mutationFn: (input: UpdateInput) => client.update(input, rpc),
+  }),
+  updateResult: (rpc?: RpcClientRequestOptions): UpdateResultMutationFactory => ({
+    mutationFn: (input: UpdateInput) => client.updateResult(input, rpc),
+  }),
+  delete: (rpc?: RpcClientRequestOptions): DeleteMutationFactory => ({
+    mutationFn: (input: DeleteInput) => client.delete(input, rpc),
+  }),
+  deleteResult: (rpc?: RpcClientRequestOptions): DeleteResultMutationFactory => ({
+    mutationFn: (input: DeleteInput) => client.deleteResult(input, rpc),
+  }),
+  };
+}
+
+export const userMutations = createUserMutations();
+export function useList<TData = ListOutput>(options?: ListQueryOptions<TData>) {
+  const { rpc, ...queryOptions } = options ?? {};
+
+  return useQuery<ListOutput, Error, TData, ListQueryKey>({ ...userQueries.list(rpc), ...queryOptions });
+}
+
+export function useListResult<TData = ListResult>(options?: ListResultQueryOptions<TData>) {
+  const { rpc, ...queryOptions } = options ?? {};
+
+  return useQuery<ListResult, Error, TData, ListResultQueryKey>({ ...userQueries.listResult(rpc), ...queryOptions });
+}
+export function useGetById<TData = GetByIdOutput>(input: GetByIdInput, options?: GetByIdQueryOptions<TData>) {
+  const { rpc, ...queryOptions } = options ?? {};
+
+  return useQuery<GetByIdOutput, Error, TData, GetByIdQueryKey>({ ...userQueries.getById(input, rpc), ...queryOptions });
+}
+
+export function useGetByIdResult<TData = GetByIdResult>(input: GetByIdInput, options?: GetByIdResultQueryOptions<TData>) {
+  const { rpc, ...queryOptions } = options ?? {};
+
+  return useQuery<GetByIdResult, Error, TData, GetByIdResultQueryKey>({ ...userQueries.getByIdResult(input, rpc), ...queryOptions });
+}
+export function useCreate<TContext = unknown>(options?: CreateMutationOptions<TContext>) {
+  const { rpc, ...mutationOptions } = options ?? {};
+
+  return useMutation<CreateOutput, Error, CreateMutationVariables, TContext>({ ...userMutations.create(rpc), ...mutationOptions });
+}
+
+export function useCreateResult<TContext = unknown>(options?: CreateResultMutationOptions<TContext>) {
+  const { rpc, ...mutationOptions } = options ?? {};
+
+  return useMutation<CreateResult, Error, CreateMutationVariables, TContext>({ ...userMutations.createResult(rpc), ...mutationOptions });
+}
+export function useUpdate<TContext = unknown>(options?: UpdateMutationOptions<TContext>) {
+  const { rpc, ...mutationOptions } = options ?? {};
+
+  return useMutation<UpdateOutput, Error, UpdateMutationVariables, TContext>({ ...userMutations.update(rpc), ...mutationOptions });
+}
+
+export function useUpdateResult<TContext = unknown>(options?: UpdateResultMutationOptions<TContext>) {
+  const { rpc, ...mutationOptions } = options ?? {};
+
+  return useMutation<UpdateResult, Error, UpdateMutationVariables, TContext>({ ...userMutations.updateResult(rpc), ...mutationOptions });
+}
+export function useDelete<TContext = unknown>(options?: DeleteMutationOptions<TContext>) {
+  const { rpc, ...mutationOptions } = options ?? {};
+
+  return useMutation<DeleteOutput, Error, DeleteMutationVariables, TContext>({ ...userMutations.delete(rpc), ...mutationOptions });
+}
+
+export function useDeleteResult<TContext = unknown>(options?: DeleteResultMutationOptions<TContext>) {
+  const { rpc, ...mutationOptions } = options ?? {};
+
+  return useMutation<DeleteResult, Error, DeleteMutationVariables, TContext>({ ...userMutations.deleteResult(rpc), ...mutationOptions });
+}

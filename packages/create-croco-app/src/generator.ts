@@ -1,6 +1,7 @@
 import { execSync, spawn } from "node:child_process";
 import type { SpawnOptions } from "node:child_process";
 import {
+  DEFAULT_TENANT_MODEL,
   createTenantModelManifest,
   createTenantModelManifestSchema,
   renderTenantModelPlaybook,
@@ -41,6 +42,7 @@ import { assertSupportedNodeVersion, writeGeneratedNodeRuntimeContract } from ".
 import { isSaasPreset, validateResolvedOptions } from "./options.js";
 import { getGeneratedAppDependencyRange } from "./package-version.js";
 import {
+  DEFAULT_SAAS_PROVIDER_PROFILE,
   assertSaasProviderTenantModelCompatibility,
   assertSaasProviderProfileCapabilities,
   createSaasProviderProfileManifest,
@@ -122,6 +124,16 @@ async function generateProject(
       ...vars,
       saasCloudflare: options.saasProviderProfile === "saas-cloudflare",
     });
+    if (
+      options.preset === "saas" &&
+      options.saasProviderProfile === DEFAULT_SAAS_PROVIDER_PROFILE &&
+      (options.tenantModel === DEFAULT_TENANT_MODEL || options.tenantModel === "single")
+    ) {
+      mergeInto(join(TEMPLATES_DIR, "saas-node-postgres-contracts"), targetDir, vars);
+      if (options.tenantModel === "single") {
+        mergeInto(join(TEMPLATES_DIR, "saas-single-tenant-contracts"), targetDir, vars);
+      }
+    }
     if (options.preset === "ai-saas") {
       mergeInto(join(TEMPLATES_DIR, "ai-saas"), targetDir, vars);
     }
