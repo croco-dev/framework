@@ -35,6 +35,17 @@ The CLI currently supports Postgres connections.
 ## Migration Files
 
 Migration files must be `.ts` or `.js` files named with a 14-digit timestamp and a descriptive suffix.
+The published CLI runs `.ts` files with Node's built-in type stripping (Node 24 or newer). TypeScript
+migrations must use erasable syntax, such as type annotations and `import type`. Enums, parameter
+properties, runtime namespaces, decorators, and `tsconfig.json` path aliases are unsupported. Rewrite
+those constructs as JavaScript or compile the migration to `.js` before deployment. Node does not typecheck
+these files.
+
+Use the same module format as the nearest `package.json`. The ESM example below needs
+`{"type":"module"}` in the migration directory or an ancestor. A CommonJS project can use
+statically detectable named exports such as `exports.up` and `exports.down`. An assignment such as
+`module.exports = makeMigration()` does not expose those names to the scanner and fails validation.
+Use explicit file extensions for relative imports.
 
 ```text
 migrations/
@@ -55,6 +66,18 @@ export async function down(db: DatabaseClient): Promise<void> {
   await db.execute("DROP TABLE accounts");
 }
 ```
+
+Before deployment, validate the migration files with the published CLI:
+
+```bash
+pnpm exec migrate validate --dir ./migrations
+```
+
+`validate` needs no database connection. It imports every timestamped migration file, checks for duplicate
+ids and `up`/`down` functions, and exits nonzero when a file cannot load. Unsupported TypeScript syntax
+includes the Node loader error and a recovery instruction in the CLI diagnostic.
+Module-level code runs during import; migration `up` and `down` bodies do not run. Run this command in the
+same Node environment and with the same runtime dependencies used for deployment.
 
 Missing `up` or `down` functions fail as Croco Problems:
 
@@ -157,17 +180,18 @@ Migration failed: migration-runner/invalid-count (400 Bad Request): Migration ro
 
 Common operator failures:
 
-| Code                                        | When it happens                                                           | Recovery                                                                                  |
-| ------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `migration-runner/database-url-required`    | No `--connection` and no `DATABASE_URL`.                                  | Provide a Postgres URL for the target environment.                                        |
-| `migration-runner/unsupported-dialect`      | `--dialect` is not `postgres`.                                            | Use Postgres or provide a direct API `DatabaseClient`.                                    |
-| `migration-runner/invalid-count`            | `down --count` is zero, negative, fractional, non-numeric, or unsafe.     | Choose a positive integer or use `--target`.                                              |
-| `migration-runner/invalid-target`           | A `down --target` id is malformed or absent from applied history.         | Supply the full 14-digit id of an applied migration; check `migrate status` if uncertain. |
-| `migration-runner/history-drift`            | Applied history references a missing, renamed, or duplicate migration.    | Restore the original migration identity or perform an explicitly verified history repair. |
-| `migration-runner/transaction-required`     | Direct API client has no `transaction` function for execution or preview. | Wrap the adapter with transaction support.                                                |
-| `migration-runner/unsupported-query-result` | Adapter returns an unsupported wrapper or malformed migration row.        | Normalize the wrapper and persisted row fields.                                           |
-| `migration-runner/missing-up-function`      | A migration file lacks `up`.                                              | Add the forward migration body.                                                           |
-| `migration-runner/missing-down-function`    | A migration file lacks `down`.                                            | Add a rollback body or do not select it for rollback.                                     |
+| Code                                        | When it happens                                                           | Recovery                                                                                              |
+| ------------------------------------------- | ------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `migration-runner/database-url-required`    | No `--connection` and no `DATABASE_URL`.                                  | Provide a Postgres URL for the target environment.                                                    |
+| `migration-runner/unsupported-dialect`      | `--dialect` is not `postgres`.                                            | Use Postgres or provide a direct API `DatabaseClient`.                                                |
+| `migration-runner/invalid-count`            | `down --count` is zero, negative, fractional, non-numeric, or unsafe.     | Choose a positive integer or use `--target`.                                                          |
+| `migration-runner/invalid-target`           | A `down --target` id is malformed or absent from applied history.         | Supply the full 14-digit id of an applied migration; check `migrate status` if uncertain.             |
+| `migration-runner/history-drift`            | Applied history references a missing, renamed, or duplicate migration.    | Restore the original migration identity or perform an explicitly verified history repair.             |
+| `migration-runner/transaction-required`     | Direct API client has no `transaction` function for execution or preview. | Wrap the adapter with transaction support.                                                            |
+| `migration-runner/unsupported-query-result` | Adapter returns an unsupported wrapper or malformed migration row.        | Normalize the wrapper and persisted row fields.                                                       |
+| `migration-runner/missing-up-function`      | A migration file lacks `up`.                                              | Add the forward migration body.                                                                       |
+| `migration-runner/missing-down-function`    | A migration file lacks `down`.                                            | Add a rollback body or do not select it for rollback.                                                 |
+| `migration-runner/file-load-failed`         | A migration or its import cannot load.                                    | Check the loader error; use erasable `.ts` syntax or compile to `.js`, then rerun `migrate validate`. |
 
 Database connection and query failures are not hidden as success. They make the command exit nonzero after the pool
 cleanup attempt. If cleanup itself fails, the CLI adds a `Cleanup failed: ...` diagnostic and exits nonzero without
