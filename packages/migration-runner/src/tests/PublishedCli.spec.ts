@@ -21,7 +21,7 @@ const spawnTimeoutMs = 180_000;
 
 describe("published migrate CLI", () => {
   it(
-    "installs the Postgres driver needed by the published binary",
+    "installs the Postgres driver and validates TypeScript migrations with the published binary",
     () => {
       const packRoot = mkdtempSync(join(tmpdir(), "croco-migration-runner-pack-"));
       const consumerRoot = mkdtempSync(join(tmpdir(), "croco-migration-runner-consumer-"));
@@ -81,6 +81,91 @@ describe("published migrate CLI", () => {
         writePackedCliMigrationSmoke(consumerRoot);
         const migrationSmoke = run("node", ["packed-cli-migration-smoke.cjs"], consumerRoot);
         expect(migrationSmoke.stdout).toContain("migration body executed");
+
+        const typescriptMigrationsDir = join(consumerRoot, "typescript-migrations");
+        mkdirSync(typescriptMigrationsDir);
+        writeFileSync(join(typescriptMigrationsDir, "package.json"), '{"type":"module"}\n');
+        writeFileSync(
+          join(typescriptMigrationsDir, "20260728000001_initialize.ts"),
+          [
+            "import type { DatabaseClient } from '@croco/migration-runner';",
+            "export async function up(db: DatabaseClient): Promise<void> {",
+            "  await db.execute({ kind: 'migration-body' });",
+            "}",
+            "export async function down(): Promise<void> {}",
+            "",
+          ].join("\n"),
+        );
+        const validation = run(
+          "pnpm",
+          ["exec", "migrate", "validate", "--dir", typescriptMigrationsDir],
+          consumerRoot,
+        );
+        expect(validation.stdout).toContain("Validated 1 migration(s)");
+        expect(validation.stdout).toContain("20260728000001_initialize");
+        const typescriptSmoke = run(
+          "node",
+          ["packed-cli-migration-smoke.cjs", typescriptMigrationsDir, "20260728000001"],
+          consumerRoot,
+        );
+        expect(typescriptSmoke.stdout).toContain("migration body executed");
+
+        writeFileSync(
+          join(typescriptMigrationsDir, "20260728000002_nonerasable.ts"),
+          [
+            "enum MigrationState { Pending, Complete }",
+            "export async function up(): Promise<void> {",
+            "  console.log(MigrationState.Complete);",
+            "}",
+            "export async function down(): Promise<void> {}",
+            "",
+          ].join("\n"),
+        );
+        const unsupportedValidation = spawnSync(
+          "pnpm",
+          ["exec", "migrate", "validate", "--dir", typescriptMigrationsDir],
+          {
+            cwd: consumerRoot,
+            encoding: "utf-8",
+            stdio: "pipe",
+            timeout: spawnTimeoutMs,
+            env: { ...process.env, DATABASE_URL: "" },
+          },
+        );
+        expect(unsupportedValidation.error).toBeUndefined();
+        expect(unsupportedValidation.status).toBe(1);
+        expect(unsupportedValidation.stderr).toContain("20260728000002_nonerasable.ts");
+        expect(unsupportedValidation.stderr).toMatch(/erasable TypeScript/i);
+        expect(unsupportedValidation.stderr).toMatch(/compile.*\.js/i);
+        expect(unsupportedValidation.stderr).not.toContain("DATABASE_URL_REQUIRED");
+
+        writeFileSync(
+          join(typescriptMigrationsDir, "20260728000002_nonerasable.ts"),
+          [
+            "function sealed(_target: Function): void {}",
+            "@sealed",
+            "class DecoratedMigration {}",
+            "export async function up(): Promise<void> {}",
+            "export async function down(): Promise<void> {}",
+            "",
+          ].join("\n"),
+        );
+        const unsupportedDecorator = spawnSync(
+          "pnpm",
+          ["exec", "migrate", "validate", "--dir", typescriptMigrationsDir],
+          {
+            cwd: consumerRoot,
+            encoding: "utf-8",
+            stdio: "pipe",
+            timeout: spawnTimeoutMs,
+            env: { ...process.env, DATABASE_URL: "" },
+          },
+        );
+        expect(unsupportedDecorator.error).toBeUndefined();
+        expect(unsupportedDecorator.status).toBe(1);
+        expect(unsupportedDecorator.stderr).toContain("20260728000002_nonerasable.ts");
+        expect(unsupportedDecorator.stderr).toMatch(/decorator/i);
+        expect(unsupportedDecorator.stderr).toMatch(/erasable TypeScript/i);
       } finally {
         rmSync(packRoot, { force: true, recursive: true });
         rmSync(consumerRoot, { force: true, recursive: true });
@@ -121,6 +206,7 @@ function writePackedCliMigrationSmoke(consumerRoot: string): void {
       "",
       "let executeCall = 0;",
       "let migrationBodyExecuted = false;",
+      "const migrationId = process.argv[3] ?? '20260728000000';",
       "const db = {",
       "  async execute(query) {",
       "    executeCall += 1;",
@@ -128,7 +214,7 @@ function writePackedCliMigrationSmoke(consumerRoot: string): void {
       "      migrationBodyExecuted = true;",
       "      return [];",
       "    }",
-      "    if (executeCall === 3) return { rows: [{ id: '20260728000000' }] };",
+      "    if (executeCall === 3) return { rows: [{ id: migrationId }] };",
       "    return [];",
       "  },",
       "  async transaction(work) {",
@@ -145,7 +231,9 @@ function writePackedCliMigrationSmoke(consumerRoot: string): void {
       "    writeError(message) { throw new Error(message); },",
       "    exit(code) { exitCode = code; },",
       "};",
-      "createProgram(runtime).parseAsync(['node', 'migrate', 'up']).then(() => {",
+      "const command = ['node', 'migrate', 'up'];",
+      "if (process.argv[2]) command.push('--dir', process.argv[2]);",
+      "createProgram(runtime).parseAsync(command).then(() => {",
       "  if (exitCode !== 0 || !migrationBodyExecuted) {",
       "    throw new Error(`packed migration smoke failed: exit=${exitCode}, executed=${migrationBodyExecuted}`);",
       "  }",
@@ -215,6 +303,7 @@ function run(
     encoding: "utf-8",
     stdio: "pipe",
     timeout: spawnTimeoutMs,
+    env: { ...process.env, DATABASE_URL: "" },
   });
 
   if (result.error || result.status !== 0) {
