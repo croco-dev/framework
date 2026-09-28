@@ -42,8 +42,10 @@ those constructs as JavaScript or compile the migration to `.js` before deployme
 these files.
 
 Use the same module format as the nearest `package.json`. The ESM example below needs
-`{"type":"module"}` in the migration directory or an ancestor. A CommonJS project can instead use
-CommonJS exports. Use explicit file extensions for relative imports.
+`{"type":"module"}` in the migration directory or an ancestor. A CommonJS project can use
+statically detectable named exports such as `exports.up` and `exports.down`. An assignment such as
+`module.exports = makeMigration()` does not expose those names to the scanner and fails validation.
+Use explicit file extensions for relative imports.
 
 ```text
 migrations/
