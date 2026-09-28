@@ -12101,6 +12101,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "EventSourceEnvelopeProblem",
+              "exportKind": "named",
+              "source": "./source/EventSourceEnvelope",
+              "declarationKind": "class"
+            },
+            {
+              "name": "parseEventSourceEnvelope",
+              "exportKind": "named",
+              "source": "./source/EventSourceEnvelope",
+              "declarationKind": "function"
+            },
+            {
               "name": "SourceDecodeProblem",
               "exportKind": "named",
               "source": "./source/SourceDecodeProblem",
@@ -12108,6 +12120,11 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "EventSourceEnvelope",
+              "exportKind": "named",
+              "source": "./source/EventSourceEnvelope"
+            },
             {
               "name": "SourceField",
               "exportKind": "named",
@@ -12166,6 +12183,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "EventSourceEnvelopeProblem",
+              "exportKind": "named",
+              "source": "./source/EventSourceEnvelope",
+              "declarationKind": "class"
+            },
+            {
+              "name": "parseEventSourceEnvelope",
+              "exportKind": "named",
+              "source": "./source/EventSourceEnvelope",
+              "declarationKind": "function"
+            },
+            {
               "name": "SourceDecodeProblem",
               "exportKind": "named",
               "source": "./source/SourceDecodeProblem",
@@ -12173,6 +12202,11 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "EventSourceEnvelope",
+              "exportKind": "named",
+              "source": "./source/EventSourceEnvelope"
+            },
             {
               "name": "SourceField",
               "exportKind": "named",
@@ -12202,6 +12236,138 @@
               "name": "SourceValue",
               "exportKind": "named",
               "source": "./source/types"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/etl-events-tx",
+      "relativeDir": "packages/etl-events-tx",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/etl-events-tx/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "AnalyticsOutboxConsumer",
+              "exportKind": "named",
+              "source": "./libs/AnalyticsOutboxConsumer",
+              "declarationKind": "class"
+            },
+            {
+              "name": "EtlEventProblem",
+              "exportKind": "named",
+              "source": "./libs/EtlEventProblem",
+              "declarationKind": "class"
+            },
+            {
+              "name": "validateSourceEnvelope",
+              "exportKind": "named",
+              "source": "./libs/AnalyticsOutboxConsumer",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "AnalyticsConsumerConfig",
+              "exportKind": "named",
+              "source": "./libs/AnalyticsOutboxConsumer"
+            },
+            {
+              "name": "AnalyticsOutcome",
+              "exportKind": "named",
+              "source": "./libs/AnalyticsOutboxConsumer"
+            },
+            {
+              "name": "QuarantineRecord",
+              "exportKind": "named",
+              "source": "./libs/AnalyticsOutboxConsumer"
+            },
+            {
+              "name": "QuarantineStore",
+              "exportKind": "named",
+              "source": "./libs/AnalyticsOutboxConsumer"
+            },
+            {
+              "name": "ReplayOutcome",
+              "exportKind": "named",
+              "source": "./libs/AnalyticsOutboxConsumer"
+            },
+            {
+              "name": "SourceEnvelope",
+              "exportKind": "named",
+              "source": "./libs/AnalyticsOutboxConsumer"
+            },
+            {
+              "name": "SourceRetention",
+              "exportKind": "named",
+              "source": "./libs/AnalyticsOutboxConsumer"
+            }
+          ]
+        },
+        {
+          "exportPath": "./postgres",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/postgres.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/postgres.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/postgres.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/etl-events-tx/src/postgres.ts",
+          "runtimeExports": [
+            {
+              "name": "installPostgresQuarantineSchema",
+              "exportKind": "named",
+              "source": "./libs/PostgresQuarantineStore",
+              "declarationKind": "function"
+            },
+            {
+              "name": "PostgresQuarantineStore",
+              "exportKind": "named",
+              "source": "./libs/PostgresQuarantineStore",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "QuarantinePostgresClient",
+              "exportKind": "named",
+              "source": "./libs/PostgresQuarantineStore"
+            },
+            {
+              "name": "QuarantinePostgresConnection",
+              "exportKind": "named",
+              "source": "./libs/PostgresQuarantineStore"
+            },
+            {
+              "name": "QuarantinePostgresPool",
+              "exportKind": "named",
+              "source": "./libs/PostgresQuarantineStore"
             }
           ]
         }

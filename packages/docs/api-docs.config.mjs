@@ -218,6 +218,12 @@ export const apiDocPackages = [
     moduleName: "etl-core/src",
   },
   {
+    packageName: "@croco/etl-events-tx",
+    directory: "etl-events-tx",
+    entryPoint: "src/index.ts",
+    moduleName: "etl-events-tx/src",
+  },
+  {
     packageName: "@croco/esbuild-plugin",
     directory: "esbuild-plugin",
     entryPoint: "src/index.ts",

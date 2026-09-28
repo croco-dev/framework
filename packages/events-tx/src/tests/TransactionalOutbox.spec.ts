@@ -94,11 +94,11 @@ function createOutboxFixture() {
 
 async function appendMessage(
   fixture: ReturnType<typeof createOutboxFixture>,
-  options: { idempotencyKey?: string; maxAttempts?: number } = {},
+  options: { aggregateId?: string; idempotencyKey?: string; maxAttempts?: number } = {},
 ): Promise<TransactionalOutboxMessage> {
   return fixture.txManager.run(() =>
-    fixture.outbox.append(new AccountCreditedEvent("acct-1", 100), {
-      aggregateId: "acct-1",
+    fixture.outbox.append(new AccountCreditedEvent(options.aggregateId ?? "acct-1", 100), {
+      aggregateId: options.aggregateId ?? "acct-1",
       idempotencyKey: options.idempotencyKey ?? "credit-acct-1",
       maxAttempts: options.maxAttempts,
     }),
@@ -776,7 +776,7 @@ describe("TransactionalOutboxRelay", () => {
   it("cancels an active batch and releases every unstarted claim for retry", async () => {
     const fixture = createOutboxFixture();
     await appendMessage(fixture, { idempotencyKey: "credit-acct-1" });
-    await appendMessage(fixture, { idempotencyKey: "credit-acct-2" });
+    await appendMessage(fixture, { aggregateId: "acct-2", idempotencyKey: "credit-acct-2" });
     const publishStarted = createDeferred<void>();
     const publish = vi.fn(
       async (_message: TransactionalOutboxMessage, signal?: AbortSignal): Promise<void> => {
@@ -957,6 +957,7 @@ describe("TransactionalOutboxRelay", () => {
     const fixture = createOutboxFixture();
     const poisonMsg = await appendMessage(fixture, { idempotencyKey: "poison-1", maxAttempts: 1 });
     const successMsg = await appendMessage(fixture, {
+      aggregateId: "acct-2",
       idempotencyKey: "success-2",
       maxAttempts: 1,
     });
@@ -1013,7 +1014,11 @@ describe("TransactionalOutboxRelay", () => {
   it("returns degraded status when a batch contains both poisoned and dead-lettered messages", async () => {
     const fixture = createOutboxFixture();
     const deadLetterMsg = await appendMessage(fixture, { idempotencyKey: "dlq-1", maxAttempts: 1 });
-    const poisonMsg = await appendMessage(fixture, { idempotencyKey: "poison-2", maxAttempts: 1 });
+    const poisonMsg = await appendMessage(fixture, {
+      aggregateId: "acct-2",
+      idempotencyKey: "poison-2",
+      maxAttempts: 1,
+    });
 
     const relay = new TransactionalOutboxRelay({
       store: fixture.store,

@@ -660,6 +660,8 @@ jobs:
               - 'packages/engagement-drizzle/**'
               - 'packages/entitlements-core/**'
               - 'packages/entitlements-drizzle/**'
+              - 'packages/etl-core/**'
+              - 'packages/etl-events-tx/**'
               - 'packages/events-core/**'
               - 'packages/events-tx/**'
               - 'packages/execution-core/**'
@@ -718,6 +720,7 @@ jobs:
               - 'packages/entitlements-drizzle/src/**'
               - 'packages/esbuild-plugin/src/**'
               - 'packages/etl-core/src/**'
+              - 'packages/etl-events-tx/src/**'
               - 'packages/events-core/src/**'
               - 'packages/events-inmemory/src/**'
               - 'packages/events-tx/src/**'
@@ -1548,6 +1551,8 @@ jobs:
           pnpm --filter @croco/metering-core test:real
           pnpm build --filter=@croco/warehouse-postgres...
           pnpm --filter @croco/warehouse-postgres test:real
+          pnpm build --filter=@croco/etl-events-tx...
+          pnpm --filter @croco/etl-events-tx test:real
 
   docs-sync-check:
     needs: changes

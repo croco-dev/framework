@@ -95,6 +95,7 @@
         "@croco/customer-health-drizzle",
         "@croco/engagement-drizzle",
         "@croco/entitlements-drizzle",
+        "@croco/etl-events-tx",
         "@croco/events-inmemory",
         "@croco/events-tx",
         "@croco/execution-drizzle",

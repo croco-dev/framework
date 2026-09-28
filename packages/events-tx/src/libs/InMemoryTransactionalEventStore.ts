@@ -300,11 +300,30 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
   ): Promise<TransactionalOutboxMessage[]> {
     const state = this.resolveState(context);
     const lockedUntil = new Date(options.now.getTime() + options.visibilityTimeoutMs);
-    const ready = [...state.outbox.values()]
-      .filter((message) => this.isClaimable(message, options.now))
+    const messages = [...state.outbox.values()];
+    const ready = messages
+      .filter(
+        (message) =>
+          this.isClaimable(message, options.now) &&
+          (!message.aggregateId ||
+            !messages.some(
+              (predecessor) =>
+                predecessor.aggregateId === message.aggregateId &&
+                (predecessor.status === "pending" ||
+                  predecessor.status === "publishing" ||
+                  predecessor.status === "retrying") &&
+                (compareDates(predecessor.createdAt, message.createdAt) < 0 ||
+                  (compareDates(predecessor.createdAt, message.createdAt) === 0 &&
+                    predecessor.id.localeCompare(message.id) < 0)),
+            )),
+      )
       .sort((left, right) => {
         const visibleOrder = compareDates(left.visibleAt, right.visibleAt);
-        return visibleOrder === 0 ? compareDates(left.createdAt, right.createdAt) : visibleOrder;
+        return (
+          visibleOrder ||
+          compareDates(left.createdAt, right.createdAt) ||
+          left.id.localeCompare(right.id)
+        );
       })
       .slice(0, options.limit);
 

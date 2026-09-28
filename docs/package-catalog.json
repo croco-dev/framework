@@ -669,6 +669,12 @@
       "runtimes": [],
       "domain": "ETL"
     },
+    "etl-events-tx": {
+      "role": "Plugins",
+      "subtype": "integration",
+      "runtimes": ["node"],
+      "domain": "ETL"
+    },
     "entitlements-drizzle": {
       "role": "Plugins",
       "subtype": "provider",
@@ -1300,6 +1306,7 @@
       "description": "Analytics, feature-flag, and observability integrations",
       "packages": [
         "analytics-posthog",
+        "etl-events-tx",
         "features-posthog",
         "integrations-posthog",
         "telemetry-api",
@@ -1492,6 +1499,7 @@
         "experience-core",
         "experience-drizzle",
         "etl-core",
+        "etl-events-tx",
         "frontend-problems",
         "metering-upstash",
         "notifications-react-email",
@@ -1567,6 +1575,18 @@
           "flush lifecycle",
           "disabled-mode skip evidence",
           "safe readiness diagnostics"
+        ]
+      },
+      "etl-events-tx": {
+        "domain": "ETL",
+        "adapter": "Transactional outbox to durable warehouse fact integration",
+        "runtimes": ["node"],
+        "requiredEnv": ["durable outbox, warehouse writer, and quarantine store supplied by app"],
+        "features": [
+          "validated server event envelope",
+          "per-consumer inbox acknowledgement after durable receipt",
+          "durable quarantine for invalid facts",
+          "exact-ID retained replay with unavailable history"
         ]
       },
       "audit-drizzle": {
