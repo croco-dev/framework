@@ -1893,6 +1893,72 @@ describe("PolarWebhookHandler", () => {
   });
 
   describe("처리 완료 후 completeWebhook 호출", () => {
+    it("acknowledges an already completed subscription webhook without republishing its intent", async () => {
+      vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
+      vi.mocked(mockStore.completeWebhook).mockRejectedValueOnce(
+        new WebhookAlreadyProcessedProblem(signedSubscriptionEvent.id),
+      );
+      mockVerifyPolarWebhook.mockReturnValue(signedSubscriptionEvent);
+      const body = JSON.stringify(signedSubscriptionEvent);
+      const headers = { "webhook-id": signedSubscriptionEvent.id };
+
+      await expect(handler.handle(body, headers)).resolves.toEqual({
+        success: true,
+        eventId: signedSubscriptionEvent.id,
+      });
+      await expect(handler.handle(body, headers)).resolves.toEqual({
+        success: true,
+        eventId: signedSubscriptionEvent.id,
+      });
+
+      expect(mockEventPublisher.publishIdempotently).toHaveBeenCalledTimes(1);
+      expect(mockStore.markWebhookEventIntentPublished).toHaveBeenCalledTimes(1);
+      expect(mockStore.completeWebhook).toHaveBeenCalledWith(signedSubscriptionEvent.id);
+      expect(mockStore.failWebhook).not.toHaveBeenCalledWith(signedSubscriptionEvent.id);
+    });
+
+    it("rejects an already processed problem from subscription intent publication", async () => {
+      const failure = new WebhookAlreadyProcessedProblem(signedSubscriptionEvent.id);
+      vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
+      vi.mocked(mockEventPublisher.publishIdempotently).mockRejectedValueOnce(failure);
+      mockVerifyPolarWebhook.mockReturnValue(signedSubscriptionEvent);
+
+      await expect(
+        handler.handle(JSON.stringify(signedSubscriptionEvent), {
+          "webhook-id": signedSubscriptionEvent.id,
+        }),
+      ).rejects.toMatchObject({
+        code: "WEBHOOK_PROCESSING_FAILED",
+        status: 500,
+        cause: failure,
+      });
+
+      expect(mockStore.markWebhookEventIntentPublished).not.toHaveBeenCalled();
+      expect(mockStore.completeWebhook).not.toHaveBeenCalled();
+    });
+
+    it("preserves a genuine subscription webhook completion failure after intent publication", async () => {
+      const failure = new Error("completion unavailable");
+      vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
+      vi.mocked(mockStore.completeWebhook).mockRejectedValueOnce(failure);
+      mockVerifyPolarWebhook.mockReturnValue(signedSubscriptionEvent);
+
+      await expect(
+        handler.handle(JSON.stringify(signedSubscriptionEvent), {
+          "webhook-id": signedSubscriptionEvent.id,
+        }),
+      ).rejects.toMatchObject({
+        code: "WEBHOOK_PROCESSING_FAILED",
+        status: 500,
+        detail: expect.stringContaining("completion unavailable"),
+        cause: failure,
+      });
+
+      expect(mockEventPublisher.publishIdempotently).toHaveBeenCalledTimes(1);
+      expect(mockStore.markWebhookEventIntentPublished).toHaveBeenCalledTimes(1);
+      expect(mockStore.failWebhook).not.toHaveBeenCalledWith(signedSubscriptionEvent.id);
+    });
+
     it("성공적인 이벤트 처리 후 webhook 처리 기록 저장", async () => {
       vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
       vi.mocked(mockStore.reserveWebhook).mockResolvedValue(undefined);

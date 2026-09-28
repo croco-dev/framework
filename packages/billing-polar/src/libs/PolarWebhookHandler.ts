@@ -295,7 +295,12 @@ export class PolarWebhookHandler {
         await this.store.markWebhookEventIntentPublished(eventId, intent.event.eventId);
       }
 
-      await this.store.completeWebhook(eventId);
+      try {
+        await this.store.completeWebhook(eventId);
+      } catch (error) {
+        if (error instanceof WebhookAlreadyProcessedProblem) return { success: true, eventId };
+        throw error;
+      }
       return { success: true, eventId };
     } catch (error) {
       throw new WebhookProcessingProblem(
