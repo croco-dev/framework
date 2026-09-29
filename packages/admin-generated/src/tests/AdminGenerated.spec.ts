@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ProblemCategory } from "@croco/problems-core";
-import { buildContractGraph } from "@croco/protocols-core";
+import { buildContractGraph, type ContractGraph } from "@croco/protocols-core";
 import {
   Body,
   Controller,
@@ -24,6 +24,7 @@ import {
   createAdminGeneratedArtifact,
   generateAdminResourceFilesFromContractGraph,
   generateAdminResourceSourceFromContractGraph,
+  getAdminGeneratedDiagnostics,
 } from "../libs/generate";
 
 const ENTITLEMENT_REQUIREMENTS_KEY = Symbol.for("croco:entitlements:requirements");
@@ -486,6 +487,65 @@ export const adminResources = [
         routeId: "UsersController.getUserHistory",
       }),
     ]);
+  });
+
+  it("should fail binding-name normalization collisions with a dedicated diagnostic", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/")
+      listUsers(): void {}
+    }
+
+    @Controller("/user-details")
+    class UserDetailsController {
+      @Get("/")
+      listUsers(): void {}
+    }
+
+    const graph = buildContractGraph([UsersController, UserDetailsController]);
+    const artifact = createAdminGeneratedArtifact(graph);
+    expect(Object.keys(artifact.clientBindings)).toEqual([
+      "userDetailsControllerListUsers",
+      "usersControllerListUsers",
+    ]);
+    const renamedGraph: ContractGraph = {
+      ...graph,
+      routes: graph.routes.map((route) =>
+        route.routeId === "UserDetailsController.listUsers"
+          ? { ...route, operationId: "UsersController-listUsers" }
+          : route,
+      ),
+    };
+
+    const diagnostics = getAdminGeneratedDiagnostics(renamedGraph);
+
+    expect(diagnostics).toEqual([
+      expect.objectContaining({
+        code: "admin-generated-duplicate-binding",
+        routeId: "UserDetailsController.listUsers",
+      }),
+    ]);
+    const [diagnostic] = diagnostics;
+    expect(diagnostic?.message).toContain("usersControllerListUsers");
+    expect(diagnostic?.message).toContain("UsersController.listUsers");
+    expect(diagnostic?.message).toContain("UsersController-listUsers");
+
+    expect(() => createAdminGeneratedArtifact(renamedGraph)).toThrow(AdminGeneratedContractProblem);
+    try {
+      createAdminGeneratedArtifact(renamedGraph);
+    } catch (error) {
+      expect(error).toBeInstanceOf(AdminGeneratedContractProblem);
+      const problem = error as AdminGeneratedContractProblem;
+      expect(problem.diagnostics.map((entry) => entry.code)).toEqual([
+        "admin-generated-duplicate-binding",
+      ]);
+      expect(problem.message).toContain("UsersController.listUsers");
+      expect(problem.message).toContain("UsersController-listUsers");
+      expect(problem.message).not.toContain("contract-consumer-missing-route");
+    }
+    expect(() => generateAdminResourceSourceFromContractGraph(renamedGraph)).toThrow(
+      "usersControllerListUsers",
+    );
   });
 
   it("should write deterministic admin resource files", () => {
