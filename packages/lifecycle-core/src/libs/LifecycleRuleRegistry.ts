@@ -397,7 +397,16 @@ export class LifecycleRuleRegistry {
       this.activeRegistrationKeys.add(key);
     }
 
-    if (input.activate && persistedVersion?.state !== "active") {
+    // Re-running registration for an already settled version (active, paused,
+    // superseded) is an idempotent no-op. Reusing the deterministic activation
+    // commandId after a revision bump would collide with the recorded command
+    // fingerprint for the full command TTL, so skip the internal activation
+    // instead of reporting a misleading command conflict.
+    const canActivateFromState =
+      persistedVersion === undefined ||
+      persistedVersion.state === "registered" ||
+      persistedVersion.state === "inactive";
+    if (input.activate && canActivateFromState) {
       const activated = await this.stateStore.applyCommand({
         command: "activate",
         request: {

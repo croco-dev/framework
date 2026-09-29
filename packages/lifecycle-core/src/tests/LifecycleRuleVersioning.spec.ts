@@ -369,6 +369,38 @@ describe("LifecycleRuleRegistry versioning", () => {
     expect((await restartedRegistry.getIdentityState("retention-risk"))?.history).toHaveLength(1);
   });
 
+  it("reuses a settled version registration without reusing its activation command", async () => {
+    const stateStore = new InMemoryLifecycleRuleStateStore();
+    const registry = new LifecycleRuleRegistry({ stateStore });
+    await registerVersion(registry, "1.0.0", { activate: true });
+    await registry.pause({
+      commandId: "pause-settled-version",
+      ruleId: "retention-risk",
+      version: "1.0.0",
+      expectedRevision: 1,
+    });
+
+    const reread = await registerVersion(registry, "1.0.0", { activate: true });
+    await registerVersion(registry, "1.0.0", { activate: true });
+
+    expect(reread.descriptor.version).toBe("1.0.0");
+    expect(await registry.getIdentityState("retention-risk")).toMatchObject({
+      revision: 2,
+      versions: [{ state: "paused" }],
+      history: [{ command: "activate" }, { command: "pause" }],
+    });
+
+    await expect(
+      registry.resume({
+        commandId: "resume-after-settled-reread",
+        ruleId: "retention-risk",
+        version: "1.0.0",
+        expectedRevision: 2,
+      }),
+    ).resolves.toMatchObject({ state: { revision: 3 } });
+    expect(await registry.getRegistrationState("retention-risk", "1.0.0")).toBe("active");
+  });
+
   it("rejects a changed executable artifact reattaching to a persisted active version", async () => {
     const stateStore = new InMemoryLifecycleRuleStateStore();
     const firstRegistry = new LifecycleRuleRegistry({ stateStore });
