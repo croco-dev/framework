@@ -38,7 +38,7 @@ export function Transactional<TReceiver, TOptions = unknown>(
         switch (propagation) {
           case "REQUIRED":
             return txManager.run(() => originalMethod.apply(this, args), {
-              nesting: nesting ?? "join",
+              ...(nesting !== undefined && { nesting }),
               ...(txOptions !== undefined && { options: txOptions }),
               ...(timeout !== undefined && { timeout }),
             });
