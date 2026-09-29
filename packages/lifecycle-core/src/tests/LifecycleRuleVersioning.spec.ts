@@ -76,7 +76,11 @@ function createContext(signalId = "signal-1", now = NOW) {
 function registerVersion(
   registry: LifecycleRuleRegistry,
   version: string,
-  options: { readonly activate?: boolean; readonly executableRegistrationId?: string } = {},
+  options: {
+    readonly activate?: boolean;
+    readonly executableRegistrationId?: string;
+    readonly registeredAt?: Date;
+  } = {},
 ) {
   return registry.registerVersion({
     rule: createRule(version),
@@ -85,6 +89,7 @@ function registerVersion(
     executableFingerprint: `retention-risk-bundle:${version}`,
     contextRequirements: ["metadata.atRisk", "onboarding.isCompleted"],
     activate: options.activate,
+    registeredAt: options.registeredAt,
   });
 }
 
@@ -470,8 +475,14 @@ describe("LifecycleRuleRegistry versioning", () => {
     const secondRegistry = new LifecycleRuleRegistry({ stateStore });
 
     const [first, second] = await Promise.all([
-      registerVersion(firstRegistry, "1.0.0", { activate: true }),
-      registerVersion(secondRegistry, "1.0.0", { activate: true }),
+      registerVersion(firstRegistry, "1.0.0", {
+        activate: true,
+        registeredAt: new Date("2026-01-01T00:00:00.000Z"),
+      }),
+      registerVersion(secondRegistry, "1.0.0", {
+        activate: true,
+        registeredAt: new Date("2026-02-01T00:00:00.000Z"),
+      }),
     ]);
 
     expect(first.descriptor).toEqual(second.descriptor);
