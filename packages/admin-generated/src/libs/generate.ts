@@ -68,6 +68,7 @@ export function getAdminGeneratedDiagnostics(
 ): readonly AdminGeneratedDiagnostic[] {
   const diagnostics: AdminGeneratedDiagnostic[] = [];
   const seenOperationKeys = new Map<string, ContractGraphRoute>();
+  const seenBindingNames = new Map<string, ContractGraphRoute>();
 
   for (const route of graph.routes) {
     const classified = classifyRoute(route);
@@ -91,6 +92,21 @@ export function getAdminGeneratedDiagnostics(
     }
 
     seenOperationKeys.set(operationKey, route);
+
+    const bindingName = bindingNameForRoute(route);
+    const existingBindingRoute = seenBindingNames.get(bindingName);
+
+    if (existingBindingRoute) {
+      diagnostics.push({
+        code: "admin-generated-duplicate-binding",
+        routeId: route.routeId,
+        path: route.path,
+        message: `Cannot generate admin client binding '${bindingName}': operation id '${route.operationId}' (route '${route.routeId}') collides with operation id '${existingBindingRoute.operationId}' (route '${existingBindingRoute.routeId}'). Rename one operation id so the normalized binding names are distinct.`,
+      });
+      continue;
+    }
+
+    seenBindingNames.set(bindingName, route);
   }
 
   return diagnostics.sort(compareDiagnostics);
@@ -102,6 +118,14 @@ export function createAdminGeneratedArtifact(graph: ContractGraph): AdminGenerat
   const diagnostics = [...getAdminGeneratedDiagnostics(graph)];
   const resourceDrafts = new Map<string, ResourceDraft>();
   const clientBindings: Record<string, AdminGeneratedClientBinding> = {};
+
+  const bindingDiagnostics = diagnostics.filter(
+    (diagnostic) => diagnostic.code === "admin-generated-duplicate-binding",
+  );
+
+  if (bindingDiagnostics.length > 0) {
+    throw new AdminGeneratedContractProblem(bindingDiagnostics);
+  }
 
   if (diagnostics.length > 0) {
     return {
