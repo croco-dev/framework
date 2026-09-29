@@ -16,4 +16,5 @@ COPY --from=builder --chown=nodejs:nodejs /app/{{apiDistPath}} ./{{apiDistPath}}
 COPY --chown=nodejs:nodejs web/gateway.mjs ./web/gateway.mjs
 USER nodejs
 EXPOSE {{apiPort}}
+ENV PORT={{apiPort}}
 CMD ["node", "web/gateway.mjs"]

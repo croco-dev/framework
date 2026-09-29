@@ -245,6 +245,7 @@ describe("E2E Vite SPA: generate()", () => {
       "COPY --chown=nodejs:nodejs web/gateway.mjs ./web/gateway.mjs",
     );
     expect(dockerfileContent).toContain("EXPOSE 3001");
+    expect(dockerfileContent).toContain("ENV PORT=3001");
     expect(dockerfileContent).toContain('CMD ["node", "web/gateway.mjs"]');
 
     expect(existsSync(join(testDir, "web", "gateway.mjs"))).toBe(true);
@@ -288,6 +289,7 @@ describe("E2E Vite SPA: generate()", () => {
       "COPY --chown=nodejs:nodejs web/gateway.mjs ./web/gateway.mjs",
     );
     expect(dockerfileContent).toContain("EXPOSE 4000");
+    expect(dockerfileContent).toContain("ENV PORT=4000");
     expect(dockerfileContent).toContain('CMD ["node", "web/gateway.mjs"]');
     expect(dockerfileContent).not.toContain("apps/api");
     expect(existsSync(join(testDir, "web", "gateway.mjs"))).toBe(true);
@@ -310,6 +312,7 @@ describe("E2E Vite SPA: generate()", () => {
           "<!doctype html><html><body>spa index</body></html>\n",
         );
         writeFileSync(join(spaRoot, "assets", "app.js"), "console.log('spa');\n");
+        writeFileSync(join(spaRoot, "favicon.ico"), "fake-icon-bytes\n");
 
         const apiDir = join(fixtureRoot, "apps", "api", "dist");
         mkdirSync(apiDir, { recursive: true });
@@ -342,6 +345,24 @@ describe("E2E Vite SPA: generate()", () => {
         const apiResponse = await fetch(`http://127.0.0.1:${publicPort}/health.check?batch=1`, {
           headers: { accept: "application/json" },
         });
+        const browserApiResponse = await fetch(
+          `http://127.0.0.1:${publicPort}/health.check?batch=1`,
+          { headers: { accept: "text/html" } },
+        );
+        const browserApiBody = await browserApiResponse.json();
+        const missingAssetResponse = await fetch(
+          `http://127.0.0.1:${publicPort}/assets/missing.js`,
+        );
+        const postResponse = await fetch(`http://127.0.0.1:${publicPort}/`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ query: "{ health }" }),
+        });
+        const rootStaticResponse = await fetch(`http://127.0.0.1:${publicPort}/favicon.ico`);
+        const dottedSpaResponse = await fetch(`http://127.0.0.1:${publicPort}/users/john.doe`);
+        const nestedDottedSpaResponse = await fetch(
+          `http://127.0.0.1:${publicPort}/docs/v2.0/notes`,
+        );
 
         expect(indexResponse.status).toBe(200);
         expect(await indexResponse.text()).toContain("spa index");
@@ -353,6 +374,17 @@ describe("E2E Vite SPA: generate()", () => {
         expect(await apiResponse.json()).toEqual(
           expect.objectContaining({ path: "/health.check?batch=1" }),
         );
+        expect(browserApiResponse.status).toBe(200);
+        expect(browserApiBody).toEqual(expect.objectContaining({ path: "/health.check?batch=1" }));
+        expect(missingAssetResponse.status).toBe(404);
+        expect(postResponse.status).toBe(200);
+        expect(await postResponse.json()).toEqual(expect.objectContaining({ path: "/" }));
+        expect(rootStaticResponse.status).toBe(200);
+        expect(await rootStaticResponse.text()).toContain("fake-icon-bytes");
+        expect(dottedSpaResponse.status).toBe(200);
+        expect(await dottedSpaResponse.text()).toContain("spa index");
+        expect(nestedDottedSpaResponse.status).toBe(200);
+        expect(await nestedDottedSpaResponse.text()).toContain("spa index");
       } finally {
         gateway?.kill();
         rmSync(fixtureRoot, { recursive: true, force: true });

@@ -5,7 +5,7 @@ import { dirname, extname, join, normalize, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const appRoot = resolve(here, "..", "..");
+const appRoot = resolve(here, "..");
 const defaultApiEntry = existsSync(join(appRoot, "apps", "api", "dist", "index.js"))
   ? join(appRoot, "apps", "api", "dist", "index.js")
   : join(appRoot, "apps", "graphql-api", "dist", "index.js");
@@ -14,8 +14,22 @@ const apiEntry = process.env.CROCO_API_ENTRY ?? defaultApiEntry;
 // GraphQL). The gateway binds the container's public port itself and forwards
 // API traffic to the child on its own private loopback port, so the child must
 // be told a non-conflicting port.
-const apiPort = Number(process.env.CROCO_API_PORT ?? "3001");
-const publicPort = Number(process.env.PORT ?? "3000");
+function parsePort(value, fallback) {
+  const port = Number(value);
+  return Number.isInteger(port) && port > 0 && port < 65536 ? port : fallback;
+}
+const isGraphqlDefault = defaultApiEntry.includes("graphql-api");
+let apiPort = parsePort(
+  process.env.CROCO_API_PORT,
+  isGraphqlDefault ? 4000 : 3001,
+);
+const publicPort = parsePort(process.env.PORT, isGraphqlDefault ? 4000 : 3001);
+// The child must not share the gateway's public port. When both resolve to
+// the same port (e.g. platform-injected PORT matching the API default with no
+// CROCO_API_PORT override), move the private loopback port aside.
+if (apiPort === publicPort) {
+  apiPort = publicPort >= 65535 ? publicPort - 1 : publicPort + 1;
+}
 const spaRoot = process.env.CROCO_SPA_ROOT ?? join(appRoot, "apps", "web", "dist");
 const spaIndex = join(spaRoot, "index.html");
 
@@ -35,6 +49,10 @@ const MIME_TYPES = {
 };
 
 function sendStatus(res, status, body) {
+  if (res.headersSent) {
+    res.destroy();
+    return;
+  }
   res.writeHead(status, { "content-type": "text/plain; charset=utf-8" });
   res.end(body);
 }
@@ -64,13 +82,16 @@ function serveFile(res, filePath, { immutable = false } = {}) {
     "cache-control": immutable ? "public, max-age=31536000, immutable" : "public, max-age=0",
   };
   res.writeHead(200, headers);
-  createReadStream(filePath).pipe(res);
+  const stream = createReadStream(filePath);
+  stream.on("error", () => sendStatus(res, 500, "Failed to read file"));
+  stream.pipe(res);
 }
 
 function isExplicitApiPath(req, pathname) {
-  // tRPC serves under /<router>.<procedure>, GraphQL under /graphql (and /
-  // for POST). Route those before static lookup so an extension-less API path
-  // never falls through to the SPA fallback.
+  // GraphQL under /graphql (and / for POST). Route those before static lookup
+  // so an API path never falls through to the SPA fallback. Dotted tRPC
+  // procedure paths (e.g. /health.check) are checked after static lookup so
+  // on-disk files such as /index.html or /favicon.ico win over the API.
   if (req.method !== "GET" && req.method !== "HEAD") {
     return true;
   }
@@ -78,22 +99,12 @@ function isExplicitApiPath(req, pathname) {
 }
 
 function isApiPath(req, pathname) {
-  // Static files are resolved before this check, so any remaining dotted path
-  // (e.g. /health.check) is an API call rather than an SPA asset.
-  const accept = req.headers.accept ?? "";
-  if (accept.includes("application/json") || accept.includes("application/trpc")) {
-    return true;
-  }
-  if (accept.includes("text/html")) {
-    return false;
-  }
-  if (pathname === "/") {
-    return false;
-  }
-  if (req.headers["sec-fetch-dest"] === "document") {
-    return false;
-  }
-  return pathname.includes(".");
+  // Static files are resolved before this check, so this only handles paths
+  // with no on-disk match. Only single-segment dotted paths (e.g.
+  // /health.check) are tRPC GET procedure calls; nested dotted paths (e.g.
+  // /users/john.doe) are SPA client-side routes and fall through to index.
+  void req;
+  return /^\/[^/.]+\.[^/]+$/.test(pathname);
 }
 
 function proxyToApi(req, res) {
@@ -103,20 +114,40 @@ function proxyToApi(req, res) {
       port: apiPort,
       path: req.url ?? "/",
       method: req.method,
-      headers: req.headers,
+      headers: { ...req.headers, host: `127.0.0.1:${apiPort}` },
     },
     (apiRes) => {
-      res.writeHead(apiRes.statusCode ?? 502, apiRes.headers);
+      if (res.headersSent) {
+        apiRes.resume();
+        return;
+      }
+      const headers = { ...apiRes.headers };
+      delete headers["transfer-encoding"];
+      delete headers.connection;
+      res.writeHead(apiRes.statusCode ?? 502, headers);
+      apiRes.on("error", () => {
+        if (!res.headersSent) {
+          sendStatus(res, 502, "API unavailable");
+          return;
+        }
+        res.destroy();
+      });
       apiRes.pipe(res);
     },
   );
   proxy.on("error", () => sendStatus(res, 502, "API unavailable"));
+  req.on("error", () => proxy.destroy());
   req.pipe(proxy);
 }
 
 const child = spawn(process.execPath, [apiEntry], {
   env: { ...process.env, PORT: String(apiPort) },
   stdio: "inherit",
+});
+
+child.on("error", (error) => {
+  console.error(`Failed to start API child ${apiEntry}: ${error.message}`);
+  process.exitCode = 1;
 });
 
 child.on("exit", (code) => {
@@ -130,8 +161,13 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
 }
 
 const server = createServer((req, res) => {
-  const url = new URL(req.url ?? "/", "http://127.0.0.1");
-  const pathname = url.pathname;
+  let pathname = "/";
+  try {
+    pathname = new URL(req.url ?? "/", "http://127.0.0.1").pathname;
+  } catch {
+    sendStatus(res, 400, "Bad request");
+    return;
+  }
 
   if (req.method !== "GET" && req.method !== "HEAD") {
     proxyToApi(req, res);
