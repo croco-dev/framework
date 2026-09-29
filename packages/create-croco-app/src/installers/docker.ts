@@ -63,4 +63,7 @@ export function installDocker(targetDir: string, options: DockerInstallerOptions
     join(targetDir, "web", webDockerfileName),
     context,
   );
+  if (options.frontendDeploy === "vite-spa") {
+    copyDockerFile(join(addonDir, "web", "gateway.mjs"), join(targetDir, "web", "gateway.mjs"));
+  }
 }
