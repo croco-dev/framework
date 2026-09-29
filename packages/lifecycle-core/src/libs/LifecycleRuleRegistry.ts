@@ -4,6 +4,7 @@ import { InMemoryLifecycleRuleStateStore } from "./InMemoryLifecycleRuleStateSto
 import {
   DuplicateLifecycleRuleProblem,
   LifecycleRuleDefinitionProblem,
+  LifecycleRuleVersionConflictProblem,
   LifecycleRuleVersionDefinitionProblem,
   UnavailableLifecycleRuleVersionProblem,
   UnknownLifecycleRuleVersionProblem,
@@ -393,26 +394,78 @@ export class LifecycleRuleRegistry {
     const registration =
       existingRegistration ?? cloneRegistration({ descriptor, rule: input.rule });
     this.registrations.set(key, registration);
-    if (persistedVersion?.state === "active") {
-      this.activeRegistrationKeys.add(key);
-    }
 
-    if (input.activate && persistedVersion?.state !== "active") {
+    // Re-running registration for an already settled version (active, paused,
+    // superseded) is an idempotent ensure that leaves activation state to the
+    // explicit activate/pause/resume/supersede commands. Reusing the
+    // deterministic activation commandId after a revision bump would collide
+    // with the recorded command fingerprint for the full command TTL, so skip
+    // the internal activation instead of reporting a misleading command
+    // conflict. The decision uses post-save state so a concurrent install that
+    // settled the version first turns this attempt into a skip rather than a
+    // stale collide. The internal request omits `at` so concurrent
+    // same-revision activations share a stable fingerprint and replay instead
+    // of conflicting.
+    const fresh = await this.stateStore.get(input.rule.id);
+    await this.ensureInternalActivation({
+      ruleId: input.rule.id,
+      version: input.version,
+      activate: input.activate,
+      state: fresh,
+    });
+
+    return cloneRegistration(registration);
+  }
+
+  private async ensureInternalActivation(input: {
+    readonly ruleId: string;
+    readonly version: string;
+    readonly activate: boolean | undefined;
+    readonly state: LifecycleRuleIdentityState | undefined;
+    readonly retried?: boolean;
+  }): Promise<void> {
+    const version = input.state?.versions.find(
+      (record) => record.descriptor.version === input.version,
+    );
+    const canActivateFromState =
+      version === undefined || version.state === "registered" || version.state === "inactive";
+    if (input.activate !== true || !canActivateFromState) {
+      if (input.state) {
+        // Re-registration observes rather than mutates settled state. Keep the
+        // synchronous compatibility view (`get`/`getAll`/`match`) converged with
+        // the authoritative store when another process changed activation state.
+        this.synchronizeActiveRegistrations(input.state);
+      }
+      return;
+    }
+    try {
       const activated = await this.stateStore.applyCommand({
         command: "activate",
         request: {
-          commandId: `registration:${input.rule.id}:${input.version}`,
-          ruleId: input.rule.id,
+          commandId: `registration:${input.ruleId}:${input.version}`,
+          ruleId: input.ruleId,
           version: input.version,
-          expectedRevision: (await this.stateStore.get(input.rule.id))?.revision ?? 0,
+          expectedRevision: input.state?.revision ?? 0,
           reason: "compatibility registration",
-          at: registeredAt,
         },
       });
       this.synchronizeActiveRegistrations(activated.state);
+    } catch (error) {
+      // A concurrent mutation may invalidate the revision read above. Reload
+      // once and retry only while the target version remains activatable; a
+      // settled target (active/paused/superseded) converges on the observed
+      // state instead of racing the peer that settled it.
+      if (!(error instanceof LifecycleRuleVersionConflictProblem)) throw error;
+      if (input.retried === true) throw error;
+      const latest = await this.stateStore.get(input.ruleId);
+      await this.ensureInternalActivation({
+        ruleId: input.ruleId,
+        version: input.version,
+        activate: true,
+        state: latest,
+        retried: true,
+      });
     }
-
-    return cloneRegistration(registration);
   }
 
   async activate(request: LifecycleRuleActivationCommand): Promise<LifecycleRuleStateMutation> {
