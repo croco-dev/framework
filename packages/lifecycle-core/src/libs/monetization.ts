@@ -1250,8 +1250,7 @@ function createRecipe(spec: RecipeSpec): MonetizationRecipeDefinition {
         triggers: spec.triggers.map((type) => ({ type })),
         severity: spec.severity,
         cooldown: spec.cooldownDurationMs ? { durationMs: spec.cooldownDurationMs } : undefined,
-        idempotencyKey: ({ context }) =>
-          context.signal.id ?? context.signal.occurredAt.toISOString(),
+        idempotencyKey: ({ context }) => context.signal.id,
         when: (context) => {
           const data = signalData(context.signal);
           if (!data) {

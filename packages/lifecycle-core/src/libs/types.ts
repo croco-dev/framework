@@ -33,10 +33,20 @@ export type LifecycleSignalType =
   | (string & {});
 
 export type LifecycleSignal = {
+  /**
+   * Stable source event identity issued once at the durable ingress boundary and
+   * preserved on every redelivery envelope. Required for default source dedupe;
+   * the evaluator rejects missing identity instead of estimating it from
+   * timestamps, payloads, or per-attempt UUIDs.
+   */
   readonly id?: string;
   readonly type: LifecycleSignalType;
   readonly tenantId: string;
   readonly occurredAt: Date;
+  /**
+   * Provider/source namespace that disambiguates identical event IDs issued by
+   * different sources. Combined with the event id as the dedupe tuple.
+   */
   readonly source?: string;
   readonly data?: Record<string, unknown>;
 };
@@ -142,7 +152,8 @@ export type LifecycleSkipReason =
   | "rule_paused"
   | "rule_unavailable"
   | "all_actions_skipped"
-  | "no_actions";
+  | "no_actions"
+  | "source_payload_conflict";
 
 export type LifecycleRun = {
   readonly id: string;
@@ -152,9 +163,19 @@ export type LifecycleRun = {
   readonly tenantId: string;
   readonly signalType: LifecycleSignalType;
   readonly signalId?: string;
+  /**
+   * Source namespace captured from the signal at claim time. Together with
+   * `signalId` this preserves the redeliverable source event identity.
+   */
+  readonly signalSource?: string;
   readonly severity: LifecycleSeverity;
   readonly status: LifecycleRunStatus;
   readonly idempotencyKey: string;
+  /**
+   * Canonical semantic payload fingerprint used only for conflict checks on
+   * redelivery with the same source identity. Never an identity input.
+   */
+  readonly sourceFingerprint?: string;
   readonly skipReason?: LifecycleSkipReason;
   readonly actionResults: readonly LifecycleActionResult[];
   readonly error?: {
@@ -187,6 +208,17 @@ export type LifecycleRunClaim = {
   readonly ruleId: string;
   readonly claimedAt: Date;
   readonly cooldownSince?: Date;
+  /**
+   * Canonical semantic payload fingerprint for conflict checks only. Carries no
+   * identity semantics; two claims with the same key but different fingerprints
+   * are a conflict, not a dedupe hit or a new event.
+   */
+  readonly sourceFingerprint?: string;
+  /**
+   * Legacy default key accepted for one release so existing persisted receipts
+   * keep deduping during migration. New claims never issue it.
+   */
+  readonly legacyIdempotencyKey?: string;
 };
 
 export type LifecycleRunClaimResult =
@@ -194,6 +226,12 @@ export type LifecycleRunClaimResult =
   | {
       readonly claimed: false;
       readonly reason: "cooldown_active" | "idempotency_key_reused";
+      readonly existingRun?: LifecycleRun;
+    }
+  | {
+      readonly claimed: false;
+      readonly reason: "source_payload_conflict";
+      readonly existingRun: LifecycleRun;
     };
 
 export type LifecycleRunFinalizationResult =
@@ -207,6 +245,9 @@ export interface LifecycleRunStore {
   /**
    * Atomically reserves an idempotency key and optional cooldown window before dispatch.
    * Distributed adapters must enforce both constraints in one shared transaction.
+   * When a claim key is already held, the store returns the existing run when it
+   * can be identified, and reports `source_payload_conflict` when the same source
+   * identity arrives with a different semantic fingerprint.
    */
   claim(
     claim: LifecycleRunClaim,
@@ -233,7 +274,13 @@ export interface LifecycleRunStore {
 export type LifecycleIdempotencyResolver = (input: {
   readonly rule: LifecycleRule;
   readonly context: LifecycleContext;
-}) => string;
+}) => string | undefined;
+
+/**
+ * Explicit business coalescing: an application-supplied bucket key. Unlike the
+ * default source-identity key, a custom key intentionally merges distinct source
+ * events that map to the same business unit of work.
+ */
 
 export type LifecycleConditionEvidence = Readonly<Record<string, boolean>>;
 

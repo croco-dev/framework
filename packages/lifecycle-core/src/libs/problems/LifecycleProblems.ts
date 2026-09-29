@@ -205,6 +205,57 @@ export class LifecycleRuleActionContractProblem extends Problem {
   }
 }
 
+/**
+ * Indicates that a lifecycle signal arrived without a durable source event identity.
+ * The ingress boundary must issue one stable sourceEventId and preserve it on the
+ * retryable envelope; the evaluator does not invent timestamps, payload hashes, or
+ * per-attempt UUIDs as a fallback.
+ */
+export class MissingLifecycleSourceIdentityProblem extends Problem {
+  readonly code = "lifecycle-core/source-identity-missing";
+  readonly category = ProblemCategory.ValidationError;
+
+  constructor(ruleId: string, version: string) {
+    super(
+      undefined,
+      undefined,
+      `Lifecycle rule '${ruleId}' version '${version}' requires a durable source event identity`,
+      {
+        extensions: {
+          ruleId,
+          version,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
+/**
+ * Indicates that a redelivered source event carried a conflicting semantic payload.
+ * Identity matches but the canonical payload fingerprint differs, so this is an
+ * explicit conflict rather than a dedupe hit or a new event.
+ */
+export class LifecycleSourcePayloadConflictProblem extends Problem {
+  readonly code = "lifecycle-core/source-payload-conflict";
+  readonly category = ProblemCategory.Conflict;
+
+  constructor(ruleId: string, version: string) {
+    super(
+      undefined,
+      undefined,
+      `Lifecycle rule '${ruleId}' version '${version}' received a conflicting payload for a known source event`,
+      {
+        extensions: {
+          ruleId,
+          version,
+          retryable: false,
+        },
+      },
+    );
+  }
+}
+
 /** Reports invalid data supplied for a provider-neutral monetization signal. */
 export class MonetizationSignalDefinitionProblem extends Problem {
   constructor(signalType: MonetizationSignalType, message: string) {

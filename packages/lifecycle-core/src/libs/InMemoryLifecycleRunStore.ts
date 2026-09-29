@@ -42,6 +42,12 @@ function snapshotClaim(
     ...identity,
     claimedAt: new Date(claimedAt.getTime()),
     ...(cooldownSince ? { cooldownSince: new Date(cooldownSince.getTime()) } : {}),
+    ...(claim.sourceFingerprint !== undefined
+      ? { sourceFingerprint: claim.sourceFingerprint }
+      : {}),
+    ...(claim.legacyIdempotencyKey !== undefined
+      ? { legacyIdempotencyKey: claim.legacyIdempotencyKey }
+      : {}),
   };
 }
 
@@ -116,8 +122,10 @@ function snapshotRun(run: LifecycleRun, identity = snapshotRunIdentity(run)): Li
     ruleFingerprint: run.ruleFingerprint,
     signalType: run.signalType,
     ...(run.signalId !== undefined ? { signalId: run.signalId } : {}),
+    ...(run.signalSource !== undefined ? { signalSource: run.signalSource } : {}),
     severity: run.severity,
     status: run.status,
+    ...(run.sourceFingerprint !== undefined ? { sourceFingerprint: run.sourceFingerprint } : {}),
     ...(run.skipReason !== undefined ? { skipReason: run.skipReason } : {}),
     actionResults: run.actionResults.map((result) => snapshotActionResult(result, identity.id)),
     ...(error ? { error: { ...error } } : {}),
@@ -126,9 +134,41 @@ function snapshotRun(run: LifecycleRun, identity = snapshotRunIdentity(run)): Li
   };
 }
 
+export type InMemoryLifecycleRunStoreOptions = {
+  /**
+   * How long finalized receipts are retained for redelivery dedupe. Must be
+   * aligned with the supported replay horizon: redelivery after expiry is
+   * treated as a new receipt, not as a duplicate.
+   */
+  readonly receiptTtlMs?: number;
+  readonly now?: () => Date;
+};
+
+const DEFAULT_RECEIPT_TTL_MS = 30 * 24 * 60 * 60 * 1000;
+
 export class InMemoryLifecycleRunStore implements LifecycleRunStore {
   private readonly runs: LifecycleRun[] = [];
   private readonly claims = new Map<string, LifecycleRunClaim>();
+
+  constructor(private readonly options: InMemoryLifecycleRunStoreOptions = {}) {}
+
+  private receiptExpiresAt(run: LifecycleRun): number {
+    return run.completedAt.getTime() + (this.options.receiptTtlMs ?? DEFAULT_RECEIPT_TTL_MS);
+  }
+
+  private pruneExpiredReceipts(now = (this.options.now ?? (() => new Date()))().getTime()): void {
+    for (let index = this.runs.length - 1; index >= 0; index -= 1) {
+      const run = this.runs[index];
+      if (
+        run &&
+        run.status !== "skipped" &&
+        run.status !== "indeterminate" &&
+        this.receiptExpiresAt(run) <= now
+      ) {
+        this.runs.splice(index, 1);
+      }
+    }
+  }
 
   async claim(
     claim: LifecycleRunClaim,
@@ -144,11 +184,56 @@ export class InMemoryLifecycleRunStore implements LifecycleRunStore {
     ) {
       throw new LifecycleRunFinalizationProblem(claimedIdentity.runId, "dispatch_claim_mismatch");
     }
-    const findRejection = (cooldownSince?: Date): LifecycleRunClaimResult | null => {
-      const duplicateRun = this.runs.some(
-        (run) => run.idempotencyKey === claimedIdentity.idempotencyKey && run.status !== "skipped",
+    const matchesKey = (run: LifecycleRun): boolean => {
+      if (run.status === "skipped") {
+        return false;
+      }
+      if (run.idempotencyKey === claimedIdentity.idempotencyKey) {
+        return true;
+      }
+      return (
+        claim.legacyIdempotencyKey !== undefined &&
+        run.idempotencyKey === claim.legacyIdempotencyKey
       );
-      if (duplicateRun || this.claims.has(claimedIdentity.idempotencyKey)) {
+    };
+    const toDuplicateRejection = (
+      existing: LifecycleRun,
+      fingerprint: string | undefined,
+    ): LifecycleRunClaimResult => {
+      if (
+        fingerprint !== undefined &&
+        existing.sourceFingerprint !== undefined &&
+        existing.sourceFingerprint !== fingerprint
+      ) {
+        return {
+          claimed: false,
+          reason: "source_payload_conflict",
+          existingRun: snapshotRun(existing),
+        };
+      }
+      return {
+        claimed: false,
+        reason: "idempotency_key_reused",
+        existingRun: snapshotRun(existing),
+      };
+    };
+    const findRejection = (cooldownSince?: Date): LifecycleRunClaimResult | null => {
+      this.pruneExpiredReceipts(claim.claimedAt.getTime());
+      const duplicateRun = this.runs.find(matchesKey);
+      if (duplicateRun) {
+        return toDuplicateRejection(duplicateRun, claim.sourceFingerprint);
+      }
+      const heldClaim = this.claims.get(claimedIdentity.idempotencyKey);
+      if (heldClaim) {
+        const heldRun = this.runs.find(
+          (run) => run.id === heldClaim.runId && run.status !== "skipped",
+        );
+        if (heldRun) {
+          return toDuplicateRejection(heldRun, claim.sourceFingerprint);
+        }
+        return { claimed: false, reason: "idempotency_key_reused" };
+      }
+      if (claim.legacyIdempotencyKey && this.claims.has(claim.legacyIdempotencyKey)) {
         return { claimed: false, reason: "idempotency_key_reused" };
       }
       if (!cooldownSince) {

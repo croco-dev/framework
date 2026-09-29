@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 836,
+  problemCount: 838,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -13309,7 +13309,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 228,
+          line: 279,
           column: 5,
           kind: "problem-constructor",
         },
@@ -13340,7 +13340,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 211,
+          line: 262,
           column: 5,
           kind: "problem-constructor",
         },
@@ -13371,7 +13371,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 246,
+          line: 297,
           column: 5,
           kind: "problem-constructor",
         },
@@ -13688,6 +13688,66 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "lifecycle-core/source-identity-missing",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#lifecycle-core-source-identity-missing",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
+          line: 214,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "lifecycle-core/source-payload-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#lifecycle-core-source-payload-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
+          line: 239,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "lifecycle-core/webhook-timeout-invalid",
       category: "ValidationError",
       status: 422,
@@ -13711,7 +13771,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
-          line: 263,
+          line: 314,
           column: 1,
           kind: "problem-class",
         },
