@@ -490,7 +490,25 @@ function assertWorkerServiceBindingHasMain(workerDir: string, expectedMain: stri
 }
 
 function parseWranglerMain(wranglerContent: string): string | undefined {
-  return wranglerContent.match(/^\s*main\s*=\s*"([^"]+)"\s*$/m)?.[1];
+  for (const line of wranglerContent.split("\n")) {
+    const match = line.match(/^\s*main\s*=\s*("(?:[^"]*)"|'(?:[^']*)')\s*(?:#.*)?$/);
+    if (match) {
+      return match[1].slice(1, -1);
+    }
+  }
+
+  return undefined;
+}
+
+function parseWranglerAssetsDirectory(wranglerContent: string): string | undefined {
+  for (const line of wranglerContent.split("\n")) {
+    const match = line.match(/^\s*directory\s*=\s*("(?:[^"]*)"|'(?:[^']*)')\s*(?:#.*)?$/);
+    if (match) {
+      return match[1].slice(1, -1);
+    }
+  }
+
+  return undefined;
 }
 
 function escapeRegExp(value: string): string {
@@ -530,6 +548,7 @@ function assertWranglerMainMatchesBuildOutput(packageDir: string): void {
 
   if (main === undefined) {
     expect(wranglerContent).toContain("[assets]");
+    expect(parseWranglerMain(wranglerContent)).toBeUndefined();
     return;
   }
 
@@ -924,6 +943,7 @@ describe("E2E: generate()", () => {
       assertSourceBareImportsDeclared(webDir);
       const webWranglerContent = readFileSync(join(webDir, "wrangler.toml"), "utf8");
       expect(webWranglerContent).not.toContain("dist/worker-ssr");
+      expect(parseWranglerMain(webWranglerContent)).toBeUndefined();
       assertWranglerMainMatchesBuildOutput(webDir);
       assertAllWranglerMainsMatchBuildOutputs(testDir);
       assertNoHandlebarsPlaceholders(testDir);
