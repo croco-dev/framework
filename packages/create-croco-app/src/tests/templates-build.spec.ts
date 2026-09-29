@@ -897,6 +897,16 @@ function checkWebMetaViteFullstackAddonStructure() {
     ["api-worker", "wrangler.toml.hbs"],
     /^\s*\[build\]\s*$/m,
   );
+  checkFileContains(
+    "addons/web-meta-vite-fullstack",
+    ["ssr-worker", "wrangler.toml.hbs"],
+    /^\s*main\s*=\s*"dist\/index\.js"\s*$/m,
+  );
+  checkFileContains(
+    "addons/web-meta-vite-fullstack",
+    ["ssr-worker", "wrangler.toml.hbs"],
+    /^\s*binding\s*=\s*"API_WORKER"\s*$/m,
+  );
 }
 
 function checkContainerFullstackStructure() {
