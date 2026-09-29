@@ -398,10 +398,13 @@ export class LifecycleRuleRegistry {
     }
 
     // Re-running registration for an already settled version (active, paused,
-    // superseded) is an idempotent no-op. Reusing the deterministic activation
-    // commandId after a revision bump would collide with the recorded command
-    // fingerprint for the full command TTL, so skip the internal activation
-    // instead of reporting a misleading command conflict.
+    // superseded) is an idempotent ensure that leaves activation state to the
+    // explicit activate/pause/resume/supersede commands. Reusing the
+    // deterministic activation commandId after a revision bump would collide
+    // with the recorded command fingerprint for the full command TTL, so skip
+    // the internal activation instead of reporting a misleading command
+    // conflict. The internal request omits `at` so concurrent same-revision
+    // activations share a stable fingerprint and replay instead of conflicting.
     const canActivateFromState =
       persistedVersion === undefined ||
       persistedVersion.state === "registered" ||
@@ -415,7 +418,6 @@ export class LifecycleRuleRegistry {
           version: input.version,
           expectedRevision: (await this.stateStore.get(input.rule.id))?.revision ?? 0,
           reason: "compatibility registration",
-          at: registeredAt,
         },
       });
       this.synchronizeActiveRegistrations(activated.state);

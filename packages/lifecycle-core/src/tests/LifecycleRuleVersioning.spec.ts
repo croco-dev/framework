@@ -401,6 +401,47 @@ describe("LifecycleRuleRegistry versioning", () => {
     expect(await registry.getRegistrationState("retention-risk", "1.0.0")).toBe("active");
   });
 
+  it("leaves a superseded version registration settled across reinstalls", async () => {
+    const stateStore = new InMemoryLifecycleRuleStateStore();
+    const registry = new LifecycleRuleRegistry({ stateStore });
+    await registerVersion(registry, "1.0.0", { activate: true });
+    await registry.supersede({
+      commandId: "supersede-settled-version",
+      ruleId: "retention-risk",
+      version: "1.0.0",
+      expectedRevision: 1,
+    });
+
+    await registerVersion(registry, "1.0.0", { activate: true });
+
+    expect(await registry.getIdentityState("retention-risk")).toMatchObject({
+      revision: 2,
+      versions: [{ state: "superseded" }],
+      history: [{ command: "activate" }, { command: "supersede" }],
+    });
+  });
+
+  it("reuses a paused version registration after a process restart", async () => {
+    const stateStore = new InMemoryLifecycleRuleStateStore();
+    const firstRegistry = new LifecycleRuleRegistry({ stateStore });
+    await registerVersion(firstRegistry, "1.0.0", { activate: true });
+    await firstRegistry.pause({
+      commandId: "pause-before-restart",
+      ruleId: "retention-risk",
+      version: "1.0.0",
+      expectedRevision: 1,
+    });
+    const restartedRegistry = new LifecycleRuleRegistry({ stateStore });
+
+    const restarted = await registerVersion(restartedRegistry, "1.0.0", { activate: true });
+
+    expect(restarted.descriptor.version).toBe("1.0.0");
+    expect(await restartedRegistry.inspect()).toMatchObject([
+      { version: "1.0.0", state: "paused", revision: 2 },
+    ]);
+    expect((await restartedRegistry.getIdentityState("retention-risk"))?.history).toHaveLength(2);
+  });
+
   it("rejects a changed executable artifact reattaching to a persisted active version", async () => {
     const stateStore = new InMemoryLifecycleRuleStateStore();
     const firstRegistry = new LifecycleRuleRegistry({ stateStore });

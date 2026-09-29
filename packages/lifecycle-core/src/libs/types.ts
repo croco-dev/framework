@@ -392,6 +392,13 @@ export type LifecycleRuleRegistrationInput = {
   readonly executableFingerprint: string;
   readonly contextRequirements?: readonly string[];
   readonly actionDescriptors?: readonly LifecycleRuleActionDescriptor[];
+  /**
+   * Ensures the version exists and activates it when it is newly registered or
+   * still activatable (`registered`/`inactive`). Re-running registration for an
+   * already settled version (`active`/`paused`/`superseded`) leaves activation
+   * state unchanged; use the explicit activate/pause/resume/supersede commands
+   * to change it.
+   */
   readonly activate?: boolean;
   readonly registeredAt?: Date;
 };
