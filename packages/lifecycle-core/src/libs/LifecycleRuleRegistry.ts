@@ -403,12 +403,19 @@ export class LifecycleRuleRegistry {
     // deterministic activation commandId after a revision bump would collide
     // with the recorded command fingerprint for the full command TTL, so skip
     // the internal activation instead of reporting a misleading command
-    // conflict. The internal request omits `at` so concurrent same-revision
-    // activations share a stable fingerprint and replay instead of conflicting.
+    // conflict. The decision uses post-save state so a concurrent install that
+    // settled the version first turns this attempt into a skip rather than a
+    // stale collide. The internal request omits `at` so concurrent
+    // same-revision activations share a stable fingerprint and replay instead
+    // of conflicting.
+    const fresh = await this.stateStore.get(input.rule.id);
+    const freshVersion = fresh?.versions.find(
+      (record) => record.descriptor.version === input.version,
+    );
     const canActivateFromState =
-      persistedVersion === undefined ||
-      persistedVersion.state === "registered" ||
-      persistedVersion.state === "inactive";
+      freshVersion === undefined ||
+      freshVersion.state === "registered" ||
+      freshVersion.state === "inactive";
     if (input.activate && canActivateFromState) {
       const activated = await this.stateStore.applyCommand({
         command: "activate",
@@ -416,7 +423,7 @@ export class LifecycleRuleRegistry {
           commandId: `registration:${input.rule.id}:${input.version}`,
           ruleId: input.rule.id,
           version: input.version,
-          expectedRevision: (await this.stateStore.get(input.rule.id))?.revision ?? 0,
+          expectedRevision: fresh?.revision ?? 0,
           reason: "compatibility registration",
         },
       });

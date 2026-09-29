@@ -442,6 +442,24 @@ describe("LifecycleRuleRegistry versioning", () => {
     expect((await restartedRegistry.getIdentityState("retention-risk"))?.history).toHaveLength(2);
   });
 
+  it("converges concurrent fresh installations without command conflicts", async () => {
+    const stateStore = new AsyncLifecycleRuleStateStore();
+    const firstRegistry = new LifecycleRuleRegistry({ stateStore });
+    const secondRegistry = new LifecycleRuleRegistry({ stateStore });
+
+    const [first, second] = await Promise.all([
+      registerVersion(firstRegistry, "1.0.0", { activate: true }),
+      registerVersion(secondRegistry, "1.0.0", { activate: true }),
+    ]);
+
+    expect(first.descriptor).toEqual(second.descriptor);
+    expect(await firstRegistry.getIdentityState("retention-risk")).toMatchObject({
+      revision: 1,
+      versions: [{ state: "active" }],
+      history: [{ command: "activate", version: "1.0.0" }],
+    });
+  });
+
   it("rejects a changed executable artifact reattaching to a persisted active version", async () => {
     const stateStore = new InMemoryLifecycleRuleStateStore();
     const firstRegistry = new LifecycleRuleRegistry({ stateStore });
