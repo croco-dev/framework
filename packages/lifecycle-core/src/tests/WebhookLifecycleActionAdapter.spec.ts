@@ -172,4 +172,74 @@ describe("WebhookLifecycleActionAdapter", () => {
       },
     });
   });
+
+  it("consumes the response body on success", async () => {
+    const text = vi.fn().mockResolvedValue("ok");
+    const response = { ok: true, status: 202, text } as unknown as Response;
+    const fetchImpl = vi.fn().mockResolvedValue(response) as unknown as typeof fetch;
+
+    await executeWebhook(new WebhookLifecycleActionAdapter(fetchImpl));
+
+    expect(text).toHaveBeenCalledTimes(1);
+  });
+
+  it("consumes the response body on failure", async () => {
+    const text = vi.fn().mockResolvedValue("upstream busy");
+    const response = { ok: false, status: 503, text } as unknown as Response;
+    const fetchImpl = vi.fn().mockResolvedValue(response) as unknown as typeof fetch;
+
+    await executeWebhook(new WebhookLifecycleActionAdapter(fetchImpl));
+
+    expect(text).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not let payload headers override fixed protocol headers", async () => {
+    let capturedHeaders: Record<string, string> | undefined;
+    const fetchImpl = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+      capturedHeaders = init?.headers as Record<string, string>;
+      return Promise.resolve(new Response(null, { status: 202 }));
+    }) as unknown as typeof fetch;
+
+    await executeWebhook(new WebhookLifecycleActionAdapter(fetchImpl), {
+      url: "https://example.test/lifecycle",
+      headers: {
+        "content-type": "text/plain",
+        "idempotency-key": "spoofed-key",
+        "x-custom": "yes",
+      },
+    });
+
+    expect(capturedHeaders?.["content-type"]).toBe("application/json");
+    expect(capturedHeaders?.["idempotency-key"]).toBe("webhook-rule:tenant-1");
+    expect(capturedHeaders?.["x-custom"]).toBe("yes");
+  });
+
+  it("treats reserved header names case-insensitively", async () => {
+    let capturedHeaders: Record<string, string> | undefined;
+    const fetchImpl = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+      capturedHeaders = init?.headers as Record<string, string>;
+      return Promise.resolve(new Response(null, { status: 202 }));
+    }) as unknown as typeof fetch;
+
+    await executeWebhook(new WebhookLifecycleActionAdapter(fetchImpl), {
+      url: "https://example.test/lifecycle",
+      headers: {
+        "Content-Type": "text/plain",
+        "Idempotency-Key": "spoofed-key",
+      },
+    });
+
+    expect(capturedHeaders?.["content-type"]).toBe("application/json");
+    expect(capturedHeaders?.["idempotency-key"]).toBe("webhook-rule:tenant-1");
+    expect(
+      Object.keys(capturedHeaders ?? {}).filter(
+        (key) => key.toLowerCase() === "content-type" && key !== "content-type",
+      ),
+    ).toEqual([]);
+    expect(
+      Object.keys(capturedHeaders ?? {}).filter(
+        (key) => key.toLowerCase() === "idempotency-key" && key !== "idempotency-key",
+      ),
+    ).toEqual([]);
+  });
 });

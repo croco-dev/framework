@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baselineEntryCount": 6,
+  "baselineEntryCount": 7,
   "description": "Reviewed baseline for CROCO_STATIC_EMPTY_CATCH_RUNTIME_BOUNDARY. New production empty catch blocks must be converted or added with package/file/reason and owner and unexpired expiresOn metadata.",
   "entries": [
     {
@@ -56,6 +56,15 @@
       "reason": "Startup logging is optional and must not prevent the GraphQL server from resolving a successful listen callback.",
       "owner": "framework-error-handling",
       "expiresOn": "2026-10-29"
+    },
+    {
+      "package": "@croco/lifecycle-core",
+      "file": "packages/lifecycle-core/src/libs/WebhookLifecycleActionAdapter.ts",
+      "line": 47,
+      "excerpt": "} catch {",
+      "reason": "Reviewed 2026-09-29: response body drain failures must not replace the already-determined webhook status (derived from response.ok/status before the drain). The body is discarded, not interpreted, and the adapter has no diagnostic sink; WebhookLifecycleActionAdapter.spec.ts covers body consumption on both branches.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2026-12-29"
     }
   ]
 }

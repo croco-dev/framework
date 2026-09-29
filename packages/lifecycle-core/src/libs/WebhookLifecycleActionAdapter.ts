@@ -31,6 +31,24 @@ function getStringRecord(value: unknown): Record<string, string> {
   );
 }
 
+const RESERVED_WEBHOOK_HEADERS = new Set(["content-type", "idempotency-key"]);
+
+function getCustomWebhookHeaders(value: unknown): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(getStringRecord(value)).filter(
+      ([key]) => !RESERVED_WEBHOOK_HEADERS.has(key.toLowerCase()),
+    ),
+  );
+}
+
+async function consumeWebhookBody(response: Response): Promise<void> {
+  try {
+    await response.text();
+  } catch {
+    // The status is already determined; a body read failure must not mask it.
+  }
+}
+
 export class WebhookLifecycleActionAdapter implements LifecycleActionAdapter {
   private readonly timeoutMs: number;
 
@@ -83,9 +101,9 @@ export class WebhookLifecycleActionAdapter implements LifecycleActionAdapter {
       const request = this.fetchImpl(url, {
         method: "POST",
         headers: {
+          ...getCustomWebhookHeaders(action.payload?.headers),
           "content-type": "application/json",
           "idempotency-key": action.idempotencyKey ?? run.idempotencyKey,
-          ...getStringRecord(action.payload?.headers),
         },
         body: JSON.stringify({
           action,
@@ -117,6 +135,7 @@ export class WebhookLifecycleActionAdapter implements LifecycleActionAdapter {
       const response = outcome.response;
 
       if (!response.ok) {
+        await consumeWebhookBody(response);
         return {
           actionId: action.id,
           type: action.type,
@@ -128,6 +147,7 @@ export class WebhookLifecycleActionAdapter implements LifecycleActionAdapter {
         };
       }
 
+      await consumeWebhookBody(response);
       return {
         actionId: action.id,
         type: action.type,
