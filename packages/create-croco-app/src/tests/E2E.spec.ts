@@ -489,6 +489,111 @@ function assertWorkerServiceBindingHasMain(workerDir: string, expectedMain: stri
   expect(existsSync(join(workerDir, "src", "index.ts"))).toBe(true);
 }
 
+function parseWranglerMain(wranglerContent: string): string | undefined {
+  for (const line of wranglerContent.split("\n")) {
+    const match = line.match(/^\s*main\s*=\s*("(?:[^"]*)"|'(?:[^']*)')\s*(?:#.*)?$/);
+    if (match) {
+      return match[1].slice(1, -1);
+    }
+  }
+
+  return undefined;
+}
+
+function parseWranglerAssetsDirectory(wranglerContent: string): string | undefined {
+  for (const line of wranglerContent.split("\n")) {
+    const match = line.match(/^\s*directory\s*=\s*("(?:[^"]*)"|'(?:[^']*)')\s*(?:#.*)?$/);
+    if (match) {
+      return match[1].slice(1, -1);
+    }
+  }
+
+  return undefined;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function buildScriptReferencesPath(buildScript: string, targetPath: string): boolean {
+  return new RegExp(`(^|[^\\w./-])${escapeRegExp(targetPath)}($|[^\\w./-])`).test(buildScript);
+}
+
+function buildScriptOutputDirs(buildScript: string): string[] {
+  return [...buildScript.matchAll(/--outDir\s+([^\s]+)/g)].map((match) => match[1]);
+}
+
+function buildScriptProducesMain(buildScript: string, main: string): boolean {
+  if (buildScriptReferencesPath(buildScript, main)) {
+    return true;
+  }
+
+  const mainParentDir = main.split("/").slice(0, -1).join("/");
+
+  return buildScriptOutputDirs(buildScript).some(
+    (outDir) => mainParentDir === outDir || mainParentDir.startsWith(`${outDir}/`),
+  );
+}
+
+function assertWranglerMainMatchesBuildOutput(packageDir: string): void {
+  const wranglerPath = join(packageDir, "wrangler.toml");
+
+  if (!existsSync(wranglerPath)) {
+    return;
+  }
+
+  const wranglerContent = readFileSync(wranglerPath, "utf8");
+  const main = parseWranglerMain(wranglerContent);
+
+  if (main === undefined) {
+    const packageJson = readPackageJson(join(packageDir, "package.json"));
+    const buildScript = packageJson.scripts?.build ?? "";
+    const assetsDir = parseWranglerAssetsDirectory(wranglerContent);
+
+    expect(wranglerContent).toContain("[assets]");
+    expect(parseWranglerMain(wranglerContent)).toBeUndefined();
+    expect(
+      assetsDir !== undefined &&
+        buildScriptOutputDirs(buildScript).some(
+          (outDir) => assetsDir === outDir || assetsDir.startsWith(`${outDir}/`),
+        ),
+      `wrangler assets directory "${assetsDir}" must be produced by build script "${buildScript}" in ${packageDir}`,
+    ).toBe(true);
+    return;
+  }
+
+  if (main.startsWith("src/")) {
+    expect(existsSync(join(packageDir, main))).toBe(true);
+    return;
+  }
+
+  if (main.startsWith("dist/")) {
+    const packageJson = readPackageJson(join(packageDir, "package.json"));
+    const buildScript = packageJson.scripts?.build ?? "";
+
+    expect(
+      buildScriptProducesMain(buildScript, main),
+      `wrangler main "${main}" must be produced by build script "${buildScript}" in ${packageDir}`,
+    ).toBe(true);
+    return;
+  }
+
+  expect(wranglerContent).toContain("[assets]");
+  expect(parseWranglerMain(wranglerContent)).toBe(main);
+}
+
+function assertAllWranglerMainsMatchBuildOutputs(projectDir: string): void {
+  const wranglerFiles = collectFiles(projectDir).filter(
+    (filePath) => basename(filePath) === "wrangler.toml",
+  );
+
+  expect(wranglerFiles.length).toBeGreaterThan(0);
+
+  for (const wranglerFile of wranglerFiles) {
+    assertWranglerMainMatchesBuildOutput(wranglerFile.slice(0, -"/wrangler.toml".length));
+  }
+}
+
 function assertNoExternalCrocoWorkspaceRanges(projectDir: string): void {
   const manifests = collectFiles(projectDir)
     .filter((filePath) => basename(filePath) === "package.json")
@@ -845,6 +950,11 @@ describe("E2E: generate()", () => {
       assertMetaViteBrowserBuildEntrypoint(webDir, "vite build --outDir dist/client");
       assertViteConfigImportsDeclared(webDir);
       assertSourceBareImportsDeclared(webDir);
+      const webWranglerContent = readFileSync(join(webDir, "wrangler.toml"), "utf8");
+      expect(webWranglerContent).not.toContain("dist/worker-ssr");
+      expect(parseWranglerMain(webWranglerContent)).toBeUndefined();
+      assertWranglerMainMatchesBuildOutput(webDir);
+      assertAllWranglerMainsMatchBuildOutputs(testDir);
       assertNoHandlebarsPlaceholders(testDir);
       assertNoExternalCrocoWorkspaceRanges(testDir);
     },
@@ -942,6 +1052,9 @@ describe("E2E: generate()", () => {
       assertSourceBareImportsDeclared(join(testDir, "api-worker"));
       assertViteConfigImportsDeclared(ssrWorkerDir);
       assertSourceBareImportsDeclared(ssrWorkerDir);
+      assertWranglerMainMatchesBuildOutput(join(testDir, "api-worker"));
+      assertWranglerMainMatchesBuildOutput(ssrWorkerDir);
+      assertAllWranglerMainsMatchBuildOutputs(testDir);
       assertNoHandlebarsPlaceholders(testDir);
       assertNoExternalCrocoWorkspaceRanges(testDir);
     },
