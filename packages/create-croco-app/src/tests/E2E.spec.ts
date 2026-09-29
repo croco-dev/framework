@@ -523,16 +523,15 @@ function buildScriptOutputDirs(buildScript: string): string[] {
   return [...buildScript.matchAll(/--outDir\s+([^\s]+)/g)].map((match) => match[1]);
 }
 
-function buildScriptProducesMain(buildScript: string, main: string, mainDir: string): boolean {
-  if (
-    buildScriptReferencesPath(buildScript, main) ||
-    buildScriptReferencesPath(buildScript, mainDir)
-  ) {
+function buildScriptProducesMain(buildScript: string, main: string): boolean {
+  if (buildScriptReferencesPath(buildScript, main)) {
     return true;
   }
 
+  const mainParentDir = main.split("/").slice(0, -1).join("/");
+
   return buildScriptOutputDirs(buildScript).some(
-    (outDir) => main === outDir || main.startsWith(`${outDir}/`),
+    (outDir) => mainParentDir === outDir || mainParentDir.startsWith(`${outDir}/`),
   );
 }
 
@@ -547,8 +546,19 @@ function assertWranglerMainMatchesBuildOutput(packageDir: string): void {
   const main = parseWranglerMain(wranglerContent);
 
   if (main === undefined) {
+    const packageJson = readPackageJson(join(packageDir, "package.json"));
+    const buildScript = packageJson.scripts?.build ?? "";
+    const assetsDir = parseWranglerAssetsDirectory(wranglerContent);
+
     expect(wranglerContent).toContain("[assets]");
     expect(parseWranglerMain(wranglerContent)).toBeUndefined();
+    expect(
+      assetsDir !== undefined &&
+        buildScriptOutputDirs(buildScript).some(
+          (outDir) => assetsDir === outDir || assetsDir.startsWith(`${outDir}/`),
+        ),
+      `wrangler assets directory "${assetsDir}" must be produced by build script "${buildScript}" in ${packageDir}`,
+    ).toBe(true);
     return;
   }
 
@@ -560,17 +570,16 @@ function assertWranglerMainMatchesBuildOutput(packageDir: string): void {
   if (main.startsWith("dist/")) {
     const packageJson = readPackageJson(join(packageDir, "package.json"));
     const buildScript = packageJson.scripts?.build ?? "";
-    const mainDir = main.split("/").slice(0, 2).join("/");
 
     expect(
-      buildScriptProducesMain(buildScript, main, mainDir),
+      buildScriptProducesMain(buildScript, main),
       `wrangler main "${main}" must be produced by build script "${buildScript}" in ${packageDir}`,
     ).toBe(true);
     return;
   }
 
   expect(wranglerContent).toContain("[assets]");
-  expect(main.length).toBeGreaterThan(0);
+  expect(parseWranglerMain(wranglerContent)).toBe(main);
 }
 
 function assertAllWranglerMainsMatchBuildOutputs(projectDir: string): void {
