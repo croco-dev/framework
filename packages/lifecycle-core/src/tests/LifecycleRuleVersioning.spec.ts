@@ -442,6 +442,28 @@ describe("LifecycleRuleRegistry versioning", () => {
     expect((await restartedRegistry.getIdentityState("retention-risk"))?.history).toHaveLength(2);
   });
 
+  it("converges a stale compatibility view when a peer changed activation state", async () => {
+    const stateStore = new InMemoryLifecycleRuleStateStore();
+    const firstRegistry = new LifecycleRuleRegistry({ stateStore });
+    const secondRegistry = new LifecycleRuleRegistry({ stateStore });
+    await registerVersion(firstRegistry, "1.0.0", { activate: true });
+    await registerVersion(secondRegistry, "1.0.0", { activate: true });
+    await secondRegistry.pause({
+      commandId: "pause-from-peer",
+      ruleId: "retention-risk",
+      version: "1.0.0",
+      expectedRevision: 1,
+    });
+
+    await registerVersion(firstRegistry, "1.0.0", { activate: true });
+
+    expect(await firstRegistry.getIdentityState("retention-risk")).toMatchObject({
+      revision: 2,
+      versions: [{ state: "paused" }],
+    });
+    expect(firstRegistry.get("retention-risk")).toBeUndefined();
+  });
+
   it("converges concurrent fresh installations without command conflicts", async () => {
     const stateStore = new AsyncLifecycleRuleStateStore();
     const firstRegistry = new LifecycleRuleRegistry({ stateStore });

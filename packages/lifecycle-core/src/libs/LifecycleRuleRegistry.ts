@@ -393,9 +393,6 @@ export class LifecycleRuleRegistry {
     const registration =
       existingRegistration ?? cloneRegistration({ descriptor, rule: input.rule });
     this.registrations.set(key, registration);
-    if (persistedVersion?.state === "active") {
-      this.activeRegistrationKeys.add(key);
-    }
 
     // Re-running registration for an already settled version (active, paused,
     // superseded) is an idempotent ensure that leaves activation state to the
@@ -428,6 +425,11 @@ export class LifecycleRuleRegistry {
         },
       });
       this.synchronizeActiveRegistrations(activated.state);
+    } else if (fresh) {
+      // Re-registration observes rather than mutates settled state. Keep the
+      // synchronous compatibility view (`get`/`getAll`/`match`) converged with
+      // the authoritative store when another process changed activation state.
+      this.synchronizeActiveRegistrations(fresh);
     }
 
     return cloneRegistration(registration);
