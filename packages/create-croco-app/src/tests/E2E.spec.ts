@@ -477,6 +477,18 @@ function assertMetaViteBrowserBuildEntrypoint(packageDir: string, buildScript: s
   expect(viteConfig).toContain("outDir: 'dist/client'");
 }
 
+function assertWorkerServiceBindingHasMain(workerDir: string, expectedMain: string): void {
+  const wranglerConfig = readFileSync(join(workerDir, "wrangler.toml"), "utf8");
+  const packageJson = readPackageJson(join(workerDir, "package.json"));
+  const buildScript = packageJson.scripts?.build ?? "";
+
+  expect(wranglerConfig).toContain("[[services]]");
+  expect(wranglerConfig).toContain(`main = "${expectedMain}"`);
+  expect(buildScript).toContain("--ssr src/index.ts");
+  expect(buildScript).toContain("--outDir dist");
+  expect(existsSync(join(workerDir, "src", "index.ts"))).toBe(true);
+}
+
 function assertNoExternalCrocoWorkspaceRanges(projectDir: string): void {
   const manifests = collectFiles(projectDir)
     .filter((filePath) => basename(filePath) === "package.json")
@@ -904,6 +916,9 @@ describe("E2E: generate()", () => {
       expect(workspaceConfig).toContain("tsup@8.5.1: patches/tsup@8.5.1.patch");
       expect(existsSync(join(testDir, "patches", "tsup@8.5.1.patch"))).toBe(true);
       expect(workerWranglerConfig).not.toMatch(/^\s*\[build\]\s*$/m);
+      const ssrWorkerWranglerConfig = readFileSync(join(ssrWorkerDir, "wrangler.toml"), "utf8");
+      expect(ssrWorkerWranglerConfig).toContain('binding = "API_WORKER"');
+      assertWorkerServiceBindingHasMain(ssrWorkerDir, "dist/index.js");
       expect(ssrWorkerPackageJson.dependencies?.["@croco/meta-vite"]).toBe(
         externalCrocoRange("@croco/meta-vite"),
       );
