@@ -77,6 +77,15 @@ title: "LifecycleRun"
 
 ---
 
+### signalSource?
+
+> `readonly` `optional` **signalSource?**: `string`
+
+Source namespace captured from the signal at claim time. Together with
+`signalId` this preserves the redeliverable source event identity.
+
+---
+
 ### signalType
 
 > `readonly` **signalType**: [`LifecycleSignalType`](/api/lifecycle-core/src/type-aliases/lifecyclesignaltype/)
@@ -86,6 +95,15 @@ title: "LifecycleRun"
 ### skipReason?
 
 > `readonly` `optional` **skipReason?**: [`LifecycleSkipReason`](/api/lifecycle-core/src/type-aliases/lifecycleskipreason/)
+
+---
+
+### sourceFingerprint?
+
+> `readonly` `optional` **sourceFingerprint?**: `string`
+
+Canonical semantic payload fingerprint used only for conflict checks on
+redelivery with the same source identity. Never an identity input.
 
 ---
 

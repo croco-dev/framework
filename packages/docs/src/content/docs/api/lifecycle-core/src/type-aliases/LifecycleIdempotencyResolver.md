@@ -5,7 +5,7 @@ prev: false
 title: "LifecycleIdempotencyResolver"
 ---
 
-> **LifecycleIdempotencyResolver** = (`input`) => `string`
+> **LifecycleIdempotencyResolver** = (`input`) => `string` \| `undefined`
 
 ## Parameters
 
@@ -21,4 +21,4 @@ title: "LifecycleIdempotencyResolver"
 
 ## Returns
 
-`string`
+`string` \| `undefined`
