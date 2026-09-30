@@ -17394,7 +17394,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
-          line: 54,
+          line: 58,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17427,7 +17427,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
-          line: 19,
+          line: 20,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17458,7 +17458,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
-          line: 65,
+          line: 74,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17490,7 +17490,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
-          line: 76,
+          line: 90,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17520,7 +17520,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
-          line: 40,
+          line: 42,
           column: 5,
           kind: "problem-constructor",
         },
@@ -19977,7 +19977,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts",
-          line: 97,
+          line: 113,
           column: 5,
           kind: "problem-constructor",
         },

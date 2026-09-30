@@ -15,7 +15,7 @@ Resend 전송 실패와 설정/검증 문제를 표현하는 Problem입니다.
 
 ### Constructor
 
-> **new ResendTerminalUpstreamProblem**(`context`, `detail?`): `ResendTerminalUpstreamProblem`
+> **new ResendTerminalUpstreamProblem**(`context`, `detail?`, `cause?`): `ResendTerminalUpstreamProblem`
 
 #### Parameters
 
@@ -26,6 +26,10 @@ Resend 전송 실패와 설정/검증 문제를 표현하는 Problem입니다.
 ##### detail?
 
 `string` = `"Resend upstream request failed terminally"`
+
+##### cause?
+
+`Error`
 
 #### Returns
 

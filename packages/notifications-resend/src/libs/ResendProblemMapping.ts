@@ -1,4 +1,4 @@
-import { Problem } from "@croco/problems-core";
+import { Problem, readExplicitRetryability } from "@croco/problems-core";
 import type { CreateEmailResponse } from "resend";
 import {
   ResendIdempotencyConflictProblem,
@@ -116,6 +116,16 @@ export function normalizeResendProblem(
   providerResponse?: CreateEmailResponse,
   options: ResendProblemNormalizationOptions = {},
 ): Problem {
+  const normalizedExhausted = normalizeResendRetryExhaustion(
+    error,
+    operation,
+    providerResponse,
+    options,
+  );
+  if (normalizedExhausted !== undefined) {
+    return normalizedExhausted;
+  }
+
   if (error instanceof Problem) {
     return error;
   }
@@ -144,9 +154,20 @@ export function createResendErrorContext(
   operation: ResendProblemOperation,
 ): ResendErrorContext {
   const normalized = normalizeResendError(error, "Unknown Resend error");
+  return createResendErrorContextWithRetryable(
+    normalized,
+    operation,
+    isRetryableResendError(normalized),
+  );
+}
+
+function createResendErrorContextWithRetryable(
+  normalized: ResendError,
+  operation: ResendProblemOperation,
+  retryable: boolean,
+): ResendErrorContext {
   const status = getErrorStatus(normalized);
   const upstreamCode = getErrorCode(normalized);
-  const retryable = isRetryableResendError(normalized);
 
   return {
     provider: "resend",
@@ -173,6 +194,165 @@ export function isRetryableResendError(error: unknown): boolean {
   }
 
   return TRANSIENT_ERROR_CODES.has(code);
+}
+
+export function getResendExhaustedProviderResponse(
+  error: unknown,
+): CreateEmailResponse | undefined {
+  const exhaustion = readRetryExhaustionDetails(error);
+  if (exhaustion?.lastError === undefined) {
+    return undefined;
+  }
+
+  return (exhaustion.lastError as ResendError).providerResponse;
+}
+
+type RetryExhaustionDetails = {
+  readonly attempts?: number;
+  readonly lastError?: Error;
+  readonly methodName?: string;
+};
+
+function normalizeResendRetryExhaustion(
+  error: unknown,
+  operation: ResendProblemOperation,
+  providerResponse: CreateEmailResponse | undefined,
+  options: ResendProblemNormalizationOptions,
+): Problem | undefined {
+  const exhaustion = readRetryExhaustionDetails(error);
+  if (exhaustion === undefined) {
+    return undefined;
+  }
+
+  const exhaustedCause =
+    exhaustion.lastError ??
+    (error instanceof Error && !(error instanceof Problem) ? error : undefined);
+  if (exhaustedCause === undefined) {
+    return new ResendTerminalUpstreamProblem(
+      {
+        provider: "resend",
+        operation,
+        ...(exhaustion.attempts === undefined ? {} : { retryAttempts: exhaustion.attempts }),
+      },
+      "Resend retry attempts exhausted",
+      undefined,
+    );
+  }
+
+  const normalized = normalizeResendError(exhaustedCause, "Unknown Resend error", providerResponse);
+  const context =
+    exhaustedCause instanceof Problem
+      ? createResendProblemCauseContext(exhaustedCause, normalized, operation)
+      : createResendErrorContext(normalized, operation);
+  const detail = sanitizeResendDiagnosticText(
+    `Resend retry attempts exhausted after ${exhaustion.attempts ?? "unknown"} attempts: ${normalized.message}`,
+    options.redactionValues,
+  );
+  const exhaustedContext: ResendErrorContext =
+    exhaustion.attempts === undefined
+      ? context
+      : { ...context, retryAttempts: exhaustion.attempts };
+
+  if (exhaustedContext.upstreamCode === "invalid_idempotent_request") {
+    return new ResendIdempotencyConflictProblem(exhaustedContext, detail, exhaustedCause);
+  }
+
+  if (isValidationError(exhaustedContext)) {
+    return new ResendValidationProblem(exhaustedContext, detail, exhaustedCause);
+  }
+
+  if (exhaustedContext.retryable === true) {
+    return new ResendRetryableUpstreamProblem(exhaustedContext, detail, exhaustedCause);
+  }
+
+  return new ResendTerminalUpstreamProblem(exhaustedContext, detail, exhaustedCause);
+}
+
+// Preserve Resend Problem cause taxonomy: upstream code/status/retryability stay
+// derived from the inner cause instead of the outward HTTP status.
+function createResendProblemCauseContext(
+  cause: Problem,
+  normalized: ResendError,
+  operation: ResendProblemOperation,
+): ResendErrorContext {
+  const normalizedContext = createResendErrorContext(normalized, operation);
+  const retryable = readExplicitRetryability(cause) ?? normalizedContext.retryable;
+  const upstreamCode =
+    readProblemStringExtension(cause, "upstreamCode") ?? normalizedContext.upstreamCode;
+  const status = readProblemNumberExtension(cause, "upstreamStatus") ?? normalizedContext.status;
+
+  return {
+    provider: "resend",
+    operation,
+    ...(retryable === undefined ? {} : { retryable }),
+    ...(status === undefined ? {} : { status }),
+    ...(upstreamCode === undefined ? {} : { upstreamCode }),
+  };
+}
+
+function readProblemExtensionValue(cause: Problem, field: string): unknown {
+  let extensions: unknown;
+  try {
+    extensions = Reflect.get(cause, "extensions");
+    return typeof extensions === "object" && extensions !== null
+      ? Reflect.get(extensions, field)
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function readProblemStringExtension(cause: Problem, field: string): string | undefined {
+  const value = readProblemExtensionValue(cause, field);
+  return typeof value === "string" ? value : undefined;
+}
+
+function readProblemNumberExtension(cause: Problem, field: string): number | undefined {
+  const value = readProblemExtensionValue(cause, field);
+  return typeof value === "number" ? value : undefined;
+}
+
+function readRetryExhaustionDetails(error: unknown): RetryExhaustionDetails | undefined {
+  if (typeof error !== "object" || error === null) {
+    return undefined;
+  }
+
+  const candidate = error as {
+    code?: unknown;
+    name?: unknown;
+    attempts?: unknown;
+    lastError?: unknown;
+    methodName?: unknown;
+    getOriginalError?: unknown;
+  };
+  const isExhaustedMarker =
+    candidate.code === "RETRY_EXHAUSTED" ||
+    (typeof candidate.name === "string" && candidate.name === "RetryExhaustedProblem");
+  if (!isExhaustedMarker) {
+    return undefined;
+  }
+
+  let fromAccessor: unknown;
+  try {
+    fromAccessor =
+      typeof candidate.getOriginalError === "function"
+        ? (candidate.getOriginalError as () => unknown).call(error)
+        : undefined;
+  } catch {
+    fromAccessor = undefined;
+  }
+  const lastError =
+    candidate.lastError instanceof Error
+      ? candidate.lastError
+      : fromAccessor instanceof Error
+        ? fromAccessor
+        : undefined;
+
+  return {
+    ...(typeof candidate.attempts === "number" ? { attempts: candidate.attempts } : {}),
+    ...(lastError === undefined ? {} : { lastError }),
+    ...(typeof candidate.methodName === "string" ? { methodName: candidate.methodName } : {}),
+  };
 }
 
 export function sanitizeResendDiagnosticValue(value: unknown): unknown {

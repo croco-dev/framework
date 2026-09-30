@@ -17,6 +17,7 @@ import { isResendEmailAddress, validateResendConfig, type ResendConfig } from ".
 import { RESEND_PROVIDER_CAPABILITIES } from "./ResendCapabilities";
 import {
   createResendErrorContext,
+  getResendExhaustedProviderResponse,
   isRetryableResendError,
   normalizeResendError,
   normalizeResendProblem,
@@ -171,7 +172,8 @@ export class ResendProvider implements NotificationProvider {
       };
     } catch (error: unknown) {
       const cause = normalizeResendError(error, "Unknown Resend error");
-      const problem = normalizeResendProblem(cause, "send", cause.providerResponse, {
+      const providerResponse = cause.providerResponse ?? getResendExhaustedProviderResponse(error);
+      const problem = normalizeResendProblem(error, "send", providerResponse, {
         redactionValues,
       });
 
@@ -180,7 +182,7 @@ export class ResendProvider implements NotificationProvider {
       return {
         success: false,
         problem,
-        providerResponse: cause.providerResponse,
+        providerResponse,
       };
     }
   }

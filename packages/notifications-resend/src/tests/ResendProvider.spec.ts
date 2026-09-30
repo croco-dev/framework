@@ -8,6 +8,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ResendIdempotencyConflictProblem,
   ResendMissingConfigProblem,
+  ResendRetryableUpstreamProblem,
   ResendTerminalUpstreamProblem,
   ResendValidationProblem,
 } from "../libs/problems/ResendNotificationProblem";
@@ -740,6 +741,148 @@ describe("ResendProvider", () => {
         }),
       );
       expect(recordError).toHaveBeenCalledWith(expect.any(Error));
+    });
+
+    it("should preserve provider responses through exhausted transient response retries", async () => {
+      const transientErrorResponse: CreateEmailResponse = {
+        data: null,
+        error: { message: "Rate limit exceeded", name: "rate_limit_exceeded" },
+      };
+
+      vi.mocked(mockResendClient.emails.send).mockResolvedValue(transientErrorResponse);
+
+      const payload: NotificationPayload = {
+        to: "recipient@example.com",
+        subject: "Retry Subject",
+        content: "<h1>Retry Content</h1>",
+      };
+
+      const result = await provider.send(payload);
+
+      expectFailedNotificationResult(result);
+      expect(result.problem).toBeInstanceOf(ResendRetryableUpstreamProblem);
+      expect(result.problem.extensions).toMatchObject({
+        provider: "resend",
+        operation: "send",
+        retryable: true,
+        upstreamCode: "rate_limit_exceeded",
+      });
+      expect(result.problem.detail).toContain("Rate limit exceeded");
+      expect(result.providerResponse).toEqual(transientErrorResponse);
+      expect(mockResendClient.emails.send).toHaveBeenCalledTimes(3);
+      expect(result.problem.cause).toBeUndefined();
+    });
+
+    it("should classify exhausted transient retries as retryable with upstream cause preserved", async () => {
+      const { normalizeResendProblem } = await import("../libs/ResendProblemMapping");
+      const { RetryExhaustedProblem } = await import("@croco/retry-core");
+      const upstream = Object.assign(new Error("Service unavailable"), {
+        code: "internal_server_error",
+        status: 500,
+      });
+      const exhausted = RetryExhaustedProblem.fromContext("send", 3, upstream);
+
+      const problem = normalizeResendProblem(exhausted, "send");
+
+      expect(problem).toBeInstanceOf(ResendRetryableUpstreamProblem);
+      expect(problem.extensions).toMatchObject({
+        provider: "resend",
+        operation: "send",
+        retryable: true,
+        retryAttempts: 3,
+        upstreamStatus: 500,
+        upstreamCode: "internal_server_error",
+      });
+      expect(problem.detail).toContain("Service unavailable");
+      expect(problem.cause).toBe(upstream);
+    });
+
+    it("should classify exhausted terminal retries as non-retryable with upstream cause preserved", async () => {
+      const { normalizeResendProblem } = await import("../libs/ResendProblemMapping");
+      const { RetryExhaustedProblem } = await import("@croco/retry-core");
+      const networkError = new Error("Network connection failed");
+      const exhausted = RetryExhaustedProblem.fromContext("send", 3, networkError);
+
+      const problem = normalizeResendProblem(exhausted, "send");
+
+      expect(problem).toBeInstanceOf(ResendTerminalUpstreamProblem);
+      expect(problem.extensions).toMatchObject({
+        provider: "resend",
+        operation: "send",
+        retryable: false,
+        retryAttempts: 3,
+      });
+      expect(problem.cause).toBe(networkError);
+    });
+
+    it("should preserve terminal Problem causes without reclassifying outward status", async () => {
+      const { normalizeResendProblem } = await import("../libs/ResendProblemMapping");
+      const { RetryExhaustedProblem } = await import("@croco/retry-core");
+      const terminalCause = new ResendTerminalUpstreamProblem(
+        {
+          provider: "resend",
+          operation: "send",
+          retryable: false,
+          status: 500,
+          upstreamCode: "internal_server_error",
+        },
+        "Service unavailable",
+      );
+      const exhausted = RetryExhaustedProblem.fromContext("send", 3, terminalCause);
+
+      const problem = normalizeResendProblem(exhausted, "send");
+
+      expect(problem).toBeInstanceOf(ResendTerminalUpstreamProblem);
+      expect(problem.extensions).toMatchObject({
+        provider: "resend",
+        operation: "send",
+        retryable: false,
+        retryAttempts: 3,
+        upstreamStatus: 500,
+        upstreamCode: "internal_server_error",
+      });
+      expect(problem.cause).toBe(terminalCause);
+    });
+
+    it("should map exhausted retryTemplate failures through send with providerResponse fallback", async () => {
+      const { RetryExhaustedProblem } = await import("@croco/retry-core");
+      const upstreamResponse: CreateEmailResponse = {
+        data: null,
+        error: { message: "Service unavailable", name: "internal_server_error" },
+      };
+      const upstream = Object.assign(new Error("Service unavailable"), {
+        code: "internal_server_error",
+        status: 500,
+        providerResponse: upstreamResponse,
+      });
+      const exhausted = RetryExhaustedProblem.fromContext("send", 3, upstream);
+
+      const internals = provider as unknown as {
+        retryTemplate: { execute: (...args: unknown[]) => Promise<unknown> };
+      };
+      vi.spyOn(internals.retryTemplate, "execute").mockRejectedValue(exhausted);
+
+      const payload: NotificationPayload = {
+        to: "recipient@example.com",
+        subject: "Retry Subject",
+        content: "<h1>Retry Content</h1>",
+      };
+
+      const result = await provider.send(payload);
+
+      expectFailedNotificationResult(result);
+      expect(result.problem).toBeInstanceOf(ResendRetryableUpstreamProblem);
+      expect(result.problem.extensions).toMatchObject({
+        provider: "resend",
+        operation: "send",
+        retryable: true,
+        retryAttempts: 3,
+        upstreamStatus: 500,
+        upstreamCode: "internal_server_error",
+      });
+      expect(result.problem.detail).toContain("Service unavailable");
+      expect(result.problem.cause).toBe(upstream);
+      expect(result.providerResponse).toEqual(upstreamResponse);
     });
 
     it("should reject invalid recipients before calling Resend", async () => {

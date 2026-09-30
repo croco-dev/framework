@@ -8,6 +8,7 @@ export type ResendErrorContext = {
   readonly operation: ResendProblemOperation;
   readonly provider: "resend";
   readonly retryable?: boolean;
+  readonly retryAttempts?: number;
   readonly status?: number;
   readonly upstreamCode?: string;
 };
@@ -36,8 +37,10 @@ export class ResendValidationProblem extends Problem {
   constructor(
     context: ResendErrorContext,
     detail = "Resend notification request validation failed",
+    cause?: Error,
   ) {
     super("notifications-resend/validation-failed", ProblemCategory.ValidationError, detail, {
+      ...(cause === undefined ? {} : { cause }),
       extensions: {
         ...toResendExtensions(context),
         retryable: false,
@@ -50,8 +53,10 @@ export class ResendIdempotencyConflictProblem extends Problem {
   constructor(
     context: ResendErrorContext,
     detail = "Resend rejected the idempotency key for this send",
+    cause?: Error,
   ) {
     super("notifications-resend/idempotency-conflict", ProblemCategory.Conflict, detail, {
+      ...(cause === undefined ? {} : { cause }),
       extensions: {
         ...toResendExtensions(context),
         retryable: false,
@@ -61,8 +66,13 @@ export class ResendIdempotencyConflictProblem extends Problem {
 }
 
 export class ResendRetryableUpstreamProblem extends Problem {
-  constructor(context: ResendErrorContext, detail = "Resend upstream request failed retryably") {
+  constructor(
+    context: ResendErrorContext,
+    detail = "Resend upstream request failed retryably",
+    cause?: Error,
+  ) {
     super("notifications-resend/retryable-upstream", ProblemCategory.InternalServerError, detail, {
+      ...(cause === undefined ? {} : { cause }),
       extensions: {
         ...toResendExtensions(context),
         retryable: true,
@@ -72,8 +82,13 @@ export class ResendRetryableUpstreamProblem extends Problem {
 }
 
 export class ResendTerminalUpstreamProblem extends Problem {
-  constructor(context: ResendErrorContext, detail = "Resend upstream request failed terminally") {
+  constructor(
+    context: ResendErrorContext,
+    detail = "Resend upstream request failed terminally",
+    cause?: Error,
+  ) {
     super("notifications-resend/terminal-upstream", ProblemCategory.InternalServerError, detail, {
+      ...(cause === undefined ? {} : { cause }),
       extensions: {
         ...toResendExtensions(context),
         retryable: false,
@@ -87,6 +102,7 @@ function toResendExtensions(context: ResendErrorContext): Record<string, unknown
     provider: context.provider,
     operation: context.operation,
     ...(context.retryable !== undefined && { retryable: context.retryable }),
+    ...(context.retryAttempts !== undefined && { retryAttempts: context.retryAttempts }),
     ...(context.status !== undefined && { upstreamStatus: context.status }),
     ...(context.upstreamCode !== undefined && { upstreamCode: context.upstreamCode }),
   };
