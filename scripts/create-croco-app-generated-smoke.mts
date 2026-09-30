@@ -1446,7 +1446,19 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     ],
     runtimeTarget: "container+browser",
     matrixTargets: ["base-ddd"],
-    validations: [{ label: "frontend Dockerfile", paths: ["web/Dockerfile"] }],
+    validations: [
+      { label: "build", args: ["build"] },
+      {
+        label: "frontend Docker output",
+        paths: [
+          "web/Dockerfile",
+          "apps/web/.next/standalone/apps/web/server.js",
+          "apps/web/.next/static",
+          "apps/web/public",
+        ],
+      },
+      { label: "rebuild with standalone output", args: ["build"] },
+    ],
   },
   {
     name: "graphql-vite-spa-docker",
