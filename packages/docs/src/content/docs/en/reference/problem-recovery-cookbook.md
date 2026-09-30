@@ -250,7 +250,7 @@ This cookbook documents 879 public Croco Problem codes. The deterministic JSON r
 | [`engagement-core/campaign-snapshot-payload-invalid`](#engagement-core-campaign-snapshot-payload-invalid)                             | ValidationError       |    422 | not-retryable | public        | active     |       1 |
 | [`engagement-core/campaign-store-conflict`](#engagement-core-campaign-store-conflict)                                                 | Conflict              |    409 | conditional   | safe-message  | active     |       1 |
 | [`engagement-core/campaign-store-invalid`](#engagement-core-campaign-store-invalid)                                                   | ValidationError       |    422 | not-retryable | public        | active     |       1 |
-| [`engagement-core/contact-policy-acceptance-unknown`](#engagement-core-contact-policy-acceptance-unknown)                             | InternalServerError   |    500 | conditional   | operator-only | active     |       1 |
+| [`engagement-core/contact-policy-acceptance-unknown`](#engagement-core-contact-policy-acceptance-unknown)                             | InternalServerError   |    500 | not-retryable | operator-only | active     |       1 |
 | [`engagement-core/contact-policy-conflict`](#engagement-core-contact-policy-conflict)                                                 | Conflict              |    409 | conditional   | safe-message  | active     |       1 |
 | [`engagement-core/contact-policy-invalid`](#engagement-core-contact-policy-invalid)                                                   | ValidationError       |    422 | not-retryable | public        | active     |       1 |
 | [`engagement-core/delivery-event-correlation-invalid`](#engagement-core-delivery-event-correlation-invalid)                           | ValidationError       |    422 | not-retryable | public        | active     |       1 |
@@ -5191,12 +5191,12 @@ Sources:
 
 - Category: `InternalServerError`
 - HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
+- Retryability: `not-retryable`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Cause: Provider acceptance could not be durably confirmed for a contact policy reservation.
+- User action: Do not automatically resend the message or refund the contact budget; request operator reconciliation.
+- Operator action: Verify provider evidence, then call ContactPolicy.reconcile with the evidence reference, actor, and reason. Record accepted execution IDs or release the reservation only when evidence confirms non-acceptance; expiry alone must not refund the budget.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:

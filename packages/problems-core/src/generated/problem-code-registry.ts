@@ -7386,12 +7386,13 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#engagement-core-contact-policy-acceptance-unknown",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
+        cause:
+          "Provider acceptance could not be durably confirmed for a contact policy reservation.",
         userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+          "Do not automatically resend the message or refund the contact budget; request operator reconciliation.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
+          "Verify provider evidence, then call ContactPolicy.reconcile with the evidence reference, actor, and reason. Record accepted execution IDs or release the reservation only when evidence confirms non-acceptance; expiry alone must not refund the budget.",
+        retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
           eventName: "croco.problem.error",

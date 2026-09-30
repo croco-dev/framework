@@ -821,13 +821,6 @@
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
-      "file": "packages/engagement-core/README.md",
-      "blockIndex": 4,
-      "language": "typescript",
-      "openingLine": 188,
-      "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
-    },
-    {
       "file": "packages/engagement-drizzle/README.md",
       "blockIndex": 1,
       "language": "ts",

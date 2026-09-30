@@ -185,7 +185,9 @@ message data, rendered content and endpoint identity, but only the digest enters
 The default service without this gate and direct notification provider calls bypass these budgets.
 The gate does not claim control over those sends.
 
-```typescript
+```typescript typecheck
+import { ContactPolicy, InMemoryContactPolicyStore } from "@croco/engagement-core";
+
 const policy = new ContactPolicy({
   store: new InMemoryContactPolicyStore(),
   config: {
