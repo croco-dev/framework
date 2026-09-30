@@ -1,0 +1,1459 @@
+{
+  "version": "croco.project-map.manifest.v1",
+  "project": {
+    "root": ".",
+    "packageName": "{{projectName}}",
+    "packageManager": "pnpm@12.7.0"
+  },
+  "summary": {
+    "packages": 3,
+    "controllers": 3,
+    "routes": 9,
+    "providers": 0,
+    "policies": 1,
+    "problems": 14,
+    "telemetryBoundaries": 15,
+    "generatedArtifacts": 4,
+    "diagnostics": 0,
+    "errors": 0,
+    "warnings": 0
+  },
+  "packageGraph": {
+    "packages": [
+      {
+        "name": "{{scope}}/api-server",
+        "path": "apps/api-server/package.json",
+        "private": true,
+        "scripts": [
+          "build",
+          "demo:scenario",
+          "demo:seed",
+          "demo:smoke",
+          "demo:usage-recover",
+          "dev",
+          "di:generate",
+          "di:graph",
+          "failure-drill:integration",
+          "failure-drill:smoke",
+          "jobs:smoke",
+          "ops:smoke",
+          "profile:check",
+          "profile:smoke:real",
+          "test",
+          "typecheck"
+        ],
+        "dependencies": [
+          {
+            "name": "@croco/access-core",
+            "range": "{{lookup crocoPackageRanges "@croco/access-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/ai-usage",
+            "range": "{{lookup crocoPackageRanges "@croco/ai-usage"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/auth-better-auth",
+            "range": "{{lookup crocoPackageRanges "@croco/auth-better-auth"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/auth-core",
+            "range": "{{lookup crocoPackageRanges "@croco/auth-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/billing-core",
+            "range": "{{lookup crocoPackageRanges "@croco/billing-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/billing-polar",
+            "range": "{{lookup crocoPackageRanges "@croco/billing-polar"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/cli",
+            "range": "{{lookup crocoPackageRanges "@croco/cli"}}",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@croco/diagnostics-core",
+            "range": "{{lookup crocoPackageRanges "@croco/diagnostics-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/engagement-core",
+            "range": "{{lookup crocoPackageRanges "@croco/engagement-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/entitlements-core",
+            "range": "{{lookup crocoPackageRanges "@croco/entitlements-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/esbuild-plugin",
+            "range": "{{lookup crocoPackageRanges "@croco/esbuild-plugin"}}",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@croco/events-core",
+            "range": "{{lookup crocoPackageRanges "@croco/events-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/execution-core",
+            "range": "{{lookup crocoPackageRanges "@croco/execution-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/framework-context",
+            "range": "{{lookup crocoPackageRanges "@croco/framework-context"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/framework-module",
+            "range": "{{lookup crocoPackageRanges "@croco/framework-module"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/health-core",
+            "range": "{{lookup crocoPackageRanges "@croco/health-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/idempotency-core",
+            "range": "{{lookup crocoPackageRanges "@croco/idempotency-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/invitation-core",
+            "range": "{{lookup crocoPackageRanges "@croco/invitation-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/lifecycle-core",
+            "range": "{{lookup crocoPackageRanges "@croco/lifecycle-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/membership-core",
+            "range": "{{lookup crocoPackageRanges "@croco/membership-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/metering-core",
+            "range": "{{lookup crocoPackageRanges "@croco/metering-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/notifications-core",
+            "range": "{{lookup crocoPackageRanges "@croco/notifications-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/preset-node",
+            "range": "{{lookup crocoPackageRanges "@croco/preset-node"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/problems-core",
+            "range": "{{lookup crocoPackageRanges "@croco/problems-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/protocols-core",
+            "range": "{{lookup crocoPackageRanges "@croco/protocols-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/protocols-rest",
+            "range": "{{lookup crocoPackageRanges "@croco/protocols-rest"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/ratelimit-core",
+            "range": "{{lookup crocoPackageRanges "@croco/ratelimit-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/storage-cloudinary",
+            "range": "{{lookup crocoPackageRanges "@croco/storage-cloudinary"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/storage-core",
+            "range": "{{lookup crocoPackageRanges "@croco/storage-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/tasks-core",
+            "range": "{{lookup crocoPackageRanges "@croco/tasks-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/tasks-qstash",
+            "range": "{{lookup crocoPackageRanges "@croco/tasks-qstash"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/telemetry-api",
+            "range": "{{lookup crocoPackageRanges "@croco/telemetry-api"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/telemetry-sdk-node",
+            "range": "{{lookup crocoPackageRanges "@croco/telemetry-sdk-node"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/tenant-core",
+            "range": "{{lookup crocoPackageRanges "@croco/tenant-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/testing",
+            "range": "{{lookup crocoPackageRanges "@croco/testing"}}",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@croco/transports-http",
+            "range": "{{lookup crocoPackageRanges "@croco/transports-http"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/tx-core",
+            "range": "{{lookup crocoPackageRanges "@croco/tx-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/tx-drizzle",
+            "range": "{{lookup crocoPackageRanges "@croco/tx-drizzle"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/webhooks-core",
+            "range": "{{lookup crocoPackageRanges "@croco/webhooks-core"}}",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@types/node",
+            "range": "^24",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@types/pg",
+            "range": "8.20.0",
+            "kind": "devDependency"
+          },
+          {
+            "name": "cross-env",
+            "range": "^10.1.0",
+            "kind": "devDependency"
+          },
+          {
+            "name": "drizzle-orm",
+            "range": "^0.45.2",
+            "kind": "dependency"
+          },
+          {
+            "name": "pg",
+            "range": "^8.11.0",
+            "kind": "dependency"
+          },
+          {
+            "name": "reflect-metadata",
+            "range": "0.2.2",
+            "kind": "dependency"
+          },
+          {
+            "name": "tsup",
+            "range": "^8.5.1",
+            "kind": "devDependency"
+          },
+          {
+            "name": "tsx",
+            "range": "^4.0.0",
+            "kind": "devDependency"
+          },
+          {
+            "name": "typescript",
+            "range": "^6.0.3",
+            "kind": "devDependency"
+          },
+          {
+            "name": "vitest",
+            "range": "^4.1.8",
+            "kind": "devDependency"
+          },
+          {
+            "name": "zod",
+            "range": "^3.23.8",
+            "kind": "dependency"
+          }
+        ]
+      },
+      {
+        "name": "{{scope}}/provider-rpc",
+        "path": "libs/shared/provider-rpc/package.json",
+        "private": true,
+        "scripts": [
+          "typecheck"
+        ],
+        "dependencies": [
+          {
+            "name": "@croco/problems-core",
+            "range": "{{lookup crocoPackageRanges "@croco/problems-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "typescript",
+            "range": "^6.0.3",
+            "kind": "devDependency"
+          }
+        ]
+      },
+      {
+        "name": "{{projectName}}",
+        "path": "package.json",
+        "private": true,
+        "scripts": [
+          "architecture-policy:check",
+          "build",
+          "build:api",
+          "ci:contracts",
+          "codegen",
+          "contract:check",
+          "contract:client",
+          "contract:client:check",
+          "contract:coverage",
+          "contract:diff",
+          "contract:openapi",
+          "contract:openapi:check",
+          "contract:snapshot",
+          "contract:verify",
+          "demo:scenario",
+          "demo:seed",
+          "demo:smoke",
+          "dev:api",
+          "di:assert",
+          "di:check",
+          "di:graph",
+          "di:verify",
+          "doctor",
+          "failure-drill:integration",
+          "failure-drill:smoke",
+          "jobs:smoke",
+          "lint",
+          "ops:smoke",
+          "profile:check",
+          "profile:smoke:real",
+          "project-map:check",
+          "project-map:write",
+          "runtime-policy:check",
+          "test",
+          "typecheck"
+        ],
+        "dependencies": [
+          {
+            "name": "@biomejs/biome",
+            "range": "2.3.12",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@croco/cli",
+            "range": "{{lookup crocoPackageRanges "@croco/cli"}}",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@croco/openapi-spec",
+            "range": "{{lookup crocoPackageRanges "@croco/openapi-spec"}}",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@croco/protocols-rest",
+            "range": "{{lookup crocoPackageRanges "@croco/protocols-rest"}}",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@croco/rpc-codegen",
+            "range": "{{lookup crocoPackageRanges "@croco/rpc-codegen"}}",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@types/node",
+            "range": "^24",
+            "kind": "devDependency"
+          },
+          {
+            "name": "turbo",
+            "range": "2.10.2",
+            "kind": "devDependency"
+          },
+          {
+            "name": "typescript",
+            "range": "^6.0.3",
+            "kind": "devDependency"
+          },
+          {
+            "name": "zod",
+            "range": "^3.23.8",
+            "kind": "devDependency"
+          }
+        ]
+      }
+    ],
+    "providerProfile": {
+      "manifestPath": "croco-saas-profile.manifest.json",
+      "profileName": "saas-node-postgres",
+      "packages": [
+        "@croco/auth-better-auth",
+        "@croco/auth-core",
+        "@croco/billing-core",
+        "@croco/billing-polar",
+        "@croco/preset-node",
+        "@croco/storage-cloudinary",
+        "@croco/storage-core",
+        "@croco/tasks-core",
+        "@croco/tasks-qstash",
+        "@croco/telemetry-sdk-node",
+        "@croco/transports-http",
+        "@croco/tx-core",
+        "@croco/tx-drizzle",
+        "@types/pg",
+        "drizzle-orm",
+        "pg"
+      ]
+    }
+  },
+  "routeGraph": {
+    "frameworkManifestVersion": "croco.framework-manifest.v1",
+    "contractGraphSnapshotVersion": "croco.contract-graph.snapshot.v1",
+    "controllers": [
+      {
+        "id": "JobsController",
+        "name": "JobsController",
+        "path": "/ops/jobs",
+        "source": {
+          "file": "apps/api-server/src/controllers/JobsController.ts",
+          "line": 71,
+          "column": 8
+        }
+      },
+      {
+        "id": "OperationsController",
+        "name": "OperationsController",
+        "path": "/ops",
+        "source": {
+          "file": "apps/api-server/src/controllers/OperationsController.ts",
+          "line": 7,
+          "column": 8
+        }
+      },
+      {
+        "id": "SaasController",
+        "name": "SaasController",
+        "path": "/saas",
+        "source": {
+          "file": "apps/api-server/src/controllers/SaasController.ts",
+          "line": 21,
+          "column": 8
+        }
+      }
+    ],
+    "routes": [
+      {
+        "id": "JobsController.cancel",
+        "method": "POST",
+        "path": "/ops/jobs/:id/cancel",
+        "controllerId": "JobsController",
+        "handlerName": "cancel",
+        "source": {
+          "file": "apps/api-server/src/controllers/JobsController.ts",
+          "line": 71,
+          "column": 8
+        }
+      },
+      {
+        "id": "JobsController.list",
+        "method": "GET",
+        "path": "/ops/jobs",
+        "controllerId": "JobsController",
+        "handlerName": "list",
+        "source": {
+          "file": "apps/api-server/src/controllers/JobsController.ts",
+          "line": 71,
+          "column": 8
+        }
+      },
+      {
+        "id": "JobsController.logs",
+        "method": "GET",
+        "path": "/ops/jobs/:id/logs",
+        "controllerId": "JobsController",
+        "handlerName": "logs",
+        "source": {
+          "file": "apps/api-server/src/controllers/JobsController.ts",
+          "line": 71,
+          "column": 8
+        }
+      },
+      {
+        "id": "JobsController.replay",
+        "method": "POST",
+        "path": "/ops/jobs/:id/replay",
+        "controllerId": "JobsController",
+        "handlerName": "replay",
+        "source": {
+          "file": "apps/api-server/src/controllers/JobsController.ts",
+          "line": 71,
+          "column": 8
+        }
+      },
+      {
+        "id": "JobsController.show",
+        "method": "GET",
+        "path": "/ops/jobs/:id",
+        "controllerId": "JobsController",
+        "handlerName": "show",
+        "source": {
+          "file": "apps/api-server/src/controllers/JobsController.ts",
+          "line": 71,
+          "column": 8
+        }
+      },
+      {
+        "id": "OperationsController.diagnostics",
+        "method": "GET",
+        "path": "/ops/diagnostics",
+        "controllerId": "OperationsController",
+        "handlerName": "diagnostics",
+        "source": {
+          "file": "apps/api-server/src/controllers/OperationsController.ts",
+          "line": 7,
+          "column": 8
+        }
+      },
+      {
+        "id": "OperationsController.health",
+        "method": "GET",
+        "path": "/ops/health",
+        "controllerId": "OperationsController",
+        "handlerName": "health",
+        "source": {
+          "file": "apps/api-server/src/controllers/OperationsController.ts",
+          "line": 7,
+          "column": 8
+        }
+      },
+      {
+        "id": "SaasController.seedDemo",
+        "method": "POST",
+        "path": "/saas/demo/seed",
+        "controllerId": "SaasController",
+        "handlerName": "seedDemo",
+        "source": {
+          "file": "apps/api-server/src/controllers/SaasController.ts",
+          "line": 21,
+          "column": 8
+        }
+      },
+      {
+        "id": "SaasController.smokeDemo",
+        "method": "GET",
+        "path": "/saas/demo/smoke",
+        "controllerId": "SaasController",
+        "handlerName": "smokeDemo",
+        "source": {
+          "file": "apps/api-server/src/controllers/SaasController.ts",
+          "line": 21,
+          "column": 8
+        }
+      }
+    ]
+  },
+  "di": {
+    "providers": []
+  },
+  "policies": {
+    "runtime": {
+      "manifestPath": "croco-runtime-policy.manifest.json",
+      "target": "node",
+      "planCount": 0,
+      "requiredCapabilities": []
+    }
+  },
+  "problems": {
+    "responses": [
+      {
+        "routeId": "JobsController.cancel",
+        "code": "saas-demo/job-not-found",
+        "category": "NotFound",
+        "status": 404
+      },
+      {
+        "routeId": "JobsController.list",
+        "code": "protocols-rest/request-validation-failed",
+        "category": "ValidationError",
+        "status": 422
+      },
+      {
+        "routeId": "JobsController.list",
+        "code": "saas-demo/invalid-jobs-query",
+        "category": "ValidationError",
+        "status": 422
+      },
+      {
+        "routeId": "JobsController.logs",
+        "code": "saas-demo/job-not-found",
+        "category": "NotFound",
+        "status": 404
+      },
+      {
+        "routeId": "JobsController.replay",
+        "code": "saas-demo/job-not-found",
+        "category": "NotFound",
+        "status": 404
+      },
+      {
+        "routeId": "JobsController.show",
+        "code": "saas-demo/job-not-found",
+        "category": "NotFound",
+        "status": 404
+      },
+      {
+        "routeId": "SaasController.seedDemo",
+        "code": "saas-demo/demo-endpoint-disabled",
+        "category": "Forbidden",
+        "status": 403
+      },
+      {
+        "routeId": "SaasController.seedDemo",
+        "code": "saas-demo/smoke-failed",
+        "category": "InternalServerError",
+        "status": 500
+      },
+      {
+        "routeId": "SaasController.seedDemo",
+        "code": "saas-demo/tenant-already-exists",
+        "category": "Conflict",
+        "status": 409
+      },
+      {
+        "routeId": "SaasController.seedDemo",
+        "code": "saas-demo/tenant-not-found",
+        "category": "NotFound",
+        "status": 404
+      },
+      {
+        "routeId": "SaasController.smokeDemo",
+        "code": "saas-demo/demo-endpoint-disabled",
+        "category": "Forbidden",
+        "status": 403
+      },
+      {
+        "routeId": "SaasController.smokeDemo",
+        "code": "saas-demo/smoke-failed",
+        "category": "InternalServerError",
+        "status": 500
+      },
+      {
+        "routeId": "SaasController.smokeDemo",
+        "code": "saas-demo/tenant-already-exists",
+        "category": "Conflict",
+        "status": 409
+      },
+      {
+        "routeId": "SaasController.smokeDemo",
+        "code": "saas-demo/tenant-not-found",
+        "category": "NotFound",
+        "status": 404
+      }
+    ]
+  },
+  "telemetry": {
+    "boundaries": [
+      {
+        "kind": "span-wrapper",
+        "id": "span-wrapper:apps/api-server/src/demo/operational-failure-drills.ts:14",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 14,
+          "column": 1
+        }
+      },
+      {
+        "kind": "span-wrapper",
+        "id": "span-wrapper:apps/api-server/src/demo/operational-failure-drills.ts:188",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 188,
+          "column": 9
+        }
+      },
+      {
+        "kind": "telemetry-flush",
+        "id": "telemetry-flush:apps/api-server/src/demo/operational-failure-drills.ts:138",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 138,
+          "column": 5
+        }
+      },
+      {
+        "kind": "telemetry-flush",
+        "id": "telemetry-flush:apps/api-server/src/demo/operational-failure-drills.ts:191",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 191,
+          "column": 9
+        }
+      },
+      {
+        "kind": "telemetry-flush",
+        "id": "telemetry-flush:apps/api-server/src/demo/operational-failure-drills.ts:194",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 194,
+          "column": 11
+        }
+      },
+      {
+        "kind": "telemetry-flush",
+        "id": "telemetry-flush:apps/api-server/src/generatedSaasProviderProfile.ts:553",
+        "source": {
+          "file": "apps/api-server/src/generatedSaasProviderProfile.ts",
+          "line": 553,
+          "column": 5
+        }
+      },
+      {
+        "kind": "telemetry-flush",
+        "id": "telemetry-flush:apps/api-server/src/generatedSaasProviderProfile.ts:559",
+        "source": {
+          "file": "apps/api-server/src/generatedSaasProviderProfile.ts",
+          "line": 559,
+          "column": 1
+        }
+      },
+      {
+        "kind": "telemetry-flush",
+        "id": "telemetry-flush:apps/api-server/src/index.ts:32",
+        "source": {
+          "file": "apps/api-server/src/index.ts",
+          "line": 32,
+          "column": 5
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/demo/operational-failure-drills.ts:138",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 138,
+          "column": 5
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/demo/operational-failure-drills.ts:15",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 15,
+          "column": 1
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/demo/operational-failure-drills.ts:176",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 176,
+          "column": 9
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/demo/operational-failure-drills.ts:177",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 177,
+          "column": 9
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/demo/operational-failure-drills.ts:214",
+        "source": {
+          "file": "apps/api-server/src/demo/operational-failure-drills.ts",
+          "line": 214,
+          "column": 11
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/generatedSaasProviderProfile.ts:553",
+        "source": {
+          "file": "apps/api-server/src/generatedSaasProviderProfile.ts",
+          "line": 553,
+          "column": 5
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/generatedSaasProviderProfile.ts:559",
+        "source": {
+          "file": "apps/api-server/src/generatedSaasProviderProfile.ts",
+          "line": 559,
+          "column": 1
+        }
+      }
+    ]
+  },
+  "entrypoints": [
+    {
+      "kind": "http-route",
+      "id": "JobsController.cancel",
+      "method": "POST",
+      "path": "/ops/jobs/:id/cancel",
+      "source": {
+        "file": "apps/api-server/src/controllers/JobsController.ts",
+        "line": 71,
+        "column": 8
+      }
+    },
+    {
+      "kind": "http-route",
+      "id": "JobsController.list",
+      "method": "GET",
+      "path": "/ops/jobs",
+      "source": {
+        "file": "apps/api-server/src/controllers/JobsController.ts",
+        "line": 71,
+        "column": 8
+      }
+    },
+    {
+      "kind": "http-route",
+      "id": "JobsController.logs",
+      "method": "GET",
+      "path": "/ops/jobs/:id/logs",
+      "source": {
+        "file": "apps/api-server/src/controllers/JobsController.ts",
+        "line": 71,
+        "column": 8
+      }
+    },
+    {
+      "kind": "http-route",
+      "id": "JobsController.replay",
+      "method": "POST",
+      "path": "/ops/jobs/:id/replay",
+      "source": {
+        "file": "apps/api-server/src/controllers/JobsController.ts",
+        "line": 71,
+        "column": 8
+      }
+    },
+    {
+      "kind": "http-route",
+      "id": "JobsController.show",
+      "method": "GET",
+      "path": "/ops/jobs/:id",
+      "source": {
+        "file": "apps/api-server/src/controllers/JobsController.ts",
+        "line": 71,
+        "column": 8
+      }
+    },
+    {
+      "kind": "http-route",
+      "id": "OperationsController.diagnostics",
+      "method": "GET",
+      "path": "/ops/diagnostics",
+      "source": {
+        "file": "apps/api-server/src/controllers/OperationsController.ts",
+        "line": 7,
+        "column": 8
+      }
+    },
+    {
+      "kind": "http-route",
+      "id": "OperationsController.health",
+      "method": "GET",
+      "path": "/ops/health",
+      "source": {
+        "file": "apps/api-server/src/controllers/OperationsController.ts",
+        "line": 7,
+        "column": 8
+      }
+    },
+    {
+      "kind": "http-route",
+      "id": "SaasController.seedDemo",
+      "method": "POST",
+      "path": "/saas/demo/seed",
+      "source": {
+        "file": "apps/api-server/src/controllers/SaasController.ts",
+        "line": 21,
+        "column": 8
+      }
+    },
+    {
+      "kind": "http-route",
+      "id": "SaasController.smokeDemo",
+      "method": "GET",
+      "path": "/saas/demo/smoke",
+      "source": {
+        "file": "apps/api-server/src/controllers/SaasController.ts",
+        "line": 21,
+        "column": 8
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#build",
+      "packageName": "{{scope}}/api-server",
+      "command": "build",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.build"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#demo:scenario",
+      "packageName": "{{scope}}/api-server",
+      "command": "demo:scenario",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.demo:scenario"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#demo:seed",
+      "packageName": "{{scope}}/api-server",
+      "command": "demo:seed",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.demo:seed"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#demo:smoke",
+      "packageName": "{{scope}}/api-server",
+      "command": "demo:smoke",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.demo:smoke"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#demo:usage-recover",
+      "packageName": "{{scope}}/api-server",
+      "command": "demo:usage-recover",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.demo:usage-recover"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#dev",
+      "packageName": "{{scope}}/api-server",
+      "command": "dev",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.dev"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#di:generate",
+      "packageName": "{{scope}}/api-server",
+      "command": "di:generate",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.di:generate"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#di:graph",
+      "packageName": "{{scope}}/api-server",
+      "command": "di:graph",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.di:graph"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#failure-drill:integration",
+      "packageName": "{{scope}}/api-server",
+      "command": "failure-drill:integration",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.failure-drill:integration"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#failure-drill:smoke",
+      "packageName": "{{scope}}/api-server",
+      "command": "failure-drill:smoke",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.failure-drill:smoke"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#jobs:smoke",
+      "packageName": "{{scope}}/api-server",
+      "command": "jobs:smoke",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.jobs:smoke"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#ops:smoke",
+      "packageName": "{{scope}}/api-server",
+      "command": "ops:smoke",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.ops:smoke"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#profile:check",
+      "packageName": "{{scope}}/api-server",
+      "command": "profile:check",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.profile:check"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#profile:smoke:real",
+      "packageName": "{{scope}}/api-server",
+      "command": "profile:smoke:real",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.profile:smoke:real"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#test",
+      "packageName": "{{scope}}/api-server",
+      "command": "test",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.test"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#typecheck",
+      "packageName": "{{scope}}/api-server",
+      "command": "typecheck",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.typecheck"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/provider-rpc#typecheck",
+      "packageName": "{{scope}}/provider-rpc",
+      "command": "typecheck",
+      "source": {
+        "file": "libs/shared/provider-rpc/package.json",
+        "symbol": "scripts.typecheck"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#architecture-policy:check",
+      "packageName": "{{projectName}}",
+      "command": "architecture-policy:check",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.architecture-policy:check"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#build",
+      "packageName": "{{projectName}}",
+      "command": "build",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.build"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#build:api",
+      "packageName": "{{projectName}}",
+      "command": "build:api",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.build:api"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#ci:contracts",
+      "packageName": "{{projectName}}",
+      "command": "ci:contracts",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.ci:contracts"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#codegen",
+      "packageName": "{{projectName}}",
+      "command": "codegen",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.codegen"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#contract:check",
+      "packageName": "{{projectName}}",
+      "command": "contract:check",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.contract:check"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#contract:client",
+      "packageName": "{{projectName}}",
+      "command": "contract:client",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.contract:client"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#contract:client:check",
+      "packageName": "{{projectName}}",
+      "command": "contract:client:check",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.contract:client:check"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#contract:coverage",
+      "packageName": "{{projectName}}",
+      "command": "contract:coverage",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.contract:coverage"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#contract:diff",
+      "packageName": "{{projectName}}",
+      "command": "contract:diff",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.contract:diff"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#contract:openapi",
+      "packageName": "{{projectName}}",
+      "command": "contract:openapi",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.contract:openapi"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#contract:openapi:check",
+      "packageName": "{{projectName}}",
+      "command": "contract:openapi:check",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.contract:openapi:check"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#contract:snapshot",
+      "packageName": "{{projectName}}",
+      "command": "contract:snapshot",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.contract:snapshot"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#contract:verify",
+      "packageName": "{{projectName}}",
+      "command": "contract:verify",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.contract:verify"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#demo:scenario",
+      "packageName": "{{projectName}}",
+      "command": "demo:scenario",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.demo:scenario"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#demo:seed",
+      "packageName": "{{projectName}}",
+      "command": "demo:seed",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.demo:seed"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#demo:smoke",
+      "packageName": "{{projectName}}",
+      "command": "demo:smoke",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.demo:smoke"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#dev:api",
+      "packageName": "{{projectName}}",
+      "command": "dev:api",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.dev:api"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#di:assert",
+      "packageName": "{{projectName}}",
+      "command": "di:assert",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.di:assert"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#di:check",
+      "packageName": "{{projectName}}",
+      "command": "di:check",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.di:check"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#di:graph",
+      "packageName": "{{projectName}}",
+      "command": "di:graph",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.di:graph"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#di:verify",
+      "packageName": "{{projectName}}",
+      "command": "di:verify",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.di:verify"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#doctor",
+      "packageName": "{{projectName}}",
+      "command": "doctor",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.doctor"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#failure-drill:integration",
+      "packageName": "{{projectName}}",
+      "command": "failure-drill:integration",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.failure-drill:integration"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#failure-drill:smoke",
+      "packageName": "{{projectName}}",
+      "command": "failure-drill:smoke",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.failure-drill:smoke"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#jobs:smoke",
+      "packageName": "{{projectName}}",
+      "command": "jobs:smoke",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.jobs:smoke"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#lint",
+      "packageName": "{{projectName}}",
+      "command": "lint",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.lint"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#ops:smoke",
+      "packageName": "{{projectName}}",
+      "command": "ops:smoke",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.ops:smoke"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#profile:check",
+      "packageName": "{{projectName}}",
+      "command": "profile:check",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.profile:check"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#profile:smoke:real",
+      "packageName": "{{projectName}}",
+      "command": "profile:smoke:real",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.profile:smoke:real"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#project-map:check",
+      "packageName": "{{projectName}}",
+      "command": "project-map:check",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.project-map:check"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#project-map:write",
+      "packageName": "{{projectName}}",
+      "command": "project-map:write",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.project-map:write"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#runtime-policy:check",
+      "packageName": "{{projectName}}",
+      "command": "runtime-policy:check",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.runtime-policy:check"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#test",
+      "packageName": "{{projectName}}",
+      "command": "test",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.test"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#typecheck",
+      "packageName": "{{projectName}}",
+      "command": "typecheck",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.typecheck"
+      }
+    }
+  ],
+  "generatedArtifacts": [
+    {
+      "kind": "framework-manifest",
+      "path": ".croco/build/framework-manifest.json",
+      "commitPolicy": "commit-required"
+    },
+    {
+      "kind": "intent-map",
+      "path": ".croco/build/intent-map.json",
+      "commitPolicy": "commit-required"
+    },
+    {
+      "kind": "route-registration-table",
+      "path": ".croco/build/route-registration-table.json",
+      "commitPolicy": "commit-required"
+    },
+    {
+      "kind": "routes-module",
+      "path": ".croco/build/routes.mjs",
+      "commitPolicy": "commit-required"
+    }
+  ],
+  "diagnostics": []
+}

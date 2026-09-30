@@ -1,6 +1,7 @@
 import { execSync, spawn } from "node:child_process";
 import type { SpawnOptions } from "node:child_process";
 import {
+  DEFAULT_TENANT_MODEL,
   createTenantModelManifest,
   createTenantModelManifestSchema,
   renderTenantModelPlaybook,
@@ -19,6 +20,7 @@ import { createGenerationResult } from "./generation-result.js";
 import type { GeneratorOptions } from "./types.js";
 import { writeGoalManifest } from "./goals.js";
 import { mergeInto } from "./helpers/fs.js";
+import { getExternalCrocoPackageRanges } from "./helpers/croco-ranges.js";
 import { rewriteExternalCrocoWorkspaceRanges } from "./helpers/manifest-normalizer.js";
 import {
   installAgentRules,
@@ -41,6 +43,7 @@ import { assertSupportedNodeVersion, writeGeneratedNodeRuntimeContract } from ".
 import { isSaasPreset, validateResolvedOptions } from "./options.js";
 import { getGeneratedAppDependencyRange } from "./package-version.js";
 import {
+  DEFAULT_SAAS_PROVIDER_PROFILE,
   assertSaasProviderTenantModelCompatibility,
   assertSaasProviderProfileCapabilities,
   createSaasProviderProfileManifest,
@@ -111,7 +114,11 @@ async function generateProject(
   options: GeneratorOptions,
   executionOptions: GeneratorExecutionOptions,
 ): Promise<void> {
-  const vars = { projectName: options.projectName, scope: options.scope };
+  const vars = {
+    projectName: options.projectName,
+    scope: options.scope,
+    crocoPackageRanges: getExternalCrocoPackageRanges(),
+  };
   const isLegacyVikeFullstackPreset = options.preset === "ddd-vike-fullstack";
 
   // Step 2: root workspace baseline + 프리셋 분기
@@ -122,6 +129,17 @@ async function generateProject(
       ...vars,
       saasCloudflare: options.saasProviderProfile === "saas-cloudflare",
     });
+    if (
+      options.preset === "saas" &&
+      options.saasProviderProfile === DEFAULT_SAAS_PROVIDER_PROFILE &&
+      (options.tenantModel === DEFAULT_TENANT_MODEL || options.tenantModel === "single")
+    ) {
+      mergeInto(join(TEMPLATES_DIR, "saas-node-postgres-contracts"), targetDir, vars);
+      if (options.tenantModel === "single") {
+        mergeInto(join(TEMPLATES_DIR, "saas-single-tenant-contracts"), targetDir, vars);
+      }
+      sortScaffoldProjectMap(targetDir);
+    }
     if (options.preset === "ai-saas") {
       mergeInto(join(TEMPLATES_DIR, "ai-saas"), targetDir, vars);
     }
@@ -138,6 +156,7 @@ async function generateProject(
     if (options.preset === "admin-console") {
       mergeInto(join(TEMPLATES_DIR, "admin-console"), targetDir, vars);
     }
+    sortScaffoldProjectMap(targetDir);
     if (options.agentRules) {
       installAgentRules(targetDir, vars);
     }
@@ -557,6 +576,39 @@ const SAAS_HOST_ARTIFACTS = {
     build: "pnpm di:generate && tsup src/worker.ts --format esm --platform browser --clean --dts",
   },
 } as const;
+
+function sortScaffoldProjectMap(targetDir: string): void {
+  const path = join(targetDir, "croco.project-map.json");
+  const manifest = JSON.parse(readFileSync(path, "utf8")) as {
+    packageGraph: {
+      packages: {
+        name: string;
+        path: string;
+        dependencies: { name: string; kind: string }[];
+      }[];
+    };
+    entrypoints: { kind: string; id: string; packageName?: string }[];
+  };
+  const compareStrings = (left: string, right: string): number =>
+    left < right ? -1 : left > right ? 1 : 0;
+
+  manifest.packageGraph.packages.sort(
+    (left, right) => compareStrings(left.name, right.name) || compareStrings(left.path, right.path),
+  );
+  for (const pkg of manifest.packageGraph.packages) {
+    pkg.dependencies.sort(
+      (left, right) =>
+        compareStrings(left.name, right.name) || compareStrings(left.kind, right.kind),
+    );
+  }
+  manifest.entrypoints.sort(
+    (left, right) =>
+      compareStrings(left.kind, right.kind) ||
+      compareStrings(left.id, right.id) ||
+      compareStrings(left.packageName ?? "", right.packageName ?? ""),
+  );
+  writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`);
+}
 
 async function finalize(
   targetDir: string,

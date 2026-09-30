@@ -938,6 +938,13 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     matrixTargets: ["saas"],
     validations: [
       {
+        label: "install-immediate contract verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
+        args: ["contract:verify"],
+      },
+      { label: "test", packagePath: ["apps", "api-server"], args: ["test"] },
+      {
         label: "build",
         args: ["build"],
         paths: ["apps/api-server/dist/index.js", "apps/api-server/dist/index.mjs"],
@@ -1668,6 +1675,12 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     runtimeTarget: "node+browser",
     matrixTargets: ["spa-be-split"],
     validations: [
+      {
+        label: "install-immediate contract verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
+        args: ["contract:verify"],
+      },
       { label: "dev smoke", args: ["dev:smoke"] },
       {
         label: "browser testing contract",
@@ -1758,6 +1771,12 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     runtimeTarget: "node+browser",
     matrixTargets: ["admin-console", "spa-be-split"],
     validations: [
+      {
+        label: "install-immediate contract verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
+        args: ["contract:verify"],
+      },
       { label: "admin smoke", args: ["admin:smoke"] },
       {
         label: "browser testing contract",
@@ -2278,6 +2297,23 @@ export function getGeneratedSmokeDependencyCaseInputs(): readonly {
   }));
 }
 
+export function prepareGeneratedSmokeDependencyOverrides(
+  projectDir: string,
+  smokeCaseName: string,
+  rangeOverrides: Readonly<Record<string, string>>,
+): void {
+  if (
+    !["goal-saas-api", "production-app-starter", "admin-console-starter"].includes(smokeCaseName)
+  ) {
+    rewriteExternalCrocoRanges(
+      projectDir,
+      rangeOverrides,
+      generatedSmokeExternalCrocoRangeExceptions,
+    );
+  }
+  writePnpmWorkspaceOverrides(projectDir, rangeOverrides);
+}
+
 export function getGeneratedGoalSmokeCaseInputs(): readonly {
   readonly goal: AppGoal;
   readonly name: string;
@@ -2422,17 +2458,16 @@ if (isMainModule()) {
           packedWorkspacePackages,
           builtWorkspacePackageNames,
         );
-        rewriteExternalCrocoRanges(
-          projectDir,
-          generatedSmokeRangeOverrides,
-          generatedSmokeExternalCrocoRangeExceptions,
-        );
         assertGeneratedReadme(projectDir, smokeCase);
         assertGeneratedNodeRuntimeContract(projectDir, smokeCase);
         assertGeneratedEnvironmentTemplate(projectDir, smokeCase);
         assertNoGeneratedSecurityValidationOptOut(projectDir, smokeCase);
         assertNoGeneratedCredentialLookingValues(projectDir, smokeCase);
-        writePnpmWorkspaceOverrides(projectDir, generatedSmokeRangeOverrides);
+        prepareGeneratedSmokeDependencyOverrides(
+          projectDir,
+          smokeCase.name,
+          generatedSmokeRangeOverrides,
+        );
         runSmokeCaseCommand(
           smokeReport,
           caseResult,

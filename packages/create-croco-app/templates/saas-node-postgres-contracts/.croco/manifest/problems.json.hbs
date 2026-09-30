@@ -1,0 +1,124 @@
+{
+  "schemaVersion": "croco.manifest.problems.v1",
+  "source": {
+    "schemaVersion": "croco.project-map.manifest.v1",
+    "artifact": "croco.project-map.json",
+    "packageName": "{{projectName}}",
+    "generatedArtifacts": [
+      {
+        "kind": "framework-manifest",
+        "path": ".croco/build/framework-manifest.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "intent-map",
+        "path": ".croco/build/intent-map.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "route-registration-table",
+        "path": ".croco/build/route-registration-table.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "routes-module",
+        "path": ".croco/build/routes.mjs",
+        "commitPolicy": "commit-required"
+      }
+    ]
+  },
+  "project": {
+    "root": ".",
+    "packageName": "{{projectName}}",
+    "packageManager": "pnpm@12.7.0"
+  },
+  "summary": {
+    "responses": 14
+  },
+  "responses": [
+    {
+      "routeId": "JobsController.cancel",
+      "code": "saas-demo/job-not-found",
+      "category": "NotFound",
+      "status": 404
+    },
+    {
+      "routeId": "JobsController.list",
+      "code": "protocols-rest/request-validation-failed",
+      "category": "ValidationError",
+      "status": 422
+    },
+    {
+      "routeId": "JobsController.list",
+      "code": "saas-demo/invalid-jobs-query",
+      "category": "ValidationError",
+      "status": 422
+    },
+    {
+      "routeId": "JobsController.logs",
+      "code": "saas-demo/job-not-found",
+      "category": "NotFound",
+      "status": 404
+    },
+    {
+      "routeId": "JobsController.replay",
+      "code": "saas-demo/job-not-found",
+      "category": "NotFound",
+      "status": 404
+    },
+    {
+      "routeId": "JobsController.show",
+      "code": "saas-demo/job-not-found",
+      "category": "NotFound",
+      "status": 404
+    },
+    {
+      "routeId": "SaasController.seedDemo",
+      "code": "saas-demo/demo-endpoint-disabled",
+      "category": "Forbidden",
+      "status": 403
+    },
+    {
+      "routeId": "SaasController.seedDemo",
+      "code": "saas-demo/smoke-failed",
+      "category": "InternalServerError",
+      "status": 500
+    },
+    {
+      "routeId": "SaasController.seedDemo",
+      "code": "saas-demo/tenant-already-exists",
+      "category": "Conflict",
+      "status": 409
+    },
+    {
+      "routeId": "SaasController.seedDemo",
+      "code": "saas-demo/tenant-not-found",
+      "category": "NotFound",
+      "status": 404
+    },
+    {
+      "routeId": "SaasController.smokeDemo",
+      "code": "saas-demo/demo-endpoint-disabled",
+      "category": "Forbidden",
+      "status": 403
+    },
+    {
+      "routeId": "SaasController.smokeDemo",
+      "code": "saas-demo/smoke-failed",
+      "category": "InternalServerError",
+      "status": 500
+    },
+    {
+      "routeId": "SaasController.smokeDemo",
+      "code": "saas-demo/tenant-already-exists",
+      "category": "Conflict",
+      "status": 409
+    },
+    {
+      "routeId": "SaasController.smokeDemo",
+      "code": "saas-demo/tenant-not-found",
+      "category": "NotFound",
+      "status": 404
+    }
+  ]
+}

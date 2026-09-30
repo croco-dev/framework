@@ -1,0 +1,503 @@
+import { useMutation, useQuery } from '@tanstack/react-query';
+import type { UseMutationOptions, UseQueryOptions } from '@tanstack/react-query';
+import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, encodeRpcPathSegment, serializeRpcQueryKeyInput } from './rpc';
+import type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcDomainProblem, RpcFormFieldProblem, RpcFormGlobalProblem, RpcFormModel, RpcProblemDetailsFor, RpcValidationProblem } from './rpc';
+export type SnapshotInput = { query: { tenantId?: string | undefined; }; };
+export type ListUsersInput = { query: { tenantId?: string | undefined; }; };
+export type GetUserInput = { path: { id: string; }; query: { tenantId?: string | undefined; }; };
+export type CreateUserInput = { email: string; name: string; role: 'admin' | 'owner' | 'viewer'; tenantId: string; };
+export type ListOperationsInput = { query: { tenantId?: string | undefined; }; };
+export type CreditOperationsInput = { query: { tenantId: string; }; };
+export type ExecuteCreditOperationInput = { accountId: string; actionKind: 'adjustment' | 'grant' | 'refund' | 'release-reservation'; actorId: string; amount?: string | undefined; auditReason: string; consumptionTransactionId?: string | undefined; direction?: 'credit' | 'debit' | undefined; expectedPosition: number; expiresAt?: string | undefined; idempotencyKey: string; inputKind: 'adjustment' | 'grant' | 'refund' | 'release-reservation'; meterKeys?: string[] | undefined; referenceId: string; referenceType: string; reservationId?: string | undefined; source?: string | undefined; targetId: string; tenantId: string; };
+export type SnapshotOutput = { operations: ({ action: string; actor: string; id: string; occurredAt: string; resource: string; status: 'blocked' | 'needs-review' | 'succeeded'; summary: string; tenantId: string; })[]; tenant: { name: string; permissionMode: 'owner-managed' | 'support-managed'; tenantId: string; }; users: ({ email: string; id: string; lastSeenAt: string; name: string; role: 'admin' | 'owner' | 'viewer'; status: 'active' | 'invited' | 'suspended'; tenantId: string; })[]; };
+export type ListUsersOutput = ({ email: string; id: string; lastSeenAt: string; name: string; role: 'admin' | 'owner' | 'viewer'; status: 'active' | 'invited' | 'suspended'; tenantId: string; })[];
+export type GetUserOutput = { email: string; id: string; lastSeenAt: string; name: string; role: 'admin' | 'owner' | 'viewer'; status: 'active' | 'invited' | 'suspended'; tenantId: string; };
+export type CreateUserOutput = { email: string; id: string; lastSeenAt: string; name: string; role: 'admin' | 'owner' | 'viewer'; status: 'active' | 'invited' | 'suspended'; tenantId: string; };
+export type ListOperationsOutput = ({ action: string; actor: string; id: string; occurredAt: string; resource: string; status: 'blocked' | 'needs-review' | 'succeeded'; summary: string; tenantId: string; })[];
+export type CreditOperationsOutput = { accountId: string; balance: { accountId: string; available: string; consumed: string; expired: string; expiringSoon: string; expiringSoonBefore: string; ledgerPosition: number; lifetimeGranted: string; netAdjusted: string; reserved: string; }; generatedAt: string; grantLots: ({ amount: string; expiresAt?: string | undefined; meterKeys: string[]; remaining: string; source?: { maskedValue?: string | undefined; requiredPermissions?: string[] | undefined; type: string; value?: string | undefined; visibility: 'denied' | 'masked' | 'visible'; } | undefined; status: 'available' | 'consumed' | 'expired' | 'reserved'; transactionId: string; })[]; history: { earliestPosition: number; kind: 'partial'; reason: string; } | { kind: 'complete'; }; reservations: ({ allocations: { amount: string; grantTransactionId: string; }[]; amount: string; createdAt: string; id: string; meterKey?: string | undefined; release?: { allowed: boolean; reason: string; } | undefined; settledAt?: string | undefined; status: 'active' | 'committed' | 'released'; })[]; tenantId: string; transactions: ({ actorId?: string | undefined; adjustmentDirection?: 'credit' | 'debit' | undefined; allocations: { amount: string; grantTransactionId: string; }[]; amount: string; correlationId?: string | undefined; id: string; kind: 'adjustment' | 'commit' | 'consume' | 'expire' | 'grant' | 'refund' | 'release' | 'reserve'; meterKey?: string | undefined; occurredAt: string; position: number; reference: { maskedValue?: string | undefined; requiredPermissions?: string[] | undefined; type: string; value?: string | undefined; visibility: 'denied' | 'masked' | 'visible'; }; refundableAmount?: string | undefined; relatedTransactionId?: string | undefined; reservationId?: string | undefined; })[]; };
+export type ExecuteCreditOperationOutput = { kind: 'problem'; ledgerCommitted?: boolean | undefined; problem: { code: string; detail?: string | undefined; retryable?: boolean | undefined; status?: number | undefined; title?: string | undefined; }; recovery: 'change-input' | 'refresh-ledger' | 'retry-event-publication' | 'reuse-idempotency-result'; } | { kind: 'succeeded'; ledgerPosition: number; replayed: boolean; transactionIds: string[]; };
+export type SnapshotProblem = never;
+export type SnapshotProblemDetails = RpcProblemDetailsFor<SnapshotProblem>;
+export type SnapshotResult = RpcClientResult<SnapshotOutput, SnapshotProblem>;
+export type ListUsersProblem = never;
+export type ListUsersProblemDetails = RpcProblemDetailsFor<ListUsersProblem>;
+export type ListUsersResult = RpcClientResult<ListUsersOutput, ListUsersProblem>;
+export type GetUserProblem = RpcDeclaredProblem<'admin-console/user-not-found', 'NotFound', 404>;
+export type GetUserProblemDetails = RpcProblemDetailsFor<GetUserProblem>;
+export type GetUserResult = RpcClientResult<GetUserOutput, GetUserProblem>;
+export type CreateUserProblem = never;
+export type CreateUserProblemDetails = RpcProblemDetailsFor<CreateUserProblem>;
+export type CreateUserResult = RpcClientResult<CreateUserOutput, CreateUserProblem>;
+export type ListOperationsProblem = never;
+export type ListOperationsProblemDetails = RpcProblemDetailsFor<ListOperationsProblem>;
+export type ListOperationsResult = RpcClientResult<ListOperationsOutput, ListOperationsProblem>;
+export type CreditOperationsProblem = RpcDeclaredProblem<'admin-core/credit-operations-permission-denied', 'Forbidden', 403> | RpcDeclaredProblem<'admin-core/credit-operations-validation-failed', 'ValidationError', 422>;
+export type CreditOperationsProblemDetails = RpcProblemDetailsFor<CreditOperationsProblem>;
+export type CreditOperationsResult = RpcClientResult<CreditOperationsOutput, CreditOperationsProblem>;
+export type ExecuteCreditOperationProblem = RpcDeclaredProblem<'admin-core/credit-operations-permission-denied', 'Forbidden', 403> | RpcDeclaredProblem<'admin-core/credit-operations-validation-failed', 'ValidationError', 422> | RpcDeclaredProblem<'credits-core/duplicate-conflict', 'Conflict', 409> | RpcDeclaredProblem<'credits-core/event-publication-failed', 'InternalServerError', 500> | RpcDeclaredProblem<'credits-core/stale-ledger-position', 'Conflict', 409> | RpcDeclaredProblem<'protocols-rest/request-validation-failed', 'ValidationError', 422>;
+export type ExecuteCreditOperationProblemDetails = RpcProblemDetailsFor<ExecuteCreditOperationProblem>;
+export type ExecuteCreditOperationResult = RpcClientResult<ExecuteCreditOperationOutput, ExecuteCreditOperationProblem>;
+export const snapshotProblemDeclarations = [
+
+] as const satisfies readonly RpcDeclaredProblem[];
+export const listUsersProblemDeclarations = [
+
+] as const satisfies readonly RpcDeclaredProblem[];
+export const getUserProblemDeclarations = [
+  { code: 'admin-console/user-not-found', category: 'NotFound', status: 404, description: 'The requested admin user does not exist in the selected tenant context.', cookbookPath: '/reference/problem-recovery-cookbook/#admin-console-user-not-found' }
+] as const satisfies readonly RpcDeclaredProblem[];
+export const createUserProblemDeclarations = [
+
+] as const satisfies readonly RpcDeclaredProblem[];
+export const listOperationsProblemDeclarations = [
+
+] as const satisfies readonly RpcDeclaredProblem[];
+export const creditOperationsProblemDeclarations = [
+  { code: 'admin-core/credit-operations-permission-denied', category: 'Forbidden', status: 403, description: 'The operator lacks a permission required for tenant credit operations.', cookbookPath: '/reference/problem-recovery-cookbook/#admin-core-credit-operations-permission-denied' },
+  { code: 'admin-core/credit-operations-validation-failed', category: 'ValidationError', status: 422, description: 'The requested tenant credit operation failed semantic validation.', cookbookPath: '/reference/problem-recovery-cookbook/#admin-core-credit-operations-validation-failed' }
+] as const satisfies readonly RpcDeclaredProblem[];
+export const executeCreditOperationProblemDeclarations = [
+  { code: 'admin-core/credit-operations-permission-denied', category: 'Forbidden', status: 403, description: 'The operator lacks a permission required for tenant credit operations.', cookbookPath: '/reference/problem-recovery-cookbook/#admin-core-credit-operations-permission-denied' },
+  { code: 'admin-core/credit-operations-validation-failed', category: 'ValidationError', status: 422, description: 'The requested tenant credit operation failed semantic validation.', cookbookPath: '/reference/problem-recovery-cookbook/#admin-core-credit-operations-validation-failed' },
+  { code: 'credits-core/duplicate-conflict', category: 'Conflict', status: 409, description: 'The idempotency key was already used for a different credit command.', cookbookPath: '/reference/problem-recovery-cookbook/#credits-core-duplicate-conflict' },
+  { code: 'credits-core/event-publication-failed', category: 'InternalServerError', status: 500, description: 'The ledger committed but its post-commit event could not be published.', cookbookPath: '/reference/problem-recovery-cookbook/#credits-core-event-publication-failed' },
+  { code: 'credits-core/stale-ledger-position', category: 'Conflict', status: 409, description: 'The credit ledger advanced beyond the operator\'s expected position.', cookbookPath: '/reference/problem-recovery-cookbook/#credits-core-stale-ledger-position' },
+  { code: 'protocols-rest/request-validation-failed', category: 'ValidationError', status: 422, description: 'The credit operation request does not match the declared route schema.', cookbookPath: '/reference/problem-recovery-cookbook/#protocols-rest-request-validation-failed' }
+] as const satisfies readonly RpcDeclaredProblem[];
+export type CreateUserFormFieldName = 'tenantId' | 'name' | 'email' | 'role';
+export type CreateUserFormValues = { tenantId: string; name: string; email: string; role: 'admin' | 'owner' | 'viewer'; };
+export type CreateUserSubmitPayload = CreateUserInput;
+export type CreateUserValidationProblem = RpcValidationProblem<CreateUserProblem>;
+export type CreateUserDomainProblem = RpcDomainProblem<CreateUserProblem>;
+export type CreateUserFormProblem = RpcFormFieldProblem<CreateUserFormFieldName, CreateUserValidationProblem> | RpcFormGlobalProblem<CreateUserDomainProblem>;
+
+export const createUserFormModel = {
+  routeId: 'AdminController.createUser',
+  operationId: 'createAdminUser',
+  methodName: 'createUser',
+  method: 'POST',
+  path: '/admin/users',
+  fieldNames: ['tenantId', 'name', 'email', 'role'],
+  fields: [
+    { name: 'tenantId', label: 'Tenant Id', control: 'text', valueKind: 'string', required: true, initialValue: '' },
+    { name: 'name', label: 'Name', control: 'text', valueKind: 'string', required: true, initialValue: '' },
+    { name: 'email', label: 'Email', control: 'text', valueKind: 'string', required: true, initialValue: '' },
+    { name: 'role', label: 'Role', control: 'select', valueKind: 'enum', required: true, initialValue: 'admin', options: [{ label: 'admin', value: 'admin' }, { label: 'owner', value: 'owner' }, { label: 'viewer', value: 'viewer' }] }
+  ],
+  initialValues: { tenantId: '', name: '', email: '', role: 'admin' },
+} as const satisfies RpcFormModel<CreateUserFormValues, CreateUserFormFieldName>;
+
+export function buildCreateUserFormPayload(values: CreateUserFormValues): CreateUserSubmitPayload {
+  return { tenantId: values.tenantId, name: values.name, email: values.email, role: values.role };
+}
+
+export function mapCreateUserFormProblem(failure: Extract<CreateUserResult, { ok: false; kind: 'problem' }>): CreateUserFormProblem {
+  return toRpcFormProblem<CreateUserFormFieldName, CreateUserProblem>(failure, createUserFormModel.fieldNames);
+}
+export type ExecuteCreditOperationFormFieldName = 'targetId' | 'accountId' | 'tenantId' | 'actorId' | 'auditReason' | 'idempotencyKey' | 'referenceType' | 'referenceId' | 'expectedPosition' | 'actionKind' | 'inputKind' | 'amount' | 'expiresAt' | 'source' | 'meterKeys' | 'consumptionTransactionId' | 'reservationId' | 'direction';
+export type ExecuteCreditOperationFormValues = { targetId: string; accountId: string; tenantId: string; actorId: string; auditReason: string; idempotencyKey: string; referenceType: string; referenceId: string; expectedPosition: number; actionKind: 'adjustment' | 'grant' | 'refund' | 'release-reservation'; inputKind: 'adjustment' | 'grant' | 'refund' | 'release-reservation'; amount: string | null; expiresAt: string | null; source: string | null; meterKeys: string[] | null; consumptionTransactionId: string | null; reservationId: string | null; direction: 'credit' | 'debit' | null; };
+export type ExecuteCreditOperationSubmitPayload = ExecuteCreditOperationInput;
+export type ExecuteCreditOperationValidationProblem = RpcValidationProblem<ExecuteCreditOperationProblem>;
+export type ExecuteCreditOperationDomainProblem = RpcDomainProblem<ExecuteCreditOperationProblem>;
+export type ExecuteCreditOperationFormProblem = RpcFormFieldProblem<ExecuteCreditOperationFormFieldName, ExecuteCreditOperationValidationProblem> | RpcFormGlobalProblem<ExecuteCreditOperationDomainProblem>;
+
+export const executeCreditOperationFormModel = {
+  routeId: 'AdminController.executeCreditOperation',
+  operationId: 'executeAdminCreditOperation',
+  methodName: 'executeCreditOperation',
+  method: 'POST',
+  path: '/admin/credits/actions',
+  fieldNames: ['targetId', 'accountId', 'tenantId', 'actorId', 'auditReason', 'idempotencyKey', 'referenceType', 'referenceId', 'expectedPosition', 'actionKind', 'inputKind', 'amount', 'expiresAt', 'source', 'meterKeys', 'consumptionTransactionId', 'reservationId', 'direction'],
+  fields: [
+    { name: 'targetId', label: 'Target Id', control: 'text', valueKind: 'string', required: true, initialValue: '' },
+    { name: 'accountId', label: 'Account Id', control: 'text', valueKind: 'string', required: true, initialValue: '' },
+    { name: 'tenantId', label: 'Tenant Id', control: 'text', valueKind: 'string', required: true, initialValue: '' },
+    { name: 'actorId', label: 'Actor Id', control: 'text', valueKind: 'string', required: true, initialValue: '' },
+    { name: 'auditReason', label: 'Audit Reason', control: 'text', valueKind: 'string', required: true, initialValue: '' },
+    { name: 'idempotencyKey', label: 'Idempotency Key', control: 'text', valueKind: 'string', required: true, initialValue: '' },
+    { name: 'referenceType', label: 'Reference Type', control: 'text', valueKind: 'string', required: true, initialValue: '' },
+    { name: 'referenceId', label: 'Reference Id', control: 'text', valueKind: 'string', required: true, initialValue: '' },
+    { name: 'expectedPosition', label: 'Expected Position', control: 'number', valueKind: 'number', required: true, initialValue: 0 },
+    { name: 'actionKind', label: 'Action Kind', control: 'select', valueKind: 'enum', required: true, initialValue: 'adjustment', options: [{ label: 'adjustment', value: 'adjustment' }, { label: 'grant', value: 'grant' }, { label: 'refund', value: 'refund' }, { label: 'release-reservation', value: 'release-reservation' }] },
+    { name: 'inputKind', label: 'Input Kind', control: 'select', valueKind: 'enum', required: true, initialValue: 'adjustment', options: [{ label: 'adjustment', value: 'adjustment' }, { label: 'grant', value: 'grant' }, { label: 'refund', value: 'refund' }, { label: 'release-reservation', value: 'release-reservation' }] },
+    { name: 'amount', label: 'Amount', control: 'text', valueKind: 'string', required: false, initialValue: null },
+    { name: 'expiresAt', label: 'Expires At', control: 'text', valueKind: 'string', required: false, initialValue: null },
+    { name: 'source', label: 'Source', control: 'text', valueKind: 'string', required: false, initialValue: null },
+    { name: 'meterKeys', label: 'Meter Keys', control: 'list', valueKind: 'array', required: false, initialValue: null },
+    { name: 'consumptionTransactionId', label: 'Consumption Transaction Id', control: 'text', valueKind: 'string', required: false, initialValue: null },
+    { name: 'reservationId', label: 'Reservation Id', control: 'text', valueKind: 'string', required: false, initialValue: null },
+    { name: 'direction', label: 'Direction', control: 'select', valueKind: 'enum', required: false, initialValue: null, options: [{ label: 'credit', value: 'credit' }, { label: 'debit', value: 'debit' }] }
+  ],
+  initialValues: { targetId: '', accountId: '', tenantId: '', actorId: '', auditReason: '', idempotencyKey: '', referenceType: '', referenceId: '', expectedPosition: 0, actionKind: 'adjustment', inputKind: 'adjustment', amount: null, expiresAt: null, source: null, meterKeys: null, consumptionTransactionId: null, reservationId: null, direction: null },
+} as const satisfies RpcFormModel<ExecuteCreditOperationFormValues, ExecuteCreditOperationFormFieldName>;
+
+export function buildExecuteCreditOperationFormPayload(values: ExecuteCreditOperationFormValues): ExecuteCreditOperationSubmitPayload {
+  return { targetId: values.targetId, accountId: values.accountId, tenantId: values.tenantId, actorId: values.actorId, auditReason: values.auditReason, idempotencyKey: values.idempotencyKey, referenceType: values.referenceType, referenceId: values.referenceId, expectedPosition: values.expectedPosition, actionKind: values.actionKind, inputKind: values.inputKind, amount: values.amount === null ? undefined : values.amount, expiresAt: values.expiresAt === null ? undefined : values.expiresAt, source: values.source === null ? undefined : values.source, meterKeys: values.meterKeys === null ? undefined : values.meterKeys, consumptionTransactionId: values.consumptionTransactionId === null ? undefined : values.consumptionTransactionId, reservationId: values.reservationId === null ? undefined : values.reservationId, direction: values.direction === null ? undefined : values.direction };
+}
+
+export function mapExecuteCreditOperationFormProblem(failure: Extract<ExecuteCreditOperationResult, { ok: false; kind: 'problem' }>): ExecuteCreditOperationFormProblem {
+  return toRpcFormProblem<ExecuteCreditOperationFormFieldName, ExecuteCreditOperationProblem>(failure, executeCreditOperationFormModel.fieldNames);
+}
+export const adminContractRoutes = [
+  { routeId: 'AdminController.snapshot', operationId: 'getAdminSnapshot', methodName: 'snapshot', method: 'GET', path: '/admin/snapshot' },
+  { routeId: 'AdminController.listUsers', operationId: 'listAdminUsers', methodName: 'listUsers', method: 'GET', path: '/admin/users' },
+  { routeId: 'AdminController.getUser', operationId: 'getAdminUser', methodName: 'getUser', method: 'GET', path: '/admin/users/:id' },
+  { routeId: 'AdminController.createUser', operationId: 'createAdminUser', methodName: 'createUser', method: 'POST', path: '/admin/users' },
+  { routeId: 'AdminController.listOperations', operationId: 'listAdminOperations', methodName: 'listOperations', method: 'GET', path: '/admin/operations' },
+  { routeId: 'AdminController.creditOperations', operationId: 'getAdminCreditOperations', methodName: 'creditOperations', method: 'GET', path: '/admin/credits' },
+  { routeId: 'AdminController.executeCreditOperation', operationId: 'executeAdminCreditOperation', methodName: 'executeCreditOperation', method: 'POST', path: '/admin/credits/actions' }
+] as const;
+export const adminKeys = {
+  all: () => ['admin'] as const,
+  snapshot: (input: SnapshotInput) => [...adminKeys.all(), 'snapshot', serializeRpcQueryKeyInput(input)] as const,
+  listUsers: (input: ListUsersInput) => [...adminKeys.all(), 'listUsers', serializeRpcQueryKeyInput(input)] as const,
+  getUser: (input: GetUserInput) => [...adminKeys.all(), 'getUser', serializeRpcQueryKeyInput(input)] as const,
+  createUser: (input: CreateUserInput) => [...adminKeys.all(), 'createUser', serializeRpcQueryKeyInput(input)] as const,
+  listOperations: (input: ListOperationsInput) => [...adminKeys.all(), 'listOperations', serializeRpcQueryKeyInput(input)] as const,
+  creditOperations: (input: CreditOperationsInput) => [...adminKeys.all(), 'creditOperations', serializeRpcQueryKeyInput(input)] as const,
+  executeCreditOperation: (input: ExecuteCreditOperationInput) => [...adminKeys.all(), 'executeCreditOperation', serializeRpcQueryKeyInput(input)] as const,
+};
+export const adminInvalidationManifest = {
+  createUser: { route: adminContractRoutes[3], invalidates: [adminKeys.all()] },
+  executeCreditOperation: { route: adminContractRoutes[6], invalidates: [adminKeys.all()] },
+} as const;
+function serializeQueryParams(query: Record<string, unknown> | null | undefined): string {
+  if (query === undefined || query === null) {
+    return '';
+  }
+
+  const params = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    const values = Array.isArray(value) ? value : [value];
+
+    for (const item of values) {
+      if (item === undefined) {
+        continue;
+      }
+
+      params.append(key, String(item));
+    }
+  }
+
+  return params.toString();
+}
+
+export function createAdminClient(config: RpcClientConfig = {}) {
+  return {
+    snapshot: (input: SnapshotInput, options?: RpcClientRequestOptions): Promise<SnapshotOutput> => {
+      const path = '/admin/snapshot';
+      const query = serializeQueryParams(input.query);
+      const url = query ? `${path}?${query}` : path;
+      const request = createRpcClientRequest(adminContractRoutes[0], 'query', url, { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<SnapshotOutput>(response, request.telemetry));
+    },
+    snapshotResult: (input: SnapshotInput, options?: RpcClientRequestOptions): Promise<SnapshotResult> => {
+      const path = '/admin/snapshot';
+      const query = serializeQueryParams(input.query);
+      const url = query ? `${path}?${query}` : path;
+      const request = createRpcClientRequest(adminContractRoutes[0], 'query', url, { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<SnapshotOutput, SnapshotProblem>(response, snapshotProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+    listUsers: (input: ListUsersInput, options?: RpcClientRequestOptions): Promise<ListUsersOutput> => {
+      const path = '/admin/users';
+      const query = serializeQueryParams(input.query);
+      const url = query ? `${path}?${query}` : path;
+      const request = createRpcClientRequest(adminContractRoutes[1], 'query', url, { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<ListUsersOutput>(response, request.telemetry));
+    },
+    listUsersResult: (input: ListUsersInput, options?: RpcClientRequestOptions): Promise<ListUsersResult> => {
+      const path = '/admin/users';
+      const query = serializeQueryParams(input.query);
+      const url = query ? `${path}?${query}` : path;
+      const request = createRpcClientRequest(adminContractRoutes[1], 'query', url, { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<ListUsersOutput, ListUsersProblem>(response, listUsersProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+    getUser: (input: GetUserInput, options?: RpcClientRequestOptions): Promise<GetUserOutput> => {
+      const path = (): string => `/admin/users/${encodeRpcPathSegment(adminContractRoutes[2], 'id', input.path.id)}`;
+      const query = serializeQueryParams(input.query);
+      const url = (): string => (query ? `${path()}?${query}` : path());
+      const request = createRpcClientRequest(adminContractRoutes[2], 'query', url, { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<GetUserOutput>(response, request.telemetry));
+    },
+    getUserResult: (input: GetUserInput, options?: RpcClientRequestOptions): Promise<GetUserResult> => {
+      const path = (): string => `/admin/users/${encodeRpcPathSegment(adminContractRoutes[2], 'id', input.path.id)}`;
+      const query = serializeQueryParams(input.query);
+      const url = (): string => (query ? `${path()}?${query}` : path());
+      const request = createRpcClientRequest(adminContractRoutes[2], 'query', url, { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<GetUserOutput, GetUserProblem>(response, getUserProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+    createUser: (input: CreateUserInput, options?: RpcClientRequestOptions): Promise<CreateUserOutput> => {
+      const request = createRpcClientRequest(adminContractRoutes[3], 'mutation', '/admin/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<CreateUserOutput>(response, request.telemetry));
+    },
+    createUserResult: (input: CreateUserInput, options?: RpcClientRequestOptions): Promise<CreateUserResult> => {
+      const request = createRpcClientRequest(adminContractRoutes[3], 'mutation', '/admin/users', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<CreateUserOutput, CreateUserProblem>(response, createUserProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+    listOperations: (input: ListOperationsInput, options?: RpcClientRequestOptions): Promise<ListOperationsOutput> => {
+      const path = '/admin/operations';
+      const query = serializeQueryParams(input.query);
+      const url = query ? `${path}?${query}` : path;
+      const request = createRpcClientRequest(adminContractRoutes[4], 'query', url, { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<ListOperationsOutput>(response, request.telemetry));
+    },
+    listOperationsResult: (input: ListOperationsInput, options?: RpcClientRequestOptions): Promise<ListOperationsResult> => {
+      const path = '/admin/operations';
+      const query = serializeQueryParams(input.query);
+      const url = query ? `${path}?${query}` : path;
+      const request = createRpcClientRequest(adminContractRoutes[4], 'query', url, { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<ListOperationsOutput, ListOperationsProblem>(response, listOperationsProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+    creditOperations: (input: CreditOperationsInput, options?: RpcClientRequestOptions): Promise<CreditOperationsOutput> => {
+      const path = '/admin/credits';
+      const query = serializeQueryParams(input.query);
+      const url = query ? `${path}?${query}` : path;
+      const request = createRpcClientRequest(adminContractRoutes[5], 'query', url, { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<CreditOperationsOutput>(response, request.telemetry));
+    },
+    creditOperationsResult: (input: CreditOperationsInput, options?: RpcClientRequestOptions): Promise<CreditOperationsResult> => {
+      const path = '/admin/credits';
+      const query = serializeQueryParams(input.query);
+      const url = query ? `${path}?${query}` : path;
+      const request = createRpcClientRequest(adminContractRoutes[5], 'query', url, { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<CreditOperationsOutput, CreditOperationsProblem>(response, creditOperationsProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+    executeCreditOperation: (input: ExecuteCreditOperationInput, options?: RpcClientRequestOptions): Promise<ExecuteCreditOperationOutput> => {
+      const request = createRpcClientRequest(adminContractRoutes[6], 'mutation', '/admin/credits/actions', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<ExecuteCreditOperationOutput>(response, request.telemetry));
+    },
+    executeCreditOperationResult: (input: ExecuteCreditOperationInput, options?: RpcClientRequestOptions): Promise<ExecuteCreditOperationResult> => {
+      const request = createRpcClientRequest(adminContractRoutes[6], 'mutation', '/admin/credits/actions', { method: 'POST', body: JSON.stringify(input), headers: { 'Content-Type': 'application/json' } }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<ExecuteCreditOperationOutput, ExecuteCreditOperationProblem>(response, executeCreditOperationProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+  };
+}
+
+export type AdminClient = ReturnType<typeof createAdminClient>;
+
+export const adminClient = createAdminClient();
+
+export type SnapshotQueryKey = ReturnType<typeof adminKeys.snapshot>;
+export type SnapshotResultQueryKey = readonly [...ReturnType<typeof adminKeys.snapshot>, 'result'];
+export type SnapshotQueryFactory = {
+  readonly queryKey: SnapshotQueryKey;
+  readonly queryFn: () => Promise<SnapshotOutput>;
+};
+export type SnapshotResultQueryFactory = {
+  readonly queryKey: SnapshotResultQueryKey;
+  readonly queryFn: () => Promise<SnapshotResult>;
+};
+export type SnapshotQueryOptions<TData = SnapshotOutput> = Omit<UseQueryOptions<SnapshotOutput, Error, TData, SnapshotQueryKey>, 'queryKey' | 'queryFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type SnapshotResultQueryOptions<TData = SnapshotResult> = Omit<UseQueryOptions<SnapshotResult, Error, TData, SnapshotResultQueryKey>, 'queryKey' | 'queryFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type ListUsersQueryKey = ReturnType<typeof adminKeys.listUsers>;
+export type ListUsersResultQueryKey = readonly [...ReturnType<typeof adminKeys.listUsers>, 'result'];
+export type ListUsersQueryFactory = {
+  readonly queryKey: ListUsersQueryKey;
+  readonly queryFn: () => Promise<ListUsersOutput>;
+};
+export type ListUsersResultQueryFactory = {
+  readonly queryKey: ListUsersResultQueryKey;
+  readonly queryFn: () => Promise<ListUsersResult>;
+};
+export type ListUsersQueryOptions<TData = ListUsersOutput> = Omit<UseQueryOptions<ListUsersOutput, Error, TData, ListUsersQueryKey>, 'queryKey' | 'queryFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type ListUsersResultQueryOptions<TData = ListUsersResult> = Omit<UseQueryOptions<ListUsersResult, Error, TData, ListUsersResultQueryKey>, 'queryKey' | 'queryFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type GetUserQueryKey = ReturnType<typeof adminKeys.getUser>;
+export type GetUserResultQueryKey = readonly [...ReturnType<typeof adminKeys.getUser>, 'result'];
+export type GetUserQueryFactory = {
+  readonly queryKey: GetUserQueryKey;
+  readonly queryFn: () => Promise<GetUserOutput>;
+};
+export type GetUserResultQueryFactory = {
+  readonly queryKey: GetUserResultQueryKey;
+  readonly queryFn: () => Promise<GetUserResult>;
+};
+export type GetUserQueryOptions<TData = GetUserOutput> = Omit<UseQueryOptions<GetUserOutput, Error, TData, GetUserQueryKey>, 'queryKey' | 'queryFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type GetUserResultQueryOptions<TData = GetUserResult> = Omit<UseQueryOptions<GetUserResult, Error, TData, GetUserResultQueryKey>, 'queryKey' | 'queryFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type CreateUserMutationVariables = CreateUserInput;
+export type CreateUserMutationFactory = {
+  readonly mutationFn: (input: CreateUserInput) => Promise<CreateUserOutput>;
+};
+export type CreateUserResultMutationFactory = {
+  readonly mutationFn: (input: CreateUserInput) => Promise<CreateUserResult>;
+};
+export type CreateUserMutationOptions<TContext = unknown> = Omit<UseMutationOptions<CreateUserOutput, Error, CreateUserMutationVariables, TContext>, 'mutationFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type CreateUserResultMutationOptions<TContext = unknown> = Omit<UseMutationOptions<CreateUserResult, Error, CreateUserMutationVariables, TContext>, 'mutationFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type ListOperationsQueryKey = ReturnType<typeof adminKeys.listOperations>;
+export type ListOperationsResultQueryKey = readonly [...ReturnType<typeof adminKeys.listOperations>, 'result'];
+export type ListOperationsQueryFactory = {
+  readonly queryKey: ListOperationsQueryKey;
+  readonly queryFn: () => Promise<ListOperationsOutput>;
+};
+export type ListOperationsResultQueryFactory = {
+  readonly queryKey: ListOperationsResultQueryKey;
+  readonly queryFn: () => Promise<ListOperationsResult>;
+};
+export type ListOperationsQueryOptions<TData = ListOperationsOutput> = Omit<UseQueryOptions<ListOperationsOutput, Error, TData, ListOperationsQueryKey>, 'queryKey' | 'queryFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type ListOperationsResultQueryOptions<TData = ListOperationsResult> = Omit<UseQueryOptions<ListOperationsResult, Error, TData, ListOperationsResultQueryKey>, 'queryKey' | 'queryFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type CreditOperationsQueryKey = ReturnType<typeof adminKeys.creditOperations>;
+export type CreditOperationsResultQueryKey = readonly [...ReturnType<typeof adminKeys.creditOperations>, 'result'];
+export type CreditOperationsQueryFactory = {
+  readonly queryKey: CreditOperationsQueryKey;
+  readonly queryFn: () => Promise<CreditOperationsOutput>;
+};
+export type CreditOperationsResultQueryFactory = {
+  readonly queryKey: CreditOperationsResultQueryKey;
+  readonly queryFn: () => Promise<CreditOperationsResult>;
+};
+export type CreditOperationsQueryOptions<TData = CreditOperationsOutput> = Omit<UseQueryOptions<CreditOperationsOutput, Error, TData, CreditOperationsQueryKey>, 'queryKey' | 'queryFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type CreditOperationsResultQueryOptions<TData = CreditOperationsResult> = Omit<UseQueryOptions<CreditOperationsResult, Error, TData, CreditOperationsResultQueryKey>, 'queryKey' | 'queryFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type ExecuteCreditOperationMutationVariables = ExecuteCreditOperationInput;
+export type ExecuteCreditOperationMutationFactory = {
+  readonly mutationFn: (input: ExecuteCreditOperationInput) => Promise<ExecuteCreditOperationOutput>;
+};
+export type ExecuteCreditOperationResultMutationFactory = {
+  readonly mutationFn: (input: ExecuteCreditOperationInput) => Promise<ExecuteCreditOperationResult>;
+};
+export type ExecuteCreditOperationMutationOptions<TContext = unknown> = Omit<UseMutationOptions<ExecuteCreditOperationOutput, Error, ExecuteCreditOperationMutationVariables, TContext>, 'mutationFn'> & { readonly rpc?: RpcClientRequestOptions };
+export type ExecuteCreditOperationResultMutationOptions<TContext = unknown> = Omit<UseMutationOptions<ExecuteCreditOperationResult, Error, ExecuteCreditOperationMutationVariables, TContext>, 'mutationFn'> & { readonly rpc?: RpcClientRequestOptions };
+export function createAdminQueries(client: AdminClient = adminClient) {
+  return {
+  snapshot: (input: SnapshotInput, rpc?: RpcClientRequestOptions): SnapshotQueryFactory => ({
+    queryKey: adminKeys.snapshot(input),
+    queryFn: () => client.snapshot(input, rpc),
+  }),
+  snapshotResult: (input: SnapshotInput, rpc?: RpcClientRequestOptions): SnapshotResultQueryFactory => ({
+    queryKey: [...adminKeys.snapshot(input), 'result'] as const,
+    queryFn: () => client.snapshotResult(input, rpc),
+  }),
+  listUsers: (input: ListUsersInput, rpc?: RpcClientRequestOptions): ListUsersQueryFactory => ({
+    queryKey: adminKeys.listUsers(input),
+    queryFn: () => client.listUsers(input, rpc),
+  }),
+  listUsersResult: (input: ListUsersInput, rpc?: RpcClientRequestOptions): ListUsersResultQueryFactory => ({
+    queryKey: [...adminKeys.listUsers(input), 'result'] as const,
+    queryFn: () => client.listUsersResult(input, rpc),
+  }),
+  getUser: (input: GetUserInput, rpc?: RpcClientRequestOptions): GetUserQueryFactory => ({
+    queryKey: adminKeys.getUser(input),
+    queryFn: () => client.getUser(input, rpc),
+  }),
+  getUserResult: (input: GetUserInput, rpc?: RpcClientRequestOptions): GetUserResultQueryFactory => ({
+    queryKey: [...adminKeys.getUser(input), 'result'] as const,
+    queryFn: () => client.getUserResult(input, rpc),
+  }),
+  listOperations: (input: ListOperationsInput, rpc?: RpcClientRequestOptions): ListOperationsQueryFactory => ({
+    queryKey: adminKeys.listOperations(input),
+    queryFn: () => client.listOperations(input, rpc),
+  }),
+  listOperationsResult: (input: ListOperationsInput, rpc?: RpcClientRequestOptions): ListOperationsResultQueryFactory => ({
+    queryKey: [...adminKeys.listOperations(input), 'result'] as const,
+    queryFn: () => client.listOperationsResult(input, rpc),
+  }),
+  creditOperations: (input: CreditOperationsInput, rpc?: RpcClientRequestOptions): CreditOperationsQueryFactory => ({
+    queryKey: adminKeys.creditOperations(input),
+    queryFn: () => client.creditOperations(input, rpc),
+  }),
+  creditOperationsResult: (input: CreditOperationsInput, rpc?: RpcClientRequestOptions): CreditOperationsResultQueryFactory => ({
+    queryKey: [...adminKeys.creditOperations(input), 'result'] as const,
+    queryFn: () => client.creditOperationsResult(input, rpc),
+  }),
+  };
+}
+
+export const adminQueries = createAdminQueries();
+export function createAdminMutations(client: AdminClient = adminClient) {
+  return {
+  createUser: (rpc?: RpcClientRequestOptions): CreateUserMutationFactory => ({
+    mutationFn: (input: CreateUserInput) => client.createUser(input, rpc),
+  }),
+  createUserResult: (rpc?: RpcClientRequestOptions): CreateUserResultMutationFactory => ({
+    mutationFn: (input: CreateUserInput) => client.createUserResult(input, rpc),
+  }),
+  executeCreditOperation: (rpc?: RpcClientRequestOptions): ExecuteCreditOperationMutationFactory => ({
+    mutationFn: (input: ExecuteCreditOperationInput) => client.executeCreditOperation(input, rpc),
+  }),
+  executeCreditOperationResult: (rpc?: RpcClientRequestOptions): ExecuteCreditOperationResultMutationFactory => ({
+    mutationFn: (input: ExecuteCreditOperationInput) => client.executeCreditOperationResult(input, rpc),
+  }),
+  };
+}
+
+export const adminMutations = createAdminMutations();
+export function useSnapshot<TData = SnapshotOutput>(input: SnapshotInput, options?: SnapshotQueryOptions<TData>) {
+  const { rpc, ...queryOptions } = options ?? {};
+
+  return useQuery<SnapshotOutput, Error, TData, SnapshotQueryKey>({ ...adminQueries.snapshot(input, rpc), ...queryOptions });
+}
+
+export function useSnapshotResult<TData = SnapshotResult>(input: SnapshotInput, options?: SnapshotResultQueryOptions<TData>) {
+  const { rpc, ...queryOptions } = options ?? {};
+
+  return useQuery<SnapshotResult, Error, TData, SnapshotResultQueryKey>({ ...adminQueries.snapshotResult(input, rpc), ...queryOptions });
+}
+export function useListUsers<TData = ListUsersOutput>(input: ListUsersInput, options?: ListUsersQueryOptions<TData>) {
+  const { rpc, ...queryOptions } = options ?? {};
+
+  return useQuery<ListUsersOutput, Error, TData, ListUsersQueryKey>({ ...adminQueries.listUsers(input, rpc), ...queryOptions });
+}
+
+export function useListUsersResult<TData = ListUsersResult>(input: ListUsersInput, options?: ListUsersResultQueryOptions<TData>) {
+  const { rpc, ...queryOptions } = options ?? {};
+
+  return useQuery<ListUsersResult, Error, TData, ListUsersResultQueryKey>({ ...adminQueries.listUsersResult(input, rpc), ...queryOptions });
+}
+export function useGetUser<TData = GetUserOutput>(input: GetUserInput, options?: GetUserQueryOptions<TData>) {
+  const { rpc, ...queryOptions } = options ?? {};
+
+  return useQuery<GetUserOutput, Error, TData, GetUserQueryKey>({ ...adminQueries.getUser(input, rpc), ...queryOptions });
+}
+
+export function useGetUserResult<TData = GetUserResult>(input: GetUserInput, options?: GetUserResultQueryOptions<TData>) {
+  const { rpc, ...queryOptions } = options ?? {};
+
+  return useQuery<GetUserResult, Error, TData, GetUserResultQueryKey>({ ...adminQueries.getUserResult(input, rpc), ...queryOptions });
+}
+export function useCreateUser<TContext = unknown>(options?: CreateUserMutationOptions<TContext>) {
+  const { rpc, ...mutationOptions } = options ?? {};
+
+  return useMutation<CreateUserOutput, Error, CreateUserMutationVariables, TContext>({ ...adminMutations.createUser(rpc), ...mutationOptions });
+}
+
+export function useCreateUserResult<TContext = unknown>(options?: CreateUserResultMutationOptions<TContext>) {
+  const { rpc, ...mutationOptions } = options ?? {};
+
+  return useMutation<CreateUserResult, Error, CreateUserMutationVariables, TContext>({ ...adminMutations.createUserResult(rpc), ...mutationOptions });
+}
+export function useListOperations<TData = ListOperationsOutput>(input: ListOperationsInput, options?: ListOperationsQueryOptions<TData>) {
+  const { rpc, ...queryOptions } = options ?? {};
+
+  return useQuery<ListOperationsOutput, Error, TData, ListOperationsQueryKey>({ ...adminQueries.listOperations(input, rpc), ...queryOptions });
+}
+
+export function useListOperationsResult<TData = ListOperationsResult>(input: ListOperationsInput, options?: ListOperationsResultQueryOptions<TData>) {
+  const { rpc, ...queryOptions } = options ?? {};
+
+  return useQuery<ListOperationsResult, Error, TData, ListOperationsResultQueryKey>({ ...adminQueries.listOperationsResult(input, rpc), ...queryOptions });
+}
+export function useCreditOperations<TData = CreditOperationsOutput>(input: CreditOperationsInput, options?: CreditOperationsQueryOptions<TData>) {
+  const { rpc, ...queryOptions } = options ?? {};
+
+  return useQuery<CreditOperationsOutput, Error, TData, CreditOperationsQueryKey>({ ...adminQueries.creditOperations(input, rpc), ...queryOptions });
+}
+
+export function useCreditOperationsResult<TData = CreditOperationsResult>(input: CreditOperationsInput, options?: CreditOperationsResultQueryOptions<TData>) {
+  const { rpc, ...queryOptions } = options ?? {};
+
+  return useQuery<CreditOperationsResult, Error, TData, CreditOperationsResultQueryKey>({ ...adminQueries.creditOperationsResult(input, rpc), ...queryOptions });
+}
+export function useExecuteCreditOperation<TContext = unknown>(options?: ExecuteCreditOperationMutationOptions<TContext>) {
+  const { rpc, ...mutationOptions } = options ?? {};
+
+  return useMutation<ExecuteCreditOperationOutput, Error, ExecuteCreditOperationMutationVariables, TContext>({ ...adminMutations.executeCreditOperation(rpc), ...mutationOptions });
+}
+
+export function useExecuteCreditOperationResult<TContext = unknown>(options?: ExecuteCreditOperationResultMutationOptions<TContext>) {
+  const { rpc, ...mutationOptions } = options ?? {};
+
+  return useMutation<ExecuteCreditOperationResult, Error, ExecuteCreditOperationMutationVariables, TContext>({ ...adminMutations.executeCreditOperationResult(rpc), ...mutationOptions });
+}

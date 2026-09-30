@@ -1,0 +1,213 @@
+{
+  "schemaVersion": "croco.manifest.contract-graph.v1",
+  "source": {
+    "schemaVersion": "croco.project-map.manifest.v1",
+    "artifact": "croco.project-map.json",
+    "packageName": "{{projectName}}",
+    "generatedArtifacts": [
+      {
+        "kind": "framework-manifest",
+        "path": ".croco/build/framework-manifest.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "intent-map",
+        "path": ".croco/build/intent-map.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "route-registration-table",
+        "path": ".croco/build/route-registration-table.json",
+        "commitPolicy": "commit-required"
+      },
+      {
+        "kind": "routes-module",
+        "path": ".croco/build/routes.mjs",
+        "commitPolicy": "commit-required"
+      }
+    ]
+  },
+  "project": {
+    "root": ".",
+    "packageName": "{{projectName}}",
+    "packageManager": "pnpm@12.7.0"
+  },
+  "summary": {
+    "controllers": 2,
+    "routes": 12,
+    "diagnostics": 0,
+    "errors": 0,
+    "warnings": 0
+  },
+  "frameworkManifestVersion": "croco.framework-manifest.v1",
+  "contractGraphSnapshotVersion": "croco.contract-graph.snapshot.v1",
+  "controllers": [
+    {
+      "id": "AdminController",
+      "name": "AdminController",
+      "path": "/admin",
+      "source": {
+        "file": "apps/api-server/src/controllers/AdminController.ts",
+        "line": 33,
+        "column": 8
+      }
+    },
+    {
+      "id": "UserController",
+      "name": "UserController",
+      "path": "/users",
+      "source": {
+        "file": "apps/api-server/src/controllers/UserController.ts",
+        "line": 25,
+        "column": 8
+      }
+    }
+  ],
+  "routes": [
+    {
+      "id": "AdminController.createUser",
+      "method": "POST",
+      "path": "/admin/users",
+      "controllerId": "AdminController",
+      "handlerName": "createUser",
+      "source": {
+        "file": "apps/api-server/src/controllers/AdminController.ts",
+        "line": 33,
+        "column": 8
+      }
+    },
+    {
+      "id": "AdminController.creditOperations",
+      "method": "GET",
+      "path": "/admin/credits",
+      "controllerId": "AdminController",
+      "handlerName": "creditOperations",
+      "source": {
+        "file": "apps/api-server/src/controllers/AdminController.ts",
+        "line": 33,
+        "column": 8
+      }
+    },
+    {
+      "id": "AdminController.executeCreditOperation",
+      "method": "POST",
+      "path": "/admin/credits/actions",
+      "controllerId": "AdminController",
+      "handlerName": "executeCreditOperation",
+      "source": {
+        "file": "apps/api-server/src/controllers/AdminController.ts",
+        "line": 33,
+        "column": 8
+      }
+    },
+    {
+      "id": "AdminController.getUser",
+      "method": "GET",
+      "path": "/admin/users/:id",
+      "controllerId": "AdminController",
+      "handlerName": "getUser",
+      "source": {
+        "file": "apps/api-server/src/controllers/AdminController.ts",
+        "line": 33,
+        "column": 8
+      }
+    },
+    {
+      "id": "AdminController.listOperations",
+      "method": "GET",
+      "path": "/admin/operations",
+      "controllerId": "AdminController",
+      "handlerName": "listOperations",
+      "source": {
+        "file": "apps/api-server/src/controllers/AdminController.ts",
+        "line": 33,
+        "column": 8
+      }
+    },
+    {
+      "id": "AdminController.listUsers",
+      "method": "GET",
+      "path": "/admin/users",
+      "controllerId": "AdminController",
+      "handlerName": "listUsers",
+      "source": {
+        "file": "apps/api-server/src/controllers/AdminController.ts",
+        "line": 33,
+        "column": 8
+      }
+    },
+    {
+      "id": "AdminController.snapshot",
+      "method": "GET",
+      "path": "/admin/snapshot",
+      "controllerId": "AdminController",
+      "handlerName": "snapshot",
+      "source": {
+        "file": "apps/api-server/src/controllers/AdminController.ts",
+        "line": 33,
+        "column": 8
+      }
+    },
+    {
+      "id": "UserController.create",
+      "method": "POST",
+      "path": "/users",
+      "controllerId": "UserController",
+      "handlerName": "create",
+      "source": {
+        "file": "apps/api-server/src/controllers/UserController.ts",
+        "line": 25,
+        "column": 8
+      }
+    },
+    {
+      "id": "UserController.delete",
+      "method": "DELETE",
+      "path": "/users/:id",
+      "controllerId": "UserController",
+      "handlerName": "delete",
+      "source": {
+        "file": "apps/api-server/src/controllers/UserController.ts",
+        "line": 25,
+        "column": 8
+      }
+    },
+    {
+      "id": "UserController.getById",
+      "method": "GET",
+      "path": "/users/:id",
+      "controllerId": "UserController",
+      "handlerName": "getById",
+      "source": {
+        "file": "apps/api-server/src/controllers/UserController.ts",
+        "line": 25,
+        "column": 8
+      }
+    },
+    {
+      "id": "UserController.list",
+      "method": "GET",
+      "path": "/users",
+      "controllerId": "UserController",
+      "handlerName": "list",
+      "source": {
+        "file": "apps/api-server/src/controllers/UserController.ts",
+        "line": 25,
+        "column": 8
+      }
+    },
+    {
+      "id": "UserController.update",
+      "method": "PUT",
+      "path": "/users/:id",
+      "controllerId": "UserController",
+      "handlerName": "update",
+      "source": {
+        "file": "apps/api-server/src/controllers/UserController.ts",
+        "line": 25,
+        "column": 8
+      }
+    }
+  ],
+  "diagnostics": []
+}
