@@ -114,10 +114,7 @@ const CASE_TEST_PATH_PREFIXES = {
     "addons/graphql-standalone/apps/graphql-api/",
   ],
   "trpc-lambda-api": [],
-  "graphql-standalone-nextjs-opennext": [
-    "base-ddd/libs/shared/utils-env/",
-    "addons/graphql-standalone/apps/graphql-api/",
-  ],
+  "graphql-standalone-nextjs-opennext": [],
   "trpc-standalone-nextjs-opennext": [],
   "trpc-nextjs-vercel-fullstack": [],
   "graphql-nextjs-opennext": [],
