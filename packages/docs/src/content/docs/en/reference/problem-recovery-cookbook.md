@@ -5273,7 +5273,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/EngagementService.ts:990:5` (problem-constructor)
+- `packages/engagement-core/src/libs/EngagementService.ts:1004:5` (problem-constructor)
 
 <a id="engagement-core-message-already-registered"></a>
 
@@ -5363,7 +5363,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/EngagementService.ts:906:5` (problem-constructor)
+- `packages/engagement-core/src/libs/EngagementService.ts:920:5` (problem-constructor)
 
 <a id="engagement-core-recipient-directory-scope-mismatch"></a>
 
@@ -5381,7 +5381,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/EngagementService.ts:921:5` (problem-constructor)
+- `packages/engagement-core/src/libs/EngagementService.ts:935:5` (problem-constructor)
 
 <a id="engagement-core-recipient-not-found"></a>
 
@@ -5399,7 +5399,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/EngagementService.ts:894:5` (problem-constructor)
+- `packages/engagement-core/src/libs/EngagementService.ts:908:5` (problem-constructor)
 
 <a id="engagement-core-recorded-dispatch-failed"></a>
 
@@ -5417,7 +5417,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/EngagementService.ts:1018:5` (problem-constructor)
+- `packages/engagement-core/src/libs/EngagementService.ts:1032:5` (problem-constructor)
 
 <a id="engagement-core-render-failed"></a>
 
@@ -5435,7 +5435,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/EngagementService.ts:942:5` (problem-constructor)
+- `packages/engagement-core/src/libs/EngagementService.ts:956:5` (problem-constructor)
 
 <a id="engagement-core-renderer-already-registered"></a>
 
@@ -5561,7 +5561,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/EngagementService.ts:933:5` (problem-constructor)
+- `packages/engagement-core/src/libs/EngagementService.ts:947:5` (problem-constructor)
 
 <a id="engagement-core-store-input-invalid"></a>
 
@@ -5597,7 +5597,7 @@ Sources:
 
 Sources:
 
-- `packages/engagement-core/src/libs/EngagementService.ts:963:5` (problem-constructor)
+- `packages/engagement-core/src/libs/EngagementService.ts:977:5` (problem-constructor)
 
 <a id="entitlement-denied"></a>
 
