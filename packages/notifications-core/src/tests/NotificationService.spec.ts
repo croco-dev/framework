@@ -1,4 +1,4 @@
-import type { ExecutionManager } from "@croco/execution-core";
+import type { Execution, ExecutionManager } from "@croco/execution-core";
 import { Container } from "@croco/framework-context";
 import { TaskExecutionAlreadySettledProblem, TaskRegistry, TaskRunner } from "@croco/tasks-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -22,8 +22,10 @@ import {
   NotificationProviderIdempotencyUnsupportedProblem,
   NotificationProviderNotConfiguredProblem,
   NotificationProviderNotRegisteredProblem,
+  NotificationTaskResultInvalidProblem,
 } from "../libs/problems/NotificationProblems";
 import { NotificationChannel } from "../libs/types";
+import { SendNotificationTask } from "../libs/SendNotificationTask";
 import {
   createConsumerManagedRenderedCapabilities,
   createProvider,
@@ -125,9 +127,10 @@ describe("NotificationService", () => {
 
     registry = new NotificationProviderRegistry();
     taskRunner = new TaskRunner(createExecutionManager(), new TaskRegistry());
-    executeSpy = vi
-      .spyOn(taskRunner, "executeTracked")
-      .mockResolvedValue({ executionId: "execution-1", result: undefined });
+    executeSpy = vi.spyOn(taskRunner, "executeTracked").mockResolvedValue({
+      executionId: "execution-1",
+      result: { providerName: "email-provider" },
+    });
     service = new NotificationService(taskRunner, registry);
     emailProvider = createRenderedProvider("email-provider", NotificationChannel.EMAIL);
   });
@@ -151,6 +154,75 @@ describe("NotificationService", () => {
   });
 
   describe("send()", () => {
+    it("preserves the original provider identity when a completed execution is replayed", async () => {
+      const executionManager = createExecutionManager();
+      let saved: Execution | undefined;
+      executionManager.create = vi.fn(async (input) => {
+        expect(input.idempotencyKey).toMatch(/^task:v2:/);
+        if (saved !== undefined) {
+          expect(input.idempotencyKey).toBe(saved.idempotencyKey);
+          return saved;
+        }
+        saved = {
+          id: "original-execution",
+          type: input.type,
+          payload: input.payload,
+          status: "pending",
+          attempts: 0,
+          maxAttempts: 1,
+          createdAt: new Date(),
+          idempotencyKey: input.idempotencyKey,
+        };
+        return saved;
+      });
+      executionManager.start = vi.fn(async () => {
+        if (saved === undefined) throw new Error("Execution was not created");
+        saved = { ...saved, status: "running", attempts: 1, startedAt: new Date() };
+        return saved;
+      });
+      executionManager.complete = vi.fn(async (_id, result) => {
+        if (saved === undefined) throw new Error("Execution was not created");
+        saved = { ...saved, status: "completed", result };
+        return saved;
+      });
+      const replacement = createRenderedProvider("replacement-provider", NotificationChannel.EMAIL);
+      emailProvider.send.mockResolvedValue({ success: true, messageId: "original-message" });
+      registry.registerProvider(emailProvider);
+      registry.registerProvider(replacement);
+      const task = new SendNotificationTask(registry);
+      const tasks = new TaskRegistry();
+      tasks.register("send-notification", SendNotificationTask, "handle", {
+        name: "send-notification",
+        options: { maxAttempts: 1 },
+        target: SendNotificationTask,
+        methodName: "handle",
+      });
+      const runner = new TaskRunner(executionManager, tasks, undefined, {
+        serviceResolver: () => task,
+      });
+      const notifications = new NotificationService(runner, registry);
+      const payload = { to: "recipient@example.com", content: "Hello" };
+      const original = await notifications.dispatch(
+        NotificationChannel.EMAIL,
+        payload,
+        createSendOptions(NotificationChannel.EMAIL, { providerName: "email-provider" }),
+      );
+      await expect(
+        notifications.dispatch(
+          NotificationChannel.EMAIL,
+          payload,
+          createSendOptions(NotificationChannel.EMAIL, { providerName: "replacement-provider" }),
+        ),
+      ).resolves.toEqual(original);
+      expect(original).toEqual({
+        executionId: "original-execution",
+        providerName: "email-provider",
+        providerMessageId: "original-message",
+      });
+      expect(emailProvider.send).toHaveBeenCalledTimes(1);
+      expect(replacement.send).not.toHaveBeenCalled();
+    });
+
     it.each([
       ["failed", "provider/token-invalid", true],
       ["failed", "provider/rate-limit", false],
@@ -204,7 +276,7 @@ describe("NotificationService", () => {
     it("returns the provider message ID from a completed task", async () => {
       executeSpy.mockResolvedValueOnce({
         executionId: "execution-2",
-        result: "provider-message-2",
+        result: { providerName: "email-provider", providerMessageId: "provider-message-2" },
       });
       service.registerProvider(emailProvider, true);
 
@@ -219,6 +291,62 @@ describe("NotificationService", () => {
         providerName: "email-provider",
         providerMessageId: "provider-message-2",
       });
+    });
+
+    it("retains only the execution ID for legacy completed tasks without delivery evidence", async () => {
+      executeSpy.mockResolvedValueOnce({ executionId: "legacy-execution", result: undefined });
+      service.registerProvider(emailProvider, true);
+      await expect(
+        service.dispatch(
+          NotificationChannel.EMAIL,
+          { to: "test@example.com", content: "Test Content" },
+          createSendOptions(NotificationChannel.EMAIL),
+        ),
+      ).resolves.toEqual({ executionId: "legacy-execution" });
+      expect(emailProvider.send).not.toHaveBeenCalled();
+    });
+
+    it("returns only the recorded provider evidence and the tracked execution ID", async () => {
+      executeSpy.mockResolvedValueOnce({
+        executionId: "tracked-execution",
+        result: {
+          providerName: "email-provider",
+          providerMessageId: "original-message",
+          executionId: "untrusted-execution",
+          token: "untrusted-token",
+        },
+      });
+      service.registerProvider(emailProvider, true);
+      await expect(
+        service.dispatch(
+          NotificationChannel.EMAIL,
+          { to: "test@example.com", content: "Test Content" },
+          createSendOptions(NotificationChannel.EMAIL),
+        ),
+      ).resolves.toEqual({
+        executionId: "tracked-execution",
+        providerName: "email-provider",
+        providerMessageId: "original-message",
+      });
+    });
+
+    it.each([
+      "unattributed-message-id",
+      { providerMessageId: "unattributed-message-id" },
+      { providerName: "" },
+      { providerName: "email-provider", providerMessageId: 123 },
+      null,
+    ])("rejects malformed recorded delivery evidence %j", async (result) => {
+      executeSpy.mockResolvedValueOnce({ executionId: "malformed-execution", result });
+      service.registerProvider(emailProvider, true);
+      await expect(
+        service.dispatch(
+          NotificationChannel.EMAIL,
+          { to: "test@example.com", content: "Test Content" },
+          createSendOptions(NotificationChannel.EMAIL),
+        ),
+      ).rejects.toBeInstanceOf(NotificationTaskResultInvalidProblem);
+      expect(emailProvider.send).not.toHaveBeenCalled();
     });
 
     it("should reject providers that cannot honor a required idempotency key", async () => {

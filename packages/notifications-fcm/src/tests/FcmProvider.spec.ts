@@ -50,11 +50,32 @@ describe("FcmProvider", () => {
     ).toEqual({ success: true, messageId: "projects/fixture/messages/accepted" });
     expect(send).toHaveBeenCalledExactlyOnceWith(
       "[redacted-token]",
-      expect.objectContaining({ title: "Title", body: "Body", ttlSeconds: 60, priority: "high" }),
+      expect.objectContaining({
+        title: "Title",
+        body: "Body",
+        imageUrl: "https://example.test/image.png",
+        ttlSeconds: 60,
+        priority: "high",
+      }),
     );
     expect(provider.getName()).toBe("fcm");
     expect(provider.getChannel()).toBe(NotificationChannel.PUSH);
     expect(provider.getCapabilities().supportsIdempotencyKey).toBe(false);
+  });
+
+  it("rejects HTTP image URLs before sending without exposing the URL", async () => {
+    const send = vi.fn().mockResolvedValue("accepted");
+    const imageUrl = "http://example.test/private-image.png?access=secret";
+    const result = await new FcmProvider(config, { send }).send({
+      ...payload,
+      push: { ...payload.push, imageUrl },
+    });
+    expect(result.success).toBe(false);
+    if (result.success) return;
+    expect(result.problem.code).toBe("notifications-fcm/validation");
+    expect(result.problem.extensions).toMatchObject({ retryable: false, endpointInvalid: false });
+    expect(JSON.stringify(result)).not.toContain(imageUrl);
+    expect(send).not.toHaveBeenCalled();
   });
 
   it("bounds batch concurrency and preserves order under retryable failures", async () => {

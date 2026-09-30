@@ -104,6 +104,12 @@ Providers return a discriminated `NotificationResult`. Successful delivery may i
 while failed delivery must include a Croco `Problem`. Provider-native responses remain available as optional
 diagnostic evidence on either branch.
 
+Successful `send-notification` tasks persist `NotificationJobResult` with the sending provider name
+and optional provider message ID. Completed replays return that original identity even if the
+currently selected provider changes. Legacy completed tasks with no recorded result retain their
+execution ID without fabricating provider evidence. Malformed recorded results fail with
+`notifications-core/task-result-invalid` and are not sent again.
+
 ```typescript
 import type { NotificationProvider, NotificationResult } from "@croco/notifications-core";
 

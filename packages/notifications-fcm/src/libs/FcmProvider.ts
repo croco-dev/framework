@@ -168,7 +168,7 @@ function validateFcmPayload(
       (typeof push.collapseKey !== "string" || !push.collapseKey.trim())) ||
     (push.deepLink !== undefined && (typeof push.deepLink !== "string" || !push.deepLink.trim())) ||
     (push.imageUrl !== undefined &&
-      (typeof push.imageUrl !== "string" || !/^https?:\/\//.test(push.imageUrl))) ||
+      (typeof push.imageUrl !== "string" || !push.imageUrl.startsWith("https://"))) ||
     (push.data !== undefined &&
       (typeof push.data !== "object" ||
         push.data === null ||

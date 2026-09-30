@@ -1684,6 +1684,12 @@
       "owner": "@croco/engagement-core"
     },
     {
+      "path": "packages/engagement-core/src/tests/ContactPolicyPushLifecycle.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-core"
+    },
+    {
       "path": "packages/engagement-core/src/tests/EngagementService.spec.ts",
       "lane": "fast",
       "qualifiers": [],

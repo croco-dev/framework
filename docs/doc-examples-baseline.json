@@ -824,7 +824,7 @@
       "file": "packages/engagement-core/README.md",
       "blockIndex": 5,
       "language": "ts",
-      "openingLine": 215,
+      "openingLine": 217,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {
@@ -1979,7 +1979,7 @@
       "file": "packages/notifications-core/README.md",
       "blockIndex": 3,
       "language": "typescript",
-      "openingLine": 107,
+      "openingLine": 113,
       "reason": "Legacy authored docs block is not yet isolated for documentation typechecking."
     },
     {

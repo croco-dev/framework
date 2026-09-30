@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 888,
+  problemCount: 889,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -7529,7 +7529,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 1100,
+          line: 1140,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7653,7 +7653,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementStores.ts",
-          line: 348,
+          line: 350,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7686,7 +7686,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 1016,
+          line: 1056,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7719,7 +7719,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 1031,
+          line: 1071,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7750,7 +7750,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 1004,
+          line: 1044,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7783,7 +7783,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 1128,
+          line: 1168,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7815,7 +7815,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 1052,
+          line: 1092,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8036,7 +8036,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 1043,
+          line: 1083,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8066,7 +8066,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementStores.ts",
-          line: 340,
+          line: 342,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8099,7 +8099,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 1073,
+          line: 1113,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16904,7 +16904,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 135,
+          line: 146,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16936,7 +16936,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 224,
+          line: 235,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16967,7 +16967,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 296,
+          line: 307,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16998,7 +16998,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 312,
+          line: 323,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17029,7 +17029,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 279,
+          line: 290,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17060,7 +17060,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 263,
+          line: 274,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17091,7 +17091,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 241,
+          line: 252,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17124,7 +17124,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 64,
+          line: 75,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17157,7 +17157,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 80,
+          line: 91,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17190,7 +17190,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 117,
+          line: 128,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17223,7 +17223,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 96,
+          line: 107,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17256,7 +17256,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 157,
+          line: 168,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17289,7 +17289,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 191,
+          line: 202,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17354,7 +17354,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 175,
+          line: 186,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17387,7 +17387,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 48,
+          line: 59,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17420,7 +17420,40 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 208,
+          line: 219,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "notifications-core/task-result-invalid",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-core-task-result-invalid",
+      recovery: {
+        cause:
+          "A completed notification task contains invalid persisted provider delivery evidence.",
+        userAction:
+          "Do not retry the unchanged delivery or resend automatically; report the execution ID to the service operator.",
+        operatorAction:
+          "Inspect and reconcile the persisted task result against the original provider delivery before repairing the record.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
+          line: 48,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17451,7 +17484,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 328,
+          line: 339,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17482,7 +17515,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 346,
+          line: 357,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17513,7 +17546,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/notifications-core/src/libs/problems/NotificationProblems.ts",
-          line: 365,
+          line: 376,
           column: 5,
           kind: "problem-constructor",
         },

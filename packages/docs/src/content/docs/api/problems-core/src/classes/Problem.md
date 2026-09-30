@@ -432,6 +432,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`NotificationProviderNotFoundProblem`](/api/notifications-core/src/classes/notificationprovidernotfoundproblem/)
 - [`NotificationProviderNotRegisteredProblem`](/api/notifications-core/src/classes/notificationprovidernotregisteredproblem/)
 - [`NotificationSendMaxAttemptsInvalidProblem`](/api/notifications-core/src/classes/notificationsendmaxattemptsinvalidproblem/)
+- [`NotificationTaskResultInvalidProblem`](/api/notifications-core/src/classes/notificationtaskresultinvalidproblem/)
 - [`NotificationTemplateAlreadyRegisteredProblem`](/api/notifications-core/src/classes/notificationtemplatealreadyregisteredproblem/)
 - [`NotificationTemplateNotFoundProblem`](/api/notifications-core/src/classes/notificationtemplatenotfoundproblem/)
 - [`NotificationTemplateVariablesInvalidProblem`](/api/notifications-core/src/classes/notificationtemplatevariablesinvalidproblem/)

@@ -2718,6 +2718,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "notifications-core/task-result-invalid": recovery({
+    cause: "A completed notification task contains invalid persisted provider delivery evidence.",
+    userAction:
+      "Do not retry the unchanged delivery or resend automatically; report the execution ID to the service operator.",
+    operatorAction:
+      "Inspect and reconcile the persisted task result against the original provider delivery before repairing the record.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "access-core/invalid-provider-result": recovery({
     cause: "AccessProvider.check() returned a result without a supported authoritative decision.",
     userAction:

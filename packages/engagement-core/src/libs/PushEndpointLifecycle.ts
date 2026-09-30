@@ -59,7 +59,7 @@ export class PushEndpointLifecycle {
       });
       return {
         status: existing === undefined ? "registered" : "refreshed",
-        endpoint: requirePush(saved),
+        endpoint: requireActivePush(saved),
       };
     });
   }
@@ -88,7 +88,7 @@ export class PushEndpointLifecycle {
           kind: "push",
           lastSeenAt: laterDate(existing.lastSeenAt, input.lastSeenAt),
         });
-        return { status: "refreshed", endpoint: requirePush(refreshed) };
+        return { status: "refreshed", endpoint: requireActivePush(refreshed) };
       }
       const replacementId = createPushEndpointId(input);
       const replacement = await store.getEndpoint(input.tenantId, replacementId);
@@ -113,7 +113,7 @@ export class PushEndpointLifecycle {
         kind: "push",
         lastSeenAt: laterDate(replacement?.lastSeenAt, input.lastSeenAt),
       });
-      return { status: "rotated", endpoint: requirePush(saved) };
+      return { status: "rotated", endpoint: requireActivePush(saved) };
     });
   }
 
@@ -212,13 +212,16 @@ function laterDate(existing: Date | undefined, incoming: Date): Date {
   return new Date(Math.max(existing?.getTime() ?? incoming.getTime(), incoming.getTime()));
 }
 
-function requirePush(
+function requireActivePush(
   endpoint: Awaited<ReturnType<EngagementPersistence["saveEndpoint"]>>,
 ): PushContactEndpoint {
   if (endpoint.kind !== "push") {
     throw new EngagementStoreValidationProblem(
       "Push endpoint store returned an incompatible endpoint",
     );
+  }
+  if (endpoint.invalidatedAt !== undefined) {
+    throw new EngagementStoreValidationProblem("Push endpoint was invalidated during registration");
   }
   return endpoint;
 }

@@ -1,6 +1,5 @@
 import {
   createEngagementStoreConformanceSuite,
-  ContactPolicyConflictProblem,
   PushEndpointLifecycle,
 } from "@croco/engagement-core";
 import { TxManager } from "@croco/tx-core";
@@ -185,6 +184,82 @@ describePostgres("DrizzleEngagementStore PostgreSQL conformance", () => {
     ]);
   });
 
+  it.each(["register", "refresh", "rotate"] as const)(
+    "rejects %s when terminal invalidation commits after the active endpoint read",
+    async (operation) => {
+      await reset();
+      const store = new DrizzleEngagementStore(db, txManager);
+      const lifecycle = new PushEndpointLifecycle(store);
+      const registration = {
+        tenantId: "tenant-invalidation-race",
+        recipientId: "recipient-invalidation-race",
+        provider: "fcm",
+        app: "app",
+        platform: "android",
+        environment: "test",
+        tokenReference: "vault:predecessor",
+        lastSeenAt: new Date("2026-01-01"),
+      };
+      const first = await lifecycle.register(registration);
+      const replacementInput = { ...registration, tokenReference: "vault:replacement" };
+      const target = operation === "rotate" ? await lifecycle.register(replacementInput) : first;
+      let releaseRead: () => void = () => {};
+      const activeRead = new Promise<void>((resolve) => {
+        releaseRead = resolve;
+      });
+      let releaseSave: () => void = () => {};
+      const invalidationCommitted = new Promise<void>((resolve) => {
+        releaseSave = resolve;
+      });
+      const getEndpoint = store.getEndpoint.bind(store);
+      const spy = vi.spyOn(store, "getEndpoint").mockImplementation(async (...args) => {
+        const endpoint = await getEndpoint(...args);
+        if (args[1] === target.endpoint.id) {
+          releaseRead();
+          await invalidationCommitted;
+        }
+        return endpoint;
+      });
+      const result =
+        operation === "register"
+          ? lifecycle.register(registration)
+          : lifecycle.rotate({
+              ...(operation === "rotate" ? replacementInput : registration),
+              previousEndpointId: first.endpoint.id,
+              expectedVersion: first.endpoint.version,
+            });
+      const rejection = expect(result).rejects.toThrow(
+        "Push endpoint was invalidated during registration",
+      );
+      await activeRead;
+      try {
+        await expect(
+          store.invalidateEndpoint({
+            tenantId: registration.tenantId,
+            endpointId: target.endpoint.id,
+            expectedVersion: target.endpoint.version,
+            reason: "token-invalid",
+            invalidatedAt: new Date("2026-02-01"),
+          }),
+        ).resolves.toMatchObject({ status: "invalidated" });
+      } finally {
+        releaseSave();
+        spy.mockRestore();
+      }
+      await rejection;
+      await expect(
+        store.getEndpoint(registration.tenantId, target.endpoint.id),
+      ).resolves.toMatchObject({
+        invalidationReason: "token-invalid",
+      });
+      const active = await store.listActiveEndpoints(
+        registration.tenantId,
+        registration.recipientId,
+      );
+      expect(active).toEqual(operation === "rotate" ? [first.endpoint] : []);
+    },
+  );
+
   it("serializes concurrent writes to one logical dispatch identity", async () => {
     await reset();
     const store = new DrizzleEngagementStore(db, txManager);
@@ -213,51 +288,5 @@ describePostgres("DrizzleEngagementStore PostgreSQL conformance", () => {
     await expect(
       store.listByRecipient("tenant-concurrent", "recipient-concurrent", { limit: 10 }),
     ).resolves.toMatchObject({ items: [{ id: first.id }] });
-  });
-  it("atomically preserves failed acceptance against a stale eligibility write", async () => {
-    await reset();
-    const store = new DrizzleEngagementStore(db, txManager);
-    const stale = new DrizzleEngagementStore(db, txManager);
-    const identity = {
-      tenantId: "tenant-atomic-policy",
-      recipientId: "recipient-atomic-policy",
-      messageId: "message-atomic-policy",
-      channel: "push" as const,
-      semanticKey: "send-atomic-policy",
-    };
-    expect(await stale.findByIdentity(identity)).toBeUndefined();
-    const accepted = await store.recordDispatch({
-      ...identity,
-      topic: "marketing",
-      recordedAt: new Date("2026-10-01T00:00:00Z"),
-      targets: [
-        {
-          endpointId: "device",
-          endpointVersion: 1,
-          executionId: "execution",
-          provider: "fcm",
-          providerMessageId: "projects/project/messages/accepted",
-        },
-      ],
-      outcome: {
-        kind: "failed",
-        stage: "persistence",
-        failureCode: "engagement-core/contact-policy-acceptance-unknown",
-        retryable: false,
-        executionIds: ["execution"],
-      },
-    });
-    const eligibility = {
-      ...identity,
-      topic: "marketing",
-      recordedAt: new Date("2026-10-01T00:00:01Z"),
-      targets: [],
-      outcome: { kind: "suppressed" as const, reason: "suppression" as const },
-      expectedState: "absent-or-eligibility" as const,
-    };
-    await expect(stale.recordDispatch(eligibility)).rejects.toBeInstanceOf(
-      ContactPolicyConflictProblem,
-    );
-    expect(await store.findByIdentity(identity)).toEqual(accepted);
   });
 });

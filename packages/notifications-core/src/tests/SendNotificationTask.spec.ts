@@ -65,7 +65,10 @@ describe("SendNotificationTask", () => {
         content: "Test Content",
       };
 
-      await expect(task.handle(payload)).resolves.toBe("msg-123");
+      await expect(task.handle(payload)).resolves.toEqual({
+        providerName: "resend",
+        providerMessageId: "msg-123",
+      });
 
       expect(mockProvider.send).toHaveBeenCalledWith({
         to: "test@example.com",
@@ -114,7 +117,7 @@ describe("SendNotificationTask", () => {
           content: push.body,
           push,
         }),
-      ).resolves.toBe("push-1");
+      ).resolves.toEqual({ providerName: "resend", providerMessageId: "push-1" });
       expect(mockProvider.send).toHaveBeenCalledWith({
         to: "vault://device-1",
         content: push.body,

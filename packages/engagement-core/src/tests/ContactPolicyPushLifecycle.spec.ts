@@ -249,7 +249,9 @@ describe("contact policy with durable push delivery", () => {
       ]),
     );
     expect(
-      (await test.events()).sort((left, right) => left.endpointId.localeCompare(right.endpointId)),
+      [...(await test.events())].sort((left, right) =>
+        left.endpointId.localeCompare(right.endpointId),
+      ),
     ).toMatchObject([
       { type: "accepted", endpointId: "device-1", provider: "fcm" },
       {

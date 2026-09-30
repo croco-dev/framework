@@ -9,7 +9,12 @@ import {
   NotificationProviderNotFoundProblem,
   NotificationSendMaxAttemptsInvalidProblem,
 } from "./problems/NotificationProblems";
-import type { NotificationJobPayload, NotificationPayload, NotificationProvider } from "./types";
+import type {
+  NotificationJobPayload,
+  NotificationJobResult,
+  NotificationPayload,
+  NotificationProvider,
+} from "./types";
 
 function parseMaxAttempts(envValue: string | undefined, defaultValue: number): number {
   if (envValue === undefined) return defaultValue;
@@ -40,7 +45,7 @@ export class SendNotificationTask {
     name: "send-notification",
     maxAttempts: SEND_NOTIFICATION_MAX_ATTEMPTS,
   })
-  async handle(payload: NotificationJobPayload): Promise<string | undefined> {
+  async handle(payload: NotificationJobPayload): Promise<NotificationJobResult> {
     const { providerName, idempotencyKey } = payload;
     const notificationPayload = toProviderPayload(payload);
 
@@ -63,7 +68,10 @@ export class SendNotificationTask {
     }
 
     recordNotificationDispatchSuccess(payload);
-    return result.messageId;
+    return {
+      providerName,
+      ...(result.messageId === undefined ? {} : { providerMessageId: result.messageId }),
+    };
   }
 }
 

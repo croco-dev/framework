@@ -24,7 +24,7 @@ Choose explicit Application Default Credentials or `{ type: 'service-account', c
 
 ## Content and delivery
 
-Pass canonical `NotificationPayload.push` content. `title`, `body`, and `imageUrl` map to Firebase notification fields. String `data` entries map to data fields; `deepLink` is delivered as `data.deepLink` for the receiving application to handle. Supplying both `deepLink` and `data.deepLink` fails validation. Reserved Firebase data keys fail validation.
+Pass canonical `NotificationPayload.push` content. `title`, `body`, and `imageUrl` map to Firebase notification fields. `imageUrl` must begin with `https://`; HTTP images fail with a sanitized validation Problem before sending. This keeps image transport compatible with default [Apple App Transport Security](https://developer.apple.com/documentation/BundleResources/Information-Property-List/NSAppTransportSecurity) settings. String `data` entries map to data fields; `deepLink` is delivered as `data.deepLink` for the receiving application to handle. Supplying both `deepLink` and `data.deepLink` fails validation. Reserved Firebase data keys fail validation.
 
 `ttlSeconds` accepts integer values from 0 through 2,419,200, maps to Android milliseconds, APNs expiration, and Web Push TTL. Priority maps to Android priority, APNs priority 10/5, and Web Push urgency. `collapseKey` maps to Android collapse key, APNs collapse ID, and the Web notification tag. Platform-specific limits still apply; Firebase rejection is returned as a terminal validation Problem. Web tags replace displayed notifications and do not guarantee transport deduplication. Clients own deep-link navigation and push-open ingestion through Croco's provider-neutral interaction seam.
 

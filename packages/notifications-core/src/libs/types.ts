@@ -100,6 +100,11 @@ export interface NotificationProvider {
   getCapabilities(): NotificationProviderCapabilities;
 }
 
+export type NotificationJobResult = Readonly<{
+  providerName: string;
+  providerMessageId?: string;
+}>;
+
 export interface NotificationJobPayload extends NotificationPayload {
   providerName: string;
   idempotencyKey?: string;

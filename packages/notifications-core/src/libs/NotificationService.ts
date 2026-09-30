@@ -31,12 +31,14 @@ import {
   NotificationProviderNotConfiguredProblem,
   NotificationProviderNotRegisteredProblem,
   NotificationProviderIdempotencyUnsupportedProblem,
+  NotificationTaskResultInvalidProblem,
 } from "./problems/NotificationProblems";
 import type {
   NotificationChannel,
   NotificationPayload,
   NotificationProvider,
   NotificationProviderCapabilities,
+  NotificationJobResult,
 } from "./types";
 
 export type NotificationSendContractOptions = {
@@ -335,12 +337,35 @@ export class NotificationService {
         }
         throw error;
       });
+    if (execution.result === undefined) {
+      // Completed tasks from before delivery evidence was recorded retain only their execution ID.
+      return { executionId: execution.executionId };
+    }
+    if (!isNotificationJobResult(execution.result)) {
+      throw new NotificationTaskResultInvalidProblem();
+    }
     return {
       executionId: execution.executionId,
-      providerName: provider.providerName,
-      ...(typeof execution.result === "string" ? { providerMessageId: execution.result } : {}),
+      providerName: execution.result.providerName,
+      ...(execution.result.providerMessageId === undefined
+        ? {}
+        : { providerMessageId: execution.result.providerMessageId }),
     };
   }
+}
+
+function isNotificationJobResult(result: unknown): result is NotificationJobResult {
+  return (
+    typeof result === "object" &&
+    result !== null &&
+    !Array.isArray(result) &&
+    "providerName" in result &&
+    typeof result.providerName === "string" &&
+    result.providerName.trim().length > 0 &&
+    (!("providerMessageId" in result) ||
+      result.providerMessageId === undefined ||
+      typeof result.providerMessageId === "string")
+  );
 }
 
 class RecordedEndpointFailureProblem extends Problem {

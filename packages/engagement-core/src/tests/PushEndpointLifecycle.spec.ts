@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { InMemoryEngagementStore } from "../libs/InMemoryEngagementStore";
 import { PushEndpointLifecycle, createPushEndpointId } from "../libs/PushEndpointLifecycle";
 
@@ -93,6 +93,40 @@ describe("PushEndpointLifecycle", () => {
       first.endpoint,
     ]);
   });
+
+  it.each(["register", "refresh", "rotate"] as const)(
+    "rejects an invalidated save result during %s and rolls back the predecessor",
+    async (operation) => {
+      const { store, lifecycle } = fixture();
+      const first = await lifecycle.register(registration);
+      const save = InMemoryEngagementStore.prototype.saveEndpoint;
+      const invalidatedAt = new Date("2026-02-01");
+      const spy = vi
+        .spyOn(InMemoryEngagementStore.prototype, "saveEndpoint")
+        .mockImplementationOnce(async function (this: InMemoryEngagementStore, input) {
+          const saved = await save.call(this, input);
+          return { ...saved, invalidatedAt, invalidationReason: "token-invalid" };
+        });
+      try {
+        const result =
+          operation === "register"
+            ? lifecycle.register(registration)
+            : lifecycle.rotate({
+                ...registration,
+                tokenReference:
+                  operation === "rotate" ? "vault:replacement" : registration.tokenReference,
+                previousEndpointId: first.endpoint.id,
+                expectedVersion: first.endpoint.version,
+              });
+        await expect(result).rejects.toThrow("Push endpoint was invalidated during registration");
+        expect(await store.listActiveEndpoints(scope.tenantId, scope.recipientId)).toEqual([
+          first.endpoint,
+        ]);
+      } finally {
+        spy.mockRestore();
+      }
+    },
+  );
 
   it("makes terminal invalidation idempotent and prevents token resurrection", async () => {
     const { store, lifecycle } = fixture();

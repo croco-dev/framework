@@ -188,6 +188,8 @@ version, so a stale result cannot invalidate a newer endpoint version. An invali
 from later recipient resolution. Acceptance proves only that the provider accepted the message.
 Asynchronous dispatchers must feed their later results into the event processor themselves.
 
+Store adapters must enforce `RecordEngagementDispatchInput.expectedState: "absent-or-eligibility"` atomically with the dispatch write. A queued or failed dispatch rejects that precondition without changing its targets or outcome. The exported store conformance suite checks this contract across reopened store handles.
+
 The dispatch is persisted before its delivery events. If event persistence fails, the send fails;
 retry the same message, recipient, and semantic key after the store recovers. Replay reconciles
 acceptance events and any recorded terminal token-invalid outcome without another provider send.
