@@ -723,6 +723,12 @@
       "runtimes": [],
       "domain": "Features"
     },
+    "features-drizzle": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Features"
+    },
     "features-posthog": {
       "role": "Plugins",
       "subtype": "integration",
@@ -1284,6 +1290,7 @@
         "experience-drizzle",
         "entitlements-drizzle",
         "execution-drizzle",
+        "features-drizzle",
         "invitation-drizzle",
         "membership-drizzle",
         "metering-drizzle",
@@ -1500,6 +1507,7 @@
         "experience-drizzle",
         "etl-core",
         "etl-events-tx",
+        "features-drizzle",
         "frontend-problems",
         "metering-upstash",
         "notifications-react-email",
@@ -1743,6 +1751,13 @@
         "runtimes": ["node", "lambda"],
         "requiredEnv": ["database connection supplied by app"],
         "features": ["execution state persistence", "retryable failure records"]
+      },
+      "features-drizzle": {
+        "domain": "Features",
+        "adapter": "PostgreSQL policy release store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": ["revisioned policy publication", "scoped activation and receipts"]
       },
       "features-posthog": {
         "domain": "Feature flags",

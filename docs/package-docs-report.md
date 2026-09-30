@@ -6,12 +6,12 @@
 
 | Metric                         | Count |
 | ------------------------------ | ----: |
-| Public packages                |   125 |
+| Public packages                |   126 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
-| Missing generated API docs     |     0 |
+| Missing generated API docs     |     1 |
 | Missing package test directory |     0 |
-| Extension matrix packages      |    52 |
+| Extension matrix packages      |    53 |
 | Certification records          |     8 |
 | Croco 1.0 spine packages       |    18 |
 
@@ -88,7 +88,7 @@ None.
 
 ## Missing Generated API Docs
 
-None.
+- `@croco/features-drizzle` (`packages/features-drizzle`) — new gap
 
 ## Generated API Docs Backlog By Maturity
 
@@ -96,7 +96,7 @@ None.
 | ------------------- | ---------------: |
 | 🟢 production-ready |                0 |
 | 🟡 beta             |                0 |
-| 🔴 alpha/WIP        |                0 |
+| 🔴 alpha/WIP        |                1 |
 | ⚠️ deprecated       |                0 |
 
 ## Missing Test Directory
@@ -154,6 +154,7 @@ None.
 | `@croco/experience-core`               | Contracts      | domain        | Experiences             | unclaimed                                 |
 | `@croco/experience-drizzle`            | Plugins        | provider      | Experiences             | node, lambda                              |
 | `@croco/features-core`                 | Contracts      | domain        | Features                | unclaimed                                 |
+| `@croco/features-drizzle`              | Plugins        | provider      | Features                | node, lambda                              |
 | `@croco/features-posthog`              | Plugins        | integration   | Feature flags           | node, lambda                              |
 | `@croco/framework-config`              | Kernel         | runtime       | Framework Config        | unclaimed                                 |
 | `@croco/framework-context`             | Kernel         | runtime       | Framework Context       | unclaimed                                 |
@@ -239,7 +240,7 @@ None.
 | ------------ | -------: |
 | Core         |       23 |
 | Domain       |       34 |
-| Provider     |       31 |
+| Provider     |       32 |
 | Integration  |        6 |
 | Protocol     |        8 |
 | Transport    |        2 |
@@ -252,7 +253,7 @@ None.
 | ------------------- | -------: |
 | 🟢 production-ready |       23 |
 | 🟡 beta             |       78 |
-| 🔴 alpha/WIP        |       24 |
+| 🔴 alpha/WIP        |       25 |
 | ⚠️ deprecated       |        0 |
 
 ## Extension Matrix
@@ -261,7 +262,7 @@ Extension matrix metadata is maintained in `docs/package-catalog.json` and rende
 
 | Group        | Packages | Without package tests |
 | ------------ | -------: | --------------------: |
-| Provider     |       31 |                     0 |
+| Provider     |       32 |                     0 |
 | Integration  |        6 |                     0 |
 | Transport    |        2 |                     0 |
 | Host         |        4 |                     0 |

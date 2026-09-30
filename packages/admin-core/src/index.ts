@@ -276,3 +276,15 @@ export type {
   ExperienceAdminPreview,
   ExperienceAdminState,
 } from "./libs/ExperienceOperations";
+export {
+  PolicyReleaseOperations,
+  PolicyReleaseAccessProblem,
+  assertPolicyReleaseAccess,
+} from "./libs/PolicyReleaseOperations";
+export type {
+  PolicyReleaseAccess,
+  PolicyReleasePermission,
+  PolicyReleaseAdminTarget,
+  PolicyReleaseAdminCommand,
+  PolicyReleaseAdminSnapshot,
+} from "./libs/PolicyReleaseOperations";

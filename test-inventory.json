@@ -134,6 +134,12 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/PolicyReleaseOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/TenantWorkspace.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -279,6 +285,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/PlanReleaseConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/PolicyReleaseConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -2000,6 +2012,30 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/features-core"
+    },
+    {
+      "path": "packages/features-core/src/tests/PolicyReleaseService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/features-core"
+    },
+    {
+      "path": "packages/features-drizzle/src/tests/DrizzlePolicyReleaseStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/features-drizzle"
+    },
+    {
+      "path": "packages/features-drizzle/src/tests/FeaturesSchema.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/features-drizzle"
+    },
+    {
+      "path": "packages/features-drizzle/src/tests/ScheduledPolicyPublisher.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/features-drizzle"
     },
     {
       "path": "packages/features-posthog/src/tests/PostHogFeatureManager.spec.ts",

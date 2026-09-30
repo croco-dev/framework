@@ -1,0 +1,19 @@
+{
+  "name": "@croco-example/policy-release",
+  "version": "0.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "start": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@croco/features-core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "tsx": "^4.0.0",
+    "typescript": "^6.0.3"
+  }
+}

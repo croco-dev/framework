@@ -67,6 +67,7 @@
     "@croco/analytics-core": "workspace:*",
     "@croco/cohort-core": "workspace:*",
     "@croco/experience-core": "workspace:*",
+    "@croco/features-core": "workspace:*",
     "@croco/onboarding-core": "workspace:*",
     "@croco/problems-core": "workspace:*"
   },
