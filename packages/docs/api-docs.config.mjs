@@ -290,6 +290,12 @@ export const apiDocPackages = [
     moduleName: "features-core/src",
   },
   {
+    packageName: "@croco/features-drizzle",
+    directory: "features-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "features-drizzle/src",
+  },
+  {
     packageName: "@croco/features-posthog",
     directory: "features-posthog",
     entryPoint: "src/index.ts",

@@ -27,6 +27,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`PolicyActivationConflictProblem`](/api/features-core/src/classes/policyactivationconflictproblem/)
 - [`PolicyValidationFailedProblem`](/api/features-core/src/classes/policyvalidationfailedproblem/)
 - [`PolicyUnavailableProblem`](/api/features-core/src/classes/policyunavailableproblem/)
+- [`FeaturePolicyMigrationProblem`](/api/features-drizzle/src/classes/featurepolicymigrationproblem/)
 
 ## Constructors
 

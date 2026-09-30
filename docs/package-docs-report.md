@@ -9,7 +9,7 @@
 | Public packages                |   126 |
 | Private packages skipped       |     2 |
 | Missing package README         |     0 |
-| Missing generated API docs     |     1 |
+| Missing generated API docs     |     0 |
 | Missing package test directory |     0 |
 | Extension matrix packages      |    53 |
 | Certification records          |     8 |
@@ -88,7 +88,7 @@ None.
 
 ## Missing Generated API Docs
 
-- `@croco/features-drizzle` (`packages/features-drizzle`) — new gap
+None.
 
 ## Generated API Docs Backlog By Maturity
 
@@ -96,7 +96,7 @@ None.
 | ------------------- | ---------------: |
 | 🟢 production-ready |                0 |
 | 🟡 beta             |                0 |
-| 🔴 alpha/WIP        |                1 |
+| 🔴 alpha/WIP        |                0 |
 | ⚠️ deprecated       |                0 |
 
 ## Missing Test Directory

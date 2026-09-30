@@ -1,6 +1,6 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
-import type { PolicyRevisionState } from "../Policy";
+import type { PolicyRevisionState } from "../PolicyRevisionState";
 
 export type PolicyProblemCode =
   | "invalid-definition"

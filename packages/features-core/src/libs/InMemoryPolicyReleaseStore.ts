@@ -9,7 +9,7 @@ import type {
   PolicyScheduleInput,
   PolicyScheduleRecord,
 } from "./Policy";
-import type { PolicyScheduleLookup } from "./PolicyReleaseService";
+import type { PolicyScheduleLookup } from "./PolicyReleaseStore";
 import {
   PolicyRevisionConflictProblem,
   PolicyIdempotencyConflictProblem,

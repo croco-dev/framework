@@ -6,18 +6,13 @@ import type {
   PolicyCommandReceipt,
   PolicyContext,
   PolicyDefinition,
-  PolicyDefinitionRecord,
   PolicyEvaluationResult,
   PolicyFieldDescriptor,
-  PolicyPublicationInput,
-  PolicyPauseInput,
   PolicyResolution,
   PolicyRevision,
   PolicyRevisionState,
   PolicyScope,
   PolicySemanticDiff,
-  PolicyScheduleInput,
-  PolicyScheduleRecord,
   PolicyValidationResult,
 } from "./Policy";
 import {
@@ -44,15 +39,13 @@ import {
   PolicyValidationFailedProblem,
 } from "./problems/PolicyProblems";
 
-export type PolicyAuthorizationAction =
-  | "read"
-  | "create"
-  | "edit"
-  | "review"
-  | "schedule"
-  | "publish"
-  | "pause"
-  | "rollback";
+import type { PolicyAuthorizationAction, PolicyReleaseStore } from "./PolicyReleaseStore";
+export type {
+  PolicyAuthorizationAction,
+  PolicyAuditEntry,
+  PolicyReleaseStore,
+  PolicyScheduleLookup,
+} from "./PolicyReleaseStore";
 
 export type PolicyAuthorizationRequest = {
   readonly action: PolicyAuthorizationAction;
@@ -65,60 +58,6 @@ export type PolicyAuthorizationRequest = {
 
 export interface PolicyAuthorizationPolicy {
   authorize(request: PolicyAuthorizationRequest): void | boolean | Promise<void | boolean>;
-}
-
-export type PolicyAuditEntry = {
-  readonly id: string;
-  readonly policyId: string;
-  readonly scope: PolicyScope;
-  readonly action: PolicyAuthorizationAction;
-  readonly revisionId?: string;
-  readonly revision?: number;
-  readonly actor: PolicyActor;
-  readonly reason: string;
-  readonly occurredAt: string;
-};
-
-export interface PolicyReleaseStore<TValue = unknown> {
-  create(revision: PolicyRevision<TValue>, definition?: PolicyDefinitionRecord): Promise<void>;
-  get(scope: PolicyScope, policyId: string): Promise<PolicyRevision<TValue> | null>;
-  getRevision(
-    scope: PolicyScope,
-    policyId: string,
-    revision: number,
-  ): Promise<PolicyRevision<TValue> | null>;
-  list(scope: PolicyScope, policyId: string): Promise<readonly PolicyRevision<TValue>[]>;
-  save(
-    revision: PolicyRevision<TValue>,
-    expectedRevision: number,
-    definition?: PolicyDefinitionRecord,
-  ): Promise<void>;
-  recordPause(input: PolicyPauseInput<TValue>): Promise<PolicyCommandReceipt>;
-  recordPublication(input: PolicyPublicationInput<TValue>): Promise<PolicyCommandReceipt>;
-  findCommandReceipt(
-    scope: PolicyScope,
-    policyId: string,
-    idempotencyKey: string,
-  ): Promise<PolicyCommandReceipt | null>;
-  resolve(scope: PolicyScope, policyId: string, at: Date): Promise<PolicyResolution<TValue>>;
-  schedule(input: PolicyScheduleInput): Promise<PolicyScheduleRecord>;
-  attachScheduleExecution(
-    scheduleId: string,
-    executionId: string,
-    triggerId?: string,
-  ): Promise<PolicyScheduleRecord>;
-  listDueSchedules(now: Date, limit?: number): Promise<readonly PolicyScheduleRecord[]>;
-  claimSchedule(
-    scheduleId: string,
-    workerId: string,
-    now: Date,
-    leaseMs: number,
-  ): Promise<PolicyScheduleRecord | null>;
-  completeSchedule(scheduleId: string, now: Date): Promise<PolicyScheduleRecord>;
-  failSchedule(scheduleId: string, now: Date, error: string): Promise<PolicyScheduleRecord>;
-  cancelSchedule(scheduleId: string, now: Date, reason: string): Promise<PolicyScheduleRecord>;
-  appendAudit?(entry: PolicyAuditEntry): Promise<void>;
-  listAudit?(policyId: string, scope: PolicyScope): Promise<readonly PolicyAuditEntry[]>;
 }
 
 export type PolicyReleaseServiceOptions = {
@@ -1281,8 +1220,4 @@ function registrationToPolicy(registration: ErasedPolicy): ParameterizedPolicy<u
 
 function clone<T>(value: T): T {
   return structuredClone(value);
-}
-
-export interface PolicyScheduleLookup<TValue = unknown> extends PolicyReleaseStore<TValue> {
-  getSchedule(scheduleId: string): Promise<PolicyScheduleRecord | null>;
 }

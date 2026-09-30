@@ -100,6 +100,7 @@
         "@croco/events-tx",
         "@croco/execution-drizzle",
         "@croco/experience-drizzle",
+        "@croco/features-drizzle",
         "@croco/features-posthog",
         "@croco/framework-routes",
         "@croco/frontend-cloudflare",

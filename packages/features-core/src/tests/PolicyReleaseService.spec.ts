@@ -387,14 +387,19 @@ describe("PolicyReleaseService", () => {
       }),
     ).resolves.toMatchObject({ state: "published" });
   });
-  it("rejects omitted tenant scope instead of granting app-wide scope", async () => {
+  it.each([
+    ["tenantId", { app: "checkout", environment: "production" }],
+    ["app", { ...scope, app: " " }],
+    ["environment", { ...scope, environment: " " }],
+    ["tenantId", { ...scope, tenantId: " " }],
+  ])("rejects invalid %s scope with a structured diagnostic", async (field, invalidScope) => {
     const { service } = setup();
     await expect(
-      service.resolve({
-        policyId: "limit",
-        scope: { app: "checkout", environment: "production" } as typeof scope,
-      }),
-    ).rejects.toThrow("tenantId");
+      service.resolve({ policyId: "limit", scope: invalidScope as typeof scope }),
+    ).rejects.toMatchObject({
+      code: "features/policy/invalid-definition",
+      message: expect.stringContaining(`scope.${field}`),
+    });
   });
   it.each(["publish", "schedule", "rollback"] as const)(
     "returns the persisted %s revision for concurrent retries with advancing clock",

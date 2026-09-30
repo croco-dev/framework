@@ -35,8 +35,9 @@ Register the delivery target with `@Cron` from `@croco/triggers-core` and route 
 QStash requests through `QStashTriggerHandler`. The application supplies its receiver,
 `deliveryIdentityVerifier`, execution manager, and service resolver to that handler.
 
-```ts
+```typescript typecheck
 import { Cron } from "@croco/triggers-core";
+import { ScheduledPolicyPublisher } from "@croco/features-drizzle";
 import type { QStashWebhookPayload, QStashTriggerExecutionContext } from "@croco/triggers-qstash";
 
 class PolicyDelivery {

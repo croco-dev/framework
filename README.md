@@ -788,7 +788,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/credits-drizzle`           | Provider     | `packages/credits-drizzle`           | README, API, tests |
 | `@croco/engagement-drizzle`        | Provider     | `packages/engagement-drizzle`        | README, API, tests |
 | `@croco/experience-drizzle`        | Provider     | `packages/experience-drizzle`        | README, API, tests |
-| `@croco/features-drizzle`          | Provider     | `packages/features-drizzle`          | README, tests      |
+| `@croco/features-drizzle`          | Provider     | `packages/features-drizzle`          | README, API, tests |
 | `@croco/metering-upstash`          | Provider     | `packages/metering-upstash`          | README, API, tests |
 | `@croco/notifications-resend`      | Provider     | `packages/notifications-resend`      | README, API, tests |
 | `@croco/ratelimit-upstash`         | Provider     | `packages/ratelimit-upstash`         | README, API, tests |

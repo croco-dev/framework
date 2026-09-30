@@ -1,6 +1,11 @@
 import { createHash } from "node:crypto";
 
-import { PolicyValidationFailedProblem } from "./problems/PolicyProblems";
+import {
+  InvalidPolicyDefinitionProblem,
+  PolicyValidationFailedProblem,
+} from "./problems/PolicyProblems";
+
+import type { PolicyRevisionState } from "./PolicyRevisionState";
 
 export type PolicyContext = Readonly<Record<string, unknown>>;
 
@@ -103,7 +108,7 @@ export type PolicyActor = {
   readonly displayName?: string;
 };
 
-export type PolicyRevisionState = "draft" | "reviewed" | "scheduled" | "published" | "paused";
+export type { PolicyRevisionState } from "./PolicyRevisionState";
 
 export type PolicyTransitionRecord = {
   readonly from: PolicyRevisionState | null;
@@ -283,7 +288,9 @@ export function normalizePolicyScope(scope: PolicyScope): PolicyScope {
   assertNonEmpty(scope.app, "scope.app");
   assertNonEmpty(scope.environment, "scope.environment");
   if (scope.tenantId === undefined)
-    throw new TypeError("scope.tenantId must explicitly be null or a tenant identifier");
+    throw new InvalidPolicyDefinitionProblem(
+      "scope.tenantId must explicitly be null or a tenant identifier",
+    );
   if (scope.tenantId !== null) {
     assertNonEmpty(scope.tenantId, "scope.tenantId");
   }
@@ -435,7 +442,7 @@ function normalizeValidationResult(
 
 function assertNonEmpty(value: string, path: string): void {
   if (typeof value !== "string" || value.trim().length === 0) {
-    throw new TypeError(`${path} must not be empty`);
+    throw new InvalidPolicyDefinitionProblem(`${path} must not be empty`);
   }
 }
 

@@ -1957,6 +1957,9 @@ importers:
       '@croco/features-core':
         specifier: workspace:*
         version: link:../features-core
+      '@croco/features-drizzle':
+        specifier: workspace:*
+        version: link:../features-drizzle
       '@croco/features-posthog':
         specifier: workspace:*
         version: link:../features-posthog
