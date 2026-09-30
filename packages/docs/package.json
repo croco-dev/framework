@@ -93,6 +93,7 @@
     "@croco/invitation-core": "workspace:*",
     "@croco/invitation-drizzle": "workspace:*",
     "@croco/lifecycle-core": "workspace:*",
+    "@croco/lifecycle-drizzle": "workspace:*",
     "@croco/membership-core": "workspace:*",
     "@croco/membership-drizzle": "workspace:*",
     "@croco/meta-vite": "workspace:*",

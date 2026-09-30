@@ -29,6 +29,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`FactHistoryInputProblem`](/api/admin-core/src/classes/facthistoryinputproblem/)
 - [`OfferConsoleValidationProblem`](/api/admin-core/src/classes/offerconsolevalidationproblem/)
 - [`PolicyReleaseAccessProblem`](/api/admin-core/src/classes/policyreleaseaccessproblem/)
+- [`JourneyAdminProblem`](/api/admin-core/src/classes/journeyadminproblem/)
 - [`WebhookOperationsActionValidationProblem`](/api/admin-core/src/classes/webhookoperationsactionvalidationproblem/)
 - [`AdminGeneratedContractProblem`](/api/admin-generated/src/classes/admingeneratedcontractproblem/)
 - [`FactHistoryProblem`](/api/analytics-core/src/classes/facthistoryproblem/)

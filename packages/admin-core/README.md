@@ -254,3 +254,19 @@ The boundary exposes only public definition fields and server-owned sample label
 `command` supplies start/pause/stop with a server-resolved actor, reason, idempotency key, and expected state version (`expectedRevision`, initially zero). `configure` creates a new immutable revision; it retains the server registration's identity, salt, allocator, and private handlers. Operators may change the unit, login policy, registered eligibility rule, allocation/weights, hypothesis, observation plan, and UTC period. The runtime validates variant identities and values against the source registration. Existing assignments keep their original revision.
 
 See `examples/experiment-runtime` for a credential-free Console and actual server treatment flow.
+
+## Journey operations
+
+`JourneyOperations` is a server boundary for listing redacted episode evidence,
+previewing registered sample subjects, and pause/resume/stop commands. Supply an
+`authenticate()` function that derives scope, actor and permissions from the server
+session. Request bodies supply no authority: each method verifies tenant, app and
+environment plus `journey.read`, `journey.preview` or `journey.operate`.
+
+Commands require an audit reason, idempotency key and expected revision. The
+adapter calls `JourneyEngine.command`; the engine persists audit and enforces
+revision/idempotency semantics. Errors propagate, including revision conflicts.
+The dry-run adapter resolves a registered sample in the authenticated scope and
+uses an isolated, non-dispatching preview. Returned views exclude raw subjects,
+business objects, action parameters and audit payloads; receipt reason codes are
+allowlisted. `safeResume` is false when admitted or indeterminate actions remain.

@@ -639,6 +639,8 @@ describe("classification, CLI, and repository migration", () => {
       ["packages/testing-resources/src/tests/RealResources.spec.ts", "live"],
       ["scripts/tests/provider-certification-check.spec.ts", "fast"],
       ["scripts/tests/package-entrypoint-smoke.spec.ts", "fast"],
+      ["examples/lifecycle-journey/src/tests/TaskRecovery.spec.ts", "fast"],
+      ["examples/lifecycle-journey/src/tests/Journey.integration.spec.ts", "integration"],
     ] as const;
     for (const [path, lane] of cases)
       expect(classifyDiscoveredTest(root, path).lane, path).toBe(lane);

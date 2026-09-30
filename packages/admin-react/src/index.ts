@@ -330,3 +330,6 @@ export type {
 
 export { GrowthAnalysisPanel } from "./libs/GrowthAnalysisPanel";
 export type { GrowthAnalysisPanelProps } from "./libs/GrowthAnalysisPanel";
+
+export { JourneyConsole } from "./libs/JourneyConsole";
+export type { JourneyConsoleProps } from "./libs/JourneyConsole";
