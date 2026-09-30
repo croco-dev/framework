@@ -25084,6 +25084,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidPaginationLimitProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
               "name": "MAX_LIMIT",
               "exportKind": "named",
               "source": "./libs/constants",
