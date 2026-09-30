@@ -10,9 +10,8 @@ import type {
 } from "./EngagementService";
 import type {
   ContactEndpoint,
-  ContactEndpointInvalidationResult,
   ContactEndpointStore,
-  EngagementDeliveryEventRecordResult,
+  EngagementDeliveryEventProcessingResult,
   EngagementDispatch,
   EngagementPersistence,
   EngagementPreferenceState,
@@ -22,26 +21,13 @@ import type {
   SuppressionStore,
 } from "./EngagementStores";
 
-export interface PushTokenResolver {
-  resolveToken(
-    reference: Readonly<{
-      tenantId: string;
-      recipientId: string;
-      endpointId: string;
-      provider: string;
-      app: string;
-      environment: string;
-      tokenReference: string;
-    }>,
-  ): Promise<string>;
-}
+export type { EngagementDeliveryEventProcessingResult } from "./EngagementStores";
 
 /** Combines an application-owned recipient directory with durable endpoint state. */
 export class StoreBackedRecipientDirectory implements RecipientDirectory {
   constructor(
     private readonly recipients: RecipientDirectory,
     private readonly endpoints: ContactEndpointStore,
-    private readonly pushTokens: PushTokenResolver,
   ) {}
 
   async resolve(ref: RecipientRef): Promise<ResolvedRecipient | undefined> {
@@ -59,33 +45,23 @@ export class StoreBackedRecipientDirectory implements RecipientDirectory {
         address: endpoint.address,
         version: endpoint.version,
       }));
-    const push = await Promise.all(
-      endpoints
-        .filter(
-          (endpoint): endpoint is Extract<ContactEndpoint, { kind: "push" }> =>
-            endpoint.kind === "push",
-        )
-        .map(
-          async (endpoint): Promise<PushEndpoint> => ({
-            id: endpoint.id,
-            token: await this.pushTokens.resolveToken({
-              tenantId: endpoint.tenantId,
-              recipientId: endpoint.recipientId,
-              endpointId: endpoint.id,
-              provider: endpoint.provider,
-              app: endpoint.app,
-              environment: endpoint.environment,
-              tokenReference: endpoint.tokenReference,
-            }),
-            provider: endpoint.provider,
-            app: endpoint.app,
-            platform: endpoint.platform,
-            environment: endpoint.environment,
-            lastSeenAt: new Date(endpoint.lastSeenAt.getTime()),
-            version: endpoint.version,
-          }),
-        ),
-    );
+    const push = endpoints
+      .filter(
+        (endpoint): endpoint is Extract<ContactEndpoint, { kind: "push" }> =>
+          endpoint.kind === "push",
+      )
+      .map(
+        (endpoint): PushEndpoint => ({
+          id: endpoint.id,
+          tokenReference: endpoint.tokenReference,
+          provider: endpoint.provider,
+          app: endpoint.app,
+          platform: endpoint.platform,
+          environment: endpoint.environment,
+          lastSeenAt: new Date(endpoint.lastSeenAt.getTime()),
+          version: endpoint.version,
+        }),
+      );
 
     return {
       recipient: { ...profile.recipient },
@@ -153,11 +129,6 @@ export class StoredEngagementPolicyEvaluator implements EngagementSuppressionEva
   }
 }
 
-export type EngagementDeliveryEventProcessingResult = Readonly<{
-  event: EngagementDeliveryEventRecordResult;
-  invalidation?: ContactEndpointInvalidationResult;
-}>;
-
 /** Atomically deduplicates normalized delivery events and applies terminal endpoint policy. */
 export class EngagementDeliveryEventProcessor {
   constructor(private readonly persistence: EngagementPersistence) {}
@@ -173,7 +144,7 @@ export class EngagementDeliveryEventProcessor {
       if (
         dispatch === undefined ||
         target === undefined ||
-        !wasDispatchTargetEnqueued(dispatch, target)
+        !wasDispatchTargetEnqueued(dispatch, target, input.type)
       ) {
         throw new EngagementDeliveryEventCorrelationProblem(input.tenantId);
       }
@@ -201,8 +172,16 @@ export class EngagementDeliveryEventProcessor {
 function wasDispatchTargetEnqueued(
   dispatch: EngagementDispatch,
   target: EngagementDispatch["targets"][number],
+  eventType: RecordEngagementDeliveryEventInput["type"],
 ): boolean {
-  return dispatch.outcome.kind === "queued" || target.executionId !== undefined;
+  return (
+    dispatch.outcome.kind === "queued" ||
+    target.executionId !== undefined ||
+    (eventType === "token-invalid" &&
+      dispatch.channel === "push" &&
+      dispatch.outcome.kind === "failed" &&
+      dispatch.outcome.stage === "provider")
+  );
 }
 
 export class EngagementDeliveryEventCorrelationProblem extends Problem {

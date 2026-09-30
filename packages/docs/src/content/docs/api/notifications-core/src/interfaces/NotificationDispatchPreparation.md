@@ -11,7 +11,7 @@ A dispatch function bound to the provider and preference decision captured durin
 
 ### dispatch()
 
-> **dispatch**(`payload`, `options`): `Promise`\<`Readonly`\<\{ `executionId`: `string`; \}\>\>
+> **dispatch**(`payload`, `options`): `Promise`\<`Readonly`\<\{ `executionId`: `string`; `providerMessageId?`: `string`; `providerName?`: `string`; \}\>\>
 
 #### Parameters
 
@@ -25,4 +25,4 @@ A dispatch function bound to the provider and preference decision captured durin
 
 #### Returns
 
-`Promise`\<`Readonly`\<\{ `executionId`: `string`; \}\>\>
+`Promise`\<`Readonly`\<\{ `executionId`: `string`; `providerMessageId?`: `string`; `providerName?`: `string`; \}\>\>

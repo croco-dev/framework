@@ -35,19 +35,7 @@ title: "MessageContentByChannel"
 
 ### push
 
-> `readonly` **push**: `object`
-
-#### body
-
-> `readonly` **body**: `string`
-
-#### deepLink?
-
-> `readonly` `optional` **deepLink?**: `string`
-
-#### title
-
-> `readonly` **title**: `string`
+> `readonly` **push**: [`PushContent`](/api/engagement-core/src/type-aliases/pushcontent/)
 
 ---
 

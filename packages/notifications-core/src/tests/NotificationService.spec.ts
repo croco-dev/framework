@@ -1,6 +1,6 @@
 import type { ExecutionManager } from "@croco/execution-core";
 import { Container } from "@croco/framework-context";
-import { TaskRegistry, TaskRunner } from "@croco/tasks-core";
+import { TaskExecutionAlreadySettledProblem, TaskRegistry, TaskRunner } from "@croco/tasks-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createNotificationPreferenceEvaluationKey,
@@ -151,6 +151,44 @@ describe("NotificationService", () => {
   });
 
   describe("send()", () => {
+    it.each([
+      ["failed", "provider/token-invalid", true],
+      ["failed", "provider/rate-limit", false],
+      ["failed", "unknown/token-invalid", false],
+      ["cancelled", "provider/token-invalid", false],
+      ["timed_out", "provider/token-invalid", false],
+    ] as const)("replays %s %s with endpoint invalidation %s", async (status, code, invalid) => {
+      emailProvider.getCapabilities.mockReturnValue({
+        ...createConsumerManagedRenderedCapabilities("email-provider", NotificationChannel.EMAIL),
+        terminalEndpointFailureCodes: ["provider/token-invalid"],
+      });
+      service.registerProvider(emailProvider, true);
+      const settled = new TaskExecutionAlreadySettledProblem(
+        "send-notification",
+        "failed-execution",
+        status,
+        code,
+      );
+      executeSpy.mockRejectedValue(settled);
+      const failure = await service
+        .dispatch(
+          NotificationChannel.EMAIL,
+          { to: "opaque-reference", content: "Test" },
+          createSendOptions(NotificationChannel.EMAIL),
+        )
+        .catch((error: unknown) => error);
+      if (invalid) {
+        expect(failure).toMatchObject({
+          code,
+          extensions: { provider: "email-provider", endpointInvalid: true, retryable: false },
+        });
+        expect(JSON.stringify(failure)).not.toContain("opaque-reference");
+      } else {
+        expect(failure).toBe(settled);
+      }
+      expect(emailProvider.send).not.toHaveBeenCalled();
+    });
+
     it("should retain the task execution id for tracked dispatches", async () => {
       service.registerProvider(emailProvider, true);
 
@@ -160,7 +198,27 @@ describe("NotificationService", () => {
           { to: "test@example.com", content: "Test Content" },
           createSendOptions(NotificationChannel.EMAIL),
         ),
-      ).resolves.toEqual({ executionId: "execution-1" });
+      ).resolves.toEqual({ executionId: "execution-1", providerName: "email-provider" });
+    });
+
+    it("returns the provider message ID from a completed task", async () => {
+      executeSpy.mockResolvedValueOnce({
+        executionId: "execution-2",
+        result: "provider-message-2",
+      });
+      service.registerProvider(emailProvider, true);
+
+      await expect(
+        service.dispatch(
+          NotificationChannel.EMAIL,
+          { to: "test@example.com", content: "Test Content" },
+          createSendOptions(NotificationChannel.EMAIL),
+        ),
+      ).resolves.toEqual({
+        executionId: "execution-2",
+        providerName: "email-provider",
+        providerMessageId: "provider-message-2",
+      });
     });
 
     it("should reject providers that cannot honor a required idempotency key", async () => {

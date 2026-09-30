@@ -3256,6 +3256,92 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "notifications-fcm/configuration": recovery({
+    cause: "FCM configuration or explicit credential selection is missing or invalid.",
+    userAction:
+      "Report the unavailable notification channel; retrying unchanged configuration cannot repair it.",
+    operatorAction:
+      "Validate the Firebase project ID and credential configuration, then redeploy before sending again.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
+  "notifications-fcm/authentication": recovery({
+    cause: "Firebase rejected provider credentials or platform authentication.",
+    userAction:
+      "Report the unavailable notification channel; do not retry the unchanged request automatically.",
+    operatorAction:
+      "Repair Firebase permissions or APNs credentials using provider diagnostics; keep credentials out of logs.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
+  "notifications-fcm/validation": recovery({
+    cause: "Canonical push content or its mapped Firebase payload is invalid.",
+    userAction: "Correct the message content before sending again.",
+    operatorAction:
+      "Validate reserved data keys, payload size, TTL, and platform limits using sanitized fixtures; retain the endpoint.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
+  "notifications-fcm/token-invalid": recovery({
+    cause: "Firebase rejected an invalid or unregistered device token.",
+    userAction: "Register a current device token through the application's endpoint lifecycle.",
+    operatorAction:
+      "Persist the terminal delivery event and invalidate the dispatched endpoint version; replay a saved dispatch to reconcile missing events after a store outage.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
+  "notifications-fcm/sender-mismatch": recovery({
+    cause:
+      "The token belongs to a Firebase sender or project different from the configured credentials.",
+    userAction: "Report the channel configuration mismatch before another send.",
+    operatorAction:
+      "Align the token vault scope, Firebase project, and provider credentials; retain the potentially valid endpoint.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
+  "notifications-fcm/rate-limit": recovery({
+    cause: "Firebase rejected the send because a message rate or quota limit was exceeded.",
+    userAction:
+      "Retry only under the application's bounded retry policy after the quota or rate limit recovers.",
+    operatorAction:
+      "Inspect Firebase quota and send rates, apply backoff, and retain the endpoint; FCM does not guarantee idempotency-key deduplication.",
+    retryability: "conditional",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
+  "notifications-fcm/timeout": recovery({
+    cause: "The FCM send timed out and provider acceptance may be unknown.",
+    userAction: "Retry only when the application accepts the risk of duplicate delivery.",
+    operatorAction:
+      "Inspect connectivity and apply bounded retry policy; retain the endpoint and account for FCM's lack of idempotency-key deduplication.",
+    retryability: "conditional",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
+  "notifications-fcm/unavailable": recovery({
+    cause: "Firebase or its network connection was temporarily unavailable.",
+    userAction:
+      "Retry under the application's bounded retry policy when duplicate delivery risk is acceptable.",
+    operatorAction:
+      "Inspect upstream availability and connectivity, apply backoff, and retain the endpoint.",
+    retryability: "conditional",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
+  "notifications-fcm/upstream": recovery({
+    cause: "FCM returned an unclassified failure whose retry safety is unknown.",
+    userAction: "Report the failed notification for investigation before another send.",
+    operatorAction:
+      "Investigate through sanitized provider diagnostics; do not automatically retry or invalidate the endpoint.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
   "notifications-resend/idempotency-conflict": recovery({
     cause: "Resend rejected reuse of an idempotency key for a different send request.",
     userAction:

@@ -1,3 +1,4 @@
+import { ContactPolicyConflictProblem } from "./ContactPolicy";
 import {
   assertEngagementPreference,
   assertEngagementStoreText,
@@ -91,7 +92,9 @@ export class InMemoryEngagementStore implements EngagementPersistence {
         id: input.id,
         tenantId: input.tenantId,
         recipientId: input.recipientId,
-        lastSeenAt: cloneDate(input.lastSeenAt),
+        lastSeenAt: new Date(
+          Math.max(existing?.lastSeenAt.getTime() ?? -Infinity, input.lastSeenAt.getTime()),
+        ),
         version: (existing?.version ?? 0) + (sameTarget ? 0 : 1),
         createdAt: existing?.createdAt ?? now,
         updatedAt: now,
@@ -151,6 +154,12 @@ export class InMemoryEngagementStore implements EngagementPersistence {
       }
       if (endpoint.version !== input.expectedVersion) {
         return { status: "version-mismatch", endpoint: clone(endpoint) };
+      }
+      if (
+        input.lastSeenBefore !== undefined &&
+        endpoint.lastSeenAt.getTime() >= input.lastSeenBefore.getTime()
+      ) {
+        return { status: "freshness-mismatch", endpoint: clone(endpoint) };
       }
       const invalidated: ContactEndpoint = {
         ...endpoint,
@@ -321,6 +330,14 @@ export class InMemoryEngagementStore implements EngagementPersistence {
       const identityKey = createEngagementDispatchIdentityKey(input);
       const existingId = this.state.dispatchIdsByIdentity.get(identityKey);
       const existing = existingId === undefined ? undefined : this.state.dispatches.get(existingId);
+      if (
+        input.expectedState === "absent-or-eligibility" &&
+        (existing?.outcome.kind === "queued" || existing?.outcome.kind === "failed")
+      ) {
+        throw new ContactPolicyConflictProblem(
+          "Existing dispatch acceptance cannot be replaced before policy replay validation; reconciliation is required",
+        );
+      }
       if (existing !== undefined && existing.outcome.kind !== "failed") return clone(existing);
 
       const id = existing?.id ?? createEngagementDispatchId(input);

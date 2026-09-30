@@ -106,7 +106,12 @@ export class TaskExecutionAlreadySettledProblem extends Problem {
   readonly executionId: string;
   readonly executionStatus: SettledTaskExecutionStatus;
 
-  constructor(taskId: string, executionId: string, status: SettledTaskExecutionStatus) {
+  constructor(
+    taskId: string,
+    executionId: string,
+    status: SettledTaskExecutionStatus,
+    failureCode?: string,
+  ) {
     super(
       "tasks-core/execution-already-settled",
       ProblemCategory.Conflict,
@@ -118,6 +123,7 @@ export class TaskExecutionAlreadySettledProblem extends Problem {
           executionStatus: status,
           retryable: false,
           recoveryAction: recoveryActionFor(status),
+          ...(failureCode === undefined ? {} : { failureCode }),
         },
       },
     );

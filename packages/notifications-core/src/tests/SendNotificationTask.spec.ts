@@ -65,7 +65,7 @@ describe("SendNotificationTask", () => {
         content: "Test Content",
       };
 
-      await expect(task.handle(payload)).resolves.not.toThrow();
+      await expect(task.handle(payload)).resolves.toBe("msg-123");
 
       expect(mockProvider.send).toHaveBeenCalledWith({
         to: "test@example.com",
@@ -91,6 +91,34 @@ describe("SendNotificationTask", () => {
         to: "test@example.com",
         content: "Test Content",
         metadata: { userId: "123" },
+      });
+    });
+
+    it("preserves canonical push content for the provider task", async () => {
+      vi.mocked(mockProvider.send).mockResolvedValue({ success: true, messageId: "push-1" });
+      const push = {
+        title: "Alert",
+        body: "Check your account",
+        deepLink: "/account",
+        imageUrl: "https://example.invalid/image.png",
+        data: { source: "billing" },
+        collapseKey: "account",
+        ttlSeconds: 60,
+        priority: "high" as const,
+      };
+
+      await expect(
+        task.handle({
+          providerName: "resend",
+          to: "vault://device-1",
+          content: push.body,
+          push,
+        }),
+      ).resolves.toBe("push-1");
+      expect(mockProvider.send).toHaveBeenCalledWith({
+        to: "vault://device-1",
+        content: push.body,
+        push,
       });
     });
 

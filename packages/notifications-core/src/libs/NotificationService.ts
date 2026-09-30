@@ -1,5 +1,6 @@
 import { Component } from "@croco/framework-context";
-import type { TaskRunner } from "@croco/tasks-core";
+import { TaskExecutionAlreadySettledProblem, type TaskRunner } from "@croco/tasks-core";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
   createNotificationDispatchRequest,
   toNotificationJobPayload,
@@ -61,6 +62,8 @@ export type NotificationSendServiceOptions =
 
 export type NotificationDispatchResult = Readonly<{
   executionId: string;
+  providerName?: string;
+  providerMessageId?: string;
 }>;
 
 /** Inputs evaluated before a notification payload is rendered. */
@@ -310,12 +313,44 @@ export class NotificationService {
       ...(template === undefined ? {} : { template }),
     });
 
-    const execution = await this.taskRunner.executeTracked(
-      "send-notification",
-      toNotificationJobPayload(dispatchRequest),
-      idempotencyKey === undefined ? {} : { idempotencyKey },
+    const execution = await this.taskRunner
+      .executeTracked(
+        "send-notification",
+        toNotificationJobPayload(dispatchRequest),
+        idempotencyKey === undefined ? {} : { idempotencyKey },
+      )
+      .catch((error: unknown) => {
+        if (
+          error instanceof TaskExecutionAlreadySettledProblem &&
+          error.executionStatus === "failed" &&
+          typeof error.extensions?.failureCode === "string" &&
+          provider.providerCapabilities.terminalEndpointFailureCodes?.includes(
+            error.extensions.failureCode,
+          )
+        ) {
+          throw new RecordedEndpointFailureProblem(
+            provider.providerName,
+            error.extensions.failureCode,
+          );
+        }
+        throw error;
+      });
+    return {
+      executionId: execution.executionId,
+      providerName: provider.providerName,
+      ...(typeof execution.result === "string" ? { providerMessageId: execution.result } : {}),
+    };
+  }
+}
+
+class RecordedEndpointFailureProblem extends Problem {
+  constructor(provider: string, failureCode: string) {
+    super(
+      failureCode,
+      ProblemCategory.ValidationError,
+      "Recorded provider failure invalidates the destination endpoint",
+      { extensions: { provider, endpointInvalid: true, retryable: false } },
     );
-    return { executionId: execution.executionId };
   }
 }
 

@@ -308,7 +308,12 @@ export class TaskRunner {
       execution.status === "cancelled" ||
       execution.status === "timed_out"
     ) {
-      throw new TaskExecutionAlreadySettledProblem(taskId, execution.id, execution.status);
+      throw new TaskExecutionAlreadySettledProblem(
+        taskId,
+        execution.id,
+        execution.status,
+        execution.error?.code,
+      );
     }
 
     const result = await this.runExecution(task.target, task.methodName, execution, taskOptions);

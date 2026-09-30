@@ -113,6 +113,7 @@ export type {
   MessageRendererConstructor,
   MessageRegistryInspection,
 } from "./libs/MessageContracts";
+export type { PushContent } from "@croco/notifications-core";
 export {
   EngagementCommandInvalidProblem,
   EngagementDispatchFailedProblem,
@@ -203,10 +204,15 @@ export {
 } from "./libs/PersistentEngagement";
 export type {
   EngagementDeliveryEventProcessingResult,
-  PushTokenResolver,
   StoredEngagementPolicyOptions,
 } from "./libs/PersistentEngagement";
 export { createEngagementStoreConformanceSuite } from "./libs/EngagementStoreConformance";
+export { PushEndpointLifecycle, createPushEndpointId } from "./libs/PushEndpointLifecycle";
+export type {
+  PushEndpointRegistrationResult,
+  PushEndpointScope,
+  RegisterPushEndpointInput,
+} from "./libs/PushEndpointLifecycle";
 export type {
   EngagementStoreConformanceCase,
   EngagementStoreConformanceOptions,

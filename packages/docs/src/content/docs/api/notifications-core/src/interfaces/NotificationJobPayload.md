@@ -147,6 +147,16 @@ title: "NotificationJobPayload"
 
 ---
 
+### push?
+
+> `optional` **push?**: `Readonly`\<\{ `body`: `string`; `collapseKey?`: `string`; `data?`: `Readonly`\<`Record`\<`string`, `string`\>\>; `deepLink?`: `string`; `imageUrl?`: `string`; `priority?`: `"normal"` \| `"high"`; `title`: `string`; `ttlSeconds?`: `number`; \}\>
+
+#### Inherited from
+
+[`NotificationPayload`](/api/notifications-core/src/interfaces/notificationpayload/).[`push`](/api/notifications-core/src/interfaces/notificationpayload/#push)
+
+---
+
 ### replyTo?
 
 > `optional` **replyTo?**: `string`

@@ -29,7 +29,7 @@ title: "NotificationService"
 
 ### dispatch()
 
-> **dispatch**(`channel`, `payload`, `options`): `Promise`\<`Readonly`\<\{ `executionId`: `string`; \}\>\>
+> **dispatch**(`channel`, `payload`, `options`): `Promise`\<`Readonly`\<\{ `executionId`: `string`; `providerMessageId?`: `string`; `providerName?`: `string`; \}\>\>
 
 Dispatches through the same task path as send() while retaining the execution identifier.
 
@@ -49,7 +49,7 @@ Dispatches through the same task path as send() while retaining the execution id
 
 #### Returns
 
-`Promise`\<`Readonly`\<\{ `executionId`: `string`; \}\>\>
+`Promise`\<`Readonly`\<\{ `executionId`: `string`; `providerMessageId?`: `string`; `providerName?`: `string`; \}\>\>
 
 ---
 

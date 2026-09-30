@@ -16,9 +16,11 @@ import {
 } from "./ContactPolicy";
 import {
   EngagementPersistenceProblem,
+  type EngagementDeliveryEventProcessingResult,
   type EngagementDispatch,
   type EngagementDispatchStore,
   type EngagementDispatchTarget,
+  type RecordEngagementDeliveryEventInput,
 } from "./EngagementStores";
 import {
   MessageDataInvalidProblem,
@@ -46,7 +48,7 @@ export type EmailEndpoint = Readonly<{
 
 export type PushEndpoint = Readonly<{
   id: string;
-  token: string;
+  tokenReference: string;
   provider?: string;
   app?: string;
   platform?: string;
@@ -290,6 +292,11 @@ export class EngagementService {
     private readonly dispatches?: EngagementDispatchStore,
     private readonly clock: () => Date = () => new Date(),
     private readonly contactPolicy?: EngagementContactPolicyGate,
+    private readonly deliveryEvents?: {
+      process(
+        input: RecordEngagementDeliveryEventInput,
+      ): Promise<EngagementDeliveryEventProcessingResult>;
+    },
   ) {}
 
   async send<TMessage extends AnyMessage>(
@@ -534,6 +541,7 @@ export class EngagementService {
     executionIds: string[],
   ): Promise<void> {
     const channelExecutionIds: string[] = [];
+    const deliveredTargets: EngagementDispatchTarget[] = [];
     let reservation: ContactPolicyReservation | undefined;
     let activePolicy: ContactPolicy | undefined;
     if (this.contactPolicy !== undefined) {
@@ -563,6 +571,21 @@ export class EngagementService {
         now: this.clock(),
       });
       reservation = reserved.reservation;
+      if (reserved.replay && reservation?.state !== "released") {
+        const dispatch = await this.findDispatch(message, command, channel);
+        if (
+          reservation?.state === "committed" &&
+          this.dispatches !== undefined &&
+          dispatch === undefined
+        ) {
+          throw new ContactPolicyAcceptanceUnknownProblem(
+            new ContactPolicyConflictProblem(
+              "Committed contact reservation is missing durable dispatch evidence; reconciliation is required",
+            ),
+          );
+        }
+        await this.reconcileDeliveryEvents(dispatch);
+      }
       if (reserved.replay && reservation?.state === "committed") {
         channelResults.push({ channel, status: "queued", executionIds: reservation.executionIds });
         executionIds.push(...reservation.executionIds);
@@ -607,12 +630,21 @@ export class EngagementService {
         );
         channelExecutionIds.push(result.executionId);
         executionIds.push(result.executionId);
+        deliveredTargets.push({
+          endpointId: endpoint.id,
+          endpointVersion: endpoint.version,
+          executionId: result.executionId,
+          ...(result.providerName === undefined ? {} : { provider: result.providerName }),
+          ...(result.providerMessageId === undefined
+            ? {}
+            : { providerMessageId: result.providerMessageId }),
+        });
       } catch (error) {
         const failure =
           reservation === undefined
             ? normalizeError(error)
             : new ContactPolicyAcceptanceUnknownProblem(normalizeError(error));
-        await this.recordFailure(
+        const failedDispatch = await this.recordFailure(
           message,
           command,
           channel,
@@ -620,7 +652,20 @@ export class EngagementService {
           failure,
           "provider",
           channelExecutionIds,
+          [...deliveredTargets, { endpointId: endpoint.id, endpointVersion: endpoint.version }],
+          channel === "push" &&
+            error instanceof Problem &&
+            error.extensions?.endpointInvalid === true &&
+            error.extensions.retryable === false &&
+            typeof error.extensions.provider === "string"
+            ? {
+                endpointId: endpoint.id,
+                provider: error.extensions.provider,
+                ...(reservation === undefined ? {} : { providerCode: error.code }),
+              }
+            : undefined,
         );
+        await this.reconcileDeliveryEvents(failedDispatch);
         throw new EngagementDispatchFailedProblem(
           message.id,
           command.recipient,
@@ -642,7 +687,7 @@ export class EngagementService {
       } catch (error) {
         const failure = new ContactPolicyAcceptanceUnknownProblem(normalizeError(error));
         try {
-          await this.recordFailure(
+          const failedDispatch = await this.recordFailure(
             message,
             command,
             channel,
@@ -650,7 +695,9 @@ export class EngagementService {
             failure,
             "persistence",
             channelExecutionIds,
+            deliveredTargets,
           );
+          await this.reconcileDeliveryEvents(failedDispatch);
         } catch (recordingError) {
           throw new ContactPolicyAcceptanceUnknownProblem(normalizeError(recordingError));
         }
@@ -661,8 +708,54 @@ export class EngagementService {
     if (channelExecutionIds.length > 0) {
       const result = { channel, status: "queued", executionIds: channelExecutionIds } as const;
       channelResults.push(result);
-      await this.recordChannelResult(message, command, result, eligibleEndpoints);
+      const dispatch = await this.recordChannelResult(
+        message,
+        command,
+        result,
+        eligibleEndpoints,
+        deliveredTargets,
+      );
+      await this.reconcileDeliveryEvents(dispatch);
     }
+  }
+
+  private async reconcileDeliveryEvents(dispatch: EngagementDispatch | undefined): Promise<void> {
+    if (this.deliveryEvents === undefined || dispatch === undefined) return;
+    for (const target of dispatch.targets) {
+      if (target.provider === undefined || target.executionId === undefined) continue;
+      await this.deliveryEvents.process({
+        tenantId: dispatch.tenantId,
+        provider: target.provider,
+        providerEventId: `${target.executionId}:accepted`,
+        dispatchId: dispatch.id,
+        endpointId: target.endpointId,
+        type: "accepted",
+        occurredAt: dispatch.updatedAt,
+        recordedAt: dispatch.updatedAt,
+      });
+    }
+    if (dispatch.outcome.kind !== "failed" || dispatch.outcome.invalidEndpoint === undefined)
+      return;
+    const { endpointId, provider, providerCode } = dispatch.outcome.invalidEndpoint;
+    const target = dispatch.targets.find((candidate) => candidate.endpointId === endpointId);
+    if (target === undefined) {
+      throw new EngagementCommandInvalidProblem(
+        "Terminal token outcome requires a dispatch target",
+      );
+    }
+    await this.deliveryEvents.process({
+      tenantId: dispatch.tenantId,
+      provider,
+      providerEventId: `${dispatch.id}:${endpointId}:${target.endpointVersion}:token-invalid`,
+      dispatchId: dispatch.id,
+      endpointId,
+      type: "token-invalid",
+      occurredAt: dispatch.updatedAt,
+      evidence: {
+        providerCode: (providerCode ?? dispatch.outcome.failureCode).replaceAll("/", ":"),
+      },
+      recordedAt: dispatch.updatedAt,
+    });
   }
 
   private async resolveRecipient(ref: RecipientRef): Promise<ResolvedRecipient> {
@@ -753,9 +846,21 @@ export class EngagementService {
     previousResults: readonly EngagementChannelResult[],
   ): Promise<EngagementChannelResult | undefined> {
     if (this.dispatches === undefined || this.contactPolicy !== undefined) return undefined;
-    let dispatch: EngagementDispatch | undefined;
+    const dispatch = await this.findDispatch(message, command, channel);
+    await this.reconcileDeliveryEvents(dispatch);
+    return dispatch === undefined
+      ? undefined
+      : channelResultFromDispatch(dispatch, command.recipient, previousResults);
+  }
+
+  private async findDispatch(
+    message: AnyMessage,
+    command: Readonly<{ recipient: RecipientRef; key: string }>,
+    channel: MessageChannel,
+  ): Promise<EngagementDispatch | undefined> {
+    if (this.dispatches === undefined) return undefined;
     try {
-      dispatch = await this.dispatches.findByIdentity({
+      return await this.dispatches.findByIdentity({
         tenantId: command.recipient.tenantId,
         messageId: message.id,
         recipientId: command.recipient.userId,
@@ -769,9 +874,6 @@ export class EngagementService {
         normalizeError(error),
       );
     }
-    return dispatch === undefined
-      ? undefined
-      : channelResultFromDispatch(dispatch, command.recipient, previousResults);
   }
 
   private async replayCompletedSend(
@@ -796,22 +898,40 @@ export class EngagementService {
     return complete ? engagementResult(channelResults, executionIds) : undefined;
   }
 
+  private async assertDispatchCanRecordEligibility(
+    message: AnyMessage,
+    command: Readonly<{ recipient: RecipientRef; key: string }>,
+    channel: MessageChannel,
+  ): Promise<void> {
+    if (this.contactPolicy === undefined) return;
+    const existing = await this.findDispatch(message, command, channel);
+    if (existing?.outcome.kind === "queued" || existing?.outcome.kind === "failed") {
+      throw new ContactPolicyConflictProblem(
+        "Existing dispatch acceptance cannot be replaced before policy replay validation; reconciliation is required",
+      );
+    }
+  }
+
   private async recordChannelResult(
     message: AnyMessage,
     command: Readonly<{ recipient: RecipientRef; key: string; campaignId?: string }>,
     result: EngagementChannelResult,
     endpoints: readonly ResolvedEndpoint[],
-  ): Promise<void> {
+    targets?: readonly EngagementDispatchTarget[],
+  ): Promise<EngagementDispatch | undefined> {
     if (this.dispatches === undefined) return;
+    if (result.status !== "queued") {
+      await this.assertDispatchCanRecordEligibility(message, command, result.channel);
+    }
     try {
-      await this.dispatches.recordDispatch({
+      return await this.dispatches.recordDispatch({
         tenantId: command.recipient.tenantId,
         messageId: message.id,
         recipientId: command.recipient.userId,
         channel: result.channel,
         semanticKey: command.key,
         topic: message.topic,
-        targets: dispatchTargets(endpoints, result),
+        targets: targets ?? dispatchTargets(endpoints, result),
         outcome:
           result.status === "queued"
             ? { kind: "queued", executionIds: result.executionIds }
@@ -848,9 +968,13 @@ export class EngagementService {
               : result.status === "unavailable"
                 ? { kind: "unavailable", reason: result.reason }
                 : { kind: "skipped", reason: result.reason },
+        ...(this.contactPolicy !== undefined && result.status !== "queued"
+          ? { expectedState: "absent-or-eligibility" as const }
+          : {}),
         recordedAt: this.clock(),
       });
     } catch (error) {
+      if (error instanceof ContactPolicyConflictProblem) throw error;
       throw new EngagementPersistenceProblem(
         "record-dispatch",
         command.recipient.tenantId,
@@ -867,32 +991,44 @@ export class EngagementService {
     error: unknown,
     stage: "preparation" | "render" | "provider" | "network" | "persistence",
     executionIds: readonly string[] = [],
-  ): Promise<void> {
+    targets?: readonly EngagementDispatchTarget[],
+    invalidEndpoint?: Readonly<{ endpointId: string; provider: string; providerCode?: string }>,
+  ): Promise<EngagementDispatch | undefined> {
     if (this.dispatches === undefined) return;
+    if (stage === "preparation" || stage === "render") {
+      await this.assertDispatchCanRecordEligibility(message, command, channel);
+    }
     const cause = normalizeError(error);
     try {
-      await this.dispatches.recordDispatch({
+      return await this.dispatches.recordDispatch({
         tenantId: command.recipient.tenantId,
         messageId: message.id,
         recipientId: command.recipient.userId,
         channel,
         semanticKey: command.key,
         topic: message.topic,
-        targets: dispatchTargets(endpoints, {
-          channel,
-          status: "queued",
-          executionIds,
-        }),
+        targets:
+          targets ??
+          dispatchTargets(endpoints, {
+            channel,
+            status: "queued",
+            executionIds,
+          }),
         outcome: {
           kind: "failed",
           stage,
           failureCode: cause instanceof Problem ? cause.code : "unknown",
           retryable: cause instanceof Problem && cause.extensions?.retryable === true,
           executionIds,
+          ...(invalidEndpoint === undefined ? {} : { invalidEndpoint }),
         },
+        ...(this.contactPolicy !== undefined && (stage === "preparation" || stage === "render")
+          ? { expectedState: "absent-or-eligibility" as const }
+          : {}),
         recordedAt: this.clock(),
       });
     } catch (persistenceError) {
+      if (persistenceError instanceof ContactPolicyConflictProblem) throw persistenceError;
       throw new EngagementPersistenceProblem(
         "record-failed-dispatch",
         command.recipient.tenantId,
@@ -1166,7 +1302,7 @@ function endpointsForChannel(
     }
     case "push":
       return recipient.push.flatMap((endpoint) =>
-        usableEndpoint(endpoint.id, endpoint.token, endpoint.version),
+        usableEndpoint(endpoint.id, endpoint.tokenReference, endpoint.version),
       );
     case "sms":
     case "inApp":
@@ -1224,6 +1360,7 @@ function toNotificationPayload<TChannel extends MessageChannel>(
         to: endpoint.target,
         subject: push.title,
         content: push.body,
+        push,
         metadata: {
           ...metadata,
           ...(push.deepLink === undefined ? {} : { deepLink: push.deepLink }),

@@ -10802,6 +10802,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createPushEndpointId",
+              "exportKind": "named",
+              "source": "./libs/PushEndpointLifecycle",
+              "declarationKind": "function"
+            },
+            {
               "name": "decodeCampaignSnapshotData",
               "exportKind": "named",
               "source": "./libs/CampaignStore",
@@ -11004,6 +11010,12 @@
               "exportKind": "named",
               "source": "./libs/EngagementStores",
               "declarationKind": "function"
+            },
+            {
+              "name": "PushEndpointLifecycle",
+              "exportKind": "named",
+              "source": "./libs/PushEndpointLifecycle",
+              "declarationKind": "class"
             },
             {
               "name": "RecipientDirectoryLookupProblem",
@@ -11602,14 +11614,24 @@
               "source": "./libs/EngagementStores"
             },
             {
+              "name": "PushContent",
+              "exportKind": "named",
+              "source": "@croco/notifications-core"
+            },
+            {
               "name": "PushEndpoint",
               "exportKind": "named",
               "source": "./libs/EngagementService"
             },
             {
-              "name": "PushTokenResolver",
+              "name": "PushEndpointRegistrationResult",
               "exportKind": "named",
-              "source": "./libs/PersistentEngagement"
+              "source": "./libs/PushEndpointLifecycle"
+            },
+            {
+              "name": "PushEndpointScope",
+              "exportKind": "named",
+              "source": "./libs/PushEndpointLifecycle"
             },
             {
               "name": "RecipientDirectory",
@@ -11635,6 +11657,11 @@
               "name": "RecordEngagementDispatchInput",
               "exportKind": "named",
               "source": "./libs/EngagementStores"
+            },
+            {
+              "name": "RegisterPushEndpointInput",
+              "exportKind": "named",
+              "source": "./libs/PushEndpointLifecycle"
             },
             {
               "name": "ResolvedRecipient",
@@ -24450,10 +24477,106 @@
               "declarationKind": "type"
             },
             {
+              "name": "PushContent",
+              "exportKind": "declaration",
+              "source": "./libs/types",
+              "declarationKind": "type"
+            },
+            {
               "name": "UnsafeNotificationSendOptions",
               "exportKind": "declaration",
               "source": "./libs/NotificationService",
               "declarationKind": "type"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/notifications-fcm",
+      "relativeDir": "packages/notifications-fcm",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/notifications-fcm/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "FCM_PROVIDER_CAPABILITIES",
+              "exportKind": "named",
+              "source": "./libs/FcmProvider",
+              "declarationKind": "const"
+            },
+            {
+              "name": "FcmDiagnosticsProvider",
+              "exportKind": "named",
+              "source": "./libs/FcmDiagnosticsProvider",
+              "declarationKind": "class"
+            },
+            {
+              "name": "FcmProblem",
+              "exportKind": "named",
+              "source": "./libs/FcmProblem",
+              "declarationKind": "class"
+            },
+            {
+              "name": "FcmProvider",
+              "exportKind": "named",
+              "source": "./libs/FcmProvider",
+              "declarationKind": "class"
+            },
+            {
+              "name": "normalizeFcmProblem",
+              "exportKind": "named",
+              "source": "./libs/FcmProblem",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateFcmConfig",
+              "exportKind": "named",
+              "source": "./libs/FcmConfig",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "FcmClient",
+              "exportKind": "named",
+              "source": "./libs/FcmProvider"
+            },
+            {
+              "name": "FcmConfig",
+              "exportKind": "named",
+              "source": "./libs/FcmConfig"
+            },
+            {
+              "name": "FcmDiagnosticsOptions",
+              "exportKind": "named",
+              "source": "./libs/FcmDiagnosticsProvider"
+            },
+            {
+              "name": "FcmFailureKind",
+              "exportKind": "named",
+              "source": "./libs/FcmProblem"
+            },
+            {
+              "name": "FcmProviderOptions",
+              "exportKind": "named",
+              "source": "./libs/FcmProvider"
             }
           ]
         }

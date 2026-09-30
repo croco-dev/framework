@@ -8,10 +8,22 @@ export enum NotificationChannel {
   IN_APP = "IN_APP",
 }
 
+export type PushContent = Readonly<{
+  title: string;
+  body: string;
+  deepLink?: string;
+  imageUrl?: string;
+  data?: Readonly<Record<string, string>>;
+  collapseKey?: string;
+  ttlSeconds?: number;
+  priority?: "normal" | "high";
+}>;
+
 export interface NotificationPayload {
   to: string;
   subject?: string;
   content: string; // HTML or Text
+  push?: PushContent;
   text?: string;
   replyTo?: string;
   headers?: Readonly<Record<string, string>>;
@@ -59,6 +71,8 @@ export type NotificationProviderCapabilities = {
   readonly supportsProviderTemplates: boolean;
   readonly supportsRenderedTemplates: boolean;
   readonly outboxIntegration: NotificationProviderOutboxIntegration;
+  /** Stable failure codes whose failed task replay must still invalidate the destination endpoint. */
+  readonly terminalEndpointFailureCodes?: readonly string[];
 };
 
 export interface NotificationProvider {

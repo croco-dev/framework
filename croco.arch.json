@@ -115,6 +115,7 @@
         "@croco/metering-upstash",
         "@croco/metrics-billing",
         "@croco/warehouse-postgres",
+        "@croco/notifications-fcm",
         "@croco/notifications-react-email",
         "@croco/notifications-resend",
         "@croco/onboarding-drizzle",

@@ -567,6 +567,12 @@ describe("TaskRunner", () => {
           id: "exec-settled",
           payload: { data: "test" },
           status,
+          error: {
+            code: "provider/token-invalid",
+            message: "private provider detail",
+            stack: "private stack",
+            retryable: false,
+          },
         }),
       );
       const runner = new TaskRunner(mockExecutionManager, registry);
@@ -577,6 +583,7 @@ describe("TaskRunner", () => {
         code: "tasks-core/execution-already-settled",
         executionId: "exec-settled",
         executionStatus: status,
+        extensions: { failureCode: "provider/token-invalid" },
       });
       await expect(
         runner.execute("test-task", { data: "test" }, { idempotencyKey: "key" }),

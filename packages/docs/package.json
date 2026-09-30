@@ -103,6 +103,7 @@
     "@croco/metrics-core": "workspace:*",
     "@croco/migration-runner": "workspace:*",
     "@croco/notifications-core": "workspace:*",
+    "@croco/notifications-fcm": "workspace:*",
     "@croco/notifications-react-email": "workspace:*",
     "@croco/notifications-resend": "workspace:*",
     "@croco/onboarding-core": "workspace:*",

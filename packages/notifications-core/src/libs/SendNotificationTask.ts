@@ -40,7 +40,7 @@ export class SendNotificationTask {
     name: "send-notification",
     maxAttempts: SEND_NOTIFICATION_MAX_ATTEMPTS,
   })
-  async handle(payload: NotificationJobPayload): Promise<void> {
+  async handle(payload: NotificationJobPayload): Promise<string | undefined> {
     const { providerName, idempotencyKey } = payload;
     const notificationPayload = toProviderPayload(payload);
 
@@ -63,6 +63,7 @@ export class SendNotificationTask {
     }
 
     recordNotificationDispatchSuccess(payload);
+    return result.messageId;
   }
 }
 
@@ -71,6 +72,7 @@ function toProviderPayload(payload: NotificationJobPayload): NotificationPayload
     to: payload.to,
     ...(payload.subject === undefined ? {} : { subject: payload.subject }),
     content: payload.content,
+    ...(payload.push === undefined ? {} : { push: payload.push }),
     ...(payload.text === undefined ? {} : { text: payload.text }),
     ...(payload.replyTo === undefined ? {} : { replyTo: payload.replyTo }),
     ...(payload.headers === undefined ? {} : { headers: payload.headers }),

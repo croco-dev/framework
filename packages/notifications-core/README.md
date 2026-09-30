@@ -25,6 +25,14 @@ validated profile for dispatch; it never infers template, idempotency, or outbox
 can expose that same explicit profile through their diagnostics, and certification suites can inspect it through
 `getCapabilities()`.
 
+Providers may declare `terminalEndpointFailureCodes` for normalized failures that permanently
+invalidate a destination endpoint. When an idempotent task replay returns a failed settled execution,
+`NotificationService` compares its saved `failureCode` with that declaration. A match restores the
+terminal endpoint-invalidating outcome so engagement can persist delivery evidence after a store
+outage. This path uses the saved code and fixed text; it does not reconstruct the original error
+message or stack. Declare only codes that require endpoint invalidation, not authentication or
+payload errors.
+
 ```typescript
 import { NotificationChannel, type NotificationProvider } from "@croco/notifications-core";
 
@@ -76,6 +84,19 @@ await notificationService.send(
   },
 );
 ```
+
+## Push content
+
+`NotificationPayload.push` carries canonical `PushContent`: required `title` and `body`, plus
+optional `deepLink`, `imageUrl`, string-valued `data`, `collapseKey`, `ttlSeconds`, and `priority`
+(`"normal"` or `"high"`). The first-party [`@croco/notifications-fcm`](../notifications-fcm/README.md)
+provider maps these fields to Firebase Admin requests. `content` remains required by the shared
+payload contract; engagement dispatch fills it from the push body.
+
+For durable push jobs, keep `to` as an opaque vault reference and resolve the token inside the
+provider. Do not resolve tokens before serializing jobs, or put raw tokens in metadata or diagnostic
+output. Provider acceptance does not establish device delivery, and a Croco idempotency key does
+not imply provider deduplication: inspect `supportsIdempotencyKey` in the provider capability profile.
 
 ## Provider results
 

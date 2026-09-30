@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 879,
+  problemCount: 888,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -7497,7 +7497,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/PersistentEngagement.ts",
-          line: 210,
+          line: 189,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7529,7 +7529,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 1004,
+          line: 1100,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7560,7 +7560,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 372,
+          line: 369,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7590,7 +7590,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 359,
+          line: 356,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7621,7 +7621,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 351,
+          line: 348,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7653,7 +7653,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementStores.ts",
-          line: 340,
+          line: 348,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7686,7 +7686,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 920,
+          line: 1016,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7719,7 +7719,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 935,
+          line: 1031,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7750,7 +7750,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 908,
+          line: 1004,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7783,7 +7783,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 1032,
+          line: 1128,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7815,7 +7815,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 956,
+          line: 1052,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7846,7 +7846,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 385,
+          line: 382,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7877,7 +7877,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 437,
+          line: 434,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7910,7 +7910,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 426,
+          line: 423,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7941,7 +7941,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 448,
+          line: 445,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7974,7 +7974,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 407,
+          line: 404,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8006,7 +8006,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/MessageContracts.ts",
-          line: 396,
+          line: 393,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8036,7 +8036,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 947,
+          line: 1043,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8066,7 +8066,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementStores.ts",
-          line: 332,
+          line: 340,
           column: 5,
           kind: "problem-constructor",
         },
@@ -8099,7 +8099,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 977,
+          line: 1073,
           column: 5,
           kind: "problem-constructor",
         },
@@ -17520,6 +17520,290 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "notifications-fcm/authentication",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-fcm-authentication",
+      recovery: {
+        cause: "Firebase rejected provider credentials or platform authentication.",
+        userAction:
+          "Report the unavailable notification channel; do not retry the unchanged request automatically.",
+        operatorAction:
+          "Repair Firebase permissions or APNs credentials using provider diagnostics; keep credentials out of logs.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-fcm/src/libs/FcmProblem.ts",
+          line: 19,
+          column: 19,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "notifications-fcm/configuration",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-fcm-configuration",
+      recovery: {
+        cause: "FCM configuration or explicit credential selection is missing or invalid.",
+        userAction:
+          "Report the unavailable notification channel; retrying unchanged configuration cannot repair it.",
+        operatorAction:
+          "Validate the Firebase project ID and credential configuration, then redeploy before sending again.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-fcm/src/libs/FcmProblem.ts",
+          line: 15,
+          column: 18,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "notifications-fcm/rate-limit",
+      category: "TooManyRequests",
+      status: 429,
+      title: "Too Many Requests",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-fcm-rate-limit",
+      recovery: {
+        cause: "Firebase rejected the send because a message rate or quota limit was exceeded.",
+        userAction:
+          "Retry only under the application's bounded retry policy after the quota or rate limit recovers.",
+        operatorAction:
+          "Inspect Firebase quota and send rates, apply backoff, and retain the endpoint; FCM does not guarantee idempotency-key deduplication.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-fcm/src/libs/FcmProblem.ts",
+          line: 35,
+          column: 17,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "notifications-fcm/sender-mismatch",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-fcm-sender-mismatch",
+      recovery: {
+        cause:
+          "The token belongs to a Firebase sender or project different from the configured credentials.",
+        userAction: "Report the channel configuration mismatch before another send.",
+        operatorAction:
+          "Align the token vault scope, Firebase project, and provider credentials; retain the potentially valid endpoint.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-fcm/src/libs/FcmProblem.ts",
+          line: 31,
+          column: 22,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "notifications-fcm/timeout",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-fcm-timeout",
+      recovery: {
+        cause: "The FCM send timed out and provider acceptance may be unknown.",
+        userAction: "Retry only when the application accepts the risk of duplicate delivery.",
+        operatorAction:
+          "Inspect connectivity and apply bounded retry policy; retain the endpoint and account for FCM's lack of idempotency-key deduplication.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-fcm/src/libs/FcmProblem.ts",
+          line: 39,
+          column: 12,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "notifications-fcm/token-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-fcm-token-invalid",
+      recovery: {
+        cause: "Firebase rejected an invalid or unregistered device token.",
+        userAction: "Register a current device token through the application's endpoint lifecycle.",
+        operatorAction:
+          "Persist the terminal delivery event and invalidate the dispatched endpoint version; replay a saved dispatch to reconcile missing events after a store outage.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-fcm/src/libs/FcmProblem.ts",
+          line: 27,
+          column: 20,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "notifications-fcm/unavailable",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-fcm-unavailable",
+      recovery: {
+        cause: "Firebase or its network connection was temporarily unavailable.",
+        userAction:
+          "Retry under the application's bounded retry policy when duplicate delivery risk is acceptable.",
+        operatorAction:
+          "Inspect upstream availability and connectivity, apply backoff, and retain the endpoint.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-fcm/src/libs/FcmProblem.ts",
+          line: 43,
+          column: 16,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "notifications-fcm/upstream",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-fcm-upstream",
+      recovery: {
+        cause: "FCM returned an unclassified failure whose retry safety is unknown.",
+        userAction: "Report the failed notification for investigation before another send.",
+        operatorAction:
+          "Investigate through sanitized provider diagnostics; do not automatically retry or invalidate the endpoint.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-fcm/src/libs/FcmProblem.ts",
+          line: 47,
+          column: 13,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "notifications-fcm/validation",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#notifications-fcm-validation",
+      recovery: {
+        cause: "Canonical push content or its mapped Firebase payload is invalid.",
+        userAction: "Correct the message content before sending again.",
+        operatorAction:
+          "Validate reserved data keys, payload size, TTL, and platform limits using sanitized fixtures; retain the endpoint.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/notifications-fcm/src/libs/FcmProblem.ts",
+          line: 23,
+          column: 15,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
       code: "notifications-react-email/render-failed",
       category: "InternalServerError",
       status: 500,
@@ -23044,7 +23328,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tasks-core/src/libs/problems/TasksProblems.ts",
-          line: 110,
+          line: 115,
           column: 5,
           kind: "problem-constructor",
         },

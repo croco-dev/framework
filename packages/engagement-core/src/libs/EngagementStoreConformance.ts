@@ -35,6 +35,41 @@ export function createEngagementStoreConformanceSuite(
   return {
     cases: [
       {
+        name: "keeps refreshed endpoints active when stale invalidation uses an old version snapshot",
+        run: async () => {
+          const store = await options.createStore();
+          const input = pushEndpoint("tenant-freshness", "recipient-freshness");
+          const initial = await store.saveEndpoint(input);
+          const refreshed = await store.saveEndpoint({ ...input, lastSeenAt: instant(3) });
+          const invalidation = {
+            tenantId: input.tenantId,
+            endpointId: initial.id,
+            expectedVersion: initial.version,
+            reason: "other" as const,
+            invalidatedAt: instant(4),
+          };
+          for (const cutoff of [instant(2), instant(3)]) {
+            const result = await store.invalidateEndpoint({
+              ...invalidation,
+              lastSeenBefore: cutoff,
+            });
+            assert.equal(result.status, "freshness-mismatch");
+            assert.deepEqual(await store.listActiveEndpoints(input.tenantId, input.recipientId), [
+              refreshed,
+            ]);
+          }
+          assert.equal(
+            (
+              await store.invalidateEndpoint({
+                ...invalidation,
+                lastSeenBefore: instant(4),
+              })
+            ).status,
+            "invalidated",
+          );
+        },
+      },
+      {
         name: "persists endpoints preferences suppressions and dispatch evidence across reopen",
         run: async () => {
           const store = await options.createStore();
@@ -508,8 +543,11 @@ export function createEngagementStoreConformanceSuite(
 
           assert.equal(refreshed.version, first.version);
           assert.deepEqual(refreshed.lastSeenAt, instant(3));
+          const staleRefresh = await store.saveEndpoint({ ...input, lastSeenAt: instant(2) });
+          assert.equal(staleRefresh.version, first.version);
+          assert.deepEqual(staleRefresh.lastSeenAt, instant(3));
           const reopened = await reopen(store);
-          assert.deepEqual(await reopened.getEndpoint(input.tenantId, input.id), refreshed);
+          assert.deepEqual(await reopened.getEndpoint(input.tenantId, input.id), staleRefresh);
         },
       })),
       ...(["recipientId", "address"] as const).map((field) => ({

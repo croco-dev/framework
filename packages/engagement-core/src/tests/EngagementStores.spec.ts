@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createEngagementStoreConformanceSuite,
+  ContactPolicyConflictProblem,
   EngagementPersistenceProblem,
   EngagementStoreValidationProblem,
   InMemoryEngagementStore,
@@ -86,22 +87,17 @@ describe("InMemoryEngagementStore", () => {
       tokenReference: "secret://push/directory",
       lastSeenAt: new Date("2026-01-01T00:00:02.000Z"),
     });
-    const resolveToken = vi.fn(async () => "resolved-push-token");
     const directory = new StoreBackedRecipientDirectory(
       new InMemoryRecipientDirectory([{ recipient, push: [], locale: "ko-KR" }]),
       store,
-      { resolveToken },
     );
 
     await expect(directory.resolve(recipient)).resolves.toMatchObject({
       recipient,
       email: { id: email.id, address: "recipient@example.invalid", version: email.version },
-      push: [{ id: "push-directory", token: "resolved-push-token", version: 1 }],
+      push: [{ id: "push-directory", tokenReference: "secret://push/directory", version: 1 }],
       locale: "ko-KR",
     });
-    expect(resolveToken).toHaveBeenCalledWith(
-      expect.objectContaining({ tokenReference: "secret://push/directory" }),
-    );
 
     await store.invalidateEndpoint({
       tenantId: recipient.tenantId,
@@ -171,5 +167,50 @@ describe("InMemoryEngagementStore", () => {
     await expect(
       reopened.getEndpoint("tenant-concurrent", "standalone-endpoint"),
     ).resolves.toBeDefined();
+  });
+  it("atomically preserves failed acceptance against a stale eligibility write", async () => {
+    const store = new InMemoryEngagementStore();
+    const stale = store.reopen();
+    const identity = {
+      tenantId: "tenant-atomic-policy",
+      recipientId: "recipient-atomic-policy",
+      messageId: "message-atomic-policy",
+      channel: "push" as const,
+      semanticKey: "send-atomic-policy",
+    };
+    expect(await stale.findByIdentity(identity)).toBeUndefined();
+    const accepted = await store.recordDispatch({
+      ...identity,
+      topic: "marketing",
+      recordedAt: new Date("2026-10-01T00:00:00Z"),
+      targets: [
+        {
+          endpointId: "device",
+          endpointVersion: 1,
+          executionId: "execution",
+          provider: "fcm",
+          providerMessageId: "projects/project/messages/accepted",
+        },
+      ],
+      outcome: {
+        kind: "failed",
+        stage: "persistence",
+        failureCode: "engagement-core/contact-policy-acceptance-unknown",
+        retryable: false,
+        executionIds: ["execution"],
+      },
+    });
+    const eligibility = {
+      ...identity,
+      topic: "marketing",
+      recordedAt: new Date("2026-10-01T00:00:01Z"),
+      targets: [],
+      outcome: { kind: "suppressed" as const, reason: "suppression" as const },
+      expectedState: "absent-or-eligibility" as const,
+    };
+    await expect(stale.recordDispatch(eligibility)).rejects.toBeInstanceOf(
+      ContactPolicyConflictProblem,
+    );
+    expect(await store.findByIdentity(identity)).toEqual(accepted);
   });
 });

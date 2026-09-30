@@ -435,6 +435,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`NotificationTemplateAlreadyRegisteredProblem`](/api/notifications-core/src/classes/notificationtemplatealreadyregisteredproblem/)
 - [`NotificationTemplateNotFoundProblem`](/api/notifications-core/src/classes/notificationtemplatenotfoundproblem/)
 - [`NotificationTemplateVariablesInvalidProblem`](/api/notifications-core/src/classes/notificationtemplatevariablesinvalidproblem/)
+- [`FcmProblem`](/api/notifications-fcm/src/classes/fcmproblem/)
 - [`ReactEmailRenderProblem`](/api/notifications-react-email/src/classes/reactemailrenderproblem/)
 - [`ResendIdempotencyConflictProblem`](/api/notifications-resend/src/classes/resendidempotencyconflictproblem/)
 - [`ResendMissingConfigProblem`](/api/notifications-resend/src/classes/resendmissingconfigproblem/)
