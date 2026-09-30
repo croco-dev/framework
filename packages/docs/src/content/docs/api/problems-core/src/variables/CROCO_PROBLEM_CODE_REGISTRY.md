@@ -11,7 +11,7 @@ title: "CROCO_PROBLEM_CODE_REGISTRY"
 
 ### problemCount
 
-> `readonly` **problemCount**: `854` = `854`
+> `readonly` **problemCount**: `855` = `855`
 
 ### problems
 
