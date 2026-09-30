@@ -1543,7 +1543,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
         packagePath: ["apps", "web"],
         args: ["presentation:smoke"],
       },
-      { label: "test", packagePath: ["libs", "shared", "utils-env"], args: ["test"] },
+      { label: "test", args: ["test"] },
     ],
   },
   {
