@@ -125,6 +125,24 @@ export const GENERATED_SMOKE_MATRIX_CASES = [
   { name: "graphql-lambda-api", tier: "spine-blocking" },
   { name: "trpc-lambda-api", tier: "spine-blocking" },
   {
+    name: "graphql-standalone-nextjs-opennext",
+    tier: "ecosystem-advisory",
+    advisory: {
+      owner: "Presentation standalone GraphQL Next.js owner",
+      recoveryAction:
+        "CROCO_GENERATED_SMOKE_CASES=graphql-standalone-nextjs-opennext pnpm create-croco-app:smoke; inspect generated web typecheck and build failures.",
+    },
+  },
+  {
+    name: "trpc-standalone-nextjs-opennext",
+    tier: "ecosystem-advisory",
+    advisory: {
+      owner: "Presentation standalone tRPC Next.js owner",
+      recoveryAction:
+        "CROCO_GENERATED_SMOKE_CASES=trpc-standalone-nextjs-opennext pnpm create-croco-app:smoke; inspect generated web typecheck and build failures.",
+    },
+  },
+  {
     name: "trpc-nextjs-vercel-fullstack",
     tier: "ecosystem-advisory",
     advisory: {

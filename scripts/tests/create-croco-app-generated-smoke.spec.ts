@@ -1511,7 +1511,7 @@ describe("create-croco-app generated smoke matrix", () => {
     ]);
     expect(
       GENERATED_SMOKE_MATRIX_CASES.filter(({ tier }) => tier === "ecosystem-advisory"),
-    ).toHaveLength(11);
+    ).toHaveLength(13);
     const graphqlLambdaApiCase: SmokeMatrixCaseDefinition | undefined =
       GENERATED_SMOKE_MATRIX_CASES.find(({ name }) => name === "graphql-lambda-api");
     expect(graphqlLambdaApiCase?.advisory).toBeUndefined();

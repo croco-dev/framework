@@ -3,7 +3,7 @@ import * as stylex from "@stylexjs/stylex";
 import { trpc } from "../lib/trpc";
 
 export function HealthCheck() {
-  const { data, isLoading, error } = trpc.health.useQuery();
+  const { data, isLoading, error } = trpc.health.check.useQuery();
   if (isLoading) return <p {...stylex.props(styles.message, styles.muted)}>Loading...</p>;
   if (error)
     return <p {...stylex.props(styles.message, styles.error)}>Unable to check API status.</p>;
@@ -11,7 +11,7 @@ export function HealthCheck() {
   return (
     <section {...stylex.props(styles.card)}>
       <span {...stylex.props(styles.label)}>API Status</span>
-      <strong {...stylex.props(styles.value)}>{data}</strong>
+      <strong {...stylex.props(styles.value)}>{data?.status}</strong>
     </section>
   );
 }
