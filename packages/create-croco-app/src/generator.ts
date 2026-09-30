@@ -20,6 +20,7 @@ import { createGenerationResult } from "./generation-result.js";
 import type { GeneratorOptions } from "./types.js";
 import { writeGoalManifest } from "./goals.js";
 import { mergeInto } from "./helpers/fs.js";
+import { getExternalCrocoPackageRanges } from "./helpers/croco-ranges.js";
 import { rewriteExternalCrocoWorkspaceRanges } from "./helpers/manifest-normalizer.js";
 import {
   installAgentRules,
@@ -113,7 +114,11 @@ async function generateProject(
   options: GeneratorOptions,
   executionOptions: GeneratorExecutionOptions,
 ): Promise<void> {
-  const vars = { projectName: options.projectName, scope: options.scope };
+  const vars = {
+    projectName: options.projectName,
+    scope: options.scope,
+    crocoPackageRanges: getExternalCrocoPackageRanges(),
+  };
   const isLegacyVikeFullstackPreset = options.preset === "ddd-vike-fullstack";
 
   // Step 2: root workspace baseline + 프리셋 분기

@@ -1196,7 +1196,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/generator.ts",
-      "line": 11,
+      "line": 12,
       "column": 8,
       "code": "TS6059",
       "message": "File 'packages/framework-context/src/index.ts' is not under 'rootDir' 'packages/create-croco-app/src'. 'rootDir' is expected to contain all source files."
@@ -1204,7 +1204,7 @@
     {
       "packageName": "create-croco-app",
       "file": "packages/create-croco-app/src/generator.ts",
-      "line": 7,
+      "line": 8,
       "column": 8,
       "code": "TS6059",
       "message": "File 'packages/tenant-core/src/tenant-model.ts' is not under 'rootDir' 'packages/create-croco-app/src'. 'rootDir' is expected to contain all source files."

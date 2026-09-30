@@ -1,18 +1,62 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import * as crocoRanges from "../helpers/croco-ranges.js";
 import { generate } from "../generator.js";
 import { normalizeNonInteractiveOptions } from "../options.js";
 
 const roots: string[] = [];
 
+type PackageManifest = {
+  packageManager?: string;
+  dependencies?: Record<string, string>;
+  devDependencies?: Record<string, string>;
+  peerDependencies?: Record<string, string>;
+  optionalDependencies?: Record<string, string>;
+};
+
+function expectProjectMapDependencies(targetDir: string): void {
+  const projectMap = JSON.parse(
+    readFileSync(join(targetDir, "croco.project-map.json"), "utf8"),
+  ) as {
+    project: { packageManager: string };
+    packageGraph: {
+      packages: {
+        path: string;
+        dependencies: { name: string; range: string; kind: string }[];
+      }[];
+    };
+  };
+  const rootManifest = JSON.parse(
+    readFileSync(join(targetDir, "package.json"), "utf8"),
+  ) as PackageManifest;
+  expect(projectMap.project.packageManager).toBe(rootManifest.packageManager);
+
+  for (const pkg of projectMap.packageGraph.packages) {
+    const manifest = JSON.parse(readFileSync(join(targetDir, pkg.path), "utf8")) as PackageManifest;
+    const dependencies = [
+      ["dependencies", "dependency"],
+      ["devDependencies", "devDependency"],
+      ["peerDependencies", "peerDependency"],
+      ["optionalDependencies", "optionalDependency"],
+    ] as const;
+    const expected = dependencies.flatMap(([field, kind]) =>
+      Object.entries(manifest[field] ?? {}).map(([name, range]) => ({ name, range, kind })),
+    );
+    expect(pkg.dependencies).toEqual(expect.arrayContaining(expected));
+    expect(pkg.dependencies).toHaveLength(expected.length);
+  }
+}
+
 afterEach(() => {
+  vi.restoreAllMocks();
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
 async function generatePreset(
   preset: "production-app" | "admin-console" | "saas",
+  tenantModel?: "single",
 ): Promise<string> {
   const root = mkdtempSync(join(tmpdir(), "croco-fresh-artifacts-"));
   roots.push(root);
@@ -23,6 +67,7 @@ async function generatePreset(
       projectName: "app",
       scope: "@acme",
       preset,
+      tenantModel,
       installDeps: false,
       initGit: false,
     }),
@@ -32,6 +77,25 @@ async function generatePreset(
 }
 
 describe("fresh scaffold contract artifacts", () => {
+  it("keeps project maps aligned with the next published Croco version ranges", async () => {
+    const ranges = crocoRanges.getExternalCrocoPackageRanges();
+    const nextRange = ranges["@croco/cli"].replace(/\d+/, (major) => String(Number(major) + 1));
+    const nextRanges = { ...ranges, "@croco/cli": nextRange };
+    vi.spyOn(crocoRanges, "getExternalCrocoPackageRanges").mockReturnValue(nextRanges);
+    vi.spyOn(crocoRanges, "getExternalCrocoPackageRange").mockImplementation(
+      (name) => nextRanges[name as keyof typeof nextRanges],
+    );
+
+    for (const preset of ["production-app", "admin-console", "saas"] as const) {
+      const targetDir = await generatePreset(preset);
+      const manifest = JSON.parse(
+        readFileSync(join(targetDir, "package.json"), "utf8"),
+      ) as PackageManifest;
+      expect(manifest.devDependencies?.["@croco/cli"]).toBe(nextRange);
+      expectProjectMapDependencies(targetDir);
+    }
+    expectProjectMapDependencies(await generatePreset("saas", "single"));
+  });
   it.each(["production-app", "admin-console"] as const)(
     "%s ships the baselines that its generated browser CI contracts job verifies",
     async (preset) => {
@@ -47,6 +111,7 @@ describe("fresh scaffold contract artifacts", () => {
         projectMap: existsSync(join(targetDir, "croco.project-map.json")),
         openapi: existsSync(join(targetDir, "openapi.json")),
       }).toEqual({ contractGraph: true, projectMap: true, openapi: true });
+      expectProjectMapDependencies(targetDir);
     },
   );
 
@@ -64,6 +129,7 @@ describe("fresh scaffold contract artifacts", () => {
       contractGraph: existsSync(join(targetDir, "contract-graph.snapshot.json")),
       projectMap: existsSync(join(targetDir, "croco.project-map.json")),
     }).toEqual({ contractGraph: true, projectMap: true });
+    expectProjectMapDependencies(targetDir);
 
     const singleRoot = mkdtempSync(join(tmpdir(), "croco-fresh-artifacts-single-"));
     roots.push(singleRoot);
@@ -84,6 +150,7 @@ describe("fresh scaffold contract artifacts", () => {
     expect(readFileSync(join(singleDir, "croco.project-map.json"), "utf8")).toContain(
       "telemetry-flush:apps/api-server/src/generatedSaasProviderProfile.ts:547",
     );
+    expectProjectMapDependencies(singleDir);
 
     for (const variation of [
       { preset: "saas" as const, tenantModel: "workspace" as const },
