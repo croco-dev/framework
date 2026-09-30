@@ -122,11 +122,11 @@ class AuditWriteFailureAggregateError extends Error {
 }
 
 function attachAuditWriteCause(originalError: unknown, auditWriteError: unknown): void {
-  if (!(originalError instanceof Error)) {
-    return;
-  }
-
   try {
+    if (!(originalError instanceof Error)) {
+      return;
+    }
+
     const existingCause = (originalError as Error & { cause?: unknown }).cause;
     const diagnosticCause =
       existingCause === undefined

@@ -1188,6 +1188,121 @@ describe("@Auditable", () => {
         }),
       );
     });
+
+    it("should rethrow the identical original error when a revoked Proxy fails and audit persistence also fails", async () => {
+      const auditError = new Error("audit persistence failed");
+      const createSpy = vi.fn(async () => {
+        throw auditError;
+      });
+
+      const repository = {
+        create: createSpy,
+        find: vi.fn(),
+      } as unknown as AuditLogRepository;
+
+      const loggerMock: ILogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        fatal: vi.fn(),
+        child: vi.fn(function (this: ILogger) {
+          return this;
+        }),
+      };
+
+      vi.spyOn(Container, "get").mockImplementation((token) => {
+        if (token === LOGGER_TOKEN) {
+          return loggerMock;
+        }
+        return repository;
+      });
+
+      vi.spyOn(Context, "get").mockReturnValue({
+        requestId: "req-6-revoked-proxy",
+        tenantId: "tenant-6-revoked-proxy",
+        user: { id: "actor-6-revoked-proxy" },
+      } as RequestContextStub);
+      vi.spyOn(telemetry, "recordError").mockImplementation(() => {});
+
+      const { proxy, revoke } = Proxy.revocable(new Error("revoked domain failure"), {});
+      revoke();
+
+      class TestService {
+        @Auditable({
+          action: "order.cancel",
+          resourceType: "Order",
+          resourceIdIndex: 0,
+          throwOnFailure: true,
+        })
+        async cancel(orderId: string): Promise<void> {
+          void orderId;
+          throw proxy;
+        }
+      }
+
+      await expect(new TestService().cancel("o1")).rejects.toBe(proxy);
+      expect(createSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it("should rethrow the identical original error when a getPrototypeOf-throwing Proxy fails and audit persistence also fails", async () => {
+      const auditError = new Error("audit persistence failed");
+      const createSpy = vi.fn(async () => {
+        throw auditError;
+      });
+
+      const repository = {
+        create: createSpy,
+        find: vi.fn(),
+      } as unknown as AuditLogRepository;
+
+      const loggerMock: ILogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        fatal: vi.fn(),
+        child: vi.fn(function (this: ILogger) {
+          return this;
+        }),
+      };
+
+      vi.spyOn(Container, "get").mockImplementation((token) => {
+        if (token === LOGGER_TOKEN) {
+          return loggerMock;
+        }
+        return repository;
+      });
+
+      vi.spyOn(Context, "get").mockReturnValue({
+        requestId: "req-6-trapping-proxy",
+        tenantId: "tenant-6-trapping-proxy",
+        user: { id: "actor-6-trapping-proxy" },
+      } as RequestContextStub);
+      vi.spyOn(telemetry, "recordError").mockImplementation(() => {});
+
+      const trappingProxy = new Proxy(new Error("proxy domain failure"), {
+        getPrototypeOf: () => {
+          throw new Error("prototype trap failed");
+        },
+      });
+
+      class TestService {
+        @Auditable({
+          action: "order.cancel",
+          resourceType: "Order",
+          resourceIdIndex: 0,
+          throwOnFailure: true,
+        })
+        async cancel(orderId: string): Promise<void> {
+          void orderId;
+          throw trappingProxy;
+        }
+      }
+
+      await expect(new TestService().cancel("o1")).rejects.toBe(trappingProxy);
+      expect(createSpy).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("impersonation context", () => {
