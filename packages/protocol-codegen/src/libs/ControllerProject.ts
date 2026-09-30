@@ -1,4 +1,5 @@
 import * as fs from "node:fs";
+import { createRequire, isBuiltin } from "node:module";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Problem, ProblemCategory } from "@croco/problems-core";
@@ -490,6 +491,8 @@ function rewriteRuntimeSpecifiers(
           outputPaths,
           syntaxTree,
           replacements,
+          false,
+          false,
         );
       }
       if (
@@ -500,6 +503,7 @@ function rewriteRuntimeSpecifiers(
         node.arguments.length === 1 &&
         ts.isStringLiteral(node.arguments[0])
       ) {
+        const expressionText = node.expression.getText(syntaxTree);
         addRuntimeAliasReplacement(
           node.arguments[0],
           sourcePath,
@@ -508,6 +512,8 @@ function rewriteRuntimeSpecifiers(
           outputPaths,
           syntaxTree,
           replacements,
+          expressionText === "require",
+          expressionText !== "require",
         );
       }
       ts.forEachChild(node, visit);
@@ -530,6 +536,8 @@ function addRuntimeAliasReplacement(
   outputPaths: ReadonlyMap<string, string>,
   syntaxTree: ts.SourceFile,
   replacements: Array<{ start: number; end: number; value: string }>,
+  isRequireCall: boolean,
+  isDynamicImport: boolean,
 ): void {
   const specifier = moduleSpecifier.text;
   if (path.isAbsolute(specifier)) return;
@@ -548,10 +556,22 @@ function addRuntimeAliasReplacement(
     addSpecifierReplacement(moduleSpecifier, relative, syntaxTree, replacements);
     return;
   }
-  if (!specifier.startsWith(".")) return;
-  const runtimeSpecifier = rewriteTypeScriptExtension(specifier);
-  if (runtimeSpecifier !== specifier) {
+  const useImportCondition =
+    isDynamicImport || (!isRequireCall && isEsmModuleKind(compilerOptions.module, sourcePath));
+  const runtimeSpecifier = resolveExternalRuntimeSpecifier(
+    specifier,
+    sourcePath,
+    useImportCondition,
+    isRequireCall,
+  );
+  if (runtimeSpecifier) {
     addSpecifierReplacement(moduleSpecifier, runtimeSpecifier, syntaxTree, replacements);
+    return;
+  }
+  if (!specifier.startsWith(".")) return;
+  const typeScriptSpecifier = rewriteTypeScriptExtension(specifier);
+  if (typeScriptSpecifier !== specifier) {
+    addSpecifierReplacement(moduleSpecifier, typeScriptSpecifier, syntaxTree, replacements);
   }
 }
 
@@ -575,6 +595,256 @@ function rewriteTypeScriptExtension(specifier: string): string {
     .replace(/\.tsx?$/, ".js");
 }
 
+function resolveExternalRuntimeSpecifier(
+  specifier: string,
+  sourcePath: string,
+  useImportCondition: boolean,
+  isRequireCall: boolean,
+): string | null {
+  if (specifier.startsWith(".") || path.isAbsolute(specifier)) return null;
+  if (isNodeBuiltinSpecifier(specifier)) return null;
+  if (useImportCondition && !isRequireCall) {
+    const runtimePath = resolveEsmRuntimePath(specifier, sourcePath);
+    if (!runtimePath) return null;
+    if (!path.isAbsolute(runtimePath)) return null;
+    return pathToFileURL(runtimePath).href;
+  }
+  let runtimePath: string;
+  try {
+    runtimePath = createRequire(sourcePath).resolve(specifier);
+  } catch {
+    return null;
+  }
+  if (!path.isAbsolute(runtimePath)) return null;
+  return escapeWindowsPath(runtimePath);
+}
+
+function isNodeBuiltinSpecifier(specifier: string): boolean {
+  if (specifier.startsWith("node:")) return true;
+  return isBuiltin(specifier);
+}
+
+function resolveEsmRuntimePath(specifier: string, sourcePath: string): string | null {
+  const packageScope = findScopedPackageName(specifier);
+  if (!packageScope) return null;
+  const resolvedPackageJson = tryResolvePackageJson(packageScope, sourcePath);
+  if (!resolvedPackageJson) return null;
+  const packageJson = readPackageJson(resolvedPackageJson);
+  if (!packageJson) return null;
+  const subpath = specifier.slice(packageScope.length) || ".";
+  const normalized = normalizeSubpath(subpath);
+  const entry =
+    resolveEsmPackageEntry(packageJson, normalized) ??
+    resolvePackageEntry(packageJson, normalized, ["node", "import"]) ??
+    resolvePackageEntry(packageJson, normalized, ["node"]);
+  if (!entry) return null;
+  return path.resolve(path.dirname(resolvedPackageJson), entry);
+}
+
+function resolveEsmPackageEntry(packageJson: PackageJsonEntry, subpath: string): string | null {
+  const exportsField = packageJson.exports;
+  if (typeof exportsField === "string") {
+    return subpath === "." ? exportsField : null;
+  }
+  if (exportsField && typeof exportsField === "object" && !Array.isArray(exportsField)) {
+    const table = exportsField as Record<string, unknown>;
+    if (!Object.keys(table).some((key) => key.startsWith("."))) {
+      return subpath === "." ? resolveExportTargetInDeclarationOrder(exportsField, true) : null;
+    }
+    const exact = table[subpath];
+    if (exact !== undefined) return resolveExportTargetInDeclarationOrder(exact, true);
+    const wildcard = matchWildcardSubpath(table, subpath);
+    if (wildcard) return resolveExportTargetInDeclarationOrder(wildcard, true);
+    return null;
+  }
+  if (subpath !== ".") return null;
+  return typeof packageJson.main === "string" ? packageJson.main : null;
+}
+
+function matchWildcardSubpath(table: Record<string, unknown>, subpath: string): unknown | null {
+  let best: { key: string; target: unknown } | null = null;
+  for (const [key, target] of Object.entries(table)) {
+    if (!key.includes("*")) continue;
+    const starIndex = key.indexOf("*");
+    const keyPrefix = key.slice(0, starIndex);
+    const keySuffix = key.slice(starIndex + 1);
+    if (keyPrefix && !subpath.startsWith(keyPrefix)) continue;
+    if (keySuffix && !subpath.endsWith(keySuffix)) continue;
+    if (subpath.length < keyPrefix.length + keySuffix.length) continue;
+    if (!best || key.length > best.key.length) best = { key, target };
+  }
+  if (!best) return null;
+  const starIndex = best.key.indexOf("*");
+  const keyPrefix = best.key.slice(0, starIndex);
+  const keySuffix = best.key.slice(starIndex + 1);
+  const captured = subpath.slice(keyPrefix.length, subpath.length - keySuffix.length || undefined);
+  return substituteWildcardTarget(best.target, captured);
+}
+
+function substituteWildcardTarget(target: unknown, captured: string): unknown {
+  if (typeof target === "string") return target.replaceAll("*", captured);
+  if (Array.isArray(target))
+    return target.map((entry) => substituteWildcardTarget(entry, captured));
+  if (target && typeof target === "object") {
+    return Object.fromEntries(
+      Object.entries(target as Record<string, unknown>).map(([key, value]) => [
+        key,
+        substituteWildcardTarget(value, captured),
+      ]),
+    );
+  }
+  return target;
+}
+
+function resolveExportTargetInDeclarationOrder(
+  target: unknown,
+  useImportCondition: boolean,
+): string | null {
+  if (typeof target === "string") return target;
+  if (Array.isArray(target)) {
+    for (const entry of target) {
+      const resolved = resolveExportTargetInDeclarationOrder(entry, useImportCondition);
+      if (resolved) return resolved;
+    }
+    return null;
+  }
+  if (target && typeof target === "object") {
+    const table = target as Record<string, unknown>;
+    let fallback: unknown;
+    let hasFallback = false;
+    for (const [condition, value] of Object.entries(table)) {
+      if (condition === "default") {
+        fallback = value;
+        hasFallback = true;
+        continue;
+      }
+      if (!isActiveExportCondition(condition, useImportCondition)) continue;
+      const resolved = resolveExportTargetInDeclarationOrder(value, useImportCondition);
+      if (resolved) return resolved;
+    }
+    if (hasFallback) return resolveExportTargetInDeclarationOrder(fallback, useImportCondition);
+  }
+  return null;
+}
+
+function isActiveExportCondition(condition: string, useImportCondition: boolean): boolean {
+  if (condition === "node") return true;
+  if (condition === "import") return useImportCondition;
+  if (condition === "require") return !useImportCondition;
+  return condition === "default";
+}
+function escapeWindowsPath(runtimePath: string): string {
+  return runtimePath.replace(/\\/g, "\\\\");
+}
+
+type PackageJsonEntry = {
+  readonly main?: unknown;
+  readonly exports?: unknown;
+};
+
+function findScopedPackageName(specifier: string): string | null {
+  if (specifier.startsWith("@")) {
+    const segments = specifier.split("/");
+    if (segments.length < 2 || !segments[0] || !segments[1]) return null;
+    return `${segments[0]}/${segments[1]}`;
+  }
+  const [head] = specifier.split("/");
+  return head ? head : null;
+}
+
+function tryResolvePackageJson(packageName: string, sourcePath: string): string | null {
+  const applicationRequire = createRequire(sourcePath);
+  for (const subpath of ["package.json", "."]) {
+    try {
+      const resolved = applicationRequire.resolve(`${packageName}/${subpath}`);
+      if (subpath === "package.json") return resolved;
+      return path.join(path.dirname(resolved), "package.json");
+    } catch {
+      continue;
+    }
+  }
+  let directory = path.dirname(sourcePath);
+  while (true) {
+    const candidate = path.join(directory, "node_modules", packageName, "package.json");
+    if (fs.existsSync(candidate)) return candidate;
+    const parent = path.dirname(directory);
+    if (parent === directory) return null;
+    directory = parent;
+  }
+}
+
+function readPackageJson(packageJsonPath: string): PackageJsonEntry | null {
+  try {
+    return JSON.parse(fs.readFileSync(packageJsonPath, "utf8")) as PackageJsonEntry;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeSubpath(subpath: string): string {
+  if (subpath === "" || subpath === ".") return ".";
+  return subpath.startsWith("./") ? subpath : `./${subpath.replace(/^\/+/, "")}`;
+}
+
+function resolvePackageEntry(
+  packageJson: PackageJsonEntry,
+  subpath: string,
+  conditions: readonly string[],
+): string | null {
+  const exportsField = packageJson.exports;
+  if (typeof exportsField === "string") {
+    return subpath === "." ? exportsField : null;
+  }
+  if (exportsField && typeof exportsField === "object" && !Array.isArray(exportsField)) {
+    const table = exportsField as Record<string, unknown>;
+    if (!Object.keys(table).some((key) => key.startsWith("."))) {
+      return subpath === "." ? resolveExportTarget(exportsField, conditions) : null;
+    }
+    const target = table[subpath];
+    if (target === undefined) {
+      const fallback = table["."];
+      return subpath === "." ? resolveExportTarget(fallback, conditions) : null;
+    }
+    return resolveExportTarget(target, conditions);
+  }
+  if (subpath !== ".") return null;
+  return typeof packageJson.main === "string" ? packageJson.main : null;
+}
+
+function resolveExportTarget(target: unknown, conditions: readonly string[]): string | null {
+  if (typeof target === "string") return target;
+  if (Array.isArray(target)) {
+    for (const entry of target) {
+      const resolved = resolveExportTarget(entry, conditions);
+      if (resolved) return resolved;
+    }
+    return null;
+  }
+  if (target && typeof target === "object") {
+    const table = target as Record<string, unknown>;
+    for (const condition of conditions) {
+      if (condition in table) {
+        const resolved = resolveExportTarget(table[condition], conditions);
+        if (resolved) return resolved;
+      }
+    }
+    if ("default" in table) return resolveExportTarget(table.default, conditions);
+  }
+  return null;
+}
+
+function isEsmModuleKind(moduleKind: ts.ModuleKind | undefined, sourcePath: string): boolean {
+  return (
+    moduleKind === ts.ModuleKind.ES2015 ||
+    moduleKind === ts.ModuleKind.ES2020 ||
+    moduleKind === ts.ModuleKind.ES2022 ||
+    moduleKind === ts.ModuleKind.ESNext ||
+    moduleKind === ts.ModuleKind.Preserve ||
+    ((moduleKind === ts.ModuleKind.Node16 || moduleKind === ts.ModuleKind.NodeNext) &&
+      sourceUsesEsmBoundary(sourcePath))
+  );
+}
+
 function writeModuleBoundaries(context: ProjectContext, sourceRoot: string, emitDir: string): void {
   const moduleKind = context.project.getCompilerOptions().module;
 
@@ -582,14 +852,7 @@ function writeModuleBoundaries(context: ProjectContext, sourceRoot: string, emit
     const sourcePath = sourceFile.getFilePath();
     const emittedPath = getEmittedFilePath(sourceRoot, emitDir, sourcePath);
     if (!fs.existsSync(emittedPath)) continue;
-    const isEsm =
-      moduleKind === ts.ModuleKind.ES2015 ||
-      moduleKind === ts.ModuleKind.ES2020 ||
-      moduleKind === ts.ModuleKind.ES2022 ||
-      moduleKind === ts.ModuleKind.ESNext ||
-      moduleKind === ts.ModuleKind.Preserve ||
-      ((moduleKind === ts.ModuleKind.Node16 || moduleKind === ts.ModuleKind.NodeNext) &&
-        sourceUsesEsmBoundary(sourcePath));
+    const isEsm = isEsmModuleKind(moduleKind, sourcePath);
     fs.writeFileSync(
       path.join(path.dirname(emittedPath), "package.json"),
       JSON.stringify({ type: isEsm ? "module" : "commonjs" }),
