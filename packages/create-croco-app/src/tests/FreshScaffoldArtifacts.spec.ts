@@ -23,15 +23,32 @@ function expectProjectMapDependencies(targetDir: string): void {
     project: { packageManager: string };
     packageGraph: {
       packages: {
+        name: string;
         path: string;
         dependencies: { name: string; range: string; kind: string }[];
       }[];
     };
+    entrypoints: { kind: string; id: string; packageName?: string }[];
   };
   const rootManifest = JSON.parse(
     readFileSync(join(targetDir, "package.json"), "utf8"),
   ) as PackageManifest;
   expect(projectMap.project.packageManager).toBe(rootManifest.packageManager);
+
+  expect(projectMap.packageGraph.packages).toEqual(
+    [...projectMap.packageGraph.packages].sort(
+      (left, right) =>
+        compareStrings(left.name, right.name) || compareStrings(left.path, right.path),
+    ),
+  );
+  expect(projectMap.entrypoints).toEqual(
+    [...projectMap.entrypoints].sort(
+      (left, right) =>
+        compareStrings(left.kind, right.kind) ||
+        compareStrings(left.id, right.id) ||
+        compareStrings(left.packageName ?? "", right.packageName ?? ""),
+    ),
+  );
 
   for (const pkg of projectMap.packageGraph.packages) {
     const manifest = JSON.parse(readFileSync(join(targetDir, pkg.path), "utf8")) as PackageManifest;
@@ -44,9 +61,16 @@ function expectProjectMapDependencies(targetDir: string): void {
     const expected = dependencies.flatMap(([field, kind]) =>
       Object.entries(manifest[field] ?? {}).map(([name, range]) => ({ name, range, kind })),
     );
-    expect(pkg.dependencies).toEqual(expect.arrayContaining(expected));
-    expect(pkg.dependencies).toHaveLength(expected.length);
+    expected.sort(
+      (left, right) =>
+        compareStrings(left.name, right.name) || compareStrings(left.kind, right.kind),
+    );
+    expect(pkg.dependencies).toEqual(expected);
   }
+}
+
+function compareStrings(left: string, right: string): number {
+  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 afterEach(() => {
@@ -57,6 +81,8 @@ afterEach(() => {
 async function generatePreset(
   preset: "production-app" | "admin-console" | "saas",
   tenantModel?: "single",
+  scope = "@acme",
+  projectName = "app",
 ): Promise<string> {
   const root = mkdtempSync(join(tmpdir(), "croco-fresh-artifacts-"));
   roots.push(root);
@@ -64,8 +90,8 @@ async function generatePreset(
   await generate(
     targetDir,
     normalizeNonInteractiveOptions({
-      projectName: "app",
-      scope: "@acme",
+      projectName,
+      scope,
       preset,
       tenantModel,
       installDeps: false,
@@ -77,6 +103,12 @@ async function generatePreset(
 }
 
 describe("fresh scaffold contract artifacts", () => {
+  it("keeps project map ordering canonical after scope and project name substitution", async () => {
+    for (const preset of ["production-app", "admin-console", "saas"] as const) {
+      expectProjectMapDependencies(await generatePreset(preset, undefined, "@smoke", "1-app"));
+    }
+    expectProjectMapDependencies(await generatePreset("saas", "single", "@smoke", "1-app"));
+  });
   it("keeps project maps aligned with the next published Croco version ranges", async () => {
     const ranges = crocoRanges.getExternalCrocoPackageRanges();
     const nextRange = ranges["@croco/cli"].replace(/\d+/, (major) => String(Number(major) + 1));

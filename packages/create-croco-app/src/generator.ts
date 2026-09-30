@@ -138,6 +138,7 @@ async function generateProject(
       if (options.tenantModel === "single") {
         mergeInto(join(TEMPLATES_DIR, "saas-single-tenant-contracts"), targetDir, vars);
       }
+      sortScaffoldProjectMap(targetDir);
     }
     if (options.preset === "ai-saas") {
       mergeInto(join(TEMPLATES_DIR, "ai-saas"), targetDir, vars);
@@ -155,6 +156,7 @@ async function generateProject(
     if (options.preset === "admin-console") {
       mergeInto(join(TEMPLATES_DIR, "admin-console"), targetDir, vars);
     }
+    sortScaffoldProjectMap(targetDir);
     if (options.agentRules) {
       installAgentRules(targetDir, vars);
     }
@@ -574,6 +576,39 @@ const SAAS_HOST_ARTIFACTS = {
     build: "pnpm di:generate && tsup src/worker.ts --format esm --platform browser --clean --dts",
   },
 } as const;
+
+function sortScaffoldProjectMap(targetDir: string): void {
+  const path = join(targetDir, "croco.project-map.json");
+  const manifest = JSON.parse(readFileSync(path, "utf8")) as {
+    packageGraph: {
+      packages: {
+        name: string;
+        path: string;
+        dependencies: { name: string; kind: string }[];
+      }[];
+    };
+    entrypoints: { kind: string; id: string; packageName?: string }[];
+  };
+  const compareStrings = (left: string, right: string): number =>
+    left < right ? -1 : left > right ? 1 : 0;
+
+  manifest.packageGraph.packages.sort(
+    (left, right) => compareStrings(left.name, right.name) || compareStrings(left.path, right.path),
+  );
+  for (const pkg of manifest.packageGraph.packages) {
+    pkg.dependencies.sort(
+      (left, right) =>
+        compareStrings(left.name, right.name) || compareStrings(left.kind, right.kind),
+    );
+  }
+  manifest.entrypoints.sort(
+    (left, right) =>
+      compareStrings(left.kind, right.kind) ||
+      compareStrings(left.id, right.id) ||
+      compareStrings(left.packageName ?? "", right.packageName ?? ""),
+  );
+  writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`);
+}
 
 async function finalize(
   targetDir: string,
