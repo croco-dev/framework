@@ -86,6 +86,16 @@ describe.each(["graphql", "trpc"] as const)("%s web app naming", (api) => {
     expect(/output:\s*"([^"]+)"/.exec(stack)?.[1]).toBe("apps/admin/dist");
   });
 
+  it("builds each Vercel app's actual workspace package", async () => {
+    const targetDir = await generateFullstack({ api, frontendDeploy: "vercel" });
+    for (const app of ["web", "admin"]) {
+      const config = JSON.parse(
+        readFileSync(join(targetDir, "apps", app, "vercel.json"), "utf8"),
+      ) as { buildCommand: string };
+      expect(/--filter=(\S+)/.exec(config.buildCommand)?.[1]).toBe(readPackageName(targetDir, app));
+    }
+  });
+
   it("builds each Docker app's actual workspace package", async () => {
     const targetDir = await generateFullstack({ api, frontendDeploy: "docker" });
     for (const app of ["web", "admin"]) {
