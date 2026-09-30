@@ -19,10 +19,7 @@ function parsePort(value, fallback) {
   return Number.isInteger(port) && port > 0 && port < 65536 ? port : fallback;
 }
 const isGraphqlDefault = defaultApiEntry.includes("graphql-api");
-let apiPort = parsePort(
-  process.env.CROCO_API_PORT,
-  isGraphqlDefault ? 4000 : 3001,
-);
+let apiPort = parsePort(process.env.CROCO_API_PORT, isGraphqlDefault ? 4000 : 3001);
 const publicPort = parsePort(process.env.PORT, isGraphqlDefault ? 4000 : 3001);
 // The child must not share the gateway's public port. When both resolve to
 // the same port (e.g. platform-injected PORT matching the API default with no
