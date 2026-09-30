@@ -238,6 +238,54 @@ describe("InMemoryMembershipStore", () => {
     });
     expect(await store.countByRole("tenant-1", "owner")).toBe(1);
   });
+
+  it("should isolate findByTenantAndUser results from caller mutation", async () => {
+    await store.save(createInput({ id: "mem-1", role: "owner" }));
+
+    const found = await store.findByTenantAndUser("tenant-1", "user-1");
+    expect(found).not.toBeNull();
+    found!.role = "member";
+
+    const recheck = await store.findByTenantAndUser("tenant-1", "user-1");
+    expect(recheck?.role).toBe("owner");
+  });
+
+  it("should isolate save results from caller mutation", async () => {
+    const saved = await store.save(createInput({ id: "mem-1", role: "member" }));
+    saved.role = "owner";
+
+    const recheck = await store.findByTenantAndUser("tenant-1", "user-1");
+    expect(recheck?.role).toBe("member");
+  });
+
+  it("should isolate collection results from caller mutation", async () => {
+    await store.save(createInput({ id: "mem-1", userId: "user-1", role: "member" }));
+    await store.save(createInput({ id: "mem-2", userId: "user-2", role: "admin" }));
+
+    const byTenant = await store.findAllByTenant("tenant-1");
+    byTenant[0]!.role = "owner";
+    const byUser = await store.findAllByUser("user-2");
+    byUser[0]!.role = "owner";
+
+    expect(await store.findByTenantAndUser("tenant-1", "user-1")).toMatchObject({
+      role: "member",
+    });
+    expect(await store.findByTenantAndUser("tenant-1", "user-2")).toMatchObject({ role: "admin" });
+  });
+
+  it("should isolate Date fields from caller mutation", async () => {
+    await store.save(createInput({ id: "mem-1", role: "member" }));
+
+    const found = await store.findByTenantAndUser("tenant-1", "user-1");
+    expect(found).not.toBeNull();
+    const originalTime = found!.createdAt.getTime();
+    found!.createdAt.setFullYear(2000);
+    found!.updatedAt.setFullYear(2000);
+
+    const recheck = await store.findByTenantAndUser("tenant-1", "user-1");
+    expect(recheck?.createdAt.getTime()).toBe(originalTime);
+    expect(recheck?.updatedAt.getFullYear()).not.toBe(2000);
+  });
 });
 
 describe("in-memory membership command conformance", () => {
