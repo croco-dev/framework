@@ -24,7 +24,7 @@ overrides:
   "@croco/meta-vite>vite": 6.4.3
   anymatch>picomatch: 2.3.2
   astro>vite: 7.3.5
-  axios: 1.18.1
+  axios: 1.20.0
   better-auth>next: 16.2.3
   better-auth>vitest: 4.1.8
   defu: 6.1.7
