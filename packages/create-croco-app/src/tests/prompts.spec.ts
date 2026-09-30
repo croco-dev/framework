@@ -70,6 +70,28 @@ describe("GeneratorOptions type", () => {
     expect(opts.ui).toBe("astryx");
   });
 
+  it("selects standalone hosting for a custom web app name before asking for hosting", async () => {
+    const options = await runPrompts({
+      projectName: "app",
+      scope: "@acme",
+      preset: "ddd-fullstack",
+      webApps: ["admin"],
+      api: "graphql",
+      backendDeploy: "docker",
+      frontendDeploy: "vercel",
+      db: ["postgres"],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    });
+
+    expect(options.apiHosting).toBe("standalone");
+    expect(promptMocks.note).toHaveBeenCalledWith(
+      "Custom web app name detected — API hosting forced to Standalone",
+      "Auto-selected",
+    );
+  });
+
   it.each([
     ["web,,admin", "Web app names cannot contain empty entries"],
     ["", "Web app names cannot contain empty entries"],
