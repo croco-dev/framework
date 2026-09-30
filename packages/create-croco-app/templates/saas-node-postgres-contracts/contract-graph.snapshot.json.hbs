@@ -1,0 +1,4778 @@
+{
+  "snapshotVersion": "croco.contract-graph.snapshot.v1",
+  "graphVersion": "croco.contract-graph.v1",
+  "controllerCount": 3,
+  "routeCount": 9,
+  "operationIds": [
+    "cancelJob",
+    "getOperationsDiagnostics",
+    "getOperationsHealth",
+    "listJobLogs",
+    "listJobs",
+    "replayJob",
+    "seedSaasDemo",
+    "showJob",
+    "smokeSaasDemo"
+  ],
+  "consumerCoverage": {
+    "version": "croco.contract-consumer-coverage.v1",
+    "routeCount": 9,
+    "consumers": [
+      {
+        "consumerId": "admin-generated",
+        "label": "Admin resource config",
+        "generatedArtifact": "admin resource config files",
+        "routeCount": 9,
+        "requiredRouteFields": [
+          "routeId",
+          "operationId",
+          "httpMethod",
+          "path",
+          "request.body",
+          "request.path",
+          "request.query",
+          "request.headers",
+          "response",
+          "problems",
+          "entitlements",
+          "access.guards",
+          "access.roles"
+        ],
+        "unsupportedRouteFields": [],
+        "routes": [
+          {
+            "routeId": "JobsController.cancel",
+            "operationId": "cancelJob",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "JobsController.list",
+            "operationId": "listJobs",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "JobsController.logs",
+            "operationId": "listJobLogs",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "JobsController.replay",
+            "operationId": "replayJob",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "JobsController.show",
+            "operationId": "showJob",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "OperationsController.diagnostics",
+            "operationId": "getOperationsDiagnostics",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "OperationsController.health",
+            "operationId": "getOperationsHealth",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "SaasController.seedDemo",
+            "operationId": "seedSaasDemo",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "SaasController.smokeDemo",
+            "operationId": "smokeSaasDemo",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          }
+        ],
+        "diagnostics": []
+      },
+      {
+        "consumerId": "openapi",
+        "label": "OpenAPI specification",
+        "generatedArtifact": "openapi.json",
+        "routeCount": 9,
+        "requiredRouteFields": [
+          "routeId",
+          "operationId",
+          "httpMethod",
+          "path",
+          "request.body",
+          "request.path",
+          "request.query",
+          "request.headers",
+          "response",
+          "problems",
+          "entitlements"
+        ],
+        "unsupportedRouteFields": [
+          "access.guards",
+          "access.roles"
+        ],
+        "routes": [
+          {
+            "routeId": "JobsController.cancel",
+            "operationId": "cancelJob",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "JobsController.list",
+            "operationId": "listJobs",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "JobsController.logs",
+            "operationId": "listJobLogs",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "JobsController.replay",
+            "operationId": "replayJob",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "JobsController.show",
+            "operationId": "showJob",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "OperationsController.diagnostics",
+            "operationId": "getOperationsDiagnostics",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "OperationsController.health",
+            "operationId": "getOperationsHealth",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "SaasController.seedDemo",
+            "operationId": "seedSaasDemo",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "SaasController.smokeDemo",
+            "operationId": "smokeSaasDemo",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          }
+        ],
+        "diagnostics": []
+      },
+      {
+        "consumerId": "rpc-client",
+        "label": "RPC fetch client",
+        "generatedArtifact": "provider-rpc client files",
+        "routeCount": 9,
+        "requiredRouteFields": [
+          "routeId",
+          "operationId",
+          "httpMethod",
+          "path",
+          "request.body",
+          "request.path",
+          "request.query",
+          "request.headers",
+          "response",
+          "problems"
+        ],
+        "unsupportedRouteFields": [
+          "access.guards",
+          "access.roles",
+          "entitlements"
+        ],
+        "routes": [
+          {
+            "routeId": "JobsController.cancel",
+            "operationId": "cancelJob",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "JobsController.list",
+            "operationId": "listJobs",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "JobsController.logs",
+            "operationId": "listJobLogs",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "JobsController.replay",
+            "operationId": "replayJob",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "JobsController.show",
+            "operationId": "showJob",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "OperationsController.diagnostics",
+            "operationId": "getOperationsDiagnostics",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "OperationsController.health",
+            "operationId": "getOperationsHealth",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "SaasController.seedDemo",
+            "operationId": "seedSaasDemo",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "SaasController.smokeDemo",
+            "operationId": "smokeSaasDemo",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          }
+        ],
+        "diagnostics": []
+      }
+    ],
+    "diagnostics": []
+  },
+  "controllers": [
+    {
+      "name": "JobsController",
+      "path": "/ops/jobs",
+      "guards": [],
+      "roles": [],
+      "routeIds": [
+        "JobsController.cancel",
+        "JobsController.list",
+        "JobsController.logs",
+        "JobsController.replay",
+        "JobsController.show"
+      ]
+    },
+    {
+      "name": "OperationsController",
+      "path": "/ops",
+      "guards": [],
+      "roles": [],
+      "routeIds": [
+        "OperationsController.diagnostics",
+        "OperationsController.health"
+      ]
+    },
+    {
+      "name": "SaasController",
+      "path": "/saas",
+      "guards": [],
+      "roles": [],
+      "routeIds": [
+        "SaasController.seedDemo",
+        "SaasController.smokeDemo"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "routeId": "JobsController.cancel",
+      "operationId": "cancelJob",
+      "controllerName": "JobsController",
+      "methodName": "cancel",
+      "httpMethod": "POST",
+      "path": "/ops/jobs/:id/cancel",
+      "controllerPath": "/ops/jobs",
+      "domain": null,
+      "routeContract": {
+        "id": "jobs.cancel",
+        "method": "POST",
+        "path": "/ops/jobs/:id/cancel",
+        "operationId": "cancelJob"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "path",
+          "name": "id",
+          "schema": {
+            "kind": "string",
+            "typeName": "ZodString",
+            "jsonSafe": true
+          }
+        },
+        {
+          "kind": "body",
+          "name": "",
+          "schema": {
+            "kind": "object",
+            "typeName": "ZodObject",
+            "jsonSafe": true,
+            "fields": [
+              {
+                "name": "reason",
+                "required": false,
+                "schema": {
+                  "kind": "optional",
+                  "typeName": "ZodOptional",
+                  "jsonSafe": true,
+                  "inner": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "request": {
+        "body": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "reason",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            }
+          ]
+        },
+        "path": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "id",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        },
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "attempts",
+            "required": true,
+            "schema": {
+              "kind": "number",
+              "typeName": "ZodNumber",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "checkpoints",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "record",
+                "typeName": "ZodRecord",
+                "jsonSafe": true,
+                "element": {
+                  "kind": "unknown",
+                  "typeName": "ZodUnknown",
+                  "jsonSafe": true
+                }
+              }
+            }
+          },
+          {
+            "name": "completedAt",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "createdAt",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "error",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "unknown",
+                "typeName": "ZodUnknown",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "errorMessage",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "failurePolicy",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "needsAttention",
+                  "required": true,
+                  "schema": {
+                    "kind": "boolean",
+                    "typeName": "ZodBoolean",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "reason",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "recoveryAction",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "replayable",
+                  "required": true,
+                  "schema": {
+                    "kind": "boolean",
+                    "typeName": "ZodBoolean",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "retryable",
+                  "required": true,
+                  "schema": {
+                    "kind": "boolean",
+                    "typeName": "ZodBoolean",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "state",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "logCount",
+            "required": true,
+            "schema": {
+              "kind": "number",
+              "typeName": "ZodNumber",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "logs",
+            "required": true,
+            "schema": {
+              "kind": "array",
+              "typeName": "ZodArray",
+              "jsonSafe": true,
+              "element": {
+                "kind": "object",
+                "typeName": "ZodObject",
+                "jsonSafe": true,
+                "fields": [
+                  {
+                    "name": "data",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "record",
+                        "typeName": "ZodRecord",
+                        "jsonSafe": true,
+                        "element": {
+                          "kind": "unknown",
+                          "typeName": "ZodUnknown",
+                          "jsonSafe": true
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "name": "level",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "message",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "timestamp",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "maxAttempts",
+            "required": true,
+            "schema": {
+              "kind": "number",
+              "typeName": "ZodNumber",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "metadata",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "record",
+                "typeName": "ZodRecord",
+                "jsonSafe": true,
+                "element": {
+                  "kind": "unknown",
+                  "typeName": "ZodUnknown",
+                  "jsonSafe": true
+                }
+              }
+            }
+          },
+          {
+            "name": "payload",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "unknown",
+                "typeName": "ZodUnknown",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "progress",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "unknown",
+                "typeName": "ZodUnknown",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "replayOf",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "result",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "unknown",
+                "typeName": "ZodUnknown",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "startedAt",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "status",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "type",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "workflowName",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          }
+        ]
+      },
+      "problems": [
+        {
+          "code": "saas-demo/job-not-found",
+          "category": "NotFound",
+          "status": 404,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#saas-demo-job-not-found",
+          "description": "The requested job does not exist."
+        }
+      ]
+    },
+    {
+      "routeId": "JobsController.list",
+      "operationId": "listJobs",
+      "controllerName": "JobsController",
+      "methodName": "list",
+      "httpMethod": "GET",
+      "path": "/ops/jobs",
+      "controllerPath": "/ops/jobs",
+      "domain": null,
+      "routeContract": {
+        "id": "jobs.list",
+        "method": "GET",
+        "path": "/ops/jobs",
+        "operationId": "listJobs"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "query",
+          "name": "status",
+          "schema": {
+            "kind": "optional",
+            "typeName": "ZodOptional",
+            "jsonSafe": true,
+            "inner": {
+              "kind": "enum",
+              "typeName": "ZodEnum",
+              "jsonSafe": true,
+              "values": [
+                "",
+                "cancelled",
+                "completed",
+                "failed",
+                "pending",
+                "retrying",
+                "running",
+                "timed_out"
+              ]
+            }
+          }
+        },
+        {
+          "kind": "query",
+          "name": "type",
+          "schema": {
+            "kind": "optional",
+            "typeName": "ZodOptional",
+            "jsonSafe": true,
+            "inner": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          }
+        },
+        {
+          "kind": "query",
+          "name": "replayOf",
+          "schema": {
+            "kind": "optional",
+            "typeName": "ZodOptional",
+            "jsonSafe": true,
+            "inner": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          }
+        },
+        {
+          "kind": "query",
+          "name": "limit",
+          "schema": {
+            "kind": "optional",
+            "typeName": "ZodOptional",
+            "jsonSafe": true,
+            "inner": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          }
+        },
+        {
+          "kind": "query",
+          "name": "offset",
+          "schema": {
+            "kind": "optional",
+            "typeName": "ZodOptional",
+            "jsonSafe": true,
+            "inner": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          }
+        }
+      ],
+      "request": {
+        "body": null,
+        "path": null,
+        "query": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "limit",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            },
+            {
+              "name": "offset",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            },
+            {
+              "name": "replayOf",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            },
+            {
+              "name": "status",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "enum",
+                  "typeName": "ZodEnum",
+                  "jsonSafe": true,
+                  "values": [
+                    "",
+                    "cancelled",
+                    "completed",
+                    "failed",
+                    "pending",
+                    "retrying",
+                    "running",
+                    "timed_out"
+                  ]
+                }
+              }
+            },
+            {
+              "name": "type",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            }
+          ]
+        },
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "attentionCount",
+            "required": true,
+            "schema": {
+              "kind": "number",
+              "typeName": "ZodNumber",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "generatedAt",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "jobs",
+            "required": true,
+            "schema": {
+              "kind": "array",
+              "typeName": "ZodArray",
+              "jsonSafe": true,
+              "element": {
+                "kind": "object",
+                "typeName": "ZodObject",
+                "jsonSafe": true,
+                "fields": [
+                  {
+                    "name": "attempts",
+                    "required": true,
+                    "schema": {
+                      "kind": "number",
+                      "typeName": "ZodNumber",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "completedAt",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    }
+                  },
+                  {
+                    "name": "createdAt",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "errorMessage",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    }
+                  },
+                  {
+                    "name": "failurePolicy",
+                    "required": true,
+                    "schema": {
+                      "kind": "object",
+                      "typeName": "ZodObject",
+                      "jsonSafe": true,
+                      "fields": [
+                        {
+                          "name": "needsAttention",
+                          "required": true,
+                          "schema": {
+                            "kind": "boolean",
+                            "typeName": "ZodBoolean",
+                            "jsonSafe": true
+                          }
+                        },
+                        {
+                          "name": "reason",
+                          "required": true,
+                          "schema": {
+                            "kind": "string",
+                            "typeName": "ZodString",
+                            "jsonSafe": true
+                          }
+                        },
+                        {
+                          "name": "recoveryAction",
+                          "required": true,
+                          "schema": {
+                            "kind": "string",
+                            "typeName": "ZodString",
+                            "jsonSafe": true
+                          }
+                        },
+                        {
+                          "name": "replayable",
+                          "required": true,
+                          "schema": {
+                            "kind": "boolean",
+                            "typeName": "ZodBoolean",
+                            "jsonSafe": true
+                          }
+                        },
+                        {
+                          "name": "retryable",
+                          "required": true,
+                          "schema": {
+                            "kind": "boolean",
+                            "typeName": "ZodBoolean",
+                            "jsonSafe": true
+                          }
+                        },
+                        {
+                          "name": "state",
+                          "required": true,
+                          "schema": {
+                            "kind": "string",
+                            "typeName": "ZodString",
+                            "jsonSafe": true
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "name": "id",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "logCount",
+                    "required": true,
+                    "schema": {
+                      "kind": "number",
+                      "typeName": "ZodNumber",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "maxAttempts",
+                    "required": true,
+                    "schema": {
+                      "kind": "number",
+                      "typeName": "ZodNumber",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "replayOf",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    }
+                  },
+                  {
+                    "name": "startedAt",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    }
+                  },
+                  {
+                    "name": "status",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "type",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "workflowName",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "summary",
+            "required": true,
+            "schema": {
+              "kind": "enum",
+              "typeName": "ZodEnum",
+              "jsonSafe": true,
+              "values": [
+                "attention",
+                "healthy"
+              ]
+            }
+          },
+          {
+            "name": "total",
+            "required": true,
+            "schema": {
+              "kind": "number",
+              "typeName": "ZodNumber",
+              "jsonSafe": true
+            }
+          }
+        ]
+      },
+      "problems": [
+        {
+          "code": "protocols-rest/request-validation-failed",
+          "category": "ValidationError",
+          "status": 422,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#protocols-rest-request-validation-failed",
+          "description": "A request parameter does not satisfy the route contract."
+        },
+        {
+          "code": "saas-demo/invalid-jobs-query",
+          "category": "ValidationError",
+          "status": 422,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#saas-demo-invalid-jobs-query",
+          "description": "A jobs query parameter is invalid."
+        }
+      ]
+    },
+    {
+      "routeId": "JobsController.logs",
+      "operationId": "listJobLogs",
+      "controllerName": "JobsController",
+      "methodName": "logs",
+      "httpMethod": "GET",
+      "path": "/ops/jobs/:id/logs",
+      "controllerPath": "/ops/jobs",
+      "domain": null,
+      "routeContract": {
+        "id": "jobs.logs",
+        "method": "GET",
+        "path": "/ops/jobs/:id/logs",
+        "operationId": "listJobLogs"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "path",
+          "name": "id",
+          "schema": {
+            "kind": "string",
+            "typeName": "ZodString",
+            "jsonSafe": true
+          }
+        }
+      ],
+      "request": {
+        "body": null,
+        "path": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "id",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        },
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "array",
+        "typeName": "ZodArray",
+        "jsonSafe": true,
+        "element": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "data",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "record",
+                  "typeName": "ZodRecord",
+                  "jsonSafe": true,
+                  "element": {
+                    "kind": "unknown",
+                    "typeName": "ZodUnknown",
+                    "jsonSafe": true
+                  }
+                }
+              }
+            },
+            {
+              "name": "level",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "message",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "timestamp",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        }
+      },
+      "problems": [
+        {
+          "code": "saas-demo/job-not-found",
+          "category": "NotFound",
+          "status": 404,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#saas-demo-job-not-found",
+          "description": "The requested job does not exist."
+        }
+      ]
+    },
+    {
+      "routeId": "JobsController.replay",
+      "operationId": "replayJob",
+      "controllerName": "JobsController",
+      "methodName": "replay",
+      "httpMethod": "POST",
+      "path": "/ops/jobs/:id/replay",
+      "controllerPath": "/ops/jobs",
+      "domain": null,
+      "routeContract": {
+        "id": "jobs.replay",
+        "method": "POST",
+        "path": "/ops/jobs/:id/replay",
+        "operationId": "replayJob"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "path",
+          "name": "id",
+          "schema": {
+            "kind": "string",
+            "typeName": "ZodString",
+            "jsonSafe": true
+          }
+        },
+        {
+          "kind": "body",
+          "name": "",
+          "schema": {
+            "kind": "object",
+            "typeName": "ZodObject",
+            "jsonSafe": true,
+            "fields": [
+              {
+                "name": "reason",
+                "required": false,
+                "schema": {
+                  "kind": "optional",
+                  "typeName": "ZodOptional",
+                  "jsonSafe": true,
+                  "inner": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "request": {
+        "body": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "reason",
+              "required": false,
+              "schema": {
+                "kind": "optional",
+                "typeName": "ZodOptional",
+                "jsonSafe": true,
+                "inner": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            }
+          ]
+        },
+        "path": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "id",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        },
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "attempts",
+            "required": true,
+            "schema": {
+              "kind": "number",
+              "typeName": "ZodNumber",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "checkpoints",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "record",
+                "typeName": "ZodRecord",
+                "jsonSafe": true,
+                "element": {
+                  "kind": "unknown",
+                  "typeName": "ZodUnknown",
+                  "jsonSafe": true
+                }
+              }
+            }
+          },
+          {
+            "name": "completedAt",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "createdAt",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "error",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "unknown",
+                "typeName": "ZodUnknown",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "errorMessage",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "failurePolicy",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "needsAttention",
+                  "required": true,
+                  "schema": {
+                    "kind": "boolean",
+                    "typeName": "ZodBoolean",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "reason",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "recoveryAction",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "replayable",
+                  "required": true,
+                  "schema": {
+                    "kind": "boolean",
+                    "typeName": "ZodBoolean",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "retryable",
+                  "required": true,
+                  "schema": {
+                    "kind": "boolean",
+                    "typeName": "ZodBoolean",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "state",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "logCount",
+            "required": true,
+            "schema": {
+              "kind": "number",
+              "typeName": "ZodNumber",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "logs",
+            "required": true,
+            "schema": {
+              "kind": "array",
+              "typeName": "ZodArray",
+              "jsonSafe": true,
+              "element": {
+                "kind": "object",
+                "typeName": "ZodObject",
+                "jsonSafe": true,
+                "fields": [
+                  {
+                    "name": "data",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "record",
+                        "typeName": "ZodRecord",
+                        "jsonSafe": true,
+                        "element": {
+                          "kind": "unknown",
+                          "typeName": "ZodUnknown",
+                          "jsonSafe": true
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "name": "level",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "message",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "timestamp",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "maxAttempts",
+            "required": true,
+            "schema": {
+              "kind": "number",
+              "typeName": "ZodNumber",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "metadata",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "record",
+                "typeName": "ZodRecord",
+                "jsonSafe": true,
+                "element": {
+                  "kind": "unknown",
+                  "typeName": "ZodUnknown",
+                  "jsonSafe": true
+                }
+              }
+            }
+          },
+          {
+            "name": "payload",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "unknown",
+                "typeName": "ZodUnknown",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "progress",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "unknown",
+                "typeName": "ZodUnknown",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "replayOf",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "result",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "unknown",
+                "typeName": "ZodUnknown",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "startedAt",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "status",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "type",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "workflowName",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          }
+        ]
+      },
+      "problems": [
+        {
+          "code": "saas-demo/job-not-found",
+          "category": "NotFound",
+          "status": 404,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#saas-demo-job-not-found",
+          "description": "The requested job does not exist."
+        }
+      ]
+    },
+    {
+      "routeId": "JobsController.show",
+      "operationId": "showJob",
+      "controllerName": "JobsController",
+      "methodName": "show",
+      "httpMethod": "GET",
+      "path": "/ops/jobs/:id",
+      "controllerPath": "/ops/jobs",
+      "domain": null,
+      "routeContract": {
+        "id": "jobs.show",
+        "method": "GET",
+        "path": "/ops/jobs/:id",
+        "operationId": "showJob"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "path",
+          "name": "id",
+          "schema": {
+            "kind": "string",
+            "typeName": "ZodString",
+            "jsonSafe": true
+          }
+        }
+      ],
+      "request": {
+        "body": null,
+        "path": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "id",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        },
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "attempts",
+            "required": true,
+            "schema": {
+              "kind": "number",
+              "typeName": "ZodNumber",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "checkpoints",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "record",
+                "typeName": "ZodRecord",
+                "jsonSafe": true,
+                "element": {
+                  "kind": "unknown",
+                  "typeName": "ZodUnknown",
+                  "jsonSafe": true
+                }
+              }
+            }
+          },
+          {
+            "name": "completedAt",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "createdAt",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "error",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "unknown",
+                "typeName": "ZodUnknown",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "errorMessage",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "failurePolicy",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "needsAttention",
+                  "required": true,
+                  "schema": {
+                    "kind": "boolean",
+                    "typeName": "ZodBoolean",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "reason",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "recoveryAction",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "replayable",
+                  "required": true,
+                  "schema": {
+                    "kind": "boolean",
+                    "typeName": "ZodBoolean",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "retryable",
+                  "required": true,
+                  "schema": {
+                    "kind": "boolean",
+                    "typeName": "ZodBoolean",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "state",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "logCount",
+            "required": true,
+            "schema": {
+              "kind": "number",
+              "typeName": "ZodNumber",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "logs",
+            "required": true,
+            "schema": {
+              "kind": "array",
+              "typeName": "ZodArray",
+              "jsonSafe": true,
+              "element": {
+                "kind": "object",
+                "typeName": "ZodObject",
+                "jsonSafe": true,
+                "fields": [
+                  {
+                    "name": "data",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "record",
+                        "typeName": "ZodRecord",
+                        "jsonSafe": true,
+                        "element": {
+                          "kind": "unknown",
+                          "typeName": "ZodUnknown",
+                          "jsonSafe": true
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "name": "level",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "message",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "timestamp",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "maxAttempts",
+            "required": true,
+            "schema": {
+              "kind": "number",
+              "typeName": "ZodNumber",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "metadata",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "record",
+                "typeName": "ZodRecord",
+                "jsonSafe": true,
+                "element": {
+                  "kind": "unknown",
+                  "typeName": "ZodUnknown",
+                  "jsonSafe": true
+                }
+              }
+            }
+          },
+          {
+            "name": "payload",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "unknown",
+                "typeName": "ZodUnknown",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "progress",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "unknown",
+                "typeName": "ZodUnknown",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "replayOf",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "result",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "unknown",
+                "typeName": "ZodUnknown",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "startedAt",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          },
+          {
+            "name": "status",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "type",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "workflowName",
+            "required": false,
+            "schema": {
+              "kind": "optional",
+              "typeName": "ZodOptional",
+              "jsonSafe": true,
+              "inner": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          }
+        ]
+      },
+      "problems": [
+        {
+          "code": "saas-demo/job-not-found",
+          "category": "NotFound",
+          "status": 404,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#saas-demo-job-not-found",
+          "description": "The requested job does not exist."
+        }
+      ]
+    },
+    {
+      "routeId": "OperationsController.diagnostics",
+      "operationId": "getOperationsDiagnostics",
+      "controllerName": "OperationsController",
+      "methodName": "diagnostics",
+      "httpMethod": "GET",
+      "path": "/ops/diagnostics",
+      "controllerPath": "/ops",
+      "domain": null,
+      "routeContract": {
+        "id": "operations.diagnostics",
+        "method": "GET",
+        "path": "/ops/diagnostics",
+        "operationId": "getOperationsDiagnostics"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [],
+      "request": {
+        "body": null,
+        "path": null,
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "components",
+            "required": true,
+            "schema": {
+              "kind": "array",
+              "typeName": "ZodArray",
+              "jsonSafe": true,
+              "element": {
+                "kind": "object",
+                "typeName": "ZodObject",
+                "jsonSafe": true,
+                "fields": [
+                  {
+                    "name": "component",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "details",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "record",
+                        "typeName": "ZodRecord",
+                        "jsonSafe": true,
+                        "element": {
+                          "kind": "unknown",
+                          "typeName": "ZodUnknown",
+                          "jsonSafe": true
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "name": "lastChecked",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "message",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    }
+                  },
+                  {
+                    "name": "status",
+                    "required": true,
+                    "schema": {
+                      "kind": "enum",
+                      "typeName": "ZodEnum",
+                      "jsonSafe": true,
+                      "values": [
+                        "degraded",
+                        "healthy",
+                        "unhealthy"
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "recentErrors",
+            "required": true,
+            "schema": {
+              "kind": "array",
+              "typeName": "ZodArray",
+              "jsonSafe": true,
+              "element": {
+                "kind": "object",
+                "typeName": "ZodObject",
+                "jsonSafe": true,
+                "fields": [
+                  {
+                    "name": "cause",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "string",
+                        "typeName": "ZodString",
+                        "jsonSafe": true
+                      }
+                    }
+                  },
+                  {
+                    "name": "code",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "component",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "message",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "timestamp",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "summary",
+            "required": true,
+            "schema": {
+              "kind": "enum",
+              "typeName": "ZodEnum",
+              "jsonSafe": true,
+              "values": [
+                "all_healthy",
+                "degraded",
+                "issues_detected"
+              ]
+            }
+          },
+          {
+            "name": "timestamp",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          }
+        ]
+      },
+      "problems": []
+    },
+    {
+      "routeId": "OperationsController.health",
+      "operationId": "getOperationsHealth",
+      "controllerName": "OperationsController",
+      "methodName": "health",
+      "httpMethod": "GET",
+      "path": "/ops/health",
+      "controllerPath": "/ops",
+      "domain": null,
+      "routeContract": {
+        "id": "operations.health",
+        "method": "GET",
+        "path": "/ops/health",
+        "operationId": "getOperationsHealth"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [],
+      "request": {
+        "body": null,
+        "path": null,
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "results",
+            "required": true,
+            "schema": {
+              "kind": "array",
+              "typeName": "ZodArray",
+              "jsonSafe": true,
+              "element": {
+                "kind": "object",
+                "typeName": "ZodObject",
+                "jsonSafe": true,
+                "fields": [
+                  {
+                    "name": "details",
+                    "required": false,
+                    "schema": {
+                      "kind": "optional",
+                      "typeName": "ZodOptional",
+                      "jsonSafe": true,
+                      "inner": {
+                        "kind": "record",
+                        "typeName": "ZodRecord",
+                        "jsonSafe": true,
+                        "element": {
+                          "kind": "unknown",
+                          "typeName": "ZodUnknown",
+                          "jsonSafe": true
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "name": "name",
+                    "required": true,
+                    "schema": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  },
+                  {
+                    "name": "status",
+                    "required": true,
+                    "schema": {
+                      "kind": "enum",
+                      "typeName": "ZodEnum",
+                      "jsonSafe": true,
+                      "values": [
+                        "down",
+                        "up"
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "status",
+            "required": true,
+            "schema": {
+              "kind": "enum",
+              "typeName": "ZodEnum",
+              "jsonSafe": true,
+              "values": [
+                "down",
+                "up"
+              ]
+            }
+          }
+        ]
+      },
+      "problems": []
+    },
+    {
+      "routeId": "SaasController.seedDemo",
+      "operationId": "seedSaasDemo",
+      "controllerName": "SaasController",
+      "methodName": "seedDemo",
+      "httpMethod": "POST",
+      "path": "/saas/demo/seed",
+      "controllerPath": "/saas",
+      "domain": null,
+      "routeContract": {
+        "id": "saas.demo.seed",
+        "method": "POST",
+        "path": "/saas/demo/seed",
+        "operationId": "seedSaasDemo"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [],
+      "request": {
+        "body": null,
+        "path": null,
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "access",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "allowed",
+                  "required": true,
+                  "schema": {
+                    "kind": "boolean",
+                    "typeName": "ZodBoolean",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "object",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "relation",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "ai",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "completionTokens",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "costUsd",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "modelId",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "promptQuota",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "promptTokens",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "promptUsage",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "provider",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "quotaFailureCode",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "responseText",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "totalTokens",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "auth",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "allowed",
+                  "required": true,
+                  "schema": {
+                    "kind": "boolean",
+                    "typeName": "ZodBoolean",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "permission",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "roles",
+                  "required": true,
+                  "schema": {
+                    "kind": "array",
+                    "typeName": "ZodArray",
+                    "jsonSafe": true,
+                    "element": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  }
+                },
+                {
+                  "name": "sessionId",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "userId",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "billing",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "checkoutUrl",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "entitlementPlanId",
+                  "required": true,
+                  "schema": {
+                    "kind": "nullable",
+                    "typeName": "ZodNullable",
+                    "jsonSafe": true,
+                    "inner": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  }
+                },
+                {
+                  "name": "mockEvent",
+                  "required": true,
+                  "schema": {
+                    "kind": "object",
+                    "typeName": "ZodObject",
+                    "jsonSafe": true,
+                    "fields": [
+                      {
+                        "name": "duplicateFailureCode",
+                        "required": true,
+                        "schema": {
+                          "kind": "string",
+                          "typeName": "ZodString",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "eventId",
+                        "required": true,
+                        "schema": {
+                          "kind": "string",
+                          "typeName": "ZodString",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "eventType",
+                        "required": true,
+                        "schema": {
+                          "kind": "string",
+                          "typeName": "ZodString",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "externalSubscriptionId",
+                        "required": true,
+                        "schema": {
+                          "kind": "string",
+                          "typeName": "ZodString",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "planVersionRef",
+                        "required": true,
+                        "schema": {
+                          "kind": "string",
+                          "typeName": "ZodString",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "processedStatus",
+                        "required": true,
+                        "schema": {
+                          "kind": "literal",
+                          "typeName": "ZodLiteral",
+                          "jsonSafe": true,
+                          "value": "completed"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "name": "subscriptionStatus",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "contract",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "providerProfile",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "version",
+                  "required": true,
+                  "schema": {
+                    "kind": "literal",
+                    "typeName": "ZodLiteral",
+                    "jsonSafe": true,
+                    "value": "saas-smoke-contract/v1"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "entitlement",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "featureKey",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "granted",
+                  "required": true,
+                  "schema": {
+                    "kind": "boolean",
+                    "typeName": "ZodBoolean",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "planId",
+                  "required": false,
+                  "schema": {
+                    "kind": "optional",
+                    "typeName": "ZodOptional",
+                    "jsonSafe": true,
+                    "inner": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  }
+                },
+                {
+                  "name": "quota",
+                  "required": false,
+                  "schema": {
+                    "kind": "optional",
+                    "typeName": "ZodOptional",
+                    "jsonSafe": true,
+                    "inner": {
+                      "kind": "number",
+                      "typeName": "ZodNumber",
+                      "jsonSafe": true
+                    }
+                  }
+                },
+                {
+                  "name": "remaining",
+                  "required": false,
+                  "schema": {
+                    "kind": "optional",
+                    "typeName": "ZodOptional",
+                    "jsonSafe": true,
+                    "inner": {
+                      "kind": "number",
+                      "typeName": "ZodNumber",
+                      "jsonSafe": true
+                    }
+                  }
+                },
+                {
+                  "name": "usage",
+                  "required": false,
+                  "schema": {
+                    "kind": "optional",
+                    "typeName": "ZodOptional",
+                    "jsonSafe": true,
+                    "inner": {
+                      "kind": "number",
+                      "typeName": "ZodNumber",
+                      "jsonSafe": true
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "invitation",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "invitedUserId",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "status",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "jobs",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "failurePolicyState",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "id",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "logCount",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "status",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "type",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "lifecycle",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "duplicateRunStatus",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "duplicateSkipReason",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "emittedActionCount",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "emittedActionType",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "firstRunStatus",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "ruleId",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "visibleRunCount",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "membership",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "memberCount",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "memberRole",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "ownerRole",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "seatLimit",
+                  "required": true,
+                  "schema": {
+                    "kind": "object",
+                    "typeName": "ZodObject",
+                    "jsonSafe": true,
+                    "fields": [
+                      {
+                        "name": "exceeded",
+                        "required": true,
+                        "schema": {
+                          "kind": "boolean",
+                          "typeName": "ZodBoolean",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "failureCode",
+                        "required": true,
+                        "schema": {
+                          "kind": "string",
+                          "typeName": "ZodString",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "quota",
+                        "required": true,
+                        "schema": {
+                          "kind": "number",
+                          "typeName": "ZodNumber",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "rejectedUserId",
+                        "required": true,
+                        "schema": {
+                          "kind": "string",
+                          "typeName": "ZodString",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "remaining",
+                        "required": true,
+                        "schema": {
+                          "kind": "number",
+                          "typeName": "ZodNumber",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "usage",
+                        "required": true,
+                        "schema": {
+                          "kind": "number",
+                          "typeName": "ZodNumber",
+                          "jsonSafe": true
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "metering",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "currentUsage",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "meterId",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "recordedValue",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "operations",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "diagnosticsSummary",
+                  "required": true,
+                  "schema": {
+                    "kind": "enum",
+                    "typeName": "ZodEnum",
+                    "jsonSafe": true,
+                    "values": [
+                      "all_healthy",
+                      "degraded",
+                      "issues_detected"
+                    ]
+                  }
+                },
+                {
+                  "name": "healthStatus",
+                  "required": true,
+                  "schema": {
+                    "kind": "enum",
+                    "typeName": "ZodEnum",
+                    "jsonSafe": true,
+                    "values": [
+                      "down",
+                      "up"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "tenant",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "id",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "name",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "slug",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "status",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "problems": [
+        {
+          "code": "saas-demo/demo-endpoint-disabled",
+          "category": "Forbidden",
+          "status": 403,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#saas-demo-demo-endpoint-disabled",
+          "description": "Demo endpoints are disabled for this environment."
+        },
+        {
+          "code": "saas-demo/smoke-failed",
+          "category": "InternalServerError",
+          "status": 500,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#saas-demo-smoke-failed",
+          "description": "The SaaS demo smoke flow failed."
+        },
+        {
+          "code": "saas-demo/tenant-already-exists",
+          "category": "Conflict",
+          "status": 409,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#saas-demo-tenant-already-exists",
+          "description": "The demo tenant already exists."
+        },
+        {
+          "code": "saas-demo/tenant-not-found",
+          "category": "NotFound",
+          "status": 404,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#saas-demo-tenant-not-found",
+          "description": "The requested tenant does not exist."
+        }
+      ]
+    },
+    {
+      "routeId": "SaasController.smokeDemo",
+      "operationId": "smokeSaasDemo",
+      "controllerName": "SaasController",
+      "methodName": "smokeDemo",
+      "httpMethod": "GET",
+      "path": "/saas/demo/smoke",
+      "controllerPath": "/saas",
+      "domain": null,
+      "routeContract": {
+        "id": "saas.demo.smoke",
+        "method": "GET",
+        "path": "/saas/demo/smoke",
+        "operationId": "smokeSaasDemo"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [],
+      "request": {
+        "body": null,
+        "path": null,
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "access",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "allowed",
+                  "required": true,
+                  "schema": {
+                    "kind": "boolean",
+                    "typeName": "ZodBoolean",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "object",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "relation",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "ai",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "completionTokens",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "costUsd",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "modelId",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "promptQuota",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "promptTokens",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "promptUsage",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "provider",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "quotaFailureCode",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "responseText",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "totalTokens",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "auth",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "allowed",
+                  "required": true,
+                  "schema": {
+                    "kind": "boolean",
+                    "typeName": "ZodBoolean",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "permission",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "roles",
+                  "required": true,
+                  "schema": {
+                    "kind": "array",
+                    "typeName": "ZodArray",
+                    "jsonSafe": true,
+                    "element": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  }
+                },
+                {
+                  "name": "sessionId",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "userId",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "billing",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "checkoutUrl",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "entitlementPlanId",
+                  "required": true,
+                  "schema": {
+                    "kind": "nullable",
+                    "typeName": "ZodNullable",
+                    "jsonSafe": true,
+                    "inner": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  }
+                },
+                {
+                  "name": "mockEvent",
+                  "required": true,
+                  "schema": {
+                    "kind": "object",
+                    "typeName": "ZodObject",
+                    "jsonSafe": true,
+                    "fields": [
+                      {
+                        "name": "duplicateFailureCode",
+                        "required": true,
+                        "schema": {
+                          "kind": "string",
+                          "typeName": "ZodString",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "eventId",
+                        "required": true,
+                        "schema": {
+                          "kind": "string",
+                          "typeName": "ZodString",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "eventType",
+                        "required": true,
+                        "schema": {
+                          "kind": "string",
+                          "typeName": "ZodString",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "externalSubscriptionId",
+                        "required": true,
+                        "schema": {
+                          "kind": "string",
+                          "typeName": "ZodString",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "planVersionRef",
+                        "required": true,
+                        "schema": {
+                          "kind": "string",
+                          "typeName": "ZodString",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "processedStatus",
+                        "required": true,
+                        "schema": {
+                          "kind": "literal",
+                          "typeName": "ZodLiteral",
+                          "jsonSafe": true,
+                          "value": "completed"
+                        }
+                      }
+                    ]
+                  }
+                },
+                {
+                  "name": "subscriptionStatus",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "contract",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "providerProfile",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "version",
+                  "required": true,
+                  "schema": {
+                    "kind": "literal",
+                    "typeName": "ZodLiteral",
+                    "jsonSafe": true,
+                    "value": "saas-smoke-contract/v1"
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "entitlement",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "featureKey",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "granted",
+                  "required": true,
+                  "schema": {
+                    "kind": "boolean",
+                    "typeName": "ZodBoolean",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "planId",
+                  "required": false,
+                  "schema": {
+                    "kind": "optional",
+                    "typeName": "ZodOptional",
+                    "jsonSafe": true,
+                    "inner": {
+                      "kind": "string",
+                      "typeName": "ZodString",
+                      "jsonSafe": true
+                    }
+                  }
+                },
+                {
+                  "name": "quota",
+                  "required": false,
+                  "schema": {
+                    "kind": "optional",
+                    "typeName": "ZodOptional",
+                    "jsonSafe": true,
+                    "inner": {
+                      "kind": "number",
+                      "typeName": "ZodNumber",
+                      "jsonSafe": true
+                    }
+                  }
+                },
+                {
+                  "name": "remaining",
+                  "required": false,
+                  "schema": {
+                    "kind": "optional",
+                    "typeName": "ZodOptional",
+                    "jsonSafe": true,
+                    "inner": {
+                      "kind": "number",
+                      "typeName": "ZodNumber",
+                      "jsonSafe": true
+                    }
+                  }
+                },
+                {
+                  "name": "usage",
+                  "required": false,
+                  "schema": {
+                    "kind": "optional",
+                    "typeName": "ZodOptional",
+                    "jsonSafe": true,
+                    "inner": {
+                      "kind": "number",
+                      "typeName": "ZodNumber",
+                      "jsonSafe": true
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "invitation",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "invitedUserId",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "status",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "jobs",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "failurePolicyState",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "id",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "logCount",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "status",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "type",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "lifecycle",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "duplicateRunStatus",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "duplicateSkipReason",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "emittedActionCount",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "emittedActionType",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "firstRunStatus",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "ruleId",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "visibleRunCount",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "membership",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "memberCount",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "memberRole",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "ownerRole",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "seatLimit",
+                  "required": true,
+                  "schema": {
+                    "kind": "object",
+                    "typeName": "ZodObject",
+                    "jsonSafe": true,
+                    "fields": [
+                      {
+                        "name": "exceeded",
+                        "required": true,
+                        "schema": {
+                          "kind": "boolean",
+                          "typeName": "ZodBoolean",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "failureCode",
+                        "required": true,
+                        "schema": {
+                          "kind": "string",
+                          "typeName": "ZodString",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "quota",
+                        "required": true,
+                        "schema": {
+                          "kind": "number",
+                          "typeName": "ZodNumber",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "rejectedUserId",
+                        "required": true,
+                        "schema": {
+                          "kind": "string",
+                          "typeName": "ZodString",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "remaining",
+                        "required": true,
+                        "schema": {
+                          "kind": "number",
+                          "typeName": "ZodNumber",
+                          "jsonSafe": true
+                        }
+                      },
+                      {
+                        "name": "usage",
+                        "required": true,
+                        "schema": {
+                          "kind": "number",
+                          "typeName": "ZodNumber",
+                          "jsonSafe": true
+                        }
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "metering",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "currentUsage",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "meterId",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "recordedValue",
+                  "required": true,
+                  "schema": {
+                    "kind": "number",
+                    "typeName": "ZodNumber",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "operations",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "diagnosticsSummary",
+                  "required": true,
+                  "schema": {
+                    "kind": "enum",
+                    "typeName": "ZodEnum",
+                    "jsonSafe": true,
+                    "values": [
+                      "all_healthy",
+                      "degraded",
+                      "issues_detected"
+                    ]
+                  }
+                },
+                {
+                  "name": "healthStatus",
+                  "required": true,
+                  "schema": {
+                    "kind": "enum",
+                    "typeName": "ZodEnum",
+                    "jsonSafe": true,
+                    "values": [
+                      "down",
+                      "up"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "name": "tenant",
+            "required": true,
+            "schema": {
+              "kind": "object",
+              "typeName": "ZodObject",
+              "jsonSafe": true,
+              "fields": [
+                {
+                  "name": "id",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "name",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "slug",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                },
+                {
+                  "name": "status",
+                  "required": true,
+                  "schema": {
+                    "kind": "string",
+                    "typeName": "ZodString",
+                    "jsonSafe": true
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      "problems": [
+        {
+          "code": "saas-demo/demo-endpoint-disabled",
+          "category": "Forbidden",
+          "status": 403,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#saas-demo-demo-endpoint-disabled",
+          "description": "Demo endpoints are disabled for this environment."
+        },
+        {
+          "code": "saas-demo/smoke-failed",
+          "category": "InternalServerError",
+          "status": 500,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#saas-demo-smoke-failed",
+          "description": "The SaaS demo smoke flow failed."
+        },
+        {
+          "code": "saas-demo/tenant-already-exists",
+          "category": "Conflict",
+          "status": 409,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#saas-demo-tenant-already-exists",
+          "description": "The demo tenant already exists."
+        },
+        {
+          "code": "saas-demo/tenant-not-found",
+          "category": "NotFound",
+          "status": 404,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#saas-demo-tenant-not-found",
+          "description": "The requested tenant does not exist."
+        }
+      ]
+    }
+  ],
+  "monetization": {
+    "verification": {
+      "mode": "credential-free-structural",
+      "remoteProviderConfigurationInspected": false
+    },
+    "nodes": [
+      {
+        "kind": "entitlement-set",
+        "id": "entitlement-set:team@v1",
+        "planId": "team",
+        "planVersionRef": "team@v1",
+        "entitlements": [
+          {
+            "featureKey": "api.requests",
+            "type": "metered",
+            "quota": 2,
+            "meterId": "api_requests",
+            "meterBilling": "required",
+            "overagePolicy": "ALLOW_WITH_OVERAGE"
+          }
+        ]
+      },
+      {
+        "kind": "meter",
+        "id": "meter:api_requests",
+        "key": "api_requests",
+        "aggregation": "COUNT",
+        "unit": "request",
+        "billing": "required",
+        "dimensions": {}
+      },
+      {
+        "kind": "plan-version",
+        "id": "plan-version:team@v1",
+        "ref": "team@v1",
+        "planId": "team",
+        "versionId": "v1",
+        "rating": {
+          "mode": "provider",
+          "provider": "polar"
+        },
+        "providerBindings": [
+          {
+            "provider": "polar",
+            "productId": "team",
+            "priceIds": [
+              "team-api-overage-v1",
+              "team-fixed-v1"
+            ],
+            "meterBindings": [
+              {
+                "meterKey": "api_requests",
+                "meterId": "polar-api-requests"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "kind": "provider",
+        "id": "provider:polar",
+        "providerName": "polar",
+        "capabilities": {
+          "checkout": {
+            "supported": true
+          },
+          "usage": {
+            "supported": true
+          }
+        }
+      },
+      {
+        "kind": "subscription-mapping",
+        "id": "subscription-mapping:subscription_tenant_acme",
+        "subscriptionId": "subscription_tenant_acme",
+        "entitlementPlanVersionRef": "team@v1",
+        "providerPlanVersionRef": "team@v1"
+      }
+    ],
+    "edges": [
+      {
+        "kind": "plan-version-bills-meter",
+        "from": "plan-version:team@v1",
+        "to": "meter:api_requests",
+        "metadata": {
+          "provider": "polar",
+          "providerMeterId": "polar-api-requests"
+        }
+      },
+      {
+        "kind": "plan-version-grants-entitlement",
+        "from": "plan-version:team@v1",
+        "to": "entitlement:api.requests"
+      },
+      {
+        "kind": "plan-version-uses-provider",
+        "from": "plan-version:team@v1",
+        "to": "provider:polar"
+      },
+      {
+        "kind": "subscription-resolves-plan-version",
+        "from": "subscription-mapping:subscription_tenant_acme",
+        "to": "plan-version:team@v1"
+      }
+    ]
+  },
+  "diagnostics": []
+}

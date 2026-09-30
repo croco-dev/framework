@@ -94,7 +94,7 @@ export function assertGeneratedTemplateLintContracts(templatesDir: string): void
       );
     }
     const configPath = join(templateDir, toolchain.configFile);
-    if (!existsSync(configPath)) {
+    if (!existsSync(configPath) && !existsSync(`${configPath}.hbs`)) {
       throw new Error(`${manifestPath}: lint script requires missing config ${configPath}`);
     }
 

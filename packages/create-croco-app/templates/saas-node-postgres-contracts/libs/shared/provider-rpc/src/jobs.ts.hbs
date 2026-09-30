@@ -1,0 +1,204 @@
+import { createRpcClientRequest, handleRpcRequestError, handleRpcRequestResultError, handleJsonResponse, handleJsonResult, toRpcFormProblem, encodeRpcPathSegment, serializeRpcQueryKeyInput } from './rpc';
+import type { RpcClientConfig, RpcClientRequestOptions, RpcClientResult, RpcDeclaredProblem, RpcDomainProblem, RpcFormFieldProblem, RpcFormGlobalProblem, RpcFormModel, RpcProblemDetailsFor, RpcValidationProblem } from './rpc';
+export type ListInput = { query: { limit?: string | undefined; offset?: string | undefined; replayOf?: string | undefined; status?: '' | 'cancelled' | 'completed' | 'failed' | 'pending' | 'retrying' | 'running' | 'timed_out' | undefined; type?: string | undefined; }; };
+export type ShowInput = { path: { id: string; }; };
+export type LogsInput = { path: { id: string; }; };
+export type CancelInput = { body: { reason?: string | undefined; }; path: { id: string; }; };
+export type ReplayInput = { body: { reason?: string | undefined; }; path: { id: string; }; };
+export type ListOutput = { attentionCount: number; generatedAt: string; jobs: ({ attempts: number; completedAt?: string | undefined; createdAt: string; errorMessage?: string | undefined; failurePolicy: { needsAttention: boolean; reason: string; recoveryAction: string; replayable: boolean; retryable: boolean; state: string; }; id: string; logCount: number; maxAttempts: number; replayOf?: string | undefined; startedAt?: string | undefined; status: string; type: string; workflowName?: string | undefined; })[]; summary: 'attention' | 'healthy'; total: number; };
+export type ShowOutput = { attempts: number; checkpoints?: Record<string, unknown> | undefined; completedAt?: string | undefined; createdAt: string; error?: unknown | undefined; errorMessage?: string | undefined; failurePolicy: { needsAttention: boolean; reason: string; recoveryAction: string; replayable: boolean; retryable: boolean; state: string; }; id: string; logCount: number; logs: ({ data?: Record<string, unknown> | undefined; level: string; message: string; timestamp: string; })[]; maxAttempts: number; metadata?: Record<string, unknown> | undefined; payload?: unknown | undefined; progress?: unknown | undefined; replayOf?: string | undefined; result?: unknown | undefined; startedAt?: string | undefined; status: string; type: string; workflowName?: string | undefined; };
+export type LogsOutput = ({ data?: Record<string, unknown> | undefined; level: string; message: string; timestamp: string; })[];
+export type CancelOutput = { attempts: number; checkpoints?: Record<string, unknown> | undefined; completedAt?: string | undefined; createdAt: string; error?: unknown | undefined; errorMessage?: string | undefined; failurePolicy: { needsAttention: boolean; reason: string; recoveryAction: string; replayable: boolean; retryable: boolean; state: string; }; id: string; logCount: number; logs: ({ data?: Record<string, unknown> | undefined; level: string; message: string; timestamp: string; })[]; maxAttempts: number; metadata?: Record<string, unknown> | undefined; payload?: unknown | undefined; progress?: unknown | undefined; replayOf?: string | undefined; result?: unknown | undefined; startedAt?: string | undefined; status: string; type: string; workflowName?: string | undefined; };
+export type ReplayOutput = { attempts: number; checkpoints?: Record<string, unknown> | undefined; completedAt?: string | undefined; createdAt: string; error?: unknown | undefined; errorMessage?: string | undefined; failurePolicy: { needsAttention: boolean; reason: string; recoveryAction: string; replayable: boolean; retryable: boolean; state: string; }; id: string; logCount: number; logs: ({ data?: Record<string, unknown> | undefined; level: string; message: string; timestamp: string; })[]; maxAttempts: number; metadata?: Record<string, unknown> | undefined; payload?: unknown | undefined; progress?: unknown | undefined; replayOf?: string | undefined; result?: unknown | undefined; startedAt?: string | undefined; status: string; type: string; workflowName?: string | undefined; };
+export type ListProblem = RpcDeclaredProblem<'protocols-rest/request-validation-failed', 'ValidationError', 422> | RpcDeclaredProblem<'saas-demo/invalid-jobs-query', 'ValidationError', 422>;
+export type ListProblemDetails = RpcProblemDetailsFor<ListProblem>;
+export type ListResult = RpcClientResult<ListOutput, ListProblem>;
+export type ShowProblem = RpcDeclaredProblem<'saas-demo/job-not-found', 'NotFound', 404>;
+export type ShowProblemDetails = RpcProblemDetailsFor<ShowProblem>;
+export type ShowResult = RpcClientResult<ShowOutput, ShowProblem>;
+export type LogsProblem = RpcDeclaredProblem<'saas-demo/job-not-found', 'NotFound', 404>;
+export type LogsProblemDetails = RpcProblemDetailsFor<LogsProblem>;
+export type LogsResult = RpcClientResult<LogsOutput, LogsProblem>;
+export type CancelProblem = RpcDeclaredProblem<'saas-demo/job-not-found', 'NotFound', 404>;
+export type CancelProblemDetails = RpcProblemDetailsFor<CancelProblem>;
+export type CancelResult = RpcClientResult<CancelOutput, CancelProblem>;
+export type ReplayProblem = RpcDeclaredProblem<'saas-demo/job-not-found', 'NotFound', 404>;
+export type ReplayProblemDetails = RpcProblemDetailsFor<ReplayProblem>;
+export type ReplayResult = RpcClientResult<ReplayOutput, ReplayProblem>;
+export const listProblemDeclarations = [
+  { code: 'protocols-rest/request-validation-failed', category: 'ValidationError', status: 422, description: 'A request parameter does not satisfy the route contract.', cookbookPath: '/reference/problem-recovery-cookbook/#protocols-rest-request-validation-failed' },
+  { code: 'saas-demo/invalid-jobs-query', category: 'ValidationError', status: 422, description: 'A jobs query parameter is invalid.', cookbookPath: '/reference/problem-recovery-cookbook/#saas-demo-invalid-jobs-query' }
+] as const satisfies readonly RpcDeclaredProblem[];
+export const showProblemDeclarations = [
+  { code: 'saas-demo/job-not-found', category: 'NotFound', status: 404, description: 'The requested job does not exist.', cookbookPath: '/reference/problem-recovery-cookbook/#saas-demo-job-not-found' }
+] as const satisfies readonly RpcDeclaredProblem[];
+export const logsProblemDeclarations = [
+  { code: 'saas-demo/job-not-found', category: 'NotFound', status: 404, description: 'The requested job does not exist.', cookbookPath: '/reference/problem-recovery-cookbook/#saas-demo-job-not-found' }
+] as const satisfies readonly RpcDeclaredProblem[];
+export const cancelProblemDeclarations = [
+  { code: 'saas-demo/job-not-found', category: 'NotFound', status: 404, description: 'The requested job does not exist.', cookbookPath: '/reference/problem-recovery-cookbook/#saas-demo-job-not-found' }
+] as const satisfies readonly RpcDeclaredProblem[];
+export const replayProblemDeclarations = [
+  { code: 'saas-demo/job-not-found', category: 'NotFound', status: 404, description: 'The requested job does not exist.', cookbookPath: '/reference/problem-recovery-cookbook/#saas-demo-job-not-found' }
+] as const satisfies readonly RpcDeclaredProblem[];
+export type CancelFormFieldName = 'reason';
+export type CancelFormValues = { reason: string | null; };
+export type CancelSubmitPayload = CancelInput;
+export type CancelValidationProblem = RpcValidationProblem<CancelProblem>;
+export type CancelDomainProblem = RpcDomainProblem<CancelProblem>;
+export type CancelFormProblem = RpcFormFieldProblem<CancelFormFieldName, CancelValidationProblem> | RpcFormGlobalProblem<CancelDomainProblem>;
+
+export const cancelFormModel = {
+  routeId: 'JobsController.cancel',
+  operationId: 'cancelJob',
+  methodName: 'cancel',
+  method: 'POST',
+  path: '/ops/jobs/:id/cancel',
+  fieldNames: ['reason'],
+  fields: [
+    { name: 'reason', label: 'Reason', control: 'text', valueKind: 'string', required: false, initialValue: null }
+  ],
+  initialValues: { reason: null },
+} as const satisfies RpcFormModel<CancelFormValues, CancelFormFieldName>;
+
+export function buildCancelFormPayload(context: Omit<CancelInput, 'body'>, values: CancelFormValues): CancelSubmitPayload {
+  return { ...context, body: { reason: values.reason === null ? undefined : values.reason } };
+}
+
+export function mapCancelFormProblem(failure: Extract<CancelResult, { ok: false; kind: 'problem' }>): CancelFormProblem {
+  return toRpcFormProblem<CancelFormFieldName, CancelProblem>(failure, cancelFormModel.fieldNames);
+}
+export type ReplayFormFieldName = 'reason';
+export type ReplayFormValues = { reason: string | null; };
+export type ReplaySubmitPayload = ReplayInput;
+export type ReplayValidationProblem = RpcValidationProblem<ReplayProblem>;
+export type ReplayDomainProblem = RpcDomainProblem<ReplayProblem>;
+export type ReplayFormProblem = RpcFormFieldProblem<ReplayFormFieldName, ReplayValidationProblem> | RpcFormGlobalProblem<ReplayDomainProblem>;
+
+export const replayFormModel = {
+  routeId: 'JobsController.replay',
+  operationId: 'replayJob',
+  methodName: 'replay',
+  method: 'POST',
+  path: '/ops/jobs/:id/replay',
+  fieldNames: ['reason'],
+  fields: [
+    { name: 'reason', label: 'Reason', control: 'text', valueKind: 'string', required: false, initialValue: null }
+  ],
+  initialValues: { reason: null },
+} as const satisfies RpcFormModel<ReplayFormValues, ReplayFormFieldName>;
+
+export function buildReplayFormPayload(context: Omit<ReplayInput, 'body'>, values: ReplayFormValues): ReplaySubmitPayload {
+  return { ...context, body: { reason: values.reason === null ? undefined : values.reason } };
+}
+
+export function mapReplayFormProblem(failure: Extract<ReplayResult, { ok: false; kind: 'problem' }>): ReplayFormProblem {
+  return toRpcFormProblem<ReplayFormFieldName, ReplayProblem>(failure, replayFormModel.fieldNames);
+}
+export const jobsContractRoutes = [
+  { routeId: 'JobsController.list', operationId: 'listJobs', methodName: 'list', method: 'GET', path: '/ops/jobs' },
+  { routeId: 'JobsController.show', operationId: 'showJob', methodName: 'show', method: 'GET', path: '/ops/jobs/:id' },
+  { routeId: 'JobsController.logs', operationId: 'listJobLogs', methodName: 'logs', method: 'GET', path: '/ops/jobs/:id/logs' },
+  { routeId: 'JobsController.cancel', operationId: 'cancelJob', methodName: 'cancel', method: 'POST', path: '/ops/jobs/:id/cancel' },
+  { routeId: 'JobsController.replay', operationId: 'replayJob', methodName: 'replay', method: 'POST', path: '/ops/jobs/:id/replay' }
+] as const;
+export const jobsKeys = {
+  all: () => ['jobs'] as const,
+  list: (input: ListInput) => [...jobsKeys.all(), 'list', serializeRpcQueryKeyInput(input)] as const,
+  show: (input: ShowInput) => [...jobsKeys.all(), 'show', serializeRpcQueryKeyInput(input)] as const,
+  logs: (input: LogsInput) => [...jobsKeys.all(), 'logs', serializeRpcQueryKeyInput(input)] as const,
+  cancel: (input: CancelInput) => [...jobsKeys.all(), 'cancel', serializeRpcQueryKeyInput(input)] as const,
+  replay: (input: ReplayInput) => [...jobsKeys.all(), 'replay', serializeRpcQueryKeyInput(input)] as const,
+};
+export const jobsInvalidationManifest = {
+  cancel: { route: jobsContractRoutes[3], invalidates: [jobsKeys.all()] },
+  replay: { route: jobsContractRoutes[4], invalidates: [jobsKeys.all()] },
+} as const;
+function serializeQueryParams(query: Record<string, unknown> | null | undefined): string {
+  if (query === undefined || query === null) {
+    return '';
+  }
+
+  const params = new URLSearchParams();
+
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined) {
+      continue;
+    }
+
+    const values = Array.isArray(value) ? value : [value];
+
+    for (const item of values) {
+      if (item === undefined) {
+        continue;
+      }
+
+      params.append(key, String(item));
+    }
+  }
+
+  return params.toString();
+}
+
+export function createJobsClient(config: RpcClientConfig = {}) {
+  return {
+    list: (input: ListInput, options?: RpcClientRequestOptions): Promise<ListOutput> => {
+      const path = '/ops/jobs';
+      const query = serializeQueryParams(input.query);
+      const url = query ? `${path}?${query}` : path;
+      const request = createRpcClientRequest(jobsContractRoutes[0], 'query', url, { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<ListOutput>(response, request.telemetry));
+    },
+    listResult: (input: ListInput, options?: RpcClientRequestOptions): Promise<ListResult> => {
+      const path = '/ops/jobs';
+      const query = serializeQueryParams(input.query);
+      const url = query ? `${path}?${query}` : path;
+      const request = createRpcClientRequest(jobsContractRoutes[0], 'query', url, { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<ListOutput, ListProblem>(response, listProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+    show: (input: ShowInput, options?: RpcClientRequestOptions): Promise<ShowOutput> => {
+      const path = (): string => `/ops/jobs/${encodeRpcPathSegment(jobsContractRoutes[1], 'id', input.path.id)}`;
+      const request = createRpcClientRequest(jobsContractRoutes[1], 'query', path, { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<ShowOutput>(response, request.telemetry));
+    },
+    showResult: (input: ShowInput, options?: RpcClientRequestOptions): Promise<ShowResult> => {
+      const path = (): string => `/ops/jobs/${encodeRpcPathSegment(jobsContractRoutes[1], 'id', input.path.id)}`;
+      const request = createRpcClientRequest(jobsContractRoutes[1], 'query', path, { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<ShowOutput, ShowProblem>(response, showProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+    logs: (input: LogsInput, options?: RpcClientRequestOptions): Promise<LogsOutput> => {
+      const path = (): string => `/ops/jobs/${encodeRpcPathSegment(jobsContractRoutes[2], 'id', input.path.id)}/logs`;
+      const request = createRpcClientRequest(jobsContractRoutes[2], 'query', path, { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<LogsOutput>(response, request.telemetry));
+    },
+    logsResult: (input: LogsInput, options?: RpcClientRequestOptions): Promise<LogsResult> => {
+      const path = (): string => `/ops/jobs/${encodeRpcPathSegment(jobsContractRoutes[2], 'id', input.path.id)}/logs`;
+      const request = createRpcClientRequest(jobsContractRoutes[2], 'query', path, { method: 'GET' }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<LogsOutput, LogsProblem>(response, logsProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+    cancel: (input: CancelInput, options?: RpcClientRequestOptions): Promise<CancelOutput> => {
+      const path = (): string => `/ops/jobs/${encodeRpcPathSegment(jobsContractRoutes[3], 'id', input.path.id)}/cancel`;
+      const request = createRpcClientRequest(jobsContractRoutes[3], 'mutation', path, { method: 'POST', body: JSON.stringify(input.body), headers: { 'Content-Type': 'application/json' } }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<CancelOutput>(response, request.telemetry));
+    },
+    cancelResult: (input: CancelInput, options?: RpcClientRequestOptions): Promise<CancelResult> => {
+      const path = (): string => `/ops/jobs/${encodeRpcPathSegment(jobsContractRoutes[3], 'id', input.path.id)}/cancel`;
+      const request = createRpcClientRequest(jobsContractRoutes[3], 'mutation', path, { method: 'POST', body: JSON.stringify(input.body), headers: { 'Content-Type': 'application/json' } }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<CancelOutput, CancelProblem>(response, cancelProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+    replay: (input: ReplayInput, options?: RpcClientRequestOptions): Promise<ReplayOutput> => {
+      const path = (): string => `/ops/jobs/${encodeRpcPathSegment(jobsContractRoutes[4], 'id', input.path.id)}/replay`;
+      const request = createRpcClientRequest(jobsContractRoutes[4], 'mutation', path, { method: 'POST', body: JSON.stringify(input.body), headers: { 'Content-Type': 'application/json' } }, options, config);
+      return request.fetch(request.url, request.init).catch((error) => handleRpcRequestError(error, request.telemetry)).then((response) => handleJsonResponse<ReplayOutput>(response, request.telemetry));
+    },
+    replayResult: (input: ReplayInput, options?: RpcClientRequestOptions): Promise<ReplayResult> => {
+      const path = (): string => `/ops/jobs/${encodeRpcPathSegment(jobsContractRoutes[4], 'id', input.path.id)}/replay`;
+      const request = createRpcClientRequest(jobsContractRoutes[4], 'mutation', path, { method: 'POST', body: JSON.stringify(input.body), headers: { 'Content-Type': 'application/json' } }, options, config);
+      return request.fetch(request.url, request.init).then((response) => handleJsonResult<ReplayOutput, ReplayProblem>(response, replayProblemDeclarations, request.telemetry), (error) => handleRpcRequestResultError(error, request.telemetry));
+    },
+  };
+}
+
+export type JobsClient = ReturnType<typeof createJobsClient>;
+
+export const jobsClient = createJobsClient();

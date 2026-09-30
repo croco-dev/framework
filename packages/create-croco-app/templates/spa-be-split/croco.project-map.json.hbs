@@ -1,0 +1,1429 @@
+{
+  "version": "croco.project-map.manifest.v1",
+  "project": {
+    "root": ".",
+    "packageName": "{{projectName}}",
+    "packageManager": "pnpm@12.7.0"
+  },
+  "summary": {
+    "packages": 10,
+    "controllers": 1,
+    "routes": 5,
+    "providers": 0,
+    "policies": 0,
+    "problems": 3,
+    "telemetryBoundaries": 12,
+    "generatedArtifacts": 4,
+    "diagnostics": 0,
+    "errors": 0,
+    "warnings": 0
+  },
+  "packageGraph": {
+    "packages": [
+      {
+        "name": "{{scope}}/api-server",
+        "path": "apps/api-server/package.json",
+        "private": true,
+        "scripts": [
+          "build",
+          "dev",
+          "dev:smoke",
+          "di:generate",
+          "di:graph",
+          "test",
+          "typecheck"
+        ],
+        "dependencies": [
+          {
+            "name": "@croco/esbuild-plugin",
+            "range": "{{lookup crocoPackageRanges "@croco/esbuild-plugin"}}",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@croco/events-core",
+            "range": "{{lookup crocoPackageRanges "@croco/events-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/events-inmemory",
+            "range": "{{lookup crocoPackageRanges "@croco/events-inmemory"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/framework-context",
+            "range": "{{lookup crocoPackageRanges "@croco/framework-context"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/framework-module",
+            "range": "{{lookup crocoPackageRanges "@croco/framework-module"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/preset-lambda",
+            "range": "{{lookup crocoPackageRanges "@croco/preset-lambda"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/preset-node",
+            "range": "{{lookup crocoPackageRanges "@croco/preset-node"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/problems-core",
+            "range": "{{lookup crocoPackageRanges "@croco/problems-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/protocols-core",
+            "range": "{{lookup crocoPackageRanges "@croco/protocols-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/protocols-rest",
+            "range": "{{lookup crocoPackageRanges "@croco/protocols-rest"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/ratelimit-core",
+            "range": "{{lookup crocoPackageRanges "@croco/ratelimit-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/repository-core",
+            "range": "{{lookup crocoPackageRanges "@croco/repository-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/retry-core",
+            "range": "{{lookup crocoPackageRanges "@croco/retry-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/telemetry-api",
+            "range": "{{lookup crocoPackageRanges "@croco/telemetry-api"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/telemetry-sdk-node",
+            "range": "{{lookup crocoPackageRanges "@croco/telemetry-sdk-node"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/transports-http",
+            "range": "{{lookup crocoPackageRanges "@croco/transports-http"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@types/node",
+            "range": "^24",
+            "kind": "devDependency"
+          },
+          {
+            "name": "cross-env",
+            "range": "^10.1.0",
+            "kind": "devDependency"
+          },
+          {
+            "name": "reflect-metadata",
+            "range": "0.2.2",
+            "kind": "dependency"
+          },
+          {
+            "name": "tsup",
+            "range": "^8.5.1",
+            "kind": "devDependency"
+          },
+          {
+            "name": "tsx",
+            "range": "^4.0.0",
+            "kind": "devDependency"
+          },
+          {
+            "name": "typescript",
+            "range": "^6.0.3",
+            "kind": "devDependency"
+          },
+          {
+            "name": "vitest",
+            "range": "^4.1.8",
+            "kind": "devDependency"
+          },
+          {
+            "name": "zod",
+            "range": "^3.23.8",
+            "kind": "dependency"
+          }
+        ]
+      },
+      {
+        "name": "{{scope}}/console-web",
+        "path": "apps/console-web/package.json",
+        "private": true,
+        "scripts": [
+          "build",
+          "dev",
+          "dev:smoke",
+          "preview",
+          "test",
+          "test:browser:install",
+          "test:component",
+          "typecheck"
+        ],
+        "dependencies": [
+          {
+            "name": "{{scope}}/provider-rpc",
+            "range": "workspace:*",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/frontend-problems",
+            "range": "{{lookup crocoPackageRanges "@croco/frontend-problems"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/frontend-vite",
+            "range": "{{lookup crocoPackageRanges "@croco/frontend-vite"}}",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@croco/problems-core",
+            "range": "{{lookup crocoPackageRanges "@croco/problems-core"}}",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@types/node",
+            "range": "^24",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@types/react",
+            "range": "^19.0.0",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@types/react-dom",
+            "range": "^19.0.0",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@vitejs/plugin-react",
+            "range": "^4.3.0",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@vitest/browser-playwright",
+            "range": "4.1.8",
+            "kind": "devDependency"
+          },
+          {
+            "name": "msw",
+            "range": "2.15.0",
+            "kind": "devDependency"
+          },
+          {
+            "name": "playwright",
+            "range": "1.62.0",
+            "kind": "devDependency"
+          },
+          {
+            "name": "react",
+            "range": "^19.0.0",
+            "kind": "dependency"
+          },
+          {
+            "name": "react-dom",
+            "range": "^19.0.0",
+            "kind": "dependency"
+          },
+          {
+            "name": "typescript",
+            "range": "^6.0.3",
+            "kind": "devDependency"
+          },
+          {
+            "name": "vite",
+            "range": "^6.0.0",
+            "kind": "devDependency"
+          },
+          {
+            "name": "vitest",
+            "range": "4.1.8",
+            "kind": "devDependency"
+          },
+          {
+            "name": "vitest-browser-react",
+            "range": "2.2.0",
+            "kind": "devDependency"
+          }
+        ]
+      },
+      {
+        "name": "{{scope}}/provider-rpc",
+        "path": "libs/shared/provider-rpc/package.json",
+        "private": true,
+        "scripts": [
+          "typecheck"
+        ],
+        "dependencies": [
+          {
+            "name": "@croco/frontend-problems",
+            "range": "{{lookup crocoPackageRanges "@croco/frontend-problems"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@croco/problems-core",
+            "range": "{{lookup crocoPackageRanges "@croco/problems-core"}}",
+            "kind": "dependency"
+          },
+          {
+            "name": "@tanstack/react-query",
+            "range": "^5.0.0",
+            "kind": "dependency"
+          },
+          {
+            "name": "typescript",
+            "range": "^6.0.3",
+            "kind": "devDependency"
+          }
+        ]
+      },
+      {
+        "name": "{{scope}}/sample-domain",
+        "path": "libs/sample-domain/domain/package.json",
+        "private": true,
+        "scripts": [
+          "build",
+          "typecheck"
+        ],
+        "dependencies": [
+          {
+            "name": "tsup",
+            "range": "^8.5.1",
+            "kind": "devDependency"
+          },
+          {
+            "name": "typescript",
+            "range": "^6.0.3",
+            "kind": "devDependency"
+          }
+        ]
+      },
+      {
+        "name": "{{scope}}/sample-domain-datasource",
+        "path": "libs/sample-domain/datasource/package.json",
+        "private": true,
+        "scripts": [
+          "build",
+          "typecheck"
+        ],
+        "dependencies": [
+          {
+            "name": "{{scope}}/sample-domain",
+            "range": "workspace:*",
+            "kind": "dependency"
+          },
+          {
+            "name": "tsup",
+            "range": "^8.5.1",
+            "kind": "devDependency"
+          },
+          {
+            "name": "typescript",
+            "range": "^6.0.3",
+            "kind": "devDependency"
+          }
+        ]
+      },
+      {
+        "name": "{{scope}}/sample-domain-feature",
+        "path": "libs/sample-domain/feature/package.json",
+        "private": true,
+        "scripts": [
+          "build",
+          "typecheck"
+        ],
+        "dependencies": [
+          {
+            "name": "{{scope}}/sample-domain-ui",
+            "range": "workspace:*",
+            "kind": "dependency"
+          },
+          {
+            "name": "@types/react",
+            "range": "^19.0.0",
+            "kind": "devDependency"
+          },
+          {
+            "name": "react",
+            "range": "^19.0.0",
+            "kind": "dependency"
+          },
+          {
+            "name": "tsup",
+            "range": "^8.5.1",
+            "kind": "devDependency"
+          },
+          {
+            "name": "typescript",
+            "range": "^6.0.3",
+            "kind": "devDependency"
+          }
+        ]
+      },
+      {
+        "name": "{{scope}}/sample-domain-page",
+        "path": "libs/sample-domain/page/package.json",
+        "private": true,
+        "scripts": [
+          "build",
+          "typecheck"
+        ],
+        "dependencies": [
+          {
+            "name": "{{scope}}/sample-domain-feature",
+            "range": "workspace:*",
+            "kind": "dependency"
+          },
+          {
+            "name": "@types/react",
+            "range": "^19.0.0",
+            "kind": "devDependency"
+          },
+          {
+            "name": "react",
+            "range": "^19.0.0",
+            "kind": "dependency"
+          },
+          {
+            "name": "tsup",
+            "range": "^8.5.1",
+            "kind": "devDependency"
+          },
+          {
+            "name": "typescript",
+            "range": "^6.0.3",
+            "kind": "devDependency"
+          }
+        ]
+      },
+      {
+        "name": "{{scope}}/sample-domain-service",
+        "path": "libs/sample-domain/service/package.json",
+        "private": true,
+        "scripts": [
+          "build",
+          "typecheck"
+        ],
+        "dependencies": [
+          {
+            "name": "{{scope}}/sample-domain",
+            "range": "workspace:*",
+            "kind": "dependency"
+          },
+          {
+            "name": "{{scope}}/sample-domain-datasource",
+            "range": "workspace:*",
+            "kind": "dependency"
+          },
+          {
+            "name": "tsup",
+            "range": "^8.5.1",
+            "kind": "devDependency"
+          },
+          {
+            "name": "typescript",
+            "range": "^6.0.3",
+            "kind": "devDependency"
+          }
+        ]
+      },
+      {
+        "name": "{{scope}}/sample-domain-ui",
+        "path": "libs/sample-domain/ui/package.json",
+        "private": true,
+        "scripts": [
+          "build",
+          "typecheck"
+        ],
+        "dependencies": [
+          {
+            "name": "@types/react",
+            "range": "^19.0.0",
+            "kind": "devDependency"
+          },
+          {
+            "name": "react",
+            "range": "^19.0.0",
+            "kind": "dependency"
+          },
+          {
+            "name": "tsup",
+            "range": "^8.5.1",
+            "kind": "devDependency"
+          },
+          {
+            "name": "typescript",
+            "range": "^6.0.3",
+            "kind": "devDependency"
+          }
+        ]
+      },
+      {
+        "name": "{{projectName}}",
+        "path": "package.json",
+        "private": true,
+        "scripts": [
+          "build",
+          "ci:contracts",
+          "codegen",
+          "contract:check",
+          "contract:client",
+          "contract:client:check",
+          "contract:coverage",
+          "contract:diff",
+          "contract:openapi",
+          "contract:openapi:check",
+          "contract:snapshot",
+          "contract:verify",
+          "dev",
+          "dev:api",
+          "dev:smoke",
+          "dev:web",
+          "di:assert",
+          "di:check",
+          "di:graph",
+          "di:verify",
+          "doctor",
+          "lint",
+          "project-map:check",
+          "project-map:write",
+          "test",
+          "test:browser:install",
+          "test:ci",
+          "test:component",
+          "test:journey",
+          "typecheck"
+        ],
+        "dependencies": [
+          {
+            "name": "@biomejs/biome",
+            "range": "2.3.12",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@croco/cli",
+            "range": "{{lookup crocoPackageRanges "@croco/cli"}}",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@croco/openapi-spec",
+            "range": "{{lookup crocoPackageRanges "@croco/openapi-spec"}}",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@croco/rpc-codegen",
+            "range": "{{lookup crocoPackageRanges "@croco/rpc-codegen"}}",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@playwright/test",
+            "range": "1.62.0",
+            "kind": "devDependency"
+          },
+          {
+            "name": "@types/node",
+            "range": "^24",
+            "kind": "devDependency"
+          },
+          {
+            "name": "turbo",
+            "range": "2.10.2",
+            "kind": "devDependency"
+          },
+          {
+            "name": "typescript",
+            "range": "^6.0.3",
+            "kind": "devDependency"
+          }
+        ]
+      }
+    ]
+  },
+  "routeGraph": {
+    "frameworkManifestVersion": "croco.framework-manifest.v1",
+    "contractGraphSnapshotVersion": "croco.contract-graph.snapshot.v1",
+    "controllers": [
+      {
+        "id": "UserController",
+        "name": "UserController",
+        "path": "/users",
+        "source": {
+          "file": "apps/api-server/src/controllers/UserController.ts",
+          "line": 25,
+          "column": 8
+        }
+      }
+    ],
+    "routes": [
+      {
+        "id": "UserController.create",
+        "method": "POST",
+        "path": "/users",
+        "controllerId": "UserController",
+        "handlerName": "create",
+        "source": {
+          "file": "apps/api-server/src/controllers/UserController.ts",
+          "line": 25,
+          "column": 8
+        }
+      },
+      {
+        "id": "UserController.delete",
+        "method": "DELETE",
+        "path": "/users/:id",
+        "controllerId": "UserController",
+        "handlerName": "delete",
+        "source": {
+          "file": "apps/api-server/src/controllers/UserController.ts",
+          "line": 25,
+          "column": 8
+        }
+      },
+      {
+        "id": "UserController.getById",
+        "method": "GET",
+        "path": "/users/:id",
+        "controllerId": "UserController",
+        "handlerName": "getById",
+        "source": {
+          "file": "apps/api-server/src/controllers/UserController.ts",
+          "line": 25,
+          "column": 8
+        }
+      },
+      {
+        "id": "UserController.list",
+        "method": "GET",
+        "path": "/users",
+        "controllerId": "UserController",
+        "handlerName": "list",
+        "source": {
+          "file": "apps/api-server/src/controllers/UserController.ts",
+          "line": 25,
+          "column": 8
+        }
+      },
+      {
+        "id": "UserController.update",
+        "method": "PUT",
+        "path": "/users/:id",
+        "controllerId": "UserController",
+        "handlerName": "update",
+        "source": {
+          "file": "apps/api-server/src/controllers/UserController.ts",
+          "line": 25,
+          "column": 8
+        }
+      }
+    ]
+  },
+  "di": {
+    "providers": []
+  },
+  "policies": {},
+  "problems": {
+    "responses": [
+      {
+        "routeId": "UserController.delete",
+        "code": "starter/user-not-found",
+        "category": "NotFound",
+        "status": 404
+      },
+      {
+        "routeId": "UserController.getById",
+        "code": "starter/user-not-found",
+        "category": "NotFound",
+        "status": 404
+      },
+      {
+        "routeId": "UserController.update",
+        "code": "starter/user-not-found",
+        "category": "NotFound",
+        "status": 404
+      }
+    ]
+  },
+  "telemetry": {
+    "boundaries": [
+      {
+        "kind": "span-wrapper",
+        "id": "span-wrapper:apps/api-server/src/users.ts:106",
+        "source": {
+          "file": "apps/api-server/src/users.ts",
+          "line": 106,
+          "column": 5
+        }
+      },
+      {
+        "kind": "span-wrapper",
+        "id": "span-wrapper:apps/api-server/src/users.ts:125",
+        "source": {
+          "file": "apps/api-server/src/users.ts",
+          "line": 125,
+          "column": 5
+        }
+      },
+      {
+        "kind": "span-wrapper",
+        "id": "span-wrapper:apps/api-server/src/users.ts:137",
+        "source": {
+          "file": "apps/api-server/src/users.ts",
+          "line": 137,
+          "column": 5
+        }
+      },
+      {
+        "kind": "span-wrapper",
+        "id": "span-wrapper:apps/api-server/src/users.ts:5",
+        "source": {
+          "file": "apps/api-server/src/users.ts",
+          "line": 5,
+          "column": 1
+        }
+      },
+      {
+        "kind": "span-wrapper",
+        "id": "span-wrapper:apps/api-server/src/users.ts:88",
+        "source": {
+          "file": "apps/api-server/src/users.ts",
+          "line": 88,
+          "column": 5
+        }
+      },
+      {
+        "kind": "span-wrapper",
+        "id": "span-wrapper:apps/api-server/src/users.ts:92",
+        "source": {
+          "file": "apps/api-server/src/users.ts",
+          "line": 92,
+          "column": 5
+        }
+      },
+      {
+        "kind": "telemetry-flush",
+        "id": "telemetry-flush:apps/api-server/src/index.ts:22",
+        "source": {
+          "file": "apps/api-server/src/index.ts",
+          "line": 22,
+          "column": 5
+        }
+      },
+      {
+        "kind": "telemetry-flush",
+        "id": "telemetry-flush:apps/api-server/src/lambda.ts:13",
+        "source": {
+          "file": "apps/api-server/src/lambda.ts",
+          "line": 13,
+          "column": 5
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/index.ts:1",
+        "source": {
+          "file": "apps/api-server/src/index.ts",
+          "line": 1,
+          "column": 1
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/index.ts:10",
+        "source": {
+          "file": "apps/api-server/src/index.ts",
+          "line": 10,
+          "column": 1
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/lambda.ts:3",
+        "source": {
+          "file": "apps/api-server/src/lambda.ts",
+          "line": 3,
+          "column": 1
+        }
+      },
+      {
+        "kind": "telemetry-runtime",
+        "id": "telemetry-runtime:apps/api-server/src/lambda.ts:7",
+        "source": {
+          "file": "apps/api-server/src/lambda.ts",
+          "line": 7,
+          "column": 1
+        }
+      }
+    ]
+  },
+  "entrypoints": [
+    {
+      "kind": "http-route",
+      "id": "UserController.create",
+      "method": "POST",
+      "path": "/users",
+      "source": {
+        "file": "apps/api-server/src/controllers/UserController.ts",
+        "line": 25,
+        "column": 8
+      }
+    },
+    {
+      "kind": "http-route",
+      "id": "UserController.delete",
+      "method": "DELETE",
+      "path": "/users/:id",
+      "source": {
+        "file": "apps/api-server/src/controllers/UserController.ts",
+        "line": 25,
+        "column": 8
+      }
+    },
+    {
+      "kind": "http-route",
+      "id": "UserController.getById",
+      "method": "GET",
+      "path": "/users/:id",
+      "source": {
+        "file": "apps/api-server/src/controllers/UserController.ts",
+        "line": 25,
+        "column": 8
+      }
+    },
+    {
+      "kind": "http-route",
+      "id": "UserController.list",
+      "method": "GET",
+      "path": "/users",
+      "source": {
+        "file": "apps/api-server/src/controllers/UserController.ts",
+        "line": 25,
+        "column": 8
+      }
+    },
+    {
+      "kind": "http-route",
+      "id": "UserController.update",
+      "method": "PUT",
+      "path": "/users/:id",
+      "source": {
+        "file": "apps/api-server/src/controllers/UserController.ts",
+        "line": 25,
+        "column": 8
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#build",
+      "packageName": "{{scope}}/api-server",
+      "command": "build",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.build"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#dev",
+      "packageName": "{{scope}}/api-server",
+      "command": "dev",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.dev"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#dev:smoke",
+      "packageName": "{{scope}}/api-server",
+      "command": "dev:smoke",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.dev:smoke"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#di:generate",
+      "packageName": "{{scope}}/api-server",
+      "command": "di:generate",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.di:generate"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#di:graph",
+      "packageName": "{{scope}}/api-server",
+      "command": "di:graph",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.di:graph"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#test",
+      "packageName": "{{scope}}/api-server",
+      "command": "test",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.test"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/api-server#typecheck",
+      "packageName": "{{scope}}/api-server",
+      "command": "typecheck",
+      "source": {
+        "file": "apps/api-server/package.json",
+        "symbol": "scripts.typecheck"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/console-web#build",
+      "packageName": "{{scope}}/console-web",
+      "command": "build",
+      "source": {
+        "file": "apps/console-web/package.json",
+        "symbol": "scripts.build"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/console-web#dev",
+      "packageName": "{{scope}}/console-web",
+      "command": "dev",
+      "source": {
+        "file": "apps/console-web/package.json",
+        "symbol": "scripts.dev"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/console-web#dev:smoke",
+      "packageName": "{{scope}}/console-web",
+      "command": "dev:smoke",
+      "source": {
+        "file": "apps/console-web/package.json",
+        "symbol": "scripts.dev:smoke"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/console-web#preview",
+      "packageName": "{{scope}}/console-web",
+      "command": "preview",
+      "source": {
+        "file": "apps/console-web/package.json",
+        "symbol": "scripts.preview"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/console-web#test",
+      "packageName": "{{scope}}/console-web",
+      "command": "test",
+      "source": {
+        "file": "apps/console-web/package.json",
+        "symbol": "scripts.test"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/console-web#test:browser:install",
+      "packageName": "{{scope}}/console-web",
+      "command": "test:browser:install",
+      "source": {
+        "file": "apps/console-web/package.json",
+        "symbol": "scripts.test:browser:install"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/console-web#test:component",
+      "packageName": "{{scope}}/console-web",
+      "command": "test:component",
+      "source": {
+        "file": "apps/console-web/package.json",
+        "symbol": "scripts.test:component"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/console-web#typecheck",
+      "packageName": "{{scope}}/console-web",
+      "command": "typecheck",
+      "source": {
+        "file": "apps/console-web/package.json",
+        "symbol": "scripts.typecheck"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/provider-rpc#typecheck",
+      "packageName": "{{scope}}/provider-rpc",
+      "command": "typecheck",
+      "source": {
+        "file": "libs/shared/provider-rpc/package.json",
+        "symbol": "scripts.typecheck"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/sample-domain#build",
+      "packageName": "{{scope}}/sample-domain",
+      "command": "build",
+      "source": {
+        "file": "libs/sample-domain/domain/package.json",
+        "symbol": "scripts.build"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/sample-domain#typecheck",
+      "packageName": "{{scope}}/sample-domain",
+      "command": "typecheck",
+      "source": {
+        "file": "libs/sample-domain/domain/package.json",
+        "symbol": "scripts.typecheck"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/sample-domain-datasource#build",
+      "packageName": "{{scope}}/sample-domain-datasource",
+      "command": "build",
+      "source": {
+        "file": "libs/sample-domain/datasource/package.json",
+        "symbol": "scripts.build"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/sample-domain-datasource#typecheck",
+      "packageName": "{{scope}}/sample-domain-datasource",
+      "command": "typecheck",
+      "source": {
+        "file": "libs/sample-domain/datasource/package.json",
+        "symbol": "scripts.typecheck"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/sample-domain-feature#build",
+      "packageName": "{{scope}}/sample-domain-feature",
+      "command": "build",
+      "source": {
+        "file": "libs/sample-domain/feature/package.json",
+        "symbol": "scripts.build"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/sample-domain-feature#typecheck",
+      "packageName": "{{scope}}/sample-domain-feature",
+      "command": "typecheck",
+      "source": {
+        "file": "libs/sample-domain/feature/package.json",
+        "symbol": "scripts.typecheck"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/sample-domain-page#build",
+      "packageName": "{{scope}}/sample-domain-page",
+      "command": "build",
+      "source": {
+        "file": "libs/sample-domain/page/package.json",
+        "symbol": "scripts.build"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/sample-domain-page#typecheck",
+      "packageName": "{{scope}}/sample-domain-page",
+      "command": "typecheck",
+      "source": {
+        "file": "libs/sample-domain/page/package.json",
+        "symbol": "scripts.typecheck"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/sample-domain-service#build",
+      "packageName": "{{scope}}/sample-domain-service",
+      "command": "build",
+      "source": {
+        "file": "libs/sample-domain/service/package.json",
+        "symbol": "scripts.build"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/sample-domain-service#typecheck",
+      "packageName": "{{scope}}/sample-domain-service",
+      "command": "typecheck",
+      "source": {
+        "file": "libs/sample-domain/service/package.json",
+        "symbol": "scripts.typecheck"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/sample-domain-ui#build",
+      "packageName": "{{scope}}/sample-domain-ui",
+      "command": "build",
+      "source": {
+        "file": "libs/sample-domain/ui/package.json",
+        "symbol": "scripts.build"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{scope}}/sample-domain-ui#typecheck",
+      "packageName": "{{scope}}/sample-domain-ui",
+      "command": "typecheck",
+      "source": {
+        "file": "libs/sample-domain/ui/package.json",
+        "symbol": "scripts.typecheck"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#build",
+      "packageName": "{{projectName}}",
+      "command": "build",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.build"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#ci:contracts",
+      "packageName": "{{projectName}}",
+      "command": "ci:contracts",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.ci:contracts"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#codegen",
+      "packageName": "{{projectName}}",
+      "command": "codegen",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.codegen"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#contract:check",
+      "packageName": "{{projectName}}",
+      "command": "contract:check",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.contract:check"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#contract:client",
+      "packageName": "{{projectName}}",
+      "command": "contract:client",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.contract:client"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#contract:client:check",
+      "packageName": "{{projectName}}",
+      "command": "contract:client:check",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.contract:client:check"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#contract:coverage",
+      "packageName": "{{projectName}}",
+      "command": "contract:coverage",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.contract:coverage"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#contract:diff",
+      "packageName": "{{projectName}}",
+      "command": "contract:diff",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.contract:diff"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#contract:openapi",
+      "packageName": "{{projectName}}",
+      "command": "contract:openapi",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.contract:openapi"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#contract:openapi:check",
+      "packageName": "{{projectName}}",
+      "command": "contract:openapi:check",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.contract:openapi:check"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#contract:snapshot",
+      "packageName": "{{projectName}}",
+      "command": "contract:snapshot",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.contract:snapshot"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#contract:verify",
+      "packageName": "{{projectName}}",
+      "command": "contract:verify",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.contract:verify"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#dev",
+      "packageName": "{{projectName}}",
+      "command": "dev",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.dev"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#dev:api",
+      "packageName": "{{projectName}}",
+      "command": "dev:api",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.dev:api"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#dev:smoke",
+      "packageName": "{{projectName}}",
+      "command": "dev:smoke",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.dev:smoke"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#dev:web",
+      "packageName": "{{projectName}}",
+      "command": "dev:web",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.dev:web"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#di:assert",
+      "packageName": "{{projectName}}",
+      "command": "di:assert",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.di:assert"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#di:check",
+      "packageName": "{{projectName}}",
+      "command": "di:check",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.di:check"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#di:graph",
+      "packageName": "{{projectName}}",
+      "command": "di:graph",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.di:graph"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#di:verify",
+      "packageName": "{{projectName}}",
+      "command": "di:verify",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.di:verify"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#doctor",
+      "packageName": "{{projectName}}",
+      "command": "doctor",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.doctor"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#lint",
+      "packageName": "{{projectName}}",
+      "command": "lint",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.lint"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#project-map:check",
+      "packageName": "{{projectName}}",
+      "command": "project-map:check",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.project-map:check"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#project-map:write",
+      "packageName": "{{projectName}}",
+      "command": "project-map:write",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.project-map:write"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#test",
+      "packageName": "{{projectName}}",
+      "command": "test",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.test"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#test:browser:install",
+      "packageName": "{{projectName}}",
+      "command": "test:browser:install",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.test:browser:install"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#test:ci",
+      "packageName": "{{projectName}}",
+      "command": "test:ci",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.test:ci"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#test:component",
+      "packageName": "{{projectName}}",
+      "command": "test:component",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.test:component"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#test:journey",
+      "packageName": "{{projectName}}",
+      "command": "test:journey",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.test:journey"
+      }
+    },
+    {
+      "kind": "package-script",
+      "id": "{{projectName}}#typecheck",
+      "packageName": "{{projectName}}",
+      "command": "typecheck",
+      "source": {
+        "file": "package.json",
+        "symbol": "scripts.typecheck"
+      }
+    }
+  ],
+  "generatedArtifacts": [
+    {
+      "kind": "framework-manifest",
+      "path": ".croco/build/framework-manifest.json",
+      "commitPolicy": "commit-required"
+    },
+    {
+      "kind": "intent-map",
+      "path": ".croco/build/intent-map.json",
+      "commitPolicy": "commit-required"
+    },
+    {
+      "kind": "route-registration-table",
+      "path": ".croco/build/route-registration-table.json",
+      "commitPolicy": "commit-required"
+    },
+    {
+      "kind": "routes-module",
+      "path": ".croco/build/routes.mjs",
+      "commitPolicy": "commit-required"
+    }
+  ],
+  "diagnostics": []
+}
