@@ -459,6 +459,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ConflictingPaginationProblem`](/api/pagination-core/src/classes/conflictingpaginationproblem/)
 - [`InvalidCursorProblem`](/api/pagination-core/src/classes/invalidcursorproblem/)
 - [`InvalidPaginationDirectionProblem`](/api/pagination-core/src/classes/invalidpaginationdirectionproblem/)
+- [`InvalidPaginationLimitProblem`](/api/pagination-core/src/classes/invalidpaginationlimitproblem/)
 - [`NodeEntryCloseTimeoutProblem`](/api/preset-node/src/classes/nodeentryclosetimeoutproblem/)
 - [`NodeEntryLifecycleIoProblem`](/api/preset-node/src/classes/nodeentrylifecycleioproblem/)
 - [`NodeEntryLifecycleProblem`](/api/preset-node/src/classes/nodeentrylifecycleproblem/)
