@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { createCursorPage } from "../libs/createCursorPage";
+import { InvalidPaginationLimitProblem } from "../libs/problems";
 
 describe("createCursorPage", () => {
   it("should return hasMore=false when items length equals limit", () => {
@@ -57,5 +58,50 @@ describe("createCursorPage", () => {
     });
     expect(result.hasPrevious).toBe(true);
     expect(result.prevCursor).toBe("prev_cursor_string");
+  });
+
+  it.each([0, -1, -100])("should reject non-positive limit %i", (limit) => {
+    const items = [{ id: "a" }, { id: "b" }];
+    expect(() => createCursorPage(items, { limit, getId: (item) => item.id })).toThrow(
+      InvalidPaginationLimitProblem,
+    );
+  });
+
+  it.each([0, -1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 1.5])(
+    "should expose stable evidence for invalid limit %s",
+    (limit) => {
+      const items = [{ id: "a" }, { id: "b" }];
+      const expectedLimit = Number.isFinite(limit) ? limit : String(limit);
+      try {
+        createCursorPage(items, { limit, getId: (item) => item.id });
+        expect.unreachable();
+      } catch (error) {
+        expect(error).toBeInstanceOf(InvalidPaginationLimitProblem);
+        expect(error).toMatchObject({
+          code: "INVALID_PAGINATION_LIMIT",
+          category: "BadRequest",
+          limit,
+          extensions: {
+            field: "limit",
+            reason: "below-minimum",
+            limit: expectedLimit,
+            minimum: 1,
+          },
+        });
+      }
+    },
+  );
+
+  it("should preserve the hasMore-implies-nextCursor invariant for valid limits", () => {
+    const items = Array.from({ length: 5 }, (_, i) => ({ id: `item_${i}` }));
+    for (const limit of [1, 2, 4, 5, 6]) {
+      const result = createCursorPage(items, { limit, getId: (item) => item.id });
+      if (result.hasMore) {
+        expect(result.nextCursor).not.toBeNull();
+        expect(result.data).toHaveLength(limit);
+      } else {
+        expect(result.nextCursor).toBeNull();
+      }
+    }
   });
 });
