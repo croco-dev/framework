@@ -38,6 +38,12 @@ const CASE_TEMPLATE_ROOTS = {
     "addons/mongodb",
     "addons/redis",
   ],
+  "trpc-lambda-api": [
+    "base-ddd",
+    "addons/trpc-standalone",
+    "addons/lambda/shared",
+    "addons/lambda/apps/api",
+  ],
   "trpc-nextjs-vercel-fullstack": [
     "base-ddd",
     "addons/trpc-nextjs",
@@ -93,6 +99,7 @@ const CASE_TEST_PATH_PREFIXES = {
     "base-ddd/libs/shared/utils-env/",
     "addons/graphql-standalone/apps/graphql-api/",
   ],
+  "trpc-lambda-api": [],
   "trpc-nextjs-vercel-fullstack": [],
   "graphql-nextjs-opennext": [],
   "trpc-nextjs-docker-frontend": [],

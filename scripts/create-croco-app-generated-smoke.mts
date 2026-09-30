@@ -1277,6 +1277,29 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     ],
   },
   {
+    name: "trpc-lambda-api",
+    args: [
+      "--preset",
+      "ddd-api",
+      "--scope",
+      "@smoke",
+      "--api",
+      "trpc",
+      "--api-hosting",
+      "standalone",
+      "--backend-deploy",
+      "lambda",
+      "--no-install",
+      "--no-git",
+    ],
+    runtimeTarget: "lambda",
+    matrixTargets: ["base-ddd"],
+    validations: [
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "build", args: ["build"], paths: ["apps/api/dist/handler.js"] },
+    ],
+  },
+  {
     name: "trpc-nextjs-vercel-fullstack",
     args: [
       "--preset",

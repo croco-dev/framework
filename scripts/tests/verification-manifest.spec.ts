@@ -325,7 +325,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("e498e83c657f1104dd3b042f07086fab3119577e4d1958913a6f281217c91adb");
+    ).toBe("ccc2802e340c13e38f39069cd196b4d0bdec89fdd00f026cd466b532944de32c");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -440,7 +440,7 @@ describe("verification manifest", () => {
         generatedInventoryPaths,
       ).sort(),
     ).toEqual(generatedInventoryPaths);
-    expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toHaveLength(12);
+    expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toHaveLength(13);
 
     const packedCli = createVerificationManifest("publish").find(
       ({ id }) => id === "cli-packed-e2e",

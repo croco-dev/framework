@@ -1,9 +1,9 @@
 import type { CreateHTTPContextOptions } from "@trpc/server/adapters/standalone";
 
 export type Context = {
-  req: CreateHTTPContextOptions["req"];
+  headers: Record<string, string | string[] | undefined>;
 };
 
 export function createContext({ req }: CreateHTTPContextOptions): Context {
-  return { req };
+  return { headers: req.headers };
 }

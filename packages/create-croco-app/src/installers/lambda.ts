@@ -12,14 +12,17 @@ type LambdaInstallerOptions = {
 
 export function installLambda(targetDir: string, options: LambdaInstallerOptions): void {
   const addonDir = join(TEMPLATES_DIR, "addons/lambda");
-  mergeInto(addonDir, targetDir, {
+  const context = {
     projectName: options.projectName,
     scope: options.scope,
     handlerPath:
       options.api === "graphql"
         ? "apps/graphql-api/src/handler.handler"
         : "apps/api/src/handler.handler",
-  });
+  };
+  const appName = options.api === "graphql" ? "graphql-api" : "api";
+  mergeInto(join(addonDir, "shared"), targetDir, context);
+  mergeInto(join(addonDir, "apps", appName), join(targetDir, "apps", appName), context);
 
   if (options.api === "graphql") {
     mergePackageJson(join(targetDir, "apps", "graphql-api"), {
@@ -40,6 +43,9 @@ export function installLambda(targetDir: string, options: LambdaInstallerOptions
       main: "./src/handler.ts",
       scripts: {
         build: "tsup src/handler.ts --format cjs --clean",
+      },
+      devDependencies: {
+        "@types/aws-lambda": "^8.10.146",
       },
     });
   }

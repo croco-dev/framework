@@ -123,6 +123,7 @@ export const GENERATED_SMOKE_MATRIX_CASES = [
     },
   },
   { name: "graphql-lambda-api", tier: "spine-blocking" },
+  { name: "trpc-lambda-api", tier: "spine-blocking" },
   {
     name: "trpc-nextjs-vercel-fullstack",
     tier: "ecosystem-advisory",
