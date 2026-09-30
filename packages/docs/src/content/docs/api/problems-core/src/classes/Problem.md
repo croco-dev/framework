@@ -343,6 +343,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`InvitationTokenCipherProblem`](/api/invitation-drizzle/src/classes/invitationtokencipherproblem/)
 - [`DuplicateLifecycleRuleProblem`](/api/lifecycle-core/src/classes/duplicatelifecycleruleproblem/)
 - [`InvalidWebhookTimeoutProblem`](/api/lifecycle-core/src/classes/invalidwebhooktimeoutproblem/)
+- [`JourneyProblem`](/api/lifecycle-core/src/classes/journeyproblem/)
 - [`LifecycleActionAdapterProblem`](/api/lifecycle-core/src/classes/lifecycleactionadapterproblem/)
 - [`LifecycleRuleActionContractProblem`](/api/lifecycle-core/src/classes/lifecycleruleactioncontractproblem/)
 - [`LifecycleRuleCommandConflictProblem`](/api/lifecycle-core/src/classes/lifecyclerulecommandconflictproblem/)
