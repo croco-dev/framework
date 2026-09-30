@@ -472,3 +472,26 @@ the same state model without losing failure evidence.
 ## Metric Inspector
 
 `MetricInspector` displays the verified result's definition identity, field and snapshot references, numerator and denominator, and separate quality axes. Pass the outcome returned by the application's registered metric read after authorization. Partial and stale outcomes retain authorized provenance, quality, and diagnostic codes while withholding raw result data. Denied and unavailable outcomes show only a recovery message.
+
+## Policy release console
+
+`PolicyReleaseConsole` is a controlled view for the `features-core` policy release service. It
+renders registered text, number, boolean, UTC datetime, select, and JSON fields, validation diagnostics, semantic changes,
+and impact evidence (`fact`, `estimate`, `insufficient-data`). It has explicit loading,
+empty, partial, denied, error, and ready states; busy commands disable mutation controls. Native
+labels, inputs, fieldsets, and buttons support keyboard navigation. JSON parse errors and error
+diagnostics block commands; warnings remain visible without blocking review or publish. The
+registered risk and independent-review requirement are displayed beside the review action.
+
+Use authenticated `PolicyReleaseOperations` endpoints for `onSave`, `onReview`, `onPublish`,
+and `onReload`. Resolve access on the server; client permission flags only control the view.
+On a local edit, clear `reviewHash` immediately and save before reviewing again. Replace the
+snapshot with each server result; preserve failed operations as an error state and use
+`onReload` to recover server state. Generate a fresh idempotency key for each new command
+and retain it when retrying that command. Set `effectiveAt` to an ISO 8601 UTC time to schedule
+or leave it blank to publish now. The receipt is displayed only after the service succeeds.
+
+Map snapshot fields directly using `input`, `min`, `max`, and `options`; diagnostics retain
+`code`, `path`, and `severity`. Pass only code-declared fields and redacted diff/diagnostic text. Never send a secret field's
+raw value to a browser merely because its input uses `type="password"`. There are no
+handler, class, URL, or JavaScript execution inputs, and no billing Plan types are required.

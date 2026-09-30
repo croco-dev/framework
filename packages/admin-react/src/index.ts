@@ -309,3 +309,9 @@ export type {
 } from "./libs/MetricInspector";
 export { ExperienceConsole } from "./libs/ExperienceConsole";
 export type { ExperienceConsoleProps } from "./libs/ExperienceConsole";
+export { PolicyReleaseConsole } from "./libs/PolicyReleaseConsole";
+export type {
+  PolicyReleaseConsoleField,
+  PolicyReleaseConsoleState,
+  PolicyReleaseConsoleProps,
+} from "./libs/PolicyReleaseConsole";

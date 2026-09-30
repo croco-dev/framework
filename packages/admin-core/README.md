@@ -178,3 +178,25 @@ assertAdminResourceValid(userResource);
 `assertAdminResourceValid()` throws `AdminResourceValidationProblem`, preserving
 all diagnostics in RFC 7807 extensions so build-time or codegen checks can fail
 without guessing at runtime.
+
+## Policy release authorization
+
+`PolicyReleaseAccess` is resolved by the server from its authenticated identity. Its scope
+includes an explicit tenant ID or `null` for a separately granted app-wide scope. Omitting a
+tenant never grants app-wide access. `assertPolicyReleaseAccess` requires an exact app,
+environment, and tenant match and the requested read, write, review, or publish permission.
+Never accept the access object or actor identity from browser request JSON.
+
+`PolicyReleaseOperations` wraps the same `PolicyReleaseService` used by standalone callers.
+Its bounded `read({ policyId, scope }, access)` reads one latest revision. `edit` accepts one
+registered descriptor ID (`field`) and its value; `review` and `publish` delegate the exact
+expected revision to the service. Every mutation requires `reason`, `expectedRevision`, and
+`idempotencyKey`; the actor comes from server access. `publish` accepts the review hash and
+an optional canonical UTC `effectiveAt` for scheduling. A provider failure propagates.
+
+Snapshots omit sensitive field values and conservatively redact semantic changes when a
+registration contains a sensitive field. Validation exposes code, path, and severity without raw input. Field snapshots retain numeric
+bounds and select options. Publication and schedule receipts are read from the persisted command
+receipt, including after reload. The default
+impact snapshot reports the revision state as fact and missing outcome data explicitly;
+applications may supply separately sourced estimates to the console.

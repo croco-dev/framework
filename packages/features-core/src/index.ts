@@ -92,3 +92,8 @@
  * ```
  */
 export { FeatureManager } from "./libs/FeatureManager";
+
+export * from "./libs/Policy";
+export * from "./libs/PolicyReleaseService";
+export * from "./libs/InMemoryPolicyReleaseStore";
+export * from "./libs/problems/PolicyProblems";

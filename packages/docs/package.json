@@ -72,6 +72,7 @@
     "@croco/experience-core": "workspace:*",
     "@croco/experience-drizzle": "workspace:*",
     "@croco/features-core": "workspace:*",
+    "@croco/features-drizzle": "workspace:*",
     "@croco/features-posthog": "workspace:*",
     "@croco/framework-config": "workspace:*",
     "@croco/framework-context": "workspace:*",

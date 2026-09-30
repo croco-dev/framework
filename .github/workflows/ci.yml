@@ -729,6 +729,7 @@ jobs:
               - 'packages/experience-core/src/**'
               - 'packages/experience-drizzle/src/**'
               - 'packages/features-core/src/**'
+              - 'packages/features-drizzle/src/**'
               - 'packages/features-posthog/src/**'
               - 'packages/framework-config/src/**'
               - 'packages/framework-context/src/**'

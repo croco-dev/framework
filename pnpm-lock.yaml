@@ -616,6 +616,22 @@ importers:
         specifier: 6.0.3
         version: 6.0.3
 
+  examples/policy-release:
+    dependencies:
+      '@croco/features-core':
+        specifier: workspace:*
+        version: link:../../packages/features-core
+    devDependencies:
+      '@types/node':
+        specifier: ^24
+        version: 24.13.2
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+
   examples/quick-start-lambda:
     dependencies:
       '@croco/auth-core':
@@ -848,6 +864,9 @@ importers:
       '@croco/experience-core':
         specifier: workspace:*
         version: link:../experience-core
+      '@croco/features-core':
+        specifier: workspace:*
+        version: link:../features-core
       '@croco/onboarding-core':
         specifier: workspace:*
         version: link:../onboarding-core
@@ -1938,6 +1957,9 @@ importers:
       '@croco/features-core':
         specifier: workspace:*
         version: link:../features-core
+      '@croco/features-drizzle':
+        specifier: workspace:*
+        version: link:../features-drizzle
       '@croco/features-posthog':
         specifier: workspace:*
         version: link:../features-posthog
@@ -2540,6 +2562,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../problems-core
     devDependencies:
       reflect-metadata:
         specifier: ^0.2.2
@@ -2550,6 +2575,34 @@ importers:
       typescript:
         specifier: 6.0.3
         version: 6.0.3
+      vitest:
+        specifier: 4.1.8
+        version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@24.13.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
+
+  packages/features-drizzle:
+    dependencies:
+      '@croco/execution-core':
+        specifier: workspace:*
+        version: link:../execution-core
+      '@croco/features-core':
+        specifier: workspace:*
+        version: link:../features-core
+    devDependencies:
+      '@croco/triggers-core':
+        specifier: workspace:*
+        version: link:../triggers-core
+      '@croco/triggers-qstash':
+        specifier: workspace:*
+        version: link:../triggers-qstash
+      '@types/pg':
+        specifier: 8.20.0
+        version: 8.20.0
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.20.0)(@upstash/redis@1.36.1)(better-sqlite3@12.11.1)(kysely@0.28.17)(pg@8.22.0)
+      pg:
+        specifier: 8.22.0
+        version: 8.22.0
       vitest:
         specifier: 4.1.8
         version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@24.13.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))

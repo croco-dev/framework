@@ -397,6 +397,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "assertPolicyReleaseAccess",
+              "exportKind": "named",
+              "source": "./libs/PolicyReleaseOperations",
+              "declarationKind": "function"
+            },
+            {
               "name": "assertReactivateEndpointValid",
               "exportKind": "named",
               "source": "./libs/EngagementOperations",
@@ -670,6 +676,18 @@
               "exportKind": "named",
               "source": "./libs/WebhookOperations",
               "declarationKind": "function"
+            },
+            {
+              "name": "PolicyReleaseAccessProblem",
+              "exportKind": "named",
+              "source": "./libs/PolicyReleaseOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PolicyReleaseOperations",
+              "exportKind": "named",
+              "source": "./libs/PolicyReleaseOperations",
+              "declarationKind": "class"
             },
             {
               "name": "redactWebhookOperationsText",
@@ -1348,6 +1366,31 @@
               "name": "NonEmptyArray",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "PolicyReleaseAccess",
+              "exportKind": "named",
+              "source": "./libs/PolicyReleaseOperations"
+            },
+            {
+              "name": "PolicyReleaseAdminCommand",
+              "exportKind": "named",
+              "source": "./libs/PolicyReleaseOperations"
+            },
+            {
+              "name": "PolicyReleaseAdminSnapshot",
+              "exportKind": "named",
+              "source": "./libs/PolicyReleaseOperations"
+            },
+            {
+              "name": "PolicyReleaseAdminTarget",
+              "exportKind": "named",
+              "source": "./libs/PolicyReleaseOperations"
+            },
+            {
+              "name": "PolicyReleasePermission",
+              "exportKind": "named",
+              "source": "./libs/PolicyReleaseOperations"
             },
             {
               "name": "RecipientRef",
@@ -2562,6 +2605,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "PolicyReleaseConsole",
+              "exportKind": "named",
+              "source": "./libs/PolicyReleaseConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "ProblemNotice",
               "exportKind": "named",
               "source": "./libs/components",
@@ -3564,6 +3613,21 @@
               "name": "PlanReleaseValidationState",
               "exportKind": "named",
               "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PolicyReleaseConsoleField",
+              "exportKind": "named",
+              "source": "./libs/PolicyReleaseConsole"
+            },
+            {
+              "name": "PolicyReleaseConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/PolicyReleaseConsole"
+            },
+            {
+              "name": "PolicyReleaseConsoleState",
+              "exportKind": "named",
+              "source": "./libs/PolicyReleaseConsole"
             },
             {
               "name": "TenantBusinessWorkspaceProps",
@@ -13963,13 +14027,818 @@
           "sourceEntrypoint": "packages/features-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "assertPolicyValue",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "function"
+            },
+            {
+              "name": "InMemoryPolicyReleaseStore",
+              "exportKind": "declaration",
+              "source": "./libs/InMemoryPolicyReleaseStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidPolicyDefinitionProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/PolicyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "normalizePolicyScope",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "function"
+            },
+            {
+              "name": "PolicyActivationConflictProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/PolicyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PolicyAuthorizationProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/PolicyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "policyCommandFingerprint",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "function"
+            },
+            {
+              "name": "PolicyIdempotencyConflictProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/PolicyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PolicyInvalidTransitionProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/PolicyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PolicyProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/PolicyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PolicyRegistrationConflictProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/PolicyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "policyRegistrationFingerprint",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "function"
+            },
+            {
+              "name": "PolicyRegistrationMissingProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/PolicyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PolicyReleaseService",
+              "exportKind": "declaration",
+              "source": "./libs/PolicyReleaseService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PolicyRevisionConflictProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/PolicyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PolicyRevisionNotFoundProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/PolicyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "policyScheduleId",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "function"
+            },
+            {
+              "name": "PolicyScheduleProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/PolicyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PolicySchemaVersionMismatchProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/PolicyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "policyScopeKey",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "function"
+            },
+            {
+              "name": "policySemanticDiff",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "function"
+            },
+            {
+              "name": "PolicyStaleReviewProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/PolicyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PolicyUnavailableProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/PolicyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PolicyValidationFailedProblem",
+              "exportKind": "declaration",
+              "source": "./libs/problems/PolicyProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "policyValueHash",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "function"
+            },
+            {
+              "name": "stableStringify",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validatePolicyValue",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "function"
+            },
+            {
               "name": "FeatureManager",
               "exportKind": "named",
               "source": "./libs/FeatureManager",
               "declarationKind": "class"
             }
           ],
-          "typeExports": []
+          "typeExports": [
+            {
+              "name": "CreatePolicyDraftCommand",
+              "exportKind": "declaration",
+              "source": "./libs/PolicyReleaseService",
+              "declarationKind": "type"
+            },
+            {
+              "name": "EvaluatePolicyInput",
+              "exportKind": "declaration",
+              "source": "./libs/PolicyReleaseService",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ParameterizedPolicy",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PausePolicyCommand",
+              "exportKind": "declaration",
+              "source": "./libs/PolicyReleaseService",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyActor",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyActorInput",
+              "exportKind": "declaration",
+              "source": "./libs/PolicyReleaseService",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyAuthorizationPolicy",
+              "exportKind": "declaration",
+              "source": "./libs/PolicyReleaseService",
+              "declarationKind": "interface"
+            },
+            {
+              "name": "PolicyAuthorizationRequest",
+              "exportKind": "declaration",
+              "source": "./libs/PolicyReleaseService",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyCommandReceipt",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyContext",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyDecisionInput",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyDecisionReference",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyDefinition",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyDefinitionRecord",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyEvaluation",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyEvaluationResult",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyFieldDescriptor",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyFieldInput",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyPauseInput",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyProblemCode",
+              "exportKind": "declaration",
+              "source": "./libs/problems/PolicyProblems",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyPublication",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyPublicationInput",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyPublishCommand",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyReleaseServiceOptions",
+              "exportKind": "declaration",
+              "source": "./libs/PolicyReleaseService",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyResolution",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyResolutionStatus",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyReview",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyRevision",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyRevisionReference",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyScheduleDelivery",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyScheduleDeliveryResult",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyScheduleInput",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyScheduleRecord",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyScheduleState",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicySchema",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyScope",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicySemanticDiff",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyTarget",
+              "exportKind": "declaration",
+              "source": "./libs/PolicyReleaseService",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyTransitionCommand",
+              "exportKind": "declaration",
+              "source": "./libs/PolicyReleaseService",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyTransitionRecord",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyValidationDiagnostic",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyValidationResult",
+              "exportKind": "declaration",
+              "source": "./libs/Policy",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PublishPolicyCommand",
+              "exportKind": "declaration",
+              "source": "./libs/PolicyReleaseService",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ResolvePolicyInput",
+              "exportKind": "declaration",
+              "source": "./libs/PolicyReleaseService",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ReviewPolicyCommand",
+              "exportKind": "declaration",
+              "source": "./libs/PolicyReleaseService",
+              "declarationKind": "type"
+            },
+            {
+              "name": "RollbackPolicyCommand",
+              "exportKind": "declaration",
+              "source": "./libs/PolicyReleaseService",
+              "declarationKind": "type"
+            },
+            {
+              "name": "SchedulePolicyCommand",
+              "exportKind": "declaration",
+              "source": "./libs/PolicyReleaseService",
+              "declarationKind": "type"
+            },
+            {
+              "name": "TriggerScheduledPolicyCommand",
+              "exportKind": "declaration",
+              "source": "./libs/PolicyReleaseService",
+              "declarationKind": "type"
+            },
+            {
+              "name": "UpdatePolicyDraftCommand",
+              "exportKind": "declaration",
+              "source": "./libs/PolicyReleaseService",
+              "declarationKind": "type"
+            },
+            {
+              "name": "UpdatePolicyDraftFieldCommand",
+              "exportKind": "declaration",
+              "source": "./libs/PolicyReleaseService",
+              "declarationKind": "type"
+            },
+            {
+              "name": "PolicyAuditEntry",
+              "exportKind": "named",
+              "source": "./PolicyReleaseStore"
+            },
+            {
+              "name": "PolicyAuthorizationAction",
+              "exportKind": "named",
+              "source": "./PolicyReleaseStore"
+            },
+            {
+              "name": "PolicyReleaseStore",
+              "exportKind": "named",
+              "source": "./PolicyReleaseStore"
+            },
+            {
+              "name": "PolicyRevisionState",
+              "exportKind": "named",
+              "source": "./PolicyRevisionState"
+            },
+            {
+              "name": "PolicyScheduleLookup",
+              "exportKind": "named",
+              "source": "./PolicyReleaseStore"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/features-drizzle",
+      "relativeDir": "packages/features-drizzle",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/features-drizzle/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "createFeaturesSchema",
+              "exportKind": "named",
+              "source": "./migrations/createFeaturesSchema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "DrizzlePolicyReleaseStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzlePolicyReleaseStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "dropFeaturesSchema",
+              "exportKind": "named",
+              "source": "./migrations/createFeaturesSchema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "featurePolicyActivations",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "featurePolicyCommandReceipts",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "featurePolicyDecisions",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "featurePolicyDefinitions",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "featurePolicyHeads",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "FeaturePolicyMigrationProblem",
+              "exportKind": "named",
+              "source": "./migrations/createFeaturesSchema",
+              "declarationKind": "class"
+            },
+            {
+              "name": "FeaturePolicyPersistenceProblem",
+              "exportKind": "named",
+              "source": "./libs/problems"
+            },
+            {
+              "name": "featurePolicyReviews",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "featurePolicyRevisions",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "featurePolicySchedules",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "normalizePolicyScope",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "policyCommandFingerprint",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyIdempotencyConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems"
+            },
+            {
+              "name": "PolicyRevisionConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems"
+            },
+            {
+              "name": "policyScheduleId",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyScheduleProblem",
+              "exportKind": "named",
+              "source": "./libs/problems"
+            },
+            {
+              "name": "policyScopeKey",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "ScheduledPolicyPublisher",
+              "exportKind": "named",
+              "source": "./libs/ScheduledPolicyPublisher",
+              "declarationKind": "class"
+            },
+            {
+              "name": "stableStringify",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "DrizzlePolicyReleaseStoreOptions",
+              "exportKind": "named",
+              "source": "./libs/DrizzlePolicyReleaseStore"
+            },
+            {
+              "name": "FeaturePolicyCommandReceiptRow",
+              "exportKind": "named",
+              "source": "./libs/schema"
+            },
+            {
+              "name": "FeaturePolicyDefinitionRow",
+              "exportKind": "named",
+              "source": "./libs/schema"
+            },
+            {
+              "name": "FeaturePolicyMigrationClient",
+              "exportKind": "named",
+              "source": "./migrations/createFeaturesSchema"
+            },
+            {
+              "name": "FeaturePolicyPgDatabase",
+              "exportKind": "named",
+              "source": "./libs/DrizzlePolicyReleaseStore"
+            },
+            {
+              "name": "FeaturePolicyPgExecutor",
+              "exportKind": "named",
+              "source": "./libs/DrizzlePolicyReleaseStore"
+            },
+            {
+              "name": "FeaturePolicyRevisionRow",
+              "exportKind": "named",
+              "source": "./libs/schema"
+            },
+            {
+              "name": "FeaturePolicyScheduleRow",
+              "exportKind": "named",
+              "source": "./libs/schema"
+            },
+            {
+              "name": "PolicyActor",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyAuditEntry",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyCommandReceipt",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyDecisionInput",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyDecisionReference",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyDefinitionRecord",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyPauseInput",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyPublication",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyPublicationInput",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyPublishCommand",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyReleaseStore",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyResolution",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyRevision",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyRevisionState",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyScheduleDelivery",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyScheduleDeliveryPayload",
+              "exportKind": "named",
+              "source": "./libs/ScheduledPolicyPublisher"
+            },
+            {
+              "name": "PolicyScheduleInput",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyScheduleLookup",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyScheduleRecord",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyScheduleState",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyScope",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyTransitionRecord",
+              "exportKind": "named",
+              "source": "./libs/contracts"
+            },
+            {
+              "name": "PolicyTriggerDispatcher",
+              "exportKind": "named",
+              "source": "./libs/ScheduledPolicyPublisher"
+            },
+            {
+              "name": "RecoverDueSchedulesResult",
+              "exportKind": "named",
+              "source": "./libs/ScheduledPolicyPublisher"
+            },
+            {
+              "name": "ScheduledPolicyPublisherOptions",
+              "exportKind": "named",
+              "source": "./libs/ScheduledPolicyPublisher"
+            }
+          ]
         }
       ]
     },
