@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import type { ILogger } from "@croco/framework-context";
 import { Container, Context, LOGGER_TOKEN } from "@croco/framework-context";
+import * as telemetry from "@croco/telemetry-api";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Auditable as createAuditable } from "../libs/Auditable";
 import { Auditable } from "./auditTestDependencies";
@@ -1117,6 +1118,69 @@ describe("@Auditable", () => {
         auditError,
       );
       expect(createSpy).toHaveBeenCalledTimes(1);
+      expect(loggerMock.warn).toHaveBeenCalledWith(
+        "[Auditable] Failed to write audit log",
+        expect.objectContaining({
+          error: "audit persistence failed",
+        }),
+      );
+    });
+
+    it("should preserve the domain failure when failure audit persistence also fails", async () => {
+      const domainError = new Error("order already cancelled");
+      const auditError = new Error("audit persistence failed");
+      const createSpy = vi.fn(async () => {
+        throw auditError;
+      });
+
+      const repository = {
+        create: createSpy,
+        find: vi.fn(),
+      } as unknown as AuditLogRepository;
+
+      const loggerMock: ILogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        fatal: vi.fn(),
+        child: vi.fn(function (this: ILogger) {
+          return this;
+        }),
+      };
+
+      vi.spyOn(Container, "get").mockImplementation((token) => {
+        if (token === LOGGER_TOKEN) {
+          return loggerMock;
+        }
+        return repository;
+      });
+
+      vi.spyOn(Context, "get").mockReturnValue({
+        requestId: "req-6-double-failure",
+        tenantId: "tenant-6-double-failure",
+        user: { id: "actor-6-double-failure" },
+      } as RequestContextStub);
+      const recordErrorSpy = vi.spyOn(telemetry, "recordError").mockImplementation(() => {});
+
+      class TestService {
+        @Auditable({
+          action: "order.cancel",
+          resourceType: "Order",
+          resourceIdIndex: 0,
+          throwOnFailure: true,
+        })
+        async cancel(orderId: string): Promise<void> {
+          void orderId;
+          throw domainError;
+        }
+      }
+
+      await expect(new TestService().cancel("o1")).rejects.toBe(domainError);
+
+      expect(createSpy).toHaveBeenCalledTimes(1);
+      expect((domainError as Error & { cause?: unknown }).cause).toBe(auditError);
+      expect(recordErrorSpy).toHaveBeenCalledWith(auditError);
       expect(loggerMock.warn).toHaveBeenCalledWith(
         "[Auditable] Failed to write audit log",
         expect.objectContaining({

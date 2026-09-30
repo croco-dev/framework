@@ -111,6 +111,36 @@ function safelyRecordError(error: unknown): void {
   }
 }
 
+class AuditWriteFailureAggregateError extends Error {
+  readonly errors: readonly unknown[];
+
+  constructor(errors: readonly unknown[]) {
+    super("Method failure includes audit-write failure evidence");
+    this.name = "AuditWriteFailureAggregateError";
+    this.errors = errors;
+  }
+}
+
+function attachAuditWriteCause(originalError: unknown, auditWriteError: unknown): void {
+  if (!(originalError instanceof Error)) {
+    return;
+  }
+
+  try {
+    const existingCause = (originalError as Error & { cause?: unknown }).cause;
+    const diagnosticCause =
+      existingCause === undefined
+        ? auditWriteError
+        : new AuditWriteFailureAggregateError([existingCause, auditWriteError]);
+    Object.defineProperty(originalError, "cause", {
+      configurable: true,
+      value: diagnosticCause,
+    });
+  } catch {
+    return;
+  }
+}
+
 function safelyWarn(logger: ILogger, message: string, metadata: Record<string, unknown>): void {
   try {
     logger.warn(message, metadata);
@@ -292,13 +322,17 @@ export function Auditable<T>(options: AuditableOptions<T>): MethodDecorator {
         result = await originalMethod.apply(this, args);
       } catch (error) {
         const payload = buildAuditPayload(args, payloadInput, null, getErrorMessage(error), false);
-        await writeDecoratorAuditLog(
-          auditConfig,
-          payload,
-          dependencies,
-          interceptorMetadataTarget,
-          propertyKey,
-        );
+        try {
+          await writeDecoratorAuditLog(
+            auditConfig,
+            payload,
+            dependencies,
+            interceptorMetadataTarget,
+            propertyKey,
+          );
+        } catch (auditWriteError) {
+          attachAuditWriteCause(error, auditWriteError);
+        }
 
         throw error;
       }
