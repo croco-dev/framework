@@ -640,7 +640,21 @@ export class EngagementService {
       try {
         await activePolicy.commit(reservation, channelExecutionIds);
       } catch (error) {
-        throw new ContactPolicyAcceptanceUnknownProblem(normalizeError(error));
+        const failure = new ContactPolicyAcceptanceUnknownProblem(normalizeError(error));
+        try {
+          await this.recordFailure(
+            message,
+            command,
+            channel,
+            eligibleEndpoints,
+            failure,
+            "persistence",
+            channelExecutionIds,
+          );
+        } catch (recordingError) {
+          throw new ContactPolicyAcceptanceUnknownProblem(normalizeError(recordingError));
+        }
+        throw failure;
       }
     }
 

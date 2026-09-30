@@ -356,41 +356,43 @@ function serviceFixture(
   };
   if (options.failCommit)
     vi.spyOn(policy, "commit").mockRejectedValue(new Error("database unavailable"));
-  const service = new EngagementService(
-    new InMemoryRecipientDirectory([
+  const createService = () =>
+    new EngagementService(
+      new InMemoryRecipientDirectory([
+        {
+          recipient,
+          emails: [
+            { id: "e1", address: "a@example.com" },
+            { id: "e2", address: "b@example.com" },
+          ],
+          push: [],
+        },
+      ]),
+      renderer,
       {
-        recipient,
-        emails: [
-          { id: "e1", address: "a@example.com" },
-          { id: "e2", address: "b@example.com" },
-        ],
-        push: [],
+        prepareDispatch() {
+          return { dispatch };
+        },
       },
-    ]),
-    renderer,
-    {
-      prepareDispatch() {
-        return { dispatch };
+      {
+        async evaluate() {
+          return { suppressed: options.deny === true, kind: "preference" };
+        },
       },
-    },
-    {
-      async evaluate() {
-        return { suppressed: options.deny === true, kind: "preference" };
+      dispatches,
+      () => now,
+      {
+        ...(options.dynamic ? { resolvePolicy: async () => currentPolicy } : { policy }),
+        app: "app",
+        environment: "test",
+        fingerprint: (value) => createHash("sha256").update(JSON.stringify(value)).digest("hex"),
       },
-    },
-    dispatches,
-    () => now,
-    {
-      ...(options.dynamic ? { resolvePolicy: async () => currentPolicy } : { policy }),
-      app: "app",
-      environment: "test",
-      fingerprint: (value) => createHash("sha256").update(JSON.stringify(value)).digest("hex"),
-    },
-  );
+    );
   return {
     store,
     policy,
-    service,
+    service: createService(),
+    createService,
     dispatch,
     dispatches,
     setConfig(next: ContactPolicyConfig) {
@@ -421,6 +423,65 @@ describe("EngagementService contact policy gate", () => {
       failureCode: "engagement-core/contact-policy-acceptance-unknown",
       retryable: false,
     });
+  });
+
+  it("records accepted endpoint evidence when contact policy commit fails and prevents resends", async () => {
+    const { service, createService, dispatches, dispatch, store } = serviceFixture({
+      failCommit: true,
+    });
+    dispatch.mockResolvedValueOnce({ executionId: "execution-first" });
+    dispatch.mockResolvedValueOnce({ executionId: "execution-second" });
+    const command = { recipient, data: {}, key: "commit-failed" };
+    await expect(service.send(message, command)).rejects.toMatchObject({
+      code: "engagement-core/contact-policy-acceptance-unknown",
+      extensions: { retryable: false },
+      cause: { message: "database unavailable" },
+    });
+    const failed = await dispatches.findByIdentity({
+      tenantId: "tenant",
+      recipientId: "recipient",
+      messageId: "message",
+      channel: "email",
+      semanticKey: command.key,
+    });
+    expect(failed?.outcome).toEqual({
+      kind: "failed",
+      stage: "persistence",
+      failureCode: "engagement-core/contact-policy-acceptance-unknown",
+      retryable: false,
+      executionIds: ["execution-first", "execution-second"],
+    });
+    expect(failed?.targets).toEqual([
+      { endpointId: "e1", endpointVersion: 1, executionId: "execution-first" },
+      { endpointId: "e2", endpointVersion: 1, executionId: "execution-second" },
+    ]);
+    expect((await store.read(scope, "recipient:recipient"))[0]?.state).toBe("unknown");
+    await expect(createService().send(message, command)).rejects.toBeInstanceOf(
+      ContactPolicyConflictProblem,
+    );
+    expect(dispatch).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps contact acceptance non-retryable when recording commit failure evidence also fails", async () => {
+    const { service, createService, dispatches, dispatch, store } = serviceFixture({
+      failCommit: true,
+    });
+    const recordingFailure = new Error("dispatch evidence unavailable");
+    vi.spyOn(dispatches, "recordDispatch").mockRejectedValue(recordingFailure);
+    const command = { recipient, data: {}, key: "evidence-failed" };
+    await expect(service.send(message, command)).rejects.toMatchObject({
+      code: "engagement-core/contact-policy-acceptance-unknown",
+      extensions: { retryable: false },
+      cause: {
+        code: "engagement-core/persistence-failed",
+        cause: recordingFailure,
+      },
+    });
+    expect((await store.read(scope, "recipient:recipient"))[0]?.state).toBe("unknown");
+    await expect(createService().send(message, command)).rejects.toBeInstanceOf(
+      ContactPolicyConflictProblem,
+    );
+    expect(dispatch).toHaveBeenCalledTimes(2);
   });
 
   it("records the denied campaign and the other campaign that consumed its budget", async () => {
