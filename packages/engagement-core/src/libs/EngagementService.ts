@@ -7,6 +7,14 @@ import {
 } from "@croco/notifications-core";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
+  ContactPolicyConflictProblem,
+  ContactPolicyAcceptanceUnknownProblem,
+  type ContactPolicy,
+  type ContactPolicyDecision,
+  type ContactPolicyReservation,
+  type EngagementContactPolicyGate,
+} from "./ContactPolicy";
+import {
   EngagementPersistenceProblem,
   type EngagementDispatch,
   type EngagementDispatchStore,
@@ -66,6 +74,7 @@ export type EngagementSendCommand<TMessage extends AnyMessage> = Readonly<{
   recipient: RecipientRef;
   data: MessageDataInput<TMessage>;
   key: string;
+  campaignId?: string;
   policy?: EngagementDeliveryPolicy;
 }>;
 
@@ -73,6 +82,7 @@ type ParsedEngagementSendCommand<TMessage extends AnyMessage> = Readonly<{
   recipient: RecipientRef;
   data: MessageData<TMessage>;
   key: string;
+  campaignId?: string;
   policy?: EngagementDeliveryPolicy;
 }>;
 
@@ -86,6 +96,7 @@ export type EngagementChannelResult =
       channel: MessageChannel;
       status: "suppressed";
       reason: "preference" | "suppression";
+      contactPolicyDecision?: ContactPolicyDecision;
     }>
   | Readonly<{
       channel: MessageChannel;
@@ -278,6 +289,7 @@ export class EngagementService {
     private readonly suppressions: EngagementSuppressionEvaluator = ALLOW_ALL_SUPPRESSIONS,
     private readonly dispatches?: EngagementDispatchStore,
     private readonly clock: () => Date = () => new Date(),
+    private readonly contactPolicy?: EngagementContactPolicyGate,
   ) {}
 
   async send<TMessage extends AnyMessage>(
@@ -512,7 +524,7 @@ export class EngagementService {
 
   private async dispatchChannel(
     message: AnyMessage,
-    command: Readonly<{ recipient: RecipientRef; key: string }>,
+    command: Readonly<{ recipient: RecipientRef; key: string; data: unknown; campaignId?: string }>,
     recipient: ResolvedRecipient,
     channel: MessageChannel,
     eligibleEndpoints: readonly ResolvedEndpoint[],
@@ -522,6 +534,60 @@ export class EngagementService {
     executionIds: string[],
   ): Promise<void> {
     const channelExecutionIds: string[] = [];
+    let reservation: ContactPolicyReservation | undefined;
+    let activePolicy: ContactPolicy | undefined;
+    if (this.contactPolicy !== undefined) {
+      const gate = this.contactPolicy;
+      const scope = {
+        app: gate.app,
+        environment: gate.environment,
+        tenantId: command.recipient.tenantId,
+      };
+      activePolicy = gate.policy ?? (await gate.resolvePolicy(scope));
+      const reserved = await activePolicy.reserve({
+        scope,
+        recipient: command.recipient.userId,
+        channel,
+        topic: message.topic,
+        messageId: message.id,
+        ...(command.campaignId === undefined ? {} : { campaignId: command.campaignId }),
+        logicalSendId: JSON.stringify([message.id, command.key, channel]),
+        payloadFingerprint: gate.fingerprint({
+          messageId: message.id,
+          topic: message.topic,
+          channel,
+          content,
+          data: command.data,
+          endpoints: eligibleEndpoints,
+        }),
+        now: this.clock(),
+      });
+      reservation = reserved.reservation;
+      if (reserved.replay && reservation?.state === "committed") {
+        channelResults.push({ channel, status: "queued", executionIds: reservation.executionIds });
+        executionIds.push(...reservation.executionIds);
+        return;
+      }
+      if (reserved.replay && reservation?.state !== "released") {
+        throw new ContactPolicyConflictProblem(
+          "Logical send is already reserved or has unknown provider acceptance; reconciliation is required",
+        );
+      }
+      if (!reserved.decision.allowed) {
+        const denied = {
+          channel,
+          status: "suppressed",
+          reason: "suppression",
+          contactPolicyDecision: reserved.decision,
+        } as const;
+        channelResults.push(denied);
+        await this.recordChannelResult(message, command, denied, eligibleEndpoints);
+        return;
+      }
+      if (reservation === undefined)
+        throw new ContactPolicyConflictProblem("Allowed reservation is missing");
+      await activePolicy.markUnknown(reservation);
+    }
 
     for (const endpoint of eligibleEndpoints) {
       try {
@@ -542,12 +608,16 @@ export class EngagementService {
         channelExecutionIds.push(result.executionId);
         executionIds.push(result.executionId);
       } catch (error) {
+        const failure =
+          reservation === undefined
+            ? normalizeError(error)
+            : new ContactPolicyAcceptanceUnknownProblem(normalizeError(error));
         await this.recordFailure(
           message,
           command,
           channel,
           eligibleEndpoints,
-          error,
+          failure,
           "provider",
           channelExecutionIds,
         );
@@ -561,8 +631,16 @@ export class EngagementService {
               ? []
               : [{ channel, status: "queued" as const, executionIds: channelExecutionIds }]),
           ],
-          normalizeError(error),
+          failure,
         );
+      }
+    }
+
+    if (reservation !== undefined && activePolicy !== undefined) {
+      try {
+        await activePolicy.commit(reservation, channelExecutionIds);
+      } catch (error) {
+        throw new ContactPolicyAcceptanceUnknownProblem(normalizeError(error));
       }
     }
 
@@ -656,11 +734,11 @@ export class EngagementService {
 
   private async replayChannel(
     message: AnyMessage,
-    command: Readonly<{ recipient: RecipientRef; key: string }>,
+    command: Readonly<{ recipient: RecipientRef; key: string; campaignId?: string }>,
     channel: MessageChannel,
     previousResults: readonly EngagementChannelResult[],
   ): Promise<EngagementChannelResult | undefined> {
-    if (this.dispatches === undefined) return undefined;
+    if (this.dispatches === undefined || this.contactPolicy !== undefined) return undefined;
     let dispatch: EngagementDispatch | undefined;
     try {
       dispatch = await this.dispatches.findByIdentity({
@@ -684,9 +762,9 @@ export class EngagementService {
 
   private async replayCompletedSend(
     message: AnyMessage,
-    command: Readonly<{ recipient: RecipientRef; key: string }>,
+    command: Readonly<{ recipient: RecipientRef; key: string; campaignId?: string }>,
   ): Promise<EngagementSendResult | undefined> {
-    if (this.dispatches === undefined) return undefined;
+    if (this.dispatches === undefined || this.contactPolicy !== undefined) return undefined;
     const channelResults: EngagementChannelResult[] = [];
     const executionIds: string[] = [];
     let complete = true;
@@ -706,7 +784,7 @@ export class EngagementService {
 
   private async recordChannelResult(
     message: AnyMessage,
-    command: Readonly<{ recipient: RecipientRef; key: string }>,
+    command: Readonly<{ recipient: RecipientRef; key: string; campaignId?: string }>,
     result: EngagementChannelResult,
     endpoints: readonly ResolvedEndpoint[],
   ): Promise<void> {
@@ -724,7 +802,35 @@ export class EngagementService {
           result.status === "queued"
             ? { kind: "queued", executionIds: result.executionIds }
             : result.status === "suppressed"
-              ? { kind: "suppressed", reason: result.reason }
+              ? {
+                  kind: "suppressed",
+                  reason: result.reason,
+                  ...(result.contactPolicyDecision === undefined || this.contactPolicy === undefined
+                    ? {}
+                    : {
+                        contactPolicy: {
+                          app: this.contactPolicy.app,
+                          environment: this.contactPolicy.environment,
+                          reason: result.contactPolicyDecision.reason,
+                          blockingRuleId: result.contactPolicyDecision.blockingRuleId,
+                          ...(command.campaignId === undefined
+                            ? {}
+                            : { campaignId: command.campaignId }),
+                          ...(result.contactPolicyDecision.blockingCampaignIds === undefined
+                            ? {}
+                            : {
+                                blockingCampaignIds:
+                                  result.contactPolicyDecision.blockingCampaignIds,
+                              }),
+                          ...(result.contactPolicyDecision.nextEligibleAt === undefined
+                            ? {}
+                            : {
+                                nextEligibleAt:
+                                  result.contactPolicyDecision.nextEligibleAt.toISOString(),
+                              }),
+                        },
+                      }),
+                }
               : result.status === "unavailable"
                 ? { kind: "unavailable", reason: result.reason }
                 : { kind: "skipped", reason: result.reason },
@@ -741,7 +847,7 @@ export class EngagementService {
 
   private async recordFailure(
     message: AnyMessage,
-    command: Readonly<{ recipient: RecipientRef; key: string }>,
+    command: Readonly<{ recipient: RecipientRef; key: string; campaignId?: string }>,
     channel: MessageChannel,
     endpoints: readonly ResolvedEndpoint[],
     error: unknown,
@@ -953,6 +1059,12 @@ function assertCommand(command: unknown): asserts command is EngagementSendComma
   const key = "key" in command ? command.key : undefined;
   if (typeof key !== "string" || key.length === 0) {
     throw new EngagementCommandInvalidProblem("Semantic key must not be empty");
+  }
+  const campaignId = "campaignId" in command ? command.campaignId : undefined;
+  if (campaignId !== undefined && (typeof campaignId !== "string" || !campaignId.trim())) {
+    throw new EngagementCommandInvalidProblem(
+      "campaignId must be a non-empty string when supplied",
+    );
   }
   const policy = "policy" in command ? command.policy : undefined;
   if (policy !== undefined && policy !== "first-reachable" && policy !== "all-reachable") {

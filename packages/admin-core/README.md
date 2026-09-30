@@ -179,24 +179,47 @@ assertAdminResourceValid(userResource);
 all diagnostics in RFC 7807 extensions so build-time or codegen checks can fail
 without guessing at runtime.
 
-## Policy release authorization
 
-`PolicyReleaseAccess` is resolved by the server from its authenticated identity. Its scope
-includes an explicit tenant ID or `null` for a separately granted app-wide scope. Omitting a
-tenant never grants app-wide access. `assertPolicyReleaseAccess` requires an exact app,
-environment, and tenant match and the requested read, write, review, or publish permission.
-Never accept the access object or actor identity from browser request JSON.
+## Contact policy operations
 
-`PolicyReleaseOperations` wraps the same `PolicyReleaseService` used by standalone callers.
-Its bounded `read({ policyId, scope }, access)` reads one latest revision. `edit` accepts one
-registered descriptor ID (`field`) and its value; `review` and `publish` delegate the exact
-expected revision to the service. Every mutation requires `reason`, `expectedRevision`, and
-`idempotencyKey`; the actor comes from server access. `publish` accepts the review hash and
-an optional canonical UTC `effectiveAt` for scheduling. A provider failure propagates.
+`ContactPolicyOperations` provides standalone server operations for the optional
+engagement contact policy gate. `load`, `save`, and `dryRun` require an explicit
+`{ scope: { app, environment, tenantId }, subject }` target. The server-owned
+`authorize` callback resolves the authenticated actor and `contact-policy.read`
+or `contact-policy.write` permissions for that exact target. Write permission must authorize tenant-wide policy changes; client permissions
+are never authorization evidence.
 
-Snapshots omit sensitive field values and conservatively redact semantic changes when a
-registration contains a sensitive field. Validation exposes code, path, and severity without raw input. Field snapshots retain numeric
-bounds and select options. Publication and schedule receipts are read from the persisted command
-receipt, including after reload. The default
-impact snapshot reports the revision state as fact and missing outcome data explicitly;
-applications may supply separately sourced estimates to the console.
+Register editable rule limit bounds, optional quiet hours, and topic priority
+bounds with `ContactPolicyAdminRegistration`. Edits cannot change topic kinds,
+message registrations, rule targeting, or reservation TTL. Topic exception
+registration remains in application code. `createPolicy(snapshot)` constructs
+the same `ContactPolicy` used by the send gate; dry-run calls its non-consuming
+`evaluate` method and never reserves budget.
+
+Policy settings and write idempotency keys belong to app/environment/tenant.
+The subject selects dry-run and history only; it does not partition configuration.
+Supply a `ContactPolicyAdminStore` with atomic revision comparison, idempotency
+replay/conflict detection, and audit persistence. `save` passes the original edit,
+server actor, reason, expected revision and key into that transaction. Persisted
+configuration revisions become policy versions for subsequent sends. History
+must be scoped to the authorized subject and contain only logical send/campaign
+IDs and decision metadata; it must not contain contact addresses or tokens.
+`historyComplete: false` signals partial evidence rather than a complete count.
+
+Install the send gate with `resolvePolicy(scope)` when operators can edit the
+policy. Resolve the persisted configuration for that app/environment/tenant and
+construct `ContactPolicy` with its config/topics and the shared durable budget
+store. Use the same factory for `ContactPolicyOperations.createPolicy`. The gate
+resolves configuration immediately before each new channel reservation; prior
+reservations retain their recorded policy version. A static gate policy is
+appropriate only when configuration is supplied exclusively in code.
+
+Persisted settings must match the deployed code registration. Call
+`assertContactPolicyRegistration(snapshot, registration)` before constructing a send
+policy from stored settings; `ContactPolicyOperations` applies this guard to reads,
+dry-runs, and saves. The guard preserves permitted limit, priority, and quiet-hour
+overrides, and rejects changed registration versions, rule topology or timing,
+reservation TTL, topic kinds, message memberships, or overrides outside current
+bounds with `admin-core/contact-policy-invalid`. A deployment that changes these
+contracts requires an explicit settings migration or reinitialization. Do not
+reuse the old snapshot or silently substitute defaults after validation fails.

@@ -1,4 +1,15 @@
 export {
+  DrizzleContactPolicyAdminStore,
+  type DrizzleContactPolicyAdminClient,
+  type ContactPolicySettingsTarget,
+  type ContactPolicySettingsSnapshot,
+  type SaveContactPolicySettings,
+} from "./libs/DrizzleContactPolicyAdminStore";
+export {
+  DrizzleContactPolicyStore,
+  type DrizzleContactPolicyClient,
+} from "./libs/DrizzleContactPolicyStore";
+export {
   DrizzleCampaignStore,
   type DrizzleCampaignClient,
   type DrizzleCampaignTxManager,
@@ -13,6 +24,10 @@ export {
   engagementCampaignSnapshotMembers,
   engagementCampaignSnapshots,
   engagementContactEndpoints,
+  engagementContactPolicyBuckets,
+  engagementContactPolicySettings,
+  engagementContactPolicyAudit,
+  engagementContactPolicyReservations,
   engagementDeliveryEvents,
   engagementDispatchTargets,
   engagementDispatches,

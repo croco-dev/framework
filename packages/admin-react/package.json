@@ -48,6 +48,7 @@
     "@croco/admin-ops": "workspace:*",
     "@croco/billing-core": "workspace:*",
     "@croco/cohort-core": "workspace:*",
+    "@croco/engagement-core": "workspace:*",
     "@croco/entitlements-core": "workspace:*",
     "@croco/experience-core": "workspace:*",
     "@croco/frontend-react": "workspace:*",

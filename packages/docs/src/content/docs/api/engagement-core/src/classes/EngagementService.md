@@ -9,7 +9,7 @@ title: "EngagementService"
 
 ### Constructor
 
-> **new EngagementService**(`directory`, `renderer`, `notifications`, `suppressions?`, `dispatches?`, `clock?`): `EngagementService`
+> **new EngagementService**(`directory`, `renderer`, `notifications`, `suppressions?`, `dispatches?`, `clock?`, `contactPolicy?`): `EngagementService`
 
 #### Parameters
 
@@ -36,6 +36,10 @@ title: "EngagementService"
 ##### clock?
 
 () => `Date`
+
+##### contactPolicy?
+
+[`EngagementContactPolicyGate`](/api/engagement-core/src/type-aliases/engagementcontactpolicygate/)
 
 #### Returns
 

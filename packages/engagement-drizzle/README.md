@@ -76,3 +76,33 @@ and an ordinary endpoint upsert cannot reactivate a terminally invalid endpoint.
 
 All public store methods require tenant scope for recipient-owned data. History is ordered by
 `updatedAt` and durable dispatch ID, so pagination remains deterministic when timestamps tie.
+
+## Contact policy persistence
+
+Use `DrizzleContactPolicyStore(db)` as the `ContactPolicy` store. The adapter creates a bucket
+for each app/environment/tenant/subject and locks that row within a PostgreSQL transaction before
+reading the ledger, evaluating quota, and writing reservations. Two application connections therefore
+share the same budget, including when the ledger is initially empty. Callback failures roll back all
+writes. Reserved, committed, released, and unknown states survive process restarts; expiration never
+automatically returns unknown budget. Ledger fields contain opaque recipient/group identifiers and
+payload fingerprints, without contact addresses or provider tokens. Optional campaign IDs preserve
+which campaign consumed a budget. Explicit reconciliation retains the verified evidence reference,
+actor, reason, and acceptance outcome across restarts; never place raw provider responses in evidence.
+
+`DrizzleContactPolicyAdminStore(db)` implements the administrative settings contract structurally.
+Settings, revision comparisons, edit idempotency, and actor/reason audit apply to the whole
+app/environment/tenant scope. The authorized subject selects suppression history only. `loadPolicy(scope)`
+loads the current settings without reading recipient history. Wire it into the engagement gate's
+`resolvePolicy` callback to construct `ContactPolicy` with the shared ledger, current config, and server
+registered topics before each send. Reject missing settings explicitly. The administration layer must
+authorize tenant-wide writes and validate edits against the server's registered bounds and topic kinds.
+
+Recent suppression history reads up to 100 scoped contact-policy outcomes from the existing dispatch
+store. `historyComplete` is false when further matching records exist. This history describes sends
+through the installed engagement gate; external sends and low-level bypasses are outside its coverage.
+
+`createEngagementSchema` adds contact-policy buckets, reservations, settings, and edit audit tables
+idempotently. For rollback, stop contact-policy writers before removing these four tables; removing
+them discards deduplication and budget evidence. `dropEngagementSchema` removes all engagement tables
+and is intended for disposable test databases, not a production feature rollback. Preserve unknown
+reservations until provider acceptance is reconciled.

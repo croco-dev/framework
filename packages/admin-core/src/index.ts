@@ -308,15 +308,23 @@ export type {
   ExperienceAdminPreview,
   ExperienceAdminState,
 } from "./libs/ExperienceOperations";
+
+
 export {
-  PolicyReleaseOperations,
-  PolicyReleaseAccessProblem,
-  assertPolicyReleaseAccess,
-} from "./libs/PolicyReleaseOperations";
+  ContactPolicyOperations,
+  assertContactPolicyRegistration,
+  ContactPolicyAdminProblem,
+  ContactPolicyAdminAccessProblem,
+} from "./libs/ContactPolicyOperations";
 export type {
-  PolicyReleaseAccess,
-  PolicyReleasePermission,
-  PolicyReleaseAdminTarget,
-  PolicyReleaseAdminCommand,
-  PolicyReleaseAdminSnapshot,
-} from "./libs/PolicyReleaseOperations";
+  ContactPolicyAdminScope,
+  ContactPolicyAdminAccess,
+  ContactPolicyAdminRegistration,
+  ContactPolicyAdminSnapshot,
+  ContactPolicySuppression,
+  ContactPolicyAdminView,
+  ContactPolicyAdminEdit,
+  ContactPolicyAdminSave,
+  ContactPolicyAdminStore,
+  ContactPolicyConsoleState,
+} from "./libs/ContactPolicyOperations";

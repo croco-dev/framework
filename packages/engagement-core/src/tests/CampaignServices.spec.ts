@@ -138,14 +138,18 @@ class FakeCampaignSender implements CampaignMessageSender {
   maxActive = 0;
   attempts = new Map<string, number>();
   logicalExecutionIds = new Map<string, string>();
-  commands: Readonly<{ recipientId: string; key: string }>[] = [];
+  commands: Readonly<{ recipientId: string; key: string; campaignId?: string }>[] = [];
   onSend?: (command: Readonly<{ recipientId: string; key: string }>) => Promise<void>;
 
   async send<TMessage extends AnyMessage>(
     _message: TMessage,
     command: EngagementSendCommand<TMessage>,
   ): Promise<EngagementSendResult> {
-    const call = { recipientId: command.recipient.userId, key: command.key };
+    const call = {
+      recipientId: command.recipient.userId,
+      key: command.key,
+      campaignId: command.campaignId,
+    };
     this.commands = [...this.commands, call];
     this.attempts.set(command.key, (this.attempts.get(command.key) ?? 0) + 1);
     this.active += 1;
@@ -448,6 +452,9 @@ describe("CampaignServices", () => {
       pending: 0,
     });
     expect(fixture.sender.maxActive).toBe(2);
+    expect(
+      fixture.sender.commands.every((command) => command.campaignId === TrialReminder.id),
+    ).toBe(true);
     expect(fixture.sender.commands.every((command) => command.key.includes(snapshot.id))).toBe(
       true,
     );

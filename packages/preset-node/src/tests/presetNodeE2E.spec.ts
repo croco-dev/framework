@@ -258,7 +258,7 @@ describe("createNodeHost keep-alive drain", () => {
     const secondHeader = data.indexOf("HTTP/1.1 200 OK", data.indexOf("HTTP/1.1 200 OK") + 1);
     expect(secondHeader).toBeGreaterThan(0);
     const secondBody = data.indexOf("\r\n\r\n", secondHeader) + 4;
-    expect(data.subarray(secondBody)).toEqual(body);
+    expect(data.subarray(secondBody).equals(body)).toBe(true);
     await expect(closing).resolves.toBeUndefined();
   }, 10_000);
 
