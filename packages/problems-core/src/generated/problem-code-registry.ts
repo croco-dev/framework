@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 853,
+  problemCount: 854,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -25138,7 +25138,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 102,
+          line: 118,
           column: 1,
           kind: "problem-class",
         },
@@ -25337,6 +25337,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "tx-core/join-timeout-unsupported",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#tx-core-join-timeout-unsupported",
+      recovery: {
+        cause:
+          "The nested operation would join its enclosing transaction, which cannot enforce an independent timeout.",
+        userAction:
+          "Remove every source of the joined timeout, including the per-run timeout and TxManager.defaultTimeout when configured; use a supported savepoint or set the deadline on the enclosing transaction if a timeout is required.",
+        operatorAction:
+          "Check the effective timeout source, nesting strategy, and adapter savepoint support; configure the manager without defaultTimeout for untimed joins.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
+          line: 102,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "tx-core/manager-not-registered",
       category: "InternalServerError",
       status: 500,
@@ -25489,7 +25522,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 164,
+          line: 180,
           column: 1,
           kind: "problem-class",
         },
@@ -25521,7 +25554,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 146,
+          line: 162,
           column: 1,
           kind: "problem-class",
         },
@@ -25553,7 +25586,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/tx-core/src/libs/problems/TransactionProblems.ts",
-          line: 129,
+          line: 145,
           column: 1,
           kind: "problem-class",
         },

@@ -594,6 +594,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`DetachedTransactionOperationProblem`](/api/tx-core/src/classes/detachedtransactionoperationproblem/)
 - [`DuplicateTxManagerRegistrationProblem`](/api/tx-core/src/classes/duplicatetxmanagerregistrationproblem/)
 - [`InvalidTransactionTimeoutProblem`](/api/tx-core/src/classes/invalidtransactiontimeoutproblem/)
+- [`JoinedTransactionTimeoutProblem`](/api/tx-core/src/classes/joinedtransactiontimeoutproblem/)
 - [`TransactionContextProblem`](/api/tx-core/src/classes/transactioncontextproblem/)
 - [`TransactionDecoratorProblem`](/api/tx-core/src/classes/transactiondecoratorproblem/)
 - [`TransactionOutcomeContextProblem`](/api/tx-core/src/classes/transactionoutcomecontextproblem/)

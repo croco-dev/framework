@@ -8,6 +8,7 @@ import {
   AfterCommitHooksProblem,
   DetachedTransactionOperationProblem,
   InvalidTransactionTimeoutProblem,
+  JoinedTransactionTimeoutProblem,
   MAX_TRANSACTION_TIMEOUT_MS,
   TransactionContextProblem,
   TransactionOutcomeContextProblem,
@@ -138,6 +139,10 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
       return outcome.value;
     }
 
+    if (nesting === "join" && timeout !== undefined) {
+      throw new JoinedTransactionTimeoutProblem(timeout);
+    }
+
     return this.executeTrackedNestedOperation(currentContext, () =>
       nesting === "join"
         ? this.executeJoined(currentContext, fn)
@@ -224,6 +229,9 @@ export class TxManager<TClient, TOptions = unknown> implements TransactionContex
     timeout?: number,
   ): Promise<T> {
     if (!this.adapter.supportsSavepoint(currentContext.client)) {
+      if (timeout !== undefined) {
+        throw new JoinedTransactionTimeoutProblem(timeout);
+      }
       this.warnSavepointNotSupported();
       return this.executeJoined(currentContext, fn);
     }
