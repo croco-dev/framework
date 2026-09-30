@@ -37,6 +37,9 @@ Implementations must make this operation idempotent.
 
 Atomically reserves an idempotency key and optional cooldown window before dispatch.
 Distributed adapters must enforce both constraints in one shared transaction.
+When a claim key is already held, the store returns the existing run when it
+can be identified, and reports `source_payload_conflict` when the same source
+identity arrives with a different semantic fingerprint.
 
 #### Parameters
 

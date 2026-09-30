@@ -262,7 +262,7 @@ describe("InMemoryLifecycleRunStore snapshot ownership", () => {
         createClaim("duplicate-run", "claim-1"),
         withUnsupportedMetadata(createIndeterminateRun("duplicate-run", "claim-1")),
       ),
-    ).resolves.toEqual({ claimed: false, reason: "idempotency_key_reused" });
+    ).resolves.toMatchObject({ claimed: false, reason: "idempotency_key_reused" });
     await expect(
       store.claim(
         {
@@ -314,7 +314,9 @@ describe("InMemoryLifecycleRunStore snapshot ownership", () => {
       ],
     });
 
-    await expect(store.claim(createClaim("outer-run", "shared-claim"), outerRun)).resolves.toEqual({
+    await expect(
+      store.claim(createClaim("outer-run", "shared-claim"), outerRun),
+    ).resolves.toMatchObject({
       claimed: false,
       reason: "idempotency_key_reused",
     });

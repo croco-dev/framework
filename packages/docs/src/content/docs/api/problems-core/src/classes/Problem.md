@@ -341,6 +341,8 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`LifecycleRuleVersionDefinitionProblem`](/api/lifecycle-core/src/classes/lifecycleruleversiondefinitionproblem/)
 - [`LifecycleRunEvidenceProblem`](/api/lifecycle-core/src/classes/lifecyclerunevidenceproblem/)
 - [`LifecycleRunFinalizationProblem`](/api/lifecycle-core/src/classes/lifecyclerunfinalizationproblem/)
+- [`LifecycleSourcePayloadConflictProblem`](/api/lifecycle-core/src/classes/lifecyclesourcepayloadconflictproblem/)
+- [`MissingLifecycleSourceIdentityProblem`](/api/lifecycle-core/src/classes/missinglifecyclesourceidentityproblem/)
 - [`MonetizationRecipeCapabilityProblem`](/api/lifecycle-core/src/classes/monetizationrecipecapabilityproblem/)
 - [`MonetizationSignalDefinitionProblem`](/api/lifecycle-core/src/classes/monetizationsignaldefinitionproblem/)
 - [`MonetizationThresholdClaimProblem`](/api/lifecycle-core/src/classes/monetizationthresholdclaimproblem/)

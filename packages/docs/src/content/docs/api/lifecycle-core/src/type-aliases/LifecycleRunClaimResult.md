@@ -5,4 +5,4 @@ prev: false
 title: "LifecycleRunClaimResult"
 ---
 
-> **LifecycleRunClaimResult** = \{ `claimed`: `true`; \} \| \{ `claimed`: `false`; `reason`: `"cooldown_active"` \| `"idempotency_key_reused"`; \}
+> **LifecycleRunClaimResult** = \{ `claimed`: `true`; \} \| \{ `claimed`: `false`; `existingRun?`: [`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/); `reason`: `"cooldown_active"` \| `"idempotency_key_reused"`; \} \| \{ `claimed`: `false`; `existingRun`: [`LifecycleRun`](/api/lifecycle-core/src/type-aliases/lifecyclerun/); `reason`: `"source_payload_conflict"`; \}

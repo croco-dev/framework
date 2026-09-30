@@ -111,6 +111,21 @@ Registering another version never replaces the active version. It remains `inact
 
 Production runs and action emissions record both `ruleVersion` and `ruleFingerprint`. A paused rule still records a skipped run with `skipReason: "rule_paused"`, but it does not dispatch actions. Resuming does not replay signals.
 
+Default dedupe preserves the redeliverable source event identity: the idempotency key is the
+`(rule id, rule version, tenant id, signal type, source namespace, source event id)` tuple.
+Issue one stable `signal.id` at the durable ingress boundary (for example with
+`ensureDurableLifecycleSignal()`) and preserve it on every redelivery envelope. Signals without
+a source identity fail evaluation with `lifecycle-core/source-identity-missing` instead of being
+estimated from timestamps, payloads, or per-attempt UUIDs. Redelivery with the same identity and
+semantic payload returns the same logical run; redelivery with a conflicting payload fails with
+`lifecycle-core/source-payload-conflict`. The conflict fingerprint covers semantic signal
+type/data only and excludes receiver timestamps and attempt metadata. An explicit custom
+`idempotencyKey` resolver is business coalescing: it intentionally merges distinct source events
+into one unit of work. `InMemoryLifecycleRunStore` retains finalized receipts for 30 days by
+default (`receiptTtlMs`); align this with the supported replay horizon because redelivery after
+expiry is treated as a new receipt. Receipts persisted with the previous default key
+(`rule:version:tenant:type:signal-or-timestamp`) are accepted as a migration fallback for one release.
+
 `LifecycleRunStore.claim()` atomically reserves the idempotency key and optional cooldown window together with an `indeterminate` dispatch boundary before any action adapter starts. Distributed adapters must commit the claim and boundary in shared durable storage; separate read-then-save checks are not sufficient under concurrent evaluation or process termination. The durable run means dispatch may have occurred and blocks automatic replay until an operator or provider-specific reconciler supplies action evidence through `finalizeDispatch()`. Finalization must compare-and-set the same run ID and idempotency key. `abortClaim()` may remove the boundary only when dispatch is proven not to have started; finalization failure must retain the claim and indeterminate run. Diagnostics report indeterminate runs as degraded health without exposing action payloads.
 
 ## Dry-run evaluation

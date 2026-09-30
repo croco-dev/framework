@@ -3,8 +3,23 @@ export { InMemoryLifecycleActionSink } from "./libs/InMemoryLifecycleActionSink"
 export { InMemoryLifecycleDryRunStore } from "./libs/InMemoryLifecycleDryRunStore";
 export { InMemoryLifecycleRuleStateStore } from "./libs/InMemoryLifecycleRuleStateStore";
 export { InMemoryLifecycleRunStore } from "./libs/InMemoryLifecycleRunStore";
+export type { InMemoryLifecycleRunStoreOptions } from "./libs/InMemoryLifecycleRunStore";
 export { LifecycleRuleEvaluator } from "./libs/LifecycleRuleEvaluator";
 export { LifecycleRuleRegistry } from "./libs/LifecycleRuleRegistry";
+export {
+  LIFECYCLE_SOURCE_IDEMPOTENCY_VERSION,
+  buildLegacyLifecycleIdempotencyKey,
+  encodeLifecycleCustomKey,
+  encodeLifecycleSourceKey,
+  ensureDurableLifecycleSignal,
+  fingerprintLifecycleSourcePayload,
+  resolveLifecycleSourceIdentity,
+} from "./libs/sourceIdentity";
+export type {
+  DurableLifecycleEnvelopeInput,
+  DurableLifecycleSignal,
+  LifecycleSourceIdentity,
+} from "./libs/sourceIdentity";
 export {
   InMemoryMonetizationThresholdStore,
   InMemoryMonetizationConditionStore,
@@ -57,7 +72,9 @@ export {
   LifecycleRuleTransitionProblem,
   LifecycleRuleVersionConflictProblem,
   LifecycleRuleVersionDefinitionProblem,
+  LifecycleSourcePayloadConflictProblem,
   MAX_WEBHOOK_TIMEOUT_MS,
+  MissingLifecycleSourceIdentityProblem,
   MonetizationRecipeCapabilityProblem,
   MonetizationSignalDefinitionProblem,
   MonetizationThresholdClaimProblem,

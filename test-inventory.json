@@ -2482,6 +2482,12 @@
       "owner": "@croco/lifecycle-core"
     },
     {
+      "path": "packages/lifecycle-core/src/tests/LifecycleSourceIdentity.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/lifecycle-core"
+    },
+    {
       "path": "packages/lifecycle-core/src/tests/MonetizationLifecycle.spec.ts",
       "lane": "fast",
       "qualifiers": [],

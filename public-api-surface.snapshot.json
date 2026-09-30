@@ -19230,6 +19230,12 @@
           "sourceEntrypoint": "packages/lifecycle-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "buildLegacyLifecycleIdempotencyKey",
+              "exportKind": "named",
+              "source": "./libs/sourceIdentity",
+              "declarationKind": "function"
+            },
+            {
               "name": "createBillingPlanChangedSignal",
               "exportKind": "named",
               "source": "./libs/signals",
@@ -19404,6 +19410,30 @@
               "declarationKind": "class"
             },
             {
+              "name": "encodeLifecycleCustomKey",
+              "exportKind": "named",
+              "source": "./libs/sourceIdentity",
+              "declarationKind": "function"
+            },
+            {
+              "name": "encodeLifecycleSourceKey",
+              "exportKind": "named",
+              "source": "./libs/sourceIdentity",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ensureDurableLifecycleSignal",
+              "exportKind": "named",
+              "source": "./libs/sourceIdentity",
+              "declarationKind": "function"
+            },
+            {
+              "name": "fingerprintLifecycleSourcePayload",
+              "exportKind": "named",
+              "source": "./libs/sourceIdentity",
+              "declarationKind": "function"
+            },
+            {
               "name": "InMemoryLifecycleActionSink",
               "exportKind": "named",
               "source": "./libs/InMemoryLifecycleActionSink",
@@ -19450,6 +19480,12 @@
               "exportKind": "named",
               "source": "./libs/problems/LifecycleProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "LIFECYCLE_SOURCE_IDEMPOTENCY_VERSION",
+              "exportKind": "named",
+              "source": "./libs/sourceIdentity",
+              "declarationKind": "const"
             },
             {
               "name": "LifecycleActionAdapterProblem",
@@ -19524,10 +19560,22 @@
               "declarationKind": "class"
             },
             {
+              "name": "LifecycleSourcePayloadConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/LifecycleProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "MAX_WEBHOOK_TIMEOUT_MS",
               "exportKind": "named",
               "source": "./libs/problems/LifecycleProblems",
               "declarationKind": "const"
+            },
+            {
+              "name": "MissingLifecycleSourceIdentityProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/LifecycleProblems",
+              "declarationKind": "class"
             },
             {
               "name": "MONETIZATION_SIGNAL_DESCRIPTORS",
@@ -19566,6 +19614,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "resolveLifecycleSourceIdentity",
+              "exportKind": "named",
+              "source": "./libs/sourceIdentity",
+              "declarationKind": "function"
+            },
+            {
               "name": "UnavailableLifecycleRuleVersionProblem",
               "exportKind": "named",
               "source": "./libs/problems/LifecycleProblems",
@@ -19602,9 +19656,24 @@
               "source": "./libs/monetization"
             },
             {
+              "name": "DurableLifecycleEnvelopeInput",
+              "exportKind": "named",
+              "source": "./libs/sourceIdentity"
+            },
+            {
+              "name": "DurableLifecycleSignal",
+              "exportKind": "named",
+              "source": "./libs/sourceIdentity"
+            },
+            {
               "name": "InMemoryLifecycleRuleStateStoreOptions",
               "exportKind": "named",
               "source": "./libs/InMemoryLifecycleRuleStateStore"
+            },
+            {
+              "name": "InMemoryLifecycleRunStoreOptions",
+              "exportKind": "named",
+              "source": "./libs/InMemoryLifecycleRunStore"
             },
             {
               "name": "InMemoryMonetizationThresholdStoreOptions",
@@ -19890,6 +19959,11 @@
               "name": "LifecycleSkipReason",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "LifecycleSourceIdentity",
+              "exportKind": "named",
+              "source": "./libs/sourceIdentity"
             },
             {
               "name": "LifecycleSubscriptionStatus",
