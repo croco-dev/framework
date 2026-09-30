@@ -24,11 +24,25 @@ export function validateJourneyScope(scope: JourneyScope): void {
   if (!scope.appId?.trim() || !scope.environment?.trim() || !scope.tenantId?.trim())
     throw new JourneyProblem("scope", "App, environment and tenant are required");
 }
+function serializeDefinition(definition: JourneyDefinition): string {
+  return JSON.stringify(definition, (_key: string, value: unknown) => {
+    if (value === null || typeof value !== "object" || Array.isArray(value)) return value;
+    return Object.fromEntries(
+      Object.entries(value).sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0)),
+    );
+  });
+}
 export class JourneyEngine {
   private readonly definitions = new Map<string, JourneyDefinition>();
   private readonly now: () => Date;
   constructor(private readonly options: JourneyEngineOptions) {
     this.now = options.now ?? (() => new Date());
+  }
+  private dateAfter(start: Date, intervalMs: number): Date {
+    const result = new Date(start.getTime() + intervalMs);
+    if (!Number.isFinite(intervalMs) || intervalMs <= 0 || !Number.isFinite(result.getTime()))
+      throw new JourneyProblem("definition", "Interval must be positive and fit the Date range");
+    return result;
   }
   register(definition: JourneyDefinition): void {
     const key = JSON.stringify([definition.id, definition.version]);
@@ -46,37 +60,42 @@ export class JourneyEngine {
       definition.unknownDeadlineMs <= 0
     )
       throw new JourneyProblem("definition", "Invalid bounded definition");
+    const registeredAt = this.now();
+    this.dateAfter(registeredAt, definition.unknownRetryMs);
+    this.dateAfter(registeredAt, definition.unknownDeadlineMs);
     const nodes = new Map(definition.nodes.map((node) => [node.id, node]));
     if (nodes.size !== definition.nodes.length || !nodes.has(definition.entry))
       throw new JourneyProblem("graph", "Duplicate node or missing entry");
     this.validateReference(definition.goal, false);
-    const visited = new Set<string>();
     const active = new Set<string>();
-    const visit = (id: string): void => {
+    const waitDurations = new Map<string, number>();
+    const visit = (id: string): number => {
       if (active.has(id)) throw new JourneyProblem("graph", "Cycles are forbidden");
-      if (visited.has(id)) return;
+      const cachedDuration = waitDurations.get(id);
+      if (cachedDuration !== undefined) return cachedDuration;
       const node = nodes.get(id);
       if (!node || !id.trim()) throw new JourneyProblem("graph", "Missing node");
       active.add(id);
+      let waitDuration = 0;
       if (node.kind === "wait") {
-        if (!Number.isFinite(node.durationMs) || node.durationMs <= 0)
-          throw new JourneyProblem("definition", "Wait must be positive");
-        visit(node.next);
+        this.dateAfter(registeredAt, node.durationMs);
+        waitDuration = node.durationMs + visit(node.next);
       } else if (node.kind === "action") {
         this.validateReference(node.action, true);
-        visit(node.next);
+        waitDuration = visit(node.next);
       } else if (node.kind === "condition") {
         this.validateReference(node.predicate, false);
-        visit(node.matched);
-        visit(node.unmatched);
+        waitDuration = Math.max(visit(node.matched), visit(node.unmatched));
       } else if (node.kind !== "end")
         throw new JourneyProblem("definition", "Unsupported node kind");
       active.delete(id);
-      visited.add(id);
+      waitDurations.set(id, waitDuration);
+      return waitDuration;
     };
-    visit(definition.entry);
-    if (visited.size !== nodes.size)
+    const waitDuration = visit(definition.entry);
+    if (waitDurations.size !== nodes.size)
       throw new JourneyProblem("graph", "Unreachable nodes are forbidden");
+    this.dateAfter(registeredAt, waitDuration + definition.unknownDeadlineMs);
     this.definitions.set(key, structuredClone(definition));
   }
   private validateReference(reference: JourneyReference, action: boolean): void {
@@ -117,7 +136,7 @@ export class JourneyEngine {
       ...structuredClone(input),
       definitionId: definition.id,
       definitionVersion: definition.version,
-      definitionSnapshot: JSON.stringify(definition),
+      definitionSnapshot: serializeDefinition(definition),
       reentryKey: JSON.stringify([
         definition.id,
         input.subject,
@@ -147,7 +166,7 @@ export class JourneyEngine {
     const episode = await this.options.store.get(scope, id);
     if (!episode) throw new JourneyProblem("not-found", "Episode not found in scope");
     const registered = this.definition(episode.definitionId, episode.definitionVersion);
-    if (JSON.stringify(registered) !== episode.definitionSnapshot)
+    if (serializeDefinition(registered) !== episode.definitionSnapshot)
       throw new JourneyProblem(
         "version-drift",
         "Pinned definition differs from the registered version",
@@ -185,11 +204,17 @@ export class JourneyEngine {
     if (episode.unknownSource !== source) episode.unknownSince = null;
     episode.unknownSource = source;
     episode.unknownSince ??= now.toISOString();
-    const deadline = Date.parse(episode.unknownSince) + definition.unknownDeadlineMs;
+    const deadline = this.dateAfter(
+      new Date(episode.unknownSince),
+      definition.unknownDeadlineMs,
+    ).getTime();
     episode.status = now.getTime() >= deadline ? "failed" : "waiting";
     episode.wakeAt =
       episode.status === "waiting"
-        ? new Date(Math.min(deadline, now.getTime() + definition.unknownRetryMs)).toISOString()
+        ? this.dateAfter(
+            now,
+            Math.min(definition.unknownRetryMs, deadline - now.getTime()),
+          ).toISOString()
         : null;
     this.receipt(
       episode,
@@ -241,11 +266,11 @@ export class JourneyEngine {
         .find((receipt) => receipt.nodeId === node.id && receipt.reason === "wait-started");
       if (!entered) {
         next.status = "waiting";
-        next.wakeAt = new Date(now.getTime() + node.durationMs).toISOString();
+        next.wakeAt = this.dateAfter(now, node.durationMs).toISOString();
         this.receipt(next, "wait-started", now);
       } else if (Date.parse(entered.evaluatedAt) + node.durationMs > now.getTime()) {
         next.status = "waiting";
-        next.wakeAt = new Date(Date.parse(entered.evaluatedAt) + node.durationMs).toISOString();
+        next.wakeAt = this.dateAfter(new Date(entered.evaluatedAt), node.durationMs).toISOString();
       } else {
         this.receipt(next, "wait-finished", now);
         next.nodeId = node.next;
@@ -408,7 +433,7 @@ export class JourneyEngine {
       const node = definition.nodes.find((item) => item.id === previous.nodeId);
       if (node?.kind === "wait") {
         next.status = "waiting";
-        next.wakeAt = new Date(this.now().getTime() + node.durationMs).toISOString();
+        next.wakeAt = this.dateAfter(this.now(), node.durationMs).toISOString();
         this.receipt(next, "wait-started", this.now());
       } else next.wakeAt = null;
     } else if (
@@ -514,6 +539,10 @@ export class JourneyEngine {
             : checks.consent === false
               ? "consent-denied"
               : "resource-invalid";
+        context.episode.status = "exited";
+        context.episode.wakeAt = null;
+        this.receipt(context.episode, step.reason, projectedAt);
+        context.episode.revision++;
         steps.push(step);
         break;
       }
@@ -530,24 +559,76 @@ export class JourneyEngine {
         if (!unknown) {
           step.outcome = matched ? "matched" : "no-match";
           step.reason = step.outcome;
+          this.receipt(context.episode, step.reason, projectedAt);
+          context.episode.status = "running";
+          context.episode.wakeAt = null;
+          context.episode.unknownSince = null;
+          context.episode.revision++;
           nodeId = matched ? node.matched : node.unmatched;
         }
       }
       if (unknown) {
         step.outcome = "deferred";
         step.reason = "unknown-deferred";
-        step.wakeAt = new Date(
-          projectedAt.getTime() + Math.min(definition.unknownRetryMs, definition.unknownDeadlineMs),
+        step.wakeAt = this.dateAfter(
+          projectedAt,
+          Math.min(definition.unknownRetryMs, definition.unknownDeadlineMs),
         ).toISOString();
-        step.deadlineAt = new Date(
-          projectedAt.getTime() + definition.unknownDeadlineMs,
-        ).toISOString();
+        step.deadlineAt = this.dateAfter(projectedAt, definition.unknownDeadlineMs).toISOString();
         step.deadlineReason = "blocked-unknown-deadline";
+        this.defer(
+          context.episode,
+          definition,
+          projectedAt,
+          goal === "unknown"
+            ? "goal"
+            : node.kind === "condition"
+              ? `condition:${node.id}`
+              : checks.consent === "unknown"
+                ? "consent"
+                : "resource",
+        );
+        context.episode.revision++;
         steps.push(step);
         break;
       }
       if (node.kind === "wait") {
-        projectedAt = new Date(projectedAt.getTime() + node.durationMs);
+        context.episode.status = "waiting";
+        context.episode.wakeAt = this.dateAfter(projectedAt, node.durationMs).toISOString();
+        this.receipt(context.episode, "wait-started", projectedAt);
+        context.episode.revision++;
+        projectedAt = new Date(context.episode.wakeAt);
+        context.now = projectedAt;
+        goal = await this.goal(definition, context);
+        if (goal !== false) {
+          step.checks.goal = goal;
+          step.projectedAt = projectedAt.toISOString();
+          if (goal === true) {
+            step.outcome = "suppressed";
+            step.reason = "goal-achieved";
+            context.episode.status = "exited";
+            context.episode.wakeAt = null;
+            this.receipt(context.episode, step.reason, projectedAt);
+          } else {
+            step.outcome = "deferred";
+            step.reason = "unknown-deferred";
+            this.defer(context.episode, definition, projectedAt, "goal");
+            step.wakeAt = context.episode.wakeAt ?? undefined;
+            step.deadlineAt = this.dateAfter(
+              projectedAt,
+              definition.unknownDeadlineMs,
+            ).toISOString();
+            step.deadlineReason = "blocked-unknown-deadline";
+          }
+          context.episode.revision++;
+          steps.push(step);
+          break;
+        }
+        this.receipt(context.episode, "wait-finished", projectedAt);
+        context.episode.status = "running";
+        context.episode.wakeAt = null;
+        context.episode.unknownSince = null;
+        context.episode.revision++;
         step.outcome = "wait";
         step.reason = "wait-projected";
         step.wakeAt = projectedAt.toISOString();
@@ -555,7 +636,17 @@ export class JourneyEngine {
       } else if (node.kind === "action") {
         step.outcome = "proposed";
         step.reason = "action-proposed";
+        // Provider acceptance is unknown in dry-run; retain only the proposed transition.
+        this.receipt(context.episode, "action-proposed", projectedAt);
+        context.episode.status = "running";
+        context.episode.wakeAt = null;
+        context.episode.unknownSince = null;
         nodeId = node.next;
+      } else if (node.kind === "end") {
+        context.episode.status = "completed";
+        context.episode.wakeAt = null;
+        this.receipt(context.episode, "completed", projectedAt);
+        context.episode.revision++;
       }
       steps.push(step);
       if (node.kind === "end") break;

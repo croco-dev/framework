@@ -231,6 +231,9 @@ message actions with parameter validators and declared capabilities before
 registering a definition. The engine rejects missing registrations, unsupported
 capabilities, graph cycles, and attempts to overwrite a registered version.
 Existing episodes retain their original definition version.
+Object and nested parameter key order does not change a pinned definition's identity.
+Wait paths, retry intervals, and deadlines must fit the JavaScript Date range;
+invalid intervals fail registration with a Journey diagnostic.
 
 `enter()` requires an application, environment, tenant, subject, business object,
 episode key, and source event ID. Reentry defaults are explicit in the definition:
@@ -281,6 +284,10 @@ execution. Unknown results report both the next retry and the deadline at which
 continued uncertainty would block execution. Wait projection advances a simulated
 clock; it does not predict future source data. Check timestamps identify when the
 read-only application callbacks actually ran. No action callback is invoked.
+Later predicates receive projected wait and condition receipts. Continuation after
+an action is a proposal: it records `action-proposed` without inventing provider
+acceptance or an accepted intent. Predicates that depend on provider outcomes
+cannot treat a dry run as evidence of those outcomes.
 
 Action receipts and intents retain the check values and evaluation time, an
 execution reference, and an engine-owned failure code. Provider exception messages,

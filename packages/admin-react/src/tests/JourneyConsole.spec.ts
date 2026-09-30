@@ -125,6 +125,9 @@ describe("Journey console", () => {
     );
     expect(markup).toContain("lifecycle-core/journey-provider-exception");
     expect(markup).toContain("Safe resume: no");
+    expect(markup).toContain(">Stop</button>");
+    expect(markup).not.toContain(">Resume</button>");
+    expect(markup).not.toContain(">Pause</button>");
   });
   it("does not show data without read permission", () => {
     expect(renderToStaticMarkup(h(JourneyConsole, { ...props, permissions: [] }))).not.toContain(

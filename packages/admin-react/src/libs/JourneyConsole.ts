@@ -222,7 +222,9 @@ function Editor(props: JourneyConsoleProps): ReactElement {
           ? (["resume", "stop"] as const)
           : episode.status === "running" || episode.status === "waiting"
             ? (["pause", "stop"] as const)
-            : []
+            : episode.status === "indeterminate"
+              ? (["stop"] as const)
+              : []
         ).map((type) =>
           h(
             "button",

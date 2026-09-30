@@ -2932,6 +2932,18 @@
       "owner": "@croco/invitation-drizzle"
     },
     {
+      "path": "packages/lifecycle-core/src/tests/JourneyDefinition.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/lifecycle-core"
+    },
+    {
+      "path": "packages/lifecycle-core/src/tests/JourneyDryRun.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/lifecycle-core"
+    },
+    {
       "path": "packages/lifecycle-core/src/tests/JourneyEngine.spec.ts",
       "lane": "fast",
       "qualifiers": [],
