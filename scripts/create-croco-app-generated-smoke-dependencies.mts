@@ -44,6 +44,20 @@ const CASE_TEMPLATE_ROOTS = {
     "addons/lambda/shared",
     "addons/lambda/apps/api",
   ],
+  "graphql-standalone-nextjs-opennext": [
+    "base-ddd",
+    "addons/graphql-standalone",
+    "addons/web-graphql",
+    "addons/lambda",
+    "addons/frontend-opennext",
+  ],
+  "trpc-standalone-nextjs-opennext": [
+    "base-ddd",
+    "addons/trpc-standalone",
+    "addons/web-trpc",
+    "addons/lambda",
+    "addons/frontend-opennext",
+  ],
   "trpc-nextjs-vercel-fullstack": [
     "base-ddd",
     "addons/trpc-nextjs",
@@ -100,6 +114,11 @@ const CASE_TEST_PATH_PREFIXES = {
     "addons/graphql-standalone/apps/graphql-api/",
   ],
   "trpc-lambda-api": [],
+  "graphql-standalone-nextjs-opennext": [
+    "base-ddd/libs/shared/utils-env/",
+    "addons/graphql-standalone/apps/graphql-api/",
+  ],
+  "trpc-standalone-nextjs-opennext": [],
   "trpc-nextjs-vercel-fullstack": [],
   "graphql-nextjs-opennext": [],
   "trpc-nextjs-docker-frontend": [],
@@ -138,6 +157,7 @@ const CASE_TENANT_MODELS = {
 
 const CASE_ADDITIONAL_DEPENDENCY_SOURCES = {
   "graphql-lambda-api": ["packages/create-croco-app/src/installers/lambda.ts"],
+  "graphql-standalone-nextjs-opennext": ["packages/create-croco-app/src/installers/lambda.ts"],
   "graphql-vite-spa-astryx": ["packages/create-croco-app/src/installers/ui-profile.ts"],
 } as const satisfies Partial<Record<keyof typeof CASE_TEMPLATE_ROOTS, readonly string[]>>;
 
