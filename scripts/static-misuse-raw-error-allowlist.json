@@ -181,7 +181,7 @@
       "excerpt": "throw new Error(`Failure drill '${scenario.id}' did not return a Problem.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/testing",
@@ -190,7 +190,7 @@
       "excerpt": "throw new Error(`Failure drill '${scenario.id}' did not return a recovery action.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/testing",
@@ -199,7 +199,7 @@
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/testing",
@@ -208,7 +208,7 @@
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/testing",
@@ -217,7 +217,7 @@
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/testing",
@@ -226,7 +226,7 @@
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/testing",
@@ -235,7 +235,7 @@
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/testing",
@@ -244,7 +244,7 @@
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/testing",
@@ -253,7 +253,7 @@
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/testing",
@@ -262,7 +262,7 @@
       "excerpt": "throw new Error(\"Expected response body to be RFC 7807 Problem Details.\");",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/testing",
@@ -271,7 +271,7 @@
       "excerpt": "throw new Error(`Expected HTTP status ${expected.status}, received ${response.status}.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/testing",
@@ -280,7 +280,7 @@
       "excerpt": "throw new Error(`Expected Problem detail to include \"${expectedDetail}\".`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/testing",
@@ -289,7 +289,7 @@
       "excerpt": "throw new Error(`Expected OpenAPI operation ${method.toUpperCase()} ${path}.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/testing",
@@ -298,7 +298,7 @@
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/testing",
@@ -307,7 +307,7 @@
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/testing",
@@ -316,7 +316,7 @@
       "excerpt": "throw new Error(",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/testing",
@@ -325,7 +325,7 @@
       "excerpt": "throw new Error(`${label} expected ${String(expected)}, received ${String(actual)}.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/webhooks-core",
