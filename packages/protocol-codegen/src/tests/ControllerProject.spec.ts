@@ -1075,6 +1075,243 @@ describe("createControllerProject", () => {
       session.dispose();
     }
   });
+
+  it("preserves dependency identity for root export arrays", async () => {
+    const root = createTemporaryDirectory();
+    writeJson(path.join(root, "package.json"), { type: "module" });
+    writeJson(path.join(root, "tsconfig.json"), {
+      compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext", target: "ES2022" },
+    });
+    for (const name of ["first", "second"]) {
+      const applicationRoot = path.join(root, name);
+      const dependencyDir = path.join(applicationRoot, "node_modules", "array-marker");
+      writeJson(path.join(dependencyDir, "package.json"), {
+        name: "array-marker",
+        exports: ["./identity.mjs"],
+      });
+      writeFile(path.join(dependencyDir, "identity.mjs"), `export const owner = '${name}';`);
+      writeFile(
+        path.join(applicationRoot, "Controller.ts"),
+        "import { owner } from 'array-marker'; export class Controller { static owner = owner; }",
+      );
+    }
+    const session = createControllerProject({ cwd: root, controllers: ["*/Controller.ts"] });
+    try {
+      session.emit();
+      const modules = await session.importControllerModules();
+      expect(
+        modules.map((module) => (module.Controller as { owner: string }).owner).sort(),
+      ).toEqual(["first", "second"]);
+    } finally {
+      session.dispose();
+    }
+  });
+
+  it.each(["self-marker", "#marker"])(
+    "resolves source package references through %s",
+    async (specifier) => {
+      const root = createTemporaryDirectory();
+      writeJson(path.join(root, "tsconfig.json"), {
+        compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext", target: "ES2022" },
+      });
+      for (const name of ["first", "second"]) {
+        const applicationRoot = path.join(root, name);
+        writeJson(path.join(applicationRoot, "package.json"), {
+          name: "self-marker",
+          type: "module",
+          exports: { ".": "./runtime.mjs" },
+          imports: { "#marker": "self-marker" },
+        });
+        writeFile(path.join(applicationRoot, "runtime.mjs"), `export const owner = '${name}';`);
+        writeFile(
+          path.join(applicationRoot, "Controller.ts"),
+          `import { owner } from '${specifier}'; export class Controller { static owner = owner; }`,
+        );
+      }
+      const session = createControllerProject({ cwd: root, controllers: ["*/Controller.ts"] });
+      try {
+        session.emit();
+        const modules = await session.importControllerModules();
+        expect(
+          modules.map((module) => (module.Controller as { owner: string }).owner).sort(),
+        ).toEqual(["first", "second"]);
+      } finally {
+        session.dispose();
+      }
+    },
+  );
+
+  it.each(["CommonJS", "NodeNext"] as const)(
+    "fails emission for an unresolved external dependency in %s",
+    (moduleKind) => {
+      const root = createTemporaryDirectory();
+      writeJson(path.join(root, "package.json"), {
+        type: moduleKind === "NodeNext" ? "module" : "commonjs",
+      });
+      writeJson(path.join(root, "tsconfig.json"), {
+        compilerOptions: {
+          module: moduleKind,
+          moduleResolution: moduleKind === "NodeNext" ? "NodeNext" : "Node",
+          target: "ES2022",
+        },
+      });
+      writeFile(
+        path.join(root, "Controller.ts"),
+        "import { owner } from 'missing-runtime-marker'; export class Controller { static owner = owner; }",
+      );
+      const session = createControllerProject({ cwd: root, controllers: ["Controller.ts"] });
+      try {
+        expect(() => session.emit()).toThrow(/missing-runtime-marker/);
+      } finally {
+        session.dispose();
+      }
+    },
+  );
+
+  it("rejects nested null export conditions instead of selecting a later fallback", () => {
+    const root = createTemporaryDirectory();
+    writeJson(path.join(root, "package.json"), { type: "module" });
+    writeJson(path.join(root, "tsconfig.json"), {
+      compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext", target: "ES2022" },
+    });
+    const dependencyDir = path.join(root, "node_modules", "blocked-marker");
+    writeJson(path.join(dependencyDir, "package.json"), {
+      name: "blocked-marker",
+      exports: { ".": { node: { import: null }, default: "./fallback.mjs" } },
+    });
+    writeFile(path.join(dependencyDir, "fallback.mjs"), "export const owner = 'wrong-fallback';");
+    writeFile(
+      path.join(root, "Controller.ts"),
+      "import { owner } from 'blocked-marker'; export class Controller { static owner = owner; }",
+    );
+    const session = createControllerProject({ cwd: root, controllers: ["Controller.ts"] });
+    try {
+      expect(() => session.emit()).toThrow(/blocked-marker/);
+    } finally {
+      session.dispose();
+    }
+  });
+
+  it.each([
+    [
+      "function parameter",
+      "function load(require: (value: string) => string) { return require('shadow-marker'); } export const value = load((value) => value);",
+    ],
+    [
+      "catch binding",
+      "let value = ''; try { throw (value: string) => value; } catch (require) { value = require('shadow-marker'); } export { value };",
+    ],
+    [
+      "destructured binding",
+      "const { require } = { require: (value: string) => value }; export const value = require('shadow-marker');",
+    ],
+  ])("preserves require arguments for a %s", async (_name, source) => {
+    const root = createTemporaryDirectory();
+    writeJson(path.join(root, "package.json"), { type: "module" });
+    writeJson(path.join(root, "tsconfig.json"), {
+      compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext", target: "ES2022" },
+    });
+    writeJson(path.join(root, "node_modules", "shadow-marker", "package.json"), {
+      name: "shadow-marker",
+      main: "index.js",
+    });
+    writeFile(path.join(root, "node_modules", "shadow-marker", "index.js"), "module.exports = {};");
+    writeFile(path.join(root, "Controller.ts"), source);
+    const session = createControllerProject({ cwd: root, controllers: ["Controller.ts"] });
+    try {
+      session.emit();
+      const [module] = await session.importControllerModules();
+      expect(module.value).toBe("shadow-marker");
+    } finally {
+      session.dispose();
+    }
+  });
+  it("preserves multi-root dynamic import identity with an explicit options argument", async () => {
+    const root = createTemporaryDirectory();
+    writeJson(path.join(root, "package.json"), { type: "module" });
+    writeJson(path.join(root, "tsconfig.json"), {
+      compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext", target: "ES2022" },
+    });
+    for (const name of ["first", "second"]) {
+      const applicationRoot = path.join(root, name);
+      const dependencyDir = path.join(applicationRoot, "node_modules", "dynamic-marker");
+      writeJson(path.join(dependencyDir, "package.json"), {
+        name: "dynamic-marker",
+        exports: "./identity.mjs",
+      });
+      writeFile(path.join(dependencyDir, "identity.mjs"), `export const owner = '${name}';`);
+      writeFile(
+        path.join(applicationRoot, "Controller.ts"),
+        "const loaded = await import('dynamic-marker', {}); export class Controller { static owner = loaded.owner; }",
+      );
+    }
+    const session = createControllerProject({ cwd: root, controllers: ["*/Controller.ts"] });
+    try {
+      session.emit();
+      expect(path.dirname(session.emitDir)).toBe(root);
+      const modules = await session.importControllerModules();
+      expect(
+        modules.map((module) => (module.Controller as { owner: string }).owner).sort(),
+      ).toEqual(["first", "second"]);
+    } finally {
+      session.dispose();
+    }
+  });
+
+  it.each([
+    { flags: ["--no-require-module"], condition: "module-sync", expected: "default" },
+    { flags: ["--no_require_module"], condition: "module-sync", expected: "default" },
+    { flags: ["--no-experimental-require-module"], condition: "module-sync", expected: "default" },
+    { flags: ["--no_experimental_require_module"], condition: "module-sync", expected: "default" },
+    { flags: ["--no-addons"], condition: "node-addons", expected: "default" },
+    { flags: ["--no_addons"], condition: "node-addons", expected: "default" },
+    { flags: ["--conditions=app_mode"], condition: "app_mode", expected: "selected" },
+    { flags: ["-C", "app_mode"], condition: "app_mode", expected: "selected" },
+    {
+      flags: ["--addons"],
+      condition: "node-addons",
+      expected: "selected",
+      nodeOptions: "--no-addons",
+    },
+  ])(
+    "forwards resolver flags $flags with condition $condition",
+    async ({ flags, condition, expected, nodeOptions }) => {
+      const root = createTemporaryDirectory();
+      writeJson(path.join(root, "package.json"), { type: "module" });
+      writeJson(path.join(root, "tsconfig.json"), {
+        compilerOptions: { module: "NodeNext", moduleResolution: "NodeNext", target: "ES2022" },
+      });
+      const dependencyDir = path.join(root, "node_modules", "condition-marker");
+      writeJson(path.join(dependencyDir, "package.json"), {
+        name: "condition-marker",
+        exports: { ".": { [condition]: "./selected.mjs", default: "./default.mjs" } },
+      });
+      writeFile(path.join(dependencyDir, "selected.mjs"), "export const owner = 'selected';");
+      writeFile(path.join(dependencyDir, "default.mjs"), "export const owner = 'default';");
+      writeFile(
+        path.join(root, "Controller.ts"),
+        "import { owner } from 'condition-marker'; export class Controller { static owner = owner; }",
+      );
+      const session = createControllerProject({ cwd: root, controllers: ["Controller.ts"] });
+      const originalExecArgv = process.execArgv;
+      const originalNodeOptions = process.env.NODE_OPTIONS;
+      try {
+        try {
+          process.execArgv = [...originalExecArgv, ...flags];
+          if (nodeOptions !== undefined) process.env.NODE_OPTIONS = nodeOptions;
+          session.emit();
+        } finally {
+          process.execArgv = originalExecArgv;
+          if (originalNodeOptions === undefined) delete process.env.NODE_OPTIONS;
+          else process.env.NODE_OPTIONS = originalNodeOptions;
+        }
+        const [module] = await session.importControllerModules();
+        expect((module.Controller as { owner: string }).owner).toBe(expected);
+      } finally {
+        session.dispose();
+      }
+    },
+  );
 });
 
 function createTemporaryDirectory(): string {

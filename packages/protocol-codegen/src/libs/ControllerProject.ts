@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import { createRequire, isBuiltin } from "node:module";
 import * as path from "node:path";
@@ -467,6 +468,12 @@ function rewriteRuntimeSpecifiers(
   outputPaths: ReadonlyMap<string, string>,
 ): void {
   const compilerOptions = context.project.getCompilerOptions();
+  const externalImports: ExternalImport[] = [];
+  const outputs: Array<{
+    emittedPath: string;
+    emittedText: string;
+    replacements: SpecifierReplacement[];
+  }> = [];
 
   for (const sourceFile of context.sourceFiles) {
     const sourcePath = sourceFile.getFilePath();
@@ -475,7 +482,8 @@ function rewriteRuntimeSpecifiers(
     if (!fs.existsSync(emittedPath)) continue;
     const emittedText = fs.readFileSync(emittedPath, "utf8");
     const syntaxTree = ts.createSourceFile(emittedPath, emittedText, ts.ScriptTarget.Latest, true);
-    const replacements: Array<{ start: number; end: number; value: string }> = [];
+    const replacements: SpecifierReplacement[] = [];
+    const checker = createRuntimeBindingChecker(syntaxTree);
 
     const visit = (node: ts.Node): void => {
       if (
@@ -493,13 +501,14 @@ function rewriteRuntimeSpecifiers(
           replacements,
           false,
           false,
+          externalImports,
         );
       }
       if (
         ts.isCallExpression(node) &&
         node.arguments.length === 1 &&
         ts.isStringLiteral(node.arguments[0]) &&
-        isGenuineRequireCall(node, syntaxTree)
+        isGenuineRequireCall(node, checker)
       ) {
         addRuntimeAliasReplacement(
           node.arguments[0],
@@ -511,13 +520,14 @@ function rewriteRuntimeSpecifiers(
           replacements,
           true,
           false,
+          externalImports,
         );
       }
       if (
         ts.isCallExpression(node) &&
         (node.expression.getText(syntaxTree) === "import" ||
           node.expression.kind === ts.SyntaxKind.ImportKeyword) &&
-        node.arguments.length === 1 &&
+        node.arguments.length >= 1 &&
         ts.isStringLiteral(node.arguments[0])
       ) {
         addRuntimeAliasReplacement(
@@ -530,12 +540,33 @@ function rewriteRuntimeSpecifiers(
           replacements,
           false,
           true,
+          externalImports,
         );
       }
       ts.forEachChild(node, visit);
     };
     visit(syntaxTree);
 
+    outputs.push({ emittedPath, emittedText, replacements });
+  }
+
+  const resolvedImports = resolveExternalImports(externalImports);
+  for (const [index, externalImport] of externalImports.entries()) {
+    const resolved = resolvedImports[index];
+    if (resolved === undefined) {
+      throw new ControllerProjectStateProblem(
+        "External dependency resolver returned an incomplete result.",
+      );
+    }
+    addSpecifierReplacement(
+      externalImport.moduleSpecifier,
+      resolved,
+      externalImport.syntaxTree,
+      externalImport.replacements,
+    );
+  }
+
+  for (const { emittedPath, emittedText, replacements } of outputs) {
     let rewritten = emittedText;
     for (const replacement of replacements.sort((left, right) => right.start - left.start)) {
       rewritten = `${rewritten.slice(0, replacement.start)}${replacement.value}${rewritten.slice(replacement.end)}`;
@@ -554,6 +585,7 @@ function addRuntimeAliasReplacement(
   replacements: Array<{ start: number; end: number; value: string }>,
   isRequireCall: boolean,
   isDynamicImport: boolean,
+  externalImports: ExternalImport[],
 ): void {
   const specifier = moduleSpecifier.text;
   if (path.isAbsolute(specifier)) return;
@@ -574,14 +606,21 @@ function addRuntimeAliasReplacement(
   }
   const useImportCondition =
     isDynamicImport || (!isRequireCall && isEsmModuleKind(compilerOptions.module, sourcePath));
-  const runtimeSpecifier = resolveExternalRuntimeSpecifier(
-    specifier,
-    sourcePath,
-    useImportCondition,
-    isRequireCall,
-  );
-  if (runtimeSpecifier) {
-    addSpecifierReplacement(moduleSpecifier, runtimeSpecifier, syntaxTree, replacements);
+  if (!specifier.startsWith(".") && !isBuiltin(specifier)) {
+    if (useImportCondition) {
+      externalImports.push({ moduleSpecifier, sourcePath, syntaxTree, replacements });
+    } else {
+      let runtimePath: string;
+      try {
+        runtimePath = createRequire(sourcePath).resolve(specifier);
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new ControllerProjectStateProblem(
+          `Cannot resolve ${specifier} from ${sourcePath}: ${detail}`,
+        );
+      }
+      addSpecifierReplacement(moduleSpecifier, runtimePath, syntaxTree, replacements);
+    }
     return;
   }
   if (!specifier.startsWith(".")) return;
@@ -591,73 +630,18 @@ function addRuntimeAliasReplacement(
   }
 }
 
-function isGenuineRequireCall(node: ts.CallExpression, syntaxTree: ts.SourceFile): boolean {
-  if (node.expression.getText(syntaxTree) !== "require") return false;
-  // `require` may be a user-defined or imported binding rather than the
-  // CommonJS loader. Only treat a file-scope `require` with no local
-  // declaration or import as the genuine loader.
-  const sourceFile = syntaxTree as ts.SourceFile;
-  let scope: ts.Node | undefined = node.parent;
-  while (scope && !ts.isSourceFile(scope)) {
-    for (const statement of getScopeStatements(scope)) {
-      if (declaresRequireBinding(statement)) return false;
-    }
-    scope = scope.parent;
-  }
-  for (const statement of sourceFile.statements) {
-    if (declaresRequireBinding(statement)) return false;
-  }
-  return true;
+function createRuntimeBindingChecker(syntaxTree: ts.SourceFile): ts.TypeChecker {
+  const options: ts.CompilerOptions = { allowJs: true, noResolve: true, noLib: true };
+  const host = ts.createCompilerHost(options);
+  host.getSourceFile = (fileName) => (fileName === syntaxTree.fileName ? syntaxTree : undefined);
+  return ts.createProgram([syntaxTree.fileName], options, host).getTypeChecker();
 }
 
-function getScopeStatements(scope: ts.Node): readonly ts.Statement[] {
-  if (ts.isBlock(scope)) return scope.statements;
-  if (ts.isModuleBlock(scope)) return scope.statements;
-  if (ts.isCaseBlock(scope)) {
-    return scope.clauses.flatMap((clause) =>
-      ts.isCaseClause(clause) || ts.isDefaultClause(clause) ? clause.statements : [],
-    );
-  }
-  return [];
-}
-
-function declaresRequireBinding(statement: ts.Node): boolean {
-  if (ts.isVariableStatement(statement)) {
-    // Ambient `declare const require` creates no runtime binding.
-    if (hasDeclareModifier(statement)) return false;
-    return statement.declarationList.declarations.some(
-      (declaration: ts.VariableDeclaration) => declaration.name.getText() === "require",
-    );
-  }
-  if (
-    ts.isFunctionDeclaration(statement) ||
-    ts.isClassDeclaration(statement) ||
-    ts.isInterfaceDeclaration(statement) ||
-    ts.isTypeAliasDeclaration(statement) ||
-    ts.isEnumDeclaration(statement)
-  ) {
-    if (statement.name?.getText() !== "require") return false;
-    const flags = ts.getCombinedModifierFlags(statement);
-    return (flags & ts.ModifierFlags.Ambient) === 0;
-  }
-  if (ts.isImportDeclaration(statement)) {
-    const bindings = statement.importClause;
-    if (!bindings) return false;
-    if (bindings.name?.getText() === "require") return true;
-    const named = bindings.namedBindings;
-    if (!named) return false;
-    if (ts.isNamespaceImport(named)) return named.name.getText() === "require";
-    return named.elements.some((element) => element.name.getText() === "require");
-  }
-  return false;
-}
-
-function hasDeclareModifier(node: ts.Node): boolean {
+function isGenuineRequireCall(node: ts.CallExpression, checker: ts.TypeChecker): boolean {
   return (
-    (ts.getCombinedModifierFlags(node as ts.Declaration) & ts.ModifierFlags.Ambient) !== 0 ||
-    (ts.canHaveModifiers(node) &&
-      (ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.DeclareKeyword) ??
-        false))
+    ts.isIdentifier(node.expression) &&
+    node.expression.text === "require" &&
+    (checker.getSymbolAtLocation(node.expression)?.declarations?.length ?? 0) === 0
   );
 }
 
@@ -668,9 +652,9 @@ function addSpecifierReplacement(
   replacements: Array<{ start: number; end: number; value: string }>,
 ): void {
   replacements.push({
-    start: moduleSpecifier.getStart(syntaxTree) + 1,
-    end: moduleSpecifier.getEnd() - 1,
-    value,
+    start: moduleSpecifier.getStart(syntaxTree),
+    end: moduleSpecifier.getEnd(),
+    value: JSON.stringify(value),
   });
 }
 
@@ -681,250 +665,99 @@ function rewriteTypeScriptExtension(specifier: string): string {
     .replace(/\.tsx?$/, ".js");
 }
 
-function resolveExternalRuntimeSpecifier(
-  specifier: string,
-  sourcePath: string,
-  useImportCondition: boolean,
-  isRequireCall: boolean,
-): string | null {
-  if (specifier.startsWith(".") || path.isAbsolute(specifier)) return null;
-  if (isNodeBuiltinSpecifier(specifier)) return null;
-  if (useImportCondition && !isRequireCall) {
-    const runtimePath = resolveEsmRuntimePath(specifier, sourcePath);
-    if (!runtimePath) return null;
-    if (!path.isAbsolute(runtimePath)) return null;
-    return pathToFileURL(runtimePath).href;
-  }
-  let runtimePath: string;
-  try {
-    runtimePath = createRequire(sourcePath).resolve(specifier);
-  } catch {
-    return null;
-  }
-  if (!path.isAbsolute(runtimePath)) return null;
-  return escapeWindowsPath(runtimePath);
-}
+type SpecifierReplacement = { start: number; end: number; value: string };
 
-function isNodeBuiltinSpecifier(specifier: string): boolean {
-  if (specifier.startsWith("node:")) return true;
-  return isBuiltin(specifier);
-}
-
-function resolveEsmRuntimePath(specifier: string, sourcePath: string): string | null {
-  const packageScope = findScopedPackageName(specifier);
-  if (!packageScope) return null;
-  const resolvedPackageJson = tryResolvePackageJson(packageScope, sourcePath);
-  if (!resolvedPackageJson) return null;
-  const packageJson = readPackageJson(resolvedPackageJson);
-  if (!packageJson) return null;
-  const subpath = specifier.slice(packageScope.length) || ".";
-  const normalized = normalizeSubpath(subpath);
-  const entry = resolveEsmPackageEntry(packageJson, normalized);
-  if (!entry) return null;
-  if (!hasExportsField(packageJson)) {
-    return resolveLegacyFilePath(resolvedPackageJson, entry, specifier, sourcePath, normalized);
-  }
-  return path.resolve(path.dirname(resolvedPackageJson), entry);
-}
-
-function hasExportsField(packageJson: PackageJsonEntry): boolean {
-  return packageJson.exports !== undefined && packageJson.exports !== null;
-}
-
-function resolveLegacyDirectoryDefault(packageJson: PackageJsonEntry): string | null {
-  if (typeof packageJson.main === "string") return packageJson.main;
-  return "./index.js";
-}
-
-function resolveLegacyFilePath(
-  packageJsonPath: string,
-  entry: string,
-  specifier: string,
-  sourcePath: string,
-  normalized: string,
-): string | null {
-  // Without an `exports` field, Node's own legacy resolver owns extension
-  // completion (`entry` -> `entry.js`), directory index lookup, and the
-  // `index.js` default. `createRequire.resolve` is anchored at the
-  // application source so per-root identity is preserved.
-  if (normalized === ".") {
-    try {
-      const resolved = createRequire(sourcePath).resolve(specifier);
-      return path.isAbsolute(resolved) ? resolved : null;
-    } catch {
-      return null;
-    }
-  }
-  const resolved = path.resolve(path.dirname(packageJsonPath), entry);
-  // Legacy subpaths must map to a real file; otherwise keep the bare
-  // specifier instead of emitting a dead file URL.
-  return fs.existsSync(resolved) ? resolved : null;
-}
-
-function resolveEsmPackageEntry(packageJson: PackageJsonEntry, subpath: string): string | null {
-  const exportsField = packageJson.exports;
-  if (typeof exportsField === "string") {
-    if (subpath !== ".") return null;
-    return isValidExportTarget(exportsField) ? exportsField : null;
-  }
-  if (exportsField && typeof exportsField === "object" && !Array.isArray(exportsField)) {
-    const table = exportsField as Record<string, unknown>;
-    if (!Object.keys(table).some((key) => key.startsWith("."))) {
-      return subpath === "." ? resolveExportTargetInDeclarationOrder(exportsField, true) : null;
-    }
-    const exact = table[subpath];
-    if (exact !== undefined) return resolveExportTargetInDeclarationOrder(exact, true);
-    const wildcard = matchWildcardSubpath(table, subpath);
-    if (wildcard) return resolveExportTargetInDeclarationOrder(wildcard, true);
-    return null;
-  }
-  if (subpath === ".") {
-    if (typeof packageJson.main !== "string") return resolveLegacyDirectoryDefault(packageJson);
-    return packageJson.main;
-  }
-  // Legacy package without an `exports` field: Node resolves the subpath
-  // as a file relative to the package root (e.g. `pkg/feature.js`).
-  return subpath;
-}
-
-function matchWildcardSubpath(table: Record<string, unknown>, subpath: string): unknown | null {
-  let best: { key: string; target: unknown } | null = null;
-  for (const [key, target] of Object.entries(table)) {
-    if (!key.includes("*")) continue;
-    const starIndex = key.indexOf("*");
-    const keyPrefix = key.slice(0, starIndex);
-    const keySuffix = key.slice(starIndex + 1);
-    if (keyPrefix && !subpath.startsWith(keyPrefix)) continue;
-    if (keySuffix && !subpath.endsWith(keySuffix)) continue;
-    if (subpath.length < keyPrefix.length + keySuffix.length) continue;
-    // Node's PATTERN_KEY_COMPARE prefers the longest matching prefix, then
-    // the longest matching suffix (equal-length keys keep the first entry).
-    if (
-      !best ||
-      keyPrefix.length > best.key.slice(0, best.key.indexOf("*")).length ||
-      (keyPrefix.length === best.key.slice(0, best.key.indexOf("*")).length &&
-        keySuffix.length > best.key.slice(best.key.indexOf("*") + 1).length)
-    ) {
-      best = { key, target };
-    }
-  }
-  if (!best) return null;
-  const starIndex = best.key.indexOf("*");
-  const keyPrefix = best.key.slice(0, starIndex);
-  const keySuffix = best.key.slice(starIndex + 1);
-  const captured = subpath.slice(keyPrefix.length, subpath.length - keySuffix.length || undefined);
-  return substituteWildcardTarget(best.target, captured);
-}
-
-function substituteWildcardTarget(target: unknown, captured: string): unknown {
-  if (typeof target === "string") return target.replaceAll("*", captured);
-  if (Array.isArray(target))
-    return target.map((entry) => substituteWildcardTarget(entry, captured));
-  if (target && typeof target === "object") {
-    return Object.fromEntries(
-      Object.entries(target as Record<string, unknown>).map(([key, value]) => [
-        key,
-        substituteWildcardTarget(value, captured),
-      ]),
-    );
-  }
-  return target;
-}
-
-function resolveExportTargetInDeclarationOrder(
-  target: unknown,
-  useImportCondition: boolean,
-): string | null {
-  if (typeof target === "string") return isValidExportTarget(target) ? target : null;
-  if (Array.isArray(target)) {
-    for (const entry of target) {
-      if (entry === null) continue;
-      const resolved = resolveExportTargetInDeclarationOrder(entry, useImportCondition);
-      if (resolved) return resolved;
-    }
-    return null;
-  }
-  if (target && typeof target === "object") {
-    const table = target as Record<string, unknown>;
-    // Node evaluates conditional-export keys in package declaration order;
-    // `default` is active at its declared position, not deferred.
-    for (const [condition, value] of Object.entries(table)) {
-      if (!isActiveExportCondition(condition, useImportCondition)) continue;
-      // An explicit null blocks the subpath; do not fall through.
-      if (value === null) return null;
-      const resolved = resolveExportTargetInDeclarationOrder(value, useImportCondition);
-      if (resolved) return resolved;
-    }
-  }
-  return null;
-}
-
-function isValidExportTarget(target: string): boolean {
-  // Node only accepts export targets pointing inside the package.
-  return target.startsWith("./");
-}
-
-function isActiveExportCondition(condition: string, useImportCondition: boolean): boolean {
-  if (condition === "node") return true;
-  // Node 22.7+/24 treats these as always-active during ESM resolution;
-  // a statically-verified local probe shows `node-addons` and
-  // `module-sync` win over `default` for bare `import` on Node 24.
-  if (condition === "node-addons" || condition === "module-sync") return true;
-  if (condition === "import") return useImportCondition;
-  if (condition === "require") return !useImportCondition;
-  return condition === "default";
-}
-function escapeWindowsPath(runtimePath: string): string {
-  return runtimePath.replace(/\\/g, "\\\\");
-}
-
-type PackageJsonEntry = {
-  readonly main?: unknown;
-  readonly exports?: unknown;
+type ExternalImport = {
+  moduleSpecifier: ts.StringLiteral;
+  sourcePath: string;
+  syntaxTree: ts.SourceFile;
+  replacements: SpecifierReplacement[];
 };
 
-function findScopedPackageName(specifier: string): string | null {
-  if (specifier.startsWith("@")) {
-    const segments = specifier.split("/");
-    if (segments.length < 2 || !segments[0] || !segments[1]) return null;
-    return `${segments[0]}/${segments[1]}`;
+const RESOLVE_EXTERNAL_IMPORTS = `
+import { readFileSync } from 'node:fs';
+try {
+  const requests = JSON.parse(readFileSync(0, 'utf8'));
+  process.stdout.write(JSON.stringify(requests.map(({ specifier, parentURL }) =>
+    import.meta.resolve(specifier, parentURL)
+  )));
+} catch (error) {
+  process.stderr.write(error.message);
+  process.exitCode = 1;
+}
+`;
+
+function resolveExternalImports(imports: readonly ExternalImport[]): readonly string[] {
+  if (imports.length === 0) return [];
+  let output: string;
+  try {
+    output = execFileSync(
+      process.execPath,
+      [
+        ...getResolutionFlags(),
+        "--experimental-import-meta-resolve",
+        "--input-type=module",
+        "--eval",
+        RESOLVE_EXTERNAL_IMPORTS,
+      ],
+      {
+        input: JSON.stringify(
+          imports.map(({ moduleSpecifier, sourcePath }) => ({
+            specifier: moduleSpecifier.text,
+            parentURL: pathToFileURL(sourcePath).href,
+          })),
+        ),
+        encoding: "utf8",
+        stdio: ["pipe", "pipe", "pipe"],
+        maxBuffer: 10 * 1024 * 1024,
+      },
+    );
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new ControllerProjectStateProblem(
+      `Cannot resolve application ESM dependencies: ${detail}`,
+    );
   }
-  const [head] = specifier.split("/");
-  return head ? head : null;
+  const resolved: unknown = JSON.parse(output);
+  if (
+    !Array.isArray(resolved) ||
+    resolved.length !== imports.length ||
+    !resolved.every((entry: unknown) => typeof entry === "string")
+  ) {
+    throw new ControllerProjectStateProblem(
+      "External dependency resolver returned an invalid result.",
+    );
+  }
+  return resolved as string[];
 }
 
-function tryResolvePackageJson(packageName: string, sourcePath: string): string | null {
-  const applicationRequire = createRequire(sourcePath);
-  for (const subpath of ["package.json", "."]) {
-    try {
-      const resolved = applicationRequire.resolve(`${packageName}/${subpath}`);
-      if (subpath === "package.json") return resolved;
-      return path.join(path.dirname(resolved), "package.json");
-    } catch {
-      continue;
+function getResolutionFlags(): readonly string[] {
+  const flags: string[] = [];
+  const toggles = new Set([
+    "addons",
+    "require-module",
+    "experimental-require-module",
+    "preserve-symlinks",
+    "preserve-symlinks-main",
+  ]);
+  for (let index = 0; index < process.execArgv.length; index++) {
+    const argument = process.execArgv[index];
+    const equals = argument.indexOf("=");
+    const name = (equals === -1 ? argument : argument.slice(0, equals)).replaceAll("_", "-");
+    if (name === "--conditions" || name === "-C") {
+      if (equals !== -1) {
+        flags.push(`${name}${argument.slice(equals)}`);
+      } else {
+        const value = process.execArgv[++index];
+        if (value === undefined)
+          throw new ControllerProjectStateProblem("Missing Node export condition.");
+        flags.push(name, value);
+      }
+    } else if (toggles.has(name.replace(/^--(?:no-)?/, ""))) {
+      flags.push(name);
     }
   }
-  let directory = path.dirname(sourcePath);
-  while (true) {
-    const candidate = path.join(directory, "node_modules", packageName, "package.json");
-    if (fs.existsSync(candidate)) return candidate;
-    const parent = path.dirname(directory);
-    if (parent === directory) return null;
-    directory = parent;
-  }
-}
-
-function readPackageJson(packageJsonPath: string): PackageJsonEntry | null {
-  try {
-    return JSON.parse(fs.readFileSync(packageJsonPath, "utf8")) as PackageJsonEntry;
-  } catch {
-    return null;
-  }
-}
-
-function normalizeSubpath(subpath: string): string {
-  if (subpath === "" || subpath === ".") return ".";
-  return subpath.startsWith("./") ? subpath : `./${subpath.replace(/^\/+/, "")}`;
+  return flags;
 }
 
 function isEsmModuleKind(moduleKind: ts.ModuleKind | undefined, sourcePath: string): boolean {

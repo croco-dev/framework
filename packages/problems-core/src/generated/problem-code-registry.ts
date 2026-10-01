@@ -19344,7 +19344,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocol-codegen/src/libs/ControllerProject.ts",
-          line: 58,
+          line: 59,
           column: 5,
           kind: "problem-constructor",
         },
@@ -19377,7 +19377,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocol-codegen/src/libs/ControllerProject.ts",
-          line: 79,
+          line: 80,
           column: 5,
           kind: "problem-constructor",
         },

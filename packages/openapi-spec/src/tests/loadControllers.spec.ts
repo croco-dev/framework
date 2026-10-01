@@ -3,6 +3,8 @@ import * as fs from "node:fs";
 import { createRequire } from "node:module";
 import * as os from "node:os";
 import * as path from "node:path";
+import { pathToFileURL } from "node:url";
+import type * as Zod from "zod";
 import { buildContractGraph } from "@croco/protocols-core";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { emitOpenAPI } from "../libs/emitOpenAPI";
@@ -27,6 +29,87 @@ describe("loadControllers", () => {
   afterEach(() => {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   });
+
+  it.each(["CommonJS", "NodeNext"] as const)(
+    "evaluates OpenAPI schemas with each application's Zod runtime before generating OpenAPI (%s)",
+    async (moduleKind) => {
+      const workspaceRequire = createRequire(import.meta.url);
+      const zodRoot = path.dirname(workspaceRequire.resolve("zod/package.json"));
+      const openapiRoot = path.dirname(
+        workspaceRequire.resolve("@asteasolutions/zod-to-openapi/package.json"),
+      );
+      const tsconfigPath = path.join(tempRoot, "tsconfig.json");
+      fs.writeFileSync(
+        tsconfigPath,
+        JSON.stringify({
+          compilerOptions: {
+            experimentalDecorators: true,
+            module: moduleKind,
+            moduleResolution: moduleKind === "NodeNext" ? "NodeNext" : "Node",
+            target: "ES2022",
+          },
+        }),
+      );
+      const esmRuntimes: (typeof Zod)[] = [];
+      for (const name of ["first", "second"]) {
+        const applicationRoot = path.join(tempRoot, name);
+        const controllerPath = path.join(applicationRoot, "src", "UsersController.ts");
+        fs.mkdirSync(path.dirname(controllerPath), { recursive: true });
+        fs.writeFileSync(
+          path.join(applicationRoot, "package.json"),
+          JSON.stringify({
+            type: moduleKind === "NodeNext" ? "module" : "commonjs",
+          }),
+        );
+        fs.cpSync(zodRoot, path.join(applicationRoot, "node_modules", "zod"), { recursive: true });
+        fs.symlinkSync(
+          openapiRoot,
+          path.join(applicationRoot, "node_modules", "openapi-types"),
+          "dir",
+        );
+        fs.writeFileSync(
+          controllerPath,
+          getMixedControllerSource()
+            .replace(
+              "import 'reflect-metadata';",
+              `import { z } from 'zod';
+import type {} from 'openapi-types';
+export const schema = z.object({ id: z.string().openapi({ example: 'user-1' }) }).openapi('User');
+schema.parse({ id: 'user-1' });`,
+            )
+            .replace("@Controller('/users')", `@Controller('/${name}')`)
+            .replace("export class UsersController", `export class ${name}UsersController`),
+        );
+        const applicationZod = createRequire(controllerPath)("zod") as typeof Zod;
+        expect(applicationZod.z.string().openapi).toBeUndefined();
+        const packageJson = JSON.parse(
+          fs.readFileSync(path.join(zodRoot, "package.json"), "utf8"),
+        ) as {
+          exports: { ".": { import: string } };
+        };
+        const esmZod = (await import(
+          pathToFileURL(
+            path.join(applicationRoot, "node_modules", "zod", packageJson.exports["."].import),
+          ).href
+        )) as typeof Zod;
+        expect(esmZod.z.string().openapi).toBeUndefined();
+        esmRuntimes.push(esmZod);
+      }
+
+      const controllers = await loadControllers(path.join(tempRoot, "*", "src", "*.ts"), {
+        tsconfigPath,
+      });
+
+      const spec = emitOpenAPI(controllers);
+      expect(Object.keys(spec.paths ?? {}).sort()).toEqual(["/first", "/second"]);
+      expect(spec.paths?.["/first"]?.get?.operationId).toBe("firstUsersController_listUsers");
+      expect(spec.paths?.["/second"]?.get?.operationId).toBe("secondUsersController_listUsers");
+      for (const { z } of esmRuntimes) {
+        expect(z.string().openapi({ example: "user-1" }).parse("user-1")).toBe("user-1");
+      }
+    },
+    LOAD_CONTROLLER_TIMEOUT_MS,
+  );
 
   it(
     "loads exported controllers while ignoring co-located helper classes",
