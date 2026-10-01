@@ -159,7 +159,19 @@ export type EngagementDispatchOutcome =
       executionIds: readonly string[];
       providerMessageIds?: readonly string[];
     }>
-  | Readonly<{ kind: "suppressed"; reason: "preference" | "suppression" }>
+  | Readonly<{
+      kind: "suppressed";
+      reason: "preference" | "suppression";
+      contactPolicy?: Readonly<{
+        app: string;
+        environment: string;
+        reason: string;
+        blockingRuleId: string | null;
+        campaignId?: string;
+        blockingCampaignIds?: readonly string[];
+        nextEligibleAt?: string;
+      }>;
+    }>
   | Readonly<{ kind: "unavailable"; reason: "no-endpoint" }>
   | Readonly<{ kind: "skipped"; reason: "policy" }>
   | Readonly<{

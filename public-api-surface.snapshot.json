@@ -379,6 +379,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "assertContactPolicyRegistration",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyOperations",
+              "declarationKind": "function"
+            },
+            {
               "name": "assertCreateSuppressionValid",
               "exportKind": "named",
               "source": "./libs/EngagementOperations",
@@ -448,6 +454,24 @@
               "name": "CohortAdminProblem",
               "exportKind": "named",
               "source": "./libs/CohortOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ContactPolicyAdminAccessProblem",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ContactPolicyAdminProblem",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ContactPolicyOperations",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyOperations",
               "declarationKind": "class"
             },
             {
@@ -1021,6 +1045,56 @@
               "name": "CohortRunRequest",
               "exportKind": "named",
               "source": "./libs/CohortOperations"
+            },
+            {
+              "name": "ContactPolicyAdminAccess",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyOperations"
+            },
+            {
+              "name": "ContactPolicyAdminEdit",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyOperations"
+            },
+            {
+              "name": "ContactPolicyAdminRegistration",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyOperations"
+            },
+            {
+              "name": "ContactPolicyAdminSave",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyOperations"
+            },
+            {
+              "name": "ContactPolicyAdminScope",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyOperations"
+            },
+            {
+              "name": "ContactPolicyAdminSnapshot",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyOperations"
+            },
+            {
+              "name": "ContactPolicyAdminStore",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyOperations"
+            },
+            {
+              "name": "ContactPolicyAdminView",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyOperations"
+            },
+            {
+              "name": "ContactPolicyConsoleState",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyOperations"
+            },
+            {
+              "name": "ContactPolicySuppression",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyOperations"
             },
             {
               "name": "CreditOperationsAction",
@@ -2472,6 +2546,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "ContactPolicyConsole",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "createAdminDataTableInvalidRowIdProblemDetails",
               "exportKind": "named",
               "source": "./libs/dataTableSnapshot",
@@ -3379,6 +3459,11 @@
               "name": "CohortBuilderProps",
               "exportKind": "named",
               "source": "./libs/CohortBuilder"
+            },
+            {
+              "name": "ContactPolicyConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyConsole"
             },
             {
               "name": "CreditOperationsConsoleProps",
@@ -10477,6 +10562,12 @@
           "sourceEntrypoint": "packages/engagement-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "assertContactPolicyScope",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy",
+              "declarationKind": "function"
+            },
+            {
               "name": "assertEngagementPreference",
               "exportKind": "named",
               "source": "./libs/EngagementStores",
@@ -10657,6 +10748,30 @@
               "declarationKind": "class"
             },
             {
+              "name": "ContactPolicy",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ContactPolicyAcceptanceUnknownProblem",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ContactPolicyConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ContactPolicyInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy",
+              "declarationKind": "class"
+            },
+            {
               "name": "createEngagementDeliveryEventId",
               "exportKind": "named",
               "source": "./libs/EngagementStores",
@@ -10792,6 +10907,12 @@
               "name": "InMemoryCampaignStore",
               "exportKind": "named",
               "source": "./libs/CampaignStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InMemoryContactPolicyStore",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy",
               "declarationKind": "class"
             },
             {
@@ -10931,6 +11052,12 @@
               "exportKind": "named",
               "source": "./libs/PersistentEngagement",
               "declarationKind": "class"
+            },
+            {
+              "name": "validateContactPolicyConfig",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -11105,6 +11232,71 @@
               "source": "./libs/EngagementStores"
             },
             {
+              "name": "ContactPolicyConfig",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy"
+            },
+            {
+              "name": "ContactPolicyDecision",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy"
+            },
+            {
+              "name": "ContactPolicyOptions",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy"
+            },
+            {
+              "name": "ContactPolicyReconciliation",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy"
+            },
+            {
+              "name": "ContactPolicyRequest",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy"
+            },
+            {
+              "name": "ContactPolicyReservation",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy"
+            },
+            {
+              "name": "ContactPolicyReservationRef",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy"
+            },
+            {
+              "name": "ContactPolicyReserveResult",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy"
+            },
+            {
+              "name": "ContactPolicyRule",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy"
+            },
+            {
+              "name": "ContactPolicyScope",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy"
+            },
+            {
+              "name": "ContactPolicyStore",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy"
+            },
+            {
+              "name": "ContactPolicyTopic",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy"
+            },
+            {
+              "name": "ContactPolicyTransaction",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy"
+            },
+            {
               "name": "CreateCampaignSnapshotInput",
               "exportKind": "named",
               "source": "./libs/CampaignStore"
@@ -11143,6 +11335,11 @@
               "name": "EngagementChannelResult",
               "exportKind": "named",
               "source": "./libs/EngagementService"
+            },
+            {
+              "name": "EngagementContactPolicyGate",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy"
             },
             {
               "name": "EngagementDeliveryEvent",
@@ -11499,6 +11696,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "DrizzleContactPolicyAdminStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleContactPolicyAdminStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "DrizzleContactPolicyStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleContactPolicyStore",
+              "declarationKind": "class"
+            },
+            {
               "name": "DrizzleEngagementStore",
               "exportKind": "named",
               "source": "./libs/DrizzleEngagementStore",
@@ -11530,6 +11739,30 @@
             },
             {
               "name": "engagementContactEndpoints",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "engagementContactPolicyAudit",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "engagementContactPolicyBuckets",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "engagementContactPolicyReservations",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "engagementContactPolicySettings",
               "exportKind": "named",
               "source": "./libs/schema",
               "declarationKind": "const"
@@ -11567,6 +11800,16 @@
           ],
           "typeExports": [
             {
+              "name": "ContactPolicySettingsSnapshot",
+              "exportKind": "named",
+              "source": "./libs/DrizzleContactPolicyAdminStore"
+            },
+            {
+              "name": "ContactPolicySettingsTarget",
+              "exportKind": "named",
+              "source": "./libs/DrizzleContactPolicyAdminStore"
+            },
+            {
               "name": "DrizzleCampaignClient",
               "exportKind": "named",
               "source": "./libs/DrizzleCampaignStore"
@@ -11575,6 +11818,16 @@
               "name": "DrizzleCampaignTxManager",
               "exportKind": "named",
               "source": "./libs/DrizzleCampaignStore"
+            },
+            {
+              "name": "DrizzleContactPolicyAdminClient",
+              "exportKind": "named",
+              "source": "./libs/DrizzleContactPolicyAdminStore"
+            },
+            {
+              "name": "DrizzleContactPolicyClient",
+              "exportKind": "named",
+              "source": "./libs/DrizzleContactPolicyStore"
             },
             {
               "name": "DrizzleEngagementClient",
@@ -11590,6 +11843,11 @@
               "name": "EngagementMigrationClient",
               "exportKind": "named",
               "source": "./migrations/engagementSchema"
+            },
+            {
+              "name": "SaveContactPolicySettings",
+              "exportKind": "named",
+              "source": "./libs/DrizzleContactPolicyAdminStore"
             }
           ]
         }

@@ -2633,6 +2633,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "public",
     severity: "info",
   }),
+  "engagement-core/contact-policy-acceptance-unknown": recovery({
+    cause: "Provider acceptance could not be durably confirmed for a contact policy reservation.",
+    userAction:
+      "Do not automatically resend the message or refund the contact budget; request operator reconciliation.",
+    operatorAction:
+      "Verify provider evidence, then call ContactPolicy.reconcile with the evidence reference, actor, and reason. Record accepted execution IDs or release the reservation only when evidence confirms non-acceptance; expiry alone must not refund the budget.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "metering-upstash/automatic-deserialization-enabled": recovery({
     cause: "The injected Upstash Redis client deserialized a Lua-returned JSON string.",
     userAction: "Retry after the Redis client is configured with automaticDeserialization: false.",

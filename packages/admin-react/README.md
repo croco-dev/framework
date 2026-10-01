@@ -495,3 +495,21 @@ Map snapshot fields directly using `input`, `min`, `max`, and `options`; diagnos
 `code`, `path`, and `severity`. Pass only code-declared fields and redacted diff/diagnostic text. Never send a secret field's
 raw value to a browser merely because its input uses `type="password"`. There are no
 handler, class, URL, or JavaScript execution inputs, and no billing Plan types are required.
+
+## Standalone contact policy console
+
+`ContactPolicyConsole` renders code-permitted contact budget limits, quiet hours,
+and topic priorities without a Journey, Cohort, or Policy Release dependency.
+Pass an explicit `target`, `registration`, and `ContactPolicyConsoleState`, with
+`onSave` and `onDryRun` callbacks connected to server `ContactPolicyOperations`.
+The dry-run callback evaluates the selected subject's intended registered
+message; it must use the send policy evaluator without reserving budget.
+
+The console supports loading, empty, partial, denied, error and ready states,
+native keyboard form controls, audit reason validation, read-only access, and
+cross-campaign suppression reasons. The host refreshes state after successful
+save and returns the current revision. `canWrite` controls presentation only;
+server authorization remains required. Display history contains logical IDs and
+policy decisions, never contact addresses or provider tokens. The UI explicitly
+limits its guarantee to sends through the installed gate and priority within a
+submitted batch.

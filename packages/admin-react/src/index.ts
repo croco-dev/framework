@@ -317,3 +317,6 @@ export type {
   PolicyReleaseConsoleState,
   PolicyReleaseConsoleProps,
 } from "./libs/PolicyReleaseConsole";
+
+export { ContactPolicyConsole } from "./libs/ContactPolicyConsole";
+export type { ContactPolicyConsoleProps } from "./libs/ContactPolicyConsole";

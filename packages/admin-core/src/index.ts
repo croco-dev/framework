@@ -320,3 +320,22 @@ export type {
   PolicyReleaseAdminCommand,
   PolicyReleaseAdminSnapshot,
 } from "./libs/PolicyReleaseOperations";
+
+export {
+  ContactPolicyOperations,
+  assertContactPolicyRegistration,
+  ContactPolicyAdminProblem,
+  ContactPolicyAdminAccessProblem,
+} from "./libs/ContactPolicyOperations";
+export type {
+  ContactPolicyAdminScope,
+  ContactPolicyAdminAccess,
+  ContactPolicyAdminRegistration,
+  ContactPolicyAdminSnapshot,
+  ContactPolicySuppression,
+  ContactPolicyAdminView,
+  ContactPolicyAdminEdit,
+  ContactPolicyAdminSave,
+  ContactPolicyAdminStore,
+  ContactPolicyConsoleState,
+} from "./libs/ContactPolicyOperations";

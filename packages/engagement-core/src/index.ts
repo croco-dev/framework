@@ -212,3 +212,28 @@ export type {
   EngagementStoreConformanceOptions,
   EngagementStoreConformanceSuite,
 } from "./libs/EngagementStoreConformance";
+export {
+  ContactPolicy,
+  ContactPolicyInvalidProblem,
+  ContactPolicyConflictProblem,
+  ContactPolicyAcceptanceUnknownProblem,
+  InMemoryContactPolicyStore,
+  assertContactPolicyScope,
+  validateContactPolicyConfig,
+} from "./libs/ContactPolicy";
+export type {
+  ContactPolicyScope,
+  ContactPolicyTopic,
+  ContactPolicyRule,
+  ContactPolicyConfig,
+  ContactPolicyRequest,
+  ContactPolicyDecision,
+  ContactPolicyReservation,
+  ContactPolicyReserveResult,
+  ContactPolicyReconciliation,
+  ContactPolicyTransaction,
+  ContactPolicyStore,
+  ContactPolicyOptions,
+  ContactPolicyReservationRef,
+  EngagementContactPolicyGate,
+} from "./libs/ContactPolicy";

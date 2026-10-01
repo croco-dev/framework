@@ -29,7 +29,7 @@ Typed message contracts and explicit, decorator-bound renderer registration for 
 
 ### TCommand
 
-`TCommand` _extends_ `Readonly`\<\{ `data`: [`MessageDataInput`](/api/engagement-core/src/type-aliases/messagedatainput/)\<`TMessage`\>; `key`: `string`; `policy?`: [`EngagementDeliveryPolicy`](/api/engagement-core/src/type-aliases/engagementdeliverypolicy/); `recipient`: [`RecipientRef`](/api/engagement-core/src/type-aliases/recipientref/); \}\>
+`TCommand` _extends_ `Readonly`\<\{ `campaignId?`: `string`; `data`: [`MessageDataInput`](/api/engagement-core/src/type-aliases/messagedatainput/)\<`TMessage`\>; `key`: `string`; `policy?`: [`EngagementDeliveryPolicy`](/api/engagement-core/src/type-aliases/engagementdeliverypolicy/); `recipient`: [`RecipientRef`](/api/engagement-core/src/type-aliases/recipientref/); \}\>
 
 ## Parameters
 

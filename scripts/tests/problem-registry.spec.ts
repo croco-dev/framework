@@ -905,6 +905,43 @@ describe("problem-registry.mts", () => {
     });
   });
 
+  it("requires provider evidence to reconcile unknown contact policy acceptance", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/engagement-core/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class ContactPolicyAcceptanceUnknownProblem extends Problem {",
+        "  constructor() {",
+        '    super("engagement-core/contact-policy-acceptance-unknown", ProblemCategory.InternalServerError);',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+    const problem = readRegistry(repo).problems.find(
+      ({ code }) => code === "engagement-core/contact-policy-acceptance-unknown",
+    );
+
+    expect(problem?.recovery).toEqual({
+      cause: "Provider acceptance could not be durably confirmed for a contact policy reservation.",
+      userAction:
+        "Do not automatically resend the message or refund the contact budget; request operator reconciliation.",
+      operatorAction:
+        "Verify provider evidence, then call ContactPolicy.reconcile with the evidence reference, actor, and reason. Record accepted execution IDs or release the reservation only when evidence confirms non-acceptance; expiry alone must not refund the budget.",
+      retryability: "not-retryable",
+      redactionPolicy: "operator-only",
+      telemetry: {
+        eventName: "croco.problem.error",
+        severity: "error",
+        attributes: ["problem.code", "problem.category", "problem.status"],
+      },
+    });
+  });
+
   it("publishes non-retryable recovery metadata for invalid auth route targets", () => {
     const repo = createTempRepo();
     writeFile(

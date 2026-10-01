@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 874,
+  problemCount: 879,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -219,6 +219,66 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 20,
           column: 79,
           kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "admin-core/contact-policy-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-contact-policy-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/ContactPolicyOperations.ts",
+          line: 79,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "admin-core/contact-policy-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#admin-core-contact-policy-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/ContactPolicyOperations.ts",
+          line: 73,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
@@ -6999,7 +7059,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/CampaignServices.ts",
-          line: 544,
+          line: 545,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7030,7 +7090,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/CampaignServices.ts",
-          line: 519,
+          line: 520,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7061,7 +7121,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/CampaignServices.ts",
-          line: 527,
+          line: 528,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7094,7 +7154,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/CampaignServices.ts",
-          line: 555,
+          line: 556,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7158,7 +7218,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/CampaignServices.ts",
-          line: 508,
+          line: 509,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7319,6 +7379,100 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "engagement-core/contact-policy-acceptance-unknown",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#engagement-core-contact-policy-acceptance-unknown",
+      recovery: {
+        cause:
+          "Provider acceptance could not be durably confirmed for a contact policy reservation.",
+        userAction:
+          "Do not automatically resend the message or refund the contact budget; request operator reconciliation.",
+        operatorAction:
+          "Verify provider evidence, then call ContactPolicy.reconcile with the evidence reference, actor, and reason. Record accepted execution IDs or release the reservation only when evidence confirms non-acceptance; expiry alone must not refund the budget.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/engagement-core/src/libs/ContactPolicy.ts",
+          line: 125,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "engagement-core/contact-policy-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#engagement-core-contact-policy-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/engagement-core/src/libs/ContactPolicy.ts",
+          line: 119,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "engagement-core/contact-policy-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#engagement-core-contact-policy-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/engagement-core/src/libs/ContactPolicy.ts",
+          line: 114,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "engagement-core/delivery-event-correlation-invalid",
       category: "ValidationError",
       status: 422,
@@ -7375,7 +7529,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 884,
+          line: 1004,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7499,7 +7653,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementStores.ts",
-          line: 328,
+          line: 340,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7532,7 +7686,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 800,
+          line: 920,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7565,7 +7719,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 815,
+          line: 935,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7596,7 +7750,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 788,
+          line: 908,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7629,7 +7783,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 912,
+          line: 1032,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7661,7 +7815,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 836,
+          line: 956,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7882,7 +8036,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 827,
+          line: 947,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7912,7 +8066,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementStores.ts",
-          line: 320,
+          line: 332,
           column: 5,
           kind: "problem-constructor",
         },
@@ -7945,7 +8099,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 857,
+          line: 977,
           column: 5,
           kind: "problem-constructor",
         },

@@ -104,6 +104,12 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/ContactPolicyOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/CreditOperations.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -237,6 +243,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/CohortBuilderInteraction.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ContactPolicyConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -1666,6 +1678,12 @@
       "owner": "@croco/engagement-core"
     },
     {
+      "path": "packages/engagement-core/src/tests/ContactPolicy.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-core"
+    },
+    {
       "path": "packages/engagement-core/src/tests/EngagementService.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -1698,6 +1716,18 @@
     {
       "path": "packages/engagement-drizzle/src/tests/DrizzleCampaignStore.spec.ts",
       "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-drizzle"
+    },
+    {
+      "path": "packages/engagement-drizzle/src/tests/DrizzleContactPolicyAdminStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/engagement-drizzle"
+    },
+    {
+      "path": "packages/engagement-drizzle/src/tests/DrizzleContactPolicyStore.postgres.spec.ts",
+      "lane": "live",
       "qualifiers": [],
       "owner": "@croco/engagement-drizzle"
     },

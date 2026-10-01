@@ -17,7 +17,8 @@
       "@croco/tenant-core": ["../tenant-core/src/libs/types.ts"],
       "@croco/analytics-core": ["../analytics-core/src/index.ts"],
       "@croco/cohort-core": ["../cohort-core/src/index.ts"],
-      "@croco/onboarding-core": ["../onboarding-core/src/index.ts"]
+      "@croco/onboarding-core": ["../onboarding-core/src/index.ts"],
+      "@croco/engagement-core": ["../engagement-core/src/index.ts"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.tsx"]
