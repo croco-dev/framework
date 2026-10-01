@@ -731,6 +731,206 @@ describe("createControllerProject", () => {
       session.dispose();
     }
   });
+
+  it("resolves legacy ESM package subpaths without an exports field", async () => {
+    const root = createTemporaryDirectory();
+    writeJson(path.join(root, "tsconfig.json"), {
+      compilerOptions: {
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        target: "ES2022",
+      },
+    });
+    const applicationRoot = path.join(root, "app");
+    const controllerPath = path.join(applicationRoot, "src", "Controller.ts");
+    fs.mkdirSync(path.dirname(controllerPath), { recursive: true });
+    writeJson(path.join(applicationRoot, "package.json"), { type: "module" });
+    const dependencyDir = path.join(applicationRoot, "node_modules", "legacy-subpath-marker");
+    fs.mkdirSync(dependencyDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dependencyDir, "package.json"),
+      JSON.stringify({ name: "legacy-subpath-marker", main: "./index.js" }),
+    );
+    fs.writeFileSync(
+      path.join(dependencyDir, "feature.js"),
+      `export const owner = 'legacy-subpath';\n`,
+    );
+    writeFile(
+      controllerPath,
+      "import { owner } from 'legacy-subpath-marker/feature.js'; export class Controller { static owner = owner; }",
+    );
+    const session = createControllerProject({
+      cwd: root,
+      controllers: ["app/src/Controller.ts"],
+    });
+
+    try {
+      session.emit();
+      const [moduleExports] = await session.importControllerModules();
+      expect((moduleExports.Controller as { owner: string }).owner).toBe("legacy-subpath");
+      const relative = path
+        .relative(session.sourceRoot, session.controllerSourceFiles[0].getFilePath())
+        .replace(/\.tsx?$/, ".js");
+      const emitted = fs.readFileSync(path.join(session.emitDir, relative), "utf8");
+      expect(emitted).toContain("feature.js");
+      expect(emitted).toContain("file://");
+      expect(emitted).not.toContain("from 'legacy-subpath-marker/feature.js'");
+    } finally {
+      session.dispose();
+    }
+  });
+
+  it("evaluates the default export condition in declaration order", async () => {
+    const root = createTemporaryDirectory();
+    writeJson(path.join(root, "tsconfig.json"), {
+      compilerOptions: {
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        target: "ES2022",
+      },
+    });
+    const applicationRoot = path.join(root, "app");
+    const controllerPath = path.join(applicationRoot, "src", "Controller.ts");
+    fs.mkdirSync(path.dirname(controllerPath), { recursive: true });
+    writeJson(path.join(applicationRoot, "package.json"), { type: "module" });
+    const dependencyDir = path.join(applicationRoot, "node_modules", "default-first-marker");
+    fs.mkdirSync(dependencyDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dependencyDir, "package.json"),
+      JSON.stringify({
+        name: "default-first-marker",
+        exports: { ".": { default: "./default.mjs", import: "./import.mjs" } },
+      }),
+    );
+    fs.writeFileSync(
+      path.join(dependencyDir, "default.mjs"),
+      `export const owner = 'default-first';\n`,
+    );
+    fs.writeFileSync(
+      path.join(dependencyDir, "import.mjs"),
+      `export const owner = 'import-target';\n`,
+    );
+    writeFile(
+      controllerPath,
+      "import { owner } from 'default-first-marker'; export class Controller { static owner = owner; }",
+    );
+    const session = createControllerProject({
+      cwd: root,
+      controllers: ["app/src/Controller.ts"],
+    });
+
+    try {
+      session.emit();
+      const [moduleExports] = await session.importControllerModules();
+      expect((moduleExports.Controller as { owner: string }).owner).toBe("default-first");
+      const relative = path
+        .relative(session.sourceRoot, session.controllerSourceFiles[0].getFilePath())
+        .replace(/\.tsx?$/, ".js");
+      const emitted = fs.readFileSync(path.join(session.emitDir, relative), "utf8");
+      expect(emitted).toContain("default.mjs");
+    } finally {
+      session.dispose();
+    }
+  });
+
+  it("skips invalid targets in export fallback arrays", async () => {
+    const root = createTemporaryDirectory();
+    writeJson(path.join(root, "tsconfig.json"), {
+      compilerOptions: {
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        target: "ES2022",
+      },
+    });
+    const applicationRoot = path.join(root, "app");
+    const controllerPath = path.join(applicationRoot, "src", "Controller.ts");
+    fs.mkdirSync(path.dirname(controllerPath), { recursive: true });
+    writeJson(path.join(applicationRoot, "package.json"), { type: "module" });
+    const dependencyDir = path.join(applicationRoot, "node_modules", "fallback-marker");
+    fs.mkdirSync(dependencyDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dependencyDir, "package.json"),
+      JSON.stringify({
+        name: "fallback-marker",
+        exports: { ".": { import: ["bad-target", "./good.mjs"] } },
+      }),
+    );
+    fs.writeFileSync(path.join(dependencyDir, "good.mjs"), `export const owner = 'fallback';\n`);
+    writeFile(
+      controllerPath,
+      "import { owner } from 'fallback-marker'; export class Controller { static owner = owner; }",
+    );
+    const session = createControllerProject({
+      cwd: root,
+      controllers: ["app/src/Controller.ts"],
+    });
+
+    try {
+      session.emit();
+      const [moduleExports] = await session.importControllerModules();
+      expect((moduleExports.Controller as { owner: string }).owner).toBe("fallback");
+      const relative = path
+        .relative(session.sourceRoot, session.controllerSourceFiles[0].getFilePath())
+        .replace(/\.tsx?$/, ".js");
+      const emitted = fs.readFileSync(path.join(session.emitDir, relative), "utf8");
+      expect(emitted).toContain("good.mjs");
+    } finally {
+      session.dispose();
+    }
+  });
+
+  it("prefers the longest wildcard prefix when export patterns overlap", async () => {
+    const root = createTemporaryDirectory();
+    writeJson(path.join(root, "tsconfig.json"), {
+      compilerOptions: {
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        target: "ES2022",
+      },
+    });
+    const applicationRoot = path.join(root, "app");
+    const controllerPath = path.join(applicationRoot, "src", "Controller.ts");
+    fs.mkdirSync(path.dirname(controllerPath), { recursive: true });
+    writeJson(path.join(applicationRoot, "package.json"), { type: "module" });
+    const dependencyDir = path.join(applicationRoot, "node_modules", "specificity-marker");
+    fs.mkdirSync(dependencyDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dependencyDir, "package.json"),
+      JSON.stringify({
+        name: "specificity-marker",
+        exports: {
+          "./a*c": "./generic.mjs",
+          "./ab*": "./specific.mjs",
+        },
+      }),
+    );
+    fs.writeFileSync(path.join(dependencyDir, "generic.mjs"), `export const owner = 'generic';\n`);
+    fs.writeFileSync(
+      path.join(dependencyDir, "specific.mjs"),
+      `export const owner = 'specific';\n`,
+    );
+    writeFile(
+      controllerPath,
+      "import { owner } from 'specificity-marker/abc'; export class Controller { static owner = owner; }",
+    );
+    const session = createControllerProject({
+      cwd: root,
+      controllers: ["app/src/Controller.ts"],
+    });
+
+    try {
+      session.emit();
+      const [moduleExports] = await session.importControllerModules();
+      expect((moduleExports.Controller as { owner: string }).owner).toBe("specific");
+      const relative = path
+        .relative(session.sourceRoot, session.controllerSourceFiles[0].getFilePath())
+        .replace(/\.tsx?$/, ".js");
+      const emitted = fs.readFileSync(path.join(session.emitDir, relative), "utf8");
+      expect(emitted).toContain("specific.mjs");
+    } finally {
+      session.dispose();
+    }
+  });
 });
 
 function createTemporaryDirectory(): string {

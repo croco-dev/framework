@@ -633,18 +633,26 @@ function resolveEsmRuntimePath(specifier: string, sourcePath: string): string | 
   if (!packageJson) return null;
   const subpath = specifier.slice(packageScope.length) || ".";
   const normalized = normalizeSubpath(subpath);
-  const entry =
-    resolveEsmPackageEntry(packageJson, normalized) ??
-    resolvePackageEntry(packageJson, normalized, ["node", "import"]) ??
-    resolvePackageEntry(packageJson, normalized, ["node"]);
+  const entry = resolveEsmPackageEntry(packageJson, normalized);
   if (!entry) return null;
-  return path.resolve(path.dirname(resolvedPackageJson), entry);
+  const resolved = path.resolve(path.dirname(resolvedPackageJson), entry);
+  // Legacy subpaths without an `exports` field must map to a real file;
+  // otherwise keep the bare specifier instead of emitting a dead file URL.
+  if (!hasExportsField(packageJson) && normalized !== "." && !fs.existsSync(resolved)) {
+    return null;
+  }
+  return resolved;
+}
+
+function hasExportsField(packageJson: PackageJsonEntry): boolean {
+  return packageJson.exports !== undefined && packageJson.exports !== null;
 }
 
 function resolveEsmPackageEntry(packageJson: PackageJsonEntry, subpath: string): string | null {
   const exportsField = packageJson.exports;
   if (typeof exportsField === "string") {
-    return subpath === "." ? exportsField : null;
+    if (subpath !== ".") return null;
+    return isValidExportTarget(exportsField) ? exportsField : null;
   }
   if (exportsField && typeof exportsField === "object" && !Array.isArray(exportsField)) {
     const table = exportsField as Record<string, unknown>;
@@ -657,8 +665,12 @@ function resolveEsmPackageEntry(packageJson: PackageJsonEntry, subpath: string):
     if (wildcard) return resolveExportTargetInDeclarationOrder(wildcard, true);
     return null;
   }
-  if (subpath !== ".") return null;
-  return typeof packageJson.main === "string" ? packageJson.main : null;
+  if (subpath === ".") {
+    return typeof packageJson.main === "string" ? packageJson.main : null;
+  }
+  // Legacy package without an `exports` field: Node resolves the subpath
+  // as a file relative to the package root (e.g. `pkg/feature.js`).
+  return subpath;
 }
 
 function matchWildcardSubpath(table: Record<string, unknown>, subpath: string): unknown | null {
@@ -671,7 +683,16 @@ function matchWildcardSubpath(table: Record<string, unknown>, subpath: string): 
     if (keyPrefix && !subpath.startsWith(keyPrefix)) continue;
     if (keySuffix && !subpath.endsWith(keySuffix)) continue;
     if (subpath.length < keyPrefix.length + keySuffix.length) continue;
-    if (!best || key.length > best.key.length) best = { key, target };
+    // Node's PATTERN_KEY_COMPARE prefers the longest matching prefix, then
+    // the longest matching suffix (equal-length keys keep the first entry).
+    if (
+      !best ||
+      keyPrefix.length > best.key.slice(0, best.key.indexOf("*")).length ||
+      (keyPrefix.length === best.key.slice(0, best.key.indexOf("*")).length &&
+        keySuffix.length > best.key.slice(best.key.indexOf("*") + 1).length)
+    ) {
+      best = { key, target };
+    }
   }
   if (!best) return null;
   const starIndex = best.key.indexOf("*");
@@ -700,9 +721,10 @@ function resolveExportTargetInDeclarationOrder(
   target: unknown,
   useImportCondition: boolean,
 ): string | null {
-  if (typeof target === "string") return target;
+  if (typeof target === "string") return isValidExportTarget(target) ? target : null;
   if (Array.isArray(target)) {
     for (const entry of target) {
+      if (entry === null) continue;
       const resolved = resolveExportTargetInDeclarationOrder(entry, useImportCondition);
       if (resolved) return resolved;
     }
@@ -710,21 +732,22 @@ function resolveExportTargetInDeclarationOrder(
   }
   if (target && typeof target === "object") {
     const table = target as Record<string, unknown>;
-    let fallback: unknown;
-    let hasFallback = false;
+    // Node evaluates conditional-export keys in package declaration order;
+    // `default` is active at its declared position, not deferred.
     for (const [condition, value] of Object.entries(table)) {
-      if (condition === "default") {
-        fallback = value;
-        hasFallback = true;
-        continue;
-      }
       if (!isActiveExportCondition(condition, useImportCondition)) continue;
+      // An explicit null blocks the subpath; do not fall through.
+      if (value === null) return null;
       const resolved = resolveExportTargetInDeclarationOrder(value, useImportCondition);
       if (resolved) return resolved;
     }
-    if (hasFallback) return resolveExportTargetInDeclarationOrder(fallback, useImportCondition);
   }
   return null;
+}
+
+function isValidExportTarget(target: string): boolean {
+  // Node only accepts export targets pointing inside the package.
+  return target.startsWith("./");
 }
 
 function isActiveExportCondition(condition: string, useImportCondition: boolean): boolean {
@@ -784,53 +807,6 @@ function readPackageJson(packageJsonPath: string): PackageJsonEntry | null {
 function normalizeSubpath(subpath: string): string {
   if (subpath === "" || subpath === ".") return ".";
   return subpath.startsWith("./") ? subpath : `./${subpath.replace(/^\/+/, "")}`;
-}
-
-function resolvePackageEntry(
-  packageJson: PackageJsonEntry,
-  subpath: string,
-  conditions: readonly string[],
-): string | null {
-  const exportsField = packageJson.exports;
-  if (typeof exportsField === "string") {
-    return subpath === "." ? exportsField : null;
-  }
-  if (exportsField && typeof exportsField === "object" && !Array.isArray(exportsField)) {
-    const table = exportsField as Record<string, unknown>;
-    if (!Object.keys(table).some((key) => key.startsWith("."))) {
-      return subpath === "." ? resolveExportTarget(exportsField, conditions) : null;
-    }
-    const target = table[subpath];
-    if (target === undefined) {
-      const fallback = table["."];
-      return subpath === "." ? resolveExportTarget(fallback, conditions) : null;
-    }
-    return resolveExportTarget(target, conditions);
-  }
-  if (subpath !== ".") return null;
-  return typeof packageJson.main === "string" ? packageJson.main : null;
-}
-
-function resolveExportTarget(target: unknown, conditions: readonly string[]): string | null {
-  if (typeof target === "string") return target;
-  if (Array.isArray(target)) {
-    for (const entry of target) {
-      const resolved = resolveExportTarget(entry, conditions);
-      if (resolved) return resolved;
-    }
-    return null;
-  }
-  if (target && typeof target === "object") {
-    const table = target as Record<string, unknown>;
-    for (const condition of conditions) {
-      if (condition in table) {
-        const resolved = resolveExportTarget(table[condition], conditions);
-        if (resolved) return resolved;
-      }
-    }
-    if ("default" in table) return resolveExportTarget(table.default, conditions);
-  }
-  return null;
 }
 
 function isEsmModuleKind(moduleKind: ts.ModuleKind | undefined, sourcePath: string): boolean {
