@@ -49,6 +49,7 @@
   "dependencies": {
     "@croco/framework-context": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "axios": "1.20.0",
     "posthog-node": "^4.0.0"
   },
   "devDependencies": {

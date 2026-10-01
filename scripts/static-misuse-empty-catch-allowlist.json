@@ -28,7 +28,7 @@
       "excerpt": "} catch {",
       "reason": "Runtime inspector failure reporters are optional instrumentation and must not affect application behavior.",
       "owner": "framework-error-handling",
-      "expiresOn": "2026-09-30"
+      "expiresOn": "2026-10-29"
     },
     {
       "package": "@croco/onboarding-core",
