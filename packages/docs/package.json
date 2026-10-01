@@ -115,6 +115,8 @@
     "@croco/preset-lambda": "workspace:*",
     "@croco/preset-node": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/promotions-core": "workspace:*",
+    "@croco/promotions-drizzle": "workspace:*",
     "@croco/protocol-codegen": "workspace:*",
     "@croco/protocols-core": "workspace:*",
     "@croco/protocols-graphql": "workspace:*",

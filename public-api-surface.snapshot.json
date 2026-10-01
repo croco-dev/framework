@@ -397,6 +397,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "assertOfferConsoleActionRequest",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "assertPolicyReleaseAccess",
               "exportKind": "named",
               "source": "./libs/PolicyReleaseOperations",
@@ -490,6 +496,36 @@
               "name": "createInProcessEventCatalogSource",
               "exportKind": "named",
               "source": "./libs/EventCatalog",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createOfferConsoleActions",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createOfferConsoleClaimView",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createOfferConsoleLoadingState",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createOfferConsolePolicyView",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createOfferConsoleReadyState",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
               "declarationKind": "function"
             },
             {
@@ -654,6 +690,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "loadOfferConsole",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "loadTenantWorkspace",
               "exportKind": "named",
               "source": "./libs/TenantWorkspace",
@@ -663,6 +705,12 @@
               "name": "maskEmailAddress",
               "exportKind": "named",
               "source": "./libs/EngagementOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "maskOfferSubjectId",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
               "declarationKind": "function"
             },
             {
@@ -676,6 +724,36 @@
               "exportKind": "named",
               "source": "./libs/WebhookOperations",
               "declarationKind": "function"
+            },
+            {
+              "name": "OFFER_CONSOLE_PII_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "const"
+            },
+            {
+              "name": "OFFER_CONSOLE_READ_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "const"
+            },
+            {
+              "name": "OFFER_CONSOLE_RESOLVE_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "const"
+            },
+            {
+              "name": "OFFER_CONSOLE_WRITE_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "const"
+            },
+            {
+              "name": "OfferConsoleValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "class"
             },
             {
               "name": "PolicyReleaseAccessProblem",
@@ -699,6 +777,12 @@
               "name": "resolveCreditOperationsReference",
               "exportKind": "named",
               "source": "./libs/CreditOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "resolveOfferConsoleSubject",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
               "declarationKind": "function"
             },
             {
@@ -728,6 +812,12 @@
               "name": "validateFactHistoryCorrection",
               "exportKind": "named",
               "source": "@croco/admin-core/fact-history-validation"
+            },
+            {
+              "name": "validateOfferPolicyEditor",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "function"
             },
             {
               "name": "WebhookOperationsActionValidationProblem",
@@ -1366,6 +1456,71 @@
               "name": "NonEmptyArray",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "OfferConsoleAction",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole"
+            },
+            {
+              "name": "OfferConsoleActionKind",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole"
+            },
+            {
+              "name": "OfferConsoleActionRequest",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole"
+            },
+            {
+              "name": "OfferConsoleClaimView",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole"
+            },
+            {
+              "name": "OfferConsolePolicyView",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole"
+            },
+            {
+              "name": "OfferConsoleReadyState",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole"
+            },
+            {
+              "name": "OfferConsoleSnapshot",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole"
+            },
+            {
+              "name": "OfferConsoleSource",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole"
+            },
+            {
+              "name": "OfferConsoleSourceResult",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole"
+            },
+            {
+              "name": "OfferConsoleState",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole"
+            },
+            {
+              "name": "OfferConsoleSubjectView",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole"
+            },
+            {
+              "name": "OfferPolicyEditorDraft",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole"
+            },
+            {
+              "name": "OfferPolicyEditorResult",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole"
             },
             {
               "name": "PolicyReleaseAccess",
@@ -2587,6 +2742,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "OfferConsole",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "PermissionInspector",
               "exportKind": "named",
               "source": "./libs/components",
@@ -3428,6 +3589,11 @@
               "name": "NonEmptyArray",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "OfferConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole"
             },
             {
               "name": "PermissionDeniedAdminPanelState",
@@ -18010,6 +18176,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "MyBenefits",
+              "exportKind": "named",
+              "source": "./libs/OfferCard",
+              "declarationKind": "function"
+            },
+            {
               "name": "NextActionCard",
               "exportKind": "named",
               "source": "./libs/GoalProgress",
@@ -18019,6 +18191,12 @@
               "name": "normalizeProblemDetails",
               "exportKind": "named",
               "source": "./libs/problemUi",
+              "declarationKind": "function"
+            },
+            {
+              "name": "OfferCard",
+              "exportKind": "named",
+              "source": "./libs/OfferCard",
               "declarationKind": "function"
             },
             {
@@ -18308,9 +18486,29 @@
               "source": "./libs/createCrocoPages"
             },
             {
+              "name": "MyBenefitsEntry",
+              "exportKind": "named",
+              "source": "./libs/OfferCard"
+            },
+            {
+              "name": "MyBenefitsProps",
+              "exportKind": "named",
+              "source": "./libs/OfferCard"
+            },
+            {
               "name": "NextActionCardProps",
               "exportKind": "named",
               "source": "./libs/GoalProgress"
+            },
+            {
+              "name": "OfferCardProps",
+              "exportKind": "named",
+              "source": "./libs/OfferCard"
+            },
+            {
+              "name": "OfferCardState",
+              "exportKind": "named",
+              "source": "./libs/OfferCard"
             },
             {
               "name": "ProblemBoundaryFallback",
@@ -26552,6 +26750,447 @@
               "name": "TypedProblemDetails",
               "exportKind": "named",
               "source": "./libs/Problem"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/promotions-core",
+      "relativeDir": "packages/promotions-core",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/promotions-core/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "addOfferAmounts",
+              "exportKind": "named",
+              "source": "./libs/amounts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertOfferScope",
+              "exportKind": "named",
+              "source": "./libs/OfferPolicy",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertOfferSubject",
+              "exportKind": "named",
+              "source": "./libs/OfferPolicy",
+              "declarationKind": "function"
+            },
+            {
+              "name": "canonicalOfferAmount",
+              "exportKind": "named",
+              "source": "./libs/amounts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "claimFingerprint",
+              "exportKind": "named",
+              "source": "./libs/PromotionStore",
+              "declarationKind": "function"
+            },
+            {
+              "name": "compareOfferAmounts",
+              "exportKind": "named",
+              "source": "./libs/amounts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "DEFAULT_QUOTE_TTL_MS",
+              "exportKind": "named",
+              "source": "./libs/OfferService",
+              "declarationKind": "const"
+            },
+            {
+              "name": "InMemoryPromotionStore",
+              "exportKind": "named",
+              "source": "./libs/InMemoryPromotionStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidOfferAmountProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidOfferPolicyProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OfferBudgetExhaustedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OfferClaimNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OfferClaimStateConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OfferCurrencyMismatchProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OfferDuplicateClaimProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OfferExpiredProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OfferFulfillmentFailedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OfferNotEligibleProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OfferPolicyConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OfferPolicyNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OfferQuoteMismatchProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OfferQuoteNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OfferService",
+              "exportKind": "named",
+              "source": "./libs/OfferService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OfferStackingConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OfferSubjectLimitReachedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OfferUnsupportedBenefitProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "quoteDiscount",
+              "exportKind": "named",
+              "source": "./libs/quoteDiscount",
+              "declarationKind": "function"
+            },
+            {
+              "name": "registerOfferPolicy",
+              "exportKind": "named",
+              "source": "./libs/OfferPolicy",
+              "declarationKind": "function"
+            },
+            {
+              "name": "sameOfferSubject",
+              "exportKind": "named",
+              "source": "./libs/OfferPolicy",
+              "declarationKind": "function"
+            },
+            {
+              "name": "stablePromotionFingerprint",
+              "exportKind": "named",
+              "source": "./libs/PromotionStore",
+              "declarationKind": "function"
+            },
+            {
+              "name": "subtractOfferAmounts",
+              "exportKind": "named",
+              "source": "./libs/amounts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ZERO_OFFER_AMOUNT",
+              "exportKind": "named",
+              "source": "./libs/amounts",
+              "declarationKind": "const"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "CreditGrantAccountResolver",
+              "exportKind": "named",
+              "source": "./libs/CreditGrantAdapter"
+            },
+            {
+              "name": "DiscountQuote",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "DiscountQuoteBenefit",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "EligibilityVerdict",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "FulfillmentResult",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ListClaimsFilter",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "OfferAuditEntry",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "OfferBenefit",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "OfferBudget",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "OfferClaim",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "OfferClaimState",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "OfferEligibilityConditions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "OfferEligibilityHook",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "OfferFulfillmentPort",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "OfferQuote",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "OfferScope",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "OfferServiceOptions",
+              "exportKind": "named",
+              "source": "./libs/OfferService"
+            },
+            {
+              "name": "OfferSubject",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "PromotionStore",
+              "exportKind": "named",
+              "source": "./libs/PromotionStore"
+            },
+            {
+              "name": "PromotionTx",
+              "exportKind": "named",
+              "source": "./libs/PromotionStore"
+            },
+            {
+              "name": "QuoteDiscountInput",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "QuoteOfferInput",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "RegisteredOfferPolicy",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "RegisterOfferPolicyInput",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReserveClaimInput",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReserveClaimResult",
+              "exportKind": "named",
+              "source": "./libs/OfferService"
+            },
+            {
+              "name": "TrialCreditBenefit",
+              "exportKind": "named",
+              "source": "./libs/types"
+            }
+          ]
+        },
+        {
+          "exportPath": "./credit-grant",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/credit-grant.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/credit-grant.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/credit-grant.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/promotions-core/src/credit-grant.ts",
+          "runtimeExports": [
+            {
+              "name": "FirstPartyCreditGrantAdapter",
+              "exportKind": "named",
+              "source": "./libs/CreditGrantAdapter",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "CreditGrantAccountResolver",
+              "exportKind": "named",
+              "source": "./libs/CreditGrantAdapter"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/promotions-drizzle",
+      "relativeDir": "packages/promotions-drizzle",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/promotions-drizzle/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "PostgresPromotionStore",
+              "exportKind": "named",
+              "source": "./libs/PostgresPromotionStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PromotionPersistenceProblem",
+              "exportKind": "named",
+              "source": "./libs/PostgresPromotionStore",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "PromotionPgDatabase",
+              "exportKind": "named",
+              "source": "./libs/PostgresPromotionStore"
+            },
+            {
+              "name": "PromotionPgExecutor",
+              "exportKind": "named",
+              "source": "./libs/PostgresPromotionStore"
             }
           ]
         }

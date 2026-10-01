@@ -23,6 +23,7 @@ export {
   UsageQuotaMeter,
 } from "./libs/components";
 export { CreditOperationsConsole } from "./libs/CreditOperationsConsole";
+export { OfferConsole } from "./libs/OfferConsole";
 export { ActivationGuideConsole } from "./libs/ActivationGuideConsole";
 export type {
   ActivationGuideConsoleProps,
@@ -93,6 +94,7 @@ export {
   updateAdminFormField,
 } from "./libs/snapshot";
 export type { CreditOperationsConsoleProps } from "./libs/CreditOperationsConsole";
+export type { OfferConsoleProps } from "./libs/OfferConsole";
 export type { PlanReleaseConsoleProps } from "./libs/PlanReleaseConsoleView";
 export type {
   PlanReleaseActionDenialReason,

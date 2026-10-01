@@ -1077,6 +1077,7 @@ describe("test lane runner", () => {
     expect(exampleCommands).not.toHaveLength(0);
     expect(resolveTurboPackageFilters(root, exampleCommands)).toEqual([
       "@croco-example/first-party-plugin-composition",
+      "@croco-example/promotion-offers",
       "@croco-example/saas-billing-golden-path",
     ]);
   });

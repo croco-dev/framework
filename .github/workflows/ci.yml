@@ -676,6 +676,8 @@ jobs:
               - 'packages/warehouse-postgres/**'
               - 'packages/migration-runner/**'
               - 'packages/problems-core/**'
+              - 'packages/promotions-core/**'
+              - 'packages/promotions-drizzle/**'
               - 'packages/testing/**'
               - 'packages/testing-resources/**'
               - 'packages/transports-http/**'
@@ -772,6 +774,8 @@ jobs:
               - 'packages/preset-lambda/src/**'
               - 'packages/preset-node/src/**'
               - 'packages/problems-core/src/**'
+              - 'packages/promotions-core/src/**'
+              - 'packages/promotions-drizzle/src/**'
               - 'packages/protocol-codegen/src/**'
               - 'packages/protocols-core/src/**'
               - 'packages/protocols-graphql/src/**'
@@ -1508,6 +1512,7 @@ jobs:
           MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           METERING_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           ONBOARDING_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+          PROMOTIONS_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
         run: |
           pnpm build --filter=@croco/analytics-drizzle...
           pnpm --filter @croco/analytics-drizzle test:postgres
@@ -1527,6 +1532,8 @@ jobs:
           pnpm --filter @croco/execution-drizzle test:postgres
           pnpm build --filter=@croco/experience-drizzle...
           pnpm --filter @croco/experience-drizzle test:live
+          pnpm build --filter=@croco/promotions-drizzle...
+          pnpm --filter @croco/promotions-drizzle test:live
           pnpm build --filter=@croco/metering-drizzle...
           pnpm --filter @croco/metering-drizzle test:postgres
           pnpm build --filter=@croco/onboarding-drizzle...

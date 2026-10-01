@@ -14,6 +14,12 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/promotion-offers/src/tests/promotion-offers.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/saas-billing-golden-path/src/tests/golden-path.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -129,6 +135,12 @@
     },
     {
       "path": "packages/admin-core/src/tests/FactHistoryOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/OfferConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-core"
@@ -279,6 +291,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/MetricInspector.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/OfferConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -2314,6 +2332,12 @@
       "owner": "@croco/frontend-react"
     },
     {
+      "path": "packages/frontend-react/src/tests/OfferCard.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
       "path": "packages/frontend-react/src/tests/authBridge.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -3308,6 +3332,36 @@
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/problems-core"
+    },
+    {
+      "path": "packages/promotions-core/src/tests/OfferPolicy.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/promotions-core"
+    },
+    {
+      "path": "packages/promotions-core/src/tests/OfferService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/promotions-core"
+    },
+    {
+      "path": "packages/promotions-core/src/tests/QuoteDiscount.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/promotions-core"
+    },
+    {
+      "path": "packages/promotions-drizzle/src/tests/PostgresPromotionStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/promotions-drizzle"
+    },
+    {
+      "path": "packages/promotions-drizzle/src/tests/PostgresPromotionStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/promotions-drizzle"
     },
     {
       "path": "packages/protocol-codegen/src/tests/ControllerProject.spec.ts",

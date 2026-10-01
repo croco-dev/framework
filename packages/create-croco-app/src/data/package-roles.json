@@ -89,6 +89,8 @@
   "@croco/preset-lambda": "plugins",
   "@croco/preset-node": "plugins",
   "@croco/problems-core": "kernel",
+  "@croco/promotions-core": "contracts",
+  "@croco/promotions-drizzle": "plugins",
   "@croco/protocol-codegen": "tooling",
   "@croco/protocols-core": "contracts",
   "@croco/protocols-graphql": "plugins",

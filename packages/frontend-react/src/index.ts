@@ -98,6 +98,13 @@ export {
 } from "./libs/hooks/usePageData";
 export type { CrocoDataFn, CrocoPageContext } from "./libs/types";
 export { GoalProgress, NextActionCard } from "./libs/GoalProgress";
+export { MyBenefits, OfferCard } from "./libs/OfferCard";
+export type {
+  MyBenefitsEntry,
+  MyBenefitsProps,
+  OfferCardProps,
+  OfferCardState,
+} from "./libs/OfferCard";
 export type {
   GoalProgressProps,
   GoalProgressState,
