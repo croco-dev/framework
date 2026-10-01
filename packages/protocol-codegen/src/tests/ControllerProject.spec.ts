@@ -931,6 +931,150 @@ describe("createControllerProject", () => {
       session.dispose();
     }
   });
+
+  it("completes extensionless legacy main entries before emitting file URLs", async () => {
+    const root = createTemporaryDirectory();
+    writeJson(path.join(root, "tsconfig.json"), {
+      compilerOptions: {
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        target: "ES2022",
+      },
+    });
+    const applicationRoot = path.join(root, "app");
+    const controllerPath = path.join(applicationRoot, "src", "Controller.ts");
+    fs.mkdirSync(path.dirname(controllerPath), { recursive: true });
+    writeJson(path.join(applicationRoot, "package.json"), { type: "module" });
+    const dependencyDir = path.join(applicationRoot, "node_modules", "extensionless-marker");
+    fs.mkdirSync(path.join(dependencyDir, "lib"), { recursive: true });
+    fs.writeFileSync(
+      path.join(dependencyDir, "package.json"),
+      JSON.stringify({ name: "extensionless-marker", main: "./lib/entry" }),
+    );
+    fs.writeFileSync(
+      path.join(dependencyDir, "lib", "entry.js"),
+      `export const owner = 'extensionless';\n`,
+    );
+    writeFile(
+      controllerPath,
+      "import { owner } from 'extensionless-marker'; export class Controller { static owner = owner; }",
+    );
+    const session = createControllerProject({
+      cwd: root,
+      controllers: ["app/src/Controller.ts"],
+    });
+
+    try {
+      session.emit();
+      const [moduleExports] = await session.importControllerModules();
+      expect((moduleExports.Controller as { owner: string }).owner).toBe("extensionless");
+      const relative = path
+        .relative(session.sourceRoot, session.controllerSourceFiles[0].getFilePath())
+        .replace(/\.tsx?$/, ".js");
+      const emitted = fs.readFileSync(path.join(session.emitDir, relative), "utf8");
+      expect(emitted).toContain("entry.js");
+    } finally {
+      session.dispose();
+    }
+  });
+
+  it("honors node-addons and module-sync conditions over default", async () => {
+    const root = createTemporaryDirectory();
+    writeJson(path.join(root, "tsconfig.json"), {
+      compilerOptions: {
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        target: "ES2022",
+      },
+    });
+    const applicationRoot = path.join(root, "app");
+    const controllerPath = path.join(applicationRoot, "src", "Controller.ts");
+    fs.mkdirSync(path.dirname(controllerPath), { recursive: true });
+    writeJson(path.join(applicationRoot, "package.json"), { type: "module" });
+    const dependencyDir = path.join(applicationRoot, "node_modules", "addon-marker");
+    fs.mkdirSync(dependencyDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dependencyDir, "package.json"),
+      JSON.stringify({
+        name: "addon-marker",
+        exports: {
+          ".": { "node-addons": "./addons.mjs", "module-sync": "./sync.mjs", default: "./js.mjs" },
+        },
+      }),
+    );
+    fs.writeFileSync(path.join(dependencyDir, "addons.mjs"), `export const owner = 'addons';\n`);
+    fs.writeFileSync(path.join(dependencyDir, "sync.mjs"), `export const owner = 'sync';\n`);
+    fs.writeFileSync(path.join(dependencyDir, "js.mjs"), `export const owner = 'js';\n`);
+    writeFile(
+      controllerPath,
+      "import { owner } from 'addon-marker'; export class Controller { static owner = owner; }",
+    );
+    const session = createControllerProject({
+      cwd: root,
+      controllers: ["app/src/Controller.ts"],
+    });
+
+    try {
+      session.emit();
+      const [moduleExports] = await session.importControllerModules();
+      expect((moduleExports.Controller as { owner: string }).owner).toBe("addons");
+      const relative = path
+        .relative(session.sourceRoot, session.controllerSourceFiles[0].getFilePath())
+        .replace(/\.tsx?$/, ".js");
+      const emitted = fs.readFileSync(path.join(session.emitDir, relative), "utf8");
+      expect(emitted).toContain("addons.mjs");
+    } finally {
+      session.dispose();
+    }
+  });
+
+  it("leaves shadowed require bindings untouched", async () => {
+    const root = createTemporaryDirectory();
+    writeJson(path.join(root, "package.json"), { type: "module" });
+    writeJson(path.join(root, "tsconfig.json"), {
+      compilerOptions: {
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        target: "ES2022",
+      },
+    });
+    const applicationRoot = path.join(root, "app");
+    const controllerPath = path.join(applicationRoot, "src", "Controller.ts");
+    fs.mkdirSync(path.dirname(controllerPath), { recursive: true });
+    writeJson(path.join(applicationRoot, "package.json"), { type: "module" });
+    const dependencyDir = path.join(applicationRoot, "node_modules", "shadow-marker");
+    fs.mkdirSync(dependencyDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(dependencyDir, "package.json"),
+      JSON.stringify({ name: "shadow-marker", main: "./index.js" }),
+    );
+    fs.writeFileSync(
+      path.join(dependencyDir, "index.js"),
+      `module.exports = { owner: 'shadow' };\n`,
+    );
+    writeFile(
+      controllerPath,
+      "const require = (_specifier: string): { owner: string } => ({ owner: 'local' }); const { owner } = require('shadow-marker'); export class Controller { static owner = owner; }",
+    );
+    writeFile(path.join(applicationRoot, "src", "loader.ts"), "export const unused = true;");
+    const session = createControllerProject({
+      cwd: root,
+      controllers: ["app/src/Controller.ts"],
+    });
+
+    try {
+      session.emit();
+      const [moduleExports] = await session.importControllerModules();
+      expect((moduleExports.Controller as { owner: string }).owner).toBe("local");
+      const relative = path
+        .relative(session.sourceRoot, session.controllerSourceFiles[0].getFilePath())
+        .replace(/\.tsx?$/, ".js");
+      const emitted = fs.readFileSync(path.join(session.emitDir, relative), "utf8");
+      expect(emitted).toContain("require('shadow-marker')");
+    } finally {
+      session.dispose();
+    }
+  });
 });
 
 function createTemporaryDirectory(): string {

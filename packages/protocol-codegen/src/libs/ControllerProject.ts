@@ -497,13 +497,10 @@ function rewriteRuntimeSpecifiers(
       }
       if (
         ts.isCallExpression(node) &&
-        (node.expression.getText(syntaxTree) === "require" ||
-          node.expression.getText(syntaxTree) === "import" ||
-          node.expression.kind === ts.SyntaxKind.ImportKeyword) &&
         node.arguments.length === 1 &&
-        ts.isStringLiteral(node.arguments[0])
+        ts.isStringLiteral(node.arguments[0]) &&
+        isGenuineRequireCall(node, syntaxTree)
       ) {
-        const expressionText = node.expression.getText(syntaxTree);
         addRuntimeAliasReplacement(
           node.arguments[0],
           sourcePath,
@@ -512,8 +509,27 @@ function rewriteRuntimeSpecifiers(
           outputPaths,
           syntaxTree,
           replacements,
-          expressionText === "require",
-          expressionText !== "require",
+          true,
+          false,
+        );
+      }
+      if (
+        ts.isCallExpression(node) &&
+        (node.expression.getText(syntaxTree) === "import" ||
+          node.expression.kind === ts.SyntaxKind.ImportKeyword) &&
+        node.arguments.length === 1 &&
+        ts.isStringLiteral(node.arguments[0])
+      ) {
+        addRuntimeAliasReplacement(
+          node.arguments[0],
+          sourcePath,
+          emittedPath,
+          compilerOptions,
+          outputPaths,
+          syntaxTree,
+          replacements,
+          false,
+          true,
         );
       }
       ts.forEachChild(node, visit);
@@ -573,6 +589,76 @@ function addRuntimeAliasReplacement(
   if (typeScriptSpecifier !== specifier) {
     addSpecifierReplacement(moduleSpecifier, typeScriptSpecifier, syntaxTree, replacements);
   }
+}
+
+function isGenuineRequireCall(node: ts.CallExpression, syntaxTree: ts.SourceFile): boolean {
+  if (node.expression.getText(syntaxTree) !== "require") return false;
+  // `require` may be a user-defined or imported binding rather than the
+  // CommonJS loader. Only treat a file-scope `require` with no local
+  // declaration or import as the genuine loader.
+  const sourceFile = syntaxTree as ts.SourceFile;
+  let scope: ts.Node | undefined = node.parent;
+  while (scope && !ts.isSourceFile(scope)) {
+    for (const statement of getScopeStatements(scope)) {
+      if (declaresRequireBinding(statement)) return false;
+    }
+    scope = scope.parent;
+  }
+  for (const statement of sourceFile.statements) {
+    if (declaresRequireBinding(statement)) return false;
+  }
+  return true;
+}
+
+function getScopeStatements(scope: ts.Node): readonly ts.Statement[] {
+  if (ts.isBlock(scope)) return scope.statements;
+  if (ts.isModuleBlock(scope)) return scope.statements;
+  if (ts.isCaseBlock(scope)) {
+    return scope.clauses.flatMap((clause) =>
+      ts.isCaseClause(clause) || ts.isDefaultClause(clause) ? clause.statements : [],
+    );
+  }
+  return [];
+}
+
+function declaresRequireBinding(statement: ts.Node): boolean {
+  if (ts.isVariableStatement(statement)) {
+    // Ambient `declare const require` creates no runtime binding.
+    if (hasDeclareModifier(statement)) return false;
+    return statement.declarationList.declarations.some(
+      (declaration: ts.VariableDeclaration) => declaration.name.getText() === "require",
+    );
+  }
+  if (
+    ts.isFunctionDeclaration(statement) ||
+    ts.isClassDeclaration(statement) ||
+    ts.isInterfaceDeclaration(statement) ||
+    ts.isTypeAliasDeclaration(statement) ||
+    ts.isEnumDeclaration(statement)
+  ) {
+    if (statement.name?.getText() !== "require") return false;
+    const flags = ts.getCombinedModifierFlags(statement);
+    return (flags & ts.ModifierFlags.Ambient) === 0;
+  }
+  if (ts.isImportDeclaration(statement)) {
+    const bindings = statement.importClause;
+    if (!bindings) return false;
+    if (bindings.name?.getText() === "require") return true;
+    const named = bindings.namedBindings;
+    if (!named) return false;
+    if (ts.isNamespaceImport(named)) return named.name.getText() === "require";
+    return named.elements.some((element) => element.name.getText() === "require");
+  }
+  return false;
+}
+
+function hasDeclareModifier(node: ts.Node): boolean {
+  return (
+    (ts.getCombinedModifierFlags(node as ts.Declaration) & ts.ModifierFlags.Ambient) !== 0 ||
+    (ts.canHaveModifiers(node) &&
+      (ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.DeclareKeyword) ??
+        false))
+  );
 }
 
 function addSpecifierReplacement(
@@ -635,17 +721,44 @@ function resolveEsmRuntimePath(specifier: string, sourcePath: string): string | 
   const normalized = normalizeSubpath(subpath);
   const entry = resolveEsmPackageEntry(packageJson, normalized);
   if (!entry) return null;
-  const resolved = path.resolve(path.dirname(resolvedPackageJson), entry);
-  // Legacy subpaths without an `exports` field must map to a real file;
-  // otherwise keep the bare specifier instead of emitting a dead file URL.
-  if (!hasExportsField(packageJson) && normalized !== "." && !fs.existsSync(resolved)) {
-    return null;
+  if (!hasExportsField(packageJson)) {
+    return resolveLegacyFilePath(resolvedPackageJson, entry, specifier, sourcePath, normalized);
   }
-  return resolved;
+  return path.resolve(path.dirname(resolvedPackageJson), entry);
 }
 
 function hasExportsField(packageJson: PackageJsonEntry): boolean {
   return packageJson.exports !== undefined && packageJson.exports !== null;
+}
+
+function resolveLegacyDirectoryDefault(packageJson: PackageJsonEntry): string | null {
+  if (typeof packageJson.main === "string") return packageJson.main;
+  return "./index.js";
+}
+
+function resolveLegacyFilePath(
+  packageJsonPath: string,
+  entry: string,
+  specifier: string,
+  sourcePath: string,
+  normalized: string,
+): string | null {
+  // Without an `exports` field, Node's own legacy resolver owns extension
+  // completion (`entry` -> `entry.js`), directory index lookup, and the
+  // `index.js` default. `createRequire.resolve` is anchored at the
+  // application source so per-root identity is preserved.
+  if (normalized === ".") {
+    try {
+      const resolved = createRequire(sourcePath).resolve(specifier);
+      return path.isAbsolute(resolved) ? resolved : null;
+    } catch {
+      return null;
+    }
+  }
+  const resolved = path.resolve(path.dirname(packageJsonPath), entry);
+  // Legacy subpaths must map to a real file; otherwise keep the bare
+  // specifier instead of emitting a dead file URL.
+  return fs.existsSync(resolved) ? resolved : null;
 }
 
 function resolveEsmPackageEntry(packageJson: PackageJsonEntry, subpath: string): string | null {
@@ -666,7 +779,8 @@ function resolveEsmPackageEntry(packageJson: PackageJsonEntry, subpath: string):
     return null;
   }
   if (subpath === ".") {
-    return typeof packageJson.main === "string" ? packageJson.main : null;
+    if (typeof packageJson.main !== "string") return resolveLegacyDirectoryDefault(packageJson);
+    return packageJson.main;
   }
   // Legacy package without an `exports` field: Node resolves the subpath
   // as a file relative to the package root (e.g. `pkg/feature.js`).
@@ -752,6 +866,10 @@ function isValidExportTarget(target: string): boolean {
 
 function isActiveExportCondition(condition: string, useImportCondition: boolean): boolean {
   if (condition === "node") return true;
+  // Node 22.7+/24 treats these as always-active during ESM resolution;
+  // a statically-verified local probe shows `node-addons` and
+  // `module-sync` win over `default` for bare `import` on Node 24.
+  if (condition === "node-addons" || condition === "module-sync") return true;
   if (condition === "import") return useImportCondition;
   if (condition === "require") return !useImportCondition;
   return condition === "default";
