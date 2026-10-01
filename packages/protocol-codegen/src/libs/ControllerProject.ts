@@ -1,4 +1,6 @@
+import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
+import { createRequire, isBuiltin } from "node:module";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Problem, ProblemCategory } from "@croco/problems-core";
@@ -466,6 +468,12 @@ function rewriteRuntimeSpecifiers(
   outputPaths: ReadonlyMap<string, string>,
 ): void {
   const compilerOptions = context.project.getCompilerOptions();
+  const externalImports: ExternalImport[] = [];
+  const outputs: Array<{
+    emittedPath: string;
+    emittedText: string;
+    replacements: SpecifierReplacement[];
+  }> = [];
 
   for (const sourceFile of context.sourceFiles) {
     const sourcePath = sourceFile.getFilePath();
@@ -474,7 +482,8 @@ function rewriteRuntimeSpecifiers(
     if (!fs.existsSync(emittedPath)) continue;
     const emittedText = fs.readFileSync(emittedPath, "utf8");
     const syntaxTree = ts.createSourceFile(emittedPath, emittedText, ts.ScriptTarget.Latest, true);
-    const replacements: Array<{ start: number; end: number; value: string }> = [];
+    const replacements: SpecifierReplacement[] = [];
+    const checker = createRuntimeBindingChecker(syntaxTree);
 
     const visit = (node: ts.Node): void => {
       if (
@@ -490,14 +499,35 @@ function rewriteRuntimeSpecifiers(
           outputPaths,
           syntaxTree,
           replacements,
+          false,
+          false,
+          externalImports,
         );
       }
       if (
         ts.isCallExpression(node) &&
-        (node.expression.getText(syntaxTree) === "require" ||
-          node.expression.getText(syntaxTree) === "import" ||
-          node.expression.kind === ts.SyntaxKind.ImportKeyword) &&
         node.arguments.length === 1 &&
+        ts.isStringLiteral(node.arguments[0]) &&
+        isGenuineRequireCall(node, checker)
+      ) {
+        addRuntimeAliasReplacement(
+          node.arguments[0],
+          sourcePath,
+          emittedPath,
+          compilerOptions,
+          outputPaths,
+          syntaxTree,
+          replacements,
+          true,
+          false,
+          externalImports,
+        );
+      }
+      if (
+        ts.isCallExpression(node) &&
+        (node.expression.getText(syntaxTree) === "import" ||
+          node.expression.kind === ts.SyntaxKind.ImportKeyword) &&
+        node.arguments.length >= 1 &&
         ts.isStringLiteral(node.arguments[0])
       ) {
         addRuntimeAliasReplacement(
@@ -508,12 +538,35 @@ function rewriteRuntimeSpecifiers(
           outputPaths,
           syntaxTree,
           replacements,
+          false,
+          true,
+          externalImports,
         );
       }
       ts.forEachChild(node, visit);
     };
     visit(syntaxTree);
 
+    outputs.push({ emittedPath, emittedText, replacements });
+  }
+
+  const resolvedImports = resolveExternalImports(externalImports);
+  for (const [index, externalImport] of externalImports.entries()) {
+    const resolved = resolvedImports[index];
+    if (resolved === undefined) {
+      throw new ControllerProjectStateProblem(
+        "External dependency resolver returned an incomplete result.",
+      );
+    }
+    addSpecifierReplacement(
+      externalImport.moduleSpecifier,
+      resolved,
+      externalImport.syntaxTree,
+      externalImport.replacements,
+    );
+  }
+
+  for (const { emittedPath, emittedText, replacements } of outputs) {
     let rewritten = emittedText;
     for (const replacement of replacements.sort((left, right) => right.start - left.start)) {
       rewritten = `${rewritten.slice(0, replacement.start)}${replacement.value}${rewritten.slice(replacement.end)}`;
@@ -530,6 +583,9 @@ function addRuntimeAliasReplacement(
   outputPaths: ReadonlyMap<string, string>,
   syntaxTree: ts.SourceFile,
   replacements: Array<{ start: number; end: number; value: string }>,
+  isRequireCall: boolean,
+  isDynamicImport: boolean,
+  externalImports: ExternalImport[],
 ): void {
   const specifier = moduleSpecifier.text;
   if (path.isAbsolute(specifier)) return;
@@ -548,11 +604,45 @@ function addRuntimeAliasReplacement(
     addSpecifierReplacement(moduleSpecifier, relative, syntaxTree, replacements);
     return;
   }
-  if (!specifier.startsWith(".")) return;
-  const runtimeSpecifier = rewriteTypeScriptExtension(specifier);
-  if (runtimeSpecifier !== specifier) {
-    addSpecifierReplacement(moduleSpecifier, runtimeSpecifier, syntaxTree, replacements);
+  const useImportCondition =
+    isDynamicImport || (!isRequireCall && isEsmModuleKind(compilerOptions.module, sourcePath));
+  if (!specifier.startsWith(".") && !isBuiltin(specifier)) {
+    if (useImportCondition) {
+      externalImports.push({ moduleSpecifier, sourcePath, syntaxTree, replacements });
+    } else {
+      let runtimePath: string;
+      try {
+        runtimePath = createRequire(sourcePath).resolve(specifier);
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        throw new ControllerProjectStateProblem(
+          `Cannot resolve ${specifier} from ${sourcePath}: ${detail}`,
+        );
+      }
+      addSpecifierReplacement(moduleSpecifier, runtimePath, syntaxTree, replacements);
+    }
+    return;
   }
+  if (!specifier.startsWith(".")) return;
+  const typeScriptSpecifier = rewriteTypeScriptExtension(specifier);
+  if (typeScriptSpecifier !== specifier) {
+    addSpecifierReplacement(moduleSpecifier, typeScriptSpecifier, syntaxTree, replacements);
+  }
+}
+
+function createRuntimeBindingChecker(syntaxTree: ts.SourceFile): ts.TypeChecker {
+  const options: ts.CompilerOptions = { allowJs: true, noResolve: true, noLib: true };
+  const host = ts.createCompilerHost(options);
+  host.getSourceFile = (fileName) => (fileName === syntaxTree.fileName ? syntaxTree : undefined);
+  return ts.createProgram([syntaxTree.fileName], options, host).getTypeChecker();
+}
+
+function isGenuineRequireCall(node: ts.CallExpression, checker: ts.TypeChecker): boolean {
+  return (
+    ts.isIdentifier(node.expression) &&
+    node.expression.text === "require" &&
+    (checker.getSymbolAtLocation(node.expression)?.declarations?.length ?? 0) === 0
+  );
 }
 
 function addSpecifierReplacement(
@@ -562,9 +652,9 @@ function addSpecifierReplacement(
   replacements: Array<{ start: number; end: number; value: string }>,
 ): void {
   replacements.push({
-    start: moduleSpecifier.getStart(syntaxTree) + 1,
-    end: moduleSpecifier.getEnd() - 1,
-    value,
+    start: moduleSpecifier.getStart(syntaxTree),
+    end: moduleSpecifier.getEnd(),
+    value: JSON.stringify(value),
   });
 }
 
@@ -575,6 +665,113 @@ function rewriteTypeScriptExtension(specifier: string): string {
     .replace(/\.tsx?$/, ".js");
 }
 
+type SpecifierReplacement = { start: number; end: number; value: string };
+
+type ExternalImport = {
+  moduleSpecifier: ts.StringLiteral;
+  sourcePath: string;
+  syntaxTree: ts.SourceFile;
+  replacements: SpecifierReplacement[];
+};
+
+const RESOLVE_EXTERNAL_IMPORTS = `
+import { readFileSync } from 'node:fs';
+try {
+  const requests = JSON.parse(readFileSync(0, 'utf8'));
+  process.stdout.write(JSON.stringify(requests.map(({ specifier, parentURL }) =>
+    import.meta.resolve(specifier, parentURL)
+  )));
+} catch (error) {
+  process.stderr.write(error.message);
+  process.exitCode = 1;
+}
+`;
+
+function resolveExternalImports(imports: readonly ExternalImport[]): readonly string[] {
+  if (imports.length === 0) return [];
+  let output: string;
+  try {
+    output = execFileSync(
+      process.execPath,
+      [
+        ...getResolutionFlags(),
+        "--experimental-import-meta-resolve",
+        "--input-type=module",
+        "--eval",
+        RESOLVE_EXTERNAL_IMPORTS,
+      ],
+      {
+        input: JSON.stringify(
+          imports.map(({ moduleSpecifier, sourcePath }) => ({
+            specifier: moduleSpecifier.text,
+            parentURL: pathToFileURL(sourcePath).href,
+          })),
+        ),
+        encoding: "utf8",
+        stdio: ["pipe", "pipe", "pipe"],
+        maxBuffer: 10 * 1024 * 1024,
+      },
+    );
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new ControllerProjectStateProblem(
+      `Cannot resolve application ESM dependencies: ${detail}`,
+    );
+  }
+  const resolved: unknown = JSON.parse(output);
+  if (
+    !Array.isArray(resolved) ||
+    resolved.length !== imports.length ||
+    !resolved.every((entry: unknown) => typeof entry === "string")
+  ) {
+    throw new ControllerProjectStateProblem(
+      "External dependency resolver returned an invalid result.",
+    );
+  }
+  return resolved as string[];
+}
+
+function getResolutionFlags(): readonly string[] {
+  const flags: string[] = [];
+  const toggles = new Set([
+    "addons",
+    "require-module",
+    "experimental-require-module",
+    "preserve-symlinks",
+    "preserve-symlinks-main",
+  ]);
+  for (let index = 0; index < process.execArgv.length; index++) {
+    const argument = process.execArgv[index];
+    const equals = argument.indexOf("=");
+    const name = (equals === -1 ? argument : argument.slice(0, equals)).replaceAll("_", "-");
+    if (name === "--conditions" || name === "-C") {
+      if (equals !== -1) {
+        flags.push(`${name}${argument.slice(equals)}`);
+      } else {
+        const value = process.execArgv[++index];
+        if (value === undefined)
+          throw new ControllerProjectStateProblem("Missing Node export condition.");
+        flags.push(name, value);
+      }
+    } else if (toggles.has(name.replace(/^--(?:no-)?/, ""))) {
+      flags.push(name);
+    }
+  }
+  return flags;
+}
+
+function isEsmModuleKind(moduleKind: ts.ModuleKind | undefined, sourcePath: string): boolean {
+  return (
+    moduleKind === ts.ModuleKind.ES2015 ||
+    moduleKind === ts.ModuleKind.ES2020 ||
+    moduleKind === ts.ModuleKind.ES2022 ||
+    moduleKind === ts.ModuleKind.ESNext ||
+    moduleKind === ts.ModuleKind.Preserve ||
+    ((moduleKind === ts.ModuleKind.Node16 || moduleKind === ts.ModuleKind.NodeNext) &&
+      sourceUsesEsmBoundary(sourcePath))
+  );
+}
+
 function writeModuleBoundaries(context: ProjectContext, sourceRoot: string, emitDir: string): void {
   const moduleKind = context.project.getCompilerOptions().module;
 
@@ -582,14 +779,7 @@ function writeModuleBoundaries(context: ProjectContext, sourceRoot: string, emit
     const sourcePath = sourceFile.getFilePath();
     const emittedPath = getEmittedFilePath(sourceRoot, emitDir, sourcePath);
     if (!fs.existsSync(emittedPath)) continue;
-    const isEsm =
-      moduleKind === ts.ModuleKind.ES2015 ||
-      moduleKind === ts.ModuleKind.ES2020 ||
-      moduleKind === ts.ModuleKind.ES2022 ||
-      moduleKind === ts.ModuleKind.ESNext ||
-      moduleKind === ts.ModuleKind.Preserve ||
-      ((moduleKind === ts.ModuleKind.Node16 || moduleKind === ts.ModuleKind.NodeNext) &&
-        sourceUsesEsmBoundary(sourcePath));
+    const isEsm = isEsmModuleKind(moduleKind, sourcePath);
     fs.writeFileSync(
       path.join(path.dirname(emittedPath), "package.json"),
       JSON.stringify({ type: isEsm ? "module" : "commonjs" }),

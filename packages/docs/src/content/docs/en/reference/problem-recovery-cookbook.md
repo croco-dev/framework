@@ -12209,7 +12209,7 @@ Sources:
 
 Sources:
 
-- `packages/protocol-codegen/src/libs/ControllerProject.ts:57:5` (problem-constructor)
+- `packages/protocol-codegen/src/libs/ControllerProject.ts:59:5` (problem-constructor)
 
 <a id="protocol-codegen-controller-project-state"></a>
 
@@ -12227,7 +12227,7 @@ Sources:
 
 Sources:
 
-- `packages/protocol-codegen/src/libs/ControllerProject.ts:78:5` (problem-constructor)
+- `packages/protocol-codegen/src/libs/ControllerProject.ts:80:5` (problem-constructor)
 
 <a id="protocols-core-contract-graph-diagnostics"></a>
 

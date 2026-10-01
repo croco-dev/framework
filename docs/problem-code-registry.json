@@ -18508,7 +18508,7 @@
       "sources": [
         {
           "file": "packages/protocol-codegen/src/libs/ControllerProject.ts",
-          "line": 57,
+          "line": 59,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -18538,7 +18538,7 @@
       "sources": [
         {
           "file": "packages/protocol-codegen/src/libs/ControllerProject.ts",
-          "line": 78,
+          "line": 80,
           "column": 5,
           "kind": "problem-constructor"
         }
