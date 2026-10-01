@@ -1,5 +1,6 @@
-import { CURSOR_VERSION } from "./constants";
+import { CURSOR_VERSION, MIN_LIMIT } from "./constants";
 import { encodeCursor } from "./cursor";
+import { InvalidPaginationLimitProblem } from "./problems";
 import type { CreateCursorPageOptions, CursorPage, CursorPageFull } from "./types";
 
 type CursorPageWithHasPreviousOptions<T> = CreateCursorPageOptions<T> & {
@@ -32,6 +33,10 @@ export function createCursorPage<T>(
   options: CreateCursorPageOptions<T>,
 ): CursorPage<T> | CursorPageFull<T> {
   const { limit, getId, hasPrevious, prevCursor } = options;
+
+  if (!Number.isInteger(limit) || limit < MIN_LIMIT) {
+    throw new InvalidPaginationLimitProblem(limit);
+  }
 
   const hasMore = items.length > limit;
   const data = hasMore ? items.slice(0, limit) : items;
