@@ -1202,6 +1202,18 @@
       "subtype": "domain",
       "runtimes": [],
       "domain": "Workflow"
+    },
+    "promotions-core": {
+      "role": "Contracts",
+      "subtype": "domain",
+      "runtimes": [],
+      "domain": "Promotions"
+    },
+    "promotions-drizzle": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Promotions"
     }
   },
   "groups": {
@@ -1269,7 +1281,8 @@
         "tasks-core",
         "triggers-core",
         "warehouse-core",
-        "workflow-core"
+        "workflow-core",
+        "promotions-core"
       ]
     },
     "Provider": {
@@ -1306,7 +1319,8 @@
         "storage-r2",
         "tasks-qstash",
         "triggers-qstash",
-        "warehouse-postgres"
+        "warehouse-postgres",
+        "promotions-drizzle"
       ]
     },
     "Integration": {
@@ -1516,7 +1530,9 @@
         "storage-cloudflare",
         "tasks-qstash",
         "triggers-qstash",
-        "warehouse-core"
+        "warehouse-core",
+        "promotions-core",
+        "promotions-drizzle"
       ]
     },
     "deprecated": {
@@ -2149,6 +2165,18 @@
           "shared conformance",
           "redacted schedule diagnostics",
           "diagnostic-coded webhook failures"
+        ]
+      },
+      "promotions-drizzle": {
+        "domain": "Promotions",
+        "adapter": "PostgreSQL promotion policy, quote, and claim store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "atomic budget reservations",
+          "compare-and-set claim transitions",
+          "deterministic idempotency receipts",
+          "indeterminate grant reconciliation"
         ]
       }
     }

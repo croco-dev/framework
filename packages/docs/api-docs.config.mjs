@@ -554,6 +554,18 @@ export const apiDocPackages = [
     moduleName: "problems-core/src",
   },
   {
+    packageName: "@croco/promotions-core",
+    directory: "promotions-core",
+    entryPoint: "src/index.ts",
+    moduleName: "promotions-core/src",
+  },
+  {
+    packageName: "@croco/promotions-drizzle",
+    directory: "promotions-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "promotions-drizzle/src",
+  },
+  {
     packageName: "@croco/protocol-codegen",
     directory: "protocol-codegen",
     entryPoint: "src/index.ts",

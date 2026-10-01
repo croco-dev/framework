@@ -368,7 +368,7 @@ Follow-up work is tracked in GitHub Issues and in [Croco 1.0 Spine](docs/release
 
 > 이 섹션은 `pnpm docs:catalog:write`로 생성됩니다. 패키지 이름과 경로는 `packages/*/package.json`에서 읽고, 그룹/성숙도는 `docs/package-catalog.json`에서 관리합니다.
 
-현재 카탈로그는 **126개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
+현재 카탈로그는 **128개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
 
 ### Croco 1.0 Spine
 
@@ -502,6 +502,8 @@ Current 1.0 spine status: 18 spine packages; 10 production-ready, 8 beta, 0 alph
 | `@croco/preset-lambda`                 | Plugins        | host          | AWS Lambda host         | lambda                                    |
 | `@croco/preset-node`                   | Plugins        | host          | Node host               | node                                      |
 | `@croco/problems-core`                 | Kernel         | runtime       | Problems                | unclaimed                                 |
+| `@croco/promotions-core`               | Contracts      | domain        | Promotions              | unclaimed                                 |
+| `@croco/promotions-drizzle`            | Plugins        | provider      | Promotions              | node, lambda                              |
 | `@croco/protocol-codegen`              | Tooling        | codegen       | Protocol Codegen        | unclaimed                                 |
 | `@croco/protocols-core`                | Contracts      | protocol      | Protocols               | unclaimed                                 |
 | `@croco/protocols-graphql`             | Plugins        | protocol      | Protocols Graphql       | unclaimed                                 |
@@ -546,8 +548,8 @@ These historical inventory buckets retain certification scope and discovery meta
 | 그룹         | 설명                                                                                                   | 패키지 수 |
 | ------------ | ------------------------------------------------------------------------------------------------------ | --------: |
 | Core         | Framework primitives, context, reliability, transactions, and cross-cutting core utilities             |        23 |
-| Domain       | Business-domain APIs and package-level abstractions                                                    |        34 |
-| Provider     | Concrete datastore, SaaS provider, and external service adapters                                       |        32 |
+| Domain       | Business-domain APIs and package-level abstractions                                                    |        35 |
+| Provider     | Concrete datastore, SaaS provider, and external service adapters                                       |        33 |
 | Integration  | Analytics, feature-flag, and observability integrations                                                |         6 |
 | Protocol     | API protocol definitions and code generation                                                           |         8 |
 | Transport    | Protocol transports that execute application surfaces independently from deployment hosts              |         2 |
@@ -564,7 +566,7 @@ Adapter 경계와 공식 우선순위, compatibility certification checklist는 
 | ------------------- | ----------------------------------- | --------------------: |
 | 🟢 production-ready | 안정화, 적극 사용 권장              |                    23 |
 | 🟡 beta             | 기능 완성, 실사용 검증 중           |                    78 |
-| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |                    25 |
+| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |                    27 |
 | ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |                     0 |
 
 ### Extension & Adapter Matrix
@@ -604,6 +606,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/metrics-billing`         | Plugins / provider | Metrics         | Billing metrics bridge                                  | yes  | yes    | yes     | -        | none                                                                                | -              | billing event metrics<br>usage aggregation bridge<br>tenant propagation<br>event identity idempotency<br>dropped metric Problems                                                                                                                                                                                                 | 🟡 beta      | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
 | `@croco/notifications-resend`    | Plugins / provider | Notifications   | Resend email provider                                   | yes  | yes    | -       | -        | RESEND_API_KEY<br>default from address                                              | -              | email send<br>rendered template send<br>retry<br>idempotency key<br>explicit capability profile<br>shared capability conformance<br>safe diagnostics<br>redacted upstream Problems<br>optional live smoke                                                                                                                        | 🔴 alpha/WIP | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
 | `@croco/onboarding-drizzle`      | Plugins / provider | Onboarding      | Drizzle repository                                      | yes  | yes    | -       | -        | database connection supplied by app                                                 | -              | onboarding state persistence<br>step completion storage                                                                                                                                                                                                                                                                          | 🟡 beta      | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
+| `@croco/promotions-drizzle`      | Plugins / provider | Promotions      | PostgreSQL promotion policy, quote, and claim store     | yes  | yes    | -       | -        | PostgreSQL connection supplied by app                                               | drizzle-orm    | atomic budget reservations<br>compare-and-set claim transitions<br>deterministic idempotency receipts<br>indeterminate grant reconciliation                                                                                                                                                                                      | 🔴 alpha/WIP | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
 | `@croco/ratelimit-upstash`       | Plugins / provider | Rate limiting   | Upstash Redis rate-limit store                          | yes  | yes    | -       | -        | UPSTASH_REDIS_REST_URL<br>UPSTASH_REDIS_REST_TOKEN                                  | @upstash/redis | sliding window<br>token bucket<br>fixed window<br>Lua atomicity<br>shared conformance<br>redacted upstream Problems                                                                                                                                                                                                              | 🔴 alpha/WIP | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
 | `@croco/search-drizzle`          | Plugins / provider | Search          | Drizzle search index                                    | yes  | yes    | -       | -        | database connection supplied by app                                                 | drizzle-orm    | search document persistence<br>tenant-aware lookup                                                                                                                                                                                                                                                                               | 🟡 beta      | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
 | `@croco/search-meilisearch`      | Plugins / provider | Search          | Meilisearch engine                                      | yes  | yes    | -       | -        | MEILISEARCH_HOST<br>MEILISEARCH_API_KEY                                             | -              | indexing<br>search<br>tenant tokens<br>search conformance<br>safe diagnostics<br>env-gated live smoke                                                                                                                                                                                                                            | 🟡 beta      | has package tests | uncertified (0.0.4)<br>@croco/search-core/SearchEngine<br>node<br>lambda<br>missing: liveSmoke     |
@@ -774,6 +777,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/credits-core`              | Domain       | `packages/credits-core`              | README, API, tests |
 | `@croco/etl-core`                  | Domain       | `packages/etl-core`                  | README, API, tests |
 | `@croco/experience-core`           | Domain       | `packages/experience-core`           | README, API, tests |
+| `@croco/promotions-core`           | Domain       | `packages/promotions-core`           | README, API, tests |
 | `@croco/warehouse-core`            | Domain       | `packages/warehouse-core`            | README, API, tests |
 | `@croco/etl-events-tx`             | Integration  | `packages/etl-events-tx`             | README, API, tests |
 | `@croco/admin-react`               | Presentation | `packages/admin-react`               | README, API, tests |
@@ -791,6 +795,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/features-drizzle`          | Provider     | `packages/features-drizzle`          | README, API, tests |
 | `@croco/metering-upstash`          | Provider     | `packages/metering-upstash`          | README, API, tests |
 | `@croco/notifications-resend`      | Provider     | `packages/notifications-resend`      | README, API, tests |
+| `@croco/promotions-drizzle`        | Provider     | `packages/promotions-drizzle`        | README, API, tests |
 | `@croco/ratelimit-upstash`         | Provider     | `packages/ratelimit-upstash`         | README, API, tests |
 | `@croco/storage-cloudflare`        | Provider     | `packages/storage-cloudflare`        | README, API, tests |
 | `@croco/tasks-qstash`              | Provider     | `packages/tasks-qstash`              | README, API, tests |

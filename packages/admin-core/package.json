@@ -69,7 +69,8 @@
     "@croco/experience-core": "workspace:*",
     "@croco/features-core": "workspace:*",
     "@croco/onboarding-core": "workspace:*",
-    "@croco/problems-core": "workspace:*"
+    "@croco/problems-core": "workspace:*",
+    "@croco/promotions-core": "workspace:*"
   },
   "devDependencies": {
     "vitest": "4.1.8"
