@@ -1,0 +1,921 @@
+{
+  "snapshotVersion": "croco.contract-graph.snapshot.v1",
+  "graphVersion": "croco.contract-graph.v1",
+  "controllerCount": 1,
+  "routeCount": 5,
+  "operationIds": [
+    "createUser",
+    "deleteUser",
+    "getUserById",
+    "listUsers",
+    "updateUser"
+  ],
+  "consumerCoverage": {
+    "version": "croco.contract-consumer-coverage.v1",
+    "routeCount": 5,
+    "consumers": [
+      {
+        "consumerId": "admin-generated",
+        "label": "Admin resource config",
+        "generatedArtifact": "admin resource config files",
+        "routeCount": 5,
+        "requiredRouteFields": [
+          "routeId",
+          "operationId",
+          "httpMethod",
+          "path",
+          "request.body",
+          "request.path",
+          "request.query",
+          "request.headers",
+          "response",
+          "problems",
+          "entitlements",
+          "access.guards",
+          "access.roles"
+        ],
+        "unsupportedRouteFields": [],
+        "routes": [
+          {
+            "routeId": "UserController.create",
+            "operationId": "createUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.delete",
+            "operationId": "deleteUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.getById",
+            "operationId": "getUserById",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.list",
+            "operationId": "listUsers",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.update",
+            "operationId": "updateUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements",
+              "access.guards",
+              "access.roles"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          }
+        ],
+        "diagnostics": []
+      },
+      {
+        "consumerId": "openapi",
+        "label": "OpenAPI specification",
+        "generatedArtifact": "openapi.json",
+        "routeCount": 5,
+        "requiredRouteFields": [
+          "routeId",
+          "operationId",
+          "httpMethod",
+          "path",
+          "request.body",
+          "request.path",
+          "request.query",
+          "request.headers",
+          "response",
+          "problems",
+          "entitlements"
+        ],
+        "unsupportedRouteFields": [
+          "access.guards",
+          "access.roles"
+        ],
+        "routes": [
+          {
+            "routeId": "UserController.create",
+            "operationId": "createUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.delete",
+            "operationId": "deleteUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.getById",
+            "operationId": "getUserById",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.list",
+            "operationId": "listUsers",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.update",
+            "operationId": "updateUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems",
+              "entitlements"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          }
+        ],
+        "diagnostics": []
+      },
+      {
+        "consumerId": "rpc-client",
+        "label": "RPC fetch client",
+        "generatedArtifact": "provider-rpc client files",
+        "routeCount": 5,
+        "requiredRouteFields": [
+          "routeId",
+          "operationId",
+          "httpMethod",
+          "path",
+          "request.body",
+          "request.path",
+          "request.query",
+          "request.headers",
+          "response",
+          "problems"
+        ],
+        "unsupportedRouteFields": [
+          "access.guards",
+          "access.roles",
+          "entitlements"
+        ],
+        "routes": [
+          {
+            "routeId": "UserController.create",
+            "operationId": "createUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.delete",
+            "operationId": "deleteUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.getById",
+            "operationId": "getUserById",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.list",
+            "operationId": "listUsers",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          },
+          {
+            "routeId": "UserController.update",
+            "operationId": "updateUser",
+            "coveredFields": [
+              "routeId",
+              "operationId",
+              "httpMethod",
+              "path",
+              "request.body",
+              "request.path",
+              "request.query",
+              "request.headers",
+              "response",
+              "problems"
+            ],
+            "missingFields": [],
+            "unsupportedFields": []
+          }
+        ],
+        "diagnostics": []
+      }
+    ],
+    "diagnostics": []
+  },
+  "controllers": [
+    {
+      "name": "UserController",
+      "path": "/users",
+      "guards": [],
+      "roles": [],
+      "routeIds": [
+        "UserController.create",
+        "UserController.delete",
+        "UserController.getById",
+        "UserController.list",
+        "UserController.update"
+      ]
+    }
+  ],
+  "routes": [
+    {
+      "routeId": "UserController.create",
+      "operationId": "createUser",
+      "controllerName": "UserController",
+      "methodName": "create",
+      "httpMethod": "POST",
+      "path": "/users",
+      "controllerPath": "/users",
+      "domain": null,
+      "routeContract": {
+        "id": "users.create",
+        "method": "POST",
+        "path": "/users",
+        "operationId": "createUser"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "body",
+          "name": "",
+          "schema": {
+            "kind": "object",
+            "typeName": "ZodObject",
+            "jsonSafe": true,
+            "fields": [
+              {
+                "name": "email",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              },
+              {
+                "name": "name",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "request": {
+        "body": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "email",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "name",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        },
+        "path": null,
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "email",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "name",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          }
+        ]
+      },
+      "problems": []
+    },
+    {
+      "routeId": "UserController.delete",
+      "operationId": "deleteUser",
+      "controllerName": "UserController",
+      "methodName": "delete",
+      "httpMethod": "DELETE",
+      "path": "/users/:id",
+      "controllerPath": "/users",
+      "domain": null,
+      "routeContract": {
+        "id": "users.delete",
+        "method": "DELETE",
+        "path": "/users/:id",
+        "operationId": "deleteUser"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "path",
+          "name": "id",
+          "schema": {
+            "kind": "string",
+            "typeName": "ZodString",
+            "jsonSafe": true
+          }
+        }
+      ],
+      "request": {
+        "body": null,
+        "path": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "id",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        },
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "deleted",
+            "required": true,
+            "schema": {
+              "kind": "boolean",
+              "typeName": "ZodBoolean",
+              "jsonSafe": true
+            }
+          }
+        ]
+      },
+      "problems": [
+        {
+          "code": "starter/user-not-found",
+          "category": "NotFound",
+          "status": 404,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#starter-user-not-found",
+          "description": "The requested user does not exist."
+        }
+      ]
+    },
+    {
+      "routeId": "UserController.getById",
+      "operationId": "getUserById",
+      "controllerName": "UserController",
+      "methodName": "getById",
+      "httpMethod": "GET",
+      "path": "/users/:id",
+      "controllerPath": "/users",
+      "domain": null,
+      "routeContract": {
+        "id": "users.get",
+        "method": "GET",
+        "path": "/users/:id",
+        "operationId": "getUserById"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "path",
+          "name": "id",
+          "schema": {
+            "kind": "string",
+            "typeName": "ZodString",
+            "jsonSafe": true
+          }
+        }
+      ],
+      "request": {
+        "body": null,
+        "path": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "id",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        },
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "email",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "name",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          }
+        ]
+      },
+      "problems": [
+        {
+          "code": "starter/user-not-found",
+          "category": "NotFound",
+          "status": 404,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#starter-user-not-found",
+          "description": "The requested user does not exist."
+        }
+      ]
+    },
+    {
+      "routeId": "UserController.list",
+      "operationId": "listUsers",
+      "controllerName": "UserController",
+      "methodName": "list",
+      "httpMethod": "GET",
+      "path": "/users",
+      "controllerPath": "/users",
+      "domain": null,
+      "routeContract": {
+        "id": "users.list",
+        "method": "GET",
+        "path": "/users",
+        "operationId": "listUsers"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [],
+      "request": {
+        "body": null,
+        "path": null,
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "array",
+        "typeName": "ZodArray",
+        "jsonSafe": true,
+        "element": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "email",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "id",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "name",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        }
+      },
+      "problems": []
+    },
+    {
+      "routeId": "UserController.update",
+      "operationId": "updateUser",
+      "controllerName": "UserController",
+      "methodName": "update",
+      "httpMethod": "PUT",
+      "path": "/users/:id",
+      "controllerPath": "/users",
+      "domain": null,
+      "routeContract": {
+        "id": "users.update",
+        "method": "PUT",
+        "path": "/users/:id",
+        "operationId": "updateUser"
+      },
+      "access": {
+        "guards": [],
+        "roles": []
+      },
+      "entitlements": [],
+      "params": [
+        {
+          "kind": "path",
+          "name": "id",
+          "schema": {
+            "kind": "string",
+            "typeName": "ZodString",
+            "jsonSafe": true
+          }
+        },
+        {
+          "kind": "body",
+          "name": "",
+          "schema": {
+            "kind": "object",
+            "typeName": "ZodObject",
+            "jsonSafe": true,
+            "fields": [
+              {
+                "name": "email",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              },
+              {
+                "name": "name",
+                "required": true,
+                "schema": {
+                  "kind": "string",
+                  "typeName": "ZodString",
+                  "jsonSafe": true
+                }
+              }
+            ]
+          }
+        }
+      ],
+      "request": {
+        "body": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "email",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            },
+            {
+              "name": "name",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        },
+        "path": {
+          "kind": "object",
+          "typeName": "ZodObject",
+          "jsonSafe": true,
+          "fields": [
+            {
+              "name": "id",
+              "required": true,
+              "schema": {
+                "kind": "string",
+                "typeName": "ZodString",
+                "jsonSafe": true
+              }
+            }
+          ]
+        },
+        "query": null,
+        "headers": null
+      },
+      "response": {
+        "kind": "object",
+        "typeName": "ZodObject",
+        "jsonSafe": true,
+        "fields": [
+          {
+            "name": "email",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "id",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          },
+          {
+            "name": "name",
+            "required": true,
+            "schema": {
+              "kind": "string",
+              "typeName": "ZodString",
+              "jsonSafe": true
+            }
+          }
+        ]
+      },
+      "problems": [
+        {
+          "code": "starter/user-not-found",
+          "category": "NotFound",
+          "status": 404,
+          "cookbookPath": "/reference/problem-recovery-cookbook/#starter-user-not-found",
+          "description": "The requested user does not exist."
+        }
+      ]
+    }
+  ],
+  "monetization": {
+    "verification": {
+      "mode": "credential-free-structural",
+      "remoteProviderConfigurationInspected": false
+    },
+    "nodes": [],
+    "edges": []
+  },
+  "diagnostics": []
+}

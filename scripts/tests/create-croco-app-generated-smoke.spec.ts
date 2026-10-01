@@ -31,6 +31,7 @@ import {
   LOCAL_PACKAGE_PREPARATION_STEP_LABEL,
   measureSmokeDurationMs,
   prepareGeneratedUnitEvidenceCapture,
+  prepareGeneratedSmokeDependencyOverrides,
   readCommandOutputSegment,
   readGeneratedSmokeAllowlistMetadata,
   reconcileGeneratedTestPaths,
@@ -675,6 +676,8 @@ describe("generated template lint contracts", () => {
     const templatesDir = createTempRoot();
     writeGeneratedLintTemplate(templatesDir, "blank");
     writeGeneratedLintTemplate(templatesDir, "saas");
+    rmSync(join(templatesDir, "saas", "biome.json"));
+    writeFileSync(join(templatesDir, "saas", "biome.json.hbs"), "{}\n");
 
     expect(() => assertGeneratedTemplateLintContracts(templatesDir)).not.toThrow();
   });
@@ -1173,6 +1176,50 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
     expect(packageJson.dependencies?.["@croco/provider-rpc"]).toBe("workspace:*");
   });
 
+  it.each(["goal-saas-api", "production-app-starter", "admin-console-starter"])(
+    "installs local tarballs for %s through workspace overrides while preserving source manifests",
+    (caseName) => {
+      const projectDir = createTempRoot();
+      const originalManifests = {
+        "package.json": '{"name":"generated-app","devDependencies":{"@croco/cli":"^1.0.0"}}\n',
+        "apps/api-server/package.json":
+          '{"name":"@smoke/api-server","dependencies":{"@croco/framework-context":"^1.0.0"}}\n',
+      };
+      for (const [path, content] of Object.entries(originalManifests)) {
+        writeFile(join(projectDir, path), content);
+      }
+      writeFile(join(projectDir, "pnpm-workspace.yaml"), "packages:\n  - apps/*\n");
+      const overrides = {
+        "@croco/cli": "file:/tmp/cli.tgz",
+        "@croco/framework-context": "file:/tmp/framework-context.tgz",
+      };
+
+      prepareGeneratedSmokeDependencyOverrides(projectDir, caseName, overrides);
+
+      for (const [path, content] of Object.entries(originalManifests)) {
+        expect(readFileSync(join(projectDir, path), "utf8"), path).toBe(content);
+      }
+      const workspace = readFileSync(join(projectDir, "pnpm-workspace.yaml"), "utf8");
+      for (const [name, range] of Object.entries(overrides)) {
+        expect(workspace).toContain(`"${name}": "${range}"`);
+      }
+    },
+  );
+
+  it("preserves the existing dependency rewrite for other smoke cases", () => {
+    const projectDir = createTempRoot();
+    writeGeneratedPackage(projectDir, "package.json", {
+      name: "generated-app",
+      dependencies: { "@croco/cli": "^1.0.0" },
+    });
+    prepareGeneratedSmokeDependencyOverrides(projectDir, "blank-basic", {
+      "@croco/cli": "file:/tmp/cli.tgz",
+    });
+    expect(readGeneratedPackage(projectDir, "package.json").dependencies?.["@croco/cli"]).toBe(
+      "file:/tmp/cli.tgz",
+    );
+  });
+
   it("allows published-range fallback only through explicit external exceptions", () => {
     const root = createTempRoot();
     const projectDir = join(root, "generated-app");
@@ -1346,6 +1393,38 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
 });
 
 describe("create-croco-app generated smoke matrix", () => {
+  it.each(["goal-saas-api", "production-app-starter", "admin-console-starter"])(
+    "verifies %s immediately after install before any contract bootstrap",
+    (caseName) => {
+      const smokeCase = getGeneratedSmokeDependencyCaseInputs().find(
+        ({ name }) => name === caseName,
+      );
+      const commands = smokeCase?.validations.filter(({ args }) => args);
+
+      expect(commands?.slice(0, 2).map(({ args }) => args)).toEqual([
+        ["lint"],
+        ["contract:verify"],
+      ]);
+      expect(commands?.filter(({ args }) => args?.[0] === "contract:verify")).toHaveLength(2);
+    },
+  );
+
+  it("runs the SaaS API tests immediately after install before build or contract bootstrap", () => {
+    const smokeCase = getGeneratedSmokeDependencyCaseInputs().find(
+      ({ name }) => name === "goal-saas-api",
+    );
+    const commands = smokeCase?.validations.filter(({ args }) => args);
+
+    expect(commands?.[2]).toMatchObject({
+      packagePath: ["apps", "api-server"],
+      args: ["test"],
+    });
+    expect(commands?.[3].args).toEqual(["build"]);
+    expect(commands?.some(({ args, packagePath }) => args?.[0] === "test" && !packagePath)).toBe(
+      true,
+    );
+  });
+
   it("executes every supported goal manifest and declared quality gate", () => {
     const goalCases = new Map(
       getGeneratedGoalSmokeCaseInputs().map((smokeCase) => [smokeCase.goal, smokeCase]),
