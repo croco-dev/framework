@@ -128,7 +128,7 @@ function fixture(
     model?: ProposeAnalysisPlan;
     prepareQuestion?: GrowthAnalysisServiceOptions["prepareQuestion"];
     settleUsage?: GrowthAnalysisServiceOptions["settleUsage"];
-    registrations?: readonly AnalysisRegistration[];
+    registrations?: readonly AnalysisRegistration[] | GrowthAnalysisServiceOptions["registrations"];
   } = {},
 ) {
   const state = { definition, context, contextRef: "tenant-1:permission-1:privacy-1" };
@@ -175,7 +175,10 @@ function fixture(
       return readService;
     },
     contextRef: () => state.contextRef,
-    registrations: () => options.registrations ?? [registration],
+    registrations: () =>
+      typeof options.registrations === "function"
+        ? options.registrations()
+        : (options.registrations ?? [registration]),
     proposeAnalysisPlan: model,
     prepareQuestion: options.prepareQuestion ?? ((question) => question),
     limits: {
@@ -261,6 +264,63 @@ describe("GrowthAnalysisService", () => {
     });
     expect(executor).toHaveBeenCalledOnce();
   });
+
+  it("uses the projector from the validated registration snapshot", async () => {
+    const replacement = {
+      ...registration,
+      facts: vi.fn(() => [{ label: "Unconfirmed replacement", value: "1" }]),
+    };
+    const registrations = vi.fn(() => [registration]);
+    const { service } = fixture({ report: report(), registrations });
+    const plan = confirmedPlan(await service.propose("Captured total"));
+    registrations.mockReset();
+    registrations.mockReturnValueOnce([registration]).mockReturnValue([replacement]);
+    expect(await service.execute(plan)).toMatchObject({
+      status: "ready",
+      answer: { facts: [{ label: "Captured amount", value: "9007199254740993" }] },
+    });
+    expect(registrations).toHaveBeenCalledOnce();
+    expect(replacement.facts).not.toHaveBeenCalled();
+  });
+
+  it("preserves the registration receiver for a method projector", async () => {
+    const { service } = fixture({
+      report: report(),
+      registrations: [
+        {
+          ...registration,
+          facts(read) {
+            return [{ label: this.label, value: (read.data as { amount: string }).amount }];
+          },
+        },
+      ],
+    });
+    const plan = confirmedPlan(await service.propose("Captured total"));
+    expect(await service.execute(plan)).toMatchObject({
+      status: "ready",
+      answer: { facts: [{ label: registration.label, value: "9007199254740993" }] },
+    });
+  });
+
+  it.each([null, undefined, 1, "invalid", true, [], new Array(1)])(
+    "models malformed projector entries %j as an invalid-facts Problem",
+    async (entry) => {
+      const facts = Array.isArray(entry) && entry.length === 1 ? entry : [entry];
+      const { service } = fixture({
+        report: report(),
+        registrations: [
+          {
+            ...registration,
+            facts: () => facts as unknown as ReturnType<AnalysisRegistration["facts"]>,
+          },
+        ],
+      });
+      const plan = confirmedPlan(await service.propose("Captured total"));
+      const problem = await service.execute(plan).catch((error: unknown) => error);
+      expect(problem).toBeInstanceOf(GrowthAnalysisProblem);
+      expect(problem).toMatchObject({ code: "analytics-core/analysis-invalid-facts" });
+    },
+  );
 
   it("returns ambiguous choices for confirmation before reading reports or executing", async () => {
     const { service, executor, reader } = fixture({

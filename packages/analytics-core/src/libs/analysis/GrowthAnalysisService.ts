@@ -228,7 +228,7 @@ export class GrowthAnalysisService {
     if (prepared === null) failure("analysis-question-blocked");
     if (!prepared.trim() || bytes(prepared) > this.options.limits.maxInputBytes)
       failure("analysis-invalid-question");
-    const choices = await this.allowedChoices(signal);
+    const choices = (await this.allowedRegistrations(signal)).map((item) => item.choice);
     this.checkAbort(signal);
     if (!choices.length)
       return { status: "unavailable", reason: "no-definitions", usage: { kind: "unknown" } };
@@ -349,7 +349,7 @@ export class GrowthAnalysisService {
       const selected = choices.filter((choice) => choiceIds.includes(choice.id));
       if (selected.length !== choiceIds.length) failure("analysis-invalid-plan");
       // Recheck definitions/permissions after model execution, including receipt recovery.
-      const current = await this.allowedChoices(signal);
+      const current = (await this.allowedRegistrations(signal)).map((item) => item.choice);
       if (
         selected.some(
           (choice) => !current.some((item) => JSON.stringify(item) === JSON.stringify(choice)),
@@ -379,11 +379,10 @@ export class GrowthAnalysisService {
     if (!plan || bytes(planKey(plan)) > this.options.limits.maxInputBytes)
       failure("analysis-invalid-plan");
     const service = this.options.readService;
-    const choices = await this.allowedChoices(signal);
-    const choice = choices.find((item) => planKey(item.plan) === planKey(plan));
-    if (!choice) return { status: "definition-changed" };
-    const registration = this.options.registrations().find((item) => item.id === choice.id);
-    if (!registration) return { status: "definition-changed" };
+    const registrations = await this.allowedRegistrations(signal);
+    const matched = registrations.find((item) => planKey(item.choice.plan) === planKey(plan));
+    if (!matched) return { status: "definition-changed" };
+    const { choice, facts: projectFacts } = matched;
     const outcome = await service.runRegisteredQuery(plan.queryId, plan.parameters, plan.window, {
       expectedVersion: plan.version,
       signal,
@@ -392,13 +391,16 @@ export class GrowthAnalysisService {
     if (outcome.status !== "verified") return { status: outcome.status };
     if (!sameDefinition(outcome.result.definition, choice.plan.metricDefinition))
       return { status: "definition-changed" };
-    const facts = registration.facts(outcome.result);
+    const facts = projectFacts(outcome.result);
     if (
       !Array.isArray(facts) ||
       facts.length === 0 ||
       facts.length > 32 ||
-      facts.some(
+      Array.from(facts).some(
         (fact) =>
+          fact === null ||
+          typeof fact !== "object" ||
+          Array.isArray(fact) ||
           typeof fact.label !== "string" ||
           fact.label.length > 120 ||
           (fact.value !== null &&
@@ -429,7 +431,9 @@ export class GrowthAnalysisService {
     };
   }
 
-  private async allowedChoices(signal?: AbortSignal): Promise<readonly AnalysisChoice[]> {
+  private async allowedRegistrations(
+    signal?: AbortSignal,
+  ): Promise<readonly { choice: AnalysisChoice; facts: AnalysisRegistration["facts"] }[]> {
     this.checkAbort(signal);
     const definitions = await this.options.readService.listDefinitions();
     this.checkAbort(signal);
@@ -458,7 +462,7 @@ export class GrowthAnalysisService {
       } catch (error) {
         throw new GrowthAnalysisProblem("analysis-invalid-registration", errorCause(error));
       }
-      return [{ id: item.id, label: item.label, plan }];
+      return [{ choice: { id: item.id, label: item.label, plan }, facts: item.facts.bind(item) }];
     });
   }
 
