@@ -1,5 +1,7 @@
 import { DEFAULT_TENANT_MODEL } from "@croco/tenant-core/tenant-model";
 import { parseWebAppNames, validateProjectName, validateWebAppNames } from "./helpers/validate.js";
+import type { WebAppCollisionOptions } from "./helpers/validate.js";
+import { findCollidingWebAppName } from "./helpers/validate.js";
 import {
   readGoal,
   resolveGoalOptions,
@@ -112,7 +114,12 @@ export function validateCliOptions(cliOptions: NormalizedGeneratorOptions): void
     );
   }
 
-  if (cliOptions.webApps !== undefined) assertValidWebAppNames(cliOptions.webApps);
+  if (cliOptions.webApps !== undefined)
+    assertResolvedWebAppNames(cliOptions.webApps, {
+      preset: cliOptions.preset,
+      api: cliOptions.api,
+      apiHosting: cliOptions.apiHosting,
+    });
 
   if (cliOptions.goal !== undefined) validateGoalCliOptions(cliOptions);
   if (cliOptions.preset !== undefined) readChoice("preset", cliOptions.preset, PRESETS);
@@ -169,7 +176,7 @@ export function validateResolvedOptions(options: NormalizedGeneratorOptions): Ge
     );
   }
 
-  assertValidWebAppNames(webApps);
+  assertResolvedWebAppNames(webApps, { preset: options.preset, api: options.api, apiHosting });
 
   readChoice("preset", preset, PRESETS);
   if (options.goal) readGoal(options.goal);
@@ -673,12 +680,42 @@ function throwInvalidProjectName(detail: string): never {
 }
 
 export function assertValidWebAppNames(webApps: readonly string[]): void {
+  assertWebAppDirectoryCollisions(webApps, {});
   const detail = validateWebAppNames(webApps);
   if (!detail) return;
 
   throwInvalidCliOption(
     detail,
     "Use unique lowercase letters, numbers, hyphens, or underscores without path separators or reserved names.",
+    "--web-apps",
+  );
+}
+
+export function assertResolvedWebAppNames(
+  webApps: readonly string[],
+  options: WebAppCollisionOptions,
+): void {
+  assertWebAppDirectoryCollisions(webApps, options);
+  const detail = validateWebAppNames(webApps);
+  if (!detail) return;
+
+  throwInvalidCliOption(
+    detail,
+    "Use unique lowercase letters, numbers, hyphens, or underscores without path separators or reserved names.",
+    "--web-apps",
+  );
+}
+
+function assertWebAppDirectoryCollisions(
+  webApps: readonly string[],
+  options: WebAppCollisionOptions,
+): void {
+  const collidingName = findCollidingWebAppName(webApps, options);
+  if (!collidingName) return;
+
+  throwInvalidCliOption(
+    `Web app name ${JSON.stringify(collidingName)} collides with the standalone API app directory "apps/${collidingName}"`,
+    `Rename the web app or choose a name other than ${JSON.stringify(collidingName)} so the standalone API package keeps its own apps directory.`,
     "--web-apps",
   );
 }

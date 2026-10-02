@@ -148,4 +148,53 @@ describe.each(["graphql", "trpc"] as const)("%s web app naming", (api) => {
     });
     expect(existsSync(targetDir)).toBe(false);
   });
+
+  it("rejects a web app name that collides with the standalone backend directory", async () => {
+    const collidingName = api === "trpc" ? "api" : "graphql-api";
+    const targetDir = createTarget();
+    const tamperedOptions = fullstackOptions({
+      api,
+      apiHosting: "standalone",
+      webApps: ["portal"],
+      frontendDeploy: "vite-spa",
+    });
+    tamperedOptions.webApps = [collidingName];
+    await expect(
+      generate(targetDir, tamperedOptions, { outputMode: "json" }),
+    ).rejects.toMatchObject({
+      code: "create-croco-app/invalid-cli-option",
+      extensions: { option: "--web-apps" },
+    });
+    expect(existsSync(targetDir)).toBe(false);
+  });
+
+  it("rejects a colliding standalone backend directory name during normalization", () => {
+    const collidingName = api === "trpc" ? "api" : "graphql-api";
+    expect(() =>
+      fullstackOptions({
+        api,
+        apiHosting: "standalone",
+        webApps: [collidingName],
+        frontendDeploy: "vite-spa",
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        code: "create-croco-app/invalid-cli-option",
+        extensions: expect.objectContaining({ option: "--web-apps" }),
+      }),
+    );
+  });
+
+  it("allows the other API directory name as a web app name", async () => {
+    const otherDirectory = api === "trpc" ? "graphql-api" : "api";
+    const apiDirectory = api === "trpc" ? "api" : "graphql-api";
+    const targetDir = await generateFullstack({
+      api,
+      apiHosting: "standalone",
+      webApps: [otherDirectory],
+      frontendDeploy: "vite-spa",
+    });
+    expect(existsSync(join(targetDir, "apps", otherDirectory, "package.json"))).toBe(true);
+    expect(readPackageName(targetDir, apiDirectory)).toBe(`@acme/${apiDirectory}`);
+  });
 });
