@@ -70,6 +70,7 @@
     "@croco/experience-core": "workspace:*",
     "@croco/features-core": "workspace:*",
     "@croco/lifecycle-core": "workspace:*",
+    "@croco/metrics-core": "workspace:*",
     "@croco/onboarding-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/promotions-core": "workspace:*"
