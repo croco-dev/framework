@@ -20,7 +20,21 @@ export async function verifyMountedPolicyReleaseConsole(
     policyId: "banner",
     revision: 3,
     status: "draft",
-    fields: [{ key: "rules", label: "Rules", input: "json", value: { enabled: true } }],
+    fields: [
+      { key: "rules", label: "Rules", input: "json", value: { enabled: true } },
+      { key: "title", label: "Title", input: "text", value: "Banner" },
+      { key: "limit", label: "Limit", input: "number", value: 3 },
+      {
+        key: "mode",
+        label: "Mode",
+        input: "select",
+        value: "all",
+        options: [
+          { value: "all", label: "All" },
+          { value: "restricted", label: "Restricted" },
+        ],
+      },
+    ],
     diagnostics: [],
     diff: [],
     impact: [],
@@ -157,6 +171,32 @@ export async function verifyMountedPolicyReleaseConsole(
     assert(reloads === 1, "Reload callback was not called exactly once");
     assertFresh({ replacement: true });
     await observe("Direct Reload clears raw JSON and validation");
+    for (const [name, value] of [
+      ["title", "Updated"],
+      ["limit", "7"],
+    ] as const) {
+      const element = container.querySelector<HTMLInputElement>(`input[name="${name}"]`);
+      assert(element !== null, `Missing ${name} input`);
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+      assert(setter !== undefined, "Missing native input value setter");
+      setter.call(element, value);
+      flushSync(() => element.dispatchEvent(new Event("input", { bubbles: true })));
+      const expected = name === "limit" ? 7 : value;
+      assert(
+        ready().fields.find((field) => field.key === name)?.value === expected,
+        `${name} callback changed`,
+      );
+      assert(element.value === value, `${name} controlled value changed`);
+    }
+    const mode = container.querySelector<HTMLSelectElement>('select[name="mode"]');
+    assert(mode !== null, "Missing mode select");
+    mode.value = "restricted";
+    flushSync(() => mode.dispatchEvent(new Event("change", { bubbles: true })));
+    assert(
+      ready().fields.find((field) => field.key === "mode")?.value === "restricted",
+      "Select callback changed",
+    );
+    await observe("Text, number and select inputs preserve their typed callbacks");
     type("{");
     const beforeRemoval = ready();
     render({ ...beforeRemoval, fields: [] });

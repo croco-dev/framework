@@ -99,6 +99,10 @@ describe("PolicyReleaseConsole JSON draft reconciliation", () => {
     type(text);
     expect(onEdit).toHaveBeenCalledWith("rules", { theme: "edited" });
     expect(input().props.value).toBe(text);
+    replace(ready.fields[0].value);
+    expect(JSON.parse(String(input().props.value))).toEqual({ theme: "light" });
+    type(text);
+    expect(input().props.value).toBe(text);
     type("{");
     expect(input().props["aria-invalid"]).toBe(true);
     replace({ theme: "replacement" });
