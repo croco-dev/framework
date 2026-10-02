@@ -61,6 +61,99 @@ async function fixture(overrides: Partial<ExperimentRegistration> = {}) {
 }
 
 describe("ExperimentRuntime", () => {
+  it("requires explicit evaluation revision and rejects an untyped missing revision", async () => {
+    // @ts-expect-error Evaluated results require the application revision even with provider metadata.
+    const missingRevision: DetailedEvaluation = {
+      status: "evaluated",
+      value: false,
+      reason: "sdk",
+      providerMetadata: { appRevision: "1" },
+    };
+    const evaluate = async () => missingRevision;
+    const { runtime, store } = await fixture({
+      provider: { previewDetailed: evaluate, evaluateDetailed: evaluate },
+    });
+    const write = vi.spyOn(store, "assign");
+    expect(await runtime.preview(input)).toEqual({
+      status: "unavailable",
+      reason: "provider_revision_unverified",
+    });
+    await runtime.start(transition);
+    expect(await runtime.assign(input)).toEqual({
+      status: "unavailable",
+      reason: "provider_revision_unverified",
+    });
+    expect(write).not.toHaveBeenCalled();
+  });
+  it("returns the local revision in preview and detailed assignment", async () => {
+    const { runtime } = await fixture();
+    expect(await runtime.preview(input)).toMatchObject({ status: "evaluated", appRevision: "1" });
+    await runtime.start(transition);
+    expect(await runtime.evaluateDetailed(input)).toMatchObject({
+      status: "evaluated",
+      appRevision: "1",
+    });
+  });
+  it("retains provider metadata while taking canonical revision from the explicit result", async () => {
+    const evaluate = async (): Promise<DetailedEvaluation> => ({
+      status: "evaluated",
+      appRevision: "1",
+      value: false,
+      reason: "sdk",
+      providerMetadata: { appRevision: "untrusted-optional-value", providerRevision: "remote-7" },
+    });
+    const { runtime } = await fixture({ provider: { evaluateDetailed: evaluate } });
+    await runtime.start(transition);
+    expect(await runtime.evaluateDetailed(input)).toMatchObject({
+      status: "evaluated",
+      appRevision: "1",
+      providerMetadata: { appRevision: "1", providerRevision: "remote-7" },
+    });
+  });
+  it.each(["2026-09-30T23:59:59.999Z", "2026-10-01T08:59:59.999+09:00", "invalid-timestamp"])(
+    "rejects exposure before assignment or invalid timestamp before writing: %s",
+    async (occurredAt) => {
+      const { runtime, store } = await fixture();
+      await runtime.start(transition);
+      const result = await runtime.assign(input);
+      if (result.status !== "assigned") throw new Error("Expected assignment");
+      const write = vi.spyOn(store, "recordExposure");
+      await expect(
+        runtime.recordExposure({
+          ...input,
+          assignmentId: result.assignment.id,
+          deliveryInstanceId: "invalid-time",
+          occurredAt,
+          kind: "display",
+        }),
+      ).rejects.toMatchObject({ code: "features/experiment/invalid" });
+      expect(write).not.toHaveBeenCalled();
+    },
+  );
+  it.each(["2026-10-01T00:00:00Z", "2026-10-01T09:00:00+09:00", "2026-10-01T00:00:00.001Z"])(
+    "accepts equal or later exposure after pause and dedupes the exact receipt: %s",
+    async (occurredAt) => {
+      const { runtime } = await fixture();
+      await runtime.start(transition);
+      const result = await runtime.assign(input);
+      if (result.status !== "assigned") throw new Error("Expected assignment");
+      await runtime.pause({ ...transition, expectedRevision: 1, idempotencyKey: "pause" });
+      const exposure = {
+        ...input,
+        assignmentId: result.assignment.id,
+        deliveryInstanceId: "late-time",
+        occurredAt,
+        kind: "display" as const,
+      };
+      const receipt = await runtime.recordExposure(exposure);
+      expect(receipt.occurredAt).toBe(occurredAt);
+      expect(await runtime.recordExposure(exposure)).toEqual(receipt);
+      expect(
+        (await runtime.recordExposure({ ...exposure, deliveryInstanceId: "another-delivery" })).id,
+      ).not.toBe(receipt.id);
+    },
+  );
+
   it("locks allocator golden vectors and unambiguous key encoding", () => {
     expect(
       ["user-1", "user-2", "a:b", "한글"].map((id) =>
@@ -357,6 +450,7 @@ describe("ExperimentRuntime", () => {
             status: "evaluated" as const,
             value: false,
             reason: "sdk",
+            appRevision: "other",
           }),
         },
         "provider_revision_unverified",
@@ -368,7 +462,7 @@ describe("ExperimentRuntime", () => {
             status: "evaluated" as const,
             value: "foreign",
             reason: "sdk",
-            providerMetadata: { appRevision: "1" },
+            appRevision: "1",
           }),
         },
         "provider_variant_drift",
@@ -395,7 +489,7 @@ describe("ExperimentRuntime", () => {
         status: "evaluated" as const,
         value: false,
         reason: "sdk",
-        providerMetadata: { appRevision: "1" },
+        appRevision: "1",
       })),
     };
     const { runtime } = await fixture({
@@ -433,7 +527,7 @@ describe("ExperimentRuntime", () => {
       status: "evaluated" as const,
       value: false,
       reason: "provider_preview",
-      providerMetadata: { appRevision: "1" },
+      appRevision: "1",
     };
     const provider = {
       previewDetailed: vi.fn(async () => result),
@@ -455,7 +549,7 @@ describe("ExperimentRuntime", () => {
     await runtime.start(transition);
     expect(await runtime.assign(input)).toMatchObject({
       status: "assigned",
-      assignment: { value: false },
+      assignment: { value: false, providerRef: { appRevision: "1" } },
     });
   });
   it.each([
@@ -464,7 +558,7 @@ describe("ExperimentRuntime", () => {
       { status: "unavailable", reason: "offline" },
     ],
     [
-      { status: "evaluated", value: false, reason: "sdk" },
+      { status: "evaluated", value: false, reason: "sdk", appRevision: "" },
       { status: "unavailable", reason: "provider_revision_unverified" },
     ],
     [
@@ -472,7 +566,7 @@ describe("ExperimentRuntime", () => {
         status: "evaluated",
         value: false,
         reason: "sdk",
-        providerMetadata: { appRevision: "other" },
+        appRevision: "other",
       },
       { status: "unavailable", reason: "provider_revision_unverified" },
     ],
@@ -481,7 +575,7 @@ describe("ExperimentRuntime", () => {
         status: "evaluated",
         value: "foreign",
         reason: "sdk",
-        providerMetadata: { appRevision: "1" },
+        appRevision: "1",
       },
       { status: "unavailable", reason: "provider_variant_drift" },
     ],
@@ -514,7 +608,7 @@ describe("ExperimentRuntime", () => {
       status: "evaluated",
       value: true,
       reason: "sdk",
-      providerMetadata: { appRevision: "1" },
+      appRevision: "1",
     });
     const { runtime, store } = await fixture({
       definition: {

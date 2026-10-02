@@ -69,6 +69,7 @@ export type ExperimentEligibility =
 export type DetailedEvaluation<T = string | boolean | number> =
   | {
       readonly status: "evaluated";
+      readonly appRevision: string;
       readonly value: T;
       readonly reason: string;
       readonly providerMetadata?: Readonly<Record<string, string>>;

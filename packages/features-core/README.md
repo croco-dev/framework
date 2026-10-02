@@ -23,8 +23,11 @@ returns the store's unique winner or an explicit `not_assigned`, `unavailable` o
 `evaluation_failed` result. A legitimate false variant remains an assigned value.
 `preview` checks eligibility and uses the local allocator or the provider's explicit
 side-effect-free preview capability. A provider without that capability is unavailable.
-Preview never changes state, assignments, exposures or calls handlers. Provider evaluation requires matching application
-revision metadata and a registered value; drift cannot silently become control.
+Preview never changes state, assignments, exposures or calls handlers. Every evaluated
+`DetailedEvaluation` requires a typed `appRevision` field. Providers must return the
+application revision they actually verified; optional `providerMetadata` contains only
+additional evidence. The runtime requires a matching revision and a registered value;
+drift cannot silently become control.
 
 `configure` creates a new draft revision from a registered template. Operator changes
 never replace existing assignments or enable an unregistered handler. Start, pause,
@@ -41,7 +44,8 @@ finite lock-wait bound in this adapter; deployments must bound database waits wh
 application requires a maximum scheduling delay. Record `recordExposure` only after actual display or successful server
 treatment, using the original assignment and a server-owned delivery identity. Retrying
 that delivery deduplicates; another real delivery records another exposure, including
-late receipts after pause. Assignment and feature-call events do not count as exposure.
+late receipts after pause. An exposure timestamp must be at or after its original
+assignment timestamp. Assignment and feature-call events do not count as exposure.
 
 Eligibility is injected, so a local predicate needs no cohort or warehouse. The
 `examples/experiment-runtime` cohort profile adapts the existing `PublishedCohortReader`:

@@ -96,7 +96,12 @@ export class ExperimentOperations {
     const result = await this.runtime.preview(input);
     // Provider metadata may contain private identifiers; only the decision is public.
     return result.status === "evaluated"
-      ? { status: result.status, value: result.value, reason: result.reason }
+      ? {
+          status: result.status,
+          value: result.value,
+          reason: result.reason,
+          appRevision: result.appRevision,
+        }
       : { status: result.status, reason: result.reason };
   }
 

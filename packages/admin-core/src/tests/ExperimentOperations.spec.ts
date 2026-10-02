@@ -106,6 +106,7 @@ describe("ExperimentOperations", () => {
       status: "evaluated",
       value: false,
       reason: "local_preview",
+      appRevision: target.experimentRevision,
     });
     expect(await store.get(target)).toEqual(before);
     expect(assign).not.toHaveBeenCalled();

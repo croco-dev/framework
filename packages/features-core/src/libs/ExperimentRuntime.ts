@@ -247,7 +247,12 @@ export class ExperimentRuntime {
     const variant = this.localVariant(registration.definition, input);
     if (variant && registration.provider) return this.providerEvaluation(registration, input, true);
     return variant
-      ? { status: "evaluated", value: variant.value, reason: "local_preview" }
+      ? {
+          status: "evaluated",
+          appRevision: registration.definition.revision,
+          value: variant.value,
+          reason: "local_preview",
+        }
       : { status: "not_assigned", reason: "outside_allocation" };
   }
   async evaluateDetailed(input: ExperimentInput): Promise<DetailedEvaluation> {
@@ -255,6 +260,7 @@ export class ExperimentRuntime {
     return result.status === "assigned"
       ? {
           status: "evaluated",
+          appRevision: result.assignment.experimentRevision,
           value: result.assignment.value,
           reason: "assigned",
           providerMetadata: result.assignment.providerRef,
@@ -295,7 +301,7 @@ export class ExperimentRuntime {
       const result = await this.providerEvaluation(registration, input, false);
       if (result.status !== "evaluated") return result;
       variant = definition.variants.find((item) => item.value === result.value);
-      providerRef = result.providerMetadata;
+      providerRef = { ...result.providerMetadata, appRevision: result.appRevision };
     }
     if (!variant) return { status: "not_assigned", reason: "outside_allocation" };
     const assignment: ExperimentAssignment = {
@@ -350,7 +356,7 @@ export class ExperimentRuntime {
     },
   ): Promise<ExperimentExposure> {
     await this.authorize({ ...input, action: "exposure" });
-    await this.original(input.assignmentId, input);
+    const original = await this.original(input.assignmentId, input);
     if (
       !input.deliveryInstanceId?.trim() ||
       !["display", "treatment"].includes(input.kind) ||
@@ -360,6 +366,8 @@ export class ExperimentRuntime {
         "invalid",
         "Exposure requires delivery identity, kind, and timestamp",
       );
+    if (Date.parse(input.occurredAt) < Date.parse(original.assignedAt))
+      throw new ExperimentProblem("invalid", "Exposure cannot precede its assignment");
     return this.options.store.recordExposure(
       {
         id: randomUUID(),
@@ -429,7 +437,7 @@ export class ExperimentRuntime {
       return { status: "evaluation_failed", reason: "provider_failure" };
     }
     if (result.status !== "evaluated") return result;
-    if (result.providerMetadata?.appRevision !== registration.definition.revision)
+    if (result.appRevision !== registration.definition.revision)
       return { status: "unavailable", reason: "provider_revision_unverified" };
     if (
       !registration.definition.variants.some(

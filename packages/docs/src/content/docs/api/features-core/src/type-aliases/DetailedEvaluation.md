@@ -5,7 +5,7 @@ prev: false
 title: "DetailedEvaluation"
 ---
 
-> **DetailedEvaluation**\<`T`\> = \{ `providerMetadata?`: `Readonly`\<`Record`\<`string`, `string`\>\>; `reason`: `string`; `status`: `"evaluated"`; `value`: `T`; \} \| \{ `providerMetadata?`: `Readonly`\<`Record`\<`string`, `string`\>\>; `reason`: `string`; `status`: `"unavailable"` \| `"evaluation_failed"` \| `"not_assigned"`; \}
+> **DetailedEvaluation**\<`T`\> = \{ `appRevision`: `string`; `providerMetadata?`: `Readonly`\<`Record`\<`string`, `string`\>\>; `reason`: `string`; `status`: `"evaluated"`; `value`: `T`; \} \| \{ `providerMetadata?`: `Readonly`\<`Record`\<`string`, `string`\>\>; `reason`: `string`; `status`: `"unavailable"` \| `"evaluation_failed"` \| `"not_assigned"`; \}
 
 ## Type Parameters
 
