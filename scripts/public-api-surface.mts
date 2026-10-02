@@ -884,13 +884,15 @@ function addExportDeclaration(
   if (!statement.exportClause) {
     if (resolvedSource) {
       const targetExports = extractEntrypointExports(resolvedSource, context);
-      if (!statement.isTypeOnly) {
-        exportsBySurface.runtime.push(
-          ...targetExports.runtimeExports.map((entry) => entryWithSourceFallback(entry, source)),
-        );
-      }
+      exportsBySurface[surface].push(
+        ...targetExports.runtimeExports
+          .filter((entry) => entry.name !== "default" && entry.name !== "export=")
+          .map((entry) => entryWithSourceFallback(entry, source)),
+      );
       exportsBySurface.type.push(
-        ...targetExports.typeExports.map((entry) => entryWithSourceFallback(entry, source)),
+        ...targetExports.typeExports
+          .filter((entry) => entry.name !== "default" && entry.name !== "export=")
+          .map((entry) => entryWithSourceFallback(entry, source)),
       );
       return;
     }
