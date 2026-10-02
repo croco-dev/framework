@@ -40,6 +40,7 @@ describe.skipIf(!enabled)("Assigned outcomes through real PostgreSQL facts", () 
     try {
       const at = "2026-01-02T00:00:00.000Z";
       const scope = { app: "outcomes", environment: "test", tenant: "tenant" };
+      const sources = ["ledger", "engagement"];
       const window = { from: "2026-01-01T00:00:00.000Z", to: "2026-01-02T00:00:00.001Z" };
       const optional = new Set<string>([
         "subject",
@@ -96,7 +97,7 @@ describe.skipIf(!enabled)("Assigned outcomes through real PostgreSQL facts", () 
       ]
         .map((item) => ({
           ...scope,
-          source: "ledger",
+          source: item.kind === "direct_contact_cost" ? "engagement" : "ledger",
           eventId: item.id,
           subject: `${item.arm}-0`,
           kind: item.kind,
@@ -109,12 +110,12 @@ describe.skipIf(!enabled)("Assigned outcomes through real PostgreSQL facts", () 
           correctionSource: null,
           correctionEventId: null,
         }))
-        .sort((a, b) => (a.eventId < b.eventId ? -1 : 1));
+        .sort((a, b) => a.source.localeCompare(b.source) || a.eventId.localeCompare(b.eventId));
       const candidate = await catalog.createCandidate({
         access,
         id: randomUUID(),
         transformHash: "outcome-mapping-v1",
-        sourceRefs: ["ledger"],
+        sourceRefs: sources,
         expectedHead: null,
         partitionSelection: null,
         audit: { reason: "test source mapping", expectedRevision: 0, idempotencyKey: randomUUID() },
@@ -135,16 +136,14 @@ describe.skipIf(!enabled)("Assigned outcomes through real PostgreSQL facts", () 
         populationCoverage: "complete",
         validity: "valid",
         reproducibility: "reproducible",
-        sourceCoverage: [
-          {
-            sourceRef: "ledger",
-            from: window.from,
-            through: at,
-            state: "complete",
-            gaps: [],
-            late: false,
-          },
-        ],
+        sourceCoverage: sources.map((sourceRef) => ({
+          sourceRef,
+          from: window.from,
+          through: at,
+          state: "complete" as const,
+          gaps: [],
+          late: false,
+        })),
       };
       await catalog.sealCandidate({
         access,
@@ -186,14 +185,16 @@ describe.skipIf(!enabled)("Assigned outcomes through real PostgreSQL facts", () 
         inputHash: "",
         definitionHash: await hashAssignedOutcomeDefinition(),
         currencies: ["USD"],
-        sources: ["ledger"],
+        sources,
         baselineArm: "control",
         retention: ["control", "test"].flatMap((arm) =>
           Array.from({ length: 100 }, (_, i) => ({ subject: `${arm}-${i}`, retained: true })),
         ),
         costCompleteness: ["control", "test"].flatMap((arm) =>
-          (["payment", "refund", "cashback", "direct_contact_cost", "noncash_grant"] as const).map(
-            (kind) => ({ arm, source: "ledger", kind, currency: "USD", status: "complete" }),
+          sources.flatMap((source) =>
+            (
+              ["payment", "refund", "cashback", "direct_contact_cost", "noncash_grant"] as const
+            ).map((kind) => ({ arm, source, kind, currency: "USD", status: "complete" as const })),
           ),
         ),
       };
@@ -223,7 +224,7 @@ describe.skipIf(!enabled)("Assigned outcomes through real PostgreSQL facts", () 
       });
       const registration = await createAssignedOutcomeQuery({
         id: "native-outcomes",
-        sourceRefs: ["ledger"],
+        sourceRefs: sources,
         limits,
         load,
       });
@@ -233,19 +234,21 @@ describe.skipIf(!enabled)("Assigned outcomes through real PostgreSQL facts", () 
           allowedFields: ASSIGNED_OUTCOME_FIELDS,
           allowRaw: true,
           budget: limits,
-          sourceRevisions: [{ sourceRef: "ledger", revision: String(snapshot.revision) }],
-          snapshotRefs: [snapshot.id],
+          sourceRevisions: sources.map((sourceRef) => ({
+            sourceRef,
+            revision: String(snapshot.revision),
+          })),
+          snapshotRefs: sources.map(() => snapshot.id),
         }),
         authorize: async () => ({
           permissionEpoch: String(access.permissionEpoch),
           privacyEpoch: String(access.privacyEpoch),
         }),
       });
-      const result = await service.runRegisteredQuery(
-        "native-outcomes",
-        { ...input, events: [] },
-        window,
-      );
+      const nativeInput = { ...input, events: [] };
+      nativeInput.inputHash = await hashAssignedOutcomeInput(nativeInput);
+      expect(nativeInput.inputHash).not.toBe(input.inputHash);
+      const result = await service.runRegisteredQuery("native-outcomes", nativeInput, window);
       expect(result.status).toBe("verified");
       if (result.status === "verified")
         expect(result.result.data).toEqual(compareAssignedOutcomes(input));
@@ -255,7 +258,7 @@ describe.skipIf(!enabled)("Assigned outcomes through real PostgreSQL facts", () 
       });
       access = { ...access, privacyEpoch: 1 };
       await expect(
-        service.runRegisteredQuery("native-outcomes", { ...input, events: [] }, window),
+        service.runRegisteredQuery("native-outcomes", nativeInput, window),
       ).rejects.toThrow();
     } finally {
       await cancellationPool.end();

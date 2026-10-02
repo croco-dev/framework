@@ -97,6 +97,11 @@ async function fixture(): Promise<AssignedOutcomeInput> {
   input.inputHash = await hashAssignedOutcomeInput(input);
   return input;
 }
+async function emptyRequest(input: AssignedOutcomeInput): Promise<AssignedOutcomeInput> {
+  const submitted = { ...input, events: [] };
+  submitted.inputHash = await hashAssignedOutcomeInput(submitted);
+  return submitted;
+}
 const snapshot: WarehouseSnapshot = {
   id: "snapshot",
   revision: 1,
@@ -187,21 +192,128 @@ describe("Assigned outcome registered reads", () => {
       limits,
       load,
     });
+    const submitted = await emptyRequest(input);
+    expect(submitted.inputHash).not.toBe(input.inputHash);
     const nativeResult = await new MetricReadService(
       [native.definition],
       [native.query],
       authority(),
-    ).runRegisteredQuery("native", { ...input, events: [] }, window);
+    ).runRegisteredQuery("native", submitted, window);
     expect(nativeResult.status).toBe("verified");
     if (nativeResult.status === "verified")
       expect(nativeResult.result.data).toEqual(compareAssignedOutcomes(input));
     expect(calls).toEqual([0, 1]);
   });
+  it("reads one canonical snapshot once for multiple registered sources", async () => {
+    const full = await fixture();
+    const extra = { ...rows[0], source: "billing", eventId: "capture", amountMinor: "50" };
+    full.sources = ["ledger", "billing"];
+    full.events = await importRows([...rows, extra]);
+    full.costCompleteness = [
+      ...full.costCompleteness,
+      ...full.costCompleteness.map((cost) => ({ ...cost, source: "billing" })),
+    ];
+    full.inputHash = await hashAssignedOutcomeInput(full);
+    const submitted = await emptyRequest(full);
+    let reads = 0;
+    const load = createWarehouseAssignedOutcomeLoader({
+      snapshot: {
+        ...snapshot,
+        quality: {
+          ...snapshot.quality,
+          sourceCoverage: [
+            ...snapshot.quality.sourceCoverage,
+            { ...snapshot.quality.sourceCoverage[0], sourceRef: "billing" },
+          ],
+        },
+      },
+      pageSize: 100,
+      quality,
+      access: () => access,
+      reader: {
+        read: async () => {
+          reads += 1;
+          return {
+            snapshotId: "snapshot",
+            rows: [...rows, extra],
+            nextCursor: null,
+            permissionEpoch: 0,
+            privacyEpoch: 0,
+            exactness: "exact",
+          };
+        },
+      },
+    });
+    const registered = await createAssignedOutcomeQuery({
+      id: "multi",
+      sourceRefs: full.sources,
+      limits,
+      load,
+    });
+    const trusted = authority();
+    const originalContext = trusted.currentContext;
+    trusted.currentContext = () => ({
+      ...originalContext(),
+      sourceRevisions: [
+        { sourceRef: "ledger", revision: "1" },
+        { sourceRef: "billing", revision: "1" },
+      ],
+      snapshotRefs: ["snapshot", "snapshot"],
+    });
+    const result = await new MetricReadService(
+      [registered.definition],
+      [registered.query],
+      trusted,
+    ).runRegisteredQuery("multi", submitted, window);
+    expect(result.status).toBe("verified");
+    if (result.status !== "verified") throw new Error("expected verified result");
+    expect(result.result.data).toEqual(compareAssignedOutcomes(full));
+    expect(result.result.data).toMatchObject({
+      inputHash: full.inputHash,
+      byCurrency: [{ arms: [{ netMinor: "130" }] }],
+    });
+    expect(reads).toBe(1);
+    await expect(
+      load({
+        input: { ...submitted, inputHash: full.inputHash },
+        context: trusted.currentContext(),
+        window,
+        signal: new AbortController().signal,
+      }),
+    ).rejects.toThrow("provenance_hash_mismatch");
+    expect(reads).toBe(1);
+    for (const incompatible of [
+      { snapshotRefs: ["snapshot", "other"] },
+      {
+        sourceRevisions: [
+          { sourceRef: "ledger", revision: "1" },
+          { sourceRef: "billing", revision: "2" },
+        ],
+      },
+      { snapshotRefs: ["snapshot"] },
+      {
+        sourceRevisions: [
+          { sourceRef: "ledger", revision: "1" },
+          { sourceRef: "unknown", revision: "1" },
+        ],
+      },
+    ]) {
+      await expect(
+        load({
+          input: submitted,
+          context: { ...trusted.currentContext(), ...incompatible },
+          window,
+          signal: new AbortController().signal,
+        }),
+      ).rejects.toThrow();
+      expect(reads).toBe(1);
+    }
+  });
   it.each([false, true])(
     "binds reviewed cache identity to the complete request (native=%s)",
     async (native) => {
       const input = await fixture();
-      const submitted = native ? { ...input, events: [] } : input;
+      const submitted = native ? await emptyRequest(input) : input;
       const registered = await createAssignedOutcomeQuery({
         id: "cached",
         sourceRefs: ["ledger"],
@@ -289,7 +401,7 @@ describe("Assigned outcome registered reads", () => {
       [registered.definition],
       [registered.query],
       authority(),
-    ).runRegisteredQuery("quality", { ...input, events: [] }, window);
+    ).runRegisteredQuery("quality", await emptyRequest(input), window);
     expect(result.status).toBe("partial");
     if (result.status !== "partial") throw new Error("expected partial result");
     expect(result.result?.quality).toMatchObject(degraded);
@@ -349,7 +461,7 @@ describe("Assigned outcome registered reads", () => {
         },
       });
       const loaded = await load({
-        input: { ...input, events: [] },
+        input: await emptyRequest(input),
         context: authority().currentContext(),
         window,
         signal: new AbortController().signal,
@@ -398,7 +510,7 @@ describe("Assigned outcome registered reads", () => {
         [registered.definition],
         [registered.query],
         authority(),
-      ).runRegisteredQuery("observed", { ...input, events: [] }, window);
+      ).runRegisteredQuery("observed", await emptyRequest(input), window);
       expect(result.status).toBe("partial");
       if (result.status !== "partial") throw new Error("expected partial result");
       expect(result.result?.quality.temporalCompleteness).toBe("partial");
@@ -499,7 +611,7 @@ describe("Assigned outcome registered reads", () => {
       const context = authority().currentContext();
       await expect(
         load({
-          input: { ...input, events: [] },
+          input: await emptyRequest(input),
           context: { ...context, budget: { ...limits, maxRows: 1 } },
           window,
           signal: new AbortController().signal,

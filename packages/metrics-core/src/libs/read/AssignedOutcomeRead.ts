@@ -397,12 +397,19 @@ export function createWarehouseAssignedOutcomeLoader(options: {
   return async ({ input, context, signal, window }) => {
     requireOutcome(input.events.length === 0, "warehouse_input_events_forbidden");
     requireOutcome(
-      context.snapshotRefs.length === 1 &&
-        context.snapshotRefs[0] === snapshot.id &&
-        context.sourceRevisions.length === 1 &&
-        context.sourceRevisions[0].revision === String(snapshot.revision) &&
-        snapshot.quality.sourceCoverage.some(
-          (coverage) => coverage.sourceRef === context.sourceRevisions[0].sourceRef,
+      input.inputHash === (await hashAssignedOutcomeInput(input)),
+      "provenance_hash_mismatch",
+    );
+    requireOutcome(
+      context.sourceRevisions.length > 0 &&
+        context.snapshotRefs.length === context.sourceRevisions.length &&
+        context.sourceRevisions.every(
+          (source, index) =>
+            context.snapshotRefs[index] === snapshot.id &&
+            source.revision === String(snapshot.revision) &&
+            snapshot.quality.sourceCoverage.some(
+              (coverage) => coverage.sourceRef === source.sourceRef,
+            ),
         ),
       "snapshot_context_mismatch",
     );
@@ -504,6 +511,8 @@ export function createWarehouseAssignedOutcomeLoader(options: {
           ? configuredQuality.reproducibility
           : "unverified",
     };
-    return { input: { ...input, events }, rows: events.length, bytes, quality };
+    const materialized = { ...input, events };
+    materialized.inputHash = await hashAssignedOutcomeInput(materialized);
+    return { input: materialized, rows: events.length, bytes, quality };
   };
 }

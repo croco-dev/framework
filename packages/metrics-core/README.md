@@ -29,6 +29,17 @@ noncash 액면은 별도로 표시합니다. 포함하지 않은 비용이 있�
 고정 정의는 `ASSIGNED_OUTCOME_DEFINITION`이며 서버는 `hashAssignedOutcomeDefinition`과 `hashAssignedOutcomeInput`으로
 정의와 배정표·원천·cutoff·revision의 입력 hash를 검증합니다. 순수 계산 API는 저장소나 worker를 시작하지 않습니다.
 
+`createWarehouseAssignedOutcomeLoader`를 사용하는 native 조회는 `events: []`와 해당 요청의
+`hashAssignedOutcomeInput` 값을 제출합니다. 호출자는 warehouse row를 미리 읽거나 그 hash를 알 필요가 없습니다.
+loader는 고정 snapshot에서 row를 읽은 뒤 전체 입력의 hash를 계산하고, 보고서는 이 실제 입력 hash를 기록합니다.
+순수 조회는 제출한 전체 입력 hash를 계속 검증합니다. 조회 cache는 제출 요청 전체의 digest와 권한 context의
+source revision·snapshot ref에 연결됩니다.
+
+이 loader는 하나의 canonical `WarehouseSnapshot`을 읽습니다. 여러 source를 등록할 수 있지만 각 source revision은
+고정 snapshot revision과 같아야 하며, 각 source에 대응하는 snapshot ref도 모두 같은 snapshot id여야 합니다.
+모든 source가 snapshot의 source coverage에 있어야 합니다. 공유 snapshot은 한 번만 순회하여 금액을 중복 계산하지
+않습니다. 서로 다른 snapshot이나 revision은 읽기 전에 거부하며, 별도 snapshot을 결합하지 않습니다.
+
 DB 없는 실제 계산과 관리 화면 예제는 `examples/assigned-outcomes`에 있습니다. 원문 보관·삭제·masking·접근 권한은
 기존 host의 source boundary가 소유하며, 관리 화면에는 원 배정 subject와 원천 사건 식별자가 전달되지 않습니다.
 
