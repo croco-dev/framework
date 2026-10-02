@@ -38,3 +38,22 @@ not supported.
 
 Host lifecycle, Transport execution, and Build Target artifacts are separate responsibilities;
 roles do not describe request execution order.
+
+## Product and data ownership
+
+The role gate enforces dependency edges; it does not certify a complete product workflow,
+provider durability, analytical correctness, or release status. Follow the
+[architecture guide](../packages/docs/src/content/docs/en/guides/architecture.mdx) for the
+integrated growth framework's current capabilities, approved targets, and data/serving boundaries.
+
+Decorated application components use [compile-time DI](architecture/compile-time-di.md): selected
+source discovery produces factories and a manifest, then an application-owned scope installs the
+graph. Explicit package boundaries do not require hand-written lists of every scanned service.
+Selected plugins, module visibility, bindings, and overrides remain explicit. Importing application
+classes or generated definitions must not perform global registration.
+
+Keep Drizzle OLTP, warehouse models/publications, ETL source projections, metric semantics, and
+original-file storage in their owning contracts and providers. Reuse shared parsers, readers, and
+runners; a role assignment does not authorize a parallel growth-data layer or a new database engine.
+Runtime publication and secrets are separate from Git declarations and reviewed migration plans.
+The policy gate alone cannot prove snapshot quality or permission/privacy validity.
