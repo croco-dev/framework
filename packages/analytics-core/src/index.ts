@@ -124,3 +124,18 @@ export type {
   FactValue,
   ReadFactsAtInput,
 } from "./libs/FactHistory";
+
+export type {
+  AnalysisAnswer,
+  AnalysisChoice,
+  AnalysisFact,
+  AnalysisModelLimits,
+  AnalysisModelRequest,
+  AnalysisModelResponse,
+  AnalysisOutcome,
+  AnalysisParameter,
+  AnalysisPlan,
+  AnalysisProposal,
+  AnalysisUsage,
+  ProposeAnalysisPlan,
+} from "./libs/GrowthAnalysis";

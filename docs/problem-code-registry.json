@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 897,
+  "problemCount": 912,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -987,6 +987,456 @@
           "line": 6,
           "column": 1,
           "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "analytics-core/analysis-cancelled",
+      "category": "BadRequest",
+      "status": 400,
+      "title": "Bad Request",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-core-analysis-cancelled",
+      "recovery": {
+        "cause": "The caller sent malformed input or unsupported request options.",
+        "userAction": "Correct the request input and retry after validation passes.",
+        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          "line": 48,
+          "column": 25,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics-core/analysis-concurrency-exceeded",
+      "category": "TooManyRequests",
+      "status": 429,
+      "title": "Too Many Requests",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-core-analysis-concurrency-exceeded",
+      "recovery": {
+        "cause": "The caller exceeded a rate, quota, or concurrency limit.",
+        "userAction": "Wait for the retry window or reduce request volume.",
+        "operatorAction": "Check limiter state, quota configuration, and abuse signals.",
+        "retryability": "retryable",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          "line": 44,
+          "column": 36,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics-core/analysis-input-budget-exceeded",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-core-analysis-input-budget-exceeded",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          "line": 40,
+          "column": 37,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics-core/analysis-invalid-completion",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-completion",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          "line": 52,
+          "column": 34,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics-core/analysis-invalid-facts",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-facts",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          "line": 68,
+          "column": 29,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics-core/analysis-invalid-json",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-json",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          "line": 64,
+          "column": 28,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics-core/analysis-invalid-limits",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-limits",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          "line": 28,
+          "column": 30,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics-core/analysis-invalid-plan",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-plan",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          "line": 24,
+          "column": 28,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics-core/analysis-invalid-question",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-question",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          "line": 32,
+          "column": 32,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics-core/analysis-invalid-registration",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-registration",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          "line": 72,
+          "column": 36,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics-core/analysis-invalid-usage",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-usage",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          "line": 20,
+          "column": 29,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics-core/analysis-output-budget-exceeded",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-core-analysis-output-budget-exceeded",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          "line": 60,
+          "column": 38,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics-core/analysis-provider-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-core-analysis-provider-failed",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          "line": 56,
+          "column": 31,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics-core/analysis-question-blocked",
+      "category": "Forbidden",
+      "status": 403,
+      "title": "Forbidden",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-core-analysis-question-blocked",
+      "recovery": {
+        "cause": "The authenticated caller is not allowed to perform the requested action.",
+        "userAction": "Request the required permission or choose an allowed action.",
+        "operatorAction": "Review policy, role, tenant, entitlement, and impersonation context.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          "line": 36,
+          "column": 32,
+          "kind": "problem-metadata"
+        }
+      ]
+    },
+    {
+      "code": "analytics-core/analysis-settlement-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#analytics-core-analysis-settlement-failed",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          "line": 112,
+          "column": 5,
+          "kind": "problem-constructor"
         }
       ]
     },
@@ -15900,7 +16350,7 @@
       "sources": [
         {
           "file": "packages/metrics-core/src/libs/read/MetricReadService.ts",
-          "line": 173,
+          "line": 177,
           "column": 10,
           "kind": "problem-constructor"
         }

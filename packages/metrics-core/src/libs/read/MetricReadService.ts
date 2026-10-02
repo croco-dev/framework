@@ -151,6 +151,10 @@ export type RegisteredQueryOutcome =
       readonly reportId?: string;
     }
   | { readonly status: "denied" | "unavailable"; readonly reportId?: string };
+export type RegisteredQueryReadOptions = {
+  readonly expectedVersion?: number;
+  readonly signal?: AbortSignal;
+};
 export type MetricReadAuditEvent = {
   readonly queryId: string;
   readonly sourceRefs: readonly string[];
@@ -435,12 +439,22 @@ export class MetricReadService {
     queryId: string,
     input: unknown,
     window: MetricWindow,
+    options: RegisteredQueryReadOptions = {},
   ): Promise<RegisteredQueryOutcome> {
     const query = this.queries.get(queryId);
     if (!query) return { status: "unavailable" };
+    if (options.expectedVersion !== undefined && options.expectedVersion !== query.version)
+      return { status: "unavailable" };
     this.checkWindow(window);
     const parsed = query.inputSchema.parse(input);
-    const context = this.readContext();
+    const authorityContext = this.readContext();
+    const context: MetricReadContext = {
+      ...authorityContext,
+      signal:
+        options.signal && authorityContext.signal
+          ? AbortSignal.any([authorityContext.signal, options.signal])
+          : (options.signal ?? authorityContext.signal),
+    };
     const deadline = Date.now() + Math.min(context.budget.maxTimeMs, query.limits.maxTimeMs);
     const definition = this.definition(query);
     const action = this.action(definition, query, window);

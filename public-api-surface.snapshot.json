@@ -2821,6 +2821,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "GrowthAnalysisPanel",
+              "exportKind": "named",
+              "source": "./libs/GrowthAnalysisPanel",
+              "declarationKind": "function"
+            },
+            {
               "name": "ImpersonationBanner",
               "exportKind": "named",
               "source": "./libs/components",
@@ -3592,6 +3598,11 @@
               "name": "FactHistoryPanelProps",
               "exportKind": "named",
               "source": "./libs/FactHistoryPanel"
+            },
+            {
+              "name": "GrowthAnalysisPanelProps",
+              "exportKind": "named",
+              "source": "./libs/GrowthAnalysisPanel"
             },
             {
               "name": "LifecycleAutomationConsoleProps",
@@ -4417,6 +4428,61 @@
           ],
           "typeExports": [
             {
+              "name": "AnalysisAnswer",
+              "exportKind": "named",
+              "source": "./libs/GrowthAnalysis"
+            },
+            {
+              "name": "AnalysisChoice",
+              "exportKind": "named",
+              "source": "./libs/GrowthAnalysis"
+            },
+            {
+              "name": "AnalysisFact",
+              "exportKind": "named",
+              "source": "./libs/GrowthAnalysis"
+            },
+            {
+              "name": "AnalysisModelLimits",
+              "exportKind": "named",
+              "source": "./libs/GrowthAnalysis"
+            },
+            {
+              "name": "AnalysisModelRequest",
+              "exportKind": "named",
+              "source": "./libs/GrowthAnalysis"
+            },
+            {
+              "name": "AnalysisModelResponse",
+              "exportKind": "named",
+              "source": "./libs/GrowthAnalysis"
+            },
+            {
+              "name": "AnalysisOutcome",
+              "exportKind": "named",
+              "source": "./libs/GrowthAnalysis"
+            },
+            {
+              "name": "AnalysisParameter",
+              "exportKind": "named",
+              "source": "./libs/GrowthAnalysis"
+            },
+            {
+              "name": "AnalysisPlan",
+              "exportKind": "named",
+              "source": "./libs/GrowthAnalysis"
+            },
+            {
+              "name": "AnalysisProposal",
+              "exportKind": "named",
+              "source": "./libs/GrowthAnalysis"
+            },
+            {
+              "name": "AnalysisUsage",
+              "exportKind": "named",
+              "source": "./libs/GrowthAnalysis"
+            },
+            {
               "name": "AppendFactsInput",
               "exportKind": "named",
               "source": "./libs/FactHistory"
@@ -4577,9 +4643,75 @@
               "source": "./libs/ProductEvent"
             },
             {
+              "name": "ProposeAnalysisPlan",
+              "exportKind": "named",
+              "source": "./libs/GrowthAnalysis"
+            },
+            {
               "name": "ReadFactsAtInput",
               "exportKind": "named",
               "source": "./libs/FactHistory"
+            }
+          ]
+        },
+        {
+          "exportPath": "./runtime",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/runtime.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/runtime.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/runtime.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/analytics-core/src/runtime.ts",
+          "runtimeExports": [
+            {
+              "name": "AnalysisSettlementProblem",
+              "exportKind": "named",
+              "source": "./libs/analysis/GrowthAnalysisService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "GrowthAnalysisProblem",
+              "exportKind": "named",
+              "source": "./libs/analysis/GrowthAnalysisService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "GrowthAnalysisService",
+              "exportKind": "named",
+              "source": "./libs/analysis/GrowthAnalysisService",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "AnalysisModelReceipt",
+              "exportKind": "named",
+              "source": "./libs/analysis/GrowthAnalysisService"
+            },
+            {
+              "name": "AnalysisRegistration",
+              "exportKind": "named",
+              "source": "./libs/analysis/GrowthAnalysisService"
+            },
+            {
+              "name": "GrowthAnalysisProblemCode",
+              "exportKind": "named",
+              "source": "./libs/analysis/GrowthAnalysisService"
+            },
+            {
+              "name": "GrowthAnalysisServiceOptions",
+              "exportKind": "named",
+              "source": "./libs/analysis/GrowthAnalysisService"
             }
           ]
         }
@@ -24182,6 +24314,11 @@
             },
             {
               "name": "RegisteredQueryOutcome",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "RegisteredQueryReadOptions",
               "exportKind": "named",
               "source": "./libs/read/MetricReadService"
             },
