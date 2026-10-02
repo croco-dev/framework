@@ -16,17 +16,16 @@ if (process.env.CROCO_AGENT_TEST_DELAY === "true") {
   const queries = components.queries.map((query) => ({
     ...query,
     readExecutor: async ({ signal }) => {
-      await writeFile(join(root, "executor-started"), "started");
       return new Promise((_resolve, reject) => {
-        signal.addEventListener(
-          "abort",
-          () => {
-            void writeFile(join(root, "executor-cancelled"), "cancelled").then(() =>
-              reject(signal.reason),
-            );
-          },
-          { once: true },
-        );
+        const onAbort = () => {
+          void writeFile(join(root, "executor-cancelled"), "cancelled").then(
+            () => reject(signal.reason),
+            reject,
+          );
+        };
+        signal.addEventListener("abort", onAbort, { once: true });
+        if (signal.aborted) onAbort();
+        else void writeFile(join(root, "executor-started"), "started").catch(reject);
       });
     },
   }));
