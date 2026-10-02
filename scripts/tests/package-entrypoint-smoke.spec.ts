@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterAll, afterEach, describe, expect, it, vi } from "vitest";
@@ -46,6 +47,59 @@ describe("package-entrypoint-smoke.mts", () => {
     );
     expect(result.stdout).toContain("✓ @croco/valid: esm 1, cjs 1, types 1");
     expect(result.stdout).toContain("summary checked=1 exempt=0 skippedPrivate=1");
+  });
+
+  it("preserves packed overrides when pnpm edits the generated consumer workspace", () => {
+    const repositoryRoot = resolve(__dirname, "../..");
+    const { packageManager } = JSON.parse(
+      readFileSync(join(repositoryRoot, "package.json"), "utf8"),
+    );
+    const root = createTempRoot({ packageManager });
+    writeImportablePackage(root, "writer-helper");
+    writeImportablePackage(root, "writer-consumer", {
+      dependencies: { "@croco/writer-helper": "0.0.0" },
+    });
+    const preloadPath = join(root, "workspace-writer.cjs");
+    const evidencePath = join(root, "writer-evidence.txt");
+    const yamlPath = createRequire(import.meta.url).resolve("yaml");
+    writeFileSync(
+      preloadPath,
+      `
+const assert = require("node:assert/strict");
+const childProcess = require("node:child_process");
+const fs = require("node:fs");
+const path = require("node:path");
+const { parse } = require(${JSON.stringify(yamlPath)});
+const originalSpawnSync = childProcess.spawnSync;
+childProcess.spawnSync = (command, args, options) => {
+  if (command === "pnpm" && args[0] === "add") {
+    const manifestPath = path.join(options.cwd, "pnpm-workspace.yaml");
+    const before = parse(fs.readFileSync(manifestPath, "utf8"));
+    assert.ok(Object.keys(before.overrides).length > 0);
+    assert.ok(Object.values(before.overrides).every(value => value.startsWith("file:")));
+    const edit = originalSpawnSync("pnpm", ["config", "--location", "project", "set", "minimumReleaseAgeExclude", '["example@1.0.0"]', "--json"], options);
+    if (edit.error || edit.status !== 0) return edit;
+    const after = parse(fs.readFileSync(manifestPath, "utf8"));
+    assert.deepEqual(after.packages, []);
+    assert.deepEqual(after.overrides, before.overrides);
+    assert.deepEqual(after.minimumReleaseAgeExclude, ["example@1.0.0"]);
+    fs.appendFileSync(${JSON.stringify(evidencePath)}, Object.keys(after.overrides).sort().join(",") + "\\n");
+  }
+  return originalSpawnSync(command, args, options);
+};
+`,
+    );
+
+    const result = runScript(root, {
+      NODE_OPTIONS: `${process.env.NODE_OPTIONS ?? ""} --require=${JSON.stringify(preloadPath)}`,
+    });
+
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(readFileSync(evidencePath, "utf8").trim().split("\n")).toEqual([
+      "@croco/writer-consumer,@croco/writer-helper",
+      "@croco/writer-helper",
+    ]);
+    expect(result.stdout).toContain("summary checked=2 exempt=0 skippedPrivate=0");
   });
 
   it("rejects packed exports whose types condition is not first", () => {
@@ -1027,9 +1081,10 @@ function writePublicDocsPackage(root: string): void {
   );
 }
 
-function runScript(root: string): ScriptResult {
+function runScript(root: string, environment: NodeJS.ProcessEnv = {}): ScriptResult {
   const result = spawnSync("node", ["--experimental-strip-types", scriptPath, "--root", root], {
     encoding: "utf-8",
+    env: { ...process.env, ...environment },
     timeout: spawnTimeoutMs,
   });
 

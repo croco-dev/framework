@@ -1019,14 +1019,12 @@ function writeConsumerPackageJson(
   );
   writeFileSync(
     join(consumerRoot, "pnpm-workspace.yaml"),
-    `${JSON.stringify(
-      {
-        packages: [],
-        overrides,
-      },
-      null,
-      2,
-    )}\n`,
+    `packages: []\noverrides:\n${Object.entries(overrides)
+      .map(
+        ([packageName, tarballPath]) =>
+          `  ${JSON.stringify(packageName)}: ${JSON.stringify(tarballPath)}`,
+      )
+      .join("\n")}\n`,
   );
   writeFileSync(
     join(consumerRoot, ".npmrc"),

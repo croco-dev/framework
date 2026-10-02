@@ -11,10 +11,12 @@ import {
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { parse } from "yaml";
 import {
   replaceInstalledPackageFile,
   restoreInstalledPackageFile,
   trackSmokeFixture,
+  writeConsumerPackageJson,
 } from "../package-bin-smoke.mts";
 
 const scriptPath = resolve(__dirname, "../package-bin-smoke.mts");
@@ -34,6 +36,61 @@ describe("package-bin-smoke.mts", () => {
       rmSync(root, { force: true, recursive: true });
     }
   });
+
+  it("preserves packed overrides when pinned pnpm writes project config", () => {
+    const root = createTempRoot();
+    const consumerRoot = join(root, "consumer");
+    mkdirSync(consumerRoot);
+    const packageName = "@croco/bin-helper";
+    const tarballPath = join(root, "packed packages", 'helper "quoted".tgz');
+    writeConsumerPackageJson(consumerRoot, [
+      {
+        packageName,
+        packageDir: root,
+        packagePath: join(root, "package.json"),
+        sourceManifest: {},
+        publishManifest: {},
+        packedManifest: {},
+        tarballPath,
+      },
+    ]);
+    const manifestPath = join(consumerRoot, "package.json");
+    const { packageManager } = JSON.parse(
+      readFileSync(resolve(__dirname, "../../package.json"), "utf8"),
+    );
+    writeFileSync(
+      manifestPath,
+      JSON.stringify({
+        ...JSON.parse(readFileSync(manifestPath, "utf8")),
+        packageManager,
+      }),
+    );
+
+    const result = spawnSync(
+      "pnpm",
+      [
+        "config",
+        "set",
+        "minimumReleaseAgeExclude",
+        '["example@1.0.0"]',
+        "--json",
+        "--location=project",
+      ],
+      {
+        cwd: consumerRoot,
+        encoding: "utf8",
+        timeout: 30_000,
+      },
+    );
+
+    expect(result.error).toBeUndefined();
+    expect(result.status, result.stderr).toBe(0);
+    expect(parse(readFileSync(join(consumerRoot, "pnpm-workspace.yaml"), "utf8"))).toEqual({
+      packages: [],
+      overrides: { [packageName]: `file:${tarballPath}` },
+      minimumReleaseAgeExclude: ["example@1.0.0"],
+    });
+  }, 45_000);
 
   it.each(["commit.gpgsign", "core.hooksPath"])(
     "isolates fixture commits from inherited %s",
