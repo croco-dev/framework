@@ -12,6 +12,7 @@ export type NetOutcomePanelProps = {
   onRefresh(request: NetOutcomeRequest): Promise<void>;
   onDrilldown?: (request: NetOutcomeDrilldownRequest) => Promise<NetOutcomeDrilldown>;
 };
+const DRILLDOWN_PAGE_LIMIT = 20;
 const rational = (value: { numerator: string; denominator: string } | null) =>
   value
     ? `${value.numerator} / ${value.denominator}`
@@ -29,9 +30,17 @@ export function NetOutcomePanel({
   const [error, setError] = useState(false);
   const [detail, setDetail] = useState<NetOutcomeDrilldown>();
   const generation = useRef(0);
+  const operationSequence = useRef(0);
+  const activeOperation = useRef<"refresh" | "drilldown" | undefined>(undefined);
   useEffect(() => {
     generation.current++;
     setDetail(undefined);
+    if (activeOperation.current === "drilldown") {
+      operationSequence.current++;
+      activeOperation.current = undefined;
+      setPending(false);
+      setError(false);
+    }
   }, [state, request]);
   useEffect(() => {
     setEffectiveAt(request.cutoff.effectiveAt);
@@ -39,16 +48,21 @@ export function NetOutcomePanel({
     setRevision(request.revision);
   }, [request.cutoff.effectiveAt, request.cutoff.knownAt, request.revision]);
   const snapshot = "snapshot" in state ? state.snapshot : undefined;
-  const run = async (action: () => Promise<void>) => {
+  const run = async (action: () => Promise<void>, kind: "refresh" | "drilldown") => {
+    const sequence = ++operationSequence.current;
+    activeOperation.current = kind;
     setPending(true);
     setError(false);
     setDetail(undefined);
     try {
       await action();
     } catch {
-      setError(true);
+      if (sequence === operationSequence.current) setError(true);
     } finally {
-      setPending(false);
+      if (sequence === operationSequence.current) {
+        activeOperation.current = undefined;
+        setPending(false);
+      }
     }
   };
   const field = (label: string, value: string, update: (value: string) => void) =>
@@ -82,7 +96,7 @@ export function NetOutcomePanel({
       {
         onSubmit: (event: FormEvent) => {
           event.preventDefault();
-          void run(() => onRefresh({ cutoff: { effectiveAt, knownAt }, revision }));
+          void run(() => onRefresh({ cutoff: { effectiveAt, knownAt }, revision }), "refresh");
         },
       },
       h(
@@ -209,10 +223,10 @@ export function NetOutcomePanel({
                                   arm: arm.arm,
                                   currency: group.currency,
                                   source,
-                                  limit: 20,
+                                  limit: DRILLDOWN_PAGE_LIMIT,
                                 });
                                 if (current === generation.current) setDetail(page);
-                              });
+                              }, "drilldown");
                             },
                           },
                           `Inspect ${arm.arm} / ${group.currency} / ${source}`,
@@ -234,7 +248,13 @@ export function NetOutcomePanel({
                 { "aria-label": "Masked event details" },
                 h("h2", null, "Masked event details"),
                 h("p", null, detail.assumptions.join(" · ")),
-                h("p", null, detail.truncated ? "Page limited to 20 rows." : "Complete page."),
+                h(
+                  "p",
+                  null,
+                  detail.truncated
+                    ? `Page limited to ${DRILLDOWN_PAGE_LIMIT} rows.`
+                    : "Complete page.",
+                ),
                 h(
                   "ul",
                   null,

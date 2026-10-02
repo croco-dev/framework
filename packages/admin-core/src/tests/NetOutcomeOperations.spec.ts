@@ -133,6 +133,45 @@ describe("NetOutcomeOperations", () => {
     expect(JSON.stringify(state)).not.toContain("private-person");
   });
 
+  it.each([
+    { name: "empty sources", sources: [], costSource: "ledger" },
+    { name: "duplicate sources", sources: ["ledger", "ledger"], costSource: "ledger" },
+    {
+      name: "too many sources",
+      sources: Array.from({ length: 101 }, (_, index) => `source-${index}`),
+      costSource: "source-0",
+    },
+    { name: "undeclared cost source", sources: ["ledger"], costSource: "other-ledger" },
+  ])(
+    "rejects authoritative reports with $name for read and export",
+    async ({ sources, costSource }) => {
+      const f = fixture();
+      const raw = await input();
+      const report = compareAssignedOutcomes(raw);
+      raw.sources = sources;
+      raw.costCompleteness = [
+        {
+          arm: "control",
+          source: costSource,
+          kind: "cashback",
+          currency: "USD",
+          status: "pending",
+          pendingCount: 1,
+        },
+      ];
+      raw.inputHash = await hashAssignedOutcomeInput(raw);
+      report.sources = raw.sources;
+      report.costCompleteness = raw.costCompleteness;
+      report.inputHash = raw.inputHash;
+      f.source.read = async () => report;
+      for (const action of ["read", "export"] as const) {
+        await expect(f.operations[action](request)).rejects.toMatchObject({
+          code: "admin/net-outcome/source-mismatch",
+        });
+      }
+    },
+  );
+
   it("rejects an authoritative report with a different definition hash", async () => {
     const f = fixture();
     const report = compareAssignedOutcomes(await input());

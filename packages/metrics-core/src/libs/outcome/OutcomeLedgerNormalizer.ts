@@ -119,12 +119,16 @@ export class OutcomeLedgerNormalizer {
       else eligible.set(key, event);
     }
     const superseded = new Set<string>();
-    for (const [key, event] of eligible) {
+    const reachable = new Map(eligible);
+    for (const [key, event] of reachable) {
       if (!event.correctionOf) continue;
       const targetKey = outcomeKey(event.correctionOf.source, event.correctionOf.eventId);
-      const target = eligible.get(targetKey);
+      const target = unique.get(targetKey);
       requireOutcome(
-        target && targetKey !== key && !superseded.has(targetKey),
+        target &&
+          outcomeTime(target.observedAt) <= known &&
+          targetKey !== key &&
+          !superseded.has(targetKey),
         "invalid_correction_target",
       );
       requireOutcome(
@@ -140,6 +144,7 @@ export class OutcomeLedgerNormalizer {
         "correction_order_invalid",
       );
       superseded.add(targetKey);
+      reachable.set(targetKey, target);
     }
     counts.superseded = superseded.size;
     return {

@@ -530,13 +530,11 @@ describe("Assigned outcome registered reads", () => {
         cutoff: { effectiveAt: at, knownAt: at },
       }),
     ).rejects.toBeInstanceOf(SourceDecodeProblem);
-    try {
-      await importRows([{ ...rows[0], amountMinor: "private-secret" }]);
-    } catch (error) {
-      expect(error).toBeInstanceOf(AssignedOutcomeRowProblem);
-      expect(error).toMatchObject({ row: 1 });
-      expect(String(error)).not.toContain("private-secret");
-    }
+    const imported = importRows([{ ...rows[0], amountMinor: "private-secret" }]);
+    await expect(imported).rejects.toBeInstanceOf(AssignedOutcomeRowProblem);
+    await expect(imported).rejects.toMatchObject({ row: 1 });
+    const error: unknown = await imported.catch((reason: unknown) => reason);
+    expect(String(error)).not.toContain("private-secret");
   });
   it("returns denied before reads and on revocation; refuses hashes and window drift", async () => {
     const input = await fixture();

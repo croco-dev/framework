@@ -3064,12 +3064,6 @@
       "owner": "@croco/metrics-core"
     },
     {
-      "path": "packages/metrics-core/src/tests/AssignedOutcomes.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/metrics-core"
-    },
-    {
       "path": "packages/metrics-core/src/tests/CarryingCapacity.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -3113,6 +3107,12 @@
     },
     {
       "path": "packages/metrics-core/src/tests/MrrCalculator.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
+      "path": "packages/metrics-core/src/tests/OutcomeLedgerNormalizer.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/metrics-core"

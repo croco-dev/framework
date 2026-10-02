@@ -42,4 +42,6 @@ function App({ first }: { first: NetOutcomeState }) {
 }
 const root = document.getElementById("root");
 if (!root) throw new Error("Missing root");
-void load(initial).then((first) => createRoot(root).render(h(App, { first })));
+void load(initial)
+  .catch((): NetOutcomeState => ({ kind: "error", code: "example/read-failed" }))
+  .then((first) => createRoot(root).render(h(App, { first })));

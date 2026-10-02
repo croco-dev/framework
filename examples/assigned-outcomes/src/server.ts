@@ -2,6 +2,7 @@ import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { createExample, request } from "./fixture";
+import { NetOutcomeProblem } from "@croco/admin-core";
 import type { NetOutcomeDrilldownRequest } from "@croco/admin-core";
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? "/", "http://127.0.0.1:4323");
@@ -53,8 +54,14 @@ const server = createServer(async (req, res) => {
       return;
     }
     res.writeHead(404).end();
-  } catch {
-    res.writeHead(400).end(JSON.stringify({ kind: "error", code: "example/report-failed" }));
+  } catch (error) {
+    const status =
+      error instanceof NetOutcomeProblem &&
+      (error.code === "admin/net-outcome/invalid-request" ||
+        error.code === "admin/net-outcome/invalid-drilldown")
+        ? 400
+        : 500;
+    res.writeHead(status).end(JSON.stringify({ kind: "error", code: "example/report-failed" }));
   }
 });
 server.listen(4323, "127.0.0.1", () =>

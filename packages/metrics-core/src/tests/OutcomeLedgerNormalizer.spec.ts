@@ -130,6 +130,178 @@ describe("Assigned outcomes", () => {
     expect(compareAssignedOutcomes(data).byCurrency[0].arms[0].netMinor).toBe("90");
     expect(compareAssignedOutcomes(data).counts.superseded).toBe(1);
   });
+  it("resolves a known correction target beyond the effective cutoff", () => {
+    const original = event("p", "control-0", "payment", "100", { occurredAt: late });
+    const corrected = event("p2", "control-0", "payment", "120", {
+      observedAt: late,
+      correctionOf: { source: "ledger", eventId: "p" },
+    });
+    const normalizer = new OutcomeLedgerNormalizer();
+    expect(
+      normalizer.normalize([original, corrected], {
+        scope,
+        cutoff: { effectiveAt: time, knownAt: time },
+      }).events,
+    ).toEqual([]);
+    for (const events of [
+      [original, corrected],
+      [corrected, original],
+    ]) {
+      const result = normalizer.normalize(events, {
+        scope,
+        cutoff: { effectiveAt: time, knownAt: late },
+      });
+      expect(result.events).toEqual([corrected]);
+      expect(result.counts.excludedByCutoff).toBe(1);
+      const data = input(events);
+      data.cutoff.knownAt = late;
+      expect(compareAssignedOutcomes(data).byCurrency[0].arms[0].netMinor).toBe("120");
+    }
+  });
+  it.each([
+    { name: "missing", original: undefined },
+    { name: "not yet known", original: { observedAt: "2026-03-01T00:00:00Z" } },
+    { name: "different subject", original: { subject: "test-0" } },
+    { name: "same observation time", original: { observedAt: late } },
+  ])("rejects a $name correction target beyond the effective cutoff", ({ original }) => {
+    const events =
+      original === undefined
+        ? []
+        : [event("p", "control-0", "payment", "100", { occurredAt: late, ...original })];
+    events.push(
+      event("p2", "control-0", "payment", "120", {
+        observedAt: late,
+        correctionOf: { source: "ledger", eventId: "p" },
+      }),
+    );
+    expect(() =>
+      new OutcomeLedgerNormalizer().normalize(events, {
+        scope,
+        cutoff: { effectiveAt: time, knownAt: late },
+      }),
+    ).toThrow(OutcomeProblem);
+  });
+  it.each([false, true])(
+    "suppresses correction ancestors across the effective cutoff (reversed: %s)",
+    (reversed) => {
+      const original = event("p", "control-0", "payment", "100");
+      const middle = event("p2", "control-0", "payment", "120", {
+        occurredAt: late,
+        observedAt: "2026-01-15T00:00:00Z",
+        correctionOf: { source: "ledger", eventId: "p" },
+      });
+      const latest = event("p3", "control-0", "payment", "150", {
+        observedAt: late,
+        correctionOf: { source: "ledger", eventId: "p2" },
+      });
+      const events = reversed ? [latest, middle, original] : [original, middle, latest];
+      const data = input(events);
+      expect(compareAssignedOutcomes(data).byCurrency[0].arms[0].netMinor).toBe("100");
+      data.cutoff.knownAt = late;
+      const result = new OutcomeLedgerNormalizer().normalize(events, {
+        scope,
+        cutoff: data.cutoff,
+      });
+      expect(result.events).toEqual([latest]);
+      expect(result.counts).toMatchObject({ excludedByCutoff: 1, superseded: 2 });
+      expect(compareAssignedOutcomes(data).byCurrency[0].arms[0].netMinor).toBe("150");
+    },
+  );
+  it.each([
+    { name: "missing", original: undefined, reason: "invalid_correction_target" },
+    {
+      name: "unknown",
+      original: { observedAt: "2026-03-01T00:00:00Z" },
+      reason: "invalid_correction_target",
+    },
+    {
+      name: "incompatible",
+      original: { subject: "test-0" },
+      reason: "correction_identity_mismatch",
+    },
+    { name: "unordered", original: { observedAt: late }, reason: "correction_order_invalid" },
+  ])("rejects a reachable $name ancestor behind an excluded correction", ({ original, reason }) => {
+    const events =
+      original === undefined ? [] : [event("p", "control-0", "payment", "100", original)];
+    events.push(
+      event("p2", "control-0", "payment", "120", {
+        occurredAt: late,
+        observedAt: "2026-01-15T00:00:00Z",
+        correctionOf: { source: "ledger", eventId: "p" },
+      }),
+      event("p3", "control-0", "payment", "150", {
+        observedAt: late,
+        correctionOf: { source: "ledger", eventId: "p2" },
+      }),
+    );
+    expect(() =>
+      new OutcomeLedgerNormalizer().normalize(events, {
+        scope,
+        cutoff: { effectiveAt: time, knownAt: late },
+      }),
+    ).toThrow(reason);
+  });
+  it("rejects a fork through a reachable excluded correction", () => {
+    const events = [
+      event("p", "control-0", "payment", "100"),
+      event("p2", "control-0", "payment", "120", {
+        occurredAt: late,
+        observedAt: "2026-01-15T00:00:00Z",
+        correctionOf: { source: "ledger", eventId: "p" },
+      }),
+      event("p3", "control-0", "payment", "150", {
+        observedAt: late,
+        correctionOf: { source: "ledger", eventId: "p2" },
+      }),
+      event("fork", "control-0", "payment", "200", {
+        observedAt: late,
+        correctionOf: { source: "ledger", eventId: "p" },
+      }),
+    ];
+    for (const ordered of [events, [...events].reverse()]) {
+      expect(() =>
+        new OutcomeLedgerNormalizer().normalize(ordered, {
+          scope,
+          cutoff: { effectiveAt: time, knownAt: late },
+        }),
+      ).toThrow("invalid_correction_target");
+    }
+  });
+  it("does not follow unrelated corrections outside either cutoff", () => {
+    const original = event("p", "control-0", "payment", "100");
+    const events = [
+      original,
+      event("future-effective", "control-0", "payment", "200", {
+        occurredAt: late,
+        correctionOf: { source: "ledger", eventId: "missing" },
+      }),
+      event("future-known", "control-0", "payment", "300", {
+        observedAt: late,
+        correctionOf: { source: "ledger", eventId: "missing" },
+      }),
+    ];
+    expect(
+      new OutcomeLedgerNormalizer().normalize(events, {
+        scope,
+        cutoff: { effectiveAt: time, knownAt: time },
+      }).events,
+    ).toEqual([original]);
+  });
+  it("resolves a long reachable correction chain without recursion", () => {
+    const events = Array.from({ length: 10000 }, (_, index) =>
+      event(`p${index}`, "control-0", "payment", String(index), {
+        occurredAt: index === 0 || index === 9999 ? time : late,
+        observedAt: new Date(Date.parse(time) + index).toISOString(),
+        ...(index === 0 ? {} : { correctionOf: { source: "ledger", eventId: `p${index - 1}` } }),
+      }),
+    );
+    const result = new OutcomeLedgerNormalizer().normalize(events, {
+      scope,
+      cutoff: { effectiveAt: time, knownAt: late },
+    });
+    expect(result.events).toEqual([events[9999]]);
+    expect(result.counts.superseded).toBe(9999);
+  });
   it("preserves payment references after payment correction", () => {
     const data = input([
       event("p", "control-0", "payment", "100"),

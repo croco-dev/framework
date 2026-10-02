@@ -133,6 +133,10 @@ export function createNetOutcomeOperations(
           report = parseAssignedOutcomeReport(input, definitionHash);
         }
         if (
+          report.sources.length === 0 ||
+          report.sources.length > 100 ||
+          new Set(report.sources).size !== report.sources.length ||
+          report.costCompleteness.some((cost) => !report.sources.includes(cost.source)) ||
           !sameScope(input.assignmentSnapshot.scope, scope) ||
           input.revision !== request.revision ||
           input.cutoff.effectiveAt !== request.cutoff.effectiveAt ||
