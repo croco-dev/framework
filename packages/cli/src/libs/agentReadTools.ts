@@ -205,8 +205,10 @@ export function createAgentReadTools(application: AgentReadApplication) {
   function locations(value: unknown): readonly RegisteredAgentSource[] {
     if (!value || typeof value !== "object") return [];
     const record = value as Record<string, unknown>;
-    const identities: unknown[] = Array.isArray(record.definitions) ? [...record.definitions] : [];
-    if (record.definition) identities.push(record.definition);
+    const identities: unknown[] = Array.isArray(record["definitions"])
+      ? [...record["definitions"]]
+      : [];
+    if (record["definition"]) identities.push(record["definition"]);
     for (const key of ["result", "evidence", "report"]) {
       if (record[key]) identities.push(...locations(record[key]));
     }

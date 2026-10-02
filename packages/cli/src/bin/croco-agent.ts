@@ -29,7 +29,7 @@ async function main(): Promise<void> {
     fail("AGENT_READ_INVALID_COMMAND");
     return;
   }
-  const modulePath = process.env.CROCO_AGENT_APPLICATION;
+  const modulePath = process.env["CROCO_AGENT_APPLICATION"];
   if (!modulePath || !isAbsolute(modulePath) || extname(modulePath) !== ".mjs") {
     fail("AGENT_READ_INVALID_APPLICATION");
     return;
