@@ -8,6 +8,8 @@ export class TenantRequiredProblem extends Problem {
   readonly category = ProblemCategory.Unauthorized;
   constructor(operation?: string) {
     super(
+      undefined,
+      undefined,
       operation ? `Tenant context is required for: ${operation}` : "Tenant context is required",
     );
   }
