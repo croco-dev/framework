@@ -11,6 +11,7 @@ import { TaskRunner } from "@croco/tasks-core";
 import { withSpan } from "@croco/telemetry-api";
 import {
   WorkflowDefinitionProblem,
+  WorkflowExecutionCancelledProblem,
   WorkflowExecutionFailedProblem,
   WorkflowExecutionInProgressProblem,
   WorkflowNotFoundProblem,
@@ -315,23 +316,26 @@ export class WorkflowRunner {
     try {
       for (const [stepIndex, step] of workflow.steps.entries()) {
         stepExecutionId = undefined;
+        await this.assertNotCancelled(workflow.name, running.id);
         const stepAttributes = {
           "workflow.name": workflow.name,
           "workflow.execution.id": running.id,
           "workflow.step.name": step.name,
           "workflow.step.task": step.task,
         };
-        span.addEvent("workflow.step.started", stepAttributes);
         await this.recordLog(span, running.id, "info", "Workflow step started", {
           step: step.name,
           task: step.task,
         });
 
+        const input = this.resolveStepInput(workflow, running, payload, step, steps);
+        await this.assertNotCancelled(workflow.name, running.id);
+        span.addEvent("workflow.step.started", stepAttributes);
         let result: unknown;
         try {
           const tracked = await this.taskRunner.executeTracked(
             step.task,
-            this.resolveStepInput(workflow, running, payload, step, steps),
+            input,
             {
               parentId: running.id,
               idempotencyKey: createStepExecutionIdempotencyKey(running.id, stepIndex, step.name),
@@ -371,6 +375,7 @@ export class WorkflowRunner {
         workflowName: workflow.name,
         steps,
       };
+      await this.assertNotCancelled(workflow.name, running.id);
       const completed = await this.executionManager.complete(running.id, result);
       span.addEvent(
         "workflow.execution.completed",
@@ -388,6 +393,16 @@ export class WorkflowRunner {
         reused: false,
       };
     } catch (error) {
+      let current: Execution;
+      try {
+        current = await this.executionManager.get(running.id);
+      } catch (inspectionError) {
+        reportFailureRecordError(span, running.id, error, inspectionError);
+        throw error;
+      }
+      if (current.status === "cancelled") {
+        return this.rejectCancelledWorkflow(workflow, current, span);
+      }
       await this.recordLog(span, running.id, "error", "Workflow execution failed", {
         workflowName: workflow.name,
         error: error instanceof Error ? error.message : String(error),
@@ -411,6 +426,10 @@ export class WorkflowRunner {
             );
           }
         }
+        const beforeFailure = await this.executionManager.get(running.id);
+        if (beforeFailure.status === "cancelled") {
+          return this.rejectCancelledWorkflow(workflow, beforeFailure, span);
+        }
         failed = await this.executionManager.fail(running.id, toExecutionError(error, retryable));
       } catch (failureRecordError) {
         reportFailureRecordError(span, running.id, error, failureRecordError);
@@ -421,6 +440,28 @@ export class WorkflowRunner {
         "workflow.error.message": error instanceof Error ? error.message : String(error),
       });
       throw error;
+    }
+  }
+
+  private async rejectCancelledWorkflow(
+    workflow: WorkflowDefinition,
+    execution: Execution,
+    span: WorkflowTelemetrySpan,
+  ): Promise<never> {
+    span.addEvent(
+      "workflow.execution.cancelled",
+      getExecutionTelemetryAttributes(workflow, execution),
+    );
+    await this.recordLog(span, execution.id, "info", "Workflow execution cancelled", {
+      workflowName: workflow.name,
+    });
+    throw new WorkflowExecutionCancelledProblem(workflow.name, execution.id);
+  }
+
+  private async assertNotCancelled(workflowName: string, executionId: string): Promise<void> {
+    const execution = await this.executionManager.get(executionId);
+    if (execution.status === "cancelled") {
+      throw new WorkflowExecutionCancelledProblem(workflowName, executionId);
     }
   }
 
