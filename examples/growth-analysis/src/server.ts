@@ -24,32 +24,39 @@ async function main(): Promise<void> {
     ],
   ]);
   createServer(async (request, response) => {
-    const url = new URL(request.url ?? "/", "http://127.0.0.1");
-    const file = files.get(url.pathname);
-    if (file && request.method === "GET") {
-      const data = await readFile(join(process.cwd(), file.path));
-      response.writeHead(200, { "content-type": file.type }).end(data);
-      return;
-    }
-    const fixture = fixtures.get(url.searchParams.get("state") ?? "ready");
-    if (!fixture || request.method !== "POST" || !["/propose", "/execute"].includes(url.pathname)) {
-      response.writeHead(404).end();
-      return;
-    }
-    const controller = new AbortController();
-    response.on("close", () => {
-      if (!response.writableEnded) controller.abort();
-    });
     try {
-      let body = "";
+      const url = new URL(request.url ?? "/", "http://127.0.0.1");
+      const file = files.get(url.pathname);
+      if (file && request.method === "GET") {
+        const data = await readFile(join(process.cwd(), file.path));
+        response.writeHead(200, { "content-type": file.type }).end(data);
+        return;
+      }
+      const fixture = fixtures.get(url.searchParams.get("state") ?? "ready");
+      if (
+        !fixture ||
+        request.method !== "POST" ||
+        !["/propose", "/execute"].includes(url.pathname)
+      ) {
+        response.writeHead(404).end();
+        return;
+      }
+      const controller = new AbortController();
+      response.on("close", () => {
+        if (!response.writableEnded) controller.abort();
+      });
+      const chunks: Buffer[] = [];
+      let bodyBytes = 0;
       for await (const chunk of request) {
-        body += String(chunk);
-        if (Buffer.byteLength(body) > 8192) {
+        const bytes = chunk as Buffer;
+        bodyBytes += bytes.byteLength;
+        if (bodyBytes > 8192) {
           response.writeHead(413).end();
           return;
         }
+        chunks.push(bytes);
       }
-      const input: unknown = JSON.parse(body);
+      const input: unknown = JSON.parse(Buffer.concat(chunks, bodyBytes).toString("utf8"));
       const output =
         url.pathname === "/propose"
           ? await fixture.service.propose(input as string, controller.signal)

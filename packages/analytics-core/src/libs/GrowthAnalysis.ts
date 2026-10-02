@@ -84,4 +84,9 @@ export type AnalysisModelResponse = {
   /** Server-only diagnostic cause. Never copied into an answer, receipt, or public Problem. */
   readonly cause?: Error;
 };
+/**
+ * Implementations must honor request.signal and settle promptly after it aborts.
+ * The service retains the concurrency slot until this promise settles, including
+ * after cancellation or timeout. A provider that never settles keeps its slot occupied.
+ */
 export type ProposeAnalysisPlan = (request: AnalysisModelRequest) => Promise<AnalysisModelResponse>;

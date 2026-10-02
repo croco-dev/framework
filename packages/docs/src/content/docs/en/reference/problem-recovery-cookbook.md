@@ -1573,9 +1573,9 @@ Sources:
 - Retryability: `not-retryable`
 - Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Cause: The serialized question, allowed definitions and choices exceeded the input byte budget.
+- User action: Shorten the question or narrow its authorized analysis choices before submitting again.
+- Operator action: Inspect maxInputBytes and the serialized definition and choice payload; reduce its size before another proposal.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
@@ -1609,9 +1609,9 @@ Sources:
 - Retryability: `conditional`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Cause: The registered facts projector returned values outside the supported fact contract.
+- User action: Report the failed analysis to the operator before requesting another execution.
+- Operator action: Correct the facts projector to return a nonempty array of at most 32 labeled facts with bounded decimal numeric strings or null values; validate it with sanitized fixtures.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
@@ -1645,9 +1645,9 @@ Sources:
 - Retryability: `not-retryable`
 - Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Cause: A configured input, output, token, time or concurrency limit was not a positive safe integer.
+- User action: Ask the operator to correct the analysis limit configuration.
+- Operator action: Configure maxInputBytes, maxOutputBytes, maxOutputTokens, maxTimeMs and maxConcurrency as positive safe integers before constructing the service.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
@@ -1699,9 +1699,9 @@ Sources:
 - Retryability: `not-retryable`
 - Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Cause: The analysis registrations contained duplicate IDs, exceeded their bound or contained an invalid JSON plan.
+- User action: Ask the operator to correct the registered analysis choices.
+- Operator action: Register at most 32 choices with unique IDs and finite plain JSON plans; validate registrations before accepting questions.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
@@ -1771,9 +1771,9 @@ Sources:
 - Retryability: `not-retryable`
 - Redaction policy: `safe-message`
 - Lifecycle: `active`
-- Cause: The authenticated caller is not allowed to perform the requested action.
-- User action: Request the required permission or choose an allowed action.
-- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Cause: The question content was rejected by the configured content policy.
+- User action: Remove personal or sensitive content from the question before submitting again.
+- Operator action: Inspect the prepareQuestion content policy with sanitized fixtures; keep rejected question content out of model requests and logs.
 - Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:

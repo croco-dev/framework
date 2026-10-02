@@ -8,9 +8,9 @@ export async function startLocalProvider(
 ) {
   const requests: Record<string, unknown>[] = [];
   const server = createServer(async (request, response) => {
-    let body = "";
-    for await (const chunk of request) body += String(chunk);
-    const payload = JSON.parse(body) as Record<string, unknown>;
+    const chunks: Buffer[] = [];
+    for await (const chunk of request) chunks.push(chunk as Buffer);
+    const payload = JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<string, unknown>;
     requests.push(payload);
     if (requests.length > 32) requests.shift();
     const input = JSON.parse(String(payload.input)) as AnalysisModelRequest;

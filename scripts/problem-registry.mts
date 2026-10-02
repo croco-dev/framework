@@ -2622,6 +2622,55 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "analytics-core/analysis-input-budget-exceeded": recovery({
+    cause:
+      "The serialized question, allowed definitions and choices exceeded the input byte budget.",
+    userAction:
+      "Shorten the question or narrow its authorized analysis choices before submitting again.",
+    operatorAction:
+      "Inspect maxInputBytes and the serialized definition and choice payload; reduce its size before another proposal.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  "analytics-core/analysis-invalid-facts": recovery({
+    cause: "The registered facts projector returned values outside the supported fact contract.",
+    userAction: "Report the failed analysis to the operator before requesting another execution.",
+    operatorAction:
+      "Correct the facts projector to return a nonempty array of at most 32 labeled facts with bounded decimal numeric strings or null values; validate it with sanitized fixtures.",
+    retryability: "conditional",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "analytics-core/analysis-invalid-limits": recovery({
+    cause:
+      "A configured input, output, token, time or concurrency limit was not a positive safe integer.",
+    userAction: "Ask the operator to correct the analysis limit configuration.",
+    operatorAction:
+      "Configure maxInputBytes, maxOutputBytes, maxOutputTokens, maxTimeMs and maxConcurrency as positive safe integers before constructing the service.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  "analytics-core/analysis-invalid-registration": recovery({
+    cause:
+      "The analysis registrations contained duplicate IDs, exceeded their bound or contained an invalid JSON plan.",
+    userAction: "Ask the operator to correct the registered analysis choices.",
+    operatorAction:
+      "Register at most 32 choices with unique IDs and finite plain JSON plans; validate registrations before accepting questions.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  "analytics-core/analysis-question-blocked": recovery({
+    cause: "The question content was rejected by the configured content policy.",
+    userAction: "Remove personal or sensitive content from the question before submitting again.",
+    operatorAction:
+      "Inspect the prepareQuestion content policy with sanitized fixtures; keep rejected question content out of model requests and logs.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
   "analytics-core/analysis-cancelled": recovery({
     cause: "The growth analysis was cancelled by its AbortSignal or exceeded its model deadline.",
     userAction:

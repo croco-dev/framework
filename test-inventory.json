@@ -20,6 +20,12 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/growth-analysis/src/tests/LocalProvider.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/growth-analysis/src/tests/OpenAIPlanProposal.spec.ts",
       "lane": "fast",
       "qualifiers": [],

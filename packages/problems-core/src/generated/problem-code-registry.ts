@@ -1092,9 +1092,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#analytics-core-analysis-input-budget-exceeded",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        cause:
+          "The serialized question, allowed definitions and choices exceeded the input byte budget.",
+        userAction:
+          "Shorten the question or narrow its authorized analysis choices before submitting again.",
+        operatorAction:
+          "Inspect maxInputBytes and the serialized definition and choice payload; reduce its size before another proposal.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
@@ -1155,11 +1158,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       title: "Internal Server Error",
       cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-facts",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
+        cause:
+          "The registered facts projector returned values outside the supported fact contract.",
         userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+          "Report the failed analysis to the operator before requesting another execution.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+          "Correct the facts projector to return a nonempty array of at most 32 labeled facts with bounded decimal numeric strings or null values; validate it with sanitized fixtures.",
         retryability: "conditional",
         redactionPolicy: "operator-only",
         telemetry: {
@@ -1219,9 +1223,11 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       title: "Validation Error",
       cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-limits",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        cause:
+          "A configured input, output, token, time or concurrency limit was not a positive safe integer.",
+        userAction: "Ask the operator to correct the analysis limit configuration.",
+        operatorAction:
+          "Configure maxInputBytes, maxOutputBytes, maxOutputTokens, maxTimeMs and maxConcurrency as positive safe integers before constructing the service.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
@@ -1314,9 +1320,11 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-registration",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        cause:
+          "The analysis registrations contained duplicate IDs, exceeded their bound or contained an invalid JSON plan.",
+        userAction: "Ask the operator to correct the registered analysis choices.",
+        operatorAction:
+          "Register at most 32 choices with unique IDs and finite plain JSON plans; validate registrations before accepting questions.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
@@ -1442,9 +1450,11 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#analytics-core-analysis-question-blocked",
       recovery: {
-        cause: "The authenticated caller is not allowed to perform the requested action.",
-        userAction: "Request the required permission or choose an allowed action.",
-        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        cause: "The question content was rejected by the configured content policy.",
+        userAction:
+          "Remove personal or sensitive content from the question before submitting again.",
+        operatorAction:
+          "Inspect the prepareQuestion content policy with sanitized fixtures; keep rejected question content out of model requests and logs.",
         retryability: "not-retryable",
         redactionPolicy: "safe-message",
         telemetry: {
