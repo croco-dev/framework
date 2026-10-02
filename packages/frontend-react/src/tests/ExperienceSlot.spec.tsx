@@ -1,3 +1,5 @@
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { createElement as h } from "react";
 import { renderToString } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
@@ -50,4 +52,15 @@ describe("ExperienceSlot", () => {
     expect(html).toContain("<strong>Protected checkout</strong>");
     expect(html).not.toContain("Dismiss");
   });
+});
+
+describe("ExperienceSlot mounted focus", () => {
+  it("preserves modal input focus and restores the opener throughout the display lifecycle", () => {
+    const runner = fileURLToPath(new URL("./experienceSlotBrowser.cjs", import.meta.url));
+    const output = execFileSync(process.execPath, [runner], { encoding: "utf8", timeout: 30000 });
+    expect(JSON.parse(output)).toEqual([
+      { viewport: { width: 1280, height: 720 }, steps: 9 },
+      { viewport: { width: 390, height: 844 }, steps: 9 },
+    ]);
+  }, 30000);
 });

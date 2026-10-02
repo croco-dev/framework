@@ -30,6 +30,7 @@ export function ExperienceSlot(props: ExperienceSlotProps): ReactElement | null 
 
 function ExperienceSlotState(props: ExperienceSlotProps): ReactElement | null {
   const { decision, handle, preview = false, onExposure, onError } = props;
+  const modal = decision?.renderer === "modal";
   const [dismissed, setDismissed] = useState(false);
   const [error, setError] = useState<"exposure" | "dismiss">();
   const [viewed, setViewed] = useState(false);
@@ -61,7 +62,7 @@ function ExperienceSlotState(props: ExperienceSlotProps): ReactElement | null {
   }, [dismissed, error]);
 
   useLayoutEffect(() => {
-    if (!decision || decision.renderer !== "modal") return;
+    if (!modal) return;
     returnFocus.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     fallbackFocus.current =
@@ -74,7 +75,7 @@ function ExperienceSlotState(props: ExperienceSlotProps): ReactElement | null {
       if (canRestoreFocus(previous)) previous.focus();
       else fallbackFocus.current?.focus();
     };
-  }, [decision]);
+  }, [modal]);
 
   useEffect(() => {
     if (
@@ -175,7 +176,6 @@ function ExperienceSlotState(props: ExperienceSlotProps): ReactElement | null {
           ),
         )
       : null;
-  const modal = decision.renderer === "modal";
   return h(
     "section",
     {
