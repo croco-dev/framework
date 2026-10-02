@@ -28,6 +28,7 @@ async function main(): Promise<void> {
   assert.equal(modelCalls, 0);
   console.log(JSON.stringify({ outcome, executorCalls: fixture.executions(), modelCalls }));
 }
-void main().catch(() => {
+void main().catch((error) => {
+  console.error(error);
   process.exitCode = 1;
 });

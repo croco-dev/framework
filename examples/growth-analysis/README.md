@@ -3,7 +3,7 @@
 Run the common registered read service without an LLM or credentials:
 
 ```bash
-pnpm --filter @croco/analytics-core... build
+pnpm --filter @croco-example/growth-analysis... build
 pnpm --filter @croco-example/growth-analysis start
 ```
 
@@ -12,7 +12,7 @@ The synthetic September activation report contains a ratio of `0.42`, numerator 
 Run the real React panel and native OpenAI SDK against a deterministic **local HTTP provider fixture**:
 
 ```bash
-pnpm --filter @croco/admin-react... build
+pnpm --filter @croco-example/growth-analysis... build
 pnpm --filter @croco-example/growth-analysis dev
 ```
 

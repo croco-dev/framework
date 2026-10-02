@@ -56,19 +56,18 @@ async function main(): Promise<void> {
           : await fixture.service.execute(input as AnalysisPlan, controller.signal);
       response.writeHead(200, { "content-type": "application/json" }).end(JSON.stringify(output));
     } catch (error) {
-      if (!response.destroyed)
+      if (!response.destroyed) {
+        const problem = error instanceof Problem ? error.toJSON() : undefined;
         response
-          .writeHead(422, { "content-type": "application/json" })
-          .end(
-            JSON.stringify(
-              error instanceof Problem ? error.toJSON() : { code: "DEMO_ANALYSIS_FAILED" },
-            ),
-          );
+          .writeHead(problem?.status ?? 500, { "content-type": "application/json" })
+          .end(JSON.stringify(problem ?? { code: "DEMO_ANALYSIS_FAILED" }));
+      }
     }
   }).listen(4179, "127.0.0.1", () =>
     console.log("Growth analysis: http://127.0.0.1:4179/ (local SDK fixture)"),
   );
 }
-void main().catch(() => {
+void main().catch((error) => {
+  console.error(error);
   process.exitCode = 1;
 });

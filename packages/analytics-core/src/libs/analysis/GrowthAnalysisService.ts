@@ -352,7 +352,13 @@ export class GrowthAnalysisService {
       const current = (await this.allowedRegistrations(signal)).map((item) => item.choice);
       if (
         selected.some(
-          (choice) => !current.some((item) => JSON.stringify(item) === JSON.stringify(choice)),
+          (choice) =>
+            !current.some(
+              (item) =>
+                item.id === choice.id &&
+                item.label === choice.label &&
+                planKey(item.plan) === planKey(choice.plan),
+            ),
         )
       )
         return { status: "unavailable", reason: "definitions-changed", usage: response.usage };

@@ -26,6 +26,12 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/growth-analysis/src/tests/Server.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/promotion-offers/src/tests/promotion-offers.spec.ts",
       "lane": "fast",
       "qualifiers": [],

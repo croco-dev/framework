@@ -46,18 +46,18 @@ This cookbook documents 912 public Croco Problem codes. The deterministic JSON r
 | [`ai-usage/record-failed`](#ai-usage-record-failed)                                                                                   | InternalServerError   |    500 | not-retryable | operator-only | active     |       1 |
 | [`ALREADY_MEMBER`](#already-member)                                                                                                   | Conflict              |    409 | conditional   | safe-message  | active     |       1 |
 | [`AMBIGUOUS_PAGINATION_PARAMETER`](#ambiguous-pagination-parameter)                                                                   | BadRequest            |    400 | not-retryable | public        | active     |       1 |
-| [`analytics-core/analysis-cancelled`](#analytics-core-analysis-cancelled)                                                             | BadRequest            |    400 | not-retryable | public        | active     |       1 |
+| [`analytics-core/analysis-cancelled`](#analytics-core-analysis-cancelled)                                                             | BadRequest            |    400 | conditional   | public        | active     |       1 |
 | [`analytics-core/analysis-concurrency-exceeded`](#analytics-core-analysis-concurrency-exceeded)                                       | TooManyRequests       |    429 | retryable     | safe-message  | active     |       1 |
 | [`analytics-core/analysis-input-budget-exceeded`](#analytics-core-analysis-input-budget-exceeded)                                     | ValidationError       |    422 | not-retryable | public        | active     |       1 |
-| [`analytics-core/analysis-invalid-completion`](#analytics-core-analysis-invalid-completion)                                           | ValidationError       |    422 | not-retryable | public        | active     |       1 |
+| [`analytics-core/analysis-invalid-completion`](#analytics-core-analysis-invalid-completion)                                           | ValidationError       |    422 | conditional   | public        | active     |       1 |
 | [`analytics-core/analysis-invalid-facts`](#analytics-core-analysis-invalid-facts)                                                     | InternalServerError   |    500 | conditional   | operator-only | active     |       1 |
-| [`analytics-core/analysis-invalid-json`](#analytics-core-analysis-invalid-json)                                                       | ValidationError       |    422 | not-retryable | public        | active     |       1 |
+| [`analytics-core/analysis-invalid-json`](#analytics-core-analysis-invalid-json)                                                       | ValidationError       |    422 | conditional   | public        | active     |       1 |
 | [`analytics-core/analysis-invalid-limits`](#analytics-core-analysis-invalid-limits)                                                   | ValidationError       |    422 | not-retryable | public        | active     |       1 |
-| [`analytics-core/analysis-invalid-plan`](#analytics-core-analysis-invalid-plan)                                                       | ValidationError       |    422 | not-retryable | public        | active     |       1 |
+| [`analytics-core/analysis-invalid-plan`](#analytics-core-analysis-invalid-plan)                                                       | ValidationError       |    422 | conditional   | public        | active     |       1 |
 | [`analytics-core/analysis-invalid-question`](#analytics-core-analysis-invalid-question)                                               | ValidationError       |    422 | not-retryable | public        | active     |       1 |
 | [`analytics-core/analysis-invalid-registration`](#analytics-core-analysis-invalid-registration)                                       | ValidationError       |    422 | not-retryable | public        | active     |       1 |
-| [`analytics-core/analysis-invalid-usage`](#analytics-core-analysis-invalid-usage)                                                     | ValidationError       |    422 | not-retryable | public        | active     |       1 |
-| [`analytics-core/analysis-output-budget-exceeded`](#analytics-core-analysis-output-budget-exceeded)                                   | ValidationError       |    422 | not-retryable | public        | active     |       1 |
+| [`analytics-core/analysis-invalid-usage`](#analytics-core-analysis-invalid-usage)                                                     | ValidationError       |    422 | conditional   | public        | active     |       1 |
+| [`analytics-core/analysis-output-budget-exceeded`](#analytics-core-analysis-output-budget-exceeded)                                   | ValidationError       |    422 | conditional   | public        | active     |       1 |
 | [`analytics-core/analysis-provider-failed`](#analytics-core-analysis-provider-failed)                                                 | InternalServerError   |    500 | conditional   | operator-only | active     |       1 |
 | [`analytics-core/analysis-question-blocked`](#analytics-core-analysis-question-blocked)                                               | Forbidden             |    403 | not-retryable | safe-message  | active     |       1 |
 | [`analytics-core/analysis-settlement-failed`](#analytics-core-analysis-settlement-failed)                                             | InternalServerError   |    500 | conditional   | operator-only | active     |       1 |
@@ -1534,12 +1534,12 @@ Sources:
 
 - Category: `BadRequest`
 - HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
+- Retryability: `conditional`
 - Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Cause: The growth analysis was cancelled by its AbortSignal or exceeded its model deadline.
+- User action: Submit the question again after the cancellation reason is cleared and the prior invocation has settled.
+- Operator action: Inspect the cancellation signal, deadline, active invocation and usage receipt before starting another inference.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
@@ -1588,12 +1588,12 @@ Sources:
 
 - Category: `ValidationError`
 - HTTP status: `422` Validation Error
-- Retryability: `not-retryable`
+- Retryability: `conditional`
 - Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Cause: The provider response did not satisfy the supported completion contract.
+- User action: Request another proposal only after the provider completion mapping is corrected.
+- Operator action: Inspect completion status mapping with sanitized fixtures and reconcile the usage receipt before another inference.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
@@ -1624,12 +1624,12 @@ Sources:
 
 - Category: `ValidationError`
 - HTTP status: `422` Validation Error
-- Retryability: `not-retryable`
+- Retryability: `conditional`
 - Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Cause: The model response was not valid JSON.
+- User action: Request another proposal only after the response contract is checked; another inference may incur usage.
+- Operator action: Check the model response schema and parser with sanitized fixtures, then reconcile the usage receipt before another inference.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
@@ -1660,12 +1660,12 @@ Sources:
 
 - Category: `ValidationError`
 - HTTP status: `422` Validation Error
-- Retryability: `not-retryable`
+- Retryability: `conditional`
 - Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Cause: The supplied plan or model selection did not match the authorized finite JSON plan contract.
+- User action: Correct the supplied plan or request a new proposal after its response contract is checked.
+- Operator action: Inspect the plan shape, registered choice IDs and authorization binding with sanitized fixtures; reconcile the usage receipt before another inference.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
@@ -1714,12 +1714,12 @@ Sources:
 
 - Category: `ValidationError`
 - HTTP status: `422` Validation Error
-- Retryability: `not-retryable`
+- Retryability: `conditional`
 - Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Cause: The provider response did not satisfy the known, estimated or unknown usage contract.
+- User action: Ask the operator to reconcile usage before requesting another proposal.
+- Operator action: Correct provider usage mapping and retain the invocation receipt for reconciliation; do not assume unknown usage is zero.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
@@ -1732,12 +1732,12 @@ Sources:
 
 - Category: `ValidationError`
 - HTTP status: `422` Validation Error
-- Retryability: `not-retryable`
+- Retryability: `conditional`
 - Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Cause: The model output exceeded the configured byte or token budget.
+- User action: Request a bounded proposal after the operator checks the output limits; another inference may incur usage.
+- Operator action: Inspect response bytes, output tokens and configured limits, then reconcile the usage receipt before another inference.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:

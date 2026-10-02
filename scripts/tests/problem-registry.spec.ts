@@ -572,6 +572,37 @@ describe("problem-registry.mts", () => {
     });
   });
 
+  it.each([
+    ["analysis-cancelled", "BadRequest", "cancelled"],
+    ["analysis-invalid-json", "ValidationError", "model"],
+    ["analysis-invalid-plan", "ValidationError", "plan"],
+    ["analysis-invalid-usage", "ValidationError", "usage"],
+    ["analysis-invalid-completion", "ValidationError", "completion"],
+    ["analysis-output-budget-exceeded", "ValidationError", "output"],
+  ])("publishes growth analysis recovery for %s", (code, category, cause) => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/analytics-core/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class AnalysisProblem extends Problem {",
+        "  constructor() {",
+        `    super("analytics-core/${code}", ProblemCategory.${category});`,
+        "  }",
+        "}",
+      ].join("\n"),
+    );
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+    expect(registry.problems[0]?.recovery).toMatchObject({
+      cause: expect.stringContaining(cause),
+      retryability: "conditional",
+      redactionPolicy: "public",
+      telemetry: { severity: "info" },
+    });
+    expect(registry.problems[0]?.recovery.operatorAction).toContain("receipt");
+  });
+
   it("publishes cancellation-specific recovery for aborted search operations", () => {
     const repo = createTempRepo();
     writeFile(

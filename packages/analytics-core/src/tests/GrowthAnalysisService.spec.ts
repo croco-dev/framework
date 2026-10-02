@@ -397,6 +397,31 @@ describe("GrowthAnalysisService", () => {
     expect(executor).not.toHaveBeenCalled();
   });
 
+  it("retains a proposal when registration parameter keys are reordered", async () => {
+    const registrations = vi
+      .fn()
+      .mockReturnValueOnce([{ ...registration, parameters: { currency: "USD", region: "US" } }])
+      .mockReturnValue([{ ...registration, parameters: { region: "US", currency: "USD" } }]);
+    const { service } = fixture({ registrations });
+    expect(await service.propose("Captured total")).toMatchObject({
+      status: "confirmation",
+      choices: [{ id: registration.id }],
+    });
+  });
+
+  it("discards a proposal when the registered choice label changes", async () => {
+    const registrations = vi
+      .fn()
+      .mockReturnValueOnce([registration])
+      .mockReturnValue([{ ...registration, label: "Changed interpretation" }]);
+    const { service } = fixture({ registrations });
+    expect(await service.propose("Captured total")).toEqual({
+      status: "unavailable",
+      reason: "definitions-changed",
+      usage: knownUsage,
+    });
+  });
+
   it("discards a proposal if its authorization context changes during inference", async () => {
     const pending = deferred<AnalysisModelResponse>();
     const { service, model, state } = fixture({ model: () => pending.promise });

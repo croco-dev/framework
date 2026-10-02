@@ -1027,11 +1027,13 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       title: "Bad Request",
       cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-cancelled",
       recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
+        cause:
+          "The growth analysis was cancelled by its AbortSignal or exceeded its model deadline.",
+        userAction:
+          "Submit the question again after the cancellation reason is cleared and the prior invocation has settled.",
         operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
-        retryability: "not-retryable",
+          "Inspect the cancellation signal, deadline, active invocation and usage receipt before starting another inference.",
+        retryability: "conditional",
         redactionPolicy: "public",
         telemetry: {
           eventName: "croco.problem.info",
@@ -1121,10 +1123,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-completion",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
-        retryability: "not-retryable",
+        cause: "The provider response did not satisfy the supported completion contract.",
+        userAction:
+          "Request another proposal only after the provider completion mapping is corrected.",
+        operatorAction:
+          "Inspect completion status mapping with sanitized fixtures and reconcile the usage receipt before another inference.",
+        retryability: "conditional",
         redactionPolicy: "public",
         telemetry: {
           eventName: "croco.problem.info",
@@ -1183,10 +1187,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       title: "Validation Error",
       cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-json",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
-        retryability: "not-retryable",
+        cause: "The model response was not valid JSON.",
+        userAction:
+          "Request another proposal only after the response contract is checked; another inference may incur usage.",
+        operatorAction:
+          "Check the model response schema and parser with sanitized fixtures, then reconcile the usage receipt before another inference.",
+        retryability: "conditional",
         redactionPolicy: "public",
         telemetry: {
           eventName: "croco.problem.info",
@@ -1243,10 +1249,13 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       title: "Validation Error",
       cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-plan",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
-        retryability: "not-retryable",
+        cause:
+          "The supplied plan or model selection did not match the authorized finite JSON plan contract.",
+        userAction:
+          "Correct the supplied plan or request a new proposal after its response contract is checked.",
+        operatorAction:
+          "Inspect the plan shape, registered choice IDs and authorization binding with sanitized fixtures; reconcile the usage receipt before another inference.",
+        retryability: "conditional",
         redactionPolicy: "public",
         telemetry: {
           eventName: "croco.problem.info",
@@ -1335,10 +1344,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       title: "Validation Error",
       cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-usage",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
-        retryability: "not-retryable",
+        cause:
+          "The provider response did not satisfy the known, estimated or unknown usage contract.",
+        userAction: "Ask the operator to reconcile usage before requesting another proposal.",
+        operatorAction:
+          "Correct provider usage mapping and retain the invocation receipt for reconciliation; do not assume unknown usage is zero.",
+        retryability: "conditional",
         redactionPolicy: "public",
         telemetry: {
           eventName: "croco.problem.info",
@@ -1366,10 +1377,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#analytics-core-analysis-output-budget-exceeded",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
-        retryability: "not-retryable",
+        cause: "The model output exceeded the configured byte or token budget.",
+        userAction:
+          "Request a bounded proposal after the operator checks the output limits; another inference may incur usage.",
+        operatorAction:
+          "Inspect response bytes, output tokens and configured limits, then reconcile the usage receipt before another inference.",
+        retryability: "conditional",
         redactionPolicy: "public",
         telemetry: {
           eventName: "croco.problem.info",
