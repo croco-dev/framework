@@ -8,6 +8,9 @@ import type { MetricsSnapshot, MRRMovement, Period, RetentionMetrics } from "../
  * database client, schema, migration, SQL은 provider package가 소유합니다.
  */
 export abstract class MetricsRepository {
+  /** Event-ID claims, shared churn claims and tenant-scoped historical primary-key lookups. */
+  abstract readonly mrrMovementIdentityVersion: 2;
+
   /**
    * MRR 변동 이력 기록
    *
@@ -15,7 +18,8 @@ export abstract class MetricsRepository {
    * @param movement - MRR 변동 데이터
    * @param timestamp - 변동 발생 시각
    * @param eventKey - 이벤트 기반 멱등성 키 (선택)
-   * @param dedupeEventKeys - 호환 또는 관련 이벤트가 공유하는 멱등성 키. eventKey와 이 키 중 하나라도 이미 claim되었으면 movement를 기록하지 않음
+   * @param dedupeEventKeys - 관련 이벤트가 공유하고 함께 claim하는 멱등성 키. eventKey와 이 키 중 하나라도 이미 claim되었으면 movement를 기록하지 않음
+   * @param legacyEventKeys - 과거 movement의 primary eventKey 조회에만 사용하는 키. 같은 tenant의 기존 row가 있으면 기록하지 않으며 이 키는 claim하지 않음
    */
   abstract recordMRRMovement(
     tenantId: string,
@@ -23,6 +27,7 @@ export abstract class MetricsRepository {
     timestamp: Date,
     eventKey?: string,
     dedupeEventKeys?: readonly string[],
+    legacyEventKeys?: readonly string[],
   ): Promise<void>;
 
   /**

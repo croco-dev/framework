@@ -21,6 +21,7 @@ describe("CarryingCapacityCalculator", () => {
     };
 
     mockMetricsRepository = {
+      mrrMovementIdentityVersion: 2,
       recordMRRMovement: vi.fn(),
       recordSnapshot: vi.fn(),
       getSnapshot: vi.fn(),

@@ -3255,6 +3255,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "metrics-billing/repository-contract-unsupported": recovery({
+    cause:
+      "BillingEventHandler was constructed with a metrics provider that does not declare movement identity version 2.",
+    userAction:
+      "Do not retry with the unchanged provider; use a provider that implements the required identity contract.",
+    operatorAction:
+      "Upgrade warehouse-postgres with metrics-core and metrics-billing, or implement tenant-scoped historical primary-key lookups in the custom provider before declaring version 2.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "metrics-billing/invalid-order-payment-reason": recovery({
     cause:
       "A paid-order event omitted its authoritative payment reason or supplied an unsupported value.",

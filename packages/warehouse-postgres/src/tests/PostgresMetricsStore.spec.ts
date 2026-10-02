@@ -59,6 +59,7 @@ describe("PostgresMetricsStore", () => {
       1000,
       "USD",
       ["event-key-1"],
+      [],
     ]);
   });
 
@@ -95,6 +96,7 @@ describe("PostgresMetricsStore", () => {
       1000,
       "USD",
       ["event-key-v2", "event-key-v1"],
+      [],
     ]);
   });
 
@@ -111,6 +113,23 @@ describe("PostgresMetricsStore", () => {
 
     expect(sql).toContain("SELECT DISTINCT candidate.event_key");
     expect(params?.[15]).toEqual(["event-key-v2", "event-key-v2", "event-key-v1", "event-key-v1"]);
+  });
+
+  it("checks historical primary keys without adding them to atomic claims", async () => {
+    await store.recordMRRMovement(
+      "tenant-1",
+      movement,
+      new Date("2026-03-02T00:00:00.000Z"),
+      "current",
+      ["churn"],
+      ["legacy-timestamp"],
+    );
+
+    const [sql, params] = vi.mocked(db.query).mock.calls[0] ?? [];
+    expect(sql).toContain("SELECT 1 FROM mrr_movements AS historical");
+    expect(sql).toContain("historical.tenant_id = $1 AND historical.event_key = ANY($17::text[])");
+    expect(params?.[15]).toEqual(["current", "churn"]);
+    expect(params?.[16]).toEqual(["legacy-timestamp"]);
   });
 
   it("should keep legacy insert path when event key is omitted", async () => {
@@ -151,6 +170,21 @@ describe("PostgresMetricsStore", () => {
       .mock.calls.map(([statement]) => statement)
       .join("\n");
     expect(sql).not.toMatch(/\b(?:BEGIN|START\s+TRANSACTION|COMMIT|ROLLBACK)\b/i);
+  });
+
+  it.each([
+    ["PostgreSQL installer", installPostgresMetricsSchema],
+    ["TimescaleDB installer", installTimescaleMetricsSchema],
+    ["legacy migration", migrateLegacyMetricsSchema],
+  ] as const)("adds the historical lookup index in the %s", async (_name, helper) => {
+    await helper(db);
+    const sql = vi
+      .mocked(db.query)
+      .mock.calls.map(([statement]) => statement)
+      .join("\n");
+    expect(sql).toMatch(
+      /CREATE INDEX IF NOT EXISTS idx_mrr_movements_tenant_event_key\s+ON mrr_movements \(tenant_id, event_key\)\s+WHERE event_key IS NOT NULL/,
+    );
   });
 
   it("should calculate retention metrics from snapshots and movement history", async () => {

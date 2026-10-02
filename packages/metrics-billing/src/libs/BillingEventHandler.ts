@@ -12,6 +12,7 @@ import { type DomainEvent, type EventHandler, RegisterEventHandler } from "@croc
 import type { MetricsRepository, Money, PlanProvider } from "@croco/metrics-core";
 import type { MRRMovement } from "@croco/metrics-core";
 import { MixedCurrencyMRRProblem, MrrCalculator } from "@croco/metrics-core";
+import { ProblemFactory } from "@croco/problems-core";
 import {
   BillingMetricDroppedProblem,
   BillingMetricRecordingProblem,
@@ -42,7 +43,14 @@ export class BillingEventHandler
     private readonly planRegistry: PlanRegistry,
     private readonly billingStore: BillingStore,
     private readonly metricsRepository: MetricsRepository,
-  ) {}
+  ) {
+    if (metricsRepository.mrrMovementIdentityVersion !== 2) {
+      throw ProblemFactory.internalServerError(
+        "metrics-billing/repository-contract-unsupported",
+        "Upgrade the metrics provider to movement identity version 2 with historical primary-key lookups before using BillingEventHandler",
+      );
+    }
+  }
 
   async getPlan(planId: string) {
     const plan = await this.planRegistry.getPlan(planId);
@@ -312,10 +320,8 @@ export class BillingEventHandler
     dedupeEventKeys: readonly string[] = [],
   ): Promise<void> {
     const eventKey = this.getEventKey(event);
-    const allDedupeEventKeys =
-      event instanceof SubscriptionRevokedEvent
-        ? dedupeEventKeys
-        : [this.getLegacyTimestampEventKey(event), ...dedupeEventKeys];
+    const legacyEventKeys =
+      event instanceof SubscriptionRevokedEvent ? [] : [this.getLegacyTimestampEventKey(event)];
 
     try {
       await this.metricsRepository.recordMRRMovement(
@@ -323,7 +329,8 @@ export class BillingEventHandler
         movement,
         event.timestamp,
         eventKey,
-        allDedupeEventKeys,
+        dedupeEventKeys,
+        legacyEventKeys,
       );
     } catch (error) {
       throw new BillingMetricRecordingProblem({

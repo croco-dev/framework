@@ -92,11 +92,19 @@ eventKey = `${eventName}_${event.eventId}`
 
 이전 버전은 `${eventName}_${timestamp.getTime()}` 형식의 timestamp 기반 키를 사용했습니다.
 `BillingEventHandler`는 primary key로 `eventId` 기반 키를 전달합니다. 기존에 movement를 기록하던
-이벤트는 timestamp 기반 키를 compatibility dedupe alias로 함께 전달합니다. revoked는 기존
-movement가 없으므로 timestamp alias를 사용하지 않습니다. PostgresMetricsStore는 alias가 이미 저장된
-row를 발견하면 새 primary key insert를 건너뛰어 배포 전후 replay가 중복 MRR을 만들지 않게 합니다.
+이벤트는 timestamp 기반 키를 `legacyEventKeys`로 함께 전달합니다. revoked는 기존
+movement가 없으므로 이 조회 키를 사용하지 않습니다. PostgresMetricsStore는 같은 tenant의 과거 movement에
+해당 primary key가 있으면 새 movement insert를 건너뜁니다. 조회 키는 claim하지 않으므로 신규 독립 이벤트가
+같은 timestamp를 가져도 각각 기록됩니다. 이전 writer가 신규 이벤트에 붙인 timestamp alias claim은
+과거 movement의 primary key가 아니므로 replay 판단에 사용하지 않습니다.
 취소와 revoked의 churn movement에는 `billing.subscription_churned_${externalSubscriptionId}` 키도
 alias로 전달하여 이벤트 순서와 관계없이 구독당 한 번만 기록합니다.
+
+`MetricsRepository` 구현체는 `mrrMovementIdentityVersion: 2`를 명시해야 합니다.
+handler는 생성 시 이 값을 검사하며, 없거나 다른 버전이면
+`metrics-billing/repository-contract-unsupported` Problem으로 실패합니다. metrics-core와 metrics-billing을
+업그레이드할 때 warehouse-postgres도 함께 업그레이드해야 합니다. custom provider는 tenant 범위의
+과거 primary-key 조회를 구현한 뒤 버전 2를 선언해야 합니다. 기존 provider에 버전 값만 붙이면 안 됩니다.
 
 ## Failure semantics
 
