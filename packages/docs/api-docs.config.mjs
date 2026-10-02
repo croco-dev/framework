@@ -482,6 +482,12 @@ export const apiDocPackages = [
     moduleName: "notifications-core/src",
   },
   {
+    packageName: "@croco/notifications-fcm",
+    directory: "notifications-fcm",
+    entryPoint: "src/index.ts",
+    moduleName: "notifications-fcm/src",
+  },
+  {
     packageName: "@croco/notifications-react-email",
     directory: "notifications-react-email",
     entryPoint: "src/index.ts",

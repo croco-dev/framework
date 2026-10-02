@@ -15,7 +15,7 @@ title: "TaskExecutionAlreadySettledProblem"
 
 ### Constructor
 
-> **new TaskExecutionAlreadySettledProblem**(`taskId`, `executionId`, `status`): `TaskExecutionAlreadySettledProblem`
+> **new TaskExecutionAlreadySettledProblem**(`taskId`, `executionId`, `status`, `failureCode?`): `TaskExecutionAlreadySettledProblem`
 
 #### Parameters
 
@@ -30,6 +30,10 @@ title: "TaskExecutionAlreadySettledProblem"
 ##### status
 
 `SettledTaskExecutionStatus`
+
+##### failureCode?
+
+`string`
 
 #### Returns
 

@@ -23,6 +23,7 @@ default. Suppressed and unavailable dispatches are recorded as outcomes, not pro
 
 ```ts
 import {
+  EngagementDeliveryEventProcessor,
   EngagementService,
   StoreBackedRecipientDirectory,
   StoredEngagementPolicyEvaluator,
@@ -35,11 +36,7 @@ await createEngagementSchema(db);
 
 const transactions = new TxManager(createDrizzleTxAdapter(db));
 const engagementStore = new DrizzleEngagementStore(db, transactions);
-const directory = new StoreBackedRecipientDirectory(
-  customerDirectory,
-  engagementStore,
-  pushTokenResolver,
-);
+const directory = new StoreBackedRecipientDirectory(customerDirectory, engagementStore);
 const policy = new StoredEngagementPolicyEvaluator(engagementStore, engagementStore, {
   topicDefaults: { "system.receipt": "allow" },
 });
@@ -49,6 +46,8 @@ const engagement = new EngagementService(
   notifications,
   policy,
   engagementStore,
+  () => new Date(),
+  new EngagementDeliveryEventProcessor(engagementStore),
 );
 ```
 
@@ -59,8 +58,10 @@ result while allowing a failed attempt to be replaced by a later successful or s
 Every campaign row carries the non-null encoded scope key, so global and tenant-owned snapshots can
 reuse identifiers without crossing scope boundaries.
 
-`PushTokenResolver` is responsible for resolving secret references at send time. Never store a raw
-push token in `tokenReference`, Problems, logs, telemetry, fixtures, or administrative output.
+`StoreBackedRecipientDirectory` preserves opaque `tokenReference` values in dispatch payloads.
+Configure `FcmProvider` with `resolveToken` to read tokens from an application-owned vault inside
+the provider, after task persistence. The directory no longer accepts a `PushTokenResolver` argument.
+Never store a raw push token in `tokenReference`, Problems, logs, telemetry, fixtures, or administrative output.
 Email addresses and endpoint identifiers are internal store values. Administrative projections must
 apply the application's existing PII permission and masking contracts; this package does not expose
 an administrative projection.
@@ -73,6 +74,12 @@ runtime, and values must be bounded opaque identifiers; response bodies and arbi
 rejected before persistence. Hard bounces, complaints, unsubscribes, and invalid push tokens invalidate
 the exact endpoint version used by the dispatch. A stale event cannot invalidate a renewed endpoint,
 and an ordinary endpoint upsert cannot reactivate a terminally invalid endpoint.
+
+With `EngagementService` and its delivery-event processor using this store, persisted dispatches
+retain enough evidence to reconcile acceptance and terminal token-invalid events on replay. If the
+event store fails after the dispatch is saved, retry the same semantic key after recovery; replay
+completes the missing events and endpoint invalidation without another provider send. Concurrent
+endpoint refreshes preserve the greatest `lastSeenAt` value.
 
 All public store methods require tenant scope for recipient-owned data. History is ordered by
 `updatedAt` and durable dispatch ID, so pagination remains deterministic when timestamps tie.

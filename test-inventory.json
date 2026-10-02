@@ -1684,6 +1684,12 @@
       "owner": "@croco/engagement-core"
     },
     {
+      "path": "packages/engagement-core/src/tests/ContactPolicyPushLifecycle.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-core"
+    },
+    {
       "path": "packages/engagement-core/src/tests/EngagementService.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -1704,6 +1710,12 @@
     {
       "path": "packages/engagement-core/src/tests/PublishedMessageContracts.spec.ts",
       "lane": "published",
+      "qualifiers": [],
+      "owner": "@croco/engagement-core"
+    },
+    {
+      "path": "packages/engagement-core/src/tests/PushEndpointLifecycle.spec.ts",
+      "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/engagement-core"
     },
@@ -3098,6 +3110,24 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/notifications-core"
+    },
+    {
+      "path": "packages/notifications-fcm/src/tests/FcmLifecycle.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/notifications-fcm"
+    },
+    {
+      "path": "packages/notifications-fcm/src/tests/FcmProvider.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/notifications-fcm"
+    },
+    {
+      "path": "packages/notifications-fcm/src/tests/NotificationProviderConformance.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/notifications-fcm"
     },
     {
       "path": "packages/notifications-react-email/src/tests/PublishedReactEmail.spec.ts",

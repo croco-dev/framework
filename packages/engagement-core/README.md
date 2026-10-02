@@ -101,7 +101,114 @@ const result = await engagement.send(TrialEnding, {
 });
 ```
 
-The default `first-reachable` policy follows the message's declared channel order. Use `policy: "all-reachable"` to dispatch every usable email or push endpoint. Preference denial, suppression, and missing endpoints return explicit non-provider outcomes; recipient lookup, rendering, and provider failures remain typed Problems. `InMemoryRecipientDirectory` is intended for tests and single-process examples. Durable endpoints, preferences, and suppressions belong in storage-backed implementations.
+The default `first-reachable` policy follows the message's declared channel order and dispatches every eligible endpoint in the first reachable channel. Later channels are skipped after that channel queues a send. Use `policy: "all-reachable"` to dispatch every eligible endpoint across all declared channels. Endpoint dispatch is sequential; a provider failure stops the send and preserves evidence for earlier accepted endpoints. Preference denial, suppression, and missing endpoints return explicit non-provider outcomes; recipient lookup, rendering, and provider failures remain typed Problems. `InMemoryRecipientDirectory` is intended for tests and single-process examples. Durable endpoints, preferences, and suppressions belong in storage-backed implementations.
+
+## Push endpoint lifecycle and delivery evidence
+
+Keep raw device tokens in an application-owned vault. `tokenReference` must be an opaque identifier
+that contains no token or credential: it appears in endpoint identities and persisted jobs.
+`StoreBackedRecipientDirectory` takes a recipient directory and a `ContactEndpointStore`; it returns
+active endpoint references without reading the vault. Configure
+[`FcmProvider`](../notifications-fcm/README.md) with `resolveToken` to resolve each reference inside
+the provider. Firebase credentials and SDK setup belong in the provider package and application.
+
+```ts typecheck
+import { PushEndpointLifecycle, type EngagementPersistence } from "@croco/engagement-core";
+
+// Use a durable implementation, such as DrizzleEngagementStore, in the application.
+declare const store: EngagementPersistence;
+const lifecycle = new PushEndpointLifecycle(store);
+const scope = {
+  tenantId: "tenant-1",
+  recipientId: "user-1",
+  provider: "fcm",
+  app: "customer-app",
+  platform: "android",
+  environment: "production",
+};
+const registered = await lifecycle.register({
+  ...scope,
+  tokenReference: "vault-device-reference-1",
+  lastSeenAt: new Date(),
+});
+const rotated = await lifecycle.rotate({
+  ...scope,
+  previousEndpointId: registered.endpoint.id,
+  expectedVersion: registered.endpoint.version,
+  tokenReference: "vault-device-reference-2",
+  lastSeenAt: new Date(),
+});
+```
+
+Repeated registration with the same scope and reference refreshes `lastSeenAt` without duplicating
+an active endpoint or moving the timestamp backward. A changed reference represents another endpoint;
+use `rotate()` with the previous endpoint ID and current version to replace a device token atomically.
+Rotation invalidates the previous endpoint, and stale versions fail. Registration cannot reactivate
+an invalidated endpoint. Retain separate references for separate devices. The vault must resolve each
+reference within its intended application, platform, and environment; endpoint metadata does not
+select a Firebase project or provide provider failover.
+
+Call `invalidateStale()` explicitly from application maintenance with a scope, `lastSeenBefore`, and
+`invalidatedAt`. It invalidates active endpoints older than the cutoff; sends never delete endpoints
+solely because of age. The store checks the cutoff when invalidating, so an endpoint refreshed past
+the cutoff before that write stays active.
+
+For durable policy and delivery evidence, use the same persistence implementation for the directory,
+policy evaluator, dispatch store, and delivery-event processor:
+
+```ts
+import {
+  EngagementDeliveryEventProcessor,
+  StoreBackedRecipientDirectory,
+  StoredEngagementPolicyEvaluator,
+} from "@croco/engagement-core";
+
+const events = new EngagementDeliveryEventProcessor(store);
+const policy = new StoredEngagementPolicyEvaluator(store, store, {
+  topicDefaults: { billing: "allow" },
+});
+const durableEngagement = new EngagementService(
+  new StoreBackedRecipientDirectory(directory, store),
+  new RegistryEngagementMessageRenderer(messageRegistry, rendererResolver),
+  notificationService,
+  policy,
+  store,
+  () => new Date(),
+  undefined, // Optional contact policy gate.
+  events,
+);
+```
+
+Static notification preference rules veto dispatch first. The stored policy then checks active
+suppressions, recipient preferences, tenant defaults, and configured topic/global defaults; absent
+an explicit decision or default, it denies the send. Persisted dispatch targets retain execution IDs
+and available provider message IDs. With the event processor configured, synchronous provider results
+record acceptance and terminal token-invalid evidence; invalidation uses the dispatched endpoint
+version, so a stale result cannot invalidate a newer endpoint version. An invalidated endpoint is excluded
+from later recipient resolution. Acceptance proves only that the provider accepted the message.
+Asynchronous dispatchers must feed their later results into the event processor themselves.
+
+Store adapters must enforce `RecordEngagementDispatchInput.expectedState: "absent-or-eligibility"` atomically with the dispatch write. A queued or failed dispatch rejects that precondition without changing its targets or outcome. The exported store conformance suite checks this contract across reopened store handles.
+
+The dispatch is persisted before its delivery events. If event persistence fails, the send fails;
+retry the same message, recipient, and semantic key after the store recovers. Replay reconciles
+acceptance events and any recorded terminal token-invalid outcome without another provider send.
+When a contact policy gate is configured, replay validates its payload and campaign identity before repairing events. Provider acceptance and terminal token-invalid evidence remain separate from unknown contact-budget acceptance. A policy commit failure retains accepted target metadata and requires explicit budget reconciliation; replay never releases unknown budget or sends again. If current endpoint eligibility, preferences, suppression, preparation, or rendering prevents that validation, replay reports a policy conflict and preserves the original dispatch.
+
+Event identities deduplicate events already written. A terminal provider failure remains a failure
+after reconciliation, while its endpoint invalidation is completed. This recovery requires the
+dispatch record or the underlying task result to be saved. If dispatch persistence failed after
+a terminal task failure, notification replay recognizes the saved failure code when it appears
+in the provider's `terminalEndpointFailureCodes`, then records the dispatch and invalidation.
+FCM declares `notifications-fcm/token-invalid`. Recovery uses the normalized code without
+reconstructing the original error message or stack.
+
+`EngagementDeliveryEventProcessor.process()` also accepts provider-neutral `opened` and `clicked`
+events from application-owned ingestion. Authenticate the caller, establish tenant/dispatch/endpoint
+correlation, and map the interaction to a stable `providerEventId` before calling it. Reusing that event
+identity deduplicates ingestion. Only allowlisted, bounded evidence is persisted; never include raw
+client payloads or device tokens. This seam does not provide a mobile SDK or attribution analytics.
+See the FCM README for credential-free tests and the explicitly opted-in live smoke procedure.
 
 ## Audience snapshots and one-shot campaigns
 

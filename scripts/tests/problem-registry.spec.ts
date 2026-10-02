@@ -981,6 +981,37 @@ describe("problem-registry.mts", () => {
     });
   });
 
+  it("does not recommend resending notifications with invalid persisted delivery evidence", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/notifications-core/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class NotificationTaskResultInvalidProblem extends Problem {",
+        "  constructor() {",
+        '    super("notifications-core/task-result-invalid", ProblemCategory.InternalServerError);',
+        "  }",
+        "}",
+        "",
+      ].join("\n"),
+    );
+
+    expect(runProblemRegistryCheck(repo, "write").status).toBe("pass");
+    const problem = readRegistry(repo).problems.find(
+      ({ code }) => code === "notifications-core/task-result-invalid",
+    );
+
+    expect(problem?.recovery).toMatchObject({
+      retryability: "not-retryable",
+      redactionPolicy: "operator-only",
+      userAction:
+        "Do not retry the unchanged delivery or resend automatically; report the execution ID to the service operator.",
+      operatorAction:
+        "Inspect and reconcile the persisted task result against the original provider delivery before repairing the record.",
+    });
+  });
+
   it("publishes non-retryable recovery metadata for React Email rendering failures", () => {
     const repo = createTempRepo();
     writeFile(

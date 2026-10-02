@@ -1,4 +1,5 @@
 import * as assert from "node:assert/strict";
+import { ContactPolicyConflictProblem } from "./ContactPolicy";
 import {
   EngagementDeliveryEventCorrelationProblem,
   EngagementDeliveryEventProcessor,
@@ -7,6 +8,7 @@ import {
 import {
   EngagementStoreValidationProblem,
   type EngagementEvidence,
+  type EngagementDispatchOutcome,
   type EngagementPersistence,
 } from "./EngagementStores";
 
@@ -34,6 +36,155 @@ export function createEngagementStoreConformanceSuite(
 
   return {
     cases: [
+      ...(["absent", "suppressed", "unavailable", "skipped"] as const).map((state) => ({
+        name: `allows conditional dispatch recording when prior state is ${state}`,
+        run: async () => {
+          const store = await options.createStore();
+          const input = {
+            ...identity("tenant-conditional", "recipient", "message", "push", state),
+            topic: "marketing",
+            targets: [],
+            outcome: { kind: "suppressed", reason: "suppression" } as const,
+            recordedAt: instant(1),
+          };
+          let prior;
+          if (state !== "absent") {
+            const outcome: EngagementDispatchOutcome =
+              state === "suppressed"
+                ? { kind: "suppressed", reason: "preference" }
+                : state === "unavailable"
+                  ? { kind: "unavailable", reason: "no-endpoint" }
+                  : { kind: "skipped", reason: "policy" };
+            prior = await store.recordDispatch({ ...input, outcome });
+          }
+          const reopened = await reopen(store);
+          const recorded = await reopened.recordDispatch({
+            ...input,
+            expectedState: "absent-or-eligibility",
+          });
+          if (prior === undefined) {
+            assert.deepEqual(recorded.outcome, input.outcome);
+            assert.deepEqual(recorded.targets, []);
+          } else {
+            assert.deepEqual(recorded, prior);
+          }
+          assert.deepEqual(await (await reopen(reopened)).findByIdentity(input), recorded);
+        },
+      })),
+      ...(["queued", "failed"] as const).map((state) => ({
+        name: `rejects conditional eligibility writes over ${state} acceptance across reopen`,
+        run: async () => {
+          const store = await options.createStore();
+          const input = {
+            ...identity("tenant-conditional", "recipient", "message", "push", state),
+            topic: "marketing",
+            targets: [
+              {
+                endpointId: "device",
+                endpointVersion: 1,
+                executionId: "execution",
+                provider: "fcm",
+                providerMessageId: "projects/project/messages/accepted",
+              },
+            ],
+            recordedAt: instant(1),
+          };
+          const stale = await reopen(store);
+          assert.equal(await stale.findByIdentity(input), undefined);
+          const outcome: EngagementDispatchOutcome =
+            state === "queued"
+              ? { kind: "queued", executionIds: ["execution"] }
+              : {
+                  kind: "failed",
+                  stage: "persistence",
+                  failureCode: "engagement-core/contact-policy-acceptance-unknown",
+                  retryable: false,
+                  executionIds: ["execution"],
+                };
+          const accepted = await store.recordDispatch({ ...input, outcome });
+          await assert.rejects(
+            () =>
+              stale.recordDispatch({
+                ...input,
+                targets: [],
+                outcome: { kind: "suppressed", reason: "suppression" },
+                recordedAt: instant(2),
+                expectedState: "absent-or-eligibility",
+              }),
+            ContactPolicyConflictProblem,
+          );
+          assert.deepEqual(await (await reopen(stale)).findByIdentity(input), accepted);
+        },
+      })),
+      {
+        name: "allows legacy failed dispatch retries when the conditional precondition is omitted",
+        run: async () => {
+          const store = await options.createStore();
+          const input = {
+            ...identity("tenant-legacy-retry", "recipient", "message", "push", "retry"),
+            topic: "marketing",
+            targets: [],
+            recordedAt: instant(1),
+          };
+          await store.recordDispatch({
+            ...input,
+            outcome: {
+              kind: "failed",
+              stage: "provider",
+              failureCode: "retryable-provider",
+              retryable: true,
+              executionIds: [],
+            },
+          });
+          const reopened = await reopen(store);
+          const queued = await reopened.recordDispatch({
+            ...input,
+            targets: [{ endpointId: "device", endpointVersion: 1, executionId: "retry-execution" }],
+            outcome: { kind: "queued", executionIds: ["retry-execution"] },
+            recordedAt: instant(2),
+          });
+          assert.deepEqual(queued.outcome, { kind: "queued", executionIds: ["retry-execution"] });
+          assert.deepEqual(queued.targets, [
+            { endpointId: "device", endpointVersion: 1, executionId: "retry-execution" },
+          ]);
+          assert.deepEqual(await (await reopen(reopened)).findByIdentity(input), queued);
+        },
+      },
+      {
+        name: "keeps refreshed endpoints active when stale invalidation uses an old version snapshot",
+        run: async () => {
+          const store = await options.createStore();
+          const input = pushEndpoint("tenant-freshness", "recipient-freshness");
+          const initial = await store.saveEndpoint(input);
+          const refreshed = await store.saveEndpoint({ ...input, lastSeenAt: instant(3) });
+          const invalidation = {
+            tenantId: input.tenantId,
+            endpointId: initial.id,
+            expectedVersion: initial.version,
+            reason: "other" as const,
+            invalidatedAt: instant(4),
+          };
+          for (const cutoff of [instant(2), instant(3)]) {
+            const result = await store.invalidateEndpoint({
+              ...invalidation,
+              lastSeenBefore: cutoff,
+            });
+            assert.equal(result.status, "freshness-mismatch");
+            assert.deepEqual(await store.listActiveEndpoints(input.tenantId, input.recipientId), [
+              refreshed,
+            ]);
+          }
+          assert.equal(
+            (
+              await store.invalidateEndpoint({
+                ...invalidation,
+                lastSeenBefore: instant(4),
+              })
+            ).status,
+            "invalidated",
+          );
+        },
+      },
       {
         name: "persists endpoints preferences suppressions and dispatch evidence across reopen",
         run: async () => {
@@ -508,8 +659,11 @@ export function createEngagementStoreConformanceSuite(
 
           assert.equal(refreshed.version, first.version);
           assert.deepEqual(refreshed.lastSeenAt, instant(3));
+          const staleRefresh = await store.saveEndpoint({ ...input, lastSeenAt: instant(2) });
+          assert.equal(staleRefresh.version, first.version);
+          assert.deepEqual(staleRefresh.lastSeenAt, instant(3));
           const reopened = await reopen(store);
-          assert.deepEqual(await reopened.getEndpoint(input.tenantId, input.id), refreshed);
+          assert.deepEqual(await reopened.getEndpoint(input.tenantId, input.id), staleRefresh);
         },
       })),
       ...(["recipientId", "address"] as const).map((field) => ({

@@ -915,6 +915,12 @@
       "runtimes": [],
       "domain": "Notifications"
     },
+    "notifications-fcm": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Notifications"
+    },
     "notifications-react-email": {
       "role": "Plugins",
       "subtype": "presentation",
@@ -1309,6 +1315,7 @@
         "metering-drizzle",
         "metering-upstash",
         "metrics-billing",
+        "notifications-fcm",
         "notifications-resend",
         "onboarding-drizzle",
         "ratelimit-upstash",
@@ -1524,6 +1531,7 @@
         "features-drizzle",
         "frontend-problems",
         "metering-upstash",
+        "notifications-fcm",
         "notifications-react-email",
         "notifications-resend",
         "ratelimit-upstash",
@@ -1935,6 +1943,25 @@
           "optional TimescaleDB hypertables",
           "tenant-scoped event idempotency",
           "legacy schema reconciliation"
+        ]
+      },
+      "notifications-fcm": {
+        "domain": "Notifications",
+        "adapter": "Firebase Cloud Messaging push provider",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": [
+          "Firebase project ID and explicit credentials supplied by app",
+          "token resolver supplied by app for persistent dispatch"
+        ],
+        "features": [
+          "canonical push content",
+          "one endpoint per dispatch",
+          "bounded batch concurrency",
+          "explicit retry and terminal classification",
+          "provider acceptance evidence",
+          "opaque token reference resolution",
+          "redacted Problems and diagnostics",
+          "opt-in live smoke documentation"
         ]
       },
       "notifications-resend": {

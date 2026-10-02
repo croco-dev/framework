@@ -86,22 +86,17 @@ describe("InMemoryEngagementStore", () => {
       tokenReference: "secret://push/directory",
       lastSeenAt: new Date("2026-01-01T00:00:02.000Z"),
     });
-    const resolveToken = vi.fn(async () => "resolved-push-token");
     const directory = new StoreBackedRecipientDirectory(
       new InMemoryRecipientDirectory([{ recipient, push: [], locale: "ko-KR" }]),
       store,
-      { resolveToken },
     );
 
     await expect(directory.resolve(recipient)).resolves.toMatchObject({
       recipient,
       email: { id: email.id, address: "recipient@example.invalid", version: email.version },
-      push: [{ id: "push-directory", token: "resolved-push-token", version: 1 }],
+      push: [{ id: "push-directory", tokenReference: "secret://push/directory", version: 1 }],
       locale: "ko-KR",
     });
-    expect(resolveToken).toHaveBeenCalledWith(
-      expect.objectContaining({ tokenReference: "secret://push/directory" }),
-    );
 
     await store.invalidateEndpoint({
       tenantId: recipient.tenantId,

@@ -5,4 +5,4 @@ prev: false
 title: "NotificationDispatchResult"
 ---
 
-> **NotificationDispatchResult** = `Readonly`\<\{ `executionId`: `string`; \}\>
+> **NotificationDispatchResult** = `Readonly`\<\{ `executionId`: `string`; `providerMessageId?`: `string`; `providerName?`: `string`; \}\>

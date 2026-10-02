@@ -19,6 +19,7 @@ import {
   defineMessage,
   EngagementCommandInvalidProblem,
   EngagementDispatchFailedProblem,
+  EngagementDeliveryEventProcessor,
   EngagementPersistenceProblem,
   EngagementRecordedDispatchFailureProblem,
   EngagementRenderFailedProblem,
@@ -37,6 +38,7 @@ import {
   StoredEngagementPolicyEvaluator,
   StoreBackedRecipientDirectory,
   createEngagementIdempotencyKey,
+  createEngagementDispatchId,
   type EngagementNotificationDispatcher,
   type EngagementSendCommand,
   type EngagementSuppressionEvaluator,
@@ -74,8 +76,8 @@ const recipient: ResolvedRecipient = {
   recipient: { tenantId: "tenant-1", userId: "user-1" },
   email: { id: "email-primary", address: "user@example.com" },
   push: [
-    { id: "push-phone", token: "push-token-phone" },
-    { id: "push-tablet", token: "push-token-tablet" },
+    { id: "push-phone", tokenReference: "push-token-phone" },
+    { id: "push-tablet", tokenReference: "push-token-tablet" },
   ],
   locale: "en-US",
   timezone: "Asia/Seoul",
@@ -138,13 +140,14 @@ type TestExecution = {
   id: string;
   type: string;
   payload: unknown;
-  status: "pending" | "running" | "completed";
+  status: "pending" | "running" | "completed" | "failed";
   attempts: number;
   maxAttempts: number;
   createdAt: Date;
   startedAt?: Date;
   result?: unknown;
   idempotencyKey?: string;
+  error?: { message: string; code?: string; retryable: boolean };
 };
 
 class TestExecutionMissingProblem extends Problem {
@@ -215,6 +218,15 @@ function createIdempotentExecutionManager() {
       executions.set(id, completed);
       return completed;
     }),
+    fail: vi.fn(
+      async (id: string, error: { message: string; code?: string; retryable: boolean }) => {
+        const execution = executions.get(id);
+        if (execution === undefined) throw new TestExecutionMissingProblem(id);
+        const failed: TestExecution = { ...execution, status: "failed", error };
+        executions.set(id, failed);
+        return failed;
+      },
+    ),
   };
 }
 
@@ -1183,9 +1195,7 @@ describe("EngagementService", () => {
       lastSeenAt: new Date("2026-01-01T00:00:01.000Z"),
     };
     await store.saveEndpoint(endpoint);
-    const storedDirectory = new StoreBackedRecipientDirectory(directory, store, {
-      resolveToken: async () => "unused-push-token",
-    });
+    const storedDirectory = new StoreBackedRecipientDirectory(directory, store);
     const dispatcher = createDispatcher();
     vi.spyOn(store, "recordDispatch").mockRejectedValueOnce(
       new EngagementPersistenceProblem(
@@ -1311,5 +1321,381 @@ describe("createEngagementIdempotencyKey", () => {
     expect(createEngagementIdempotencyKey({ ...input, tenantId: "tenant-2" })).not.toBe(
       createEngagementIdempotencyKey(input),
     );
+  });
+});
+
+describe("durable push delivery outcomes", () => {
+  const ref = { tenantId: "tenant-push", userId: "recipient-push" };
+  const at = new Date("2026-01-01T00:00:00.000Z");
+
+  class TestPushProblem extends Problem {
+    constructor(kind: "token-unregistered" | "rate-limit") {
+      super(
+        `notifications-fcm/${kind}`,
+        kind === "rate-limit" ? ProblemCategory.TooManyRequests : ProblemCategory.ValidationError,
+        `FCM ${kind}`,
+        {
+          extensions: {
+            provider: "fcm",
+            endpointInvalid: kind === "token-unregistered",
+            retryable: kind === "rate-limit",
+          },
+        },
+      );
+    }
+  }
+
+  async function createPushStore() {
+    const store = new InMemoryEngagementStore(undefined, () => at);
+    const endpoint = await store.saveEndpoint({
+      id: "device-1",
+      ...ref,
+      recipientId: ref.userId,
+      kind: "push",
+      provider: "fcm",
+      app: "app-1",
+      platform: "ios",
+      environment: "production",
+      tokenReference: "vault://device-1",
+      lastSeenAt: at,
+    });
+    const directory = new StoreBackedRecipientDirectory(
+      new InMemoryRecipientDirectory([{ recipient: ref, push: [] }]),
+      store,
+    );
+    return { store, endpoint, directory };
+  }
+
+  it("records provider acceptance and message ID for a resolved endpoint", async () => {
+    const { store, directory } = await createPushStore();
+    const dispatch = vi.fn(async () => ({
+      executionId: "execution-push-1",
+      providerName: "fcm",
+      providerMessageId: "projects/project-1/messages/message-1",
+    }));
+    const notifications: EngagementNotificationDispatcher = {
+      prepareDispatch: () => ({ dispatch }),
+    };
+    const service = new EngagementService(
+      directory,
+      createRenderer(),
+      notifications,
+      undefined,
+      store,
+      () => at,
+      undefined,
+      new EngagementDeliveryEventProcessor(store),
+    );
+
+    await service.send(TrialEnding, {
+      recipient: ref,
+      data: { tenantName: "Croco", secret: "redacted" },
+      key: "push-accepted",
+      policy: "all-reachable",
+    });
+
+    expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "vault://device-1",
+        push: { title: "Trial ending", body: "Croco", deepLink: "/billing" },
+      }),
+      expect.anything(),
+    );
+    const dispatchId = createEngagementDispatchId({
+      ...ref,
+      recipientId: ref.userId,
+      messageId: TrialEnding.id,
+      channel: "push",
+      semanticKey: "push-accepted",
+    });
+    const saved = await store.getDispatch(ref.tenantId, dispatchId);
+    expect(saved?.targets).toMatchObject([
+      {
+        endpointId: "device-1",
+        provider: "fcm",
+        providerMessageId: "projects/project-1/messages/message-1",
+      },
+    ]);
+    expect(await store.listByDispatch(ref.tenantId, dispatchId)).toMatchObject([
+      { endpointId: "device-1", provider: "fcm", type: "accepted" },
+    ]);
+    const interaction = {
+      tenantId: ref.tenantId,
+      provider: "client-interaction",
+      providerEventId: "authenticated-session:interaction-1",
+      dispatchId,
+      endpointId: "device-1",
+      type: "opened" as const,
+      occurredAt: at,
+      recordedAt: at,
+    };
+    const processor = new EngagementDeliveryEventProcessor(store);
+    expect((await processor.process(interaction)).event.duplicate).toBe(false);
+    expect((await processor.process(interaction)).event.duplicate).toBe(true);
+    expect(await store.listByDispatch(ref.tenantId, dispatchId)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "accepted" }),
+        expect.objectContaining({ type: "opened", provider: "client-interaction" }),
+      ]),
+    );
+  });
+
+  it("reconciles acceptance after an event outage without sending again", async () => {
+    const { store, directory } = await createPushStore();
+    const dispatch = vi.fn(async () => ({ executionId: "execution-recover", providerName: "fcm" }));
+    const notifications: EngagementNotificationDispatcher = {
+      prepareDispatch: () => ({ dispatch }),
+    };
+    const processor = new EngagementDeliveryEventProcessor(store);
+    vi.spyOn(processor, "process").mockRejectedValueOnce(new Error("event store unavailable"));
+    const command = {
+      recipient: ref,
+      data: { tenantName: "Croco", secret: "redacted" },
+      key: "push-recover-acceptance",
+      policy: "all-reachable" as const,
+    };
+    await expect(
+      new EngagementService(
+        directory,
+        createRenderer(),
+        notifications,
+        undefined,
+        store,
+        () => at,
+        undefined,
+        processor,
+      ).send(TrialEnding, command),
+    ).rejects.toThrow("event store unavailable");
+
+    const reopened = store.reopen();
+    const service = new EngagementService(
+      directory,
+      createRenderer(),
+      notifications,
+      undefined,
+      reopened,
+      () => at,
+      undefined,
+      new EngagementDeliveryEventProcessor(reopened),
+    );
+    await expect(service.send(TrialEnding, command)).resolves.toMatchObject({ status: "queued" });
+    await service.send(TrialEnding, command);
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    const saved = await reopened.findByIdentity({
+      tenantId: ref.tenantId,
+      recipientId: ref.userId,
+      messageId: TrialEnding.id,
+      channel: "push",
+      semanticKey: command.key,
+    });
+    expect(saved).toBeDefined();
+    expect(await reopened.listByDispatch(ref.tenantId, saved?.id ?? "")).toMatchObject([
+      { type: "accepted", provider: "fcm" },
+    ]);
+  });
+
+  it("reconciles terminal token invalidation after an event outage without sending again", async () => {
+    const { store, endpoint, directory } = await createPushStore();
+    const dispatch = vi.fn(async (): Promise<never> => {
+      throw new TestPushProblem("token-unregistered");
+    });
+    const notifications: EngagementNotificationDispatcher = {
+      prepareDispatch: () => ({ dispatch }),
+    };
+    const processor = new EngagementDeliveryEventProcessor(store);
+    vi.spyOn(processor, "process").mockRejectedValueOnce(new Error("event store unavailable"));
+    const command = {
+      recipient: ref,
+      data: { tenantName: "Croco", secret: "redacted" },
+      key: "push-recover-invalid",
+      policy: "all-reachable" as const,
+    };
+    await expect(
+      new EngagementService(
+        directory,
+        createRenderer(),
+        notifications,
+        undefined,
+        store,
+        () => at,
+        undefined,
+        processor,
+      ).send(TrialEnding, command),
+    ).rejects.toThrow("event store unavailable");
+    expect((await store.getEndpoint(ref.tenantId, endpoint.id))?.invalidatedAt).toBeUndefined();
+
+    const reopened = store.reopen();
+    const service = new EngagementService(
+      directory,
+      createRenderer(),
+      notifications,
+      undefined,
+      reopened,
+      () => at,
+      undefined,
+      new EngagementDeliveryEventProcessor(reopened),
+    );
+    await expect(service.send(TrialEnding, command)).rejects.toBeInstanceOf(
+      EngagementDispatchFailedProblem,
+    );
+    await expect(service.send(TrialEnding, command)).rejects.toBeInstanceOf(
+      EngagementDispatchFailedProblem,
+    );
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect((await reopened.getEndpoint(ref.tenantId, endpoint.id))?.invalidationReason).toBe(
+      "token-invalid",
+    );
+  });
+
+  it("invalidates an unregistered endpoint and excludes it from later sends", async () => {
+    const { store, endpoint, directory } = await createPushStore();
+    const dispatch = vi.fn(async (): Promise<never> => {
+      throw new TestPushProblem("token-unregistered");
+    });
+    const notifications: EngagementNotificationDispatcher = {
+      prepareDispatch: () => ({ dispatch }),
+    };
+    const service = new EngagementService(
+      directory,
+      createRenderer(),
+      notifications,
+      undefined,
+      store,
+      () => at,
+      undefined,
+      new EngagementDeliveryEventProcessor(store),
+    );
+
+    await expect(
+      service.send(TrialEnding, {
+        recipient: ref,
+        data: { tenantName: "Croco", secret: "redacted" },
+        key: "push-invalid",
+        policy: "all-reachable",
+      }),
+    ).rejects.toBeInstanceOf(EngagementDispatchFailedProblem);
+    expect((await store.getEndpoint(ref.tenantId, endpoint.id))?.invalidationReason).toBe(
+      "token-invalid",
+    );
+    expect(await store.listActiveEndpoints(ref.tenantId, ref.userId)).toEqual([]);
+    await service.send(TrialEnding, {
+      recipient: ref,
+      data: { tenantName: "Croco", secret: "redacted" },
+      key: "push-later",
+      policy: "all-reachable",
+    });
+    expect(dispatch).toHaveBeenCalledTimes(1);
+  });
+
+  it("recovers a terminal task outcome after the dispatch write fails", async () => {
+    const { store, endpoint, directory } = await createPushStore();
+    const send = vi.fn(
+      async () => ({ success: false, problem: new TestPushProblem("token-unregistered") }) as const,
+    );
+    const provider: NotificationProvider = {
+      getName: () => "fcm",
+      getChannel: () => NotificationChannel.PUSH,
+      getCapabilities: () => ({
+        providerName: "fcm",
+        channels: [NotificationChannel.PUSH],
+        supportsIdempotencyKey: false,
+        supportsProviderTemplates: false,
+        supportsRenderedTemplates: true,
+        outboxIntegration: "consumer-managed",
+        terminalEndpointFailureCodes: ["notifications-fcm/token-unregistered"],
+      }),
+      send,
+    };
+    const registry = {
+      getProvider: () => provider,
+      getDefaultProviderName: () => "fcm",
+      getProviderCapabilities: () => provider.getCapabilities(),
+    };
+    const task = new SendNotificationTask(registry as never);
+    const tasks = new TaskRegistry();
+    tasks.register("send-notification", SendNotificationTask, "handle", {
+      name: "send-notification",
+      options: { maxAttempts: 1 },
+      target: SendNotificationTask,
+      methodName: "handle",
+    });
+    const executions = createIdempotentExecutionManager();
+    const runner = new TaskRunner(executions as never, tasks, undefined, {
+      serviceResolver: () => task,
+    });
+    const notifications = new NotificationService(runner, registry as never);
+    vi.spyOn(store, "recordDispatch").mockRejectedValueOnce(
+      new Error("dispatch store unavailable"),
+    );
+    const command = {
+      recipient: ref,
+      data: { tenantName: "Croco", secret: "redacted" },
+      key: "push-recover-dispatch",
+      policy: "all-reachable" as const,
+    };
+    const first = new EngagementService(
+      directory,
+      createRenderer(),
+      notifications,
+      undefined,
+      store,
+      () => at,
+      undefined,
+      new EngagementDeliveryEventProcessor(store),
+    );
+    await expect(first.send(TrialEnding, command)).rejects.toBeInstanceOf(
+      EngagementPersistenceProblem,
+    );
+    expect((await store.getEndpoint(ref.tenantId, endpoint.id))?.invalidatedAt).toBeUndefined();
+
+    const reopened = store.reopen();
+    const replay = new EngagementService(
+      directory,
+      createRenderer(),
+      notifications,
+      undefined,
+      reopened,
+      () => at,
+      undefined,
+      new EngagementDeliveryEventProcessor(reopened),
+    );
+    await expect(replay.send(TrialEnding, command)).rejects.toBeInstanceOf(
+      EngagementDispatchFailedProblem,
+    );
+    expect(send).toHaveBeenCalledTimes(1);
+    expect((await reopened.getEndpoint(ref.tenantId, endpoint.id))?.invalidationReason).toBe(
+      "token-invalid",
+    );
+  });
+
+  it("keeps a push endpoint active after a retryable provider failure", async () => {
+    const { store, endpoint, directory } = await createPushStore();
+    const notifications: EngagementNotificationDispatcher = {
+      prepareDispatch: () => ({
+        dispatch: async () => {
+          throw new TestPushProblem("rate-limit");
+        },
+      }),
+    };
+    const service = new EngagementService(
+      directory,
+      createRenderer(),
+      notifications,
+      undefined,
+      store,
+      () => at,
+      undefined,
+      new EngagementDeliveryEventProcessor(store),
+    );
+
+    await expect(
+      service.send(TrialEnding, {
+        recipient: ref,
+        data: { tenantName: "Croco", secret: "redacted" },
+        key: "push-quota",
+        policy: "all-reachable",
+      }),
+    ).rejects.toBeInstanceOf(EngagementDispatchFailedProblem);
+    expect((await store.getEndpoint(ref.tenantId, endpoint.id))?.invalidatedAt).toBeUndefined();
   });
 });

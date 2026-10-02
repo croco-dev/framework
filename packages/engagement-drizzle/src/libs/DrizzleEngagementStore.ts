@@ -1,4 +1,5 @@
 import {
+  ContactPolicyConflictProblem,
   assertEngagementPreference,
   assertEngagementStoreText,
   assertEngagementSuppression,
@@ -122,7 +123,7 @@ export class DrizzleEngagementStore implements EngagementPersistence {
             platform: input.kind === "push" ? input.platform : null,
             environment: input.kind === "push" ? input.environment : null,
             tokenReference: input.kind === "push" ? input.tokenReference : null,
-            lastSeenAt: input.lastSeenAt,
+            lastSeenAt: sql`greatest(${engagementContactEndpoints.lastSeenAt}, excluded.last_seen_at)`,
             version: sql`case when row(
               ${engagementContactEndpoints.recipientId},
               ${engagementContactEndpoints.kind},
@@ -204,6 +205,9 @@ export class DrizzleEngagementStore implements EngagementPersistence {
             eq(engagementContactEndpoints.tenantId, input.tenantId),
             eq(engagementContactEndpoints.id, input.endpointId),
             eq(engagementContactEndpoints.version, input.expectedVersion),
+            input.lastSeenBefore === undefined
+              ? undefined
+              : lt(engagementContactEndpoints.lastSeenAt, input.lastSeenBefore),
             isNull(engagementContactEndpoints.invalidatedAt),
           ),
         )
@@ -214,9 +218,13 @@ export class DrizzleEngagementStore implements EngagementPersistence {
 
       const current = await this.getEndpoint(input.tenantId, input.endpointId);
       if (current === undefined) return { status: "not-found" };
-      return current.invalidatedAt === undefined
-        ? { status: "version-mismatch", endpoint: current }
-        : { status: "already-invalid", endpoint: current };
+      if (current.invalidatedAt !== undefined) {
+        return { status: "already-invalid", endpoint: current };
+      }
+      if (current.version !== input.expectedVersion) {
+        return { status: "version-mismatch", endpoint: current };
+      }
+      return { status: "freshness-mismatch", endpoint: current };
     });
   }
 
@@ -391,6 +399,14 @@ export class DrizzleEngagementStore implements EngagementPersistence {
           .for("update")
           .limit(1);
         const existing = existingRows[0];
+        if (
+          input.expectedState === "absent-or-eligibility" &&
+          (existing?.outcome.kind === "queued" || existing?.outcome.kind === "failed")
+        ) {
+          throw new ContactPolicyConflictProblem(
+            "Existing dispatch acceptance cannot be replaced before policy replay validation; reconciliation is required",
+          );
+        }
         if (existing !== undefined && existing.outcome.kind !== "failed") {
           return this.mapDispatch(client, existing);
         }
