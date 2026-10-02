@@ -444,6 +444,191 @@ describe("workflow-core", () => {
     },
   );
 
+  it.each([1, 2])(
+    "finalizes the parent after advisory failure inspection %s rejects once",
+    async (failedInspection) => {
+      const taskFailure = new TestWorkflowProblem("task failed");
+      const inspectionFailure = new TestWorkflowProblem("parent inspection unavailable");
+      let taskFailed = false;
+      let inspections = 0;
+      @Component()
+      class InspectionTasks {
+        @Task({ name: "inspection.failure" })
+        run() {
+          taskFailed = true;
+          throw taskFailure;
+        }
+      }
+      @Component()
+      class InspectionWorkflows {
+        @Workflow({ name: "inspection", steps: ["inspection.failure"] })
+        run() {}
+      }
+      instances.set(InspectionTasks, new InspectionTasks());
+      const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+      const get = manager.get.bind(manager);
+      vi.spyOn(manager, "get").mockImplementation(async (id) => {
+        if (taskFailed && id === "exec-1" && ++inspections === failedInspection) {
+          throw inspectionFailure;
+        }
+        return get(id);
+      });
+      const mockSpan = createMockSpan();
+      vi.spyOn(trace, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+
+      await expect(runner.execute("inspection", {})).rejects.toBe(taskFailure);
+
+      expect(await store.findById("exec-1")).toMatchObject({
+        status: "failed",
+        error: { message: taskFailure.message, retryable: false },
+      });
+      expect(taskFailure).toHaveProperty("workflowFailureRecordError", inspectionFailure);
+      expect(mockSpan.addEvent).toHaveBeenCalledWith(
+        "workflow.execution.failure_record.failed",
+        expect.objectContaining({
+          "workflow.execution.id": "exec-1",
+          "workflow.failure_record.error.message": inspectionFailure.message,
+        }),
+      );
+    },
+  );
+
+  it("returns cancellation when cancellation wins the parent failure transition", async () => {
+    @Component()
+    class FailureRaceTasks {
+      @Task({ name: "failure-race.task" })
+      run() {
+        throw new TestWorkflowProblem("task failed");
+      }
+    }
+    @Component()
+    class FailureRaceWorkflows {
+      @Workflow({ name: "failure-race", steps: ["failure-race.task"] })
+      run() {}
+    }
+    instances.set(FailureRaceTasks, new FailureRaceTasks());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+    const updateIfStatus = store.updateIfStatus.bind(store);
+    let cancelled: Execution | undefined;
+    vi.spyOn(store, "updateIfStatus").mockImplementation(async (id, status, data) => {
+      if (id === "exec-1" && data.status === "failed") {
+        cancelled = await runner.cancel(id, "operator won failure race");
+      }
+      return updateIfStatus(id, status, data);
+    });
+    const mockSpan = createMockSpan();
+    vi.spyOn(trace, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+
+    await expect(runner.execute("failure-race", {})).rejects.toMatchObject({
+      code: "workflow-core/workflow-execution-cancelled",
+    });
+
+    expect(cancelled).toBeDefined();
+    expect(await store.findById("exec-1")).toMatchObject({
+      status: "cancelled",
+      metadata: cancelled?.metadata,
+      completedAt: cancelled?.completedAt,
+      error: cancelled?.error,
+      logs: expect.arrayContaining([
+        expect.objectContaining({ message: "Workflow execution cancelled" }),
+      ]),
+    });
+    expect(mockSpan.addEvent).toHaveBeenCalledWith(
+      "workflow.execution.cancelled",
+      expect.objectContaining({ "workflow.execution.id": "exec-1" }),
+    );
+  });
+
+  it("returns cancellation when cancellation wins the invocation-owned pending start", async () => {
+    const call = vi.fn();
+    @Component()
+    class StartRaceTasks {
+      @Task({ name: "start-race.task" })
+      run() {
+        call();
+      }
+    }
+    @Component()
+    class StartRaceWorkflows {
+      @Workflow({
+        name: "start-race",
+        steps: ["start-race.task"],
+        idempotencyKey: "start-race-key",
+      })
+      run() {}
+    }
+    instances.set(StartRaceTasks, new StartRaceTasks());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+    const updateIfStatus = store.updateIfStatus.bind(store);
+    let cancelled: Execution | undefined;
+    vi.spyOn(store, "updateIfStatus").mockImplementation(async (id, status, data) => {
+      if (id === "exec-1" && status === "pending" && data.status === "running") {
+        cancelled = await runner.cancel(id, "operator won start race");
+      }
+      return updateIfStatus(id, status, data);
+    });
+
+    await expect(runner.execute("start-race", {})).rejects.toMatchObject({
+      code: "workflow-core/workflow-execution-cancelled",
+    });
+
+    expect(call).not.toHaveBeenCalled();
+    expect(await store.list({ parentId: "exec-1" })).toHaveLength(0);
+    expect(cancelled).toBeDefined();
+    expect(await store.findById("exec-1")).toMatchObject({
+      status: "cancelled",
+      metadata: cancelled?.metadata,
+      completedAt: cancelled?.completedAt,
+    });
+    await expect(runner.execute("start-race", {})).rejects.toMatchObject({
+      code: "execution/invalid-state-transition",
+    });
+  });
+
+  it("records step failure when the step input mapper throws before child creation", async () => {
+    const mapperFailure = new TestWorkflowProblem("input mapping failed");
+    const call = vi.fn();
+    @Component()
+    class MapperTasks {
+      @Task({ name: "mapper.task" })
+      run() {
+        call();
+      }
+    }
+    @Component()
+    class MapperWorkflows {
+      @Workflow({
+        name: "mapper",
+        steps: [
+          {
+            name: "mapped-step",
+            task: "mapper.task",
+            input: () => {
+              throw mapperFailure;
+            },
+          },
+        ],
+      })
+      run() {}
+    }
+    instances.set(MapperTasks, new MapperTasks());
+    const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
+    const mockSpan = createMockSpan();
+    vi.spyOn(trace, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
+
+    await expect(runner.execute("mapper", {})).rejects.toBe(mapperFailure);
+
+    expect(mockSpan.addEvent).toHaveBeenCalledWith("workflow.step.failed", {
+      "workflow.name": "mapper",
+      "workflow.execution.id": "exec-1",
+      "workflow.step.name": "mapped-step",
+      "workflow.step.task": "mapper.task",
+      "workflow.error.message": mapperFailure.message,
+    });
+    expect(call).not.toHaveBeenCalled();
+    expect(await store.list({ parentId: "exec-1" })).toHaveLength(0);
+  });
+
   it("resolves workflow tasks through the supplied application runner", async () => {
     @Component()
     class ApplicationTasks {
@@ -2165,6 +2350,12 @@ describe("workflow-core", () => {
       const runner = createWorkflowRunner(manager, WorkflowRegistry.fromMetadata());
 
       await expect(runner.execute("billing-failure-record", {})).rejects.toBe(workflowFailure);
+      if (operation === "get") {
+        expect(await store.findById("exec-1")).toMatchObject({
+          status: "failed",
+          error: { message: workflowFailure.message, retryable: false },
+        });
+      }
 
       expect(
         Object.getOwnPropertyDescriptor(workflowFailure, "workflowFailureRecordError"),

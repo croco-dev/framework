@@ -303,7 +303,14 @@ export class WorkflowRunner {
 
     span.addEvent("workflow.execution.created", executionAttributes);
 
-    const running = await this.executionManager.start(execution.id);
+    let running: Execution;
+    try {
+      running = await this.executionManager.start(execution.id);
+    } catch (error) {
+      const cancelled = await this.inspectCancellation(execution.id, span, error);
+      if (cancelled) return this.rejectCancelledWorkflow(workflow, cancelled, span);
+      throw error;
+    }
     span.setAttribute("workflow.reused", false);
     span.addEvent("workflow.execution.started", getExecutionTelemetryAttributes(workflow, running));
     const steps: WorkflowStepResult[] = [];
@@ -328,7 +335,16 @@ export class WorkflowRunner {
           task: step.task,
         });
 
-        const input = this.resolveStepInput(workflow, running, payload, step, steps);
+        let input: unknown;
+        try {
+          input = this.resolveStepInput(workflow, running, payload, step, steps);
+        } catch (error) {
+          span.addEvent("workflow.step.failed", {
+            ...stepAttributes,
+            "workflow.error.message": error instanceof Error ? error.message : String(error),
+          });
+          throw error;
+        }
         await this.assertNotCancelled(workflow.name, running.id);
         span.addEvent("workflow.step.started", stepAttributes);
         let result: unknown;
@@ -393,15 +409,9 @@ export class WorkflowRunner {
         reused: false,
       };
     } catch (error) {
-      let current: Execution;
-      try {
-        current = await this.executionManager.get(running.id);
-      } catch (inspectionError) {
-        reportFailureRecordError(span, running.id, error, inspectionError);
-        throw error;
-      }
-      if (current.status === "cancelled") {
-        return this.rejectCancelledWorkflow(workflow, current, span);
+      const cancelled = await this.inspectCancellation(running.id, span, error);
+      if (cancelled) {
+        return this.rejectCancelledWorkflow(workflow, cancelled, span);
       }
       await this.recordLog(span, running.id, "error", "Workflow execution failed", {
         workflowName: workflow.name,
@@ -426,12 +436,14 @@ export class WorkflowRunner {
             );
           }
         }
-        const beforeFailure = await this.executionManager.get(running.id);
-        if (beforeFailure.status === "cancelled") {
+        const beforeFailure = await this.inspectCancellation(running.id, span, error);
+        if (beforeFailure) {
           return this.rejectCancelledWorkflow(workflow, beforeFailure, span);
         }
         failed = await this.executionManager.fail(running.id, toExecutionError(error, retryable));
       } catch (failureRecordError) {
+        const afterFailure = await this.inspectCancellation(running.id, span, error);
+        if (afterFailure) return this.rejectCancelledWorkflow(workflow, afterFailure, span);
         reportFailureRecordError(span, running.id, error, failureRecordError);
         throw error;
       }
@@ -440,6 +452,20 @@ export class WorkflowRunner {
         "workflow.error.message": error instanceof Error ? error.message : String(error),
       });
       throw error;
+    }
+  }
+
+  private async inspectCancellation(
+    executionId: string,
+    span: WorkflowTelemetrySpan,
+    workflowError: unknown,
+  ): Promise<Execution | undefined> {
+    try {
+      const execution = await this.executionManager.get(executionId);
+      return execution.status === "cancelled" ? execution : undefined;
+    } catch (inspectionError) {
+      reportFailureRecordError(span, executionId, workflowError, inspectionError);
+      return undefined;
     }
   }
 
