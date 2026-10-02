@@ -339,3 +339,14 @@ export type {
   ContactPolicyAdminStore,
   ContactPolicyConsoleState,
 } from "./libs/ContactPolicyOperations";
+
+export { ExperimentOperations, ExperimentAdminProblem } from "./libs/ExperimentOperations";
+export type {
+  ExperimentAdminAccess,
+  ExperimentAdminCommand,
+  ExperimentAdminConfiguration,
+  ExperimentAdminConfigureCommand,
+  ExperimentAdminPermission,
+  ExperimentAdminSample,
+  ExperimentAdminSnapshot,
+} from "./libs/ExperimentOperations";

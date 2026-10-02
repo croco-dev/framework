@@ -1,5 +1,32 @@
 # @croco/features-drizzle
 
+## Durable experiments
+
+`DrizzleExperimentStore` persists the `ExperimentStore` contract independently of
+policy releases. Run the additive, idempotent `createExperimentsSchema(database)`
+migration before using it. `dropExperimentsSchema` is for isolated tests or an explicitly
+authorized teardown; it removes experiment history. Existing policy tables are unchanged.
+
+Assignments have a unique experiment revision, explicit scope and stable subject key.
+Competing workers return the stored winner even after reconnecting. State commands,
+configuration receipts and audit entries commit atomically under a lock on the same
+experiment row used by assignment and treatment admission. A pause that acquires the
+lock first blocks admission; an already admitted handler may finish after pause. Period
+checks use the supplied admission-request timestamp, rather than a new clock read after
+lock acquisition. Queue delay has no fixed upper bound here; use deployment database
+timeouts when a maximum delay is required.
+Separate deliveries create separate exposures, while retransmitting the same delivery
+returns its original exposure. Late exposures retain their original assignment.
+
+Inject this store into `ExperimentRuntime` with server authorization. The SQL adapter
+enforces assignment ownership and scope, and the runtime owns registration validation
+and actor authorization. Neither client-selected variants nor arbitrary client tenant
+claims should reach these trusted boundaries.
+
+`FEATURES_POSTGRES_URL=... pnpm --filter @croco/features-drizzle test:postgres` exercises
+real PostgreSQL concurrency with two independent pools, a fresh connection, state
+races, receipt conflicts, exposure deduplication and tenant isolation.
+
 PostgreSQL persistence for the policy release contract in `@croco/features-core`.
 
 The adapter stores policy definitions, immutable revision rows, a scope head used for revision CAS,

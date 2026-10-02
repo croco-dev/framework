@@ -320,3 +320,10 @@ export type {
 
 export { ContactPolicyConsole } from "./libs/ContactPolicyConsole";
 export type { ContactPolicyConsoleProps } from "./libs/ContactPolicyConsole";
+
+export { ExperimentConsole } from "./libs/ExperimentConsole";
+export type {
+  ExperimentConsoleProps,
+  ExperimentConsolePreview,
+  ExperimentConsoleState,
+} from "./libs/ExperimentConsole";

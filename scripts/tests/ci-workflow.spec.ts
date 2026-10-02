@@ -1021,6 +1021,10 @@ describe("CI verification profile contract", () => {
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/entitlements-drizzle test:postgres");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/execution-drizzle...");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/execution-drizzle test:postgres");
+    expect(REAL_RESOURCE_JOB).toContain(
+      "FEATURES_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
+    );
+    expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/features-drizzle test:postgres");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/experience-drizzle...");
     expect(REAL_RESOURCE_JOB).toContain("pnpm --filter @croco/experience-drizzle test:live");
     expect(REAL_RESOURCE_JOB).toContain("pnpm build --filter=@croco/promotions-drizzle...");

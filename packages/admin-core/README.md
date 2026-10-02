@@ -244,3 +244,13 @@ reservation TTL, topic kinds, message memberships, or overrides outside current
 bounds with `admin-core/contact-policy-invalid`. A deployment that changes these
 contracts requires an explicit settings migration or reinitialization. Do not
 reuse the old snapshot or silently substitute defaults after validation fails.
+
+## Experiment operations
+
+`ExperimentOperations` is the server boundary for the registered experiment runtime. Construct `ExperimentAdminAccess` from authentication with an explicit app, environment, tenant (`null` means an explicitly authorized application scope), actor, and permissions. Tenant omission is denied. Read access is required alongside preview, operate, or configure permissions.
+
+The boundary exposes only public definition fields and server-owned sample labels. `preview(target, sampleId, access)` resolves the subject and context on the server, calls the runtime's non-persistent preview, and removes provider metadata. It never accepts client-selected subjects or handlers.
+
+`command` supplies start/pause/stop with a server-resolved actor, reason, idempotency key, and expected state version (`expectedRevision`, initially zero). `configure` creates a new immutable revision; it retains the server registration's identity, salt, allocator, and private handlers. Operators may change the unit, login policy, registered eligibility rule, allocation/weights, hypothesis, observation plan, and UTC period. The runtime validates variant identities and values against the source registration. Existing assignments keep their original revision.
+
+See `examples/experiment-runtime` for a credential-free Console and actual server treatment flow.
