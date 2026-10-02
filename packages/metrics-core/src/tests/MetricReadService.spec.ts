@@ -561,7 +561,11 @@ describe("MetricReadService", () => {
   it.each(["list", "queries", "explain", "report", "query"] as const)(
     "cancels a pending %s authorization using the invocation signal",
     async (method) => {
-      const grant = vi.fn(async () => new Promise<null>(() => undefined));
+      let scopedSignal: AbortSignal | undefined;
+      const grant = vi.fn(async (request: MetricReadContext) => {
+        scopedSignal = request.signal;
+        return new Promise<null>(() => undefined);
+      });
       const { service, executor } = fixture({ grant });
       const controller = new AbortController();
       const pending =
@@ -590,6 +594,8 @@ describe("MetricReadService", () => {
       await vi.waitFor(() => expect(grant).toHaveBeenCalledOnce());
       controller.abort();
       await rejected;
+      expect(scopedSignal?.aborted).toBe(true);
+      expect(scopedSignal?.reason).toMatchObject({ code: "metrics-core/read-cancelled" });
       expect(executor).not.toHaveBeenCalled();
     },
   );
@@ -734,6 +740,114 @@ describe("MetricReadService", () => {
     },
   );
 
+  it.each([
+    ["definitions", "initial"],
+    ["definitions", "recheck"],
+    ["queries", "initial"],
+    ["queries", "recheck"],
+    ["explanation", "initial"],
+    ["explanation", "recheck"],
+    ["report", "initial"],
+    ["report", "recheck"],
+    ["execution", "initial"],
+    ["execution", "recheck"],
+  ] as const)(
+    "aborts %s %s authorization at the remaining deadline without aborting its caller",
+    async (kind, stage) => {
+      vi.useFakeTimers();
+      try {
+        const caller = new AbortController();
+        const signals: AbortSignal[] = [];
+        const grant = vi.fn(async (request: MetricReadContext) => {
+          const signal = request.signal;
+          if (!signal) throw new Error("Authorization requires a scoped signal");
+          signals.push(signal);
+          if (stage === "recheck" && signals.length === 1) {
+            await new Promise<void>((resolve) => setTimeout(resolve, 60));
+            return { permissionEpoch: "permission-1", privacyEpoch: "privacy-1" };
+          }
+          return new Promise<null>((_, reject) => {
+            signal.addEventListener(
+              "abort",
+              () => reject(new DOMException("Aborted", "AbortError")),
+              {
+                once: true,
+              },
+            );
+          });
+        });
+        const { service } = fixture({
+          context: {
+            ...context,
+            budget: {
+              ...context.budget,
+              maxTimeMs: kind === "report" || kind === "execution" ? 1_000 : 100,
+            },
+          },
+          query: { limits: { ...context.budget, maxTimeMs: 100 } },
+          grant,
+        });
+        const pending =
+          kind === "definitions"
+            ? service.listDefinitions(caller.signal)
+            : kind === "queries"
+              ? service.listRegisteredQueries(caller.signal)
+              : kind === "explanation"
+                ? service.explainDefinition(definition.id, caller.signal)
+                : kind === "report"
+                  ? service.getVerifiedReport(
+                      "captures_by_currency",
+                      { currency: "USD" },
+                      window,
+                      caller.signal,
+                    )
+                  : service.runRegisteredQuery(
+                      "captures_by_currency",
+                      { currency: "USD" },
+                      window,
+                      caller.signal,
+                    );
+        const rejected = expect(pending).rejects.toMatchObject({
+          code: "metrics-core/read-timeout",
+        });
+        await vi.advanceTimersByTimeAsync(60);
+        expect(grant).toHaveBeenCalledTimes(stage === "initial" ? 1 : 2);
+        await vi.advanceTimersByTimeAsync(40);
+        await rejected;
+        expect(signals.at(-1)?.aborted).toBe(true);
+        expect(signals.at(-1)?.reason).toMatchObject({ code: "metrics-core/read-timeout" });
+        expect(caller.signal.aborted).toBe(false);
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it("cleans up authorization timers and caller listeners after success", async () => {
+    vi.useFakeTimers();
+    try {
+      const caller = new AbortController();
+      const signals: AbortSignal[] = [];
+      const remove = vi.spyOn(caller.signal, "removeEventListener");
+      const { service } = fixture({
+        grant: async (request) => {
+          if (request.signal) signals.push(request.signal);
+          return { permissionEpoch: "permission-1", privacyEpoch: "privacy-1" };
+        },
+      });
+      expect(await service.listDefinitions(caller.signal)).toHaveLength(1);
+      expect(signals).toHaveLength(2);
+      expect(remove).toHaveBeenCalledTimes(2);
+      expect(vi.getTimerCount()).toBe(0);
+      caller.abort();
+      await vi.advanceTimersByTimeAsync(context.budget.maxTimeMs);
+      expect(signals.every((signal) => !signal.aborted)).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("holds the concurrency slot until a cancelled executor settles", async () => {
     const controller = new AbortController();
     let release!: () => void;
@@ -861,10 +975,12 @@ describe("MetricReadService", () => {
   it.each(["resolve", "reject"] as const)(
     "times out when synchronous authorization work reaches the deadline before %s settlement",
     async (settlement) => {
+      let scopedSignal: AbortSignal | undefined;
       vi.useFakeTimers();
       try {
         const { service } = fixture({
-          grant: async () => {
+          grant: async (request) => {
+            scopedSignal = request.signal;
             vi.setSystemTime(Date.now() + context.budget.maxTimeMs);
             if (settlement === "reject") throw new Error("Authority rejected after blocking");
             return { permissionEpoch: "permission-1", privacyEpoch: "privacy-1" };
@@ -873,6 +989,8 @@ describe("MetricReadService", () => {
         await expect(service.listDefinitions()).rejects.toMatchObject({
           code: "metrics-core/read-timeout",
         });
+        expect(scopedSignal?.aborted).toBe(true);
+        expect(scopedSignal?.reason).toMatchObject({ code: "metrics-core/read-timeout" });
         await vi.runAllTimersAsync();
       } finally {
         vi.useRealTimers();

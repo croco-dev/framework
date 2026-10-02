@@ -384,21 +384,11 @@ export class MetricReadService {
     }[] = [];
     for (const definition of this.definitions.values()) {
       const action = this.action(definition);
-      const grant = await this.withinDeadline(
-        () => this.grant(context, action),
-        deadline,
-        context.signal,
-      );
+      const grant = await this.grant(context, action, deadline);
       if (grant) candidates.push({ definition, action, grant });
     }
     const current = await Promise.all(
-      candidates.map(({ action, grant }) =>
-        this.withinDeadline(
-          () => this.currentGrant(context, action, grant),
-          deadline,
-          context.signal,
-        ),
-      ),
+      candidates.map(({ action, grant }) => this.currentGrant(context, action, grant, deadline)),
     );
     return candidates
       .filter((_, index) => current[index])
@@ -424,21 +414,11 @@ export class MetricReadService {
     }[] = [];
     for (const query of this.queries.values()) {
       const action = this.action(this.definition(query), query);
-      const grant = await this.withinDeadline(
-        () => this.grant(context, action),
-        deadline,
-        context.signal,
-      );
+      const grant = await this.grant(context, action, deadline);
       if (grant) candidates.push({ query, action, grant });
     }
     const current = await Promise.all(
-      candidates.map(({ action, grant }) =>
-        this.withinDeadline(
-          () => this.currentGrant(context, action, grant),
-          deadline,
-          context.signal,
-        ),
-      ),
+      candidates.map(({ action, grant }) => this.currentGrant(context, action, grant, deadline)),
     );
     return candidates
       .filter((_, index) => current[index])
@@ -464,20 +444,9 @@ export class MetricReadService {
     const context = this.readContext(signal);
     const deadline = Date.now() + context.budget.maxTimeMs;
     const action = this.action(definition);
-    const grant = await this.withinDeadline(
-      () => this.grant(context, action),
-      deadline,
-      context.signal,
-    );
+    const grant = await this.grant(context, action, deadline);
     if (!grant) return { status: "denied" };
-    if (
-      !(await this.withinDeadline(
-        () => this.currentGrant(context, action, grant),
-        deadline,
-        context.signal,
-      ))
-    )
-      return { status: "denied" };
+    if (!(await this.currentGrant(context, action, grant, deadline))) return { status: "denied" };
     return {
       definition,
       description: definition.description,
@@ -502,11 +471,7 @@ export class MetricReadService {
     const action = this.action(definition, query, window);
     let status: MetricReadAuditEvent["status"] = "error";
     try {
-      const grant = await this.withinDeadline(
-        () => this.grant(context, action),
-        deadline,
-        context.signal,
-      );
+      const grant = await this.grant(context, action, deadline);
       if (!grant) return { status: (status = "denied") };
       this.checkBudget(context.budget, query.limits, window);
       const outcome = await this.report(
@@ -518,13 +483,7 @@ export class MetricReadService {
         definition,
         deadline,
       );
-      if (
-        !(await this.withinDeadline(
-          () => this.currentGrant(context, action, grant),
-          deadline,
-          context.signal,
-        ))
-      )
+      if (!(await this.currentGrant(context, action, grant, deadline)))
         return { status: (status = "denied") };
       status = outcome.status;
       return outcome;
@@ -551,22 +510,12 @@ export class MetricReadService {
     const action = this.action(definition, query, window);
     let status: RegisteredQueryOutcome["status"] | "error" = "error";
     try {
-      const grant = await this.withinDeadline(
-        () => this.grant(context, action),
-        deadline,
-        context.signal,
-      );
+      const grant = await this.grant(context, action, deadline);
       if (!grant) return { status: (status = "denied") };
       this.checkBudget(context.budget, query.limits, window);
       const sources = this.scopedSources(query, context);
       const report = await this.report(query, parsed, window, context, grant, definition, deadline);
-      if (
-        !(await this.withinDeadline(
-          () => this.currentGrant(context, action, grant),
-          deadline,
-          context.signal,
-        ))
-      )
+      if (!(await this.currentGrant(context, action, grant, deadline)))
         return { status: (status = "denied") };
       if (report.status === "verified") {
         status = "verified";
@@ -639,13 +588,7 @@ export class MetricReadService {
         this.checkDeadline(deadline);
         this.checkResult(result, query, definition, window, context);
         query.outputSchema.parse(result.data);
-        if (
-          !(await this.withinDeadline(
-            () => this.currentGrant(context, action, grant),
-            deadline,
-            context.signal,
-          ))
-        )
+        if (!(await this.currentGrant(context, action, grant, deadline)))
           return { status: (status = "denied") };
         if (result.quality.freshness === "stale")
           return { status: (status = "stale"), evidence: metricEvidence(result) };
@@ -720,8 +663,10 @@ export class MetricReadService {
   private async grant(
     context: MetricReadContext,
     action: MetricReadAction,
+    deadline: number,
   ): Promise<MetricReadGrant | null> {
     this.checkAbort(context.signal);
+    this.checkDeadline(deadline);
     if (
       !context.principal.app ||
       !context.principal.environment ||
@@ -742,8 +687,8 @@ export class MetricReadService {
       return null;
     }
     const grant = await this.withinDeadline(
-      () => this.authority.authorize(context, action),
-      Date.now() + context.budget.maxTimeMs,
+      (signal) => this.authority.authorize({ ...context, signal }, action),
+      deadline,
       context.signal,
     );
     this.checkAbort(context.signal);
@@ -754,8 +699,9 @@ export class MetricReadService {
     context: MetricReadContext,
     action: MetricReadAction,
     original: MetricReadGrant,
+    deadline: number,
   ): Promise<boolean> {
-    const current = await this.grant(context, action);
+    const current = await this.grant(context, action, deadline);
     this.checkAbort(context.signal);
     return (
       current !== null &&
@@ -1039,38 +985,42 @@ export class MetricReadService {
   }
 
   private async withinDeadline<T>(
-    operation: () => Promise<T>,
+    operation: (signal: AbortSignal) => Promise<T>,
     deadline: number,
     signal?: AbortSignal,
   ): Promise<T> {
     this.checkAbort(signal);
     this.checkDeadline(deadline);
-    let onAbort: (() => void) | undefined;
-    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const controller = new AbortController();
+    const onAbort = () => controller.abort(cancelled("Metric read was cancelled"));
+    signal?.addEventListener("abort", onAbort, { once: true });
+    const timeout = setTimeout(() => controller.abort(timedOut()), deadline - Date.now());
+    let onOperationAbort: (() => void) | undefined;
     try {
       const result = await Promise.race([
         Promise.resolve().then(() => {
           this.checkAbort(signal);
           this.checkDeadline(deadline);
-          return operation();
+          return operation(controller.signal);
         }),
         new Promise<never>((_, reject) => {
-          onAbort = () => reject(cancelled("Metric read was cancelled"));
-          signal?.addEventListener("abort", onAbort, { once: true });
+          onOperationAbort = () => reject(controller.signal.reason);
+          controller.signal.addEventListener("abort", onOperationAbort, { once: true });
           if (signal?.aborted) onAbort();
-          timeout = setTimeout(() => reject(timedOut()), deadline - Date.now());
         }),
       ]);
       this.checkAbort(signal);
       this.checkDeadline(deadline);
       return result;
     } catch (error) {
-      this.checkAbort(signal);
-      this.checkDeadline(deadline);
+      if (signal?.aborted) onAbort();
+      else if (Date.now() >= deadline) controller.abort(timedOut());
+      if (controller.signal.aborted) throw controller.signal.reason;
       throw error;
     } finally {
-      if (timeout) clearTimeout(timeout);
-      if (onAbort) signal?.removeEventListener("abort", onAbort);
+      clearTimeout(timeout);
+      signal?.removeEventListener("abort", onAbort);
+      if (onOperationAbort) controller.signal.removeEventListener("abort", onOperationAbort);
     }
   }
 
