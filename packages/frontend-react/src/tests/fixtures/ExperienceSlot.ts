@@ -1,7 +1,7 @@
 import { createElement as h } from "react";
 import { flushSync } from "react-dom";
 import { createRoot } from "react-dom/client";
-import { ExperienceSlot } from "../libs/ExperienceSlot";
+import { ExperienceSlot } from "../../libs/ExperienceSlot";
 import type { ExperienceDecision, ExposureHandle } from "@croco/experience-core";
 
 /** Browser regression fixture for the modal's mounted focus lifecycle. */
