@@ -15,6 +15,7 @@ export type {
   MetricWindow,
   RegisteredMetricDefinition,
   RegisteredMetricQuery,
+  RegisteredMetricQueryDescription,
   RegisteredQueryOutcome,
   RegisteredQueryReadOptions,
   SourceRevision,

@@ -294,6 +294,54 @@ describe("package-bin-smoke.mts", () => {
     spawnTimeoutMs,
   );
 
+  it.each([
+    { failure: "none", command: "" },
+    { failure: "stdout", command: "call listCapabilities {}" },
+    { failure: "stdout", command: "stdio" },
+    { failure: "diagnostic", command: "call listCapabilities {}" },
+    { failure: "diagnostic", command: "stdio" },
+  ])(
+    "checks packed croco-agent no-application behavior: $failure $command",
+    ({ failure, command }) => {
+      const root = createTempRoot();
+      writeBinPackage(root, {
+        commandName: "croco-agent",
+        script: [
+          "#!/usr/bin/env node",
+          'const args = process.argv.slice(2).join(" ");',
+          'if (args !== "call listCapabilities {}" && args !== "stdio") process.exit(9);',
+          `const faulty = args === ${JSON.stringify(command)};`,
+          ...(failure === "stdout"
+            ? ['if (faulty) console.log("unexpected protocol output");']
+            : []),
+          failure === "diagnostic"
+            ? 'console.error(faulty ? "WRONG_DIAGNOSTIC" : "AGENT_READ_INVALID_APPLICATION");'
+            : 'console.error("AGENT_READ_INVALID_APPLICATION");',
+          "process.exit(1);",
+          "",
+        ].join("\n"),
+      });
+
+      const result = runScript(root);
+
+      if (failure !== "none") {
+        expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(1);
+        expect(result.stderr).toContain(`@croco/bin-tool: croco-agent ${command}`);
+        expect(result.stderr).toContain(
+          failure === "stdout" ? "stdout" : "did not print expected output",
+        );
+        return;
+      }
+      expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+      expect(result.stdout).toContain(
+        "package-bin-smoke: @croco/bin-tool croco-agent call listCapabilities {}",
+      );
+      expect(result.stdout).toContain("package-bin-smoke: @croco/bin-tool croco-agent stdio");
+      expect(result.stdout).toContain("summary checkedPackages=1 checkedBins=1");
+    },
+    spawnTimeoutMs,
+  );
+
   it.each([false, true])(
     "executes create-croco-app, croco, and RPC contracts and catches removed desktop output: %s",
     (createsDesktopOutput) => {

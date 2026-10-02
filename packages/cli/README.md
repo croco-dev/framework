@@ -67,6 +67,50 @@ not thrown to the embedding caller.
 
 ## Commands
 
+### Authorized reads for coding agents
+
+`croco-agent` exposes the same application-owned `MetricReadService` through CLI JSON and
+local stdio MCP (official TypeScript SDK 2.2.0). It needs no LLM account or PostgreSQL server.
+The operator supplies an absolute `.mjs` application path at process startup:
+
+```bash
+export CROCO_AGENT_APPLICATION=/workspace/app/agent-read.mjs
+croco-agent call listCapabilities '{}'
+croco-agent call listDefinitions '{}'
+croco-agent call listRegisteredQueries '{}'
+croco-agent call runRegisteredQuery '{"queryId":"captured-amount-usd","input":"USD","window":{"from":"2026-09-01T00:00:00.000Z","to":"2026-09-02T00:00:00.000Z"}}'
+croco-agent stdio
+```
+
+The application exports `{ service, workspaceRoot, sources, maxResponseBytes }` as its default
+value. `sources` registers opaque IDs with normalized workspace-relative `path`, a 40-character
+Git `commit`, and a positive `line`. The `@croco/cli/agent` subpath exports `createAgentReadTools`
+and `createAgentReadMcpServer` for embedding. See the executable
+[standalone example](examples/agent-read/README.md) for a generated action manifest reader and
+a digest-verified local report reader.
+
+Available tools are `listCapabilities`, `listDefinitions`, `listRegisteredQueries`,
+`explainDefinition`, `getVerifiedReport`, `runRegisteredQuery`, and `getSourceRef`.
+Tool inputs cannot select application modules, executors, credentials, principals, or arbitrary
+files/URLs. Source lookup requires an authorized definition and returns location metadata;
+source code, credential paths, path traversal, and symlink paths are excluded. The service owns
+query registration, report matching, field/raw permissions, epoch checks, numeric precision,
+snapshot references, budgets, and bounded audit metadata. Application executors must enforce
+their provider's actual read boundary and honor the supplied effective budget and signal.
+
+CLI writes one JSON value to stdout. Stdio reserves stdout for MCP; diagnostics and application
+console logging go to stderr. The CLI exits 0 for a complete result and 1 for denied, unavailable,
+partial, stale, cancelled, timeout, budget, or validation failures. Oversized responses return a
+`budget-exceeded` status with `truncated: true`, without partially exposing the payload.
+Descriptions, manifest fields, and report rows remain data and never alter tool registration.
+
+This standalone profile reports warehouse, rendering, cache, and trace providers as absent.
+It does not expose DDL/apply/backfill, pipeline mutation, snapshot publication, shell, or SQL tools.
+Warehouse lineage and native registered metric execution require the original-owner contracts in
+[#2859](https://github.com/croco-dev/framework/issues/2859) and
+[#2862](https://github.com/croco-dev/framework/issues/2862); the legacy PostgreSQL metrics store
+does not implement that contract.
+
 | Command                                 | Description                                      |
 | --------------------------------------- | ------------------------------------------------ |
 | `make controller <Name>`                | New controller class with CRUD methods           |
