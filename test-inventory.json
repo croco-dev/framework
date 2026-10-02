@@ -4402,6 +4402,12 @@
       "owner": "@croco/tenant-core"
     },
     {
+      "path": "packages/tenant-core/src/tests/TenantRequiredProblem.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/tenant-core"
+    },
+    {
       "path": "packages/testing-resources/src/tests/PluginApplicationRuntime.spec.ts",
       "lane": "fast",
       "qualifiers": [],
