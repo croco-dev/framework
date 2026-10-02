@@ -27107,7 +27107,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts",
-          line: 331,
+          line: 343,
           column: 9,
           kind: "problem-factory",
         },
