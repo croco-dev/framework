@@ -673,6 +673,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "ExperimentAdminProblem",
+              "exportKind": "named",
+              "source": "./libs/ExperimentOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ExperimentOperations",
+              "exportKind": "named",
+              "source": "./libs/ExperimentOperations",
+              "declarationKind": "class"
+            },
+            {
               "name": "FactHistoryInputProblem",
               "exportKind": "named",
               "source": "@croco/admin-core/fact-history-validation"
@@ -1475,6 +1487,41 @@
               "name": "ExperienceAdminState",
               "exportKind": "named",
               "source": "./libs/ExperienceOperations"
+            },
+            {
+              "name": "ExperimentAdminAccess",
+              "exportKind": "named",
+              "source": "./libs/ExperimentOperations"
+            },
+            {
+              "name": "ExperimentAdminCommand",
+              "exportKind": "named",
+              "source": "./libs/ExperimentOperations"
+            },
+            {
+              "name": "ExperimentAdminConfiguration",
+              "exportKind": "named",
+              "source": "./libs/ExperimentOperations"
+            },
+            {
+              "name": "ExperimentAdminConfigureCommand",
+              "exportKind": "named",
+              "source": "./libs/ExperimentOperations"
+            },
+            {
+              "name": "ExperimentAdminPermission",
+              "exportKind": "named",
+              "source": "./libs/ExperimentOperations"
+            },
+            {
+              "name": "ExperimentAdminSample",
+              "exportKind": "named",
+              "source": "./libs/ExperimentOperations"
+            },
+            {
+              "name": "ExperimentAdminSnapshot",
+              "exportKind": "named",
+              "source": "./libs/ExperimentOperations"
             },
             {
               "name": "FactHistoryComparisonRequest",
@@ -2756,6 +2803,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "ExperimentConsole",
+              "exportKind": "named",
+              "source": "./libs/ExperimentConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "FactHistoryPanel",
               "exportKind": "named",
               "source": "./libs/FactHistoryPanel",
@@ -3521,6 +3574,21 @@
               "source": "./libs/ExperienceConsole"
             },
             {
+              "name": "ExperimentConsolePreview",
+              "exportKind": "named",
+              "source": "./libs/ExperimentConsole"
+            },
+            {
+              "name": "ExperimentConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/ExperimentConsole"
+            },
+            {
+              "name": "ExperimentConsoleState",
+              "exportKind": "named",
+              "source": "./libs/ExperimentConsole"
+            },
+            {
               "name": "FactHistoryPanelProps",
               "exportKind": "named",
               "source": "./libs/FactHistoryPanel"
@@ -3968,6 +4036,50 @@
               "name": "ExperienceConsoleProps",
               "exportKind": "named",
               "source": "./libs/ExperienceConsole"
+            }
+          ]
+        },
+        {
+          "exportPath": "./experiment-console",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/experiment-console.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/experiment-console.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/experiment-console.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/admin-react/src/experiment-console.ts",
+          "runtimeExports": [
+            {
+              "name": "ExperimentConsole",
+              "exportKind": "named",
+              "source": "./libs/ExperimentConsole",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "ExperimentConsolePreview",
+              "exportKind": "named",
+              "source": "./libs/ExperimentConsole"
+            },
+            {
+              "name": "ExperimentConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/ExperimentConsole"
+            },
+            {
+              "name": "ExperimentConsoleState",
+              "exportKind": "named",
+              "source": "./libs/ExperimentConsole"
             }
           ]
         }
@@ -14478,10 +14590,64 @@
           "sourceEntrypoint": "packages/features-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "assertExperimentOwnership",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "function"
+            },
+            {
               "name": "assertPolicyValue",
               "exportKind": "declaration",
               "source": "./libs/Policy",
               "declarationKind": "function"
+            },
+            {
+              "name": "experimentActive",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "function"
+            },
+            {
+              "name": "experimentAssignmentKey",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "function"
+            },
+            {
+              "name": "experimentBucket",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "function"
+            },
+            {
+              "name": "experimentHash",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "function"
+            },
+            {
+              "name": "experimentKey",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ExperimentProblem",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ExperimentRuntime",
+              "exportKind": "declaration",
+              "source": "./libs/ExperimentRuntime",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InMemoryExperimentStore",
+              "exportKind": "declaration",
+              "source": "./libs/InMemoryExperimentStore",
+              "declarationKind": "class"
             },
             {
               "name": "InMemoryPolicyReleaseStore",
@@ -14628,6 +14794,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "resolveExperimentSubject",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "function"
+            },
+            {
               "name": "stableStringify",
               "exportKind": "declaration",
               "source": "./libs/Policy",
@@ -14654,9 +14826,165 @@
               "declarationKind": "type"
             },
             {
+              "name": "DetailedEvaluation",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
               "name": "EvaluatePolicyInput",
               "exportKind": "declaration",
               "source": "./libs/PolicyReleaseService",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentAdmission",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentAssignment",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentAssignmentResult",
+              "exportKind": "declaration",
+              "source": "./libs/ExperimentRuntime",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentAuthorization",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "interface"
+            },
+            {
+              "name": "ExperimentAuthorizationRequest",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentCommand",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentCommandReceipt",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentConfigureCommand",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentConfigureReceipt",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentDefinition",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentEligibility",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentEvaluationProvider",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "interface"
+            },
+            {
+              "name": "ExperimentExposure",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentInput",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentRecord",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentRegistration",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentRuntimeOptions",
+              "exportKind": "declaration",
+              "source": "./libs/ExperimentRuntime",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentScope",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentSnapshotReference",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentState",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentStore",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "interface"
+            },
+            {
+              "name": "ExperimentSubject",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentTarget",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentUnit",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ExperimentVariant",
+              "exportKind": "declaration",
+              "source": "./libs/Experiment",
               "declarationKind": "type"
             },
             {
@@ -15000,10 +15328,22 @@
           "sourceEntrypoint": "packages/features-drizzle/src/index.ts",
           "runtimeExports": [
             {
+              "name": "createExperimentsSchema",
+              "exportKind": "named",
+              "source": "./migrations/createExperimentsSchema",
+              "declarationKind": "function"
+            },
+            {
               "name": "createFeaturesSchema",
               "exportKind": "named",
               "source": "./migrations/createFeaturesSchema",
               "declarationKind": "function"
+            },
+            {
+              "name": "DrizzleExperimentStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleExperimentStore",
+              "declarationKind": "class"
             },
             {
               "name": "DrizzlePolicyReleaseStore",
@@ -15012,10 +15352,46 @@
               "declarationKind": "class"
             },
             {
+              "name": "dropExperimentsSchema",
+              "exportKind": "named",
+              "source": "./migrations/createExperimentsSchema",
+              "declarationKind": "function"
+            },
+            {
               "name": "dropFeaturesSchema",
               "exportKind": "named",
               "source": "./migrations/createFeaturesSchema",
               "declarationKind": "function"
+            },
+            {
+              "name": "featureExperimentAssignments",
+              "exportKind": "named",
+              "source": "./libs/experimentSchema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "featureExperimentAudit",
+              "exportKind": "named",
+              "source": "./libs/experimentSchema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "featureExperimentCommands",
+              "exportKind": "named",
+              "source": "./libs/experimentSchema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "featureExperimentExposures",
+              "exportKind": "named",
+              "source": "./libs/experimentSchema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "featureExperiments",
+              "exportKind": "named",
+              "source": "./libs/experimentSchema",
+              "declarationKind": "const"
             },
             {
               "name": "featurePolicyActivations",
@@ -15320,6 +15696,12 @@
               "name": "PostHogFeatureManager",
               "exportKind": "declaration",
               "source": "./libs/PostHogFeatureManager",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PostHogExperimentProvider",
+              "exportKind": "named",
+              "source": "./libs/PostHogExperimentProvider",
               "declarationKind": "class"
             }
           ],

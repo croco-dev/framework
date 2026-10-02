@@ -75,3 +75,15 @@ export {
   policyScopeKey,
   stableStringify,
 } from "./libs/contracts";
+export { DrizzleExperimentStore } from "./libs/DrizzleExperimentStore";
+export {
+  createExperimentsSchema,
+  dropExperimentsSchema,
+} from "./migrations/createExperimentsSchema";
+export {
+  featureExperiments,
+  featureExperimentAssignments,
+  featureExperimentExposures,
+  featureExperimentCommands,
+  featureExperimentAudit,
+} from "./libs/experimentSchema";

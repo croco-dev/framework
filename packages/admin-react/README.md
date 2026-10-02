@@ -522,3 +522,11 @@ server authorization remains required. Display history contains logical IDs and
 policy decisions, never contact addresses or provider tokens. The UI explicitly
 limits its guarantee to sends through the installed gate and priority within a
 submitted batch.
+
+## Experiment Console
+
+Import `ExperimentConsole` from `@croco/admin-react/experiment-console`. Provide a public `ExperimentAdminSnapshot` from `ExperimentOperations` and authenticated server callbacks for preview, state commands, configuration, and reload. The Console shows registered variants, hypothesis/objective, assignment unit, allocation, eligibility, period, and state.
+
+Preview uses only server-owned sample identifiers. Start/resume, pause, stop, and new-revision configuration require a change reason. Failed commands retain their idempotency key when retried with the same payload; failures remain visible until the next operation or reload. A changed experiment scope or revision resets the editor. New revision fields live in a keyboard-accessible disclosure below the operating controls.
+
+The component is a view, not an authorization boundary: the server must resolve the actor, app/environment/tenant, and subject ownership and must never trust client-provided variants, handlers, or receipts. The local executable example is `examples/experiment-runtime`.

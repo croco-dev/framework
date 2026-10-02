@@ -97,3 +97,7 @@ export * from "./libs/Policy";
 export * from "./libs/PolicyReleaseService";
 export * from "./libs/InMemoryPolicyReleaseStore";
 export * from "./libs/problems/PolicyProblems";
+
+export * from "./libs/Experiment";
+export * from "./libs/ExperimentRuntime";
+export * from "./libs/InMemoryExperimentStore";

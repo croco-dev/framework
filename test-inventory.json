@@ -2,6 +2,12 @@
   "version": 1,
   "tests": [
     {
+      "path": "examples/experiment-runtime/src/tests/CohortEligibility.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/first-party-plugin-composition/src/tests/FirstPartyPluginComposition.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -129,6 +135,12 @@
     },
     {
       "path": "packages/admin-core/src/tests/ExperienceOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/ExperimentOperations.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-core"
@@ -285,6 +297,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/ExperienceConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ExperimentConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -2086,6 +2104,12 @@
       "owner": "@croco/experience-drizzle"
     },
     {
+      "path": "packages/features-core/src/tests/ExperimentRuntime.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/features-core"
+    },
+    {
       "path": "packages/features-core/src/tests/FeatureManager.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -2098,8 +2122,26 @@
       "owner": "@croco/features-core"
     },
     {
+      "path": "packages/features-drizzle/src/tests/DrizzleExperimentStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/features-drizzle"
+    },
+    {
+      "path": "packages/features-drizzle/src/tests/DrizzleExperimentStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/features-drizzle"
+    },
+    {
       "path": "packages/features-drizzle/src/tests/DrizzlePolicyReleaseStore.postgres.spec.ts",
       "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/features-drizzle"
+    },
+    {
+      "path": "packages/features-drizzle/src/tests/ExperimentSchema.spec.ts",
+      "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/features-drizzle"
     },
@@ -2114,6 +2156,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/features-drizzle"
+    },
+    {
+      "path": "packages/features-posthog/src/tests/PostHogExperimentProvider.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/features-posthog"
     },
     {
       "path": "packages/features-posthog/src/tests/PostHogFeatureManager.spec.ts",
