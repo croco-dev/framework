@@ -2,6 +2,7 @@
 "@croco/cli": minor
 "@croco/metrics-core": minor
 "@croco/problems-core": patch
+"@croco/diagnostics-core": patch
 "create-croco-app": patch
 ---
 

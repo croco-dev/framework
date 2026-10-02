@@ -1,3 +1,4 @@
+import { CLI_DIAGNOSTIC_CODES } from "./diagnosticCodes.js";
 import { McpServer } from "@modelcontextprotocol/server";
 import type { createAgentReadTools } from "./agentReadTools.js";
 
@@ -31,7 +32,15 @@ export function createAgentReadMcpServer(
           };
         } catch {
           return {
-            content: [{ type: "text", text: '{"status":"error","code":"AGENT_READ_FAILED"}' }],
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({
+                  status: "error",
+                  code: CLI_DIAGNOSTIC_CODES.agentReadInternalError,
+                }),
+              },
+            ],
             isError: true,
           };
         }

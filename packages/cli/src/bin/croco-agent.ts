@@ -2,6 +2,7 @@
 import { isAbsolute, extname } from "node:path";
 import { pathToFileURL } from "node:url";
 import { serveStdio } from "@modelcontextprotocol/server/stdio";
+import { CLI_DIAGNOSTIC_CODES } from "../libs/diagnosticCodes.js";
 import { createAgentReadTools } from "../libs/agentReadTools.js";
 import { createAgentReadMcpServer, isAgentReadFailure } from "../libs/agentReadMcp.js";
 import type { AgentReadApplication } from "../libs/agentReadTools.js";
@@ -26,12 +27,12 @@ async function main(): Promise<void> {
   const stdio = args.length === 1 && args[0] === "stdio";
   const call = args.length === 3 && args[0] === "call";
   if (!stdio && !call) {
-    fail("AGENT_READ_INVALID_COMMAND");
+    fail(CLI_DIAGNOSTIC_CODES.agentReadInvalidCommand);
     return;
   }
   const modulePath = process.env["CROCO_AGENT_APPLICATION"];
   if (!modulePath || !isAbsolute(modulePath) || extname(modulePath) !== ".mjs") {
-    fail("AGENT_READ_INVALID_APPLICATION");
+    fail(CLI_DIAGNOSTIC_CODES.agentReadInvalidApplication);
     return;
   }
   let input: unknown;
@@ -39,19 +40,19 @@ async function main(): Promise<void> {
     try {
       input = JSON.parse(args[2] as string);
     } catch {
-      fail("AGENT_READ_INVALID_JSON");
+      fail(CLI_DIAGNOSTIC_CODES.agentReadInvalidJson);
       return;
     }
   }
   const imported: { default?: unknown } = await import(pathToFileURL(modulePath).href);
   if (typeof imported.default !== "object" || imported.default === null) {
-    fail("AGENT_READ_INVALID_APPLICATION");
+    fail(CLI_DIAGNOSTIC_CODES.agentReadInvalidApplication);
     return;
   }
   const tools = createAgentReadTools(imported.default as AgentReadApplication);
   if (stdio) {
     serveStdio(() => createAgentReadMcpServer(tools), {
-      onerror: () => fail("AGENT_READ_TRANSPORT_FAILED"),
+      onerror: () => fail(CLI_DIAGNOSTIC_CODES.agentReadTransportFailed),
     });
     return;
   }
@@ -72,5 +73,5 @@ async function main(): Promise<void> {
 try {
   await main();
 } catch {
-  fail("AGENT_READ_STARTUP_FAILED");
+  fail(CLI_DIAGNOSTIC_CODES.agentReadStartupFailed);
 }

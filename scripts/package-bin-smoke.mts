@@ -930,13 +930,13 @@ function smokeCommandsFor(
           args: ["call", "listCapabilities", "{}"],
           expectedExitCode: 1,
           expectedEmptyStdout: true,
-          expectedOutput: "AGENT_READ_INVALID_APPLICATION",
+          expectedOutput: "CROCO_CLI_AGENT_READ_007",
         },
         {
           args: ["stdio"],
           expectedExitCode: 1,
           expectedEmptyStdout: true,
-          expectedOutput: "AGENT_READ_INVALID_APPLICATION",
+          expectedOutput: "CROCO_CLI_AGENT_READ_007",
         },
       ];
     case "create-croco-app":

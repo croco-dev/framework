@@ -168,7 +168,7 @@ describe("published agent process", () => {
       });
       expect(result.status).toBe(1);
       expect(result.stdout).toBe("");
-      expect(JSON.parse(result.stderr).code).toBe("AGENT_READ_INVALID_APPLICATION");
+      expect(JSON.parse(result.stderr).code).toBe("CROCO_CLI_AGENT_READ_007");
     }
     const broken = join(root, "broken.mjs");
     await writeFile(broken, 'throw new TypeError("credential-secret");');
@@ -179,7 +179,7 @@ describe("published agent process", () => {
     expect(failed.status).toBe(1);
     expect(failed.stdout).toBe("");
     expect(failed.stderr).not.toContain("credential-secret");
-    expect(JSON.parse(failed.stderr).code).toBe("AGENT_READ_STARTUP_FAILED");
+    expect(JSON.parse(failed.stderr).code).toBe("CROCO_CLI_AGENT_READ_010");
   });
 
   it("returns a cancelled JSON outcome when a CLI call receives SIGTERM", async () => {

@@ -315,8 +315,8 @@ describe("package-bin-smoke.mts", () => {
             ? ['if (faulty) console.log("unexpected protocol output");']
             : []),
           failure === "diagnostic"
-            ? 'console.error(faulty ? "WRONG_DIAGNOSTIC" : "AGENT_READ_INVALID_APPLICATION");'
-            : 'console.error("AGENT_READ_INVALID_APPLICATION");',
+            ? 'console.error(faulty ? "WRONG_DIAGNOSTIC" : "CROCO_CLI_AGENT_READ_007");'
+            : 'console.error("CROCO_CLI_AGENT_READ_007");',
           "process.exit(1);",
           "",
         ].join("\n"),

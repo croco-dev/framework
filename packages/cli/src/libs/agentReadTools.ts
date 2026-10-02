@@ -2,6 +2,7 @@ import { realpathSync, statSync } from "node:fs";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { z } from "zod/v4";
 import { MetricReadProblem } from "@croco/metrics-core/runtime";
+import { CLI_DIAGNOSTIC_CODES } from "./diagnosticCodes.js";
 import { ProblemCategory } from "@croco/problems-core";
 import type { StandardSchemaWithJSON } from "@modelcontextprotocol/server";
 import type { MetricReadService } from "@croco/metrics-core/runtime";
@@ -128,7 +129,7 @@ function failure(error: unknown): { status: string; code: string } {
     typeof error.code === "string" &&
     /^metrics-core\/[a-z-]{1,64}$/.test(error.code)
       ? error.code
-      : "agent-read/internal-error";
+      : CLI_DIAGNOSTIC_CODES.agentReadInternalError;
   const status = code.endsWith("/read-timeout")
     ? "timeout"
     : code.endsWith("/read-cancelled")
@@ -239,11 +240,12 @@ export function createAgentReadTools(application: AgentReadApplication) {
     })),
     async call(name: string, input: unknown, signal?: AbortSignal): Promise<unknown> {
       if (!Object.hasOwn(schemas, name))
-        return { status: "unavailable", code: "agent-read/unknown-tool" };
+        return { status: "unavailable", code: CLI_DIAGNOSTIC_CODES.agentReadUnknownTool };
       const tool = name as keyof typeof schemas;
       if (!schemas[tool].safeParse(input).success)
-        return { status: "invalid-input", code: "agent-read/invalid-input" };
-      if (signal?.aborted) return { status: "cancelled", code: "metrics-core/read-cancelled" };
+        return { status: "invalid-input", code: CLI_DIAGNOSTIC_CODES.agentReadInvalidInput };
+      if (signal?.aborted)
+        return { status: "cancelled", code: CLI_DIAGNOSTIC_CODES.agentReadCancelled };
       try {
         const value = await invoke(tool, input, signal);
         const refs = locations(value);
@@ -251,7 +253,7 @@ export function createAgentReadTools(application: AgentReadApplication) {
         if (Buffer.byteLength(JSON.stringify(outcome), "utf8") > maxResponseBytes) {
           return {
             status: "budget-exceeded",
-            code: "agent-read/response-byte-limit",
+            code: CLI_DIAGNOSTIC_CODES.agentReadResponseLimit,
             truncated: true,
           };
         }

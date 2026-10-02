@@ -252,7 +252,7 @@ describe("agent read tools", () => {
       };
     });
     const response = await failed.call("listDefinitions", {});
-    expect(response).toEqual({ status: "error", code: "agent-read/internal-error" });
+    expect(response).toEqual({ status: "error", code: "CROCO_CLI_AGENT_READ_004" });
     expect(JSON.stringify(response)).not.toContain("private-token");
     expect(
       await createAgentReadTools(application).call("listRegisteredQueries", {}),
