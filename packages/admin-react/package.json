@@ -62,6 +62,7 @@
     "@croco/impersonation-core": "workspace:*",
     "@croco/lifecycle-core": "workspace:*",
     "@croco/metering-core": "workspace:*",
+    "@croco/metrics-core": "workspace:*",
     "@croco/onboarding-core": "workspace:*",
     "@croco/pagination-core": "workspace:*",
     "@croco/problems-core": "workspace:*",

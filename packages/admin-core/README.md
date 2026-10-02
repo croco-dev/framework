@@ -5,6 +5,10 @@ Croco admin surfaces. Admin packages can describe resources, list/detail fields,
 permissions, audit evidence, declared Problems, and recovery semantics without
 depending on React or a transport adapter.
 
+## Assigned net outcomes
+
+`createNetOutcomeOperations` reads a fixed assigned-outcome input or an authoritative report from the existing host source. It authorizes read, export and bounded drilldown separately, checks app/environment/tenant and current permission/privacy epochs before and after asynchronous source work, and returns aggregate totals without assignment subjects or raw event IDs. The host owns retention/deletion and the masked drilldown projection. Missing and pending inputs remain partial, source failures stay failures, and no report is cached by this adapter.
+
 ## Product event catalog
 
 `loadEventCatalog()` and `validateEventCatalogPayload()` use an explicit app or tenant scope with

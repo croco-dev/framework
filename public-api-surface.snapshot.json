@@ -523,6 +523,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createNetOutcomeOperations",
+              "exportKind": "named",
+              "source": "./libs/NetOutcomeOperations",
+              "declarationKind": "function"
+            },
+            {
               "name": "createOfferConsoleActions",
               "exportKind": "named",
               "source": "./libs/OfferConsole",
@@ -760,6 +766,12 @@
               "exportKind": "named",
               "source": "./libs/WebhookOperations",
               "declarationKind": "function"
+            },
+            {
+              "name": "NetOutcomeProblem",
+              "exportKind": "named",
+              "source": "./libs/NetOutcomeOperations",
+              "declarationKind": "class"
             },
             {
               "name": "OFFER_CONSOLE_PII_PERMISSION",
@@ -1572,6 +1584,46 @@
               "name": "LoadTenantWorkspaceInput",
               "exportKind": "named",
               "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "NetOutcomeAuthority",
+              "exportKind": "named",
+              "source": "./libs/NetOutcomeOperations"
+            },
+            {
+              "name": "NetOutcomeDrilldown",
+              "exportKind": "named",
+              "source": "./libs/NetOutcomeOperations"
+            },
+            {
+              "name": "NetOutcomeDrilldownRequest",
+              "exportKind": "named",
+              "source": "./libs/NetOutcomeOperations"
+            },
+            {
+              "name": "NetOutcomeGrant",
+              "exportKind": "named",
+              "source": "./libs/NetOutcomeOperations"
+            },
+            {
+              "name": "NetOutcomeRequest",
+              "exportKind": "named",
+              "source": "./libs/NetOutcomeOperations"
+            },
+            {
+              "name": "NetOutcomeSnapshot",
+              "exportKind": "named",
+              "source": "./libs/NetOutcomeOperations"
+            },
+            {
+              "name": "NetOutcomeSource",
+              "exportKind": "named",
+              "source": "./libs/NetOutcomeOperations"
+            },
+            {
+              "name": "NetOutcomeState",
+              "exportKind": "named",
+              "source": "./libs/NetOutcomeOperations"
             },
             {
               "name": "NonEmptyArray",
@@ -2881,6 +2933,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "NetOutcomePanel",
+              "exportKind": "named",
+              "source": "./libs/NetOutcomePanel",
+              "declarationKind": "function"
+            },
+            {
               "name": "OfferConsole",
               "exportKind": "named",
               "source": "./libs/OfferConsole",
@@ -3748,6 +3806,11 @@
               "name": "MetricInspectorResult",
               "exportKind": "named",
               "source": "./libs/MetricInspector"
+            },
+            {
+              "name": "NetOutcomePanelProps",
+              "exportKind": "named",
+              "source": "./libs/NetOutcomePanel"
             },
             {
               "name": "NonEmptyArray",
@@ -23778,6 +23841,30 @@
               "exportKind": "named",
               "source": "./libs/problems/BillingMetricsProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "billingOrderOutcome",
+              "exportKind": "named",
+              "source": "./libs/OutcomeSourceMapping",
+              "declarationKind": "function"
+            },
+            {
+              "name": "creditGrantOutcome",
+              "exportKind": "named",
+              "source": "./libs/OutcomeSourceMapping",
+              "declarationKind": "function"
+            },
+            {
+              "name": "engagementContactCostOutcome",
+              "exportKind": "named",
+              "source": "./libs/OutcomeSourceMapping",
+              "declarationKind": "function"
+            },
+            {
+              "name": "settledRefundOutcome",
+              "exportKind": "named",
+              "source": "./libs/OutcomeSourceMapping",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -23795,6 +23882,31 @@
               "name": "BillingMetricRecordingProblemOptions",
               "exportKind": "named",
               "source": "./libs/problems/BillingMetricsProblems"
+            },
+            {
+              "name": "ContactCostOutcome",
+              "exportKind": "named",
+              "source": "./libs/OutcomeSourceMapping"
+            },
+            {
+              "name": "CreditGrantOutcome",
+              "exportKind": "named",
+              "source": "./libs/OutcomeSourceMapping"
+            },
+            {
+              "name": "CreditGrantValuation",
+              "exportKind": "named",
+              "source": "./libs/OutcomeSourceMapping"
+            },
+            {
+              "name": "OutcomeSourceBinding",
+              "exportKind": "named",
+              "source": "./libs/OutcomeSourceMapping"
+            },
+            {
+              "name": "SettledContactCostReceipt",
+              "exportKind": "named",
+              "source": "./libs/OutcomeSourceMapping"
             }
           ]
         }
@@ -23830,6 +23942,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "ASSIGNED_OUTCOME_DEFINITION",
+              "exportKind": "named",
+              "source": "./libs/outcome/compareAssignedOutcomes",
+              "declarationKind": "const"
+            },
+            {
               "name": "average",
               "exportKind": "named",
               "source": "./libs/metric/MetricExpression",
@@ -23852,6 +23970,12 @@
               "exportKind": "named",
               "source": "./libs/problems/MetricsProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "compareAssignedOutcomes",
+              "exportKind": "named",
+              "source": "./libs/outcome/compareAssignedOutcomes",
+              "declarationKind": "function"
             },
             {
               "name": "compileMetric",
@@ -23906,6 +24030,18 @@
               "exportKind": "named",
               "source": "./libs/GrowthCalculator",
               "declarationKind": "class"
+            },
+            {
+              "name": "hashAssignedOutcomeDefinition",
+              "exportKind": "named",
+              "source": "./libs/outcome/compareAssignedOutcomes",
+              "declarationKind": "function"
+            },
+            {
+              "name": "hashAssignedOutcomeInput",
+              "exportKind": "named",
+              "source": "./libs/outcome/compareAssignedOutcomes",
+              "declarationKind": "function"
             },
             {
               "name": "InvalidCarryingCapacityConfigProblem",
@@ -23974,6 +24110,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "OutcomeLedgerNormalizer",
+              "exportKind": "named",
+              "source": "./libs/outcome/OutcomeLedgerNormalizer",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OutcomeProblem",
+              "exportKind": "named",
+              "source": "./libs/outcome/OutcomeProblem",
+              "declarationKind": "class"
+            },
+            {
               "name": "project",
               "exportKind": "named",
               "source": "./libs/metric/MetricExpression",
@@ -24026,6 +24174,26 @@
               "name": "AggregateExpression",
               "exportKind": "named",
               "source": "./libs/metric/MetricExpression"
+            },
+            {
+              "name": "AssignedOutcomeArm",
+              "exportKind": "named",
+              "source": "./libs/outcome/types"
+            },
+            {
+              "name": "AssignedOutcomeInput",
+              "exportKind": "named",
+              "source": "./libs/outcome/types"
+            },
+            {
+              "name": "AssignedOutcomeReport",
+              "exportKind": "named",
+              "source": "./libs/outcome/types"
+            },
+            {
+              "name": "AssignmentSnapshot",
+              "exportKind": "named",
+              "source": "./libs/outcome/types"
             },
             {
               "name": "CCComparisonResult",
@@ -24133,6 +24301,11 @@
               "source": "./types"
             },
             {
+              "name": "MoneyEvent",
+              "exportKind": "named",
+              "source": "./libs/outcome/types"
+            },
+            {
               "name": "MRRMovement",
               "exportKind": "named",
               "source": "./types"
@@ -24146,6 +24319,41 @@
               "name": "MultiCurrencyMoney",
               "exportKind": "named",
               "source": "./types"
+            },
+            {
+              "name": "OutcomeCostCompleteness",
+              "exportKind": "named",
+              "source": "./libs/outcome/types"
+            },
+            {
+              "name": "OutcomeCutoff",
+              "exportKind": "named",
+              "source": "./libs/outcome/types"
+            },
+            {
+              "name": "OutcomeDiagnostic",
+              "exportKind": "named",
+              "source": "./libs/outcome/types"
+            },
+            {
+              "name": "OutcomeKind",
+              "exportKind": "named",
+              "source": "./libs/outcome/types"
+            },
+            {
+              "name": "OutcomeRational",
+              "exportKind": "named",
+              "source": "./libs/outcome/types"
+            },
+            {
+              "name": "OutcomeReference",
+              "exportKind": "named",
+              "source": "./libs/outcome/types"
+            },
+            {
+              "name": "OutcomeScope",
+              "exportKind": "named",
+              "source": "./libs/outcome/types"
             },
             {
               "name": "Percentage",
@@ -24224,6 +24432,48 @@
           "sourceEntrypoint": "packages/metrics-core/src/runtime.ts",
           "runtimeExports": [
             {
+              "name": "ASSIGNED_OUTCOME_FIELDS",
+              "exportKind": "named",
+              "source": "./libs/read/AssignedOutcomeImport",
+              "declarationKind": "const"
+            },
+            {
+              "name": "ASSIGNED_OUTCOME_WAREHOUSE_FIELDS",
+              "exportKind": "named",
+              "source": "./libs/read/AssignedOutcomeRead",
+              "declarationKind": "const"
+            },
+            {
+              "name": "AssignedOutcomeRowProblem",
+              "exportKind": "named",
+              "source": "./libs/read/AssignedOutcomeImport",
+              "declarationKind": "class"
+            },
+            {
+              "name": "assignedOutcomeSourceSchema",
+              "exportKind": "named",
+              "source": "./libs/read/AssignedOutcomeImport",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createAssignedOutcomeQuery",
+              "exportKind": "named",
+              "source": "./libs/read/AssignedOutcomeRead",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createWarehouseAssignedOutcomeLoader",
+              "exportKind": "named",
+              "source": "./libs/read/AssignedOutcomeRead",
+              "declarationKind": "function"
+            },
+            {
+              "name": "importAssignedOutcomeEvents",
+              "exportKind": "named",
+              "source": "./libs/read/AssignedOutcomeImport",
+              "declarationKind": "function"
+            },
+            {
               "name": "MetricReadProblem",
               "exportKind": "named",
               "source": "./libs/read/MetricReadService",
@@ -24234,9 +24484,31 @@
               "exportKind": "named",
               "source": "./libs/read/MetricReadService",
               "declarationKind": "class"
+            },
+            {
+              "name": "parseAssignedOutcomeReport",
+              "exportKind": "named",
+              "source": "./libs/read/AssignedOutcomeRead",
+              "declarationKind": "function"
+            },
+            {
+              "name": "parseAssignedOutcomeRow",
+              "exportKind": "named",
+              "source": "./libs/read/AssignedOutcomeImport",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
+            {
+              "name": "AssignedOutcomeLoader",
+              "exportKind": "named",
+              "source": "./libs/read/AssignedOutcomeRead"
+            },
+            {
+              "name": "AssignedOutcomeLoadRequest",
+              "exportKind": "named",
+              "source": "./libs/read/AssignedOutcomeRead"
+            },
             {
               "name": "MetricDefinitionExplanation",
               "exportKind": "named",

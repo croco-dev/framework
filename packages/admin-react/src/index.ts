@@ -330,3 +330,5 @@ export type {
 
 export { GrowthAnalysisPanel } from "./libs/GrowthAnalysisPanel";
 export type { GrowthAnalysisPanelProps } from "./libs/GrowthAnalysisPanel";
+export { NetOutcomePanel } from "./libs/NetOutcomePanel";
+export type { NetOutcomePanelProps } from "./libs/NetOutcomePanel";
