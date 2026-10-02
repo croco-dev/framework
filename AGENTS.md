@@ -286,7 +286,7 @@ service:
 
 ### 성장·데이터 책임과 상태 판단
 
-- decorated class와 함수 API는 같은 operation/guard/클라이언트 계약을 사용한다. 함수/factory는 외부 SDK 경계와 독립 사용 경로이며 클래스의 schema·deps·handler 목록을 다시 작성하게 하는 기본 경로가 아니다.
+- decorated class와 함수 API를 같은 operation/guard/클라이언트 계약으로 정렬하는 것은 [#2842](https://github.com/croco-dev/framework/issues/2842)의 통합 목표다. 함수/factory는 외부 SDK 경계와 독립 사용 경로이며 클래스의 schema·deps·handler 목록을 다시 작성하게 하는 기본 경로가 아니다.
 - React/Vite RSC, GraphQL/tRPC, TanStack/Apollo와 외부 LLM SDK·DB 엔진을 재사용한다. SSR/`meta-vite`·프로토콜을 삭제하지 않는다. desktop 제거와 범용 LLM 엔진 제거는 선택적 LLM 사용·CLI/MCP·검수·usage/예산/PII 정책의 삭제를 뜻하지 않는다.
 - OLTP는 Drizzle, warehouse는 fact/dimension·적재·게시·조회, ETL은 source/projection·batch 연결, metrics는 지표 의미, storage는 원본/파일을 소유한다. 공통 parser/reader/runner와 선언 schema를 재사용한다. 별도 growth-data 계층·DB/optimizer/ETL scheduler/IaC를 만들지 않는다.
 - 접수·내구 저장·실행 완료·검증·게시는 다른 상태다. Git에는 선언과 검토된 migration/plan hash를, runtime에는 source snapshot·실행 상태·publication·secret을 둔다. plan/inspect는 read-only이며 apply는 검토된 산출물과 provider의 native 복구 의미를 따른다. boot DDL·apply 때 재컴파일·중복 migration owner·가짜 분산 transaction을 도입하지 않는다.
