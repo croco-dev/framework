@@ -312,10 +312,8 @@ export class BillingEventHandler
     dedupeEventKeys: readonly string[] = [],
   ): Promise<void> {
     const eventKey = this.getEventKey(event);
-    const allDedupeEventKeys =
-      event instanceof SubscriptionRevokedEvent
-        ? dedupeEventKeys
-        : [this.getLegacyTimestampEventKey(event), ...dedupeEventKeys];
+    const legacyEventKeys =
+      event instanceof SubscriptionRevokedEvent ? [] : [this.getLegacyTimestampEventKey(event)];
 
     try {
       await this.metricsRepository.recordMRRMovement(
@@ -323,7 +321,8 @@ export class BillingEventHandler
         movement,
         event.timestamp,
         eventKey,
-        allDedupeEventKeys,
+        dedupeEventKeys,
+        legacyEventKeys,
       );
     } catch (error) {
       throw new BillingMetricRecordingProblem({

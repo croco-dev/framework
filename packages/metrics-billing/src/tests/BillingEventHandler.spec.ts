@@ -106,26 +106,31 @@ describe("BillingEventHandler", () => {
     readonly timestamp: Date;
   }) => `${event.eventName}_${event.timestamp.getTime()}`;
 
-  const createMetricsRepository = (): MetricsRepository => {
-    const processedEventKeys = new Set<string>();
+  const createMetricsRepository = (legacyRecords: readonly string[] = []): MetricsRepository => {
+    const processedEventKeys = new Set(legacyRecords);
+    const storedPrimaryKeys = new Set(legacyRecords);
 
     return {
       recordMRRMovement: vi.fn(
         async (
-          _tenantId: string,
+          tenantId: string,
           movement: MRRMovement,
           _timestamp: Date,
           eventKey?: string,
           dedupeEventKeys: readonly string[] = [],
+          legacyEventKeys: readonly string[] = [],
         ) => {
-          const eventKeys = eventKey ? [eventKey, ...dedupeEventKeys] : [];
-          if (eventKeys.some((key) => processedEventKeys.has(key))) {
+          const eventKeys = [...new Set(eventKey ? [eventKey, ...dedupeEventKeys] : [])];
+          const scopedKeys = eventKeys.map((key) => `${tenantId}:${key}`);
+          const alreadyClaimed = scopedKeys.some((key) => processedEventKeys.has(key));
+          for (const key of scopedKeys) processedEventKeys.add(key);
+          if (
+            alreadyClaimed ||
+            legacyEventKeys.some((key) => storedPrimaryKeys.has(`${tenantId}:${key}`))
+          ) {
             return;
           }
-
-          for (const key of eventKeys) {
-            processedEventKeys.add(key);
-          }
+          if (eventKey) storedPrimaryKeys.add(`${tenantId}:${eventKey}`);
           recordedMovements.push(movement);
         },
       ),
@@ -210,6 +215,7 @@ describe("BillingEventHandler", () => {
         expectedMovement,
         event.timestamp,
         primaryEventKey(event),
+        [],
         [legacyTimestampEventKey(event)],
       );
     });
@@ -271,6 +277,7 @@ describe("BillingEventHandler", () => {
         },
         event.timestamp,
         primaryEventKey(event),
+        [],
         [legacyTimestampEventKey(event)],
       );
     });
@@ -291,9 +298,10 @@ describe("BillingEventHandler", () => {
       expect(metricsRepository.recordMRRMovement).toHaveBeenCalledTimes(2);
       const calls = vi.mocked(metricsRepository.recordMRRMovement).mock.calls;
       expect(calls[0]?.[3]).toBe(primaryEventKey(event));
-      expect(calls[0]?.[4]).toEqual([legacyTimestampEventKey(event)]);
+      expect(calls[0]?.[5]).toEqual([legacyTimestampEventKey(event)]);
       expect(calls[1]?.[3]).toBe(primaryEventKey(event));
-      expect(calls[1]?.[4]).toEqual([legacyTimestampEventKey(event)]);
+      expect(recordedMovements).toHaveLength(1);
+      expect(calls[1]?.[5]).toEqual([legacyTimestampEventKey(event)]);
     });
 
     it.each([undefined, "legacy_unknown"])(
@@ -343,13 +351,14 @@ describe("BillingEventHandler", () => {
 
         const calls = vi.mocked(metricsRepository.recordMRRMovement).mock.calls;
         expect(calls).toHaveLength(2);
+        expect(recordedMovements).toHaveLength(2);
         expect(calls[0]?.[2]).toEqual(timestamp);
         expect(calls[1]?.[2]).toEqual(timestamp);
         expect(calls[0]?.[3]).toBe(primaryEventKey(firstEvent));
         expect(calls[1]?.[3]).toBe(primaryEventKey(secondEvent));
-        expect(calls[0]?.[4]).toEqual([legacyTimestampEventKey(firstEvent)]);
-        expect(calls[1]?.[4]).toEqual([legacyTimestampEventKey(secondEvent)]);
-        expect(calls[0]?.[4]).toEqual(calls[1]?.[4]);
+        expect(calls[0]?.[5]).toEqual([legacyTimestampEventKey(firstEvent)]);
+        expect(calls[1]?.[5]).toEqual([legacyTimestampEventKey(secondEvent)]);
+        expect(calls[0]?.[5]).toEqual(calls[1]?.[5]);
         expect(calls[0]?.[3]).not.toBe(calls[1]?.[3]);
       } finally {
         vi.useRealTimers();
@@ -420,6 +429,46 @@ describe("BillingEventHandler", () => {
   });
 
   describe("PlanChangedEvent", () => {
+    it("records distinct plan changes in the same millisecond and deduplicates each replay", async () => {
+      vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
+      vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
+      const plans = [1000, 2000, 3000].map((amount, index) =>
+        asPlanVersion({ ...mockPlan, id: `plan-${index}`, amount }),
+      );
+      vi.mocked(planRegistry.getPlanVersion).mockImplementation(
+        async (ref) => plans.find((plan) => plan.ref === ref) ?? null,
+      );
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-09-01T12:00:00.000Z"));
+      try {
+        const first = createPlanChangedEvent("plan-0", "plan-1");
+        const second = createPlanChangedEvent("plan-1", "plan-2");
+        expect(first.eventId).not.toBe(second.eventId);
+        expect(first.timestamp).toEqual(second.timestamp);
+        await Promise.all([handler.handle(first), handler.handle(second)]);
+        await handler.handle(first);
+        await new BillingEventHandler(planRegistry, billingStore, metricsRepository).handle(second);
+        expect(recordedMovements).toHaveLength(2);
+        expect(recordedMovements.map((movement) => movement.expansion.amount)).toEqual([
+          1000, 1000,
+        ]);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("suppresses a replay of a stored legacy primary key", async () => {
+      const event = createPlanChangedEvent("plan-basic", "plan-pro");
+      metricsRepository = createMetricsRepository([`tenant-1:${legacyTimestampEventKey(event)}`]);
+      handler = new BillingEventHandler(planRegistry, billingStore, metricsRepository);
+      vi.mocked(billingStore.findAccountByTenantId).mockResolvedValue(mockAccount);
+      vi.mocked(billingStore.findSubscriptionByExternalId).mockResolvedValue(mockSubscription);
+      vi.mocked(planRegistry.getPlanVersion).mockResolvedValue(asPlanVersion(mockPlan));
+      await handler.handle(event);
+      await handler.handle(event);
+      expect(recordedMovements).toHaveLength(0);
+    });
+
     it.each([800, 1000])(
       "rejects a USD-to-EUR plan change to %i minor units without recording MRR",
       async (newAmount) => {
@@ -489,6 +538,7 @@ describe("BillingEventHandler", () => {
         }),
         event.timestamp,
         primaryEventKey(event),
+        [],
         [legacyTimestampEventKey(event)],
       );
     });
@@ -590,6 +640,7 @@ describe("BillingEventHandler", () => {
         expect.any(Object),
         event.timestamp,
         primaryEventKey(event),
+        [],
         [legacyTimestampEventKey(event)],
       );
     });
@@ -719,6 +770,53 @@ describe("BillingEventHandler", () => {
         expect(recordedMovements[0]?.churned).toEqual({ amount: 2900, currency: "USD" });
       },
     );
+
+    it("records distinct immediate cancellations in the same millisecond", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-02-01T00:00:00.000Z"));
+      try {
+        const first = new SubscriptionCanceledEvent(
+          "tenant-1",
+          "sub-a",
+          false,
+          undefined,
+          mockSubscription.planVersionRef,
+        );
+        const second = new SubscriptionCanceledEvent(
+          "tenant-1",
+          "sub-b",
+          false,
+          undefined,
+          mockSubscription.planVersionRef,
+        );
+        await handler.handle(first);
+        await handler.handle(second);
+        await handler.handle(first);
+        expect(first.timestamp).toEqual(second.timestamp);
+        expect(recordedMovements).toHaveLength(2);
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it("keeps historical cancellation replay and subsequent revocation to one churn", async () => {
+      const canceled = new SubscriptionCanceledEvent(
+        "tenant-1",
+        "sub-stripe",
+        false,
+        undefined,
+        mockSubscription.planVersionRef,
+      );
+      metricsRepository = createMetricsRepository([
+        `tenant-1:${legacyTimestampEventKey(canceled)}`,
+      ]);
+      handler = new BillingEventHandler(planRegistry, billingStore, metricsRepository);
+      await handler.handle(canceled);
+      await handler.handle(
+        new SubscriptionRevokedEvent("tenant-1", "sub-stripe", mockSubscription.planVersionRef),
+      );
+      expect(recordedMovements).toHaveLength(0);
+    });
 
     it("records separate churn for distinct subscriptions revoked in the same millisecond", async () => {
       const [first, second] = (() => {
@@ -852,7 +950,8 @@ describe("BillingEventHandler", () => {
         expectedMovement,
         event.timestamp,
         primaryEventKey(event),
-        [legacyTimestampEventKey(event), "billing.subscription_churned_sub-stripe"],
+        ["billing.subscription_churned_sub-stripe"],
+        [legacyTimestampEventKey(event)],
       );
     });
 
@@ -886,7 +985,8 @@ describe("BillingEventHandler", () => {
           }),
           event.timestamp,
           primaryEventKey(event),
-          [legacyTimestampEventKey(event), "billing.subscription_churned_sub-stripe"],
+          ["billing.subscription_churned_sub-stripe"],
+          [legacyTimestampEventKey(event)],
         );
       },
     );
@@ -950,7 +1050,8 @@ describe("BillingEventHandler", () => {
         expect.any(Object),
         event.timestamp,
         primaryEventKey(event),
-        [legacyTimestampEventKey(event), "billing.subscription_churned_sub-stripe"],
+        ["billing.subscription_churned_sub-stripe"],
+        [legacyTimestampEventKey(event)],
       );
     });
 
