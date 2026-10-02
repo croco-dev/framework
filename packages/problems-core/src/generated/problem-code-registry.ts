@@ -1483,11 +1483,11 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#analytics-core-analysis-settlement-failed",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
+        cause: "The model invocation's usage receipt settlement failed.",
         userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+          "Ask the operator to recover the preserved usage receipt; do not resubmit the question or request another inference to recover settlement.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+          "Repair the idempotent receipt sink and call the preserved server-side AnalysisSettlementProblem.resume() to settle the same invocationId without repeating inference. The recovery handle is process-local; applications must retain durable receipt references and status through their existing execution boundary for restart recovery.",
         retryability: "conditional",
         redactionPolicy: "operator-only",
         telemetry: {

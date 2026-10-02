@@ -1789,9 +1789,9 @@ Sources:
 - Retryability: `conditional`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Cause: The model invocation's usage receipt settlement failed.
+- User action: Ask the operator to recover the preserved usage receipt; do not resubmit the question or request another inference to recover settlement.
+- Operator action: Repair the idempotent receipt sink and call the preserved server-side AnalysisSettlementProblem.resume() to settle the same invocationId without repeating inference. The recovery handle is process-local; applications must retain durable receipt references and status through their existing execution boundary for restart recovery.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:

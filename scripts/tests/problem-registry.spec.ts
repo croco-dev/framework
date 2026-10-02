@@ -684,6 +684,37 @@ describe("problem-registry.mts", () => {
     for (const expected of contract.operator) expect(recovery?.operatorAction).toMatch(expected);
   });
 
+  it("recovers growth analysis settlement without repeating inference", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/analytics-core/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class AnalysisSettlementProblem extends Problem {",
+        "  constructor() {",
+        '    super("analytics-core/analysis-settlement-failed", ProblemCategory.InternalServerError);',
+        "  }",
+        "}",
+      ].join("\n"),
+    );
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+    const recovery = registry.problems[0]?.recovery;
+    expect(recovery).toMatchObject({
+      cause: expect.stringMatching(/usage.*receipt.*settlement/i),
+      userAction: expect.stringMatching(/operator/i),
+      retryability: "conditional",
+      redactionPolicy: "operator-only",
+      telemetry: { severity: "error" },
+    });
+    expect(recovery?.userAction).toMatch(/do not resubmit/i);
+    expect(recovery?.operatorAction).toMatch(/AnalysisSettlementProblem\.resume\(\)/);
+    expect(recovery?.operatorAction).toMatch(/same invocationId/i);
+    expect(recovery?.operatorAction).toMatch(/without repeating inference/i);
+    expect(recovery?.operatorAction).toMatch(/process-local/i);
+    expect(recovery?.operatorAction).toMatch(/durable.*restart recovery/i);
+  });
+
   it("publishes cancellation-specific recovery for aborted search operations", () => {
     const repo = createTempRepo();
     writeFile(

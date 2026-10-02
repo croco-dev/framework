@@ -2671,6 +2671,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "safe-message",
     severity: "warning",
   }),
+  "analytics-core/analysis-settlement-failed": recovery({
+    cause: "The model invocation's usage receipt settlement failed.",
+    userAction:
+      "Ask the operator to recover the preserved usage receipt; do not resubmit the question or request another inference to recover settlement.",
+    operatorAction:
+      "Repair the idempotent receipt sink and call the preserved server-side AnalysisSettlementProblem.resume() to settle the same invocationId without repeating inference. The recovery handle is process-local; applications must retain durable receipt references and status through their existing execution boundary for restart recovery.",
+    retryability: "conditional",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "analytics-core/analysis-cancelled": recovery({
     cause: "The growth analysis was cancelled by its AbortSignal or exceeded its model deadline.",
     userAction:
