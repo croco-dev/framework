@@ -26,6 +26,14 @@ database client, schema, migration, SQL은 provider package가 소유합니다.
 
 `MetricsRepository`
 
+## Properties
+
+### mrrMovementIdentityVersion
+
+> `abstract` `readonly` **mrrMovementIdentityVersion**: `2`
+
+Event-ID claims, shared churn claims and tenant-scoped historical primary-key lookups.
+
 ## Methods
 
 ### getMRRHistory()

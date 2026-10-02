@@ -8,6 +8,9 @@ import type { MetricsSnapshot, MRRMovement, Period, RetentionMetrics } from "../
  * database client, schema, migration, SQL은 provider package가 소유합니다.
  */
 export abstract class MetricsRepository {
+  /** Event-ID claims, shared churn claims and tenant-scoped historical primary-key lookups. */
+  abstract readonly mrrMovementIdentityVersion: 2;
+
   /**
    * MRR 변동 이력 기록
    *

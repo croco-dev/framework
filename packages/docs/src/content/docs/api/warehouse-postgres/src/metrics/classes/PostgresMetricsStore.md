@@ -31,6 +31,18 @@ PostgreSQL implementation of the metrics repository contract.
 
 [`MetricsRepository`](/api/metrics-core/src/classes/metricsrepository/).[`constructor`](/api/metrics-core/src/classes/metricsrepository/#constructor)
 
+## Properties
+
+### mrrMovementIdentityVersion
+
+> `readonly` **mrrMovementIdentityVersion**: `2` = `2`
+
+Event-ID claims, shared churn claims and tenant-scoped historical primary-key lookups.
+
+#### Overrides
+
+[`MetricsRepository`](/api/metrics-core/src/classes/metricsrepository/).[`mrrMovementIdentityVersion`](/api/metrics-core/src/classes/metricsrepository/#mrrmovementidentityversion)
+
 ## Methods
 
 ### getMRRHistory()

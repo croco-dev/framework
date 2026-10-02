@@ -8,7 +8,8 @@ import {
 } from "@croco/billing-core";
 import { EventBusConfig } from "@croco/events-core";
 import type { DomainEvent, EventBus, EventSubscription } from "@croco/events-core";
-import type { MetricsRepository, MRRMovement } from "@croco/metrics-core";
+import { MetricsRepository } from "@croco/metrics-core";
+import type { MRRMovement } from "@croco/metrics-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { BillingEventHandler } from "../libs/BillingEventHandler";
 import {
@@ -111,6 +112,7 @@ describe("BillingEventHandler", () => {
     const storedPrimaryKeys = new Set(legacyRecords);
 
     return {
+      mrrMovementIdentityVersion: 2,
       recordMRRMovement: vi.fn(
         async (
           tenantId: string,
@@ -164,6 +166,75 @@ describe("BillingEventHandler", () => {
     metricsRepository = createMetricsRepository();
 
     handler = new BillingEventHandler(planRegistry, billingStore, metricsRepository);
+  });
+
+  it.each([undefined, 1, 3])(
+    "rejects repositories with unsupported movement identity version %s before writing",
+    (version) => {
+      const olderRepository = {
+        ...metricsRepository,
+        mrrMovementIdentityVersion: version,
+        recordMRRMovement: vi.fn(
+          async (
+            _tenant: string,
+            _movement: MRRMovement,
+            _at: Date,
+            _key?: string,
+            _aliases?: readonly string[],
+          ) => {},
+        ),
+      };
+
+      expect(
+        () =>
+          new BillingEventHandler(
+            planRegistry,
+            billingStore,
+            olderRepository as unknown as MetricsRepository,
+          ),
+      ).toThrowError(
+        expect.objectContaining({ code: "metrics-billing/repository-contract-unsupported" }),
+      );
+      expect(olderRepository.recordMRRMovement).not.toHaveBeenCalled();
+      expect(billingStore.findAccountByTenantId).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects a legacy subclass without inherited capability before replaying its historical row", () => {
+    const event = createPlanChangedEvent("plan-pro", "plan-enterprise");
+    const historicalKey = legacyTimestampEventKey(event);
+    const rows = [{ eventKey: historicalKey }];
+    const claims = new Set([historicalKey]);
+
+    // @ts-expect-error Concrete providers must explicitly adopt the movement identity contract.
+    class LegacyMetricsRepository extends MetricsRepository {
+      recordMRRMovement = vi.fn(
+        async (
+          _tenant: string,
+          _movement: MRRMovement,
+          _at: Date,
+          key?: string,
+          aliases: readonly string[] = [],
+        ) => {
+          const keys = key ? [key, ...aliases] : [];
+          if (keys.some((candidate) => claims.has(candidate))) return;
+          keys.forEach((candidate) => claims.add(candidate));
+          if (key) rows.push({ eventKey: key });
+        },
+      );
+      recordSnapshot = vi.fn();
+      getSnapshot = vi.fn();
+      getMRRHistory = vi.fn();
+      getRetentionMetrics = vi.fn();
+    }
+
+    const legacy = new LegacyMetricsRepository();
+    expect(legacy.mrrMovementIdentityVersion).toBeUndefined();
+    expect(() => new BillingEventHandler(planRegistry, billingStore, legacy)).toThrowError(
+      expect.objectContaining({ code: "metrics-billing/repository-contract-unsupported" }),
+    );
+    expect(legacy.recordMRRMovement).not.toHaveBeenCalled();
+    expect(rows).toEqual([{ eventKey: historicalKey }]);
   });
 
   it("subscribes to every decorated billing event when the bus starts", async () => {

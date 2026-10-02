@@ -100,6 +100,12 @@ movement가 없으므로 이 조회 키를 사용하지 않습니다. PostgresMe
 취소와 revoked의 churn movement에는 `billing.subscription_churned_${externalSubscriptionId}` 키도
 alias로 전달하여 이벤트 순서와 관계없이 구독당 한 번만 기록합니다.
 
+`MetricsRepository` 구현체는 `mrrMovementIdentityVersion: 2`를 명시해야 합니다.
+handler는 생성 시 이 값을 검사하며, 없거나 다른 버전이면
+`metrics-billing/repository-contract-unsupported` Problem으로 실패합니다. metrics-core와 metrics-billing을
+업그레이드할 때 warehouse-postgres도 함께 업그레이드해야 합니다. custom provider는 tenant 범위의
+과거 primary-key 조회를 구현한 뒤 버전 2를 선언해야 합니다. 기존 provider에 버전 값만 붙이면 안 됩니다.
+
 ## Failure semantics
 
 billing 이벤트가 metric으로 기록되지 못하는 경우를 성공처럼 숨기지 않습니다.

@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 896,
+  "problemCount": 897,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -15637,6 +15637,36 @@
       ]
     },
     {
+      "code": "metrics-billing/repository-contract-unsupported",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metrics-billing-repository-contract-unsupported",
+      "recovery": {
+        "cause": "BillingEventHandler was constructed with a metrics provider that does not declare movement identity version 2.",
+        "userAction": "Do not retry with the unchanged provider; use a provider that implements the required identity contract.",
+        "operatorAction": "Upgrade warehouse-postgres with metrics-core and metrics-billing, or implement tenant-scoped historical primary-key lookups in the custom provider before declaring version 2.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/metrics-billing/src/libs/BillingEventHandler.ts",
+          "line": 48,
+          "column": 13,
+          "kind": "problem-factory"
+        }
+      ]
+    },
+    {
       "code": "metrics-core/carrying-capacity-simulation-error",
       "category": "BusinessRuleViolation",
       "status": 422,
@@ -25827,7 +25857,7 @@
       "sources": [
         {
           "file": "packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts",
-          "line": 343,
+          "line": 345,
           "column": 9,
           "kind": "problem-factory"
         }

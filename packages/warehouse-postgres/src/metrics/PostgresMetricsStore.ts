@@ -30,6 +30,8 @@ type MovementRow = {
 
 /** PostgreSQL implementation of the metrics repository contract. */
 export class PostgresMetricsStore extends MetricsRepository {
+  readonly mrrMovementIdentityVersion = 2;
+
   private static readonly MRR_MOVEMENTS_TABLE = "mrr_movements";
   private static readonly MRR_MOVEMENT_EVENT_KEYS_TABLE = "mrr_movement_event_keys";
   private static readonly SNAPSHOTS_TABLE = "metrics_snapshots";
