@@ -110,11 +110,16 @@ describe("installed CLI command integration", () => {
         {
           "bin": {
             "croco": "./dist/bin/croco.js",
+            "croco-agent": "./dist/bin/croco-agent.js",
           },
           "exports": {
             ".": {
               "import": "./dist/index.js",
               "types": "./dist/index.d.ts",
+            },
+            "./agent": {
+              "import": "./dist/agent.js",
+              "types": "./dist/agent.d.ts",
             },
             "./jobs": {
               "import": "./dist/jobs.js",

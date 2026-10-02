@@ -1227,30 +1227,6 @@
     },
     {
       "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/architecturePolicy.ts",
-      "line": 8,
-      "column": 8,
-      "code": "TS6059",
-      "message": "File 'packages/architecture-policy/src/index.ts' is not under 'rootDir' 'packages/cli/src'. 'rootDir' is expected to contain all source files."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/contractsCheck.ts",
-      "line": 11,
-      "column": 8,
-      "code": "TS6059",
-      "message": "File 'packages/protocols-core/src/index.ts' is not under 'rootDir' 'packages/cli/src'. 'rootDir' is expected to contain all source files."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/contractsCheck.ts",
-      "line": 171,
-      "column": 46,
-      "code": "TS6059",
-      "message": "File 'packages/rpc-codegen/src/index.ts' is not under 'rootDir' 'packages/cli/src'. 'rootDir' is expected to contain all source files."
-    },
-    {
-      "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/createDomain.ts",
       "line": 140,
       "column": 67,
@@ -1376,14 +1352,6 @@
       "column": 62,
       "code": "TS4111",
       "message": "Property 'column' comes from an index signature, so it must be accessed with ['column']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/diGraph.ts",
-      "line": 9,
-      "column": 8,
-      "code": "TS6059",
-      "message": "File 'packages/framework-context/src/index.ts' is not under 'rootDir' 'packages/cli/src'. 'rootDir' is expected to contain all source files."
     },
     {
       "packageName": "@croco/cli",
@@ -3116,14 +3084,6 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/projectMap.ts",
-      "line": 17,
-      "column": 40,
-      "code": "TS6059",
-      "message": "File 'packages/framework-routes/src/index.ts' is not under 'rootDir' 'packages/cli/src'. 'rootDir' is expected to contain all source files."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/commands/projectMap.ts",
       "line": 522,
       "column": 51,
       "code": "TS2379",
@@ -3264,14 +3224,6 @@
       "column": 41,
       "code": "TS4111",
       "message": "Property 'decorator' comes from an index signature, so it must be accessed with ['decorator']."
-    },
-    {
-      "packageName": "@croco/cli",
-      "file": "packages/cli/src/libs/diagnosticCodes.ts",
-      "line": 1,
-      "column": 37,
-      "code": "TS6059",
-      "message": "File 'packages/diagnostics-core/src/index.ts' is not under 'rootDir' 'packages/cli/src'. 'rootDir' is expected to contain all source files."
     },
     {
       "packageName": "@croco/cli",

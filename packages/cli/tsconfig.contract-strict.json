@@ -3,7 +3,9 @@
     "exactOptionalPropertyTypes": true,
     "noPropertyAccessFromIndexSignature": true,
     "noUncheckedIndexedAccess": true,
+    "rootDir": "../..",
     "paths": {
+      "@croco/metrics-core/runtime": ["../../packages/metrics-core/src/runtime.ts"],
       "@croco/*": ["../../packages/*/src/index.ts"]
     }
   },

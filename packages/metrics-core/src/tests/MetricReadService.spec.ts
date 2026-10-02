@@ -580,14 +580,11 @@ describe("MetricReadService", () => {
                     "captures_by_currency",
                     { currency: "USD" },
                     window,
-                    { signal: controller.signal },
+                    controller.signal,
                   )
-                : service.runRegisteredQuery(
-                    "captures_by_currency",
-                    { currency: "USD" },
-                    window,
-                    { signal: controller.signal },
-                  );
+                : service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window, {
+                    signal: controller.signal,
+                  });
       const rejected = expect(pending).rejects.toMatchObject({
         code: "metrics-core/read-cancelled",
       });
@@ -686,12 +683,9 @@ describe("MetricReadService", () => {
       executor: async () =>
         new Promise<MetricReadResult>((resolve) => releases.push(() => resolve(result))),
     });
-    const first = service.runRegisteredQuery(
-      "captures_by_currency",
-      { currency: "USD" },
-      window,
-      { signal: controller.signal },
-    );
+    const first = service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window, {
+      signal: controller.signal,
+    });
     const rejected = expect(first).rejects.toMatchObject({ code: "metrics-core/read-cancelled" });
     await vi.waitFor(() => expect(executor).toHaveBeenCalledTimes(1));
     const second = service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window);
@@ -805,7 +799,7 @@ describe("MetricReadService", () => {
                       "captures_by_currency",
                       { currency: "USD" },
                       window,
-                      caller.signal,
+                      { signal: caller.signal },
                     );
         const rejected = expect(pending).rejects.toMatchObject({
           code: "metrics-core/read-timeout",

@@ -188,7 +188,12 @@ export function createAgentReadTools(application: AgentReadApplication) {
       }
       case "runRegisteredQuery": {
         const request = querySchema.parse(input);
-        return service.runRegisteredQuery(request.queryId, request.input, request.window, signal ? { signal } : {});
+        return service.runRegisteredQuery(
+          request.queryId,
+          request.input,
+          request.window,
+          signal ? { signal } : {},
+        );
       }
       case "getSourceRef": {
         const request = schemas.getSourceRef.parse(input);
