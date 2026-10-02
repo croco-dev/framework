@@ -326,6 +326,12 @@
       "owner": "@croco/admin-react"
     },
     {
+      "path": "packages/admin-react/src/tests/PolicyReleaseConsoleInteraction.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
       "path": "packages/admin-react/src/tests/TenantBusinessWorkspace.spec.ts",
       "lane": "fast",
       "qualifiers": [],

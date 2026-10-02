@@ -58,8 +58,7 @@ export type PolicyReleaseConsoleProps = Readonly<{
 
 /** Controlled view: callbacks call the authenticated PolicyReleaseOperations server boundary. */
 export function PolicyReleaseConsole(props: PolicyReleaseConsoleProps): ReactElement {
-  const { state, busy = false } = props;
-  const [invalidJson, setInvalidJson] = useState<Readonly<Record<string, boolean>>>({});
+  const { state } = props;
   if (state.kind === "loading") {
     return h(
       "section",
@@ -97,9 +96,49 @@ export function PolicyReleaseConsole(props: PolicyReleaseConsoleProps): ReactEle
       h("button", { type: "button", onClick: props.onReload }, "Reload policy"),
     );
   }
-  const invalidFields = Object.entries(invalidJson).some(
-    ([key, invalid]) => key.startsWith(`${state.revision}:`) && invalid,
-  );
+  return h(ReadyPolicyReleaseConsole, {
+    ...props,
+    state,
+    key: JSON.stringify([state.policyId, state.revision]),
+  });
+}
+
+type JsonDraft = Readonly<{
+  source: unknown;
+  sensitive: boolean;
+  text: string;
+  invalid: boolean;
+  emission?: Readonly<{ value: unknown }>;
+}>;
+
+function ReadyPolicyReleaseConsole(
+  props: PolicyReleaseConsoleProps & {
+    state: Extract<PolicyReleaseConsoleState, { kind: "ready" }>;
+  },
+): ReactElement {
+  const { state, busy = false } = props;
+  const [drafts, setDrafts] = useState<Readonly<Record<string, JsonDraft>>>({});
+  const currentDrafts: Record<string, JsonDraft> = Object.create(null);
+  let changed = false;
+  for (const [key, draft] of Object.entries(drafts)) {
+    const field = state.fields.find((field) => field.key === key && field.input === "json");
+    if (!field || Boolean(field.sensitive) !== draft.sensitive) {
+      changed = true;
+    } else if (draft.emission && Object.is(field.value, draft.emission.value)) {
+      currentDrafts[key] = { ...draft, source: field.value, emission: undefined };
+      changed = true;
+    } else if (Object.is(field.value, draft.source)) {
+      currentDrafts[key] = draft;
+    } else {
+      changed = true;
+    }
+  }
+  if (changed) setDrafts(currentDrafts);
+  const invalidFields = Object.values(currentDrafts).some((draft) => draft.invalid);
+  const reload = () => {
+    setDrafts({});
+    props.onReload();
+  };
   const hasErrors = state.diagnostics.some(({ severity }) => severity === "error");
   const draft = state.status === "draft" || state.status === "reviewed";
   return h(
@@ -153,24 +192,31 @@ export function PolicyReleaseConsole(props: PolicyReleaseConsoleProps): ReactEle
             : field.input === "json"
               ? h("textarea", {
                   style: { maxWidth: "100%", boxSizing: "border-box" },
-                  key: `${state.revision}:${field.key}`,
                   name: field.key,
-                  defaultValue: field.sensitive ? "" : JSON.stringify(field.value, null, 2),
-                  "aria-invalid": invalidJson[`${state.revision}:${field.key}`] || undefined,
+                  value:
+                    currentDrafts[field.key]?.text ??
+                    (field.sensitive ? "" : JSON.stringify(field.value, null, 2)),
+                  "aria-invalid": currentDrafts[field.key]?.invalid || undefined,
                   onChange: (event: ChangeEvent<HTMLTextAreaElement>) => {
+                    const text = event.currentTarget.value;
+                    const draft = {
+                      source: field.value,
+                      sensitive: Boolean(field.sensitive),
+                      text,
+                    };
                     let value: unknown;
                     try {
-                      value = JSON.parse(event.currentTarget.value);
+                      value = JSON.parse(text);
                     } catch {
-                      setInvalidJson((current) => ({
+                      setDrafts((current) => ({
                         ...current,
-                        [`${state.revision}:${field.key}`]: true,
+                        [field.key]: { ...draft, invalid: true },
                       }));
                       return;
                     }
-                    setInvalidJson((current) => ({
+                    setDrafts((current) => ({
                       ...current,
-                      [`${state.revision}:${field.key}`]: false,
+                      [field.key]: { ...draft, invalid: false, emission: { value } },
                     }));
                     props.onEdit(field.key, value);
                   },
@@ -215,7 +261,7 @@ export function PolicyReleaseConsole(props: PolicyReleaseConsoleProps): ReactEle
                     );
                   },
                 }),
-          invalidJson[`${state.revision}:${field.key}`]
+          currentDrafts[field.key]?.invalid
             ? h("span", { role: "alert" }, "Enter valid JSON")
             : null,
         ),
@@ -322,6 +368,6 @@ export function PolicyReleaseConsole(props: PolicyReleaseConsoleProps): ReactEle
           ),
         )
       : null,
-    h("button", { type: "button", disabled: busy, onClick: props.onReload }, "Reload policy"),
+    h("button", { type: "button", disabled: busy, onClick: reload }, "Reload policy"),
   );
 }

@@ -491,6 +491,15 @@ snapshot with each server result; preserve failed operations as an error state a
 and retain it when retrying that command. Set `effectiveAt` to an ISO 8601 UTC time to schedule
 or leave it blank to publish now. The receipt is displayed only after the service succeeds.
 
+JSON text and parse errors belong to the current policy, revision, and field. Changing the
+policy or revision, leaving the ready state, or clicking Reload clears the local JSON draft.
+Replacing a JSON field's `value` also resets its text and parse error, including a fresh object
+with the same JSON content. For ordinary rerenders, retain the field's value identity. When
+handling `onEdit`, pass the emitted value directly back as `field.value`; this preserves the
+user's JSON formatting and caret while acknowledging the edit. A cloned value is treated as
+an external replacement. For a reload whose primitive value is unchanged, use Reload or
+transition through loading before passing the ready snapshot.
+
 Map snapshot fields directly using `input`, `min`, `max`, and `options`; diagnostics retain
 `code`, `path`, and `severity`. Pass only code-declared fields and redacted diff/diagnostic text. Never send a secret field's
 raw value to a browser merely because its input uses `type="password"`. There are no
