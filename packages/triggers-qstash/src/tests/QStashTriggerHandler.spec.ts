@@ -1,10 +1,11 @@
-import { ExecutionProblems } from "@croco/execution-core";
+import { ExecutionManagerImpl, ExecutionProblems } from "@croco/execution-core";
 import type {
   CreateExecutionParams,
   Execution,
   ExecutionAttemptManager,
   ExecutionError,
   ExecutionManager,
+  ExecutionStore,
 } from "@croco/execution-core";
 import { Container, defineGeneratedDiGraph, MetadataStorage } from "@croco/framework-context";
 import { Problem, ProblemCategory } from "@croco/problems-core";
@@ -174,6 +175,42 @@ function createIdempotentExecutionManager(): {
   return { create, manager };
 }
 
+function createStoredExecutionManager(): ExecutionManagerImpl {
+  const executions = new Map<string, Execution>();
+  const store: ExecutionStore = {
+    create: vi.fn(async (params) => {
+      const execution: Execution = {
+        ...params,
+        id: `exec-${executions.size + 1}`,
+        createdAt: new Date(),
+        status: "pending",
+        attempts: 0,
+        maxAttempts: params.maxAttempts ?? 1,
+      };
+      executions.set(execution.id, execution);
+      return { ...execution };
+    }),
+    findById: vi.fn(async (id) => executions.get(id) ?? null),
+    findByIdempotencyKey: vi.fn(
+      async (key) =>
+        [...executions.values()].find((execution) => execution.idempotencyKey === key) ?? null,
+    ),
+    updateIfStatus: vi.fn(async (id, status, data) => {
+      const execution = executions.get(id);
+      if (!execution || execution.status !== status) return null;
+      const updated = { ...execution, ...data };
+      executions.set(id, updated);
+      return { ...updated };
+    }),
+    update: vi.fn(),
+    mergeCheckpoint: vi.fn(),
+    listRunning: vi.fn(),
+    list: vi.fn(),
+    delete: vi.fn(),
+  };
+  return new ExecutionManagerImpl(store);
+}
+
 describe("QStashTriggerHandler", () => {
   const delivery = { messageId: "msg-test" };
 
@@ -182,6 +219,114 @@ describe("QStashTriggerHandler", () => {
     MetadataStorage.clear();
     vi.restoreAllMocks();
   });
+
+  it("records processing time for each firing while preserving the schedule sync payload", async () => {
+    const execute = vi.fn().mockResolvedValue("handled");
+    class TimestampHandler {
+      execute = execute;
+    }
+    triggerRegistry.register({
+      type: "cron",
+      expression: "* * * * *",
+      methodName: "execute",
+      target: TimestampHandler.prototype,
+      options: {},
+    });
+    const manager = createStoredExecutionManager();
+    const create = vi.spyOn(manager, "create");
+    const handler = new QStashTriggerHandler({
+      receiver: { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver,
+      executionManager: manager,
+      serviceResolver: () => new TimestampHandler(),
+    });
+    const payload = {
+      scheduleId: "schedule-timestamp",
+      className: "TimestampHandler",
+      methodName: "execute",
+      cronExpression: "* * * * *",
+      timestamp: "2026-08-13T00:00:00.000Z",
+    };
+    const body = JSON.stringify(payload);
+    const processingTimes = ["2026-10-03T00:00:00.000Z", "2026-10-03T00:01:00.000Z"];
+
+    vi.useFakeTimers();
+    try {
+      for (const [index, timestamp] of processingTimes.entries()) {
+        vi.setSystemTime(new Date(timestamp));
+        const result = await handler.handle(body, "valid-signature", {
+          messageId: `msg-timestamp-${index}`,
+        });
+        expect(result.success).toBe(true);
+        expect(create).toHaveBeenNthCalledWith(
+          index + 1,
+          expect.objectContaining({
+            payload: expect.objectContaining({ timestamp: payload.timestamp }),
+            metadata: expect.objectContaining({ timestamp }),
+          }),
+        );
+        expect(execute.mock.calls[index]?.[0]).toEqual(payload);
+      }
+      expect(create).toHaveBeenCalledTimes(2);
+      expect(execute).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it.each([false, true])(
+    "preserves processing time on later redelivery (retry: %s)",
+    async (retry) => {
+      const execute = vi.fn().mockResolvedValue("handled");
+      if (retry) execute.mockRejectedValueOnce(new TestTriggerProblem(true));
+      class RedeliveryTimestampHandler {
+        execute = execute;
+      }
+      triggerRegistry.register({
+        type: "cron",
+        expression: "* * * * *",
+        methodName: "execute",
+        target: RedeliveryTimestampHandler.prototype,
+        options: {},
+      });
+      const manager = createStoredExecutionManager();
+      const handler = new QStashTriggerHandler({
+        receiver: { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver,
+        executionManager: manager,
+        maxAttempts: 2,
+        serviceResolver: () => new RedeliveryTimestampHandler(),
+      });
+      const payload = {
+        scheduleId: "schedule-redelivery-timestamp",
+        className: "RedeliveryTimestampHandler",
+        methodName: "execute",
+        cronExpression: "* * * * *",
+        timestamp: "2026-08-13T00:00:00.000Z",
+      };
+      const body = JSON.stringify(payload);
+      const delivery = { messageId: "msg-redelivery-timestamp" };
+      const processingTime = "2026-10-03T00:00:00.000Z";
+
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(new Date(processingTime));
+        const first = await handler.handle(body, "valid-signature", delivery);
+        expect(first.statusCode).toBe(retry ? 503 : 200);
+        expect((await manager.get("exec-1")).status).toBe(retry ? "retrying" : "completed");
+
+        vi.setSystemTime(new Date("2026-10-03T00:01:00.000Z"));
+        const second = await handler.handle(body, "valid-signature", delivery);
+        expect(second.success).toBe(true);
+        expect(second.executionId).toBe("exec-1");
+        const execution = await manager.get("exec-1");
+        expect(execution.status).toBe("completed");
+        expect(execution.metadata?.timestamp).toBe(processingTime);
+        expect(execution.payload).toEqual(payload);
+        expect(execute).toHaveBeenCalledTimes(retry ? 2 : 1);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
 
   it("requires an application resolver at construction", () => {
     const { manager } = createIdempotentExecutionManager();
