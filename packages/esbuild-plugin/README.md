@@ -134,16 +134,8 @@ compile error로 거절하므로, 주입 대상 provider에는 constructor와 in
 `generateRegistry`는 지원하지 않습니다. 이 옵션을 전달하면 `enabled: false`이거나 browser build여도
 `CROCO_DI_COMPILE_001`로 build가 실패합니다. 옵션을 제거하고 `di`로 출력 위치와 생성 여부를 지정하세요.
 
-```typescript
-crocoPlugin({
-  scan: { dirs: ["src"] },
-  di: {
-    enabled: true,
-    outFile: "src/registry.gen.ts",
-    manifestFile: ".croco/di.manifest.json",
-  },
-});
-```
+component와 같은 `src/registry.gen.ts`에 출력하려면 `di.outFile: "src/registry.gen.ts"`를 지정합니다.
+manifest 위치는 `di.manifestFile: ".croco/di.manifest.json"`으로 지정할 수 있습니다.
 
 기존 `generateRegistry.enabled`는 `di.enabled`로, `outDir`과 `outFile`을 합친 경로는 `di.outFile`로 옮깁니다.
 생성을 끄려면 기존 옵션을 제거하고 `di.enabled: false`를 사용하세요.
