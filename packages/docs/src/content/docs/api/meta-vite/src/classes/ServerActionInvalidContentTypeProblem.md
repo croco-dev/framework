@@ -15,13 +15,17 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 ### Constructor
 
-> **new ServerActionInvalidContentTypeProblem**(`contentType`): `ServerActionInvalidContentTypeProblem`
+> **new ServerActionInvalidContentTypeProblem**(`contentType`, `cause?`): `ServerActionInvalidContentTypeProblem`
 
 #### Parameters
 
 ##### contentType
 
 `string` \| `null`
+
+##### cause?
+
+`unknown`
 
 #### Returns
 
