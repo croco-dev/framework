@@ -9,6 +9,18 @@ title: "FrontendRecoveryAction"
 
 ## Properties
 
+### ariaLabel?
+
+> `readonly` `optional` **ariaLabel?**: `string`
+
+---
+
+### disabled?
+
+> `readonly` `optional` **disabled?**: `boolean`
+
+---
+
 ### href?
 
 > `readonly` `optional` **href?**: `string`

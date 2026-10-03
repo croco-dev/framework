@@ -1,5 +1,6 @@
 ---
 "@croco/ui-astryx": patch
+"@croco/frontend-react": patch
 ---
 
-AuthState recovery actions support accessible labels and disabled buttons and links, sharing the presentation contract with ProblemView while preserving their existing callback signatures.
+Auth bridge recovery actions accept accessible labels and disabled controls. AuthState preserves these fields through session mapping and shares the presentation contract with ProblemView while retaining existing callback signatures.

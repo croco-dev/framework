@@ -5,39 +5,9 @@ prev: false
 title: "AstryxProblemRecoveryAction"
 ---
 
-> **AstryxProblemRecoveryAction** = `object`
+> **AstryxProblemRecoveryAction** = `Omit`\<[`FrontendRecoveryAction`](/api/frontend-react/src/type-aliases/frontendrecoveryaction/), `"onRecover"`\> & `object`
 
-## Properties
-
-### ariaLabel?
-
-> `readonly` `optional` **ariaLabel?**: `string`
-
----
-
-### disabled?
-
-> `readonly` `optional` **disabled?**: `boolean`
-
----
-
-### href?
-
-> `readonly` `optional` **href?**: `string`
-
----
-
-### id
-
-> `readonly` **id**: `string`
-
----
-
-### label
-
-> `readonly` **label**: `string`
-
----
+## Type Declaration
 
 ### onRecover?
 
@@ -52,9 +22,3 @@ title: "AstryxProblemRecoveryAction"
 #### Returns
 
 `void` \| `Promise`\<`void`\>
-
----
-
-### problemCodes?
-
-> `readonly` `optional` **problemCodes?**: readonly `string`[]

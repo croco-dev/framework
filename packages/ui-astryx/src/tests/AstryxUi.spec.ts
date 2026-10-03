@@ -1,4 +1,9 @@
-import type { FrontendSessionState, ProblemRecoveryAction } from "@croco/frontend-react";
+import { createFrontendAuthBridgeState } from "@croco/frontend-react";
+import type {
+  FrontendAuthBridgeStateInput,
+  FrontendSessionState,
+  ProblemRecoveryAction,
+} from "@croco/frontend-react";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
@@ -87,31 +92,32 @@ describe("@croco/ui-astryx", () => {
   it.each(["loading", "signed-out", "unavailable"] as const)(
     "preserves recovery accessibility and disabled state in %s sessions",
     (state) => {
-      const actions: readonly AstryxRecoveryAction[] = [
-        {
-          id: "retry",
-          label: "Retry",
-          ariaLabel: "Retry authentication",
-          disabled: true,
-          onRecover: vi.fn(),
-        },
-        {
-          id: "status",
-          label: "Status",
-          href: "/status",
-          ariaLabel: "View authentication status",
-          disabled: true,
-        },
-        { id: "sign-in", label: "Sign in", ariaLabel: "Start sign in", disabled: false },
-      ];
-      const props = toAstryxAuthStateProps(
-        state === "unavailable"
-          ? { kind: "unavailable", problem, recoveryActions: actions }
-          : {
-              kind: state === "signed-out" ? "unauthenticated" : "loading",
-              recoveryActions: actions,
-            },
-      );
+      const input = {
+        recoveryActions: [
+          {
+            id: "retry",
+            label: "Retry",
+            ariaLabel: "Retry authentication",
+            disabled: true,
+            onRecover: vi.fn(),
+          },
+          {
+            id: "status",
+            label: "Status",
+            href: "/status",
+            ariaLabel: "View authentication status",
+            disabled: true,
+          },
+          { id: "sign-in", label: "Sign in", ariaLabel: "Start sign in", disabled: false },
+        ],
+      } satisfies FrontendAuthBridgeStateInput;
+      const actions: readonly AstryxRecoveryAction[] = input.recoveryActions;
+      const bridge = createFrontendAuthBridgeState({
+        ...input,
+        loading: state === "loading",
+        providerFailure: state === "unavailable" ? problem : undefined,
+      });
+      const props = toAstryxAuthStateProps(bridge.session);
 
       const authHtml = renderToStaticMarkup(createElement(AstryxAuthState, props));
       const problemHtml = renderToStaticMarkup(
@@ -119,6 +125,7 @@ describe("@croco/ui-astryx", () => {
       );
 
       expect(props.recoveryActions).toBe(actions);
+      expect(props.state).toBe(state);
       for (const html of [authHtml, problemHtml]) {
         for (const label of ["Retry authentication", "View authentication status"]) {
           const button = html.match(new RegExp(`<button[^>]*aria-label="${label}"[^>]*>`))?.[0];
