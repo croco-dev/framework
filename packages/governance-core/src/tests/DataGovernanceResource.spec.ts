@@ -1546,4 +1546,95 @@ describe("DataGovernanceResource", () => {
       }),
     ).not.toThrow();
   });
+
+  it.each([
+    {
+      name: "invalid requestedAt Date",
+      requestedAt: new Date("not-a-date"),
+      retainedUntil: new Date("2026-07-01T00:00:00.000Z"),
+      expectedRequestedAt: "Invalid Date",
+      expectedRetainedUntil: "2026-07-01T00:00:00.000Z",
+      invalidTimestamp: "Invalid Date",
+    },
+    {
+      name: "invalid retainedUntil Date",
+      requestedAt: new Date("2026-07-02T00:00:00.000Z"),
+      retainedUntil: new Date("not-a-date"),
+      expectedRequestedAt: "2026-07-02T00:00:00.000Z",
+      expectedRetainedUntil: "Invalid Date",
+      invalidTimestamp: "Invalid Date",
+    },
+    {
+      name: "two invalid Dates",
+      requestedAt: new Date("not-a-date"),
+      retainedUntil: new Date("not-a-date"),
+      expectedRequestedAt: "Invalid Date",
+      expectedRetainedUntil: "Invalid Date",
+      invalidTimestamp: "Invalid Date",
+    },
+    {
+      name: "invalid requestedAt string with a valid Date",
+      requestedAt: "not-a-date",
+      retainedUntil: new Date("2026-07-01T00:00:00.000Z"),
+      expectedRequestedAt: "not-a-date",
+      expectedRetainedUntil: "2026-07-01T00:00:00.000Z",
+      invalidTimestamp: "not-a-date",
+    },
+    {
+      name: "invalid retainedUntil string with a valid Date",
+      requestedAt: new Date("2026-07-02T00:00:00.000Z"),
+      retainedUntil: "not-a-date",
+      expectedRequestedAt: "2026-07-02T00:00:00.000Z",
+      expectedRetainedUntil: "not-a-date",
+      invalidTimestamp: "not-a-date",
+    },
+    {
+      name: "invalid retainedUntil string with an invalid requestedAt Date",
+      requestedAt: new Date("not-a-date"),
+      retainedUntil: "not-a-date",
+      expectedRequestedAt: "Invalid Date",
+      expectedRetainedUntil: "not-a-date",
+      invalidTimestamp: "not-a-date",
+    },
+    {
+      name: "invalid retainedUntil Date with an invalid requestedAt string",
+      requestedAt: "not-a-date",
+      retainedUntil: new Date("not-a-date"),
+      expectedRequestedAt: "not-a-date",
+      expectedRetainedUntil: "Invalid Date",
+      invalidTimestamp: "Invalid Date",
+    },
+  ])("reports a retention Problem for $name", (testCase) => {
+    expect.assertions(2);
+
+    try {
+      assertRetentionPolicySatisfied({
+        audit,
+        policyId: "account-retention",
+        requestedAt: testCase.requestedAt,
+        resourceKind: "user",
+        retainedUntil: testCase.retainedUntil,
+        subjectId: "user-1",
+        subjectType: "user",
+      });
+    } catch (error) {
+      expect(error).toBeInstanceOf(RetentionPolicyViolationProblem);
+      if (!(error instanceof RetentionPolicyViolationProblem)) {
+        throw error;
+      }
+
+      expect(error.toJSON()).toMatchObject({
+        audit,
+        code: "governance-core/retention-policy-violation",
+        detail: `Invalid retention policy timestamp '${testCase.invalidTimestamp}'`,
+        policyId: "account-retention",
+        requestedAt: testCase.expectedRequestedAt,
+        resourceKind: "user",
+        retainedUntil: testCase.expectedRetainedUntil,
+        status: 422,
+        subjectId: "user-1",
+        subjectType: "user",
+      });
+    }
+  });
 });

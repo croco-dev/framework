@@ -1798,7 +1798,9 @@ function toDate(check: RetentionPolicyCheck, fieldName: "requestedAt" | "retaine
 }
 
 function stringifyTimestamp(value: Date | string): string {
-  return value instanceof Date ? value.toISOString() : value;
+  return value instanceof Date && !Number.isNaN(value.getTime())
+    ? value.toISOString()
+    : String(value);
 }
 
 function compareDataMapResources(left: DataMapResource, right: DataMapResource): number {
