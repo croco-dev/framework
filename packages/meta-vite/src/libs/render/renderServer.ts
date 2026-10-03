@@ -43,8 +43,22 @@ export class RenderServer {
       const headMetadata = route.head?.();
 
       return this.createHtmlResponse(html, 200, headMetadata);
-    } catch {
-      return this.createHtmlResponse("<h1>Internal Server Error</h1>", 500, FALLBACK_HEAD_500);
+    } catch (error) {
+      const response = this.createHtmlResponse(
+        "<h1>Internal Server Error</h1>",
+        500,
+        FALLBACK_HEAD_500,
+      );
+      try {
+        console.error("SSR rendering failed", { route: route.path, error });
+      } catch {
+        try {
+          console.warn("SSR rendering failed; error logging failed", route.path);
+        } catch {
+          return response;
+        }
+      }
+      return response;
     }
   }
 
