@@ -185,3 +185,36 @@ export type {
 } from "./libs/diagnostics/LifecycleDiagnosticsProvider";
 export type { LifecycleRuleRegistryOptions } from "./libs/LifecycleRuleRegistry";
 export type { WebhookLifecycleActionAdapterOptions } from "./libs/WebhookLifecycleActionAdapter";
+export {
+  JourneyEngine,
+  JourneyProblem,
+  validateJourneyScope,
+  validateJourneyScope as assertJourneyScope,
+} from "./libs/journey/JourneyEngine";
+export { InMemoryJourneyStore } from "./libs/journey/InMemoryJourneyStore";
+export { JourneyTaskBridge } from "./libs/journey/JourneyTaskBridge";
+export type { JourneyTaskInvoker } from "./libs/journey/JourneyTaskBridge";
+export type {
+  JourneyScope,
+  JourneyReference,
+  JourneyReconciliation,
+  JourneyNode,
+  JourneyDefinition,
+  JourneyStatus,
+  JourneyActionIntent,
+  JourneyReceipt,
+  JourneyCommand,
+  JourneyCheckSnapshot,
+  JourneyDispatchProblemCode,
+  JourneyDryRunStep,
+  JourneyDryRunResult,
+  JourneyEpisode,
+  JourneyStore,
+  JourneyFacts,
+  JourneyContext,
+  JourneyPredicate,
+  JourneyAction,
+  JourneyEngineOptions,
+  JourneyEntry,
+} from "./libs/journey/types";
+export { defineJourneyPredicate, defineJourneyAction } from "./libs/journey/registrations";

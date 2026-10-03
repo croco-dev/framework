@@ -67,6 +67,7 @@
   "@croco/invitation-core": "contracts",
   "@croco/invitation-drizzle": "plugins",
   "@croco/lifecycle-core": "contracts",
+  "@croco/lifecycle-drizzle": "plugins",
   "@croco/membership-core": "contracts",
   "@croco/membership-drizzle": "plugins",
   "@croco/meta-vite": "tooling",

@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "jsx": "react-jsx",
+    "experimentalDecorators": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "noEmit": true,
+    "paths": {
+      "@croco/admin-core": ["../../packages/admin-core/src/index.ts"],
+      "@croco/admin-react": ["../../packages/admin-react/src/index.ts"],
+      "@croco/lifecycle-core": ["../../packages/lifecycle-core/src/index.ts"],
+      "@croco/problems-core": ["../../packages/problems-core/src/index.ts"],
+      "@croco/execution-core": ["../../packages/execution-core/src/index.ts"],
+      "@croco/tasks-core": ["../../packages/tasks-core/src/index.ts"],
+      "@croco/triggers-core": ["../../packages/triggers-core/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

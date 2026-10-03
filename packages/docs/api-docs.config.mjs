@@ -416,6 +416,12 @@ export const apiDocPackages = [
     moduleName: "lifecycle-core/src",
   },
   {
+    packageName: "@croco/lifecycle-drizzle",
+    directory: "lifecycle-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "lifecycle-drizzle/src",
+  },
+  {
     packageName: "@croco/ai-usage",
     directory: "ai-usage",
     entryPoint: "src/index.ts",

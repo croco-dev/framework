@@ -1,3 +1,4 @@
+import { recordEvent } from "@croco/telemetry-api";
 import { Problem, ProblemCategory, ProblemFactory } from "@croco/problems-core";
 import type { AccessProvider } from "./interfaces/AccessProvider.js";
 import {
@@ -78,12 +79,61 @@ export class AccessEngine {
         ...request.inputs,
       },
     });
-    await recordPolicyDecisionTrace(trace, { auditSink: this.options.traceSink });
+    try {
+      await recordPolicyDecisionTrace(trace, { auditSink: this.options.traceSink });
+    } catch (error) {
+      recordEvent(ACCESS_OBSERVABILITY_DELIVERY_FAILED_EVENT, {
+        "access.operation": "check",
+        "access.policy_result": trace.result,
+        "access.observability_sink": "policy-decision-trace",
+        "access.policy_decision_id": trace.decisionId,
+        ...accessSinkErrorIdentity(error),
+      });
+    }
 
     return {
       ...result,
       trace,
     };
+  }
+}
+
+export const ACCESS_OBSERVABILITY_DELIVERY_FAILED_EVENT = "access.observability-delivery-failed";
+
+function accessSinkErrorIdentity(error: unknown): Record<string, string> {
+  let cause: Error | undefined;
+  try {
+    cause = error instanceof Error ? error : undefined;
+  } catch {
+    return {};
+  }
+  if (!cause) {
+    return {};
+  }
+
+  const attributes: Record<string, string> = {};
+  const name = readAccessSinkErrorAttribute(cause, "name");
+  if (name) {
+    attributes["access.audit.error.name"] = name;
+  }
+  const code = readAccessSinkErrorAttribute(cause, "code");
+  if (code) {
+    attributes["access.audit.error.code"] = code;
+  }
+  return attributes;
+}
+
+function readAccessSinkErrorAttribute(error: Error, key: "name" | "code"): string | undefined {
+  try {
+    const value = key === "name" ? error.name : "code" in error ? error.code : undefined;
+    const pattern = key === "name" ? /^[A-Za-z][A-Za-z0-9]{0,63}$/ : /^[A-Z][A-Z0-9_/-]{0,63}$/;
+    const sensitive =
+      /token|secret|password|credential|authorization|cookie|api.?key|private.?key|connection.?string|dsn/i;
+    return typeof value === "string" && pattern.test(value) && !sensitive.test(value)
+      ? value
+      : undefined;
+  } catch {
+    return undefined;
   }
 }
 

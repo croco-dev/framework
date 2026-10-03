@@ -350,3 +350,14 @@ export type {
   ExperimentAdminSample,
   ExperimentAdminSnapshot,
 } from "./libs/ExperimentOperations";
+
+export { JourneyAdminProblem, JourneyOperations } from "./libs/JourneyOperations";
+export type {
+  JourneyAdminPermission,
+  JourneyAdminAccess,
+  JourneyEpisodeView,
+  JourneyDryRunView,
+  JourneyAdminState,
+  JourneyAdminCommand,
+  JourneyOperationsOptions,
+} from "./libs/JourneyOperations";

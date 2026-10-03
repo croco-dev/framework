@@ -752,6 +752,7 @@ jobs:
               - 'packages/invitation-core/src/**'
               - 'packages/invitation-drizzle/src/**'
               - 'packages/lifecycle-core/src/**'
+              - 'packages/lifecycle-drizzle/src/**'
               - 'packages/membership-core/src/**'
               - 'packages/membership-drizzle/src/**'
               - 'packages/meta-vite/src/**'
