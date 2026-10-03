@@ -60,6 +60,7 @@ const operationalEnvironmentSourceExcludedDirectories = new Set([
   "type-fixtures",
 ]);
 const publicOperationalEnvironmentVariables = {
+  CROCO_AGENT_APPLICATION: { sensitive: false },
   CROCO_DEV_INSPECTOR_ENABLED: { sensitive: false },
   CROCO_DEV_INSPECTOR_EXPOSURE: { sensitive: false },
   CROCO_DEV_INSPECTOR_TOKEN: { sensitive: true },

@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 913,
+  problemCount: 914,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -17088,10 +17088,9 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       title: "Bad Request",
       cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-read-cancelled",
       recovery: {
-        cause: "The metric read was cancelled by its AbortSignal or exceeded its deadline.",
-        userAction:
-          "Retry the read after the cancellation reason is cleared or with a sufficient deadline.",
-        operatorAction: "Inspect the cancellation signal, configured deadline, and read duration.",
+        cause: "The metric read was cancelled by its trusted or invocation AbortSignal.",
+        userAction: "Retry the read after the cancellation reason is cleared.",
+        operatorAction: "Inspect the cancellation signal and invocation lifecycle.",
         retryability: "conditional",
         redactionPolicy: "public",
         telemetry: {
@@ -17106,7 +17105,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/read/MetricReadService.ts",
-          line: 177,
+          line: 189,
+          column: 10,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "metrics-core/read-timeout",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-read-timeout",
+      recovery: {
+        cause: "The metric read exceeded its authorized invocation time budget.",
+        userAction: "Retry after read latency or the authorized time budget has been reviewed.",
+        operatorAction:
+          "Inspect authorization, report reader, and executor latency against the effective time budget; retain concurrency slots until pending work settles.",
+        retryability: "conditional",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/read/MetricReadService.ts",
+          line: 193,
           column: 10,
           kind: "problem-constructor",
         },

@@ -59,6 +59,7 @@ type SmokeCommand = {
   readonly args: readonly string[];
   readonly assertFixtureUnchanged?: boolean;
   readonly expectedExitCode?: number;
+  readonly expectedEmptyStdout?: boolean;
   readonly fixtureFiles?: readonly SmokeFixtureFile[];
   readonly packageFixtureFiles?: readonly SmokePackageFixtureFile[];
   readonly expectedPaths?: readonly string[];
@@ -439,6 +440,11 @@ function runPackageBinSmoke(
             label: `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")}`,
           },
         );
+        if (smokeCommand.expectedEmptyStdout && result.stdout !== "") {
+          throw new Error(
+            `${packageInfo.packageName}: ${binTarget.commandName} ${smokeCommand.args.join(" ")} polluted protocol stdout`,
+          );
+        }
         const output = `${result.stdout}\n${result.stderr}`;
         if (!output.includes(smokeCommand.expectedOutput)) {
           throw new Error(
@@ -918,6 +924,21 @@ function smokeCommandsFor(
   packageInfo: PackedPackageInfo,
 ): readonly SmokeCommand[] {
   switch (binTarget.commandName) {
+    case "croco-agent":
+      return [
+        {
+          args: ["call", "listCapabilities", "{}"],
+          expectedExitCode: 1,
+          expectedEmptyStdout: true,
+          expectedOutput: "CROCO_CLI_AGENT_READ_007",
+        },
+        {
+          args: ["stdio"],
+          expectedExitCode: 1,
+          expectedEmptyStdout: true,
+          expectedOutput: "CROCO_CLI_AGENT_READ_007",
+        },
+      ];
     case "create-croco-app":
       return [
         {

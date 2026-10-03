@@ -105,3 +105,5 @@ const result = evaluateMetric(
 ```
 
 `@croco/metrics-core/runtime`의 `MetricReadService`는 신뢰된 애플리케이션 코드에서만 정의와 조회 executor를 등록합니다. 권한 제공자가 principal, 필드 권한, source revision, snapshot ref, 예산 및 permission/privacy epoch를 공급합니다. 검수된 보고서가 principal, 정의 hash, 기간, 필터, 출처 revision, 품질, 현재 권한과 일치하면 executor를 호출하지 않습니다. 불완전하거나 오래된 보고서는 승인된 출처·품질·진단 metadata와 함께 명시 상태로 반환하고 원본 결과값은 제외합니다. 권한 거부는 metadata 없이 반환합니다. PostgreSQL fact 읽기와 SnapshotSet 고정은 warehouse provider 구현에 속하며 이 경로가 대신 제공하지 않습니다.
+
+`listRegisteredQueries(signal?)`는 현재 권한으로 읽을 수 있는 조회의 ID·version·정의 참조·단위·필드·예산을 반환하며, executor와 schema 함수는 노출하지 않습니다. 정의 목록·설명·보고서·조회 실행 메서드는 마지막 인자로 invocation의 `AbortSignal`을 받습니다. 이 신호와 신뢰 context의 취소 신호를 함께 적용하고, `metrics-core/read-cancelled`와 `metrics-core/read-timeout`을 구분합니다. 등록 input schema의 검증 실패는 원본 오류 내용을 제외한 `metrics-core/invalid-query-input`으로 반환합니다. CLI/MCP에서는 [`@croco/cli/agent`](../cli/README.md#authorized-reads-for-coding-agents)를 통해 같은 서비스를 사용합니다.

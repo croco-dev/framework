@@ -2781,10 +2781,18 @@ const recoveryMetadataByCode = {
     severity: "error",
   }),
   "metrics-core/read-cancelled": recovery({
-    cause: "The metric read was cancelled by its AbortSignal or exceeded its deadline.",
-    userAction:
-      "Retry the read after the cancellation reason is cleared or with a sufficient deadline.",
-    operatorAction: "Inspect the cancellation signal, configured deadline, and read duration.",
+    cause: "The metric read was cancelled by its trusted or invocation AbortSignal.",
+    userAction: "Retry the read after the cancellation reason is cleared.",
+    operatorAction: "Inspect the cancellation signal and invocation lifecycle.",
+    retryability: "conditional",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  "metrics-core/read-timeout": recovery({
+    cause: "The metric read exceeded its authorized invocation time budget.",
+    userAction: "Retry after read latency or the authorized time budget has been reviewed.",
+    operatorAction:
+      "Inspect authorization, report reader, and executor latency against the effective time budget; retain concurrency slots until pending work settles.",
     retryability: "conditional",
     redactionPolicy: "public",
     severity: "info",

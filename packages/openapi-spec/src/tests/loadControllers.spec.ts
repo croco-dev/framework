@@ -24,6 +24,13 @@ describe("loadControllers", () => {
     tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "openapi-load-controllers-"));
     sourceDir = path.join(tempRoot, "src");
     fs.mkdirSync(sourceDir, { recursive: true });
+    const dependenciesDir = path.join(tempRoot, "node_modules");
+    fs.mkdirSync(dependenciesDir);
+    fs.symlinkSync(
+      path.dirname(createRequire(import.meta.url).resolve("reflect-metadata")),
+      path.join(dependenciesDir, "reflect-metadata"),
+      "dir",
+    );
   });
 
   afterEach(() => {
