@@ -121,13 +121,14 @@ describe("framework-config core skipValidation parser", () => {
     const core = await importCoreWithEnv("true", { preserveProcessEnvIdentity: true });
 
     expect(Reflect.set(core.env, "PORT", 4000)).toBe(true);
-    expect(core.env.PORT).toBe("4000");
+    expect(core.env.PORT).toBe(4000);
     expect(Object.getOwnPropertyDescriptor(core.env, "PORT")?.value).toBe(core.env.PORT);
 
     process.env.PORT = "5000";
 
-    expect(core.env.PORT).toBe("5000");
+    expect(core.env.PORT).toBe(4000);
     expect(Object.getOwnPropertyDescriptor(core.env, "PORT")?.value).toBe(core.env.PORT);
+    expect(process.env.PORT).toBe("5000");
   });
 
   it("rejects invalid SKIP_ENV_VALIDATION values on first env access", async () => {
@@ -305,5 +306,33 @@ describe("framework-config runtime env preset composition", () => {
     ]);
     expect(core.fullEnv.DATABASE_URL).toBe("postgresql://localhost:5432/test");
     expect("DATABASE_URL" in core.fullEnv).toBe(true);
+  });
+
+  it("does not delete empty-string entries from process.env during validation", async () => {
+    const core = await importCoreWithEnv(undefined, { omitRequiredServices: true });
+    process.env.EMPTY_FLAG = "";
+
+    const composedEnv = core.defineRuntimeEnv({
+      presets: [
+        {
+          server: { EMPTY_FLAG: z.string().optional() },
+          client: {},
+          shared: {},
+        },
+      ],
+    });
+
+    expect(composedEnv.EMPTY_FLAG).toBeUndefined();
+    expect(process.env.EMPTY_FLAG).toBe("");
+    expect("EMPTY_FLAG" in process.env).toBe(true);
+  });
+
+  it("preserves process.env empty-string entries on lazy first access", async () => {
+    const core = await importCoreWithEnv(undefined, { omitRequiredServices: true });
+    process.env.EMPTY_FLAG = "";
+
+    expect(core.env.NODE_ENV).toBe("test");
+    expect(process.env.EMPTY_FLAG).toBe("");
+    expect("EMPTY_FLAG" in process.env).toBe(true);
   });
 });

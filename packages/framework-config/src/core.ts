@@ -141,7 +141,7 @@ export function defineRuntimeEnv<const TPresets extends readonly RuntimeEnvPrese
     clientPrefix: "NEXT_PUBLIC_",
     client: mergeRuntimeEnvSection(presets, "client"),
     shared: mergeRuntimeEnvSection(presets, "shared"),
-    runtimeEnv: process.env,
+    runtimeEnv: { ...process.env },
     emptyStringAsUndefined: true,
     skipValidation: parseOptionalBooleanEnv("SKIP_ENV_VALIDATION"),
   });
