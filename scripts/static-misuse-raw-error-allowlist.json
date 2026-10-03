@@ -114,7 +114,7 @@
     {
       "package": "@croco/meta-vite",
       "file": "packages/meta-vite/src/libs/actions/serverActions.ts",
-      "line": 158,
+      "line": 193,
       "excerpt": "throw new Error(`ServerAction '${config.name}' already registered`);",
       "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
       "owner": "framework-error-handling",
