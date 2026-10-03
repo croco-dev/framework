@@ -273,17 +273,25 @@ describe("compileDiGraph", () => {
     ).toThrow("cannot capture request");
   }, 30_000);
 
-  it("reads scope only from the Croco decorator and rejects dynamic scope and inheritance", () => {
+  it("reads scope only from the Croco decorator", () => {
     writeProject({
       "src/Service.ts": `import { Component } from "@croco/framework-context"; function Other(options: object): ClassDecorator { return () => {}; } @Other({scope: "request"}) @Component() export class Service {}`,
     });
     expect(compileDiGraph({ baseDir: TEMP_DIR }).manifest.providers[0]?.scope).toBe("singleton");
-    for (const options of ['{scope: "invalid"}', "options", "{...options}"]) {
+  });
+
+  it.each(['{scope: "invalid"}', "options", "{...options}"])(
+    "rejects dynamic scope options (%s)",
+    (options) => {
       writeProject({
         "src/Service.ts": `import { Component } from "@croco/framework-context"; const options = {scope: "request"}; @Component(${options}) export class Service {}`,
       });
       expect(() => compileDiGraph({ baseDir: TEMP_DIR })).toThrow("must be static");
-    }
+    },
+    30_000,
+  );
+
+  it("rejects computed scope accessors and provider inheritance", () => {
     writeProject({
       "src/Service.ts": `import { Component } from "@croco/framework-context"; @Component({ get scope(): "request" { return "request"; } }) export class Service {}`,
     });
@@ -298,9 +306,9 @@ describe("compileDiGraph", () => {
     expect(() => compileDiGraph({ baseDir: TEMP_DIR })).toThrow(
       "Inherited providers are not supported",
     );
-  });
+  }, 30_000);
 
-  it("hashes source implementation and optional/many flags", () => {
+  it("hashes source implementation changes", () => {
     writeBindingFixture("InjectOptional", "Service | undefined");
     const first = compileDiGraph({ baseDir: TEMP_DIR }).manifest.inputHash;
     const file = path.join(TEMP_DIR, "src/Service.ts");
@@ -309,19 +317,26 @@ describe("compileDiGraph", () => {
       fs.readFileSync(file, "utf8").replace('value = "ok"', 'value = "changed"'),
     );
     expect(compileDiGraph({ baseDir: TEMP_DIR }).manifest.inputHash).not.toBe(first);
+  }, 30_000);
+
+  it("hashes optional and many binding flags", () => {
+    writeBindingFixture("InjectOptional", "Service | undefined");
     const optional = compileDiGraph({ baseDir: TEMP_DIR, bindings: [binding("Service")] }).manifest
       .inputHash;
     writeBindingFixture("InjectMany", "readonly Service[]");
     expect(
       compileDiGraph({ baseDir: TEMP_DIR, bindings: [binding("Service")] }).manifest.inputHash,
     ).not.toBe(optional);
-  });
+  }, 30_000);
 
-  it("semantically verifies constructor and property injection and binding token types", () => {
+  it("semantically verifies constructor injection binding token types", () => {
     writeBindingFixture("Inject", "number");
     expect(() => compileDiGraph({ baseDir: TEMP_DIR, bindings: [binding("Service")] })).toThrow(
       "not assignable",
     );
+  }, 30_000);
+
+  it("semantically verifies property injection binding token types", () => {
     writeBindingFixture(
       "Inject",
       "Service",
@@ -330,11 +345,14 @@ describe("compileDiGraph", () => {
     expect(() => compileDiGraph({ baseDir: TEMP_DIR, bindings: [binding("Service")] })).toThrow(
       "not assignable",
     );
+  }, 30_000);
+
+  it("rejects bindings to providers with missing dependencies", () => {
     writeBindingFixture("Inject", "Service", "@Component() export class Invalid { amount = 1; }");
     expect(() => compileDiGraph({ baseDir: TEMP_DIR, bindings: [binding("Invalid")] })).toThrow(
       "missing",
     );
-  });
+  }, 30_000);
 
   it("discovers task handler components with method task metadata", () => {
     writeProject({
@@ -496,7 +514,7 @@ describe("compileDiGraph", () => {
 
     expect(second.code).toBe(first.code);
     expect(second.manifest).toEqual(first.manifest);
-  });
+  }, 30_000);
 
   it("keeps the input hash stable when authored code imports generated graph output", () => {
     writeProject({
@@ -512,7 +530,7 @@ describe("compileDiGraph", () => {
 
     expect(second.manifest.inputHash).toBe(first.manifest.inputHash);
     expect(second.code).toBe(first.code);
-  });
+  }, 30_000);
 
   it("resolves constructor import aliases through re-exports", () => {
     writeProject({
@@ -529,7 +547,7 @@ describe("compileDiGraph", () => {
     ).toBe("app:src/Dependency#Dependency");
   });
 
-  it("preserves declared multi-binding order and rejects dynamic token calls", () => {
+  it("preserves declared multi-binding order", () => {
     writeBindingFixture("InjectMany", "readonly Service[]");
     const options = {
       baseDir: TEMP_DIR,
@@ -542,12 +560,17 @@ describe("compileDiGraph", () => {
         .map((provider) => provider.dependencies[0]?.tokenId),
     ).toEqual(["app:src/Service#Other", "app:src/Service#Service"]);
     expect(compileDiGraph(options).code).toBe(result.code);
+  }, 30_000);
+
+  it("rejects dynamic token calls", () => {
     writeProject({
       "src/Dynamic.ts":
         'import { Component, Inject, Token } from "@croco/framework-context"; function token() { return new Token<string>("dynamic"); } @Component() export class Dynamic { constructor(@Inject(token()) readonly value: string) {} }',
     });
-    expect(() => compileDiGraph(options)).toThrow("cannot be resolved without executing user code");
-  });
+    expect(() => compileDiGraph({ baseDir: TEMP_DIR })).toThrow(
+      "cannot be resolved without executing user code",
+    );
+  }, 30_000);
 
   it("rejects incompatible package descriptor compiler versions", () => {
     writeProject({

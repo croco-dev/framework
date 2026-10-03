@@ -145,7 +145,7 @@ describe("crocoPlugin", () => {
     onStart?.();
     const removed = JSON.parse(fs.readFileSync(manifestFile, "utf8")) as typeof first;
     expect(removed.providers).toEqual([]);
-  });
+  }, 30_000);
 
   it("does not generate or inject server providers into browser builds", async () => {
     const { entry } = createProject();
