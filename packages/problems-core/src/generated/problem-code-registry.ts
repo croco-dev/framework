@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 913,
+  problemCount: 916,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -401,6 +401,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/admin-core/src/libs/EventCatalog.ts",
           line: 183,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "admin-core/experiment-review-console-validation-failed",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#admin-core-experiment-review-console-validation-failed",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/ExperimentReviewConsole.ts",
+          line: 22,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16924,6 +16955,66 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/metrics-core/src/libs/problems/MetricsProblems.ts",
           line: 11,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "metrics-core/experiment-input-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-experiment-input-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+          line: 194,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "metrics-core/experiment-plan-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-experiment-plan-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+          line: 185,
           column: 1,
           kind: "problem-class",
         },
