@@ -327,3 +327,6 @@ export type {
   ExperimentConsolePreview,
   ExperimentConsoleState,
 } from "./libs/ExperimentConsole";
+
+export { GrowthAnalysisPanel } from "./libs/GrowthAnalysisPanel";
+export type { GrowthAnalysisPanelProps } from "./libs/GrowthAnalysisPanel";

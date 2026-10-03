@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Growth analysis example</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 32px;
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+        color: #182436;
+        background: #f5f7fa;
+      }
+      main {
+        max-width: 880px;
+        margin: auto;
+      }
+      section {
+        min-width: 0;
+      }
+      main > section {
+        background: white;
+        border: 1px solid #d6dce5;
+        border-radius: 12px;
+        padding: 24px;
+      }
+      label,
+      textarea {
+        display: block;
+      }
+      textarea {
+        width: 100%;
+        min-height: 88px;
+        margin: 8px 0;
+        padding: 12px;
+        font: inherit;
+        border: 1px solid #64748b;
+        border-radius: 6px;
+      }
+      button {
+        margin: 8px 8px 8px 0;
+        padding: 10px 16px;
+        font: inherit;
+        cursor: pointer;
+      }
+      dt {
+        font-weight: 600;
+      }
+      dd {
+        margin: 0 0 8px;
+        overflow-wrap: anywhere;
+      }
+      fieldset {
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+      }
+      input {
+        margin-right: 8px;
+      }
+      li,
+      pre {
+        overflow-wrap: anywhere;
+        white-space: pre-wrap;
+      }
+      :focus-visible {
+        outline: 3px solid #2563eb;
+        outline-offset: 3px;
+      }
+      @media (max-width: 600px) {
+        body {
+          padding: 12px;
+        }
+        main > section {
+          padding: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="root"></main>
+    <script src="/dist/browser.global.js"></script>
+  </body>
+</html>

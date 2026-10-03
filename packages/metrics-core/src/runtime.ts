@@ -16,6 +16,7 @@ export type {
   RegisteredMetricDefinition,
   RegisteredMetricQuery,
   RegisteredQueryOutcome,
+  RegisteredQueryReadOptions,
   SourceRevision,
   VerifiedMetricReport,
   VerifiedReportOutcome,

@@ -667,4 +667,91 @@ describe("MetricReadService", () => {
       MetricReadProblem,
     );
   });
+  it("rejects a different expected query version before report lookup or execution", async () => {
+    const { service, executor, reader } = fixture({ report: report() });
+    expect(
+      await service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window, {
+        expectedVersion: 2,
+      }),
+    ).toEqual({ status: "unavailable" });
+    expect(reader.readCandidates).not.toHaveBeenCalled();
+    expect(executor).not.toHaveBeenCalled();
+  });
+
+  it("executes the registered query when the expected version matches", async () => {
+    const { service, executor } = fixture();
+    expect(
+      await service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window, {
+        expectedVersion: 1,
+      }),
+    ).toEqual({ status: "verified", source: "executor", result });
+    expect(executor).toHaveBeenCalledOnce();
+  });
+
+  it("keeps a cancelled invocation reader in the shared concurrency budget until it settles", async () => {
+    const controller = new AbortController();
+    let release!: (reports: readonly VerifiedMetricReport[]) => void;
+    const pending = new Promise<readonly VerifiedMetricReport[]>((resolve) => {
+      release = resolve;
+    });
+    const reader: VerifiedReportReader = {
+      readCandidates: vi.fn(() => pending),
+      verify: vi.fn(async () => true),
+    };
+    const { service, executor } = fixture({ reader });
+    const first = service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window, {
+      signal: controller.signal,
+    });
+    await vi.waitFor(() => expect(reader.readCandidates).toHaveBeenCalledOnce());
+    controller.abort();
+    await expect(first).rejects.toMatchObject({ code: "metrics-core/read-cancelled" });
+    await expect(
+      service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window),
+    ).rejects.toMatchObject({ code: "metrics-core/concurrency-budget-exceeded" });
+    expect(executor).not.toHaveBeenCalled();
+    release([]);
+    await pending;
+    expect(
+      await service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window),
+    ).toEqual({ status: "verified", source: "executor", result });
+  });
+
+  it("cancels a pending executor using the per-invocation signal", async () => {
+    const controller = new AbortController();
+    let release!: (read: MetricReadResult) => void;
+    const pending = new Promise<MetricReadResult>((resolve) => {
+      release = resolve;
+    });
+    const { service, executor } = fixture({ executor: () => pending });
+    const first = service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window, {
+      signal: controller.signal,
+    });
+    await vi.waitFor(() => expect(executor).toHaveBeenCalledOnce());
+    controller.abort();
+    await expect(first).rejects.toMatchObject({ code: "metrics-core/read-cancelled" });
+    release(result);
+    await pending;
+  });
+
+  it("preserves authority cancellation when the invocation supplies another signal", async () => {
+    const authorityController = new AbortController();
+    const invocationController = new AbortController();
+    let release!: (read: MetricReadResult) => void;
+    const pending = new Promise<MetricReadResult>((resolve) => {
+      release = resolve;
+    });
+    const { service, executor } = fixture({
+      context: { ...context, signal: authorityController.signal },
+      executor: () => pending,
+    });
+    const first = service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window, {
+      signal: invocationController.signal,
+    });
+    await vi.waitFor(() => expect(executor).toHaveBeenCalledOnce());
+    authorityController.abort();
+    await expect(first).rejects.toMatchObject({ code: "metrics-core/read-cancelled" });
+    expect(invocationController.signal.aborted).toBe(false);
+    release(result);
+    await pending;
+  });
 });

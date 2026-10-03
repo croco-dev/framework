@@ -20,6 +20,24 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/growth-analysis/src/tests/LocalProvider.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/growth-analysis/src/tests/OpenAIPlanProposal.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/growth-analysis/src/tests/Server.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/promotion-offers/src/tests/promotion-offers.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -314,6 +332,12 @@
       "owner": "@croco/admin-react"
     },
     {
+      "path": "packages/admin-react/src/tests/GrowthAnalysisPanel.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
       "path": "packages/admin-react/src/tests/LifecycleAutomationConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -417,6 +441,12 @@
     },
     {
       "path": "packages/analytics-core/src/tests/FactHistory.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/analytics-core"
+    },
+    {
+      "path": "packages/analytics-core/src/tests/GrowthAnalysisService.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/analytics-core"

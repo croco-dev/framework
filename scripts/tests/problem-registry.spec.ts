@@ -572,6 +572,149 @@ describe("problem-registry.mts", () => {
     });
   });
 
+  it.each([
+    ["analysis-cancelled", "BadRequest", "cancelled"],
+    ["analysis-invalid-json", "ValidationError", "model"],
+    ["analysis-invalid-plan", "ValidationError", "plan"],
+    ["analysis-invalid-usage", "ValidationError", "usage"],
+    ["analysis-invalid-completion", "ValidationError", "completion"],
+    ["analysis-output-budget-exceeded", "ValidationError", "output"],
+  ])("publishes growth analysis recovery for %s", (code, category, cause) => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/analytics-core/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class AnalysisProblem extends Problem {",
+        "  constructor() {",
+        `    super("analytics-core/${code}", ProblemCategory.${category});`,
+        "  }",
+        "}",
+      ].join("\n"),
+    );
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+    expect(registry.problems[0]?.recovery).toMatchObject({
+      cause: expect.stringContaining(cause),
+      retryability: "conditional",
+      redactionPolicy: "public",
+      telemetry: { severity: "info" },
+    });
+    expect(registry.problems[0]?.recovery.operatorAction).toContain("receipt");
+  });
+
+  it.each([
+    {
+      code: "analysis-input-budget-exceeded",
+      category: "ValidationError",
+      cause: [/serialized|payload/i, /byte/i],
+      user: [/shorten|narrow|reduce/i],
+      operator: [/maxInputBytes|input.*budget|input.*limit/i, /definition|choice/i],
+      retryability: "not-retryable",
+      redactionPolicy: "public",
+      severity: "info",
+    },
+    {
+      code: "analysis-invalid-facts",
+      category: "InternalServerError",
+      cause: [/fact|project/i],
+      user: [/operator|report/i],
+      operator: [/project|facts/i, /numeric|decimal|number/i],
+      retryability: "conditional",
+      redactionPolicy: "operator-only",
+      severity: "error",
+    },
+    {
+      code: "analysis-invalid-limits",
+      category: "ValidationError",
+      cause: [/limit/i],
+      user: [/operator|configuration|configur/i],
+      operator: [/positive/i, /safe.integer/i],
+      retryability: "not-retryable",
+      redactionPolicy: "public",
+      severity: "info",
+    },
+    {
+      code: "analysis-invalid-registration",
+      category: "ValidationError",
+      cause: [/registration|registered/i],
+      user: [/operator|registration/i],
+      operator: [/duplicate|unique/i, /32|bound|limit/i, /JSON/i],
+      retryability: "not-retryable",
+      redactionPolicy: "public",
+      severity: "info",
+    },
+    {
+      code: "analysis-question-blocked",
+      category: "Forbidden",
+      cause: [/question|content/i, /policy/i],
+      user: [/personal|sensitive|redact|remove/i],
+      operator: [/prepareQuestion|content.*policy/i],
+      retryability: "not-retryable",
+      redactionPolicy: "safe-message",
+      severity: "warning",
+    },
+  ])("publishes boundary-specific growth analysis recovery for $code", (contract) => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/analytics-core/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class AnalysisProblem extends Problem {",
+        "  constructor() {",
+        `    super("analytics-core/${contract.code}", ProblemCategory.${contract.category});`,
+        "  }",
+        "}",
+      ].join("\n"),
+    );
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+    const recovery = registry.problems[0]?.recovery;
+    expect(recovery).toMatchObject({
+      retryability: contract.retryability,
+      redactionPolicy: contract.redactionPolicy,
+      telemetry: {
+        eventName: `croco.problem.${contract.severity}`,
+        severity: contract.severity,
+        attributes: ["problem.code", "problem.category", "problem.status"],
+      },
+    });
+    for (const expected of contract.cause) expect(recovery?.cause).toMatch(expected);
+    for (const expected of contract.user) expect(recovery?.userAction).toMatch(expected);
+    for (const expected of contract.operator) expect(recovery?.operatorAction).toMatch(expected);
+  });
+
+  it("recovers growth analysis settlement without repeating inference", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/analytics-core/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class AnalysisSettlementProblem extends Problem {",
+        "  constructor() {",
+        '    super("analytics-core/analysis-settlement-failed", ProblemCategory.InternalServerError);',
+        "  }",
+        "}",
+      ].join("\n"),
+    );
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+    const recovery = registry.problems[0]?.recovery;
+    expect(recovery).toMatchObject({
+      cause: expect.stringMatching(/usage.*receipt.*settlement/i),
+      userAction: expect.stringMatching(/operator/i),
+      retryability: "conditional",
+      redactionPolicy: "operator-only",
+      telemetry: { severity: "error" },
+    });
+    expect(recovery?.userAction).toMatch(/do not resubmit/i);
+    expect(recovery?.operatorAction).toMatch(/AnalysisSettlementProblem\.resume\(\)/);
+    expect(recovery?.operatorAction).toMatch(/same invocationId/i);
+    expect(recovery?.operatorAction).toMatch(/without repeating inference/i);
+    expect(recovery?.operatorAction).toMatch(/process-local/i);
+    expect(recovery?.operatorAction).toMatch(/durable.*restart recovery/i);
+  });
+
   it("publishes cancellation-specific recovery for aborted search operations", () => {
     const repo = createTempRepo();
     writeFile(

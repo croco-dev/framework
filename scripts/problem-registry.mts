@@ -2622,6 +2622,124 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "analytics-core/analysis-input-budget-exceeded": recovery({
+    cause:
+      "The serialized question, allowed definitions and choices exceeded the input byte budget.",
+    userAction:
+      "Shorten the question or narrow its authorized analysis choices before submitting again.",
+    operatorAction:
+      "Inspect maxInputBytes and the serialized definition and choice payload; reduce its size before another proposal.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  "analytics-core/analysis-invalid-facts": recovery({
+    cause: "The registered facts projector returned values outside the supported fact contract.",
+    userAction: "Report the failed analysis to the operator before requesting another execution.",
+    operatorAction:
+      "Correct the facts projector to return a nonempty array of at most 32 labeled facts with bounded decimal numeric strings or null values; validate it with sanitized fixtures.",
+    retryability: "conditional",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "analytics-core/analysis-invalid-limits": recovery({
+    cause:
+      "A configured input, output, token, time or concurrency limit was not a positive safe integer.",
+    userAction: "Ask the operator to correct the analysis limit configuration.",
+    operatorAction:
+      "Configure maxInputBytes, maxOutputBytes, maxOutputTokens, maxTimeMs and maxConcurrency as positive safe integers before constructing the service.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  "analytics-core/analysis-invalid-registration": recovery({
+    cause:
+      "The analysis registrations contained duplicate IDs, exceeded their bound or contained an invalid JSON plan.",
+    userAction: "Ask the operator to correct the registered analysis choices.",
+    operatorAction:
+      "Register at most 32 choices with unique IDs and finite plain JSON plans; validate registrations before accepting questions.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  "analytics-core/analysis-question-blocked": recovery({
+    cause: "The question content was rejected by the configured content policy.",
+    userAction: "Remove personal or sensitive content from the question before submitting again.",
+    operatorAction:
+      "Inspect the prepareQuestion content policy with sanitized fixtures; keep rejected question content out of model requests and logs.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
+  "analytics-core/analysis-settlement-failed": recovery({
+    cause: "The model invocation's usage receipt settlement failed.",
+    userAction:
+      "Ask the operator to recover the preserved usage receipt; do not resubmit the question or request another inference to recover settlement.",
+    operatorAction:
+      "Repair the idempotent receipt sink and call the preserved server-side AnalysisSettlementProblem.resume() to settle the same invocationId without repeating inference. The recovery handle is process-local; applications must retain durable receipt references and status through their existing execution boundary for restart recovery.",
+    retryability: "conditional",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
+  "analytics-core/analysis-cancelled": recovery({
+    cause: "The growth analysis was cancelled by its AbortSignal or exceeded its model deadline.",
+    userAction:
+      "Submit the question again after the cancellation reason is cleared and the prior invocation has settled.",
+    operatorAction:
+      "Inspect the cancellation signal, deadline, active invocation and usage receipt before starting another inference.",
+    retryability: "conditional",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  "analytics-core/analysis-invalid-json": recovery({
+    cause: "The model response was not valid JSON.",
+    userAction:
+      "Request another proposal only after the response contract is checked; another inference may incur usage.",
+    operatorAction:
+      "Check the model response schema and parser with sanitized fixtures, then reconcile the usage receipt before another inference.",
+    retryability: "conditional",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  "analytics-core/analysis-invalid-plan": recovery({
+    cause:
+      "The supplied plan or model selection did not match the authorized finite JSON plan contract.",
+    userAction:
+      "Correct the supplied plan or request a new proposal after its response contract is checked.",
+    operatorAction:
+      "Inspect the plan shape, registered choice IDs and authorization binding with sanitized fixtures; reconcile the usage receipt before another inference.",
+    retryability: "conditional",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  "analytics-core/analysis-invalid-usage": recovery({
+    cause: "The provider response did not satisfy the known, estimated or unknown usage contract.",
+    userAction: "Ask the operator to reconcile usage before requesting another proposal.",
+    operatorAction:
+      "Correct provider usage mapping and retain the invocation receipt for reconciliation; do not assume unknown usage is zero.",
+    retryability: "conditional",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  "analytics-core/analysis-invalid-completion": recovery({
+    cause: "The provider response did not satisfy the supported completion contract.",
+    userAction: "Request another proposal only after the provider completion mapping is corrected.",
+    operatorAction:
+      "Inspect completion status mapping with sanitized fixtures and reconcile the usage receipt before another inference.",
+    retryability: "conditional",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
+  "analytics-core/analysis-output-budget-exceeded": recovery({
+    cause: "The model output exceeded the configured byte or token budget.",
+    userAction:
+      "Request a bounded proposal after the operator checks the output limits; another inference may incur usage.",
+    operatorAction:
+      "Inspect response bytes, output tokens and configured limits, then reconcile the usage receipt before another inference.",
+    retryability: "conditional",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
   "tx-core/join-timeout-unsupported": recovery({
     cause:
       "The nested operation would join its enclosing transaction, which cannot enforce an independent timeout.",

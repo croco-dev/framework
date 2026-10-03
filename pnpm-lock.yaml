@@ -579,6 +579,55 @@ importers:
         specifier: 4.1.8
         version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@24.13.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
 
+  examples/growth-analysis:
+    dependencies:
+      '@croco/admin-react':
+        specifier: workspace:*
+        version: link:../../packages/admin-react
+      '@croco/analytics-core':
+        specifier: workspace:*
+        version: link:../../packages/analytics-core
+      '@croco/metering-core':
+        specifier: workspace:*
+        version: link:../../packages/metering-core
+      '@croco/metrics-core':
+        specifier: workspace:*
+        version: link:../../packages/metrics-core
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../../packages/problems-core
+      openai:
+        specifier: 7.25.0
+        version: 7.25.0(@aws-sdk/credential-provider-node@3.972.47)(@smithy/signature-v4@5.4.5)(undici@8.9.0)(ws@8.21.0)(zod@4.3.6)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.5
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.5(react@19.2.5)
+    devDependencies:
+      '@types/node':
+        specifier: ^24
+        version: 24.13.2
+      '@types/react':
+        specifier: ^19.0.0
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: ^19.0.0
+        version: 19.2.3(@types/react@19.2.14)
+      tsup:
+        specifier: ^8.0.0
+        version: 8.5.1(patch_hash=ce9dbc714c187cea78868f1e68c1a0e5097ddbceb7e976a564d94f2291b5bcb9)(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.18)(supports-color@10.2.2)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.9.0)
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+      vitest:
+        specifier: 4.1.8
+        version: 4.1.8(@opentelemetry/api@1.9.0)(@types/node@24.13.2)(@vitest/coverage-v8@4.1.8)(vite@7.3.5(@types/node@24.13.2)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.9.0))
+
   examples/metric-read:
     dependencies:
       '@croco/metrics-core':
@@ -1086,6 +1135,9 @@ importers:
       '@croco/admin-ops':
         specifier: workspace:*
         version: link:../admin-ops
+      '@croco/analytics-core':
+        specifier: workspace:*
+        version: link:../analytics-core
       '@croco/billing-core':
         specifier: workspace:*
         version: link:../billing-core
@@ -1184,6 +1236,9 @@ importers:
       '@croco/framework-context':
         specifier: workspace:*
         version: link:../framework-context
+      '@croco/metrics-core':
+        specifier: workspace:*
+        version: link:../metrics-core
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../problems-core
@@ -11039,6 +11094,30 @@ packages:
   oniguruma-to-es@4.3.6:
     resolution: {integrity: sha512-csuQ9x3Yr0cEIs/Zgx/OEt9iBw9vqIunAPQkx19R/fiMq2oGVTgcMqO/V3Ybqefr1TBvosI6jU539ksaBULJyA==}
 
+  openai@7.25.0:
+    resolution: {integrity: sha512-cnk0d4QT58Vq0vl2KG+DCa/C2+cXthsK2rUeaqtprq33mKv9dlX8o7fWSS283wa2IE/aVdsRyX1+Dqwz551olg==}
+    engines: {node: '>=22.0.0'}
+    peerDependencies:
+      '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
+      '@smithy/hash-node': '>=4.3.0 <5'
+      '@smithy/signature-v4': '>=5.4.0 <6'
+      undici: '>=5 <9'
+      ws: 8.21.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      '@aws-sdk/credential-provider-node':
+        optional: true
+      '@smithy/hash-node':
+        optional: true
+      '@smithy/signature-v4':
+        optional: true
+      undici:
+        optional: true
+      ws:
+        optional: true
+      zod:
+        optional: true
+
   openapi-sampler@1.7.2:
     resolution: {integrity: sha512-OKytvqB5XIaTgA9xtw8W8UTar+uymW2xPVpFN0NihMtuHPdPTGxBEhGnfFnJW5g/gOSIvkP+H0Xh3XhVI9/n7g==}
 
@@ -19450,6 +19529,14 @@ snapshots:
       oniguruma-parser: 0.12.2
       regex: 6.1.0
       regex-recursion: 6.0.2
+
+  openai@7.25.0(@aws-sdk/credential-provider-node@3.972.47)(@smithy/signature-v4@5.4.5)(undici@8.9.0)(ws@8.21.0)(zod@4.3.6):
+    optionalDependencies:
+      '@aws-sdk/credential-provider-node': 3.972.47
+      '@smithy/signature-v4': 5.4.5
+      undici: 8.9.0
+      ws: 8.21.0
+      zod: 4.3.6
 
   openapi-sampler@1.7.2:
     dependencies:

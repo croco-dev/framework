@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 897,
+  problemCount: 912,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -1017,6 +1017,494 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 6,
           column: 1,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-cancelled",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-cancelled",
+      recovery: {
+        cause:
+          "The growth analysis was cancelled by its AbortSignal or exceeded its model deadline.",
+        userAction:
+          "Submit the question again after the cancellation reason is cleared and the prior invocation has settled.",
+        operatorAction:
+          "Inspect the cancellation signal, deadline, active invocation and usage receipt before starting another inference.",
+        retryability: "conditional",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 48,
+          column: 25,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-concurrency-exceeded",
+      category: "TooManyRequests",
+      status: 429,
+      title: "Too Many Requests",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-analysis-concurrency-exceeded",
+      recovery: {
+        cause: "The caller exceeded a rate, quota, or concurrency limit.",
+        userAction: "Wait for the retry window or reduce request volume.",
+        operatorAction: "Check limiter state, quota configuration, and abuse signals.",
+        retryability: "retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 44,
+          column: 36,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-input-budget-exceeded",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-analysis-input-budget-exceeded",
+      recovery: {
+        cause:
+          "The serialized question, allowed definitions and choices exceeded the input byte budget.",
+        userAction:
+          "Shorten the question or narrow its authorized analysis choices before submitting again.",
+        operatorAction:
+          "Inspect maxInputBytes and the serialized definition and choice payload; reduce its size before another proposal.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 40,
+          column: 37,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-invalid-completion",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-completion",
+      recovery: {
+        cause: "The provider response did not satisfy the supported completion contract.",
+        userAction:
+          "Request another proposal only after the provider completion mapping is corrected.",
+        operatorAction:
+          "Inspect completion status mapping with sanitized fixtures and reconcile the usage receipt before another inference.",
+        retryability: "conditional",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 52,
+          column: 34,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-invalid-facts",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-facts",
+      recovery: {
+        cause:
+          "The registered facts projector returned values outside the supported fact contract.",
+        userAction:
+          "Report the failed analysis to the operator before requesting another execution.",
+        operatorAction:
+          "Correct the facts projector to return a nonempty array of at most 32 labeled facts with bounded decimal numeric strings or null values; validate it with sanitized fixtures.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 68,
+          column: 29,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-invalid-json",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-json",
+      recovery: {
+        cause: "The model response was not valid JSON.",
+        userAction:
+          "Request another proposal only after the response contract is checked; another inference may incur usage.",
+        operatorAction:
+          "Check the model response schema and parser with sanitized fixtures, then reconcile the usage receipt before another inference.",
+        retryability: "conditional",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 64,
+          column: 28,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-invalid-limits",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-limits",
+      recovery: {
+        cause:
+          "A configured input, output, token, time or concurrency limit was not a positive safe integer.",
+        userAction: "Ask the operator to correct the analysis limit configuration.",
+        operatorAction:
+          "Configure maxInputBytes, maxOutputBytes, maxOutputTokens, maxTimeMs and maxConcurrency as positive safe integers before constructing the service.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 28,
+          column: 30,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-invalid-plan",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-plan",
+      recovery: {
+        cause:
+          "The supplied plan or model selection did not match the authorized finite JSON plan contract.",
+        userAction:
+          "Correct the supplied plan or request a new proposal after its response contract is checked.",
+        operatorAction:
+          "Inspect the plan shape, registered choice IDs and authorization binding with sanitized fixtures; reconcile the usage receipt before another inference.",
+        retryability: "conditional",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 24,
+          column: 28,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-invalid-question",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-question",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 32,
+          column: 32,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-invalid-registration",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-registration",
+      recovery: {
+        cause:
+          "The analysis registrations contained duplicate IDs, exceeded their bound or contained an invalid JSON plan.",
+        userAction: "Ask the operator to correct the registered analysis choices.",
+        operatorAction:
+          "Register at most 32 choices with unique IDs and finite plain JSON plans; validate registrations before accepting questions.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 72,
+          column: 36,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-invalid-usage",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-invalid-usage",
+      recovery: {
+        cause:
+          "The provider response did not satisfy the known, estimated or unknown usage contract.",
+        userAction: "Ask the operator to reconcile usage before requesting another proposal.",
+        operatorAction:
+          "Correct provider usage mapping and retain the invocation receipt for reconciliation; do not assume unknown usage is zero.",
+        retryability: "conditional",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 20,
+          column: 29,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-output-budget-exceeded",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-analysis-output-budget-exceeded",
+      recovery: {
+        cause: "The model output exceeded the configured byte or token budget.",
+        userAction:
+          "Request a bounded proposal after the operator checks the output limits; another inference may incur usage.",
+        operatorAction:
+          "Inspect response bytes, output tokens and configured limits, then reconcile the usage receipt before another inference.",
+        retryability: "conditional",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 60,
+          column: 38,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-provider-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#analytics-core-analysis-provider-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 56,
+          column: 31,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-question-blocked",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-analysis-question-blocked",
+      recovery: {
+        cause: "The question content was rejected by the configured content policy.",
+        userAction:
+          "Remove personal or sensitive content from the question before submitting again.",
+        operatorAction:
+          "Inspect the prepareQuestion content policy with sanitized fixtures; keep rejected question content out of model requests and logs.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 36,
+          column: 32,
+          kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "analytics-core/analysis-settlement-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#analytics-core-analysis-settlement-failed",
+      recovery: {
+        cause: "The model invocation's usage receipt settlement failed.",
+        userAction:
+          "Ask the operator to recover the preserved usage receipt; do not resubmit the question or request another inference to recover settlement.",
+        operatorAction:
+          "Repair the idempotent receipt sink and call the preserved server-side AnalysisSettlementProblem.resume() to settle the same invocationId without repeating inference. The recovery handle is process-local; applications must retain durable receipt references and status through their existing execution boundary for restart recovery.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/analytics-core/src/libs/analysis/GrowthAnalysisService.ts",
+          line: 112,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },
@@ -16618,7 +17106,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/read/MetricReadService.ts",
-          line: 173,
+          line: 177,
           column: 10,
           kind: "problem-constructor",
         },

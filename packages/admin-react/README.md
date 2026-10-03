@@ -530,3 +530,7 @@ Import `ExperimentConsole` from `@croco/admin-react/experiment-console`. Provide
 Preview uses only server-owned sample identifiers. Start/resume, pause, stop, and new-revision configuration require a change reason. Failed commands retain their idempotency key when retried with the same payload; failures remain visible until the next operation or reload. A changed experiment scope or revision resets the editor. New revision fields live in a keyboard-accessible disclosure below the operating controls.
 
 The component is a view, not an authorization boundary: the server must resolve the actor, app/environment/tenant, and subject ownership and must never trust client-provided variants, handlers, or receipts. The local executable example is `examples/experiment-runtime`.
+
+## Growth analysis
+
+`GrowthAnalysisPanel` accepts `propose(question, signal)` and `execute(plan, signal)` server callbacks. It displays explicit plan choices before execution, supports rejection/cancellation, and renders actual aggregate facts with the definition, period, population, numerator/denominator, and source references. Missing, stale, partial, denied, unsupported, truncated, and error states remain explicit. Vendor SDKs and query execution stay on the server. The [growth-analysis example](../../examples/growth-analysis/README.md) connects the panel to the actual common runner.
