@@ -44,8 +44,7 @@ export type InMemoryTransactionalEventStoreClient = {
 
 type OutboxAppendReservation = {
   owner: InMemoryTransactionalEventStoreClient;
-  released: Promise<void>;
-  release: () => void;
+  waiters: Set<() => void>;
 };
 
 function createEmptyState(): InMemoryTransactionalEventStoreState {
@@ -156,25 +155,21 @@ function assertNotAborted(signal?: AbortSignal): void {
 }
 
 async function waitForOutboxReservation(
-  released: Promise<void>,
+  reservation: OutboxAppendReservation,
   signal?: AbortSignal,
 ): Promise<void> {
   assertNotAborted(signal);
-  if (!signal) {
-    await released;
-    return;
-  }
-
   await new Promise<void>((resolve) => {
     const complete = (): void => {
-      signal.removeEventListener("abort", complete);
+      reservation.waiters.delete(complete);
+      signal?.removeEventListener("abort", complete);
       resolve();
     };
-    signal.addEventListener("abort", complete, { once: true });
-    if (signal.aborted) {
+    reservation.waiters.add(complete);
+    signal?.addEventListener("abort", complete, { once: true });
+    if (signal?.aborted) {
       complete();
     }
-    void released.then(complete);
   });
   assertNotAborted(signal);
 }
@@ -808,11 +803,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
         if (client) {
           this.adoptCommittedOutbox(idempotencyKey, client, owner);
         }
-        let release = (): void => {};
-        const released = new Promise<void>((resolve) => {
-          release = resolve;
-        });
-        this.outboxReservations.set(idempotencyKey, { owner, released, release });
+        this.outboxReservations.set(idempotencyKey, { owner, waiters: new Set() });
         return client ? undefined : owner;
       }
       if (reservation.owner === owner) {
@@ -823,7 +814,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
           `Nested transaction cannot append reserved outbox idempotency key '${idempotencyKey}'.`,
         );
       }
-      await waitForOutboxReservation(reservation.released, signal);
+      await waitForOutboxReservation(reservation, signal);
       assertNotAborted(signal);
       if (client) {
         this.adoptCommittedOutbox(idempotencyKey, client, owner);
@@ -875,7 +866,9 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     for (const [idempotencyKey, reservation] of this.outboxReservations) {
       if (reservation.owner === owner) {
         this.outboxReservations.delete(idempotencyKey);
-        reservation.release();
+        for (const complete of reservation.waiters) {
+          complete();
+        }
       }
     }
   }

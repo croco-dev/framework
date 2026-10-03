@@ -644,6 +644,68 @@ describe("InMemoryTransactionalEventStore reservation cancellation", () => {
     await expect(store.listOutboxMessages()).resolves.toHaveLength(1);
   });
 
+  it("detaches repeatedly cancelled waiters while preserving live contenders until release", async () => {
+    const store = new InMemoryTransactionalEventStore();
+    const adapter = store.createTxAdapter();
+    const holder = await holdReservation(store, "held");
+    const pendingTransactions: Promise<unknown>[] = [];
+    const startWaiter = (signal?: AbortSignal) => {
+      const waiting = deferred();
+      const transaction = adapter.transaction(
+        async (client) => {
+          const pending = reserve(store, "held", client);
+          waiting.resolve();
+          return pending;
+        },
+        undefined,
+        signal,
+      );
+      pendingTransactions.push(transaction);
+      const outcome = transaction.catch((error: unknown) => error);
+      return { waiting: waiting.promise, transaction, outcome };
+    };
+    // Settlement and signal listeners cannot expose callbacks retained by a blocked holder.
+    const reservations = Reflect.get(store, "outboxReservations") as Map<
+      string,
+      { waiters: Set<() => void> }
+    >;
+    const reservation = reservations.get("held");
+    if (!reservation) throw new Error("Expected held reservation");
+    const liveController = new AbortController();
+    const signaled = startWaiter(liveController.signal);
+    const unsignaled = startWaiter();
+    try {
+      await within(Promise.all([signaled.waiting, unsignaled.waiting]));
+      expect(reservation.waiters.size).toBe(2);
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const controller = new AbortController();
+        const cancelled = startWaiter(controller.signal);
+        await within(cancelled.waiting);
+        expect(reservation.waiters.size).toBe(3);
+        const reason = new Error(`Cancel waiter ${attempt}`);
+        controller.abort(reason);
+        const error = await within(cancelled.outcome);
+        expect(error).toBeInstanceOf(TransactionRollbackConfirmedProblem);
+        expect(error).toMatchObject({ cause: reason });
+        expect(getEventListeners(controller.signal, "abort")).toHaveLength(0);
+        expect(reservation.waiters.size).toBe(2);
+      }
+      await expect(store.listOutboxMessages()).resolves.toEqual([]);
+      expect(getEventListeners(liveController.signal, "abort")).toHaveLength(1);
+      holder.release();
+      await expect(
+        within(Promise.all([signaled.transaction, unsignaled.transaction])),
+      ).resolves.toMatchObject([{ id: "held" }, { id: "held" }]);
+      expect(reservation.waiters.size).toBe(0);
+      expect(reservations.size).toBe(0);
+      expect(getEventListeners(liveController.signal, "abort")).toHaveLength(0);
+      await expect(store.listOutboxMessages()).resolves.toMatchObject([{ id: "held" }]);
+    } finally {
+      holder.release();
+      await Promise.allSettled([holder.transaction, ...pendingTransactions]);
+    }
+  });
+
   it("removes the abort listener when the reservation is released normally", async () => {
     const store = new InMemoryTransactionalEventStore();
     const holder = await holdReservation(store, "held");
