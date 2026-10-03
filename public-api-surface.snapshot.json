@@ -10672,6 +10672,12 @@
               "exportKind": "named",
               "source": "./libs/problems/BatchLoaderProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "InvalidBatchLoaderConfigurationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/BatchLoaderProblems",
+              "declarationKind": "class"
             }
           ],
           "typeExports": [

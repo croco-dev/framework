@@ -3,7 +3,7 @@ import { recordError } from "@croco/telemetry-api";
 import { context, SpanStatusCode, trace } from "@opentelemetry/api";
 import {
   BatchResultLengthMismatchProblem,
-  InvalidBatchLoaderConfigurationError,
+  InvalidBatchLoaderConfigurationProblem,
 } from "./problems/BatchLoaderProblems";
 import type { BatchLoader, BatchLoaderOptions } from "./types";
 
@@ -37,7 +37,7 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
   constructor(options: BatchLoaderOptions<K, V>, logger: ILogger = noopLogger) {
     const maxBatchSize = options.maxBatchSize ?? Infinity;
     if (maxBatchSize !== Infinity && (!Number.isSafeInteger(maxBatchSize) || maxBatchSize <= 0)) {
-      throw new InvalidBatchLoaderConfigurationError(
+      throw new InvalidBatchLoaderConfigurationProblem(
         `maxBatchSize must be a positive safe integer or Infinity, got ${maxBatchSize}`,
       );
     }

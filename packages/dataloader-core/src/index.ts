@@ -84,6 +84,7 @@ export { createBatchLoader } from "./libs/createBatchLoader";
 export {
   BatchResultLengthMismatchProblem,
   DuplicateBatchLoaderNameProblem,
+  InvalidBatchLoaderConfigurationProblem,
 } from "./libs/problems/BatchLoaderProblems";
 /**
  * Batch function type for loading multiple values.
