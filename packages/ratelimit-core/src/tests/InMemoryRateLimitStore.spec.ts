@@ -233,6 +233,68 @@ describe("InMemoryRateLimitStore", () => {
       expect(await fixedStore.getCount("user:counter")).toBe(20);
     });
 
+    it("should retain a standalone counter's TTL across increments and expire reads at its boundary", async () => {
+      await fixedStore.increment("user:counter", 5);
+      await fixedStore.expire("user:counter", 100);
+      now = 99;
+
+      expect(await fixedStore.increment("user:counter", 2)).toBe(7);
+      expect(await fixedStore.getCount("user:counter")).toBe(7);
+      now = 100;
+
+      expect(await fixedStore.getCount("user:counter")).toBe(0);
+      expect(await fixedStore.pruneExpired()).toBe(0);
+    });
+
+    it("should restart an expired standalone counter on increment without a preceding read", async () => {
+      await fixedStore.increment("user:counter", 5);
+      await fixedStore.expire("user:counter", 100);
+      now = 100;
+
+      expect(await fixedStore.increment("user:counter", 2)).toBe(2);
+      expect(await fixedStore.getCount("user:counter")).toBe(2);
+    });
+
+    it("should prune expired standalone counters alongside windows while retaining active counters", async () => {
+      await fixedStore.increment("user:counter", 5);
+      await fixedStore.expire("user:counter", 100);
+      await fixedStore.increment("user:active", 2);
+      await fixedStore.check("user:window", fixedPolicy);
+      now = 1001;
+
+      expect(await fixedStore.pruneExpired()).toBe(2);
+      expect(await fixedStore.getCount("user:counter")).toBe(0);
+      expect(await fixedStore.getCount("user:window")).toBe(0);
+      expect(await fixedStore.getCount("user:active")).toBe(2);
+    });
+
+    it.each([0, -1])(
+      "should immediately expire only the standalone counter for TTL %s",
+      async (ttlMs) => {
+        await fixedStore.increment("user:counter", 5);
+        await fixedStore.check("user:window", fixedPolicy);
+
+        await fixedStore.expire("user:counter", ttlMs);
+        await fixedStore.expire("user:window", ttlMs);
+
+        expect(await fixedStore.getCount("user:counter")).toBe(0);
+        expect(await fixedStore.getCount("user:window")).toBe(1);
+      },
+    );
+
+    it("should clear TTL state on reset and avoid expiring a counter that did not exist", async () => {
+      await fixedStore.increment("user:counter", 5);
+      await fixedStore.expire("user:counter", 100);
+      await fixedStore.reset("user:counter");
+      await fixedStore.increment("user:counter", 2);
+      await fixedStore.expire("user:missing", 100);
+      await fixedStore.increment("user:missing", 3);
+      now = 100;
+
+      expect(await fixedStore.getCount("user:counter")).toBe(2);
+      expect(await fixedStore.getCount("user:missing")).toBe(3);
+    });
+
     it("should continue incrementing and resetting existing policy windows", async () => {
       await fixedStore.check("user:window", fixedPolicy);
 
@@ -259,9 +321,11 @@ describe("InMemoryRateLimitStore", () => {
 
     it("should replace a standalone counter with a policy window without restoring it after pruning", async () => {
       await fixedStore.increment("user:counter", 5);
+      await fixedStore.expire("user:counter", 100);
 
       expect((await fixedStore.check("user:counter", fixedPolicy)).remaining).toBe(9);
       expect(await fixedStore.increment("user:counter", 2)).toBe(3);
+      now = 100;
       expect(await fixedStore.getCount("user:counter")).toBe(3);
       now = 1001;
 

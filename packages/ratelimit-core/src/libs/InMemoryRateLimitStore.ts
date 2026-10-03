@@ -141,7 +141,7 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
     string,
     { count: number; windowStart: number; windowMs: number }
   >();
-  private readonly counters = new Map<string, number>();
+  private readonly counters = new Map<string, InMemoryCounterEntry>();
   private readonly globalStats = { allowed: 0, denied: 0, total: 0 };
   private readonly cancelPruning?: () => void;
 
@@ -215,13 +215,13 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
       entry.count += amount;
       return entry.count;
     }
-    const count = (this.counters.get(key) ?? 0) + amount;
-    this.counters.set(key, count);
-    return count;
+    return incrementCounter(this.counters, key, amount, this.now());
   }
 
   async getCount(key: string): Promise<number> {
-    return this.windows.get(key)?.count ?? this.counters.get(key) ?? 0;
+    return (
+      this.windows.get(key)?.count ?? getActiveCounter(this.counters, key, this.now())?.count ?? 0
+    );
   }
 
   async reset(key: string): Promise<void> {
@@ -230,8 +230,8 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
     this.clearFixedWindowRefundReceipts(key);
   }
 
-  async expire(): Promise<void> {
-    return;
+  async expire(key: string, ttlMs: number): Promise<void> {
+    expireCounter(this.counters, key, ttlMs, this.now());
   }
 
   async pruneExpired(): Promise<number> {
@@ -247,7 +247,7 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
       }
     }
 
-    return deletedCount;
+    return deletedCount + pruneExpiredCounters(this.counters, now);
   }
 
   async getStats(): Promise<{ allowed: number; denied: number; total: number }> {
