@@ -1176,7 +1176,12 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
     expect(packageJson.dependencies?.["@croco/provider-rpc"]).toBe("workspace:*");
   });
 
-  it.each(["goal-saas-api", "production-app-starter", "admin-console-starter"])(
+  it.each([
+    "goal-saas-api",
+    "saas-single-tenant",
+    "production-app-starter",
+    "admin-console-starter",
+  ])(
     "installs local tarballs for %s through workspace overrides while preserving source manifests",
     (caseName) => {
       const projectDir = createTempRoot();
@@ -1393,21 +1398,18 @@ describe("create-croco-app-generated-smoke dependency resolution", () => {
 });
 
 describe("create-croco-app generated smoke matrix", () => {
-  it.each(["goal-saas-api", "production-app-starter", "admin-console-starter"])(
-    "verifies %s immediately after install before any contract bootstrap",
-    (caseName) => {
-      const smokeCase = getGeneratedSmokeDependencyCaseInputs().find(
-        ({ name }) => name === caseName,
-      );
-      const commands = smokeCase?.validations.filter(({ args }) => args);
+  it.each([
+    "goal-saas-api",
+    "saas-single-tenant",
+    "production-app-starter",
+    "admin-console-starter",
+  ])("verifies %s immediately after install before any contract bootstrap", (caseName) => {
+    const smokeCase = getGeneratedSmokeDependencyCaseInputs().find(({ name }) => name === caseName);
+    const commands = smokeCase?.validations.filter(({ args }) => args);
 
-      expect(commands?.slice(0, 2).map(({ args }) => args)).toEqual([
-        ["lint"],
-        ["contract:verify"],
-      ]);
-      expect(commands?.filter(({ args }) => args?.[0] === "contract:verify")).toHaveLength(2);
-    },
-  );
+    expect(commands?.slice(0, 2).map(({ args }) => args)).toEqual([["lint"], ["contract:verify"]]);
+    expect(commands?.filter(({ args }) => args?.[0] === "contract:verify")).toHaveLength(2);
+  });
 
   it("runs the SaaS API tests immediately after install before build or contract bootstrap", () => {
     const smokeCase = getGeneratedSmokeDependencyCaseInputs().find(
@@ -1586,6 +1588,7 @@ describe("create-croco-app generated smoke matrix", () => {
       "meta-vite-fullstack-workers",
       "production-app-starter",
       "saas-golden-path",
+      "saas-single-tenant",
       "rest-spa-contracts",
     ]);
     expect(
@@ -1621,6 +1624,7 @@ describe("create-croco-app generated smoke matrix", () => {
       "meta-vite-fullstack-workers",
       "production-app-starter",
       "saas-golden-path",
+      "saas-single-tenant",
       "rest-spa-contracts",
     ]);
     expect(() =>
