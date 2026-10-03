@@ -374,6 +374,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`OwnershipTransferRequiredProblem`](/api/membership-core/src/classes/ownershiptransferrequiredproblem/)
 - [`RoleHierarchyViolationProblem`](/api/membership-core/src/classes/rolehierarchyviolationproblem/)
 - [`SeatLimitExceededProblem`](/api/membership-core/src/classes/seatlimitexceededproblem/)
+- [`ServerActionInvalidContentTypeProblem`](/api/meta-vite/src/classes/serveractioninvalidcontenttypeproblem/)
 - [`ServerActionInvalidPathProblem`](/api/meta-vite/src/classes/serveractioninvalidpathproblem/)
 - [`ServerActionNotFoundProblem`](/api/meta-vite/src/classes/serveractionnotfoundproblem/)
 - [`ServerActionValidationProblem`](/api/meta-vite/src/classes/serveractionvalidationproblem/)
