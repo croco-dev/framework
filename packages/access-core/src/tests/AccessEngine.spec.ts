@@ -324,31 +324,36 @@ describe("AccessEngine", () => {
       recordEventSpy.mockRestore();
     });
 
-    it("should return the provider decision when telemetry reporting also fails", async () => {
+    it("should report sanitized sink error identity without leaking messages", async () => {
+      const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => undefined);
       const request: CheckRequest = {
         tenantId: "tenant-1",
         subject: "user:user-1",
         relation: "viewer",
         object: "document:document-1",
       };
+      const sinkError = Object.assign(new Error("sink down: Bearer secret-token"), {
+        code: "SINK_DOWN",
+      });
       const traceSink = {
         recordPolicyDecisionTrace: vi.fn(async () => {
-          throw new Error("trace unavailable");
+          throw sinkError;
         }),
       };
       accessEngine = new AccessEngine(mockProvider, { traceSink });
       vi.mocked(mockProvider.check).mockResolvedValue({ decision: "allow", allowed: true });
-      const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {
-        throw new Error("telemetry unavailable");
-      });
 
       const result = await accessEngine.check(request);
 
-      expect(result).toMatchObject({
-        decision: "allow",
-        allowed: true,
-        trace: { result: "allow" },
-      });
+      expect(result).toMatchObject({ decision: "allow", allowed: true });
+      expect(recordEventSpy).toHaveBeenCalledWith(
+        "access.observability-delivery-failed",
+        expect.objectContaining({
+          "access.audit.error.name": "Error",
+          "access.audit.error.code": "SINK_DOWN",
+        }),
+      );
+      expect(JSON.stringify(recordEventSpy.mock.calls)).not.toContain("secret-token");
       recordEventSpy.mockRestore();
     });
 

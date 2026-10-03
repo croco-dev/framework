@@ -82,17 +82,13 @@ export class AccessEngine {
     try {
       await recordPolicyDecisionTrace(trace, { auditSink: this.options.traceSink });
     } catch (error) {
-      try {
-        recordEvent(ACCESS_OBSERVABILITY_DELIVERY_FAILED_EVENT, {
-          "access.operation": "check",
-          "access.policy_result": trace.result,
-          "access.observability_sink": "policy-decision-trace",
-          "access.policy_decision_id": trace.decisionId,
-          ...accessSinkErrorIdentity(error),
-        });
-      } catch {
-        // Observability is best-effort and must never break the authorization decision.
-      }
+      recordEvent(ACCESS_OBSERVABILITY_DELIVERY_FAILED_EVENT, {
+        "access.operation": "check",
+        "access.policy_result": trace.result,
+        "access.observability_sink": "policy-decision-trace",
+        "access.policy_decision_id": trace.decisionId,
+        ...accessSinkErrorIdentity(error),
+      });
     }
 
     return {

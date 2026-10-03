@@ -31,6 +31,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "ACCESS_OBSERVABILITY_DELIVERY_FAILED_EVENT",
+              "exportKind": "named",
+              "source": "./libs/AccessEngine.js",
+              "declarationKind": "const"
+            },
+            {
               "name": "ACCESS_PROVIDER_TOKEN",
               "exportKind": "named",
               "source": "./libs/constants.js",
