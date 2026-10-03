@@ -290,6 +290,68 @@ describe("AccessEngine", () => {
       recordEventSpy.mockRestore();
     });
 
+    it("should return an abstain decision when the trace sink rejects", async () => {
+      const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => undefined);
+      const request: CheckRequest = {
+        tenantId: "tenant-1",
+        subject: "user:user-1",
+        relation: "viewer",
+        object: "document:document-1",
+      };
+      const traceSink = {
+        recordPolicyDecisionTrace: vi.fn(async () => {
+          throw new Error("trace unavailable");
+        }),
+      };
+      accessEngine = new AccessEngine(mockProvider, { traceSink });
+      vi.mocked(mockProvider.check).mockRejectedValue(
+        new TestBusinessProblem("Provider business error"),
+      );
+
+      const result = await accessEngine.check(request);
+
+      expect(result).toMatchObject({
+        decision: "abstain",
+        allowed: false,
+        trace: { result: "abstain" },
+      });
+      expect(recordEventSpy).toHaveBeenCalledWith(
+        "access.observability-delivery-failed",
+        expect.objectContaining({
+          "access.policy_result": "abstain",
+        }),
+      );
+      recordEventSpy.mockRestore();
+    });
+
+    it("should return the provider decision when telemetry reporting also fails", async () => {
+      const request: CheckRequest = {
+        tenantId: "tenant-1",
+        subject: "user:user-1",
+        relation: "viewer",
+        object: "document:document-1",
+      };
+      const traceSink = {
+        recordPolicyDecisionTrace: vi.fn(async () => {
+          throw new Error("trace unavailable");
+        }),
+      };
+      accessEngine = new AccessEngine(mockProvider, { traceSink });
+      vi.mocked(mockProvider.check).mockResolvedValue({ decision: "allow", allowed: true });
+      const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => {
+        throw new Error("telemetry unavailable");
+      });
+
+      const result = await accessEngine.check(request);
+
+      expect(result).toMatchObject({
+        decision: "allow",
+        allowed: true,
+        trace: { result: "allow" },
+      });
+      recordEventSpy.mockRestore();
+    });
+
     it("should re-throw on provider system problem", async () => {
       const request: CheckRequest = {
         tenantId: "tenant-1",
