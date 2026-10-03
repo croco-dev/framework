@@ -1023,9 +1023,22 @@ function getObjectTypeScript(schema: unknown, mode: "input" | "output"): string 
   return `{ ${fields.join(" ")} }`;
 }
 
-function getOptionalObjectFieldSchema(schema: unknown, mode: "input" | "output"): unknown {
+function getOptionalObjectFieldSchema(
+  schema: unknown,
+  mode: "input" | "output",
+  requireDefault = false,
+): unknown {
   const schemaName = getSchemaName(schema);
-  if (schemaName === "ZodOptional" || (mode === "input" && schemaName === "ZodDefault")) {
+  if (schemaName === "ZodOptional") {
+    if (requireDefault) {
+      return getOptionalObjectFieldSchema(getInnerSchema(schema), mode, true) !== undefined
+        ? schema
+        : undefined;
+    }
+    return getInnerSchema(schema);
+  }
+
+  if (mode === "input" && schemaName === "ZodDefault") {
     return getInnerSchema(schema);
   }
 
@@ -1041,7 +1054,7 @@ function getOptionalObjectFieldSchema(schema: unknown, mode: "input" | "output")
       schemaName === "ZodReadonly" ||
       effectType === "refinement")
   ) {
-    return getOptionalObjectFieldSchema(getInnerSchema(schema), mode) !== undefined
+    return getOptionalObjectFieldSchema(getInnerSchema(schema), mode, true) !== undefined
       ? schema
       : undefined;
   }

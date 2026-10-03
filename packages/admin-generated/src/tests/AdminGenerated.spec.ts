@@ -127,6 +127,8 @@ describe("admin-generated", () => {
       defaultOptional: z.string().default("value").optional(),
       nullable: z.string().default("value").nullable(),
       readonly: z.number().default(2).readonly(),
+      wrappedOptional: z.string().optional().readonly(),
+      wrappedDefaultOptional: z.string().default("value").optional().readonly(),
       refined: z
         .string()
         .default("value")
@@ -171,10 +173,10 @@ describe("admin-generated", () => {
       buildContractGraph([DefaultsController]),
     );
     expect(source).toContain(
-      "export type DefaultsControllerCreateDefaultsInput = { defaultOptional?: string | undefined; items: { size?: number; }[]; label?: string; nested: { count?: number; }; nullable?: string | undefined | null; numbers: (number | undefined)[]; optional?: string; optionalDefault?: string | undefined; pageSize?: number; readonly?: number | undefined; refined?: string | undefined; settings?: { enabled?: boolean; }; values: Record<string, { size?: number; }>; variants: { size?: number; } | string; };",
+      "export type DefaultsControllerCreateDefaultsInput = { defaultOptional?: string | undefined; items: { size?: number; }[]; label?: string; nested: { count?: number; }; nullable?: string | undefined | null; numbers: (number | undefined)[]; optional?: string; optionalDefault?: string | undefined; pageSize?: number; readonly?: number | undefined; refined?: string | undefined; settings?: { enabled?: boolean; }; values: Record<string, { size?: number; }>; variants: { size?: number; } | string; wrappedDefaultOptional?: string | undefined | undefined; wrappedOptional: string | undefined; };",
     );
     expect(source).toContain(
-      "export type DefaultsControllerCreateDefaultsOutput = { defaultOptional?: string; items: { size: number; }[]; label: string; nested: { count: number; }; nullable: string | null; numbers: number[]; optional?: string; optionalDefault: string | undefined; pageSize: number; readonly: number; refined: string; settings: { enabled: boolean; }; values: Record<string, { size: number; }>; variants: { size: number; } | string; };",
+      "export type DefaultsControllerCreateDefaultsOutput = { defaultOptional?: string; items: { size: number; }[]; label: string; nested: { count: number; }; nullable: string | null; numbers: number[]; optional?: string; optionalDefault: string | undefined; pageSize: number; readonly: number; refined: string; settings: { enabled: boolean; }; values: Record<string, { size: number; }>; variants: { size: number; } | string; wrappedDefaultOptional: string | undefined; wrappedOptional: string | undefined; };",
     );
     expect(source).toContain(
       "readonly input: DefaultsControllerCreateDefaultsInput; readonly output: DefaultsControllerCreateDefaultsOutput;",
