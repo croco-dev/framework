@@ -109,6 +109,7 @@
         "@croco/frontend-react",
         "@croco/integrations-posthog",
         "@croco/invitation-drizzle",
+        "@croco/lifecycle-drizzle",
         "@croco/ai-usage",
         "@croco/membership-drizzle",
         "@croco/metering-drizzle",

@@ -843,6 +843,12 @@
       "runtimes": ["node", "lambda"],
       "domain": "Invitation"
     },
+    "lifecycle-drizzle": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Lifecycle"
+    },
     "lifecycle-core": {
       "role": "Contracts",
       "subtype": "domain",
@@ -1307,6 +1313,7 @@
         "customer-health-drizzle",
         "engagement-drizzle",
         "experience-drizzle",
+        "lifecycle-drizzle",
         "entitlements-drizzle",
         "execution-drizzle",
         "features-drizzle",
@@ -1526,6 +1533,7 @@
         "engagement-drizzle",
         "experience-core",
         "experience-drizzle",
+        "lifecycle-drizzle",
         "etl-core",
         "etl-events-tx",
         "features-drizzle",
@@ -1760,6 +1768,18 @@
           "revisioned publication and audit",
           "atomic exposure reservations",
           "durable display and dismissal receipts"
+        ]
+      },
+      "lifecycle-drizzle": {
+        "domain": "Lifecycle",
+        "adapter": "PostgreSQL Journey episode and action intent store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "tenant-scoped reentry uniqueness",
+          "atomic episode and action admission",
+          "leased durable wake claims",
+          "pinned definitions and audit receipts"
         ]
       },
       "entitlements-drizzle": {

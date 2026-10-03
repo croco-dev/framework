@@ -38,6 +38,12 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/lifecycle-journey/src/tests/TaskRecovery.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/promotion-offers/src/tests/promotion-offers.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -171,6 +177,12 @@
     },
     {
       "path": "packages/admin-core/src/tests/FactHistoryOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/JourneyOperations.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-core"
@@ -333,6 +345,24 @@
     },
     {
       "path": "packages/admin-react/src/tests/GrowthAnalysisPanel.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/JourneyConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/JourneyConsoleProblem.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/JourneyConsoleRevision.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -2680,6 +2710,24 @@
       "owner": "@croco/invitation-drizzle"
     },
     {
+      "path": "packages/lifecycle-core/src/tests/JourneyDefinition.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/lifecycle-core"
+    },
+    {
+      "path": "packages/lifecycle-core/src/tests/JourneyDryRun.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/lifecycle-core"
+    },
+    {
+      "path": "packages/lifecycle-core/src/tests/JourneyEngine.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/lifecycle-core"
+    },
+    {
       "path": "packages/lifecycle-core/src/tests/LifecycleCore.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -2708,6 +2756,18 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/lifecycle-core"
+    },
+    {
+      "path": "packages/lifecycle-drizzle/src/tests/PostgresJourneyStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/lifecycle-drizzle"
+    },
+    {
+      "path": "packages/lifecycle-drizzle/src/tests/PostgresJourneyStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/lifecycle-drizzle"
     },
     {
       "path": "packages/membership-core/src/tests/MembershipManager.spec.ts",

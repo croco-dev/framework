@@ -534,3 +534,18 @@ The component is a view, not an authorization boundary: the server must resolve 
 ## Growth analysis
 
 `GrowthAnalysisPanel` accepts `propose(question, signal)` and `execute(plan, signal)` server callbacks. It displays explicit plan choices before execution, supports rejection/cancellation, and renders actual aggregate facts with the definition, period, population, numerator/denominator, and source references. Missing, stale, partial, denied, unsupported, truncated, and error states remain explicit. Vendor SDKs and query execution stay on the server. The [growth-analysis example](../../examples/growth-analysis/README.md) connects the panel to the actual common runner.
+
+## Journey console
+
+`JourneyConsole` renders an ordered journey form with wait duration, condition
+branches and registered actions, sample dry-runs, and redacted episode evidence.
+Its `state` explicitly represents loading, empty, denied, error or ready. Pass a
+`scopeKey` that changes with the authenticated tenant/app/environment to reset the
+editor and pending results on scope changes.
+
+Bind `onDryRun(definition, sampleId)` and `onCommand(command)` to authenticated
+`JourneyOperations` server endpoints. Client permissions only control affordances;
+the server rechecks authority. Pause/resume/stop require an audit reason, carry the
+shown revision and a fresh idempotency key, and display operation failure without
+marking it successful. Dry-runs never publish the edited definition. The host owns
+publication policy and production registration.

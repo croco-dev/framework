@@ -708,6 +708,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "JourneyAdminProblem",
+              "exportKind": "named",
+              "source": "./libs/JourneyOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "JourneyOperations",
+              "exportKind": "named",
+              "source": "./libs/JourneyOperations",
+              "declarationKind": "class"
+            },
+            {
               "name": "loadCreditOperations",
               "exportKind": "named",
               "source": "./libs/CreditOperations",
@@ -1562,6 +1574,41 @@
               "name": "FactHistoryState",
               "exportKind": "named",
               "source": "./libs/FactHistoryValidation"
+            },
+            {
+              "name": "JourneyAdminAccess",
+              "exportKind": "named",
+              "source": "./libs/JourneyOperations"
+            },
+            {
+              "name": "JourneyAdminCommand",
+              "exportKind": "named",
+              "source": "./libs/JourneyOperations"
+            },
+            {
+              "name": "JourneyAdminPermission",
+              "exportKind": "named",
+              "source": "./libs/JourneyOperations"
+            },
+            {
+              "name": "JourneyAdminState",
+              "exportKind": "named",
+              "source": "./libs/JourneyOperations"
+            },
+            {
+              "name": "JourneyDryRunView",
+              "exportKind": "named",
+              "source": "./libs/JourneyOperations"
+            },
+            {
+              "name": "JourneyEpisodeView",
+              "exportKind": "named",
+              "source": "./libs/JourneyOperations"
+            },
+            {
+              "name": "JourneyOperationsOptions",
+              "exportKind": "named",
+              "source": "./libs/JourneyOperations"
             },
             {
               "name": "LoadCreditOperationsInput",
@@ -2839,6 +2886,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "JourneyConsole",
+              "exportKind": "named",
+              "source": "./libs/JourneyConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "LifecycleAutomationConsole",
               "exportKind": "named",
               "source": "./libs/LifecycleAutomationConsole",
@@ -3603,6 +3656,11 @@
               "name": "GrowthAnalysisPanelProps",
               "exportKind": "named",
               "source": "./libs/GrowthAnalysisPanel"
+            },
+            {
+              "name": "JourneyConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/JourneyConsole"
             },
             {
               "name": "LifecycleAutomationConsoleProps",
@@ -21137,6 +21195,13 @@
           "sourceEntrypoint": "packages/lifecycle-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "assertJourneyScope",
+              "exportKind": "named",
+              "source": "./libs/journey/JourneyEngine",
+              "localName": "validateJourneyScope",
+              "declarationKind": "function"
+            },
+            {
               "name": "buildLegacyLifecycleIdempotencyKey",
               "exportKind": "named",
               "source": "./libs/sourceIdentity",
@@ -21311,6 +21376,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "defineJourneyAction",
+              "exportKind": "named",
+              "source": "./libs/journey/registrations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "defineJourneyPredicate",
+              "exportKind": "named",
+              "source": "./libs/journey/registrations",
+              "declarationKind": "function"
+            },
+            {
               "name": "DuplicateLifecycleRuleProblem",
               "exportKind": "named",
               "source": "./libs/problems/LifecycleProblems",
@@ -21339,6 +21416,12 @@
               "exportKind": "named",
               "source": "./libs/sourceIdentity",
               "declarationKind": "function"
+            },
+            {
+              "name": "InMemoryJourneyStore",
+              "exportKind": "named",
+              "source": "./libs/journey/InMemoryJourneyStore",
+              "declarationKind": "class"
             },
             {
               "name": "InMemoryLifecycleActionSink",
@@ -21386,6 +21469,24 @@
               "name": "InvalidWebhookTimeoutProblem",
               "exportKind": "named",
               "source": "./libs/problems/LifecycleProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "JourneyEngine",
+              "exportKind": "named",
+              "source": "./libs/journey/JourneyEngine",
+              "declarationKind": "class"
+            },
+            {
+              "name": "JourneyProblem",
+              "exportKind": "named",
+              "source": "./libs/journey/JourneyEngine",
+              "declarationKind": "class"
+            },
+            {
+              "name": "JourneyTaskBridge",
+              "exportKind": "named",
+              "source": "./libs/journey/JourneyTaskBridge",
               "declarationKind": "class"
             },
             {
@@ -21539,6 +21640,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "validateJourneyScope",
+              "exportKind": "named",
+              "source": "./libs/journey/JourneyEngine",
+              "declarationKind": "function"
+            },
+            {
               "name": "validateMonetizationRecipeCapabilities",
               "exportKind": "named",
               "source": "./libs/monetization",
@@ -21586,6 +21693,116 @@
               "name": "InMemoryMonetizationThresholdStoreOptions",
               "exportKind": "named",
               "source": "./libs/monetization"
+            },
+            {
+              "name": "JourneyAction",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyActionIntent",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyCheckSnapshot",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyCommand",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyContext",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyDefinition",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyDispatchProblemCode",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyDryRunResult",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyDryRunStep",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyEngineOptions",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyEntry",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyEpisode",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyFacts",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyNode",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyPredicate",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyReceipt",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyReconciliation",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyReference",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyScope",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyStatus",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyStore",
+              "exportKind": "named",
+              "source": "./libs/journey/types"
+            },
+            {
+              "name": "JourneyTaskInvoker",
+              "exportKind": "named",
+              "source": "./libs/journey/JourneyTaskBridge"
             },
             {
               "name": "LifecycleAction",
@@ -22051,6 +22268,46 @@
               "name": "WebhookLifecycleActionAdapterOptions",
               "exportKind": "named",
               "source": "./libs/WebhookLifecycleActionAdapter"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/lifecycle-drizzle",
+      "relativeDir": "packages/lifecycle-drizzle",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/lifecycle-drizzle/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "PostgresJourneyStore",
+              "exportKind": "named",
+              "source": "./libs/PostgresJourneyStore",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "JourneyPgDatabase",
+              "exportKind": "named",
+              "source": "./libs/PostgresJourneyStore"
             }
           ]
         }

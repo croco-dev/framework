@@ -1158,6 +1158,7 @@ export function classifyDiscoveredTest(rootDir: string, path: string): TestInven
   const lower = path.toLowerCase();
   let lane: TestLane = "fast";
   if (path.startsWith("scripts/tests/")) lane = "fast";
+  else if (path === "examples/lifecycle-journey/src/tests/TaskRecovery.spec.ts") lane = "fast";
   else if (path.startsWith("packages/create-croco-app/templates/")) lane = "generated-app";
   else if (
     /(?:^|[/._-])(?:live|provider-certification|provider-e2e)(?:[/._-]|$)/.test(lower) ||
