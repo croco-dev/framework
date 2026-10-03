@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 914,
+  problemCount: 916,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -401,6 +401,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/admin-core/src/libs/EventCatalog.ts",
           line: 183,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "admin-core/experiment-review-console-validation-failed",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#admin-core-experiment-review-console-validation-failed",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/ExperimentReviewConsole.ts",
+          line: 22,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16930,6 +16961,66 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "metrics-core/experiment-input-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-experiment-input-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+          line: 194,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "metrics-core/experiment-plan-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-experiment-plan-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/experiment/ExperimentReview.ts",
+          line: 185,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "metrics-core/gross-margin-required",
       category: "ValidationError",
       status: 422,
@@ -17088,9 +17179,10 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       title: "Bad Request",
       cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-read-cancelled",
       recovery: {
-        cause: "The metric read was cancelled by its trusted or invocation AbortSignal.",
-        userAction: "Retry the read after the cancellation reason is cleared.",
-        operatorAction: "Inspect the cancellation signal and invocation lifecycle.",
+        cause: "The metric read was cancelled by its AbortSignal or exceeded its deadline.",
+        userAction:
+          "Retry the read after the cancellation reason is cleared or with a sufficient deadline.",
+        operatorAction: "Inspect the cancellation signal, configured deadline, and read duration.",
         retryability: "conditional",
         redactionPolicy: "public",
         telemetry: {
@@ -17105,38 +17197,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/metrics-core/src/libs/read/MetricReadService.ts",
-          line: 189,
-          column: 10,
-          kind: "problem-constructor",
-        },
-      ],
-    },
-    {
-      code: "metrics-core/read-timeout",
-      category: "BadRequest",
-      status: 400,
-      title: "Bad Request",
-      cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-read-timeout",
-      recovery: {
-        cause: "The metric read exceeded its authorized invocation time budget.",
-        userAction: "Retry after read latency or the authorized time budget has been reviewed.",
-        operatorAction:
-          "Inspect authorization, report reader, and executor latency against the effective time budget; retain concurrency slots until pending work settles.",
-        retryability: "conditional",
-        redactionPolicy: "public",
-        telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
-          attributes: ["problem.code", "problem.category", "problem.status"],
-        },
-      },
-      lifecycle: {
-        status: "active",
-      },
-      sources: [
-        {
-          file: "packages/metrics-core/src/libs/read/MetricReadService.ts",
-          line: 193,
+          line: 177,
           column: 10,
           kind: "problem-constructor",
         },
