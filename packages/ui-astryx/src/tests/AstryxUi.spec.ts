@@ -10,7 +10,7 @@ import {
   AstryxProvider,
   toAstryxAuthStateProps,
 } from "../index";
-import type { AstryxAuthStateProps } from "../index";
+import type { AstryxAuthStateProps, AstryxRecoveryAction } from "../index";
 
 const problem = {
   code: "AUTH_PROVIDER_UNAVAILABLE",
@@ -83,6 +83,54 @@ describe("@croco/ui-astryx", () => {
     expect(html).toContain("Sign in");
     expect(html).not.toContain("Provider status");
   });
+
+  it.each(["loading", "signed-out", "unavailable"] as const)(
+    "preserves recovery accessibility and disabled state in %s sessions",
+    (state) => {
+      const actions: readonly AstryxRecoveryAction[] = [
+        {
+          id: "retry",
+          label: "Retry",
+          ariaLabel: "Retry authentication",
+          disabled: true,
+          onRecover: vi.fn(),
+        },
+        {
+          id: "status",
+          label: "Status",
+          href: "/status",
+          ariaLabel: "View authentication status",
+          disabled: true,
+        },
+        { id: "sign-in", label: "Sign in", ariaLabel: "Start sign in", disabled: false },
+      ];
+      const props = toAstryxAuthStateProps(
+        state === "unavailable"
+          ? { kind: "unavailable", problem, recoveryActions: actions }
+          : {
+              kind: state === "signed-out" ? "unauthenticated" : "loading",
+              recoveryActions: actions,
+            },
+      );
+
+      const authHtml = renderToStaticMarkup(createElement(AstryxAuthState, props));
+      const problemHtml = renderToStaticMarkup(
+        createElement(AstryxProblemView, { problem, recoveryActions: actions }),
+      );
+
+      expect(props.recoveryActions).toBe(actions);
+      for (const html of [authHtml, problemHtml]) {
+        for (const label of ["Retry authentication", "View authentication status"]) {
+          const button = html.match(new RegExp(`<button[^>]*aria-label="${label}"[^>]*>`))?.[0];
+          expect(button).toContain('disabled=""');
+          expect(button).not.toContain("href=");
+        }
+        const enabledButton = html.match(/<button[^>]*aria-label="Start sign in"[^>]*>/)?.[0];
+        expect(enabledButton).toBeDefined();
+        expect(enabledButton).not.toContain("disabled");
+      }
+    },
+  );
 
   it("maps Croco frontend session contracts without treating unavailable state as signed out", () => {
     const mapFrontendSessionState: (state: FrontendSessionState) => AstryxAuthStateProps =

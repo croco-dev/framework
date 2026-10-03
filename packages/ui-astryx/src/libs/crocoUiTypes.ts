@@ -1,21 +1,20 @@
 import type { ProblemDetails } from "@croco/problems-core";
 
-export type AstryxRecoveryAction = {
+type AstryxRecoveryActionBase = {
   readonly id: string;
   readonly label: string;
   readonly href?: string;
-  readonly onRecover?: () => void | Promise<void>;
-  readonly problemCodes?: readonly string[];
-};
-
-export type AstryxProblemRecoveryAction = {
-  readonly id: string;
-  readonly label: string;
-  readonly href?: string;
-  readonly onRecover?: (problem: ProblemDetails) => void | Promise<void>;
   readonly problemCodes?: readonly string[];
   readonly disabled?: boolean;
   readonly ariaLabel?: string;
+};
+
+export type AstryxRecoveryAction = AstryxRecoveryActionBase & {
+  readonly onRecover?: () => void | Promise<void>;
+};
+
+export type AstryxProblemRecoveryAction = AstryxRecoveryActionBase & {
+  readonly onRecover?: (problem: ProblemDetails) => void | Promise<void>;
 };
 
 export type AstryxSession = {
