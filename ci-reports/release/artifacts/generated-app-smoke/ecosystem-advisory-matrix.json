@@ -1,0 +1,331 @@
+{
+  "schemaVersion": "croco.generated-app-smoke/v2",
+  "tier": "ecosystem-advisory",
+  "generatedAt": "2026-10-03T20:14:18.108Z",
+  "filteredRun": true,
+  "status": "pending",
+  "release": {
+    "blockingTier": "spine-blocking",
+    "status": "pending"
+  },
+  "cases": [
+    {
+      "name": "blank-basic",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "create-croco-app blank template owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=blank-basic pnpm create-croco-app:smoke; restore blank template typecheck coverage."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "graphql-standalone-api",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "Presentation standalone GraphQL owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=graphql-standalone-api pnpm create-croco-app:smoke; inspect GraphQL contract, protected route, and standalone build coverage."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "graphql-standalone-nextjs-opennext",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "Presentation standalone GraphQL Next.js owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=graphql-standalone-nextjs-opennext pnpm create-croco-app:smoke; inspect generated web typecheck and build failures."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "trpc-standalone-nextjs-opennext",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "Presentation standalone tRPC Next.js owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=trpc-standalone-nextjs-opennext pnpm create-croco-app:smoke; inspect generated web typecheck and build failures."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "trpc-nextjs-vercel-fullstack",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "Presentation Next.js tRPC owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=trpc-nextjs-vercel-fullstack pnpm create-croco-app:smoke; inspect the ddd-fullstack Next.js tRPC build."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "graphql-nextjs-opennext",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "Presentation GraphQL OpenNext owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=graphql-nextjs-opennext pnpm create-croco-app:smoke; inspect GraphQL contract scripts and OpenNext files."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "trpc-nextjs-docker-frontend",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "Presentation Docker frontend owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=trpc-nextjs-docker-frontend pnpm create-croco-app:smoke; restore web Dockerfile generation."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "graphql-vite-spa-astryx",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "Astryx presentation profile owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=graphql-vite-spa-astryx pnpm create-croco-app:smoke; inspect the generated UI metadata, Astryx dependency isolation, Vite build, and Croco-aware render smoke."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "meta-vite-web",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "Meta Vite presentation owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=meta-vite-web pnpm create-croco-app:smoke; inspect the meta-vite build and presentation smoke."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "admin-console-starter",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "Admin console generated app owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=admin-console-starter pnpm create-croco-app:smoke; inspect admin smoke, contracts, and the DI graph."
+      },
+      "status": "passed",
+      "durationMs": 194843,
+      "steps": [
+        {
+          "label": "generate",
+          "status": "passed",
+          "durationMs": 176
+        },
+        {
+          "label": "build and pack local workspace packages",
+          "status": "passed",
+          "durationMs": 2
+        },
+        {
+          "label": "install",
+          "status": "passed",
+          "durationMs": 879
+        },
+        {
+          "label": "frozen install",
+          "status": "passed",
+          "durationMs": 107
+        },
+        {
+          "label": "lint",
+          "status": "passed",
+          "durationMs": 155
+        },
+        {
+          "label": "install-immediate contract verify",
+          "status": "passed",
+          "durationMs": 25316
+        },
+        {
+          "label": "admin smoke",
+          "status": "passed",
+          "durationMs": 11326
+        },
+        {
+          "label": "browser testing contract",
+          "status": "passed",
+          "durationMs": 5
+        },
+        {
+          "label": "Chromium install",
+          "status": "passed",
+          "durationMs": 496
+        },
+        {
+          "label": "test",
+          "status": "passed",
+          "durationMs": 6440
+        },
+        {
+          "label": "typecheck",
+          "status": "passed",
+          "durationMs": 17013
+        },
+        {
+          "label": "build",
+          "status": "passed",
+          "durationMs": 12226
+        },
+        {
+          "label": "built Node host smoke",
+          "status": "passed",
+          "durationMs": 331
+        },
+        {
+          "label": "browser journeys",
+          "status": "passed",
+          "durationMs": 7688
+        },
+        {
+          "label": "Contract snapshot",
+          "status": "passed",
+          "durationMs": 3453
+        },
+        {
+          "label": "Contract codegen",
+          "status": "passed",
+          "durationMs": 18004
+        },
+        {
+          "label": "Contract verify",
+          "status": "passed",
+          "durationMs": 25104
+        },
+        {
+          "label": "Admin RPC client",
+          "status": "passed",
+          "durationMs": 7647
+        },
+        {
+          "label": "DI graph generation",
+          "status": "passed",
+          "durationMs": 2978
+        },
+        {
+          "label": "DI graph verify",
+          "status": "passed",
+          "durationMs": 4117
+        },
+        {
+          "label": "stale Project Map canary",
+          "status": "passed",
+          "durationMs": 10319
+        },
+        {
+          "label": "stale OpenAPI canary",
+          "status": "passed",
+          "durationMs": 16987
+        },
+        {
+          "label": "stale RPC client canary",
+          "status": "passed",
+          "durationMs": 24022
+        }
+      ]
+    },
+    {
+      "name": "saas-cloudflare-profile",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "SaaS Cloudflare profile owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=saas-cloudflare-profile pnpm create-croco-app:smoke; inspect the provider profile and Workers runtime capability manifest."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "saas-lambda-profile",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "SaaS Lambda profile owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=saas-lambda-profile pnpm create-croco-app:smoke; inspect the provider profile and Lambda runtime capability manifest."
+      },
+      "status": "pending"
+    },
+    {
+      "name": "ai-saas-golden-path",
+      "tier": "ecosystem-advisory",
+      "advisory": {
+        "owner": "AI SaaS generated app owner",
+        "recoveryAction": "CROCO_GENERATED_SMOKE_CASES=ai-saas-golden-path pnpm create-croco-app:smoke; inspect the AI full demo flow and contracts."
+      },
+      "status": "passed",
+      "durationMs": 318525,
+      "steps": [
+        {
+          "label": "generate",
+          "status": "passed",
+          "durationMs": 125
+        },
+        {
+          "label": "build and pack local workspace packages",
+          "status": "passed",
+          "durationMs": 2
+        },
+        {
+          "label": "install",
+          "status": "passed",
+          "durationMs": 995
+        },
+        {
+          "label": "frozen install",
+          "status": "passed",
+          "durationMs": 111
+        },
+        {
+          "label": "lint",
+          "status": "passed",
+          "durationMs": 181
+        },
+        {
+          "label": "build",
+          "status": "passed",
+          "durationMs": 12288
+        },
+        {
+          "label": "typecheck",
+          "status": "passed",
+          "durationMs": 7329
+        },
+        {
+          "label": "Contract snapshot",
+          "status": "passed",
+          "durationMs": 7353
+        },
+        {
+          "label": "Contract codegen",
+          "status": "passed",
+          "durationMs": 29364
+        },
+        {
+          "label": "test",
+          "status": "passed",
+          "durationMs": 121733
+        },
+        {
+          "label": "Contract verify",
+          "status": "passed",
+          "durationMs": 44811
+        },
+        {
+          "label": "DI graph generation",
+          "status": "passed",
+          "durationMs": 6758
+        },
+        {
+          "label": "DI graph verify",
+          "status": "passed",
+          "durationMs": 7932
+        },
+        {
+          "label": "AI demo flow",
+          "status": "passed",
+          "durationMs": 6074
+        },
+        {
+          "label": "full demo flow",
+          "status": "passed",
+          "durationMs": 49893
+        },
+        {
+          "label": "failure drill smoke",
+          "status": "passed",
+          "durationMs": 23536
+        }
+      ]
+    }
+  ]
+}
