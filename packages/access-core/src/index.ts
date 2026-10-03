@@ -1,14 +1,14 @@
 // Types
 
-// Engine
-export { AccessEngine } from "./libs/AccessEngine.js";
-export type { AccessEngineOptions } from "./libs/AccessEngine.js";
 // Constants
 export {
   ACCESS_METADATA_KEY,
   ACCESS_PROVIDER_TOKEN,
   MAX_TRAVERSAL_DEPTH,
 } from "./libs/constants.js";
+// Engine
+export { ACCESS_OBSERVABILITY_DELIVERY_FAILED_EVENT, AccessEngine } from "./libs/AccessEngine.js";
+export type { AccessEngineOptions } from "./libs/AccessEngine.js";
 // Decorators
 export { Access } from "./libs/decorators/Access.js";
 // Guards

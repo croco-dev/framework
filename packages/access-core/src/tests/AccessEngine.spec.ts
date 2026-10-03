@@ -1,3 +1,4 @@
+import * as telemetry from "@croco/telemetry-api";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AccessEngine } from "../libs/AccessEngine";
@@ -217,6 +218,76 @@ describe("AccessEngine", () => {
       });
       expect(result.trace?.inputs.authorization).toBe("[Redacted]");
       expect(traceSink.recordPolicyDecisionTrace).toHaveBeenCalledWith(result.trace);
+    });
+
+    it("should return the provider decision when the trace sink rejects", async () => {
+      const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => undefined);
+      const request: CheckRequest = {
+        tenantId: "tenant-1",
+        subject: "user:user-1",
+        relation: "viewer",
+        object: "document:document-1",
+      };
+      const sinkError = new Error("sink down");
+      const traceSink = {
+        recordPolicyDecisionTrace: vi.fn(async () => {
+          throw sinkError;
+        }),
+      };
+      accessEngine = new AccessEngine(mockProvider, { traceSink });
+      vi.mocked(mockProvider.check).mockResolvedValue({ decision: "allow", allowed: true });
+
+      const result = await accessEngine.check(request);
+
+      expect(result).toMatchObject({
+        decision: "allow",
+        allowed: true,
+        trace: { result: "allow" },
+      });
+      expect(traceSink.recordPolicyDecisionTrace).toHaveBeenCalledWith(result.trace);
+      expect(recordEventSpy).toHaveBeenCalledWith(
+        "access.observability-delivery-failed",
+        expect.objectContaining({
+          "access.operation": "check",
+          "access.policy_result": "allow",
+          "access.observability_sink": "policy-decision-trace",
+          "access.policy_decision_id": result.trace?.decisionId,
+        }),
+      );
+      expect(JSON.stringify(recordEventSpy.mock.calls)).not.toContain("sink down");
+      recordEventSpy.mockRestore();
+    });
+
+    it("should return a deny decision when the trace sink rejects", async () => {
+      const recordEventSpy = vi.spyOn(telemetry, "recordEvent").mockImplementation(() => undefined);
+      const request: CheckRequest = {
+        tenantId: "tenant-1",
+        subject: "user:user-1",
+        relation: "viewer",
+        object: "document:document-1",
+      };
+      const traceSink = {
+        recordPolicyDecisionTrace: vi.fn(async () => {
+          throw new Error("trace unavailable");
+        }),
+      };
+      accessEngine = new AccessEngine(mockProvider, { traceSink });
+      vi.mocked(mockProvider.check).mockResolvedValue({ decision: "deny", allowed: false });
+
+      const result = await accessEngine.check(request);
+
+      expect(result).toMatchObject({
+        decision: "deny",
+        allowed: false,
+        trace: { result: "deny" },
+      });
+      expect(recordEventSpy).toHaveBeenCalledWith(
+        "access.observability-delivery-failed",
+        expect.objectContaining({
+          "access.policy_result": "deny",
+        }),
+      );
+      recordEventSpy.mockRestore();
     });
 
     it("should re-throw on provider system problem", async () => {
