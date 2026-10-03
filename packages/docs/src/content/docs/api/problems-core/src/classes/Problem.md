@@ -649,6 +649,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`SagaReplayProblem`](/api/workflow-core/src/classes/sagareplayproblem/)
 - [`SagaStoreConflictProblem`](/api/workflow-core/src/classes/sagastoreconflictproblem/)
 - [`WorkflowDefinitionProblem`](/api/workflow-core/src/classes/workflowdefinitionproblem/)
+- [`WorkflowExecutionCancelledProblem`](/api/workflow-core/src/classes/workflowexecutioncancelledproblem/)
 - [`WorkflowExecutionFailedProblem`](/api/workflow-core/src/classes/workflowexecutionfailedproblem/)
 - [`WorkflowExecutionInProgressProblem`](/api/workflow-core/src/classes/workflowexecutioninprogressproblem/)
 - [`WorkflowNotFoundProblem`](/api/workflow-core/src/classes/workflownotfoundproblem/)

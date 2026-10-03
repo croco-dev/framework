@@ -2551,7 +2551,10 @@ describe("TransactionalEventStore conformance", () => {
 
     await expect(
       adapter.transaction(async () => undefined, undefined, abortedBefore.signal),
-    ).rejects.toThrow("transaction cancelled");
+    ).rejects.toMatchObject({
+      code: "tx-core/transaction-rollback-confirmed",
+      cause: abortedBefore.signal.reason,
+    });
 
     const abortedAfter = new AbortController();
     await expect(
@@ -2562,7 +2565,10 @@ describe("TransactionalEventStore conformance", () => {
         undefined,
         abortedAfter.signal,
       ),
-    ).rejects.toThrow("Transaction aborted");
+    ).rejects.toMatchObject({
+      code: "tx-core/transaction-rollback-confirmed",
+      cause: { message: "Transaction aborted" },
+    });
   });
 });
 

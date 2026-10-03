@@ -79,8 +79,10 @@ function actionButton(action: AstryxRecoveryAction) {
 
   return (
     <Button
+      aria-label={action.ariaLabel}
       clickAction={clickAction}
       href={action.href}
+      isDisabled={action.disabled}
       key={action.id}
       label={action.label}
       variant="secondary"

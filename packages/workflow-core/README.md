@@ -13,6 +13,20 @@ Croco-native workflow definitions that connect trigger metadata, task execution,
 - `WorkflowDiagnosticsProvider` for exposing registered workflows and workflow execution status through `@croco/diagnostics-core`.
 - Telemetry spans and lifecycle events for workflow execution, step execution, reuse, completion, and failure.
 
+## Cancellation
+
+`await runner.cancel(executionId, reason)` persists the parent's `cancelled` status. The runner reads
+that status immediately before each child dispatch and before completing the workflow. Cancellation
+observed at either boundary stops subsequent dispatch and rejects the active `execute()` call with
+`WorkflowExecutionCancelledProblem` (`workflow-core/workflow-execution-cancelled`, non-retryable).
+The parent retains its cancellation record; the runner does not complete or fail it.
+
+An already dispatched task may settle successfully or fail and retains its own execution outcome.
+Cancellation does not abort JavaScript tasks or compensate their effects. The status read and child
+dispatch are separate operations: cancellation completed before the boundary read prevents dispatch,
+but cancellation racing after that read may overlap one dispatch. Cross-record atomic dispatch and
+distributed queue cancellation require a transport/store-specific coordination contract.
+
 ## Install
 
 ```bash

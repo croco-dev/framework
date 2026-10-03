@@ -935,7 +935,7 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     name: "goal-saas-api",
     args: ["--goal", "saas-api", "--scope", "@smoke", "--no-install", "--no-git"],
     runtimeTarget: "node",
-    matrixTargets: ["saas"],
+    matrixTargets: ["saas", "saas-node-postgres-contracts"],
     validations: [
       {
         label: "install-immediate contract verify",
@@ -2069,6 +2069,56 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     ],
   },
   {
+    name: "saas-single-tenant",
+    args: [
+      "--preset",
+      "saas",
+      "--scope",
+      "@smoke",
+      "--tenant-model",
+      "single",
+      "--no-install",
+      "--no-git",
+    ],
+    runtimeTarget: "node",
+    matrixTargets: ["saas", "saas-node-postgres-contracts", "saas-single-tenant-contracts"],
+    validations: [
+      {
+        label: "install-immediate contract verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
+        args: ["contract:verify"],
+      },
+      {
+        label: "provider profile manifest",
+        readOnly: true,
+        recovery: "Regenerate the application from its create-croco-app preset",
+        args: ["profile:check"],
+        json: {
+          path: "croco-tenant-model.manifest.json",
+          matches: { currentModel: "single" },
+        },
+      },
+      runtimeCapabilityManifestValidation("saas-node"),
+      { label: "build", args: ["build"], paths: ["apps/api-server/dist/index.js"] },
+      { label: "typecheck", args: ["typecheck"] },
+      { label: "test", args: ["test"] },
+      { label: "contract:snapshot", args: ["contract:snapshot"] },
+      {
+        label: "codegen",
+        args: ["codegen"],
+        paths: ["croco.project-map.json", "openapi.json", "libs/shared/provider-rpc/src/saas.ts"],
+      },
+      {
+        label: "contract:verify",
+        readOnly: true,
+        recovery: "pnpm codegen",
+        args: ["contract:verify"],
+      },
+      { label: "demo:smoke", args: ["demo:smoke"] },
+    ],
+  },
+  {
     name: "saas-cloudflare-profile",
     args: [
       "--preset",
@@ -2292,14 +2342,16 @@ const smokeCases = selectableSmokeCases.filter(
 export function getGeneratedSmokeDependencyCaseInputs(): readonly {
   readonly name: string;
   readonly args: readonly string[];
+  readonly matrixTargets: readonly string[];
   readonly validations: readonly Pick<
     SmokeValidation,
     "args" | "label" | "packagePath" | "paths"
   >[];
 }[] {
-  return smokeCases.map(({ name, args, validations }) => ({
+  return smokeCases.map(({ name, args, matrixTargets, validations }) => ({
     name,
     args,
+    matrixTargets,
     validations: validations.map(({ args: validationArgs, label, packagePath, paths }) => ({
       args: validationArgs,
       label,
@@ -2315,7 +2367,12 @@ export function prepareGeneratedSmokeDependencyOverrides(
   rangeOverrides: Readonly<Record<string, string>>,
 ): void {
   if (
-    !["goal-saas-api", "production-app-starter", "admin-console-starter"].includes(smokeCaseName)
+    ![
+      "goal-saas-api",
+      "saas-single-tenant",
+      "production-app-starter",
+      "admin-console-starter",
+    ].includes(smokeCaseName)
   ) {
     rewriteExternalCrocoRanges(
       projectDir,

@@ -39444,6 +39444,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "WorkflowExecutionCancelledProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/WorkflowProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "WorkflowExecutionFailedProblem",
               "exportKind": "named",
               "source": "./libs/problems/WorkflowProblems",

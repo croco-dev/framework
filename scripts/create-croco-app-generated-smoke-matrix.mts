@@ -200,6 +200,7 @@ export const GENERATED_SMOKE_MATRIX_CASES = [
     },
   },
   { name: "saas-golden-path", tier: "spine-blocking" },
+  { name: "saas-single-tenant", tier: "spine-blocking" },
   {
     name: "saas-cloudflare-profile",
     tier: "ecosystem-advisory",

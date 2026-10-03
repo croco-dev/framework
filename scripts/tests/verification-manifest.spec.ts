@@ -42,6 +42,7 @@ import {
 } from "../core-coverage-runner.mts";
 import { readTestInventory } from "../test-inventory.mts";
 import { generate } from "../../packages/create-croco-app/src/generator.ts";
+import { renderHandlebars } from "../../packages/create-croco-app/src/helpers/fs.ts";
 import {
   normalizeNonInteractiveOptions,
   parseCliOptions,
@@ -325,7 +326,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("ccc2802e340c13e38f39069cd196b4d0bdec89fdd00f026cd466b532944de32c");
+    ).toBe("9f022424e712b76b4efad7477969d46fa46936a5cbc121d15a65636e05f646ab");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -440,7 +441,8 @@ describe("verification manifest", () => {
         generatedInventoryPaths,
       ).sort(),
     ).toEqual(generatedInventoryPaths);
-    expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toHaveLength(13);
+    expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toHaveLength(14);
+    expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toContain("saas-single-tenant");
 
     const packedCli = createVerificationManifest("publish").find(
       ({ id }) => id === "cli-packed-e2e",
@@ -1108,7 +1110,7 @@ describe("verification manifest", () => {
     ]);
     expect(
       selectGeneratedSmokeCasesForChangedFiles(["packages/auth-better-auth/src/index.ts"]),
-    ).toEqual(["goal-saas-api", "saas-golden-path", "ai-saas-golden-path"]);
+    ).toEqual(["goal-saas-api", "saas-golden-path", "saas-single-tenant", "ai-saas-golden-path"]);
   });
 
   it("selects dynamically injected tenant and UI dependencies", () => {
@@ -1125,15 +1127,83 @@ describe("verification manifest", () => {
 
   it("materializes every generated smoke case independently of dependency selection", async () => {
     const generatedRoot = mkdtempSync(join(tmpdir(), "croco-smoke-dependency-contract-"));
+    const smokeCases = getGeneratedSmokeDependencyCaseInputs();
+    const templatesRoot = join(ROOT_DIR, "packages/create-croco-app/templates");
+    const templateNames = readdirSync(templatesRoot, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory() && entry.name !== "addons")
+      .map(({ name }) => name)
+      .sort();
+    expect([...new Set(smokeCases.flatMap(({ matrixTargets }) => matrixTargets))].sort()).toEqual(
+      templateNames,
+    );
     try {
-      for (const smokeCase of getGeneratedSmokeDependencyCaseInputs()) {
+      for (const smokeCase of smokeCases) {
         const projectDir = join(generatedRoot, smokeCase.name);
         const cliOptions = parseCliOptions(
           projectDir,
           parseGeneratedSmokeRawOptions(smokeCase.args),
         );
-        await generate(projectDir, normalizeNonInteractiveOptions(cliOptions));
+        const options = normalizeNonInteractiveOptions(cliOptions);
+        await generate(projectDir, options);
         assertGeneratedSmokeCaseDependencyMapping(smokeCase.name, projectDir);
+        const expectedOverlays =
+          smokeCase.name === "goal-saas-api"
+            ? ["saas-node-postgres-contracts"]
+            : smokeCase.name === "saas-single-tenant"
+              ? ["saas-node-postgres-contracts", "saas-single-tenant-contracts"]
+              : [];
+        expect(
+          smokeCase.matrixTargets.filter(
+            (target) => target.startsWith("saas-") && target.endsWith("-contracts"),
+          ),
+          smokeCase.name,
+        ).toEqual(expectedOverlays);
+        if (expectedOverlays.length > 0) {
+          expect(options.preset).toBe("saas");
+          expect(options.saasProviderProfile).toBe("saas-node-postgres");
+          expect(options.tenantModel).toBe(
+            smokeCase.name === "saas-single-tenant" ? "single" : "org",
+          );
+          expect(
+            JSON.parse(readFileSync(join(projectDir, "croco-tenant-model.manifest.json"), "utf8"))
+              .currentModel,
+            smokeCase.name,
+          ).toBe(options.tenantModel);
+          for (const artifact of ["contract-graph.snapshot.json", "openapi.json"]) {
+            expect(
+              JSON.parse(readFileSync(join(projectDir, artifact), "utf8")),
+              smokeCase.name,
+            ).toEqual(
+              JSON.parse(
+                renderHandlebars(
+                  join(templatesRoot, "saas-node-postgres-contracts", `${artifact}.hbs`),
+                  {
+                    projectName: options.projectName,
+                  },
+                ),
+              ),
+            );
+          }
+          const projectMapOverlay =
+            smokeCase.name === "saas-single-tenant"
+              ? "saas-single-tenant-contracts"
+              : "saas-node-postgres-contracts";
+          const expectedProjectMap = JSON.parse(
+            renderHandlebars(join(templatesRoot, projectMapOverlay, "croco.project-map.json.hbs"), {
+              projectName: options.projectName,
+              scope: options.scope,
+            }),
+          );
+          const projectMap = JSON.parse(
+            readFileSync(join(projectDir, "croco.project-map.json"), "utf8"),
+          );
+          expect(projectMap.telemetry, smokeCase.name).toEqual(expectedProjectMap.telemetry);
+        }
+        if (smokeCase.name === "ai-saas-golden-path") {
+          expect(options.preset).toBe("ai-saas");
+          expect(options.tenantModel).toBe("single");
+          expect(existsSync(join(projectDir, "contract-graph.snapshot.json"))).toBe(false);
+        }
         const generatedEntries = readTestInventory().inventory.tests.filter(
           ({ lane }) => lane === "generated-app",
         );
