@@ -161,7 +161,11 @@ describe("ExperimentReview", () => {
     // Control exposed values: 20/80 = 0.25; treatment exposed values: 30/60 = 0.5.
     expect(review.conditional.control?.estimate).toBeCloseTo(0.25, 10);
     expect(review.conditional.treatment?.estimate).toBeCloseTo(0.5, 10);
-    expect(review.primary.control?.estimate).toBeCloseTo(0.25, 10);
+    // Complete binary coverage imputes the 20/40 missing rows as 0 over the
+    // randomized denominator: control 20/100 = 0.2, treatment 30/100 = 0.3.
+    expect(review.primary.control?.estimate).toBeCloseTo(0.2, 10);
+    expect(review.primary.treatment?.estimate).toBeCloseTo(0.3, 10);
+    expect(review.primary.control?.funnel.outcomeObserved).toBe(80);
   });
 
   it("rejects a post-treatment slice attribute", () => {
@@ -178,7 +182,7 @@ describe("ExperimentReview", () => {
     const cell = review.slices?.cells["treatment::free"];
     expect(cell?.assigned).toBe(100);
     expect(cell?.n).toBe(100);
-    expect(cell?.estimate).toBeCloseTo(0.5, 10);
+    expect(cell?.estimate).toBeCloseTo(0.3, 10);
   });
 
   it("returns smd 0 with a distinguishing reason when the pooled SD is 0", () => {
@@ -301,7 +305,7 @@ describe("ExperimentReview", () => {
     });
     const method = withProvider.quality.find((check) => check.kind === "method");
     expect(method?.result).toBe("not_assessed");
-    expect(withProvider.primary.control?.method).toBe("provider-cuped");
+    expect(withProvider.primary.control?.method).toBe("local-binary-rate");
 
     const withError = summarizeExperiment({ ...dataset, providerError: "PROVIDER_TIMEOUT" });
     expect(withError.provider?.error).toBe("PROVIDER_TIMEOUT");

@@ -8,7 +8,6 @@
     "skipLibCheck": true,
     "noEmit": true,
     "types": ["node"],
-    "noEmit": true,
     "paths": {
       "@croco/admin-core": ["../../packages/admin-core/src/index.ts"],
       "@croco/etl-core/source": ["../../packages/etl-core/src/source.ts"],

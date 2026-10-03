@@ -258,21 +258,20 @@ export function createExperimentReviewTenantRequiredState(input: {
 
 function toProblemContract(caught: unknown, fallbackCode: string): AdminProblemContract {
   if (caught instanceof Problem) {
+    // Validation messages may embed raw unit/variant ids (failInput detail).
+    // PII permission is not checked on this path, so never surface them to clients.
     return {
       code: caught.code,
       status: 422,
       title: "Experiment review unavailable",
-      detail: caught.detail ?? caught.message,
-      metadata: { cause: caught },
+      detail: "The experiment review input failed validation.",
     };
   }
   return {
     code: fallbackCode,
     status: 422,
     title: "Experiment review unavailable",
-    detail:
-      caught instanceof Error ? caught.message : "The experiment review input failed validation.",
-    metadata: { cause: caught },
+    detail: "The experiment review input failed validation.",
   };
 }
 
@@ -330,7 +329,6 @@ export async function loadExperimentReviewConsole(input: {
         title: "Experiment review unavailable",
         detail: "The experiment review source failed. Inspect server-side provider evidence.",
         retryable: true,
-        metadata: { cause: caught },
       },
     };
   }
@@ -343,15 +341,20 @@ export async function loadExperimentReviewConsole(input: {
     };
   }
   if (result.kind === "problem") {
+    let partial: ExperimentReviewReadyState | undefined;
+    if (result.partial !== undefined) {
+      try {
+        partial = summarizeIntoReadyState(result.partial, input, undefined);
+      } catch {
+        partial = undefined;
+      }
+    }
     return {
       kind: "problem",
       appId: input.appId,
       environment: input.environment,
       problem: result.problem,
-      partial:
-        result.partial === undefined
-          ? undefined
-          : summarizeIntoReadyState(result.partial, input, undefined),
+      partial,
     };
   }
   try {

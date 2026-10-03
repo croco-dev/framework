@@ -304,6 +304,11 @@ async function main(): Promise<void> {
     grantedPermissions: [EXPERIMENT_REVIEW_READ_PERMISSION],
   });
   assert.equal(consoleState.kind, "ready");
+  if (consoleState.kind !== "ready") throw new Error("Expected a ready console state");
+  for (const variant of consoleState.snapshot.variants) {
+    assert.equal(variant.n, direct.primary[variant.variantId]?.n);
+    assert.equal(variant.estimate, direct.primary[variant.variantId]?.estimate);
+  }
   assert.equal(direct.primary["control"]?.n, 2);
   assert.equal(direct.primary["treatment"]?.n, 2);
   assert.equal(direct.primary["control"]?.estimate, 0.5);

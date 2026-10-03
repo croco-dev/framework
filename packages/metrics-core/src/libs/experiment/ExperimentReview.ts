@@ -536,11 +536,18 @@ function resolveOutcome(
   availability: "complete" | "partial",
   outcomeKind: ExperimentOutcomeKind,
 ): UsableOutcome {
-  if (outcome === undefined || !outcome.complete)
+  if (outcome === undefined) {
+    // Missing outcome rows: with complete coverage and a binary outcome, the absent
+    // event counts toward the randomized denominator as zero. All other cases
+    // (incomplete rows, partial coverage, mean outcomes) stay excluded.
+    if (availability === "complete" && outcomeKind === "binary") {
+      return { included: true, value: 0, imputed: true };
+    }
     return { included: false, value: 0, imputed: false };
+  }
+  if (!outcome.complete) return { included: false, value: 0, imputed: false };
   if (outcome.value !== null) return { included: true, value: outcome.value, imputed: false };
-  // Null/incomplete/partial semantics: only complete coverage permits interpreting an
-  // absent binary outcome as zero. Mean outcomes and partial coverage never zero-impute.
+  // Null rows with complete binary coverage count as zero; otherwise excluded.
   if (availability === "complete" && outcomeKind === "binary") {
     return { included: true, value: 0, imputed: true };
   }
@@ -579,7 +586,7 @@ export function summarizeExperiment(input: ExperimentReviewInput): ExperimentRev
   const { plan } = input;
   const isCluster = plan.randomizationUnit === "cluster";
   const localMethod = plan.outcomeKind === "binary" ? "local-binary-rate" : "local-per-unit-mean";
-  const aggregateMethod = plan.method ?? localMethod;
+  const aggregateMethod = localMethod;
   const sliceAttribute = input.sliceAttribute;
   if (sliceAttribute !== undefined) {
     if (!sliceAttribute.trim()) failInput("sliceAttribute must be nonempty when provided");
@@ -598,11 +605,14 @@ export function summarizeExperiment(input: ExperimentReviewInput): ExperimentRev
   const primary: Record<string, ExperimentVariantAggregate> = {};
   const conditional: Record<string, ExperimentConditionalAggregate> = {};
   const actualCounts: Record<string, number> = {};
+  const coverageEnd = Math.min(
+    Date.parse(input.completeThrough),
+    input.factsAvailableThrough === undefined
+      ? Number.POSITIVE_INFINITY
+      : Date.parse(input.factsAvailableThrough),
+  );
   const availability: ExperimentVariantAggregate["availability"] =
-    input.factsAvailableThrough !== undefined &&
-    Date.parse(input.factsAvailableThrough) < Date.parse(plan.observedWindow.to)
-      ? "partial"
-      : "complete";
+    coverageEnd < Date.parse(plan.observedWindow.to) ? "partial" : "complete";
   let totalImputed = 0;
 
   for (const variant of plan.variants) {
@@ -619,9 +629,10 @@ export function summarizeExperiment(input: ExperimentReviewInput): ExperimentRev
       const isExposed = exposure?.exposed === true;
       if (isExposed) exposed += 1;
       if (exposure?.actionObserved === true) actioned += 1;
-      const usable = resolveOutcome(outcomeByUnit.get(row.unitId), availability, plan.outcomeKind);
+      const outcome = outcomeByUnit.get(row.unitId);
+      const usable = resolveOutcome(outcome, availability, plan.outcomeKind);
       if (usable.included) {
-        observed += 1;
+        if (outcome !== undefined) observed += 1;
         numerator += usable.value;
         denominator += 1;
         if (usable.imputed) totalImputed += 1;
@@ -775,7 +786,7 @@ export function summarizeExperiment(input: ExperimentReviewInput): ExperimentRev
       evidence:
         availability === "complete"
           ? plan.outcomeKind === "binary"
-            ? `Observation coverage is complete through the planned window; ${totalImputed} complete binary null(s) imputed as 0`
+            ? `Observation coverage is complete through the planned window; ${totalImputed} complete binary missing/null outcome(s) imputed as 0`
             : "Observation coverage is complete through the planned window; mean-outcome nulls stay distinct from zero"
           : "Observation coverage is partial; null and incomplete outcomes stay distinct from zero",
       limitations: "Only complete coverage permits interpreting absent outcomes as zero",
