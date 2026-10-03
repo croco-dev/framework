@@ -875,8 +875,13 @@ function zodTypeToTypeScript(schema: unknown, mode: "input" | "output" = "output
   }
 
   if (schemaName === "ZodArray") {
-    const elementType = zodTypeToTypeScript(getArrayElementSchema(schema), mode);
-    return `${mode === "input" && elementType.includes(" | ") ? `(${elementType})` : elementType}[]`;
+    const elementSchema = getArrayElementSchema(schema);
+    const elementType = zodTypeToTypeScript(elementSchema, mode);
+    const needsParentheses =
+      mode === "input" &&
+      elementType.includes(" | ") &&
+      elementType !== zodTypeToTypeScript(elementSchema, "output");
+    return `${needsParentheses ? `(${elementType})` : elementType}[]`;
   }
 
   if (schemaName === "ZodRecord") {
