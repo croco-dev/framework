@@ -32,7 +32,7 @@ export function configureCreateCrocoAppProgram(program: Command): Command {
       "--tenant-model <model>",
       "SaaS tenant model (single|org|workspace|shared-schema|rls-backed)",
     )
-    .option("--api <api>", "API type (graphql|trpc)")
+    .option("--api <api>", "API type (graphql|trpc). Only supported with ddd-api and ddd-fullstack")
     .option("--api-hosting <hosting>", "API hosting (standalone|nextjs)")
     .option("--web-apps <apps>", "Comma-separated web app names")
     .option("--backend-deploy <deploy>", "Backend deploy (docker|lambda)")

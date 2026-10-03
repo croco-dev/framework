@@ -141,6 +141,29 @@ describe("GeneratorOptions", () => {
     expectTypeOf(saasGoalWithMismatchedTenant).toMatchTypeOf<GeneratorOptions>();
   });
 
+  it("forbids API protocols on the resolved Worker fullstack branch", () => {
+    type WorkerOptions = Extract<GeneratorOptions, { preset: "ddd-vike-fullstack" }>;
+
+    expectTypeOf<WorkerOptions["api"]>().toEqualTypeOf<undefined>();
+
+    const workerWithApi: GeneratorOptions = {
+      projectName: "worker-app",
+      scope: "@test",
+      preset: "ddd-vike-fullstack",
+      // @ts-expect-error Worker fullstack generates its own API and rejects configurable protocols.
+      api: "graphql",
+      webApps: [],
+      apiHosting: "standalone",
+      frontendDeploy: "cloudflare-meta-vite",
+      db: [],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    };
+
+    expectTypeOf(workerWithApi).toMatchTypeOf<GeneratorOptions>();
+  });
+
   it("keeps malformed normalized input available to runtime validation", () => {
     const normalizedInput: NormalizedGeneratorOptions = {
       preset: "ddd-api",
