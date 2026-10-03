@@ -11,6 +11,7 @@ import {
   assertUiCompatibility,
   assertUiPresetCompatibility,
   assertValidWebAppNames,
+  validateCliOptions,
   validateResolvedOptions,
 } from "./options.js";
 import {
@@ -308,16 +309,22 @@ export async function runPrompts(cliArgs: NormalizedGeneratorOptions): Promise<G
     assertValidWebAppNames(webApps);
   }
 
+  if (preset === "ddd-vike-fullstack" && cliArgs.api !== undefined) {
+    validateCliOptions({ ...cliArgs, preset });
+  }
+
   // 5. api type
   const api =
-    cliArgs.api ??
-    (await p.select({
-      message: "Select API type:",
-      options: [
-        { value: "graphql", label: "GraphQL", hint: "type-graphql + Apollo Server" },
-        { value: "trpc", label: "tRPC", hint: "Type-safe RPC" },
-      ],
-    }));
+    preset === "ddd-vike-fullstack"
+      ? undefined
+      : (cliArgs.api ??
+        (await p.select({
+          message: "Select API type:",
+          options: [
+            { value: "graphql", label: "GraphQL", hint: "type-graphql + Apollo Server" },
+            { value: "trpc", label: "tRPC", hint: "Type-safe RPC" },
+          ],
+        })));
   if (p.isCancel(api)) {
     p.cancel("Operation cancelled");
     process.exit(0);
