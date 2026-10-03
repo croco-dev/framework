@@ -141,6 +141,7 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
     string,
     { count: number; windowStart: number; windowMs: number }
   >();
+  private readonly counters = new Map<string, number>();
   private readonly globalStats = { allowed: 0, denied: 0, total: 0 };
   private readonly cancelPruning?: () => void;
 
@@ -204,6 +205,7 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
     key: string,
     entry: { count: number; windowStart: number; windowMs: number },
   ): Promise<void> {
+    this.counters.delete(key);
     this.windows.set(key, entry);
   }
 
@@ -213,15 +215,18 @@ export class FixedWindowInMemoryStore extends FixedWindowStore {
       entry.count += amount;
       return entry.count;
     }
-    return amount;
+    const count = (this.counters.get(key) ?? 0) + amount;
+    this.counters.set(key, count);
+    return count;
   }
 
   async getCount(key: string): Promise<number> {
-    return this.windows.get(key)?.count ?? 0;
+    return this.windows.get(key)?.count ?? this.counters.get(key) ?? 0;
   }
 
   async reset(key: string): Promise<void> {
     this.windows.delete(key);
+    this.counters.delete(key);
     this.clearFixedWindowRefundReceipts(key);
   }
 

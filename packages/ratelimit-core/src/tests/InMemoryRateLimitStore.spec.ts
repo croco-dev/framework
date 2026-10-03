@@ -184,6 +184,93 @@ describe("InMemoryRateLimitStore", () => {
     vi.useRealTimers();
   });
 
+  describe("FixedWindowInMemoryStore counters", () => {
+    let fixedStore!: FixedWindowInMemoryStore;
+    let now: number;
+    const fixedPolicy: FixedWindowPolicy = {
+      name: "fixed-counter",
+      algorithm: "fixed",
+      limit: 10,
+      windowMs: 1000,
+    };
+
+    beforeEach(() => {
+      now = 0;
+      fixedStore = new FixedWindowInMemoryStore({ now: () => now, pruneIntervalMs: 0 });
+    });
+
+    afterEach(() => {
+      fixedStore.close();
+    });
+
+    it.each([5, 0, 1.5, -2])("should persist a new key's increment of %s", async (amount) => {
+      expect(await fixedStore.getCount("user:counter")).toBe(0);
+      expect(await fixedStore.increment("user:counter", amount)).toBe(amount);
+      expect(await fixedStore.getCount("user:counter")).toBe(amount);
+      expect(await fixedStore.increment("user:counter")).toBe(amount + 1);
+      expect(await fixedStore.getCount("user:counter")).toBe(amount + 1);
+      expect(await fixedStore.getCount("user:other")).toBe(0);
+      expect(await fixedStore.getStats()).toEqual({ allowed: 0, denied: 0, total: 0 });
+    });
+
+    it("should reset only the requested counter and start its next increment from zero", async () => {
+      await fixedStore.increment("", 5);
+      await fixedStore.increment("user:other", 2);
+
+      await fixedStore.reset("");
+
+      expect(await fixedStore.getCount("")).toBe(0);
+      expect(await fixedStore.getCount("user:other")).toBe(2);
+      expect(await fixedStore.increment("")).toBe(1);
+    });
+
+    it("should accumulate concurrent standalone increments without losing updates", async () => {
+      const counts = await Promise.all(
+        Array.from({ length: 20 }, () => fixedStore.increment("user:counter")),
+      );
+
+      expect(counts).toEqual(Array.from({ length: 20 }, (_, index) => index + 1));
+      expect(await fixedStore.getCount("user:counter")).toBe(20);
+    });
+
+    it("should continue incrementing and resetting existing policy windows", async () => {
+      await fixedStore.check("user:window", fixedPolicy);
+
+      expect(await fixedStore.increment("user:window", 5)).toBe(6);
+      expect(await fixedStore.getCount("user:window")).toBe(6);
+      expect((await fixedStore.check("user:window", fixedPolicy)).remaining).toBe(3);
+
+      await fixedStore.reset("user:window");
+
+      expect(await fixedStore.getCount("user:window")).toBe(0);
+      expect(await fixedStore.increment("user:window", 2)).toBe(2);
+      expect(await fixedStore.getCount("user:window")).toBe(2);
+    });
+
+    it("should keep standalone counters when pruning unrelated policy windows", async () => {
+      await fixedStore.increment("user:counter", 5);
+      await fixedStore.check("user:window", fixedPolicy);
+      now = 1001;
+
+      expect(await fixedStore.pruneExpired()).toBe(1);
+      expect(await fixedStore.getCount("user:counter")).toBe(5);
+      expect(await fixedStore.getCount("user:window")).toBe(0);
+    });
+
+    it("should replace a standalone counter with a policy window without restoring it after pruning", async () => {
+      await fixedStore.increment("user:counter", 5);
+
+      expect((await fixedStore.check("user:counter", fixedPolicy)).remaining).toBe(9);
+      expect(await fixedStore.increment("user:counter", 2)).toBe(3);
+      expect(await fixedStore.getCount("user:counter")).toBe(3);
+      now = 1001;
+
+      expect(await fixedStore.pruneExpired()).toBe(1);
+      expect(await fixedStore.getCount("user:counter")).toBe(0);
+      expect(await fixedStore.increment("user:counter")).toBe(1);
+    });
+  });
+
   it("should automatically prune expired fixed window entries", async () => {
     vi.useFakeTimers();
     const fixedPolicy: FixedWindowPolicy = {
