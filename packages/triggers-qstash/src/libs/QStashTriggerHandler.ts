@@ -26,6 +26,7 @@ const EXECUTION_RETRY_PENDING_ERROR_CODE = "triggers-qstash/execution-retry-pend
 const INVALID_PAYLOAD_ERROR_CODE = "triggers-qstash/invalid-payload";
 const INVALID_SIGNATURE_ERROR_CODE = "triggers-qstash/invalid-signature";
 const INVALID_DELIVERY_IDENTITY_ERROR_CODE = "triggers-qstash/invalid-delivery-identity";
+const TRIGGER_DISABLED_ERROR_CODE = "triggers-qstash/trigger-disabled";
 const MISSING_DELIVERY_IDENTITY_ERROR_CODE = "triggers-qstash/missing-delivery-identity";
 const METHOD_NOT_FOUND_ERROR_CODE = "triggers-qstash/method-not-found";
 const SERVICE_RESOLUTION_ERROR_CODE = "triggers-qstash/service-resolution-failed";
@@ -373,6 +374,11 @@ export class QStashTriggerHandler {
 
     // Resolve target instance and execute
     try {
+      const disabledResult = this.rejectDisabledTrigger(payload);
+      if (disabledResult) {
+        return disabledResult;
+      }
+
       const result = await this.dispatchExecution(payload, messageId);
       return result;
     } catch (error) {
@@ -437,6 +443,88 @@ export class QStashTriggerHandler {
     if (!payload.cronExpression) {
       return "Missing cronExpression";
     }
+    return undefined;
+  }
+
+  /**
+   * Reject deliveries for triggers that are currently disabled.
+   *
+   * A schedule created before the trigger was disabled can still deliver, so
+   * the registry state is authoritative when it identifies the trigger and the
+   * payload carries an explicit disabled flag otherwise.
+   */
+  private rejectDisabledTrigger(payload: QStashWebhookPayload): HandleResult | undefined {
+    if (payload.options?.enabled === false && !this.findMatchingCronTrigger(payload)) {
+      return {
+        success: false,
+        statusCode: 410,
+        body: createErrorResponse(
+          "Trigger is disabled",
+          TRIGGER_DISABLED_ERROR_CODE,
+          ProblemCategory.Gone,
+        ),
+      };
+    }
+
+    const matched = this.findMatchingCronTrigger(payload);
+    if (matched?.options?.enabled === false) {
+      return {
+        success: false,
+        statusCode: 410,
+        body: createErrorResponse(
+          "Trigger is disabled",
+          TRIGGER_DISABLED_ERROR_CODE,
+          ProblemCategory.Gone,
+        ),
+      };
+    }
+
+    return undefined;
+  }
+
+  private findMatchingCronTrigger(
+    payload: QStashWebhookPayload,
+  ): { readonly options?: { readonly enabled?: boolean } } | undefined {
+    const allTriggers = triggerRegistry.getAllTriggers();
+    const matches: Array<{ readonly options?: { readonly enabled?: boolean } }> = [];
+
+    for (const [target, triggers] of allTriggers.entries()) {
+      const targetClass = this.getTargetClass(target);
+      if (!targetClass) {
+        continue;
+      }
+
+      if (payload.className !== undefined && payload.className !== targetClass.name) {
+        continue;
+      }
+
+      for (const trigger of triggers.values()) {
+        if (
+          trigger.type !== "cron" ||
+          String(trigger.methodName) !== payload.methodName ||
+          (payload.triggerName !== undefined &&
+            payload.triggerName !== (trigger.options?.name ?? String(trigger.methodName)))
+        ) {
+          continue;
+        }
+
+        if (
+          this.matchesScheduleId(
+            payload.scheduleId,
+            targetClass.name,
+            trigger.options?.name,
+            payload.methodName,
+          )
+        ) {
+          matches.push(trigger);
+        }
+      }
+    }
+
+    if (matches.length === 1) {
+      return matches[0];
+    }
+
     return undefined;
   }
 

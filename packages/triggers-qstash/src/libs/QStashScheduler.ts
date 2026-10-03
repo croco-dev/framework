@@ -179,7 +179,8 @@ export class QStashScheduler {
     assertScheduleSyncMode(options.mode);
     const mode = options.mode ?? this.mode;
     const cronTriggers = this.getAllCronTriggers();
-    const scheduleMap = this.buildScheduleMap(cronTriggers);
+    const { disabledScheduleIds, enabledScheduleMap } = this.partitionTriggers(cronTriggers);
+    const scheduleMap = enabledScheduleMap;
 
     // Get existing schedules from QStash
     const discovery = await this.listQStashSchedules();
@@ -233,9 +234,37 @@ export class QStashScheduler {
       }
     }
 
-    // Delete schedules that are no longer in code
+    // Delete schedules that are no longer in code or belong to disabled triggers
     for (const [scheduleId, existing] of discovery.canonical.entries()) {
       if (!scheduleMap.has(scheduleId)) {
+        if (disabledScheduleIds.has(scheduleId)) {
+          if (!discovery.ownedIds.has(scheduleId)) {
+            result.details.push(
+              createPreservedScheduleDetail(
+                scheduleId,
+                existing,
+                "Schedule ownership marker is missing or does not match this scheduler; migrate it before cleanup.",
+              ),
+            );
+            result.skipped++;
+            continue;
+          }
+
+          const detail = await this.syncDisabledSchedule(scheduleId, existing, mode);
+          result.details.push(detail);
+
+          if (detail.action === "deleted") {
+            result.deleted++;
+            continue;
+          }
+
+          if (detail.action === "skipped") {
+            result.skipped++;
+          } else {
+            result.failed++;
+          }
+          continue;
+        }
         if (!discovery.ownedIds.has(scheduleId)) {
           result.details.push(
             createPreservedScheduleDetail(
@@ -269,6 +298,9 @@ export class QStashScheduler {
 
   /**
    * Get all cron triggers from the trigger registry.
+   *
+   * Disabled triggers (`options.enabled === false`) are included so sync can
+   * delete their pre-existing remote schedules instead of leaving them running.
    */
   private getAllCronTriggers(): CronTriggerMetadata[] {
     const allTriggers = triggerRegistry.getAllTriggers();
@@ -290,6 +322,28 @@ export class QStashScheduler {
    *
    * Schedule ID format: {prefix}:{className}:{methodName}
    */
+  private partitionTriggers(triggers: CronTriggerMetadata[]): {
+    readonly disabledScheduleIds: Set<string>;
+    readonly enabledScheduleMap: Map<string, CronTriggerMetadata>;
+  } {
+    const disabledScheduleIds = new Set<string>();
+    const enabledTriggers: CronTriggerMetadata[] = [];
+
+    for (const trigger of triggers) {
+      if (trigger.options?.enabled === false) {
+        disabledScheduleIds.add(this.generateScheduleId(trigger));
+        continue;
+      }
+
+      enabledTriggers.push(trigger);
+    }
+
+    return {
+      disabledScheduleIds,
+      enabledScheduleMap: this.buildScheduleMap(enabledTriggers),
+    };
+  }
+
   private buildScheduleMap(triggers: CronTriggerMetadata[]): Map<string, CronTriggerMetadata> {
     const map = new Map<string, CronTriggerMetadata>();
 
@@ -371,6 +425,7 @@ export class QStashScheduler {
   ): Promise<ScheduleSyncDetail> {
     const methodName = String(metadata.methodName);
     const triggerName = this.getTriggerIdentifier(metadata);
+    const effectiveCron = toEffectiveCron(metadata);
     const baseDetail: ScheduleSyncDetail = {
       name: scheduleId,
       action: "skipped",
@@ -392,7 +447,7 @@ export class QStashScheduler {
 
         await this.client.schedules.create({
           scheduleId,
-          cron: metadata.expression,
+          cron: effectiveCron,
           destination: this.webhookUrl,
           method: "POST" as const,
           label: this.ownershipMarker,
@@ -406,14 +461,14 @@ export class QStashScheduler {
         return { ...baseDetail, action: "created", applied: true };
       }
 
-      if (existing.cron !== metadata.expression) {
+      if (existing.cron !== effectiveCron) {
         if (mode === "dry-run") {
           return { ...baseDetail, action: "updated" };
         }
 
         await this.client.schedules.create({
           scheduleId,
-          cron: metadata.expression,
+          cron: effectiveCron,
           destination: this.webhookUrl,
           method: "POST" as const,
           label: this.ownershipMarker,
@@ -428,6 +483,38 @@ export class QStashScheduler {
       }
 
       return baseDetail;
+    } catch (error) {
+      return { ...baseDetail, action: "failed", ...createScheduleFailureDetail(error) };
+    }
+  }
+
+  /**
+   * Delete the remote schedule of a trigger that is now disabled.
+   *
+   * A disabled trigger must stop firing even when its schedule was created
+   * before the trigger was disabled, so cleanup applies in every mode that
+   * mutates QStash state (including plain `apply`).
+   */
+  private async syncDisabledSchedule(
+    scheduleId: string,
+    existing: ExistingSchedule,
+    mode: ScheduleSyncMode = "apply",
+  ): Promise<ScheduleSyncDetail> {
+    const baseDetail: ScheduleSyncDetail = {
+      name: scheduleId,
+      action: "deleted",
+      applied: false,
+      expression: "",
+      currentExpression: existing.cron,
+      target: "unknown",
+      method: "unknown",
+    };
+
+    try {
+      if (mode === "dry-run") return baseDetail;
+
+      await this.client.schedules.delete(scheduleId);
+      return { ...baseDetail, applied: true };
     } catch (error) {
       return { ...baseDetail, action: "failed", ...createScheduleFailureDetail(error) };
     }
@@ -541,6 +628,25 @@ function assertScheduleSyncMode(mode: ScheduleSyncMode | undefined): void {
 function isCanonicalScheduleId(scheduleId: string, namespace: string): boolean {
   const components = scheduleId.slice(namespace.length).split(SCHEDULE_NAMESPACE_DELIMITER);
   return components.length >= 3 && components.every((component) => component.length > 0);
+}
+
+/**
+ * QStash honors an IANA timezone only through the `CRON_TZ=` cron prefix.
+ * An explicit prefix in the expression wins; otherwise the trigger timezone
+ * is combined with the declared expression.
+ */
+function toEffectiveCron(metadata: CronTriggerMetadata): string {
+  const expression = metadata.expression.trim();
+  if (expression.toUpperCase().startsWith("CRON_TZ=")) {
+    return expression;
+  }
+
+  const timezone = metadata.options?.timezone?.trim();
+  if (!timezone) {
+    return metadata.expression;
+  }
+
+  return `CRON_TZ=${timezone} ${metadata.expression}`;
 }
 
 function scheduleHasOwnershipMarker(schedule: Schedule, expectedMarker: string): boolean {
