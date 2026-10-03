@@ -6,7 +6,11 @@ import {
   TxManager,
 } from "@croco/tx-core";
 import type { InMemoryTransactionalEventStoreClient } from "../index";
-import { InMemoryTransactionalEventStore } from "../index";
+import {
+  InMemoryTransactionalEventStore,
+  OutboxMessageIdConflictProblem,
+  OutboxStorageProblem,
+} from "../index";
 
 const NOW = new Date("2026-01-01T00:00:00.000Z");
 const CLAIM = { limit: 10, now: NOW, visibilityTimeoutMs: 1_000 };
@@ -114,10 +118,11 @@ function reserve(
   store: InMemoryTransactionalEventStore,
   key: string,
   client?: InMemoryTransactionalEventStoreClient,
+  id = key,
 ) {
   return store.appendOutbox(
     {
-      id: key,
+      id,
       eventId: key,
       eventType: "account.changed",
       idempotencyKey: key,
@@ -392,6 +397,198 @@ describe("InMemoryTransactionalEventStore reservation cancellation", () => {
     }
     await within(reserve(store, "discarded"));
     await expect(store.listOutboxMessages()).resolves.toHaveLength(4);
+  });
+
+  it.each([false, true])(
+    "preserves a holder commit after savepoint replay rolls back (root retry: %s)",
+    async (retry) => {
+      const store = new InMemoryTransactionalEventStore();
+      const adapter = store.createTxAdapter();
+      const holder = await holdReservation(store, "held");
+      const own = new AbortController();
+      const waiting = deferred();
+      const reason = new Error("Cancel after replay");
+      const transaction = adapter.transaction(async (client) => {
+        await reserve(store, "outer", client);
+        const nested = adapter.savepoint(
+          client,
+          async (nestedClient) => {
+            const pending = reserve(store, "held", nestedClient);
+            waiting.resolve();
+            await expect(pending).resolves.toMatchObject({ id: "held" });
+            own.abort(reason);
+          },
+          undefined,
+          own.signal,
+        );
+        await expect(nested).rejects.toMatchObject({ cause: reason });
+        if (retry) {
+          await expect(reserve(store, "held", client, "root-retry")).resolves.toMatchObject({
+            id: "held",
+          });
+        }
+      });
+      try {
+        await within(waiting.promise);
+        holder.release();
+        await within(transaction);
+        expect((await store.listOutboxMessages()).map(({ id }) => id).sort()).toEqual([
+          "held",
+          "outer",
+        ]);
+      } finally {
+        holder.release();
+        await Promise.allSettled([holder.transaction, transaction]);
+      }
+    },
+  );
+
+  it.each([false, true])(
+    "preserves adoption through cancelled ancestor savepoints (inner cancelled: %s)",
+    async (cancelInner) => {
+      const store = new InMemoryTransactionalEventStore();
+      const adapter = store.createTxAdapter();
+      const holder = await holdReservation(store, "held");
+      const middleAbort = new AbortController();
+      const innerAbort = new AbortController();
+      const waiting = deferred();
+      const transaction = adapter.transaction(async (root) => {
+        await reserve(store, "outer", root);
+        const middle = adapter.savepoint(
+          root,
+          async (middleClient) => {
+            await reserve(store, "middle", middleClient);
+            const inner = adapter.savepoint(
+              middleClient,
+              async (innerClient) => {
+                await reserve(store, "inner", innerClient);
+                const pending = reserve(store, "held", innerClient);
+                waiting.resolve();
+                await pending;
+                if (cancelInner) innerAbort.abort(new Error("Cancel inner"));
+              },
+              undefined,
+              innerAbort.signal,
+            );
+            if (cancelInner) {
+              await expect(inner).rejects.toBeInstanceOf(TransactionRollbackConfirmedProblem);
+            } else {
+              await inner;
+            }
+            middleAbort.abort(new Error("Cancel middle"));
+          },
+          undefined,
+          middleAbort.signal,
+        );
+        await expect(middle).rejects.toBeInstanceOf(TransactionRollbackConfirmedProblem);
+      });
+      try {
+        await within(waiting.promise);
+        holder.release();
+        await within(transaction);
+        expect((await store.listOutboxMessages()).map(({ id }) => id).sort()).toEqual([
+          "held",
+          "outer",
+        ]);
+      } finally {
+        holder.release();
+        await Promise.allSettled([holder.transaction, transaction]);
+      }
+    },
+  );
+
+  it("preserves an ancestor's staged publication when a savepoint replays an existing row", async () => {
+    const store = new InMemoryTransactionalEventStore();
+    const adapter = store.createTxAdapter();
+    await reserve(store, "held");
+    await within(
+      adapter.transaction(async (client) => {
+        await expect(store.claimOutboxBatch(CLAIM, { client })).resolves.toMatchObject([
+          { id: "held", attempts: 1 },
+        ]);
+        await store.markOutboxPublished({ id: "held", expectedAttempts: 1, now: NOW }, { client });
+        await adapter.savepoint(client, async (nestedClient) => {
+          await expect(reserve(store, "held", nestedClient)).resolves.toMatchObject({
+            id: "held",
+            status: "published",
+          });
+        });
+        await expect(store.findOutboxById("held", { client })).resolves.toMatchObject({
+          status: "published",
+        });
+      }),
+    );
+    await expect(store.findOutboxById("held")).resolves.toMatchObject({
+      status: "published",
+      attempts: 1,
+    });
+  });
+
+  it("rejects an ancestor row-id collision without partially adopting the holder's row", async () => {
+    const store = new InMemoryTransactionalEventStore();
+    const adapter = store.createTxAdapter();
+    const holder = await holdReservation(store, "held");
+    const waiting = deferred();
+    const transaction = adapter.transaction(async (client) => {
+      await reserve(store, "local", client, "held");
+      const nested = adapter.savepoint(client, async (nestedClient) => {
+        const pending = reserve(store, "held", nestedClient);
+        waiting.resolve();
+        await expect(pending).rejects.toBeInstanceOf(OutboxMessageIdConflictProblem);
+        await expect(
+          store.findOutboxByIdempotencyKey("held", { client: nestedClient }),
+        ).resolves.toBeNull();
+        await expect(store.findOutboxById("held", { client: nestedClient })).resolves.toMatchObject(
+          { idempotencyKey: "local" },
+        );
+      });
+      await nested;
+      await expect(store.findOutboxByIdempotencyKey("held", { client })).resolves.toBeNull();
+      await expect(store.findOutboxById("held", { client })).resolves.toMatchObject({
+        idempotencyKey: "local",
+      });
+    });
+    const outcome = transaction.catch((error: unknown) => error);
+    try {
+      await within(waiting.promise);
+      holder.release();
+      expect(await within(outcome)).toBeInstanceOf(OutboxMessageIdConflictProblem);
+      await expect(store.listOutboxMessages()).resolves.toMatchObject([
+        { id: "held", idempotencyKey: "held" },
+      ]);
+      await expect(store.findOutboxByIdempotencyKey("local")).resolves.toBeNull();
+    } finally {
+      holder.release();
+      await Promise.allSettled([holder.transaction, transaction]);
+    }
+  });
+
+  it("rejects competing updates during replay without clobbering staged state or its baseline", async () => {
+    const store = new InMemoryTransactionalEventStore();
+    const adapter = store.createTxAdapter();
+    await reserve(store, "held");
+    const transaction = adapter.transaction(async (client) => {
+      await store.claimOutboxBatch(CLAIM, { client });
+      await store.markOutboxPublished({ id: "held", expectedAttempts: 1, now: NOW }, { client });
+      await expect(store.claimOutboxBatch(CLAIM)).resolves.toMatchObject([
+        { id: "held", status: "publishing" },
+      ]);
+      await adapter.savepoint(client, async (nestedClient) => {
+        await expect(reserve(store, "held", nestedClient)).rejects.toBeInstanceOf(
+          OutboxStorageProblem,
+        );
+        await expect(store.findOutboxById("held", { client: nestedClient })).resolves.toMatchObject(
+          { status: "published" },
+        );
+      });
+      await expect(store.findOutboxById("held", { client })).resolves.toMatchObject({
+        status: "published",
+      });
+    });
+    await expect(within(transaction)).rejects.toBeInstanceOf(OutboxStorageProblem);
+    await expect(store.listOutboxMessages()).resolves.toMatchObject([
+      { id: "held", status: "publishing", attempts: 1 },
+    ]);
   });
 
   it("does not stage a waiting append when cancellation races the holder release", async () => {

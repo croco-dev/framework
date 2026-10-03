@@ -203,6 +203,10 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     InMemoryTransactionalEventStoreClient,
     AbortSignal
   >();
+  private readonly savepointParentByClient = new WeakMap<
+    InMemoryTransactionalEventStoreClient,
+    InMemoryTransactionalEventStoreClient
+  >();
   private readonly transactionOwnerContext =
     new AsyncLocalStorage<InMemoryTransactionalEventStoreClient>();
 
@@ -245,6 +249,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
         };
         const owner = this.transactionOwnerByClient.get(client) ?? client;
         this.transactionOwnerByClient.set(nestedClient, owner);
+        this.savepointParentByClient.set(nestedClient, client);
         if (nestedSignal) {
           this.transactionSignalByClient.set(nestedClient, nestedSignal);
         }
@@ -268,6 +273,9 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
   ): Promise<TransactionalOutboxMessage> {
     const directOwner = await this.acquireOutboxReservation(input.idempotencyKey, context?.client);
     try {
+      assertNotAborted(
+        context?.client ? this.transactionSignalByClient.get(context.client) : undefined,
+      );
       const state = this.resolveState(context);
       const existingId = state.outboxIdByIdempotencyKey.get(input.idempotencyKey);
       if (existingId) {
@@ -816,6 +824,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
         );
       }
       await waitForOutboxReservation(reservation.released, signal);
+      assertNotAborted(signal);
       if (client) {
         this.adoptCommittedOutbox(idempotencyKey, client, owner);
       }
@@ -833,7 +842,30 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     if (!id || !message || !baseState) {
       return;
     }
-    for (const state of [baseState, client.state]) {
+    const baseMessage = baseState.outbox.get(id);
+    if (
+      baseState.outboxIdByIdempotencyKey.get(idempotencyKey) === id &&
+      isDeepStrictEqual(baseMessage, message)
+    ) {
+      return;
+    }
+    const states = [baseState];
+    let current: InMemoryTransactionalEventStoreClient | undefined = client;
+    while (current) {
+      const stagedMessage = current.state.outbox.get(id);
+      if (
+        !isDeepStrictEqual(stagedMessage, baseMessage) &&
+        !isDeepStrictEqual(stagedMessage, message)
+      ) {
+        if (stagedMessage && stagedMessage.idempotencyKey !== idempotencyKey) {
+          throw new OutboxMessageIdConflictProblem(id);
+        }
+        throw new OutboxStorageProblem(`Outbox message '${id}' changed concurrently.`);
+      }
+      states.push(current.state);
+      current = this.savepointParentByClient.get(current);
+    }
+    for (const state of states) {
       state.outbox.set(id, cloneOutboxMessage(message));
       state.outboxIdByIdempotencyKey.set(idempotencyKey, id);
     }
