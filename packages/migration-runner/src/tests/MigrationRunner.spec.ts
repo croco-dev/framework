@@ -246,6 +246,52 @@ describe("MigrationRunner", () => {
   });
 
   describe.each(["down", "previewDown"] as const)("%s target validation", (operation) => {
+    it.each([1, 2, 0, -1, Number.NaN, 1.5, Number.POSITIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1])(
+      "rejects target with count %s before database or scanner access",
+      async (count) => {
+        const db = new DeterministicMigrationDatabase();
+        const before = db.snapshot();
+        const execute = vi.spyOn(db, "execute");
+        const transaction = vi.spyOn(db, "transaction");
+        const candidate = new MigrationRunner(db, "/missing-migration-selection-fixture");
+
+        await expect(candidate[operation]("20260711000002", count)).rejects.toMatchObject({
+          code: "migration-runner/conflicting-rollback-options",
+          category: ProblemCategory.BadRequest,
+          message:
+            "Migration rollback target and count cannot be supplied together. Choose either target or count.",
+        });
+        expect(execute).not.toHaveBeenCalled();
+        expect(transaction).not.toHaveBeenCalled();
+        expect(db.snapshot()).toEqual(before);
+      },
+    );
+
+    it("selects only the requested count in reverse order", async () => {
+      const fixtures = createMigrationFixtures([
+        { id: "20260711000001", name: "create_accounts" },
+        { id: "20260711000002", name: "create_orders" },
+        { id: "20260711000003", name: "create_invoices" },
+      ]);
+      const db = new DeterministicMigrationDatabase();
+      const candidate = new MigrationRunner(db, fixtures.path);
+      try {
+        await candidate.up();
+        const before = db.snapshot();
+        await expect(candidate[operation](undefined, 2)).resolves.toEqual([
+          "20260711000003_create_invoices",
+          "20260711000002_create_orders",
+        ]);
+        if (operation === "previewDown") {
+          expect(db.snapshot()).toEqual(before);
+        } else {
+          expect(db.snapshot().checkpoints).toEqual(["20260711000001_create_accounts"]);
+        }
+      } finally {
+        fixtures.cleanup();
+      }
+    });
+
     it.each([
       ["2026", "malformed"],
       ["", "malformed"],
