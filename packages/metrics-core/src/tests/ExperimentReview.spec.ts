@@ -29,38 +29,30 @@ function makeDataset(overrides: Partial<ExperimentDatasetInput> = {}): Experimen
     });
   }
   const exposures = [
-    ...assignments
-      .slice(0, 80)
-      .map((row) => ({
-        unitId: row.unitId,
-        exposed: true,
-        actionObserved: true,
-        outcomeObserved: true,
-      })),
-    ...assignments
-      .slice(100, 160)
-      .map((row) => ({
-        unitId: row.unitId,
-        exposed: true,
-        actionObserved: true,
-        outcomeObserved: true,
-      })),
+    ...assignments.slice(0, 80).map((row) => ({
+      unitId: row.unitId,
+      exposed: true,
+      actionObserved: true,
+      outcomeObserved: true,
+    })),
+    ...assignments.slice(100, 160).map((row) => ({
+      unitId: row.unitId,
+      exposed: true,
+      actionObserved: true,
+      outcomeObserved: true,
+    })),
   ];
   const outcomes = [
-    ...assignments
-      .slice(0, 80)
-      .map((row, index) => ({
-        unitId: row.unitId,
-        value: index % 4 === 0 ? 1 : 0,
-        complete: true,
-      })),
-    ...assignments
-      .slice(100, 160)
-      .map((row, index) => ({
-        unitId: row.unitId,
-        value: index % 2 === 0 ? 1 : 0,
-        complete: true,
-      })),
+    ...assignments.slice(0, 80).map((row, index) => ({
+      unitId: row.unitId,
+      value: index % 4 === 0 ? 1 : 0,
+      complete: true,
+    })),
+    ...assignments.slice(100, 160).map((row, index) => ({
+      unitId: row.unitId,
+      value: index % 2 === 0 ? 1 : 0,
+      complete: true,
+    })),
   ];
   return {
     plan: {
