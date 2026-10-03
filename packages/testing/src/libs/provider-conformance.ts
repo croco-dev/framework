@@ -131,10 +131,11 @@ export function createStorageProviderConformanceSuite(
           assert.equal(await provider.exists(key), true);
 
           assert.equal(await provider.delete(key), undefined);
-          assert.equal(await provider.delete(key), undefined);
-
           assert.equal(await provider.exists(key), false);
           await assert.rejects(() => provider.get(key), FileNotFoundProblem);
+
+          assert.equal(await provider.delete(key), undefined);
+          assert.equal(await provider.exists(key), false);
         },
       },
       {
