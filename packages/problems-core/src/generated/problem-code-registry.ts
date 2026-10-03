@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 914,
+  problemCount: 915,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -16003,7 +16003,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 114,
+          line: 131,
           column: 1,
           kind: "problem-class",
         },
@@ -16034,7 +16034,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 86,
+          line: 87,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/server-action-malformed-body",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-server-action-malformed-body",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/actions/serverActions.ts",
+          line: 115,
           column: 1,
           kind: "problem-class",
         },
@@ -16065,7 +16096,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 72,
+          line: 73,
           column: 1,
           kind: "problem-class",
         },
@@ -16096,7 +16127,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 100,
+          line: 101,
           column: 1,
           kind: "problem-class",
         },

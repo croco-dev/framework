@@ -16,6 +16,7 @@ export type ServerActionProblemKind =
   | "action_not_found"
   | "invalid_path"
   | "invalid_content_type"
+  | "malformed_body"
   | "validation"
   | "domain_problem";
 
@@ -107,6 +108,22 @@ export class ServerActionValidationProblem extends Problem {
       ProblemCategory.ValidationError,
       "Server action input validation failed",
       { extensions: { fields, formErrors } },
+    );
+  }
+}
+
+export class ServerActionMalformedBodyProblem extends Problem {
+  readonly code = "meta-vite/server-action-malformed-body";
+  readonly category = ProblemCategory.BadRequest;
+
+  constructor(cause?: unknown) {
+    super(
+      "meta-vite/server-action-malformed-body",
+      ProblemCategory.BadRequest,
+      "Server action request body could not be parsed",
+      {
+        cause: cause instanceof Error ? cause : undefined,
+      },
     );
   }
 }
@@ -512,6 +529,14 @@ export function createServerActionHandler(
       }
 
       const actionName = segments[3];
+      const contentType = request.headers.get("content-type");
+      if (!isFormContentType(contentType)) {
+        return createServerActionProblemResponse(
+          new ServerActionInvalidContentTypeProblem(contentType),
+          "invalid_content_type",
+        );
+      }
+
       let formData: FormData;
       try {
         formData = await request.formData();
@@ -520,8 +545,8 @@ export function createServerActionHandler(
           throw error;
         }
         return createServerActionProblemResponse(
-          new ServerActionInvalidContentTypeProblem(request.headers.get("content-type"), error),
-          "invalid_content_type",
+          new ServerActionMalformedBodyProblem(error),
+          "malformed_body",
         );
       }
 
@@ -532,4 +557,12 @@ export function createServerActionHandler(
 
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
+}
+
+function isFormContentType(contentType: string | null): boolean {
+  if (!contentType) {
+    return false;
+  }
+  const mediaType = contentType.split(";")[0]?.trim().toLowerCase();
+  return mediaType === "multipart/form-data" || mediaType === "application/x-www-form-urlencoded";
 }

@@ -35,6 +35,7 @@ export {
   resetServerActions,
   ServerActionInvalidContentTypeProblem,
   ServerActionInvalidPathProblem,
+  ServerActionMalformedBodyProblem,
   ServerActionNotFoundProblem,
   ServerActionRegistry,
   ServerActionValidationProblem,

@@ -676,6 +676,34 @@ describe("Server Action HTTP Integration", () => {
     });
   });
 
+  it("returns Problem result for malformed form bodies with a form content type", async () => {
+    createServerAction({
+      name: "malformed-post",
+      handler: async () => new Response("ok"),
+    });
+
+    const route = createServerActionHandler();
+
+    const response = await route.handler(
+      new Request("http://localhost/api/action/malformed-post", {
+        method: "POST",
+        headers: { "Content-Type": "multipart/form-data; boundary=----invalid" },
+        body: "this is not valid multipart",
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      kind: "malformed_body",
+      title: "Bad Request",
+      status: 400,
+      code: "meta-vite/server-action-malformed-body",
+      detail: "Server action request body could not be parsed",
+    });
+  });
+
   it("rethrows request aborts instead of mapping them to 415", async () => {
     createServerAction({
       name: "aborted-post",
