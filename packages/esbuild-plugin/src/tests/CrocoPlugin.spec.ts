@@ -66,6 +66,85 @@ describe("crocoPlugin", () => {
     fs.rmSync(TEMP_DIR, { recursive: true, force: true });
   });
 
+  it.each([
+    { enabled: true, platform: "node" as const, diEnabled: true },
+    { enabled: true, platform: "node" as const, diEnabled: false },
+    { enabled: false, platform: "node" as const, diEnabled: true },
+    { enabled: true, platform: "browser" as const, diEnabled: true },
+  ])(
+    "rejects legacy registry configuration before generating output ($enabled, $platform, $diEnabled)",
+    async ({ enabled, platform, diEnabled }) => {
+      const { entry } = createProject();
+      await expect(
+        esbuild.build({
+          absWorkingDir: TEMP_DIR,
+          entryPoints: [entry],
+          platform,
+          bundle: true,
+          write: false,
+          logLevel: "silent",
+          external: ["@croco/framework-context", "@croco/framework-module", "reflect-metadata"],
+          plugins: [
+            crocoPlugin({
+              generateRegistry: { enabled, outDir: "src", outFile: "registry.gen.ts" },
+              di: { enabled: diEnabled },
+            }),
+          ],
+        }),
+      ).rejects.toThrow(
+        "CROCO_DI_COMPILE_001: generateRegistry is no longer supported. Remove it and use di.enabled, di.outFile, and di.manifestFile; the generatedDiGraph must be bound to createApplicationRuntime(...).",
+      );
+      expect(fs.existsSync(path.join(TEMP_DIR, "src", "registry.gen.ts"))).toBe(false);
+      expect(fs.existsSync(path.join(TEMP_DIR, ".croco"))).toBe(false);
+    },
+  );
+
+  it("bundles a sibling DI graph with local, parent, and neighboring component imports", async () => {
+    const { entry } = createProject();
+    const componentSource = fs.readFileSync(path.join(TEMP_DIR, "src", "Service.ts"), "utf8");
+    fs.writeFileSync(
+      path.join(TEMP_DIR, "Parent.ts"),
+      componentSource.replace("Service", "Parent"),
+    );
+    fs.mkdirSync(path.join(TEMP_DIR, "other"));
+    fs.writeFileSync(
+      path.join(TEMP_DIR, "other", "Sibling.ts"),
+      componentSource.replace("Service", "Sibling"),
+    );
+    const common: esbuild.BuildOptions = {
+      absWorkingDir: TEMP_DIR,
+      platform: "node",
+      format: "esm",
+      bundle: true,
+      write: false,
+      metafile: true,
+      external: ["@croco/framework-context", "@croco/framework-module", "reflect-metadata"],
+      tsconfig: path.join(TEMP_DIR, "tsconfig.json"),
+    };
+    const app = await esbuild.build({
+      ...common,
+      entryPoints: [entry],
+      plugins: [
+        crocoPlugin({
+          scan: { dirs: ["src", "other", "Parent.ts"] },
+          di: { outFile: "src/registry.gen.ts" },
+        }),
+      ],
+    });
+    expect(app.errors).toEqual([]);
+    expect(Object.keys(app.metafile?.inputs ?? {})).toContain("src/registry.gen.ts");
+    const graph = fs.readFileSync(path.join(TEMP_DIR, "src", "registry.gen.ts"), "utf8");
+    expect(graph).toContain('from "./Service"');
+    expect(graph).toContain('from "../Parent"');
+    expect(graph).toContain('from "../other/Sibling"');
+    const registry = await esbuild.build({ ...common, entryPoints: ["src/registry.gen.ts"] });
+    expect(registry.errors).toEqual([]);
+    expect(Object.keys(registry.metafile?.inputs ?? {})).toEqual(
+      expect.arrayContaining(["src/Service.ts", "Parent.ts", "other/Sibling.ts"]),
+    );
+    expect(registry.outputFiles?.[0]?.text).toContain("generatedDiGraph");
+  });
+
   it("attaches one generated graph to the app runtime without import-time registration", async () => {
     const { entry, component } = createProject();
     const build = createMockBuild("src/index.ts");
