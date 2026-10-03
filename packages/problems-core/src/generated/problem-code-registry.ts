@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 912,
+  problemCount: 913,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -28574,6 +28574,39 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/workflow-core/src/libs/problems/WorkflowProblems.ts",
           line: 32,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "workflow-core/workflow-execution-cancelled",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#workflow-core-workflow-execution-cancelled",
+      recovery: {
+        cause: "The parent workflow was cancelled before a dispatch or completion boundary.",
+        userAction:
+          "Inspect the cancelled execution before deliberately starting a new workflow with a fresh idempotency key.",
+        operatorAction:
+          "Reconcile outcomes of already dispatched tasks before starting again; cancellation does not abort or compensate them.",
+        retryability: "not-retryable",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/workflow-core/src/libs/problems/WorkflowProblems.ts",
+          line: 254,
           column: 5,
           kind: "problem-constructor",
         },

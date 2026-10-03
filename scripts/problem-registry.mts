@@ -2807,6 +2807,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "workflow-core/workflow-execution-cancelled": recovery({
+    cause: "The parent workflow was cancelled before a dispatch or completion boundary.",
+    userAction:
+      "Inspect the cancelled execution before deliberately starting a new workflow with a fresh idempotency key.",
+    operatorAction:
+      "Reconcile outcomes of already dispatched tasks before starting again; cancellation does not abort or compensate them.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "info",
+  }),
   CROCO_SAAS_PROFILE_MISMATCH: recovery({
     cause: "The generated profile and requested profile do not match.",
     userAction: "Select the generated profile or correct the explicit profile override.",
