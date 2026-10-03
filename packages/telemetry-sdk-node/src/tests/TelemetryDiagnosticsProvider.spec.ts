@@ -1,6 +1,6 @@
 import { DiagnosticsCollector, DiagnosticsHealthIndicator } from "@croco/diagnostics-core";
 import { ROOT_CONTEXT, SpanKind, TraceFlags, trace } from "@opentelemetry/api";
-import { SamplingDecision } from "@opentelemetry/sdk-trace-base";
+import { AlwaysOffSampler, AlwaysOnSampler, SamplingDecision } from "@opentelemetry/sdk-trace-base";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TelemetryDiagnosticsProvider } from "../libs/diagnostics/TelemetryDiagnosticsProvider";
 import { TelemetryRuntime } from "../runtime";
@@ -209,6 +209,22 @@ describe("TelemetryDiagnosticsProvider", () => {
       details: { mode: "active", probability: 0, traceEnabled: true },
     });
   });
+
+  it.each([new AlwaysOnSampler(), new AlwaysOffSampler()])(
+    "should avoid probability-based sampling claims when a custom sampler takes precedence: %s",
+    async (sampler) => {
+      await runtime.init({
+        serviceName: "orders",
+        trace: { exporterUrl: "http://collector:4318/v1/traces", probability: 0, sampler },
+      });
+
+      const health = await diagnostics.getHealth();
+
+      expect(health.status).toBe("healthy");
+      expect(health.details).toMatchObject({ mode: "active", probability: 0, traceEnabled: true });
+      expect(health.message).toBeUndefined();
+    },
+  );
 
   it("should keep explicitly disabled telemetry degraded when it is required", async () => {
     await runtime.init({ serviceName: "orders", enabled: false });

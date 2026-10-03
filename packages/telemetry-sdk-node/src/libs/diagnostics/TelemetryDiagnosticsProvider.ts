@@ -176,7 +176,7 @@ export class TelemetryDiagnosticsProvider implements DiagnosticsProvider {
       };
     }
 
-    if (snapshot.probability === 0) {
+    if (snapshot.probability === 0 && config.trace?.sampler === undefined) {
       return {
         status: "healthy",
         component: "telemetry",
