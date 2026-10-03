@@ -178,13 +178,14 @@ export class TelemetryDiagnosticsProvider implements DiagnosticsProvider {
 
     if (snapshot.probability === 0) {
       return {
-        status: "degraded",
+        status: "healthy",
         component: "telemetry",
-        message: "Telemetry sampling disabled (probability=0)",
+        message:
+          "Telemetry root sampling probability is 0; sampled parent traces are still recorded",
         details: createConfiguredTelemetryDetails(
           snapshot,
           initialized,
-          "sampling_disabled",
+          "active",
           this.requirement,
           autoInstrumentationModules,
         ),
