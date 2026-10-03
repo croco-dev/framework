@@ -676,6 +676,25 @@ describe("Server Action HTTP Integration", () => {
     });
   });
 
+  it("rethrows request aborts instead of mapping them to 415", async () => {
+    createServerAction({
+      name: "aborted-post",
+      handler: async () => new Response("ok"),
+    });
+
+    const route = createServerActionHandler();
+    const controller = new AbortController();
+    const request = new Request("http://localhost/api/action/aborted-post", {
+      method: "POST",
+      body: new FormData(),
+      signal: controller.signal,
+    });
+    const abortError = new DOMException("This operation was aborted", "AbortError");
+    request.formData = () => Promise.reject(abortError);
+
+    await expect(route.handler(request)).rejects.toBe(abortError);
+  });
+
   it("returns 405 for non-POST method on action endpoint", async () => {
     const handler = createMetaFetchHandler({
       apiRoutes: [createServerActionHandler()],

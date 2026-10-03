@@ -115,12 +115,15 @@ export class ServerActionInvalidContentTypeProblem extends Problem {
   readonly code = "meta-vite/server-action-invalid-content-type";
   readonly category = ProblemCategory.UnsupportedMediaType;
 
-  constructor(contentType: string | null) {
+  constructor(contentType: string | null, cause?: unknown) {
     super(
       "meta-vite/server-action-invalid-content-type",
       ProblemCategory.UnsupportedMediaType,
       "Server actions require a form-data request body",
-      { extensions: { reason: contentType ?? "missing" } },
+      {
+        extensions: { reason: contentType ?? "missing" },
+        ...(cause instanceof Error ? { cause } : {}),
+      },
     );
   }
 }
@@ -512,9 +515,12 @@ export function createServerActionHandler(
       let formData: FormData;
       try {
         formData = await request.formData();
-      } catch {
+      } catch (error) {
+        if (isAbortError(error)) {
+          throw error;
+        }
         return createServerActionProblemResponse(
-          new ServerActionInvalidContentTypeProblem(request.headers.get("content-type")),
+          new ServerActionInvalidContentTypeProblem(request.headers.get("content-type"), error),
           "invalid_content_type",
         );
       }
@@ -522,4 +528,8 @@ export function createServerActionHandler(
       return registry.dispatch(actionName, formData, context);
     },
   };
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
 }

@@ -22670,6 +22670,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "ServerActionInvalidContentTypeProblem",
+              "exportKind": "named",
+              "source": "./libs/actions/serverActions",
+              "declarationKind": "class"
+            },
+            {
               "name": "ServerActionInvalidPathProblem",
               "exportKind": "named",
               "source": "./libs/actions/serverActions",

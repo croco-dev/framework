@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 912,
+  problemCount: 913,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -15979,6 +15979,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "meta-vite/server-action-invalid-content-type",
+      category: "UnsupportedMediaType",
+      status: 415,
+      title: "Unsupported Media Type",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#meta-vite-server-action-invalid-content-type",
+      recovery: {
+        cause: "The request body uses a media type that the endpoint does not support.",
+        userAction: "Send the request body with a supported Content-Type and retry.",
+        operatorAction: "Confirm the route media-type contract and request Content-Type header.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/actions/serverActions.ts",
+          line: 114,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "meta-vite/server-action-invalid-path",
       category: "BadRequest",
       status: 400,
@@ -16003,7 +16034,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 85,
+          line: 86,
           column: 1,
           kind: "problem-class",
         },
@@ -16034,7 +16065,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 71,
+          line: 72,
           column: 1,
           kind: "problem-class",
         },
@@ -16065,7 +16096,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
-          line: 99,
+          line: 100,
           column: 1,
           kind: "problem-class",
         },
