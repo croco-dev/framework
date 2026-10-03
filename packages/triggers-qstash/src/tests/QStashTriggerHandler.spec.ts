@@ -1107,6 +1107,112 @@ describe("QStashTriggerHandler", () => {
     expect(executionManager.create).not.toHaveBeenCalled();
   });
 
+  it("비활성화된 트리거의 웹훅은 410으로 거부하고 실행하지 않아야 한다", async () => {
+    class DisabledWebhookHandler {
+      async execute(): Promise<string> {
+        return "handled";
+      }
+    }
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "0 9 * * *",
+      methodName: "execute",
+      target: DisabledWebhookHandler.prototype,
+      options: {
+        enabled: false,
+        timezone: "Asia/Seoul",
+      },
+    });
+
+    const receiver = {
+      verify: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Receiver;
+
+    const { create, manager: executionManager } = createIdempotentExecutionManager();
+    const targetInstance = new DisabledWebhookHandler();
+    const handler = new QStashTriggerHandler({
+      receiver,
+      executionManager,
+      serviceResolver: () => targetInstance,
+    });
+
+    const result = await handler.handle(
+      JSON.stringify({
+        scheduleId: "croco-trigger:DisabledWebhookHandler:execute:execute",
+        className: "DisabledWebhookHandler",
+        methodName: "execute",
+        cronExpression: "0 9 * * *",
+        timestamp: new Date().toISOString(),
+        options: {
+          enabled: false,
+          timezone: "Asia/Seoul",
+        },
+      }),
+      "valid-signature",
+      delivery,
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.statusCode).toBe(410);
+    expect(result.body).toEqual({
+      error: "Trigger is disabled",
+      code: "triggers-qstash/trigger-disabled",
+      category: ProblemCategory.Gone,
+    });
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("레지스트리에서 비활성화된 트리거의 잔존 schedule 호출도 410으로 거부해야 한다", async () => {
+    class RegistryDisabledHandler {
+      async execute(): Promise<string> {
+        return "handled";
+      }
+    }
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "0 9 * * *",
+      methodName: "execute",
+      target: RegistryDisabledHandler.prototype,
+      options: {
+        enabled: false,
+      },
+    });
+
+    const receiver = {
+      verify: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Receiver;
+
+    const { create, manager: executionManager } = createIdempotentExecutionManager();
+    const handler = new QStashTriggerHandler({
+      receiver,
+      executionManager,
+      serviceResolver: () => new RegistryDisabledHandler(),
+    });
+
+    const result = await handler.handle(
+      JSON.stringify({
+        scheduleId: "croco-trigger:RegistryDisabledHandler:execute:execute",
+        className: "RegistryDisabledHandler",
+        methodName: "execute",
+        cronExpression: "0 9 * * *",
+        timestamp: new Date().toISOString(),
+      }),
+      "valid-signature",
+      delivery,
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.statusCode).toBe(410);
+    expect(result.body).toEqual({
+      error: "Trigger is disabled",
+      code: "triggers-qstash/trigger-disabled",
+      category: ProblemCategory.Gone,
+    });
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it("Problem 예외는 안전한 code/category와 statusCode를 유지해야 한다", async () => {
     class ProblemHandler {
       async execute(): Promise<string> {
