@@ -116,6 +116,111 @@ describe("admin-generated", () => {
       }
     },
   );
+  it("should preserve defaulted route body input and parsed output contracts", () => {
+    const schema = z.object({
+      label: z.string().default("all"),
+      pageSize: z.number().default(20),
+      settings: z.object({ enabled: z.boolean().default(true) }).default({}),
+      nested: z.object({ count: z.number().default(1) }),
+      optional: z.string().optional(),
+      optionalDefault: z.string().optional().default("value"),
+      defaultOptional: z.string().default("value").optional(),
+      nullable: z.string().default("value").nullable(),
+      readonly: z.number().default(2).readonly(),
+      wrappedOptional: z.string().optional().readonly(),
+      wrappedDefaultOptional: z.string().default("value").optional().readonly(),
+      refined: z
+        .string()
+        .default("value")
+        .refine((value) => value.length > 0),
+      items: z.array(z.object({ size: z.number().default(3) })),
+      numbers: z.array(z.number().default(6)),
+      legacyNullableItems: z.array(z.string().nullable()),
+      variants: z.union([z.object({ size: z.number().default(4) }), z.string()]),
+      values: z.record(z.object({ size: z.number().default(5) })),
+    });
+
+    @Controller("/defaults")
+    class DefaultsController {
+      @Post("/")
+      @ResponseSchema(schema)
+      createDefaults(@Body(schema) body: z.input<typeof schema>): z.output<typeof schema> {
+        return schema.parse(body);
+      }
+    }
+
+    const input: z.input<typeof schema> = {
+      nested: {},
+      items: [{}],
+      numbers: [undefined],
+      legacyNullableItems: [null],
+      variants: {},
+      values: { a: {} },
+    };
+    expect(schema.parse(input)).toEqual({
+      label: "all",
+      pageSize: 20,
+      settings: { enabled: true },
+      nested: { count: 1 },
+      optionalDefault: "value",
+      nullable: "value",
+      readonly: 2,
+      refined: "value",
+      items: [{ size: 3 }],
+      numbers: [6],
+      legacyNullableItems: [null],
+      variants: { size: 4 },
+      values: { a: { size: 5 } },
+    });
+    const source = generateAdminResourceSourceFromContractGraph(
+      buildContractGraph([DefaultsController]),
+    );
+    expect(source).toContain(
+      "export type DefaultsControllerCreateDefaultsInput = { defaultOptional?: string | undefined; items: { size?: number; }[]; label?: string; legacyNullableItems: string | null[]; nested: { count?: number; }; nullable?: string | undefined | null; numbers: (number | undefined)[]; optional?: string; optionalDefault?: string | undefined; pageSize?: number; readonly?: number | undefined; refined?: string | undefined; settings?: { enabled?: boolean; }; values: Record<string, { size?: number; }>; variants: { size?: number; } | string; wrappedDefaultOptional?: string | undefined | undefined; wrappedOptional: string | undefined; };",
+    );
+    expect(source).toContain(
+      "export type DefaultsControllerCreateDefaultsOutput = { defaultOptional?: string; items: { size: number; }[]; label: string; legacyNullableItems: string | null[]; nested: { count: number; }; nullable: string | null; numbers: number[]; optional?: string; optionalDefault: string | undefined; pageSize: number; readonly: number; refined: string; settings: { enabled: boolean; }; values: Record<string, { size: number; }>; variants: { size: number; } | string; wrappedDefaultOptional: string | undefined; wrappedOptional: string | undefined; };",
+    );
+    expect(source).toContain(
+      "readonly input: DefaultsControllerCreateDefaultsInput; readonly output: DefaultsControllerCreateDefaultsOutput;",
+    );
+  });
+
+  it("should allow omitted union fields only when a branch has a default", () => {
+    const schema = z.object({
+      mode: z.union([z.string().default("all"), z.number()]),
+      wrapped: z.union([z.number(), z.string().default("all").readonly()]).nullable(),
+      nested: z.union([z.number(), z.union([z.boolean(), z.string().default("all")])]),
+      optionalBranch: z.union([z.string().optional(), z.number()]),
+      objectBranch: z.union([z.object({ value: z.string().default("all") }), z.number()]),
+    });
+
+    @Controller("/union-defaults")
+    class UnionDefaultsController {
+      @Post("/")
+      @ResponseSchema(schema)
+      create(@Body(schema) body: z.input<typeof schema>): z.output<typeof schema> {
+        return schema.parse(body);
+      }
+    }
+
+    const input: z.input<typeof schema> = { objectBranch: {} };
+    expect(schema.parse(input)).toEqual({
+      mode: "all",
+      wrapped: "all",
+      nested: "all",
+      objectBranch: { value: "all" },
+    });
+    const source = generateAdminResourceSourceFromContractGraph(
+      buildContractGraph([UnionDefaultsController]),
+    );
+    expect(source).toContain(
+      "export type UnionDefaultsControllerCreateInput = { mode?: string | undefined | number; nested?: number | boolean | string | undefined; objectBranch: { value?: string; } | number; optionalBranch: string | undefined | number; wrapped?: number | string | undefined | null; };",
+    );
+    expect(source).toContain(
+      "export type UnionDefaultsControllerCreateOutput = { mode: string | number; nested: number | boolean | string; objectBranch: { value: string; } | number; optionalBranch: string | undefined | number; wrapped: number | string | null; };",
+    );
+  });
 
   it("should generate typed admin resource config from Contract Graph routes", () => {
     @Controller("/admin/users")
