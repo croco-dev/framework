@@ -136,3 +136,26 @@ export type {
   RetentionMetrics,
   SubscriptionSnapshot,
 } from "./types";
+
+export { OutcomeLedgerNormalizer } from "./libs/outcome/OutcomeLedgerNormalizer";
+export { OutcomeProblem } from "./libs/outcome/OutcomeProblem";
+export {
+  ASSIGNED_OUTCOME_DEFINITION,
+  compareAssignedOutcomes,
+  hashAssignedOutcomeDefinition,
+  hashAssignedOutcomeInput,
+} from "./libs/outcome/compareAssignedOutcomes";
+export type {
+  OutcomeScope,
+  OutcomeCutoff,
+  OutcomeReference,
+  OutcomeKind,
+  MoneyEvent,
+  AssignmentSnapshot,
+  OutcomeCostCompleteness,
+  OutcomeRational,
+  OutcomeDiagnostic,
+  AssignedOutcomeInput,
+  AssignedOutcomeArm,
+  AssignedOutcomeReport,
+} from "./libs/outcome/types";

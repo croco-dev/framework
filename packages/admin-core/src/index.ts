@@ -350,3 +350,14 @@ export type {
   ExperimentAdminSample,
   ExperimentAdminSnapshot,
 } from "./libs/ExperimentOperations";
+export { createNetOutcomeOperations, NetOutcomeProblem } from "./libs/NetOutcomeOperations";
+export type {
+  NetOutcomeRequest,
+  NetOutcomeSnapshot,
+  NetOutcomeState,
+  NetOutcomeDrilldownRequest,
+  NetOutcomeDrilldown,
+  NetOutcomeGrant,
+  NetOutcomeAuthority,
+  NetOutcomeSource,
+} from "./libs/NetOutcomeOperations";

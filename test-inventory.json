@@ -176,6 +176,12 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/NetOutcomeOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/OfferConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -345,6 +351,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/MetricInspector.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/NetOutcomePanel.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -3040,6 +3052,18 @@
       "owner": "@croco/metrics-billing"
     },
     {
+      "path": "packages/metrics-billing/src/tests/OutcomeSourceMapping.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-billing"
+    },
+    {
+      "path": "packages/metrics-core/src/tests/AssignedOutcomeRead.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
       "path": "packages/metrics-core/src/tests/CarryingCapacity.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -3083,6 +3107,12 @@
     },
     {
       "path": "packages/metrics-core/src/tests/MrrCalculator.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
+      "path": "packages/metrics-core/src/tests/OutcomeLedgerNormalizer.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/metrics-core"
@@ -4994,6 +5024,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/warehouse-core"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/AssignedOutcome.integration.spec.ts",
+      "lane": "integration",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
     },
     {
       "path": "packages/warehouse-postgres/src/tests/PostgresMetricsStore.integration.spec.ts",
