@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { isDeepStrictEqual } from "node:util";
+import { TransactionRollbackConfirmedProblem } from "@croco/tx-core";
 import type { TxAdapter } from "@croco/tx-core";
 import {
   type AppendOutboxMessageInput,
@@ -150,8 +151,32 @@ function getAbortError(signal?: AbortSignal): Error | null {
 function assertNotAborted(signal?: AbortSignal): void {
   const error = getAbortError(signal);
   if (error) {
-    throw error;
+    throw new TransactionRollbackConfirmedProblem(error);
   }
+}
+
+async function waitForOutboxReservation(
+  released: Promise<void>,
+  signal?: AbortSignal,
+): Promise<void> {
+  assertNotAborted(signal);
+  if (!signal) {
+    await released;
+    return;
+  }
+
+  await new Promise<void>((resolve) => {
+    const complete = (): void => {
+      signal.removeEventListener("abort", complete);
+      resolve();
+    };
+    signal.addEventListener("abort", complete, { once: true });
+    if (signal.aborted) {
+      complete();
+    }
+    void released.then(complete);
+  });
+  assertNotAborted(signal);
 }
 
 /**
@@ -174,6 +199,10 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     InMemoryTransactionalEventStoreClient,
     InMemoryTransactionalEventStoreClient
   >();
+  private readonly transactionSignalByClient = new WeakMap<
+    InMemoryTransactionalEventStoreClient,
+    AbortSignal
+  >();
   private readonly transactionOwnerContext =
     new AsyncLocalStorage<InMemoryTransactionalEventStoreClient>();
 
@@ -192,6 +221,9 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
         }
         this.transactionOwnerByClient.set(client, client);
         this.transactionBaseByOwner.set(client, baseState);
+        if (signal) {
+          this.transactionSignalByClient.set(client, signal);
+        }
         try {
           const result = await this.transactionOwnerContext.run(client, () => fn(client));
           assertNotAborted(signal);
@@ -202,14 +234,22 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
         }
       },
       savepoint: async (client, fn, _options, signal) => {
-        assertNotAborted(signal);
+        const parentSignal = this.transactionSignalByClient.get(client);
+        const nestedSignal =
+          parentSignal && signal
+            ? AbortSignal.any([parentSignal, signal])
+            : (signal ?? parentSignal);
+        assertNotAborted(nestedSignal);
         const nestedClient: InMemoryTransactionalEventStoreClient = {
           state: cloneState(client.state),
         };
         const owner = this.transactionOwnerByClient.get(client) ?? client;
         this.transactionOwnerByClient.set(nestedClient, owner);
+        if (nestedSignal) {
+          this.transactionSignalByClient.set(nestedClient, nestedSignal);
+        }
         const result = await fn(nestedClient);
-        assertNotAborted(signal);
+        assertNotAborted(nestedSignal);
         client.state = cloneState(nestedClient.state);
         return result;
       },
@@ -752,7 +792,9 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     const owner = client
       ? (this.transactionOwnerByClient.get(client) ?? client)
       : { state: this.rootState };
+    const signal = client ? this.transactionSignalByClient.get(client) : undefined;
     while (true) {
+      assertNotAborted(signal);
       const reservation = this.outboxReservations.get(idempotencyKey);
       if (!reservation) {
         if (client) {
@@ -773,7 +815,7 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
           `Nested transaction cannot append reserved outbox idempotency key '${idempotencyKey}'.`,
         );
       }
-      await reservation.released;
+      await waitForOutboxReservation(reservation.released, signal);
       if (client) {
         this.adoptCommittedOutbox(idempotencyKey, client, owner);
       }
