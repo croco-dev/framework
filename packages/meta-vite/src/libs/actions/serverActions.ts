@@ -15,6 +15,7 @@ export type ServerActionValidationFields = Record<string, readonly string[]>;
 export type ServerActionProblemKind =
   | "action_not_found"
   | "invalid_path"
+  | "invalid_content_type"
   | "validation"
   | "domain_problem";
 
@@ -106,6 +107,20 @@ export class ServerActionValidationProblem extends Problem {
       ProblemCategory.ValidationError,
       "Server action input validation failed",
       { extensions: { fields, formErrors } },
+    );
+  }
+}
+
+export class ServerActionInvalidContentTypeProblem extends Problem {
+  readonly code = "meta-vite/server-action-invalid-content-type";
+  readonly category = ProblemCategory.UnsupportedMediaType;
+
+  constructor(contentType: string | null) {
+    super(
+      "meta-vite/server-action-invalid-content-type",
+      ProblemCategory.UnsupportedMediaType,
+      "Server actions require a form-data request body",
+      { extensions: { reason: contentType ?? "missing" } },
     );
   }
 }
@@ -494,7 +509,15 @@ export function createServerActionHandler(
       }
 
       const actionName = segments[3];
-      const formData = await request.formData();
+      let formData: FormData;
+      try {
+        formData = await request.formData();
+      } catch {
+        return createServerActionProblemResponse(
+          new ServerActionInvalidContentTypeProblem(request.headers.get("content-type")),
+          "invalid_content_type",
+        );
+      }
 
       return registry.dispatch(actionName, formData, context);
     },

@@ -33,6 +33,7 @@ export {
   createServerActionSuccessResponse,
   dispatchServerAction,
   resetServerActions,
+  ServerActionInvalidContentTypeProblem,
   ServerActionInvalidPathProblem,
   ServerActionNotFoundProblem,
   ServerActionRegistry,

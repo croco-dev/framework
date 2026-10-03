@@ -349,9 +349,12 @@ import { RedisCacheStoreAdapter } from "@croco/meta-vite/isr/adapters";
 | `ServerActionContractIR`            | type     | Serializable server action contract used by the route manifest builder.                                                                         |
 | `ServerActionResult`                | type     | Typed action result union: `{ ok: true, data }` or RFC 7807 Problem details with `{ ok: false, kind }`.                                         |
 
-Server action failures use a stable action result contract. Missing actions, invalid paths, validation
-failures, and thrown Croco `Problem` instances return `application/problem+json` with top-level RFC 7807
-fields plus `ok: false` and `kind`.
+Server action failures use a stable action result contract. Missing actions, invalid paths, invalid
+content types, validation failures, and thrown Croco `Problem` instances return
+`application/problem+json` with top-level RFC 7807 fields plus `ok: false` and `kind`. Server action
+calls are multipart: send `FormData` (`multipart/form-data` or
+`application/x-www-form-urlencoded`). JSON POST bodies are rejected with
+`meta-vite/server-action-invalid-content-type` (415).
 
 ```typescript
 import { createServerAction, createServerActionSuccess } from "@croco/meta-vite";

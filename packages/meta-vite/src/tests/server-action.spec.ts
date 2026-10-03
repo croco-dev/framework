@@ -647,6 +647,35 @@ describe("Server Action HTTP Integration", () => {
     });
   });
 
+  it("returns Problem result for non-form-data POST bodies", async () => {
+    createServerAction({
+      name: "json-post",
+      handler: async () => new Response("ok"),
+    });
+
+    const route = createServerActionHandler();
+
+    const response = await route.handler(
+      new Request("http://localhost/api/action/json-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "test@example.com" }),
+      }),
+    );
+
+    expect(response.status).toBe(415);
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      kind: "invalid_content_type",
+      title: "Unsupported Media Type",
+      status: 415,
+      code: "meta-vite/server-action-invalid-content-type",
+      detail: "Server actions require a form-data request body",
+      reason: "application/json",
+    });
+  });
+
   it("returns 405 for non-POST method on action endpoint", async () => {
     const handler = createMetaFetchHandler({
       apiRoutes: [createServerActionHandler()],
