@@ -75,7 +75,7 @@ Schedule ID that triggered this webhook.
 
 > `readonly` **timestamp**: `string`
 
-Timestamp when the webhook was triggered.
+Timestamp when the schedule payload was built during sync, reused for every firing.
 
 ---
 

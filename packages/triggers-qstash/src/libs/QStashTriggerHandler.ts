@@ -122,7 +122,7 @@ export type QStashWebhookPayload = {
   readonly cronExpression: string;
 
   /**
-   * Timestamp when the webhook was triggered.
+   * Timestamp when the schedule payload was built during sync, reused for every firing.
    */
   readonly timestamp: string;
 
@@ -478,6 +478,7 @@ export class QStashTriggerHandler {
     }
 
     // Create execution
+    const timestamp = new Date().toISOString();
     const execution = await this.executionManager.create({
       type: "cron",
       idempotencyKey: `qstash:${messageId}`,
@@ -494,6 +495,7 @@ export class QStashTriggerHandler {
         messageId,
         scheduleId,
         triggerType: "cron",
+        timestamp,
         options: options ?? {},
       },
     });
