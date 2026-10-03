@@ -21,7 +21,7 @@ const WORKSPACE_DEPENDENCY_FIELDS = [
 
 const CASE_TEMPLATE_ROOTS = {
   "blank-basic": ["blank"],
-  "goal-saas-api": ["saas"],
+  "goal-saas-api": ["saas", "saas-node-postgres-contracts"],
   "goal-spa-backend-split": ["spa-be-split"],
   "goal-worker": ["base-ddd", "addons/web-meta-vite-fullstack"],
   "goal-internal-tool": ["spa-be-split", "admin-console"],
@@ -93,6 +93,7 @@ const CASE_TEMPLATE_ROOTS = {
   "production-app-starter": ["spa-be-split"],
   "admin-console-starter": ["spa-be-split", "admin-console"],
   "saas-golden-path": ["saas"],
+  "saas-single-tenant": ["saas", "saas-node-postgres-contracts", "saas-single-tenant-contracts"],
   "saas-cloudflare-profile": ["saas"],
   "saas-lambda-profile": ["saas"],
   "ai-saas-golden-path": ["saas", "ai-saas"],
@@ -133,6 +134,7 @@ const CASE_TEST_PATH_PREFIXES = {
     "admin-console/tests/journeys/plan-release.spec.ts",
   ],
   "saas-golden-path": ["saas/apps/"],
+  "saas-single-tenant": ["saas/apps/"],
   "saas-cloudflare-profile": ["saas/apps/"],
   "saas-lambda-profile": ["saas/apps/"],
   "ai-saas-golden-path": ["saas/apps/", "ai-saas/apps/"],
@@ -142,6 +144,7 @@ const CASE_TEST_PATH_PREFIXES = {
 const CASE_SAAS_PROVIDER_PROFILES = {
   "goal-saas-api": "saas-node-postgres",
   "saas-golden-path": "saas-node-postgres",
+  "saas-single-tenant": "saas-node-postgres",
   "saas-cloudflare-profile": "saas-cloudflare",
   "saas-lambda-profile": "saas-lambda",
   "ai-saas-golden-path": "saas-node-postgres",
@@ -150,6 +153,7 @@ const CASE_SAAS_PROVIDER_PROFILES = {
 const CASE_TENANT_MODELS = {
   "goal-saas-api": "org",
   "saas-golden-path": "rls-backed",
+  "saas-single-tenant": "single",
   "saas-cloudflare-profile": "workspace",
   "saas-lambda-profile": "shared-schema",
   "ai-saas-golden-path": "single",
