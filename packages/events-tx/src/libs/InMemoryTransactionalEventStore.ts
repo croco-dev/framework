@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { isDeepStrictEqual } from "node:util";
+import { TransactionRollbackConfirmedProblem } from "@croco/tx-core";
 import type { TxAdapter } from "@croco/tx-core";
 import {
   type AppendOutboxMessageInput,
@@ -43,8 +44,7 @@ export type InMemoryTransactionalEventStoreClient = {
 
 type OutboxAppendReservation = {
   owner: InMemoryTransactionalEventStoreClient;
-  released: Promise<void>;
-  release: () => void;
+  waiters: Set<() => void>;
 };
 
 function createEmptyState(): InMemoryTransactionalEventStoreState {
@@ -150,8 +150,28 @@ function getAbortError(signal?: AbortSignal): Error | null {
 function assertNotAborted(signal?: AbortSignal): void {
   const error = getAbortError(signal);
   if (error) {
-    throw error;
+    throw new TransactionRollbackConfirmedProblem(error);
   }
+}
+
+async function waitForOutboxReservation(
+  reservation: OutboxAppendReservation,
+  signal?: AbortSignal,
+): Promise<void> {
+  assertNotAborted(signal);
+  await new Promise<void>((resolve) => {
+    const complete = (): void => {
+      reservation.waiters.delete(complete);
+      signal?.removeEventListener("abort", complete);
+      resolve();
+    };
+    reservation.waiters.add(complete);
+    signal?.addEventListener("abort", complete, { once: true });
+    if (signal?.aborted) {
+      complete();
+    }
+  });
+  assertNotAborted(signal);
 }
 
 /**
@@ -174,6 +194,14 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     InMemoryTransactionalEventStoreClient,
     InMemoryTransactionalEventStoreClient
   >();
+  private readonly transactionSignalByClient = new WeakMap<
+    InMemoryTransactionalEventStoreClient,
+    AbortSignal
+  >();
+  private readonly savepointParentByClient = new WeakMap<
+    InMemoryTransactionalEventStoreClient,
+    InMemoryTransactionalEventStoreClient
+  >();
   private readonly transactionOwnerContext =
     new AsyncLocalStorage<InMemoryTransactionalEventStoreClient>();
 
@@ -192,6 +220,9 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
         }
         this.transactionOwnerByClient.set(client, client);
         this.transactionBaseByOwner.set(client, baseState);
+        if (signal) {
+          this.transactionSignalByClient.set(client, signal);
+        }
         try {
           const result = await this.transactionOwnerContext.run(client, () => fn(client));
           assertNotAborted(signal);
@@ -202,14 +233,23 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
         }
       },
       savepoint: async (client, fn, _options, signal) => {
-        assertNotAborted(signal);
+        const parentSignal = this.transactionSignalByClient.get(client);
+        const nestedSignal =
+          parentSignal && signal
+            ? AbortSignal.any([parentSignal, signal])
+            : (signal ?? parentSignal);
+        assertNotAborted(nestedSignal);
         const nestedClient: InMemoryTransactionalEventStoreClient = {
           state: cloneState(client.state),
         };
         const owner = this.transactionOwnerByClient.get(client) ?? client;
         this.transactionOwnerByClient.set(nestedClient, owner);
+        this.savepointParentByClient.set(nestedClient, client);
+        if (nestedSignal) {
+          this.transactionSignalByClient.set(nestedClient, nestedSignal);
+        }
         const result = await fn(nestedClient);
-        assertNotAborted(signal);
+        assertNotAborted(nestedSignal);
         client.state = cloneState(nestedClient.state);
         return result;
       },
@@ -228,6 +268,9 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
   ): Promise<TransactionalOutboxMessage> {
     const directOwner = await this.acquireOutboxReservation(input.idempotencyKey, context?.client);
     try {
+      assertNotAborted(
+        context?.client ? this.transactionSignalByClient.get(context.client) : undefined,
+      );
       const state = this.resolveState(context);
       const existingId = state.outboxIdByIdempotencyKey.get(input.idempotencyKey);
       if (existingId) {
@@ -752,17 +795,15 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     const owner = client
       ? (this.transactionOwnerByClient.get(client) ?? client)
       : { state: this.rootState };
+    const signal = client ? this.transactionSignalByClient.get(client) : undefined;
     while (true) {
+      assertNotAborted(signal);
       const reservation = this.outboxReservations.get(idempotencyKey);
       if (!reservation) {
         if (client) {
           this.adoptCommittedOutbox(idempotencyKey, client, owner);
         }
-        let release = (): void => {};
-        const released = new Promise<void>((resolve) => {
-          release = resolve;
-        });
-        this.outboxReservations.set(idempotencyKey, { owner, released, release });
+        this.outboxReservations.set(idempotencyKey, { owner, waiters: new Set() });
         return client ? undefined : owner;
       }
       if (reservation.owner === owner) {
@@ -773,7 +814,8 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
           `Nested transaction cannot append reserved outbox idempotency key '${idempotencyKey}'.`,
         );
       }
-      await reservation.released;
+      await waitForOutboxReservation(reservation, signal);
+      assertNotAborted(signal);
       if (client) {
         this.adoptCommittedOutbox(idempotencyKey, client, owner);
       }
@@ -791,7 +833,30 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     if (!id || !message || !baseState) {
       return;
     }
-    for (const state of [baseState, client.state]) {
+    const baseMessage = baseState.outbox.get(id);
+    if (
+      baseState.outboxIdByIdempotencyKey.get(idempotencyKey) === id &&
+      isDeepStrictEqual(baseMessage, message)
+    ) {
+      return;
+    }
+    const states = [baseState];
+    let current: InMemoryTransactionalEventStoreClient | undefined = client;
+    while (current) {
+      const stagedMessage = current.state.outbox.get(id);
+      if (
+        !isDeepStrictEqual(stagedMessage, baseMessage) &&
+        !isDeepStrictEqual(stagedMessage, message)
+      ) {
+        if (stagedMessage && stagedMessage.idempotencyKey !== idempotencyKey) {
+          throw new OutboxMessageIdConflictProblem(id);
+        }
+        throw new OutboxStorageProblem(`Outbox message '${id}' changed concurrently.`);
+      }
+      states.push(current.state);
+      current = this.savepointParentByClient.get(current);
+    }
+    for (const state of states) {
       state.outbox.set(id, cloneOutboxMessage(message));
       state.outboxIdByIdempotencyKey.set(idempotencyKey, id);
     }
@@ -801,7 +866,9 @@ export class InMemoryTransactionalEventStore implements TransactionalEventStore<
     for (const [idempotencyKey, reservation] of this.outboxReservations) {
       if (reservation.owner === owner) {
         this.outboxReservations.delete(idempotencyKey);
-        reservation.release();
+        for (const complete of reservation.waiters) {
+          complete();
+        }
       }
     }
   }
