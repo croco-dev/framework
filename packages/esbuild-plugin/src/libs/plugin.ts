@@ -255,6 +255,15 @@ export function crocoPlugin(config?: CrocoPluginConfig): esbuild.Plugin {
         compiledGraph = undefined;
         boundRuntime = false;
         graphErrors = [];
+        if (config?.generateRegistry !== undefined) {
+          return {
+            errors: [
+              {
+                text: "CROCO_DI_COMPILE_001: generateRegistry is no longer supported. Remove it and use di.enabled, di.outFile, and di.manifestFile; the generatedDiGraph must be bound to createApplicationRuntime(...).",
+              },
+            ],
+          };
+        }
         const isServerBuild = build.initialOptions.platform !== "browser";
         if (
           !normalizedConfig.di.enabled ||
