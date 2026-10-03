@@ -1047,6 +1047,14 @@ function getOptionalObjectFieldSchema(
     return getInnerSchema(schema);
   }
 
+  if (mode === "input" && schemaName === "ZodUnion") {
+    return getUnionOptions(schema).some(
+      (option) => getOptionalObjectFieldSchema(option, mode, true) !== undefined,
+    )
+      ? schema
+      : undefined;
+  }
+
   const effectType =
     schemaName === "ZodEffects" && schema && typeof schema === "object" && "_def" in schema
       ? (schema._def as { readonly effect?: { readonly type?: string } }).effect?.type

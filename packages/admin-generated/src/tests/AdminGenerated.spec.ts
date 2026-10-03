@@ -186,6 +186,42 @@ describe("admin-generated", () => {
     );
   });
 
+  it("should allow omitted union fields only when a branch has a default", () => {
+    const schema = z.object({
+      mode: z.union([z.string().default("all"), z.number()]),
+      wrapped: z.union([z.number(), z.string().default("all").readonly()]).nullable(),
+      nested: z.union([z.number(), z.union([z.boolean(), z.string().default("all")])]),
+      optionalBranch: z.union([z.string().optional(), z.number()]),
+      objectBranch: z.union([z.object({ value: z.string().default("all") }), z.number()]),
+    });
+
+    @Controller("/union-defaults")
+    class UnionDefaultsController {
+      @Post("/")
+      @ResponseSchema(schema)
+      create(@Body(schema) body: z.input<typeof schema>): z.output<typeof schema> {
+        return schema.parse(body);
+      }
+    }
+
+    const input: z.input<typeof schema> = { objectBranch: {} };
+    expect(schema.parse(input)).toEqual({
+      mode: "all",
+      wrapped: "all",
+      nested: "all",
+      objectBranch: { value: "all" },
+    });
+    const source = generateAdminResourceSourceFromContractGraph(
+      buildContractGraph([UnionDefaultsController]),
+    );
+    expect(source).toContain(
+      "export type UnionDefaultsControllerCreateInput = { mode?: string | undefined | number; nested?: number | boolean | string | undefined; objectBranch: { value?: string; } | number; optionalBranch: string | undefined | number; wrapped?: number | string | undefined | null; };",
+    );
+    expect(source).toContain(
+      "export type UnionDefaultsControllerCreateOutput = { mode: string | number; nested: number | boolean | string; objectBranch: { value: string; } | number; optionalBranch: string | undefined | number; wrapped: number | string | null; };",
+    );
+  });
+
   it("should generate typed admin resource config from Contract Graph routes", () => {
     @Controller("/admin/users")
     class UsersController {
