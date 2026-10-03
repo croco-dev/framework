@@ -1029,9 +1029,17 @@ function getOptionalObjectFieldSchema(schema: unknown, mode: "input" | "output")
     return getInnerSchema(schema);
   }
 
+  const effectType =
+    schemaName === "ZodEffects" && schema && typeof schema === "object" && "_def" in schema
+      ? (schema._def as { readonly effect?: { readonly type?: string } }).effect?.type
+      : undefined;
+
   if (
     mode === "input" &&
-    (schemaName === "ZodNullable" || schemaName === "ZodBranded" || schemaName === "ZodReadonly")
+    (schemaName === "ZodNullable" ||
+      schemaName === "ZodBranded" ||
+      schemaName === "ZodReadonly" ||
+      effectType === "refinement")
   ) {
     return getOptionalObjectFieldSchema(getInnerSchema(schema), mode) !== undefined
       ? schema
