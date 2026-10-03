@@ -10,6 +10,8 @@ export type FrontendRecoveryAction = {
   readonly href?: string;
   readonly onRecover?: () => void | Promise<void>;
   readonly problemCodes?: readonly string[];
+  readonly disabled?: boolean;
+  readonly ariaLabel?: string;
 };
 
 export type FrontendSessionPrincipal = {
