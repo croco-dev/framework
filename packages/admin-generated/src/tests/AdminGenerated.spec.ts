@@ -116,6 +116,65 @@ describe("admin-generated", () => {
       }
     },
   );
+  it("should preserve defaulted route body input and parsed output contracts", () => {
+    const schema = z.object({
+      label: z.string().default("all"),
+      pageSize: z.number().default(20),
+      settings: z.object({ enabled: z.boolean().default(true) }).default({}),
+      nested: z.object({ count: z.number().default(1) }),
+      optional: z.string().optional(),
+      optionalDefault: z.string().optional().default("value"),
+      defaultOptional: z.string().default("value").optional(),
+      nullable: z.string().default("value").nullable(),
+      readonly: z.number().default(2).readonly(),
+      items: z.array(z.object({ size: z.number().default(3) })),
+      numbers: z.array(z.number().default(6)),
+      variants: z.union([z.object({ size: z.number().default(4) }), z.string()]),
+      values: z.record(z.object({ size: z.number().default(5) })),
+    });
+
+    @Controller("/defaults")
+    class DefaultsController {
+      @Post("/")
+      @ResponseSchema(schema)
+      createDefaults(@Body(schema) body: z.input<typeof schema>): z.output<typeof schema> {
+        return schema.parse(body);
+      }
+    }
+
+    const input: z.input<typeof schema> = {
+      nested: {},
+      items: [{}],
+      numbers: [undefined],
+      variants: {},
+      values: { a: {} },
+    };
+    expect(schema.parse(input)).toEqual({
+      label: "all",
+      pageSize: 20,
+      settings: { enabled: true },
+      nested: { count: 1 },
+      optionalDefault: "value",
+      nullable: "value",
+      readonly: 2,
+      items: [{ size: 3 }],
+      numbers: [6],
+      variants: { size: 4 },
+      values: { a: { size: 5 } },
+    });
+    const source = generateAdminResourceSourceFromContractGraph(
+      buildContractGraph([DefaultsController]),
+    );
+    expect(source).toContain(
+      "export type DefaultsControllerCreateDefaultsInput = { defaultOptional?: string | undefined; items: { size?: number; }[]; label?: string; nested: { count?: number; }; nullable?: string | undefined | null; numbers: (number | undefined)[]; optional?: string; optionalDefault?: string | undefined; pageSize?: number; readonly?: number | undefined; settings?: { enabled?: boolean; }; values: Record<string, { size?: number; }>; variants: { size?: number; } | string; };",
+    );
+    expect(source).toContain(
+      "export type DefaultsControllerCreateDefaultsOutput = { defaultOptional?: string; items: { size: number; }[]; label: string; nested: { count: number; }; nullable: string | null; numbers: number[]; optional?: string; optionalDefault: string | undefined; pageSize: number; readonly: number; settings: { enabled: boolean; }; values: Record<string, { size: number; }>; variants: { size: number; } | string; };",
+    );
+    expect(source).toContain(
+      "readonly input: DefaultsControllerCreateDefaultsInput; readonly output: DefaultsControllerCreateDefaultsOutput;",
+    );
+  });
 
   it("should generate typed admin resource config from Contract Graph routes", () => {
     @Controller("/admin/users")

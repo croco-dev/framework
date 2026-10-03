@@ -668,11 +668,11 @@ function generateInputType(route: ContractGraphRoute): string {
     !route.inputSchemas.query &&
     !route.inputSchemas.headers
   ) {
-    return zodTypeToTypeScript(entries[0][1]);
+    return zodTypeToTypeScript(entries[0][1], "input");
   }
 
   return `{ ${entries
-    .map(([name, schema]) => `${name}: ${zodTypeToTypeScript(schema)};`)
+    .map(([name, schema]) => `${name}: ${zodTypeToTypeScript(schema, "input")};`)
     .join(" ")} }`;
 }
 
@@ -810,7 +810,7 @@ function getInputSchemaEntries(route: ContractGraphRoute): [string, unknown][] {
   );
 }
 
-function zodTypeToTypeScript(schema: unknown): string {
+function zodTypeToTypeScript(schema: unknown, mode: "input" | "output" = "output"): string {
   const schemaName = getSchemaName(schema);
 
   if (schemaName === "ZodString") {
@@ -854,37 +854,39 @@ function zodTypeToTypeScript(schema: unknown): string {
   }
 
   if (schemaName === "ZodUnion" || schemaName === "ZodDiscriminatedUnion") {
-    return unionTypes(getUnionOptions(schema).map(zodTypeToTypeScript));
+    return unionTypes(getUnionOptions(schema).map((option) => zodTypeToTypeScript(option, mode)));
   }
 
   if (schemaName === "ZodOptional") {
-    return `${zodTypeToTypeScript(getInnerSchema(schema))} | undefined`;
+    return `${zodTypeToTypeScript(getInnerSchema(schema), mode)} | undefined`;
   }
 
   if (schemaName === "ZodNullable") {
-    return `${zodTypeToTypeScript(getInnerSchema(schema))} | null`;
+    return `${zodTypeToTypeScript(getInnerSchema(schema), mode)} | null`;
   }
 
   if (schemaName === "ZodDefault") {
-    return zodTypeToTypeScript(getInnerSchema(schema));
+    const innerType = zodTypeToTypeScript(getInnerSchema(schema), mode);
+    return mode === "input" ? `${innerType} | undefined` : innerType;
   }
 
   if (schemaName === "ZodEffects" || schemaName === "ZodBranded" || schemaName === "ZodReadonly") {
-    return zodTypeToTypeScript(getInnerSchema(schema));
+    return zodTypeToTypeScript(getInnerSchema(schema), mode);
   }
 
   if (schemaName === "ZodArray") {
-    return `${zodTypeToTypeScript(getArrayElementSchema(schema))}[]`;
+    const elementType = zodTypeToTypeScript(getArrayElementSchema(schema), mode);
+    return `${mode === "input" && elementType.includes(" | ") ? `(${elementType})` : elementType}[]`;
   }
 
   if (schemaName === "ZodRecord") {
     const valueSchema = getRecordValueSchema(schema);
 
-    return `Record<string, ${valueSchema === undefined ? "unknown" : zodTypeToTypeScript(valueSchema)}>`;
+    return `Record<string, ${valueSchema === undefined ? "unknown" : zodTypeToTypeScript(valueSchema, mode)}>`;
   }
 
   if (schemaName === "ZodObject") {
-    return getObjectTypeScript(schema);
+    return getObjectTypeScript(schema, mode);
   }
 
   throw new AdminGeneratedContractProblem([
@@ -1005,28 +1007,38 @@ function getUnionOptions(schema: unknown): unknown[] {
   return [...(definition.options ?? [])];
 }
 
-function getObjectTypeScript(schema: unknown): string {
+function getObjectTypeScript(schema: unknown, mode: "input" | "output"): string {
   const fields = Object.entries(getObjectShape(schema))
     .sort(([left], [right]) => compareStrings(left, right))
     .map(([key, value]) => {
-      const optionalFieldSchema = getOptionalObjectFieldSchema(value);
+      const optionalFieldSchema = getOptionalObjectFieldSchema(value, mode);
 
       if (optionalFieldSchema !== undefined) {
-        return `${formatObjectKey(key)}?: ${zodTypeToTypeScript(optionalFieldSchema)};`;
+        return `${formatObjectKey(key)}?: ${zodTypeToTypeScript(optionalFieldSchema, mode)};`;
       }
 
-      return `${formatObjectKey(key)}: ${zodTypeToTypeScript(value)};`;
+      return `${formatObjectKey(key)}: ${zodTypeToTypeScript(value, mode)};`;
     });
 
   return `{ ${fields.join(" ")} }`;
 }
 
-function getOptionalObjectFieldSchema(schema: unknown): unknown {
-  if (getSchemaName(schema) !== "ZodOptional") {
-    return undefined;
+function getOptionalObjectFieldSchema(schema: unknown, mode: "input" | "output"): unknown {
+  const schemaName = getSchemaName(schema);
+  if (schemaName === "ZodOptional" || (mode === "input" && schemaName === "ZodDefault")) {
+    return getInnerSchema(schema);
   }
 
-  return getInnerSchema(schema);
+  if (
+    mode === "input" &&
+    (schemaName === "ZodNullable" || schemaName === "ZodBranded" || schemaName === "ZodReadonly")
+  ) {
+    return getOptionalObjectFieldSchema(getInnerSchema(schema), mode) !== undefined
+      ? schema
+      : undefined;
+  }
+
+  return undefined;
 }
 
 function getObjectShape(schema: unknown): Record<string, unknown> {
