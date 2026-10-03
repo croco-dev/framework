@@ -571,6 +571,7 @@ function writeOperationalEnvironmentTemplate(
   overrides: Readonly<Record<string, string | undefined>> = {},
 ): void {
   const variables: Record<string, string> = {
+    CROCO_AGENT_APPLICATION: "/absolute/path/to/application.mjs",
     CROCO_DEV_INSPECTOR_ENABLED: "false",
     CROCO_DEV_INSPECTOR_EXPOSURE: "off",
     CROCO_DEV_INSPECTOR_TOKEN: "<croco-secret:CROCO_DEV_INSPECTOR_TOKEN>",

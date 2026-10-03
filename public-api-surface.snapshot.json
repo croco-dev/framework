@@ -9129,6 +9129,47 @@
           ]
         },
         {
+          "exportPath": "./agent",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/agent.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/agent.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/cli/src/agent.ts",
+          "runtimeExports": [
+            {
+              "name": "createAgentReadMcpServer",
+              "exportKind": "named",
+              "source": "./libs/agentReadMcp.js",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createAgentReadTools",
+              "exportKind": "named",
+              "source": "./libs/agentReadTools.js",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "AgentReadApplication",
+              "exportKind": "named",
+              "source": "./libs/agentReadTools.js"
+            },
+            {
+              "name": "RegisteredAgentSource",
+              "exportKind": "named",
+              "source": "./libs/agentReadTools.js"
+            }
+          ]
+        },
+        {
           "exportPath": "./jobs",
           "kind": "code",
           "targets": [
@@ -24321,6 +24362,11 @@
             },
             {
               "name": "RegisteredMetricQuery",
+              "exportKind": "named",
+              "source": "./libs/read/MetricReadService"
+            },
+            {
+              "name": "RegisteredMetricQueryDescription",
               "exportKind": "named",
               "source": "./libs/read/MetricReadService"
             },

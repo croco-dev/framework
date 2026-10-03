@@ -154,6 +154,35 @@ function report(overrides: Partial<VerifiedMetricReport> = {}): VerifiedMetricRe
 }
 
 describe("MetricReadService", () => {
+  it.each(["report", "query"] as const)(
+    "sanitizes registered schema failures for %s input",
+    async (kind) => {
+      const privateError = new Error("private customer secret in schema failure");
+      const { service, executor, reader } = fixture({
+        query: {
+          inputSchema: {
+            parse: () => {
+              throw privateError;
+            },
+          },
+        },
+      });
+      const pending =
+        kind === "report"
+          ? service.getVerifiedReport("captures_by_currency", { currency: "USD" }, window)
+          : service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window);
+      await expect(pending).rejects.toMatchObject({
+        code: "metrics-core/invalid-query-input",
+        category: ProblemCategory.ValidationError,
+        detail: "Metric query input does not match its registered schema",
+      });
+      await expect(pending).rejects.not.toBe(privateError);
+      await expect(pending).rejects.toHaveProperty("cause", undefined);
+      expect(executor).not.toHaveBeenCalled();
+      expect(reader.readCandidates).not.toHaveBeenCalled();
+    },
+  );
+
   it("scopes revisions and snapshots to each registered definition", async () => {
     const sharedContext: MetricReadContext = {
       ...context,
@@ -529,6 +558,290 @@ describe("MetricReadService", () => {
     await expect(pending).rejects.toMatchObject({ code: "metrics-core/read-cancelled" });
   });
 
+  it.each(["list", "queries", "explain", "report", "query"] as const)(
+    "cancels a pending %s authorization using the invocation signal",
+    async (method) => {
+      let scopedSignal: AbortSignal | undefined;
+      const grant = vi.fn(async (request: MetricReadContext) => {
+        scopedSignal = request.signal;
+        return new Promise<null>(() => undefined);
+      });
+      const { service, executor } = fixture({ grant });
+      const controller = new AbortController();
+      const pending =
+        method === "list"
+          ? service.listDefinitions(controller.signal)
+          : method === "queries"
+            ? service.listRegisteredQueries(controller.signal)
+            : method === "explain"
+              ? service.explainDefinition(definition.id, controller.signal)
+              : method === "report"
+                ? service.getVerifiedReport(
+                    "captures_by_currency",
+                    { currency: "USD" },
+                    window,
+                    controller.signal,
+                  )
+                : service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window, {
+                    signal: controller.signal,
+                  });
+      const rejected = expect(pending).rejects.toMatchObject({
+        code: "metrics-core/read-cancelled",
+      });
+      await vi.waitFor(() => expect(grant).toHaveBeenCalledOnce());
+      controller.abort();
+      await rejected;
+      expect(scopedSignal?.aborted).toBe(true);
+      expect(scopedSignal?.reason).toMatchObject({ code: "metrics-core/read-cancelled" });
+      expect(executor).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(["trusted", "invocation"] as const)(
+    "merges the %s cancellation signal without replacing authority",
+    async (source) => {
+      const trusted = new AbortController();
+      const invocation = new AbortController();
+      const { service, executor } = fixture({
+        context: { ...context, signal: trusted.signal },
+        executor: async () => new Promise<MetricReadResult>(() => undefined),
+      });
+      const pending = service.runRegisteredQuery(
+        "captures_by_currency",
+        { currency: "USD" },
+        window,
+        { signal: invocation.signal },
+      );
+      const rejected = expect(pending).rejects.toMatchObject({
+        code: "metrics-core/read-cancelled",
+      });
+      await vi.waitFor(() => expect(executor).toHaveBeenCalledOnce());
+      expect(executor.mock.calls[0]?.[0].context.principal).toEqual(context.principal);
+      (source === "trusted" ? trusted : invocation).abort();
+      await rejected;
+      expect(executor.mock.calls[0]?.[0].signal.aborted).toBe(true);
+      expect(source === "trusted" ? invocation.signal.aborted : trusted.signal.aborted).toBe(false);
+    },
+  );
+
+  it.each(["lookup", "verification"] as const)(
+    "cancels report %s with the invocation signal",
+    async (stage) => {
+      const controller = new AbortController();
+      const reader: VerifiedReportReader = {
+        readCandidates: vi.fn(async () =>
+          stage === "lookup"
+            ? new Promise<readonly VerifiedMetricReport[]>(() => undefined)
+            : [report()],
+        ),
+        verify: vi.fn(async () => new Promise<boolean>(() => undefined)),
+      };
+      const { service, executor } = fixture({ reader });
+      const pending = service.getVerifiedReport(
+        "captures_by_currency",
+        { currency: "USD" },
+        window,
+        controller.signal,
+      );
+      const rejected = expect(pending).rejects.toMatchObject({
+        code: "metrics-core/read-cancelled",
+      });
+      await vi.waitFor(() =>
+        expect(stage === "lookup" ? reader.readCandidates : reader.verify).toHaveBeenCalledOnce(),
+      );
+      controller.abort();
+      await rejected;
+      expect(executor).not.toHaveBeenCalled();
+    },
+  );
+
+  it("normalizes an authority's abort rejection", async () => {
+    const controller = new AbortController();
+    const { service } = fixture({
+      grant: async (readContext) =>
+        new Promise((_, reject) => {
+          readContext.signal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          );
+        }),
+    });
+    const pending = service.listDefinitions(controller.signal);
+    const rejected = expect(pending).rejects.toMatchObject({ code: "metrics-core/read-cancelled" });
+    controller.abort();
+    await rejected;
+  });
+
+  it("isolates invocation cancellation and retains the shared concurrency budget", async () => {
+    const controller = new AbortController();
+    const budget = { ...context.budget, maxConcurrency: 2 };
+    const releases: (() => void)[] = [];
+    const { service, executor } = fixture({
+      context: { ...context, budget },
+      query: { limits: budget },
+      executor: async () =>
+        new Promise<MetricReadResult>((resolve) => releases.push(() => resolve(result))),
+    });
+    const first = service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window, {
+      signal: controller.signal,
+    });
+    const rejected = expect(first).rejects.toMatchObject({ code: "metrics-core/read-cancelled" });
+    await vi.waitFor(() => expect(executor).toHaveBeenCalledTimes(1));
+    const second = service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window);
+    await vi.waitFor(() => expect(executor).toHaveBeenCalledTimes(2));
+    controller.abort();
+    await rejected;
+    expect(executor.mock.calls[1]?.[0].signal.aborted).toBe(false);
+    await expect(
+      service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window),
+    ).rejects.toMatchObject({ code: "metrics-core/concurrency-budget-exceeded" });
+    releases[1]?.();
+    expect((await second).status).toBe("verified");
+    releases[0]?.();
+  });
+
+  it.each(["authorization", "report"] as const)(
+    "classifies a stalled %s as a timeout",
+    async (stage) => {
+      vi.useFakeTimers();
+      try {
+        const { service } = fixture({
+          query: { limits: { ...context.budget, maxTimeMs: 100 } },
+          ...(stage === "authorization"
+            ? { grant: async () => new Promise<null>(() => undefined) }
+            : {
+                reader: {
+                  readCandidates: async () =>
+                    new Promise<readonly VerifiedMetricReport[]>(() => undefined),
+                  verify: async () => true,
+                },
+              }),
+        });
+        const pending = service.getVerifiedReport(
+          "captures_by_currency",
+          { currency: "USD" },
+          window,
+        );
+        const rejected = expect(pending).rejects.toMatchObject({
+          code: "metrics-core/read-timeout",
+        });
+        await vi.advanceTimersByTimeAsync(100);
+        await rejected;
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it.each([
+    ["definitions", "initial"],
+    ["definitions", "recheck"],
+    ["queries", "initial"],
+    ["queries", "recheck"],
+    ["explanation", "initial"],
+    ["explanation", "recheck"],
+    ["report", "initial"],
+    ["report", "recheck"],
+    ["execution", "initial"],
+    ["execution", "recheck"],
+  ] as const)(
+    "aborts %s %s authorization at the remaining deadline without aborting its caller",
+    async (kind, stage) => {
+      vi.useFakeTimers();
+      try {
+        const caller = new AbortController();
+        const signals: AbortSignal[] = [];
+        const grant = vi.fn(async (request: MetricReadContext) => {
+          const signal = request.signal;
+          if (!signal) throw new Error("Authorization requires a scoped signal");
+          signals.push(signal);
+          if (stage === "recheck" && signals.length === 1) {
+            await new Promise<void>((resolve) => setTimeout(resolve, 60));
+            return { permissionEpoch: "permission-1", privacyEpoch: "privacy-1" };
+          }
+          return new Promise<null>((_, reject) => {
+            signal.addEventListener(
+              "abort",
+              () => reject(new DOMException("Aborted", "AbortError")),
+              {
+                once: true,
+              },
+            );
+          });
+        });
+        const { service } = fixture({
+          context: {
+            ...context,
+            budget: {
+              ...context.budget,
+              maxTimeMs: kind === "report" || kind === "execution" ? 1_000 : 100,
+            },
+          },
+          query: { limits: { ...context.budget, maxTimeMs: 100 } },
+          grant,
+        });
+        const pending =
+          kind === "definitions"
+            ? service.listDefinitions(caller.signal)
+            : kind === "queries"
+              ? service.listRegisteredQueries(caller.signal)
+              : kind === "explanation"
+                ? service.explainDefinition(definition.id, caller.signal)
+                : kind === "report"
+                  ? service.getVerifiedReport(
+                      "captures_by_currency",
+                      { currency: "USD" },
+                      window,
+                      caller.signal,
+                    )
+                  : service.runRegisteredQuery(
+                      "captures_by_currency",
+                      { currency: "USD" },
+                      window,
+                      { signal: caller.signal },
+                    );
+        const rejected = expect(pending).rejects.toMatchObject({
+          code: "metrics-core/read-timeout",
+        });
+        await vi.advanceTimersByTimeAsync(60);
+        expect(grant).toHaveBeenCalledTimes(stage === "initial" ? 1 : 2);
+        await vi.advanceTimersByTimeAsync(40);
+        await rejected;
+        expect(signals.at(-1)?.aborted).toBe(true);
+        expect(signals.at(-1)?.reason).toMatchObject({ code: "metrics-core/read-timeout" });
+        expect(caller.signal.aborted).toBe(false);
+        expect(vi.getTimerCount()).toBe(0);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it("cleans up authorization timers and caller listeners after success", async () => {
+    vi.useFakeTimers();
+    try {
+      const caller = new AbortController();
+      const signals: AbortSignal[] = [];
+      const remove = vi.spyOn(caller.signal, "removeEventListener");
+      const { service } = fixture({
+        grant: async (request) => {
+          if (request.signal) signals.push(request.signal);
+          return { permissionEpoch: "permission-1", privacyEpoch: "privacy-1" };
+        },
+      });
+      expect(await service.listDefinitions(caller.signal)).toHaveLength(1);
+      expect(signals).toHaveLength(2);
+      expect(remove).toHaveBeenCalledTimes(2);
+      expect(vi.getTimerCount()).toBe(0);
+      caller.abort();
+      await vi.advanceTimersByTimeAsync(context.budget.maxTimeMs);
+      expect(signals.every((signal) => !signal.aborted)).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("holds the concurrency slot until a cancelled executor settles", async () => {
     const controller = new AbortController();
     let release!: () => void;
@@ -575,7 +888,7 @@ describe("MetricReadService", () => {
           new Promise<MetricReadResult>((resolve) => setTimeout(() => resolve(result), 75)),
       });
       const read = service.runRegisteredQuery("captures_by_currency", { currency: "USD" }, window);
-      const rejected = expect(read).rejects.toMatchObject({ code: "metrics-core/read-cancelled" });
+      const rejected = expect(read).rejects.toMatchObject({ code: "metrics-core/read-timeout" });
       await vi.advanceTimersByTimeAsync(75);
       expect(executor).toHaveBeenCalledOnce();
       await vi.advanceTimersByTimeAsync(25);
@@ -652,6 +965,153 @@ describe("MetricReadService", () => {
     expect(await service.listDefinitions()).toEqual([]);
     expect(await service.explainDefinition("captures_total")).toEqual({ status: "denied" });
   });
+
+  it.each(["resolve", "reject"] as const)(
+    "times out when synchronous authorization work reaches the deadline before %s settlement",
+    async (settlement) => {
+      let scopedSignal: AbortSignal | undefined;
+      vi.useFakeTimers();
+      try {
+        const { service } = fixture({
+          grant: async (request) => {
+            scopedSignal = request.signal;
+            vi.setSystemTime(Date.now() + context.budget.maxTimeMs);
+            if (settlement === "reject") throw new Error("Authority rejected after blocking");
+            return { permissionEpoch: "permission-1", privacyEpoch: "privacy-1" };
+          },
+        });
+        await expect(service.listDefinitions()).rejects.toMatchObject({
+          code: "metrics-core/read-timeout",
+        });
+        expect(scopedSignal?.aborted).toBe(true);
+        expect(scopedSignal?.reason).toMatchObject({ code: "metrics-core/read-timeout" });
+        await vi.runAllTimersAsync();
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it.each(["definitions", "queries"] as const)(
+    "shares one time budget across all %s authorizations",
+    async (kind) => {
+      vi.useFakeTimers();
+      try {
+        const { query } = fixture();
+        const authorize = vi.fn(
+          async () =>
+            new Promise<{ permissionEpoch: string; privacyEpoch: string }>((resolve) => {
+              setTimeout(
+                () => resolve({ permissionEpoch: "permission-1", privacyEpoch: "privacy-1" }),
+                40,
+              );
+            }),
+        );
+        const service = new MetricReadService(
+          [definition, { ...definition, id: "second" }, { ...definition, id: "third" }],
+          [query, { ...query, id: "second" }, { ...query, id: "third" }],
+          {
+            currentContext: () => ({ ...context, budget: { ...context.budget, maxTimeMs: 100 } }),
+            authorize,
+          },
+        );
+        const pending =
+          kind === "definitions" ? service.listDefinitions() : service.listRegisteredQueries();
+        const rejected = expect(pending).rejects.toMatchObject({
+          code: "metrics-core/read-timeout",
+        });
+        await vi.advanceTimersByTimeAsync(80);
+        expect(authorize).toHaveBeenCalledTimes(3);
+        await vi.advanceTimersByTimeAsync(20);
+        await rejected;
+        await vi.runAllTimersAsync();
+        expect(authorize).toHaveBeenCalledTimes(3);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it.each(["definitions", "queries", "explanation"] as const)(
+    "includes %s epoch rechecks in the same time budget",
+    async (kind) => {
+      vi.useFakeTimers();
+      try {
+        const authorize = vi.fn(
+          async () =>
+            new Promise<{ permissionEpoch: string; privacyEpoch: string }>((resolve) => {
+              setTimeout(
+                () => resolve({ permissionEpoch: "permission-1", privacyEpoch: "privacy-1" }),
+                60,
+              );
+            }),
+        );
+        const { service } = fixture({
+          context: { ...context, budget: { ...context.budget, maxTimeMs: 100 } },
+          grant: authorize,
+        });
+        const pending =
+          kind === "definitions"
+            ? service.listDefinitions()
+            : kind === "queries"
+              ? service.listRegisteredQueries()
+              : service.explainDefinition(definition.id);
+        const rejected = expect(pending).rejects.toMatchObject({
+          code: "metrics-core/read-timeout",
+        });
+        await vi.advanceTimersByTimeAsync(60);
+        expect(authorize).toHaveBeenCalledTimes(2);
+        await vi.advanceTimersByTimeAsync(40);
+        await rejected;
+        await vi.runAllTimersAsync();
+        expect(authorize).toHaveBeenCalledTimes(2);
+      } finally {
+        vi.useRealTimers();
+      }
+    },
+  );
+
+  it("lists authorized query metadata without executable contracts", async () => {
+    const { service, query, executor } = fixture();
+    expect(await service.listRegisteredQueries()).toEqual([
+      {
+        id: query.id,
+        version: query.version,
+        definitionRefs: query.definitionRefs,
+        unit: query.unit,
+        population: query.population,
+        filter: query.filter,
+        requiredFields: query.requiredFields,
+        requiresRaw: query.requiresRaw,
+        limits: query.limits,
+      },
+    ]);
+    expect(executor).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["field", { requiredFields: ["amountMinor", "customerId"] }],
+    ["raw", { requiresRaw: true }],
+  ])("hides registered queries without %s permission", async (_label, query) => {
+    const { service } = fixture({ query });
+    expect(await service.listRegisteredQueries()).toEqual([]);
+    expect(await service.listDefinitions()).toHaveLength(1);
+  });
+
+  it.each(["permissionEpoch", "privacyEpoch"] as const)(
+    "hides registered queries when %s changes before return",
+    async (epoch) => {
+      let calls = 0;
+      const { service } = fixture({
+        grant: async () => ({
+          permissionEpoch: "permission-1",
+          privacyEpoch: "privacy-1",
+          [epoch]: ++calls === 1 ? "original" : "changed",
+        }),
+      });
+      expect(await service.listRegisteredQueries()).toEqual([]);
+    },
+  );
 
   it.each([
     ["multiple definitions", { definitionRefs: [definition.id, definition.id] }],

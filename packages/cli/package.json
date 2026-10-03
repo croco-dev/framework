@@ -8,7 +8,8 @@
     "directory": "packages/cli"
   },
   "bin": {
-    "croco": "./dist/bin/croco.js"
+    "croco": "./dist/bin/croco.js",
+    "croco-agent": "./dist/bin/croco-agent.js"
   },
   "files": [
     "dist"
@@ -34,6 +35,10 @@
       "./jobs": {
         "types": "./dist/jobs.d.ts",
         "import": "./dist/jobs.js"
+      },
+      "./agent": {
+        "types": "./dist/agent.d.ts",
+        "import": "./dist/agent.js"
       }
     },
     "access": "public"
@@ -54,18 +59,21 @@
     "@croco/diagnostics-core": "workspace:*",
     "@croco/framework-context": "workspace:*",
     "@croco/framework-routes": "workspace:*",
+    "@croco/metrics-core": "workspace:*",
     "@croco/migration-runner": "workspace:*",
     "@croco/openapi-spec": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/protocols-core": "workspace:*",
     "@croco/rpc-codegen": "workspace:*",
     "@croco/testing": "workspace:*",
+    "@modelcontextprotocol/server": "2.2.0",
     "citty": "^0.1.6",
     "ts-morph": "^24.0.0",
     "zod": "3.25.76"
   },
   "devDependencies": {
     "@croco/execution-core": "workspace:*",
+    "@modelcontextprotocol/client": "2.2.0",
     "@types/node": "^24.0.0",
     "tsup": "^8.3.5",
     "vitest": "^4.1.8"
