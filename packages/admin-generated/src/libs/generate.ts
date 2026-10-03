@@ -975,7 +975,18 @@ function getNativeEnumValues(schema: unknown): unknown[] {
     readonly values?: Record<string, unknown>;
   };
 
-  return [...new Set(Object.values(definition.values ?? {}).filter(isLiteralTypeValue))];
+  const nativeEnum = schema as {
+    readonly _def: unknown;
+    safeParse(value: unknown): { success: boolean };
+  };
+
+  return [
+    ...new Set(
+      Object.values(definition.values ?? {}).filter(
+        (value) => isLiteralTypeValue(value) && nativeEnum.safeParse(value).success,
+      ),
+    ),
+  ];
 }
 
 function getUnionOptions(schema: unknown): unknown[] {

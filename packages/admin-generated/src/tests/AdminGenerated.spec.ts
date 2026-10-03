@@ -69,6 +69,54 @@ const updateUserSchema = z.object({
   name: z.string().optional(),
 });
 describe("admin-generated", () => {
+  it.each<{ name: string; values: z.EnumLike; expected: string }>([
+    {
+      name: "numeric",
+      values: { 0: "Active", 1: "Inactive", Active: 0, Inactive: 1 },
+      expected: "0 | 1",
+    },
+    {
+      name: "string",
+      values: { Active: "active", Inactive: "inactive" },
+      expected: "'active' | 'inactive'",
+    },
+    {
+      name: "mixed",
+      values: { 0: "Inactive", Inactive: 0, Active: "active" },
+      expected: "0 | 'active'",
+    },
+    { name: "duplicate", values: { 0: "Alias", Active: 0, Alias: 0 }, expected: "0" },
+  ])(
+    "should emit only schema-accepted $name native enum values for input and output",
+    ({ values, expected }) => {
+      const schema = z.nativeEnum(values);
+
+      @Controller("/statuses")
+      class StatusController {
+        @Post("/")
+        @ResponseSchema(schema)
+        createStatus(@Body(schema) body: z.infer<typeof schema>): z.infer<typeof schema> {
+          return body;
+        }
+      }
+
+      const source = generateAdminResourceSourceFromContractGraph(
+        buildContractGraph([StatusController]),
+      );
+      expect(source).toContain(`export type StatusControllerCreateStatusInput = ${expected};`);
+      expect(source).toContain(`export type StatusControllerCreateStatusOutput = ${expected};`);
+
+      const generatedValues = expected
+        .split(" | ")
+        .map((literal) => (literal.startsWith("'") ? literal.slice(1, -1) : Number(literal)));
+      for (const value of [...Object.values(values), "unknown", -1, null, undefined]) {
+        expect(generatedValues.includes(value as string | number)).toBe(
+          schema.safeParse(value).success,
+        );
+      }
+    },
+  );
+
   it("should generate typed admin resource config from Contract Graph routes", () => {
     @Controller("/admin/users")
     class UsersController {
