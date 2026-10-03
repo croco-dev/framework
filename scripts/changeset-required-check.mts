@@ -2,6 +2,7 @@
 
 /**
  * Enforce release metadata for publishable package behavior changes.
+ * Generated package source remains release-significant for its owning package.
  *
  * Narrow exemptions:
  * - package docs and tests do not require a changeset;
@@ -1319,6 +1320,14 @@ function logUncoveredPackages(coverage: ChangesetCoverage): void {
     log(`- ${packageName} (${change.surface}${snapshotSurface})`);
     for (const file of [...change.files].sort()) {
       log(`  - ${file}`);
+    }
+    if (change.files.some((file) => file.includes("/src/generated/"))) {
+      log(
+        "  Generated source is part of the published package; regeneration does not exempt its owning package from release metadata.",
+      );
+      log(
+        `  Changeset frontmatter entry (choose the appropriate bump; patch shown): ${JSON.stringify(packageName)}: patch`,
+      );
     }
   }
 }

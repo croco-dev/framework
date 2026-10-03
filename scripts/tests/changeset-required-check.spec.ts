@@ -76,6 +76,91 @@ describe("changeset-required-check.mts", () => {
     );
   });
 
+  describe.each([
+    ["problems-core", "problem-code-registry.ts"],
+    ["public", "client-contract.ts"],
+  ])("generated source in %s", (packageDir, fileName) => {
+    it("requires release metadata and shows the owning package entry", () => {
+      const repo = createTempRepo();
+      writePackage(repo, packageDir, { name: `@croco/${packageDir}`, version: "1.0.0" });
+      git(repo, ["add", "."]);
+      git(repo, ["commit", "-m", "chore: seed generated package"]);
+      checkoutBranch(repo, "fix/generated-without-changeset");
+      const file = `packages/${packageDir}/src/generated/${fileName}`;
+      commitFile(repo, file, "export const codes = ['NEW_PROBLEM'];", "feat: generate contract");
+
+      const result = runScript(repo);
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain(file);
+      expect(result.stdout).toContain(`"@croco/${packageDir}": patch`);
+      expect(result.stdout).toContain(
+        "Generated source is part of the published package; regeneration does not exempt its owning package from release metadata.",
+      );
+    });
+
+    it("passes when a changeset covers the generated source owner", () => {
+      const repo = createTempRepo();
+      writePackage(repo, packageDir, { name: `@croco/${packageDir}`, version: "1.0.0" });
+      git(repo, ["add", "."]);
+      git(repo, ["commit", "-m", "chore: seed generated package"]);
+      checkoutBranch(repo, "fix/generated-with-changeset");
+      commitFile(
+        repo,
+        `packages/${packageDir}/src/generated/${fileName}`,
+        "export const codes = ['NEW_PROBLEM'];",
+        "feat: generate contract",
+      );
+      commitFile(
+        repo,
+        ".changeset/generated.md",
+        `---\n"@croco/${packageDir}": patch\n---\n\nPublish the generated contract.\n`,
+        "chore: cover generated owner",
+      );
+
+      const result = runScript(repo);
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).not.toContain("Generated source is part of the published package");
+    });
+  });
+
+  it.each(["", "Changeset-required no-release reason: Only regenerated the Problem registry."])(
+    "requires registry owner coverage even when the Problem declaration package is covered (%s)",
+    (body) => {
+      const repo = createTempRepo();
+      writePackage(repo, "problems-core", { name: "@croco/problems-core", version: "1.0.0" });
+      git(repo, ["add", "."]);
+      git(repo, ["commit", "-m", "chore: seed registry owner"]);
+      checkoutBranch(repo, "fix/problem-registration");
+      commitFile(
+        repo,
+        "packages/public/src/NewProblem.ts",
+        "export class NewProblem {}",
+        "feat: declare Problem",
+      );
+      commitFile(
+        repo,
+        "packages/problems-core/src/generated/problem-code-registry.ts",
+        "export const codes = ['NEW_PROBLEM'];",
+        "feat: register Problem",
+      );
+      commitFile(
+        repo,
+        ".changeset/problem.md",
+        "---\n'@croco/public': patch\n---\n\nPublish the Problem declaration.\n",
+        "chore: cover declaration",
+      );
+      writeFile(repo, "event.json", JSON.stringify({ pull_request: { body } }));
+
+      const result = runScript(repo, { env: { GITHUB_EVENT_PATH: "event.json" } });
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain('"@croco/problems-core": patch');
+      expect(result.stdout).not.toContain('"@croco/public": patch');
+    },
+  );
+
   it("passes Changesets-supported quoted bump values and YAML comments", () => {
     const repo = createTempRepo();
     checkoutBranch(repo, "feature/quoted-changeset-metadata");
@@ -1429,6 +1514,27 @@ describe("changeset-required-check.mts", () => {
     expect(result.stdout).toContain("@croco/public (public API snapshot (.))");
     expect(result.stdout).toContain("public-api-surface.snapshot.json");
   });
+
+  it.each(["{invalid", null])(
+    "does not suggest a synthetic package entry for an invalid snapshot (%s)",
+    (content) => {
+      const repo = createTempRepo();
+      checkoutBranch(repo, "fix/invalid-public-api-snapshot");
+      if (content === null) {
+        git(repo, ["rm", "public-api-surface.snapshot.json"]);
+        git(repo, ["commit", "-m", "test: remove snapshot"]);
+      } else {
+        commitFile(repo, "public-api-surface.snapshot.json", content, "test: invalidate snapshot");
+      }
+
+      const result = runScript(repo);
+
+      expect(result.status).toBe(1);
+      expect(result.stdout).toContain("public API snapshot (public API snapshot)");
+      expect(result.stdout).not.toContain('"public API snapshot": patch');
+      expect(result.stdout).not.toContain("Changeset frontmatter entry");
+    },
+  );
 
   it("passes when the public API snapshot changes with a release changeset", () => {
     const repo = createTempRepo();
