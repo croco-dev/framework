@@ -1040,17 +1040,50 @@ describe("CloudflareImagesProvider", () => {
       );
     });
 
-    it("should throw terminal provider Problem when delete fails", async () => {
+    it("should resolve when the image is already missing", async () => {
+      const cancelResponseBody = vi.fn();
+      mockFetch.mockResolvedValueOnce(
+        new Response(new ReadableStream<Uint8Array>({ cancel: cancelResponseBody }), {
+          status: 404,
+        }),
+      );
+
+      await expect(provider.delete("missing-image-id")).resolves.toBeUndefined();
+      expect(cancelResponseBody).toHaveBeenCalledTimes(1);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("should preserve cancellation while cleaning up a missing delete response", async () => {
+      const controller = new AbortController();
+      mockFetch.mockResolvedValueOnce(
+        new Response(
+          new ReadableStream<Uint8Array>({
+            cancel() {
+              controller.abort("cancelled during response cleanup");
+            },
+          }),
+          { status: 404 },
+        ),
+      );
+
+      await expect(
+        provider.delete("missing-image-id", { signal: controller.signal }),
+      ).rejects.toThrow(StorageOperationAbortedProblem);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    it("should preserve the provider Problem when delete is forbidden", async () => {
       const mockResponse = {
         headers: new Headers(),
         ok: false,
+        status: 403,
         text: async () => "Not found",
       };
 
       mockFetch.mockResolvedValueOnce(mockResponse);
 
       await expect(provider.delete("test-image-id")).rejects.toMatchObject({
-        code: "storage-cloudflare/terminal-upstream",
+        code: "storage-cloudflare/validation-failed",
       });
     });
 
@@ -1961,7 +1994,9 @@ function useInMemoryCloudflareImagesBackend(
     }
 
     if (method === "DELETE" && url.includes("/images/v1/")) {
-      images.delete(decodeURIComponent(url.split("/images/v1/")[1] ?? ""));
+      if (!images.delete(decodeURIComponent(url.split("/images/v1/")[1] ?? ""))) {
+        return jsonResponse({ success: false, errors: ["Image not found"] }, 404);
+      }
       return jsonResponse({ success: true, errors: [] });
     }
 
