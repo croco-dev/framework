@@ -782,6 +782,12 @@
       "owner": "@croco/batch-core"
     },
     {
+      "path": "packages/batch-core/src/tests/DocExamples.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/batch-core"
+    },
+    {
       "path": "packages/batch-core/src/tests/JobBuilder.spec.ts",
       "lane": "fast",
       "qualifiers": [],
