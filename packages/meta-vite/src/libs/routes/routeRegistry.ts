@@ -17,6 +17,17 @@ export class RouteConflictError extends Error {
   }
 }
 
+export class ShellRouteDefinitionError extends Error {
+  readonly code = "meta-vite/shell-route-ssr-only" as const;
+
+  constructor(path: string, mode: string) {
+    super(
+      `Shell-first streaming (resolveShell/regions/stream) requires mode 'ssr': '${path}' declares mode '${mode}'`,
+    );
+    this.name = "ShellRouteDefinitionError";
+  }
+}
+
 export class RouteRegistry {
   private readonly definitions: PageRouteDefinition[] = [];
   private readonly apiDefinitions: ApiRouteIR[] = [];
@@ -24,6 +35,11 @@ export class RouteRegistry {
   register(definition: PageRouteDefinition): void {
     if (this.hasRegisteredRoute(definition.path)) {
       throw new RouteConflictError(definition.path);
+    }
+    if (definition.mode !== undefined && definition.mode !== "ssr") {
+      if (definition.resolveShell ?? definition.regions ?? definition.stream) {
+        throw new ShellRouteDefinitionError(definition.path, definition.mode);
+      }
     }
     this.definitions.push(definition);
   }
@@ -45,6 +61,9 @@ export class RouteRegistry {
       componentLoader: async () => ({ default: definition.component }),
       ...(pageRoute.head ? { head: pageRoute.head } : {}),
       ...(pageRoute.revalidateMs !== undefined ? { revalidateMs: pageRoute.revalidateMs } : {}),
+      ...(pageRoute.resolveShell ? { resolveShell: pageRoute.resolveShell } : {}),
+      ...(pageRoute.regions ? { regions: pageRoute.regions } : {}),
+      ...(pageRoute.stream ? { stream: pageRoute.stream } : {}),
     };
   }
 
@@ -57,6 +76,9 @@ export class RouteRegistry {
       ...(definition.revalidate !== undefined
         ? { revalidateMs: definition.revalidate * 1000 }
         : {}),
+      ...(definition.resolveShell ? { resolveShell: definition.resolveShell } : {}),
+      ...(definition.regions ? { regions: definition.regions } : {}),
+      ...(definition.stream ? { stream: definition.stream } : {}),
     };
   }
 

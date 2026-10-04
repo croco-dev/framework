@@ -1,5 +1,7 @@
-import type { RuntimeContext } from "../render/types";
 import type { HeadMetadata } from "./head";
+import type { DeferredRegionReader } from "../render/types";
+import type { RuntimeContext } from "../render/types";
+import type { PageRouteStreamDefinition } from "./shell";
 
 /**
  * Render mode for each page route.
@@ -20,7 +22,7 @@ export type PageRouteDefinition = {
   mode?: RenderMode;
   revalidate?: number;
   head?: () => HeadMetadata;
-};
+} & PageRouteStreamDefinition;
 
 /**
  * Internal page route IR (intermediate representation).
@@ -32,7 +34,7 @@ export type PageRouteIR = {
   mode: RenderMode;
   revalidateMs?: number;
   head?: () => HeadMetadata;
-};
+} & PageRouteStreamDefinition;
 
 /**
  * Internal render route IR.
@@ -44,11 +46,13 @@ export type RenderRouteIR = {
   componentLoader: () => Promise<{ default: React.ComponentType<RenderRouteComponentProps> }>;
   head?: () => HeadMetadata;
   revalidateMs?: number;
-};
+} & PageRouteStreamDefinition;
 
 export type RenderRouteComponentProps = {
   readonly request: Request;
   readonly context?: RuntimeContext;
+  /** Per-request deferred region reader; absent when the route declares no regions. */
+  readonly regions?: DeferredRegionReader;
 };
 
 /**

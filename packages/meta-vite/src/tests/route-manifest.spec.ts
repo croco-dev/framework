@@ -61,21 +61,6 @@ describe("buffered route capabilities", () => {
     expect(
       createMetaViteRouteManifest({ pages, requiredCapabilities: ["fetch", "react-ssr"] }).pages,
     ).toHaveLength(1);
-    const routeRegistry = new RouteRegistry();
-    routeRegistry.register(
-      defineRoute({
-        path: "/ssr",
-        mode: "ssr",
-        componentRef: "src/Page.tsx#Page",
-        component: Page,
-      }),
-    );
-    expect(() =>
-      createMetaViteRouteManifestFromRegistry({
-        routeRegistry,
-        requiredCapabilities: ["streaming-response"],
-      }),
-    ).toThrow(MetaViteUnsupportedCapabilityProblem);
   });
 });
 
@@ -308,6 +293,40 @@ describe("createMetaViteRouteManifestFromRegistry", () => {
     });
 
     expect(manifest.serverActions[0]?.invalidates).toEqual([]);
+  });
+
+  it("reports streaming-response only for shell-first SSR pages with regions", () => {
+    const registry = new RouteRegistry();
+    registry.register(
+      defineRoute({
+        path: "/pdp",
+        mode: "ssr",
+        componentRef: "src/pages/Pdp.tsx#PdpPage",
+        component: Page,
+        regions: [{ id: "reviews", loader: async () => "ok" }],
+      }),
+    );
+    registry.register(
+      defineRoute({
+        path: "/plain",
+        mode: "ssr",
+        componentRef: "src/pages/Plain.tsx#PlainPage",
+        component: Page,
+      }),
+    );
+
+    const manifest = createMetaViteRouteManifestFromRegistry({ routeRegistry: registry });
+    const pdp = manifest.pages.find((page) => page.path === "/pdp");
+    const plain = manifest.pages.find((page) => page.path === "/plain");
+
+    expect(pdp?.runtimeCapabilities).toEqual(["fetch", "react-ssr", "streaming-response"]);
+    expect(plain?.runtimeCapabilities).toEqual(["fetch", "react-ssr"]);
+    expect(() =>
+      createMetaViteRouteManifestFromRegistry({
+        routeRegistry: registry,
+        requiredCapabilities: ["streaming-response"],
+      }),
+    ).toThrow(MetaViteUnsupportedCapabilityProblem);
   });
 
   it("canonicalizes equivalent route sets regardless of registration order", () => {
