@@ -31,7 +31,7 @@ idempotency 충돌 중 무엇인지 알려야 합니다. 그 결정은 `Problem`
 | 카테고리                     | 용도                                                 | 기본 재시도 결정                       |
 | ---------------------------- | ---------------------------------------------------- | -------------------------------------- |
 | `BadRequest`                 | 잘못된 요청 형태, 잘못된 원시 형식, 미지원 옵션      | terminal                               |
-| `Unauthorized` / `Forbidden` | 식별자 누락이나 권한 부족                            | terminal                               |
+| `Unauthorized` / `Forbidden` | 인증 주체 부재 또는 권한 부족                            | terminal                               |
 | `NotFound` / `Gone`          | 없거나 폐기된 리소스                                 | terminal                               |
 | `Conflict`                   | 중복 상태, 낙관적 동시성, idempotency 충돌           | 호출자가 입력을 바꾸지 않으면 terminal |
 | `ValidationError`            | 스키마·필드 검증 실패                                | terminal                               |

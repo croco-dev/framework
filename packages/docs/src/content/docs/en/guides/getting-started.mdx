@@ -82,22 +82,28 @@ Add REST behavior in `apps/api-server/src/controllers/SaasController.ts`, where 
 already keeps route metadata and Problem responses together:
 
 ```typescript no-check
+import { Inject } from "@croco/framework-context";
+import { SAAS_RUNTIME_STATE_TOKEN, runSaasDemoFlow, type SaasRuntimeState } from "../saasDemo";
+
 @Controller("/saas")
 export class SaasController {
+  constructor(
+    @Inject(SAAS_RUNTIME_STATE_TOKEN)
+    private readonly runtimeState: SaasRuntimeState,
+  ) {}
+
   @Post(seedSaasDemoRoute)
   @ProblemResponses(...routeProblemResponses(seedSaasDemoRoute))
   async seedDemo() {
     await assertDemoEndpointsEnabled();
-    const { seedDefaultSaasRuntime } = await import("../saasDemo");
-    return seedDefaultSaasRuntime();
+    return runSaasDemoFlow(this.runtimeState.reset());
   }
 
   @Get(smokeSaasDemoRoute)
   @ProblemResponses(...routeProblemResponses(smokeSaasDemoRoute))
   async smokeDemo() {
     await assertDemoEndpointsEnabled();
-    const { seedDefaultSaasRuntime } = await import("../saasDemo");
-    return seedDefaultSaasRuntime();
+    return runSaasDemoFlow(this.runtimeState.reset());
   }
 }
 ```
