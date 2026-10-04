@@ -1,3 +1,4 @@
+import { compareStrings } from "../tooling/compareStrings.mjs";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
@@ -216,7 +217,9 @@ export function resolveLocalCrocoPackagesForGeneratedProject(
     resolvePackage(dependencyName, "Generated project package.json");
   }
 
-  return [...resolvedPackages.values()].sort((left, right) => left.name.localeCompare(right.name));
+  return [...resolvedPackages.values()].sort((left, right) =>
+    compareStrings(left.name, right.name),
+  );
 }
 
 export function rewriteExternalCrocoRanges(
@@ -281,7 +284,7 @@ export function writePnpmWorkspaceOverrides(
     ...rangeOverrides,
   };
   const overrideLines = Object.entries(overrides)
-    .sort(([left], [right]) => left.localeCompare(right))
+    .sort(([left], [right]) => compareStrings(left, right))
     .map(
       ([packageName, range]) =>
         `  ${toYamlDoubleQuotedScalar(packageName)}: ${toYamlDoubleQuotedScalar(range)}`,

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -146,7 +148,7 @@ function normalizeChangedFile(path: string): string {
 }
 
 function compareText(left: string, right: string): number {
-  return left.localeCompare(right);
+  return compareStrings(left, right);
 }
 
 function uniqueSorted(values: readonly string[]): string[] {

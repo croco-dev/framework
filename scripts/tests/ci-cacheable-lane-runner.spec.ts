@@ -1,3 +1,4 @@
+import { compareStrings } from "../../tooling/compareStrings.mjs";
 import { execFileSync } from "node:child_process";
 import {
   existsSync,
@@ -225,7 +226,7 @@ function regularFiles(path: string): readonly string[] {
   const metadata = lstatSync(path);
   if (metadata.isFile()) return [path];
   return readdirSync(path, { withFileTypes: true })
-    .sort((left, right) => left.name.localeCompare(right.name))
+    .sort((left, right) => compareStrings(left.name, right.name))
     .flatMap((entry) => regularFiles(join(path, entry.name)));
 }
 

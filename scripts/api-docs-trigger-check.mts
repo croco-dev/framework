@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { argv, exit, stdout } from "node:process";
@@ -53,7 +55,7 @@ export function expectedApiSourceGlobs(rootDir: string): readonly string[] {
   const packageNames = readdirSync(docsRoot, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
-    .sort((left, right) => left.localeCompare(right));
+    .sort((left, right) => compareStrings(left, right));
 
   const sourceGlobs = packageNames.map((packageName) => {
     const packageDir = join(rootDir, "packages", packageName);

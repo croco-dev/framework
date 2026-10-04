@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { extendZodWithOpenApi } from "@asteasolutions/zod-to-openapi";
@@ -709,7 +710,7 @@ function toComparableSnapshot(snapshot: OperationSnapshot): ComparableOperationS
 
 function objectFingerprint(fields: readonly ObjectFieldFingerprint[]): string {
   return `object(${[...fields]
-    .sort((left, right) => left.name.localeCompare(right.name))
+    .sort((left, right) => compareStrings(left.name, right.name))
     .map((field) => `${field.name}${field.optional ? "?" : ""}:${field.fingerprint}`)
     .join(",")})`;
 }
@@ -743,8 +744,8 @@ function toProblemSnapshot(problem: Record<string, unknown>): ProblemSnapshot {
 
 function compareProblemSnapshots(left: ProblemSnapshot, right: ProblemSnapshot): number {
   return (
-    left.code.localeCompare(right.code) ||
-    left.category.localeCompare(right.category) ||
+    compareStrings(left.code, right.code) ||
+    compareStrings(left.category, right.category) ||
     left.status - right.status
   );
 }

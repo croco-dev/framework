@@ -1,3 +1,4 @@
+import { compareStrings } from "../tooling/compareStrings.mjs";
 import { createHash } from "node:crypto";
 import {
   copyFileSync,
@@ -153,7 +154,7 @@ function stableIdentity(
 
 function contextBindings(context: ExactLaneCacheContext): readonly LaneCacheCommandBinding[] {
   const bindings = [...context.commandBindings].sort((left, right) =>
-    left.checkId.localeCompare(right.checkId),
+    compareStrings(left.checkId, right.checkId),
   );
   assertUnique(
     bindings.map(({ checkId }) => checkId),
@@ -416,7 +417,7 @@ function validateCachedFiles(cacheDir: string, entry: ExactLaneCacheEntry): void
   const filesRoot = join(cacheDir, "files");
   const visitFiles = (directory: string): readonly string[] =>
     readdirSync(directory, { withFileTypes: true })
-      .sort((left, right) => left.name.localeCompare(right.name))
+      .sort((left, right) => compareStrings(left.name, right.name))
       .flatMap((entry) => {
         const path = join(directory, entry.name);
         if (entry.isSymbolicLink()) {
@@ -426,10 +427,10 @@ function validateCachedFiles(cacheDir: string, entry: ExactLaneCacheEntry): void
         if (!entry.isFile()) fail("INVALID_EXACT_CACHE_OUTPUT", `Exact cache contains ${path}.`);
         return [relative(filesRoot, path).replaceAll("\\", "/")];
       });
-  const actualPaths = [...visitFiles(filesRoot)].sort((left, right) => left.localeCompare(right));
+  const actualPaths = [...visitFiles(filesRoot)].sort((left, right) => compareStrings(left, right));
   const expectedPaths = entry.bundle.artifact.files
     .map(({ path }) => path)
-    .sort((left, right) => left.localeCompare(right));
+    .sort((left, right) => compareStrings(left, right));
   if (JSON.stringify(actualPaths) !== JSON.stringify(expectedPaths)) {
     fail("EXACT_CACHE_PATH_SET_MISMATCH", "Exact cache file path set does not match the bundle.");
   }

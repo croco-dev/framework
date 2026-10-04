@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 /**
  * Normalize and verify publish-facing package manifest contracts.
  *
@@ -1875,7 +1877,7 @@ function validateSourceRuntimeDependencies(pkg, packageDir, violations) {
   }
 
   for (const [dependencyName, importFiles] of Array.from(importedDependencies.entries()).sort(
-    ([left], [right]) => left.localeCompare(right),
+    ([left], [right]) => compareStrings(left, right),
   )) {
     violations.push(
       `source imports ${dependencyName} at runtime but dependencies/peerDependencies/optionalDependencies is missing: ${Array.from(importFiles).sort().join(", ")}`,

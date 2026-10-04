@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import type { z } from "zod";
 import type {
   ContractAccessMetadata,
@@ -554,10 +555,6 @@ function compareDiagnostics(left: ContractDiagnostic, right: ContractDiagnostic)
     compareStrings(left.controllerName ?? "", right.controllerName ?? "") ||
     compareStrings(left.message, right.message)
   );
-}
-
-function compareStrings(left: string, right: string): number {
-  return left.localeCompare(right);
 }
 
 function isContractGraphV1Route(value: unknown): value is ContractGraphV1Route {

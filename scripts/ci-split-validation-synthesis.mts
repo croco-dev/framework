@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { argv, exit } from "node:process";
@@ -334,7 +336,7 @@ export function runSplitValidationSynthesis(options: RunOptions): SplitSynthesis
     const failed = failedPrerequisites(plan.dependsOn, results);
     if (failed.length > 0) {
       const blockers = failed
-        .sort((left, right) => left.id.localeCompare(right.id))
+        .sort((left, right) => compareStrings(left.id, right.id))
         .map(({ id, status }) => `${id} (${status})`)
         .join(", ");
       results.set(

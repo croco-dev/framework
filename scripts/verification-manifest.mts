@@ -1,3 +1,4 @@
+import { compareStrings } from "../tooling/compareStrings.mjs";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 
@@ -349,7 +350,7 @@ function readWorkspacePackages(): readonly WorkspacePackage[] {
         ];
       });
     })
-    .sort((left, right) => left.name.localeCompare(right.name));
+    .sort((left, right) => compareStrings(left.name, right.name));
 }
 
 const WORKSPACE_PACKAGES = readWorkspacePackages();

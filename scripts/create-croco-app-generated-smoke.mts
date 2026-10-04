@@ -1,3 +1,4 @@
+import { compareStrings } from "../tooling/compareStrings.mjs";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
@@ -2878,10 +2879,10 @@ function readTemplateMatrixTargets(cases: readonly SmokeCase[]): readonly Templa
   }
 
   return [...targetCases.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
+    .sort(([left], [right]) => compareStrings(left, right))
     .map(([template, caseNames]) => ({
       template,
-      cases: caseNames.sort((left, right) => left.localeCompare(right)),
+      cases: caseNames.sort((left, right) => compareStrings(left, right)),
     }));
 }
 
@@ -4270,7 +4271,7 @@ function compareGraphQLOperations(
   left: GraphQLContractOperationJson,
   right: GraphQLContractOperationJson,
 ): number {
-  return `${left.kind}:${left.name}`.localeCompare(`${right.kind}:${right.name}`);
+  return compareStrings(`${left.kind}:${left.name}`, `${right.kind}:${right.name}`);
 }
 
 function assertSmokeCoverage(cases: readonly SmokeCase[]): void {

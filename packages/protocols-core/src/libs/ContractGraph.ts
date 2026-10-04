@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import "reflect-metadata";
 import {
   createProblemRegistrySnapshot,
@@ -1024,7 +1025,7 @@ function compareProblemResponses(
   left: NonNullable<ContractGraphRoute["problemResponses"]>[number],
   right: NonNullable<ContractGraphRoute["problemResponses"]>[number],
 ): number {
-  return left.code.localeCompare(right.code) || left.status - right.status;
+  return compareStrings(left.code, right.code) || left.status - right.status;
 }
 
 function validatePathParams(route: ContractGraphRoute): ContractDiagnostic[] {

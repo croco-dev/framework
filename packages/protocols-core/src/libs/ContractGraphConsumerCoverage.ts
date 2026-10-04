@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import {
   ContractGraphDiagnosticError,
   type ContractDiagnostic,
@@ -620,8 +621,4 @@ function compareDiagnostics(left: ContractDiagnostic, right: ContractDiagnostic)
     compareStrings(left.routeId ?? "", right.routeId ?? "") ||
     compareStrings(left.message, right.message)
   );
-}
-
-function compareStrings(left: string, right: string): number {
-  return left.localeCompare(right);
 }

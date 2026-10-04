@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../tooling/compareStrings.mjs";
 import {
   buildContractGraph,
   ContractGraphDiagnosticError,
@@ -436,10 +437,6 @@ function isIntentSourceFile(name: string): boolean {
 
 function uniqueStrings(values: readonly string[]): string[] {
   return [...new Set(values)].sort(compareStrings);
-}
-
-function compareStrings(left: string, right: string): number {
-  return left.localeCompare(right);
 }
 
 function validateSupportedMethods(table: RouteRegistrationTable): ContractDiagnostic[] {

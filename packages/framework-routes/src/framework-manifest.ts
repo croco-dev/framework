@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../tooling/compareStrings.mjs";
 import {
   createProjectIntentMap,
   type CreateProjectIntentMapOptions,
@@ -566,8 +567,4 @@ function compareExportSymbols(
     left.source.line - right.source.line ||
     left.source.column - right.source.column
   );
-}
-
-function compareStrings(left: string, right: string): number {
-  return left.localeCompare(right);
 }

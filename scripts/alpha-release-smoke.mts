@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -505,7 +507,7 @@ function resolvePackageClosure(
     resolvePackage(packageName, "alpha release spine");
   }
 
-  return [...resolved.values()].sort((left, right) => left.name.localeCompare(right.name));
+  return [...resolved.values()].sort((left, right) => compareStrings(left.name, right.name));
 }
 
 function buildPackages(packages: readonly ReleasePackage[], rootDir: string): void {
@@ -714,7 +716,7 @@ export function writePnpmOverrides(
     : `packages:\n  - "."\n`;
   const contentWithoutOverrides = removeTopLevelYamlBlock(existingContent, "overrides").trimEnd();
   const overrideLines = Object.entries(rangeOverrides)
-    .sort(([left], [right]) => left.localeCompare(right))
+    .sort(([left], [right]) => compareStrings(left, right))
     .map(
       ([packageName, range]) =>
         `  ${toYamlDoubleQuotedScalar(packageName)}: ${toYamlDoubleQuotedScalar(range)}`,

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -346,8 +348,8 @@ function discoverProblemCodeInventory(rootDir: string): {
     })
     .sort(
       (left, right) =>
-        left.code.localeCompare(right.code) ||
-        String(left.category).localeCompare(String(right.category)),
+        compareStrings(left.code, right.code) ||
+        compareStrings(String(left.category), String(right.category)),
     );
   return { discoveries, dynamicCodeFactories };
 }
@@ -1099,7 +1101,7 @@ export function createProblemCodeRegistry(
   const registry = {
     version: "croco.problem-code-registry.v1",
     problemCount: problems.length,
-    problems: problems.sort((left, right) => left.code.localeCompare(right.code)),
+    problems: problems.sort((left, right) => compareStrings(left.code, right.code)),
   } as const satisfies ProblemCodeRegistry;
 
   errors.push(...getProblemCodeRegistryValidationErrors(registry));
@@ -1295,7 +1297,7 @@ function mergeProblemRegistryBaselines(
   }
 
   const problems = [...problemsByCode.values()].sort((left, right) =>
-    left.code.localeCompare(right.code),
+    compareStrings(left.code, right.code),
   );
 
   return {
@@ -1339,7 +1341,7 @@ function mergeDeprecatedProblemEntries(
   }
 
   const problems = [...mergedByCode.values()].sort((left, right) =>
-    left.code.localeCompare(right.code),
+    compareStrings(left.code, right.code),
   );
 
   return {
@@ -4821,10 +4823,10 @@ function compareSources(
   right: ProblemCodeDiscovery["sources"][number],
 ): number {
   return (
-    left.file.localeCompare(right.file) ||
+    compareStrings(left.file, right.file) ||
     left.line - right.line ||
     left.column - right.column ||
-    left.kind.localeCompare(right.kind)
+    compareStrings(left.kind, right.kind)
   );
 }
 

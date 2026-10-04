@@ -1,3 +1,4 @@
+import { compareStrings } from "../tooling/compareStrings.mjs";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -384,7 +385,7 @@ function getCatalogSpinePackages(catalog: PackageCatalog): Set<string> {
 }
 
 function uniqueSignals(signals: string[]): string[] {
-  return [...new Set(signals)].sort((left, right) => left.localeCompare(right));
+  return [...new Set(signals)].sort((left, right) => compareStrings(left, right));
 }
 
 function getReleaseCriticalSignals(packageSlug: string): string[] {
@@ -480,7 +481,7 @@ export function getCoreCoverageSelectionCandidates({
         },
       ];
     })
-    .sort((left, right) => left.packageName.localeCompare(right.packageName));
+    .sort((left, right) => compareStrings(left.packageName, right.packageName));
 }
 
 export function getCoreCoverageSelectionWarnings(

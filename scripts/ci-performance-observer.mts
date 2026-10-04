@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -1182,10 +1184,10 @@ export function createCiPerformanceObservations(
   }
   assertSplitIdentity(monolithic, shadow, "split-validation-shadow");
   const expectedBundleDigests = producerBundleDigests.sort((left, right) =>
-    left.lane.localeCompare(right.lane),
+    compareStrings(left.lane, right.lane),
   );
   const shadowBundleDigests = [...shadow.producerBundles].sort((left, right) =>
-    left.lane.localeCompare(right.lane),
+    compareStrings(left.lane, right.lane),
   );
   if (JSON.stringify(expectedBundleDigests) !== JSON.stringify(shadowBundleDigests)) {
     throw new Error("split-validation-shadow does not bind the exact producer bundles");

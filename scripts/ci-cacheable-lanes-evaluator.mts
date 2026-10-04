@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -601,7 +603,7 @@ function stable(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
   if (value && typeof value === "object")
     return `{${Object.entries(value as Record<string, unknown>)
-      .sort(([a], [b]) => a.localeCompare(b))
+      .sort(([a], [b]) => compareStrings(a, b))
       .map(([key, item]) => `${JSON.stringify(key)}:${stable(item)}`)
       .join(",")}}`;
   return JSON.stringify(value);
@@ -620,7 +622,7 @@ function resultSet(records: readonly ResultRecord[]): string {
   return stable(
     [...records]
       .map((record) => ({ ...record, diagnostics: [...record.diagnostics].sort() }))
-      .sort((left, right) => left.id.localeCompare(right.id)),
+      .sort((left, right) => compareStrings(left.id, right.id)),
   );
 }
 function recordResultContract(observation: Observation): void {
@@ -913,7 +915,7 @@ export function evaluateDataset(
       (left, right) =>
         Date.parse(left.metrics.synthesis.sourceCreatedAt) -
           Date.parse(right.metrics.synthesis.sourceCreatedAt) ||
-        left.metrics.synthesis.sourceRunId.localeCompare(right.metrics.synthesis.sourceRunId),
+        compareStrings(left.metrics.synthesis.sourceRunId, right.metrics.synthesis.sourceRunId),
     );
     const primary = splitSuccesses
       .filter(({ cohort }) => cohort === "partial" || cohort === "warm")
@@ -1040,7 +1042,7 @@ export function evaluateDataset(
       (left, right) =>
         Date.parse(left.mono[0]?.sourceCreatedAt ?? "") -
           Date.parse(right.mono[0]?.sourceCreatedAt ?? "") ||
-        (left.mono[0]?.sourceRunId ?? "").localeCompare(right.mono[0]?.sourceRunId ?? ""),
+        compareStrings(left.mono[0]?.sourceRunId ?? "", right.mono[0]?.sourceRunId ?? ""),
     );
     const pairWindow = pairs.slice(-SAMPLE_WINDOW);
     const covered = [
@@ -1081,7 +1083,8 @@ export function evaluateDataset(
         );
     }
     diagnostics.sort((left, right) =>
-      `${left.code}/${left.key ?? ""}/${left.message}`.localeCompare(
+      compareStrings(
+        `${left.code}/${left.key ?? ""}/${left.message}`,
         `${right.code}/${right.key ?? ""}/${right.message}`,
       ),
     );

@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
 import { createRequire, isBuiltin } from "node:module";
@@ -203,7 +204,7 @@ function addControllerSourceFiles(project: Project, patterns: readonly string[])
   const sourceFiles = patterns.flatMap((pattern) => project.addSourceFilesAtPaths(pattern));
   return [
     ...new Map(sourceFiles.map((sourceFile) => [sourceFile.getFilePath(), sourceFile])).values(),
-  ].sort((left, right) => left.getFilePath().localeCompare(right.getFilePath()));
+  ].sort((left, right) => compareStrings(left.getFilePath(), right.getFilePath()));
 }
 
 function resolveProjectSourceDependencies(project: Project): void {

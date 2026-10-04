@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { isAbsolute, join, relative, resolve } from "node:path";
@@ -183,7 +185,7 @@ function diagnosticKey(diagnostic: StrictContractDiagnostic): string {
 }
 
 function compareDiagnostics(a: StrictContractDiagnostic, b: StrictContractDiagnostic): number {
-  return diagnosticKey(a).localeCompare(diagnosticKey(b));
+  return compareStrings(diagnosticKey(a), diagnosticKey(b));
 }
 
 export function compareStrictContractDiagnostics(

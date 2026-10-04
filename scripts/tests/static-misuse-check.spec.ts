@@ -21,6 +21,159 @@ describe("static-misuse-check.mts", () => {
     }
   });
 
+  it("flags default-locale localeCompare calls in deterministic generation sources", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "scripts/generate.mts",
+      [
+        "export function compare(a: string, b: string) {",
+        "  a.localeCompare(b);",
+        "  a.localeCompare(",
+        "    b,",
+        "  );",
+        '  a["localeCompare"]?.(b);',
+        "  a?.localeCompare(b, undefined);",
+        "  a.localeCompare(b, void 0, { numeric: true });",
+        "}",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "deterministic-locale-compare");
+    expect(result?.status).toBe("fail");
+    expect(result?.diagnostics.map(({ line }) => line)).toEqual([2, 3, 6, 7, 8]);
+  });
+
+  it("allows explicit locales and ignores localeCompare text and out-of-scope sources", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "scripts/generate.mts",
+      [
+        'const text = "a.localeCompare(b)";',
+        "// a.localeCompare(b)",
+        'a.localeCompare(b, "en-US");',
+        'a["localeCompare"](b, ["en-US"], { numeric: true });',
+        "a.localeCompare(b, selectedLocale);",
+      ].join("\n"),
+    );
+    for (const file of [
+      "scripts/tests/fixture.ts",
+      "scripts/fixture.spec.mts",
+      "packages/rpc-codegen/src/tests/fixture.ts",
+      "packages/rpc-codegen/src/fixture.test.ts",
+      "packages/docs/src/sort.ts",
+    ]) {
+      writeFile(repo, file, "a.localeCompare(b);");
+    }
+    expect(findResult(repo, "deterministic-locale-compare")).toMatchObject({
+      status: "pass",
+      diagnostics: [],
+    });
+  });
+
+  it("covers all deterministic generation packages and shared tooling", () => {
+    const repo = createTempRepo();
+    const files = [
+      ...[
+        "rpc-codegen",
+        "openapi-spec",
+        "protocol-codegen",
+        "protocols-core",
+        "framework-routes",
+        "esbuild-plugin",
+        "admin-generated",
+      ].map((name) => `packages/${name}/src/generate.ts`),
+      "tooling/generate.mts",
+    ];
+    for (const file of files) writeFile(repo, file, "a.localeCompare(b);");
+    expect(
+      findResult(repo, "deterministic-locale-compare")
+        ?.diagnostics.map(({ file }) => file)
+        .sort(),
+    ).toEqual(files.sort());
+  });
+
+  it("does not allow inline suppression of default-locale localeCompare", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "scripts/generate.mts",
+      [
+        "// croco-static-misuse-ignore-next-line CROCO_STATIC_DETERMINISTIC_LOCALE_COMPARE -- use the baseline",
+        "a.localeCompare(b);",
+        "a.localeCompare(b); // croco-static-misuse-ignore-line CROCO_STATIC_DETERMINISTIC_LOCALE_COMPARE -- use the baseline",
+      ].join("\n"),
+    );
+    expect(findResult(repo, "deterministic-locale-compare")?.diagnostics).toHaveLength(2);
+  });
+
+  it.each([
+    ["scripts/generate.mts", "package.json", "croco"],
+    ["tooling/generate.mts", "package.json", "croco"],
+    [
+      "packages/rpc-codegen/src/generate.ts",
+      "packages/rpc-codegen/package.json",
+      "@croco/rpc-codegen",
+    ],
+  ])("honors reviewed localeCompare exceptions for %s", (file, manifest, packageName) => {
+    const repo = createTempRepo();
+    writeFile(repo, manifest, JSON.stringify({ name: packageName }));
+    writeFile(repo, file, "a.localeCompare(b);");
+    writeFile(
+      repo,
+      "scripts/static-misuse-locale-compare-allowlist.json",
+      JSON.stringify({
+        schemaVersion: 1,
+        baselineEntryCount: 1,
+        entries: [
+          {
+            package: packageName,
+            file,
+            line: 1,
+            excerpt: "a.localeCompare(b);",
+            reason: "Reviewed locale-sensitive display ordering.",
+            owner: "framework-tooling",
+            expiresOn: "2099-12-31",
+          },
+        ],
+      }),
+    );
+    expect(findResult(repo, "deterministic-locale-compare")).toMatchObject({
+      status: "pass",
+      diagnostics: [],
+    });
+  });
+
+  it("rejects expired localeCompare exceptions", () => {
+    const repo = createTempRepo();
+    writeFile(repo, "package.json", JSON.stringify({ name: "croco" }));
+    writeFile(repo, "scripts/generate.mts", "a.localeCompare(b);");
+    writeFile(
+      repo,
+      "scripts/static-misuse-locale-compare-allowlist.json",
+      JSON.stringify({
+        schemaVersion: 1,
+        baselineEntryCount: 1,
+        entries: [
+          {
+            package: "croco",
+            file: "scripts/generate.mts",
+            line: 1,
+            excerpt: "a.localeCompare(b);",
+            reason: "Expired exception.",
+            owner: "framework-tooling",
+            expiresOn: "2000-01-01",
+          },
+        ],
+      }),
+    );
+    const result = findResult(repo, "deterministic-locale-compare");
+    expect(result?.status).toBe("fail");
+    expect(result?.diagnostics).toHaveLength(2);
+    expect(result?.diagnostics[0].message).toContain("expiresOn is stale");
+  });
+
   it("flags repository-core imports of Drizzle implementation packages", () => {
     const repo = createTempRepo();
     writeFile(

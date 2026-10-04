@@ -1,3 +1,4 @@
+import { compareStrings } from "../tooling/compareStrings.mjs";
 import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
@@ -235,7 +236,7 @@ function collectInternalRuntimeGraph(
   visit(rootPackage);
 
   return Array.from(graph.values()).sort((left, right) =>
-    left.packageName.localeCompare(right.packageName),
+    compareStrings(left.packageName, right.packageName),
   );
 }
 
@@ -369,7 +370,7 @@ function binTargetsFromManifest(pkg: PackageJson, packageName: string): BinTarge
   return Object.entries(bin)
     .filter((entry): entry is [string, string] => typeof entry[1] === "string")
     .map(([commandName, target]) => ({ commandName, target }))
-    .sort((left, right) => left.commandName.localeCompare(right.commandName));
+    .sort((left, right) => compareStrings(left.commandName, right.commandName));
 }
 
 function defaultBinCommandName(packageName: string): string {
@@ -915,7 +916,7 @@ function internalPeerPackagesFor(graphPackages: readonly PackedPackageInfo[]): P
   }
 
   return Array.from(peerPackages.values()).sort((left, right) =>
-    left.packageName.localeCompare(right.packageName),
+    compareStrings(left.packageName, right.packageName),
   );
 }
 
