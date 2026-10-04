@@ -10,6 +10,7 @@ import {
   createMetaViteRouteManifest,
   createMetaViteRouteManifestFromRegistry,
   MetaViteRouteManifestError,
+  MetaViteUnsupportedCapabilityProblem,
   serializeMetaViteRouteManifest,
   writeMetaViteRouteManifest,
 } from "../libs/build/routeManifest";
@@ -22,6 +23,61 @@ import type { RenderRouteComponentProps } from "../libs/routes/types";
 function Page({ request }: RenderRouteComponentProps) {
   return createElement("main", null, request.url);
 }
+
+describe("buffered route capabilities", () => {
+  const pages = [{ path: "/buffered", mode: "rsc" as const, componentRef: "src/Page.tsx#Page" }];
+
+  it("preserves requested mode while reporting only implemented capabilities", () => {
+    const [page] = createMetaViteRouteManifest({ pages }).pages;
+    expect(page?.mode).toBe("rsc");
+    expect(page?.runtimeCapabilities).toEqual(["fetch", "react-ssr"]);
+    expect(page?.runtimeRequirements).toEqual([
+      {
+        code: "CROCO_META_VITE_RSC_RUNTIME_REQUIRED",
+        capability: "react-server-components",
+        phase: "runtime",
+      },
+    ]);
+  });
+  it.each(["react-server-components", "streaming-response"] as const)(
+    "rejects profiles requiring %s before certifying their manifest",
+    (capability) => {
+      expect(() =>
+        createMetaViteRouteManifest({ pages, requiredCapabilities: [capability] }),
+      ).toThrow(MetaViteUnsupportedCapabilityProblem);
+      try {
+        createMetaViteRouteManifest({ pages, requiredCapabilities: [capability] });
+      } catch (error) {
+        expect(error).toMatchObject({
+          code: "meta-vite/unsupported-render-capability",
+          status: 501,
+          extensions: { path: "/buffered", capability },
+        });
+      }
+    },
+  );
+
+  it("accepts buffered SSR requirements and enforces registry profile requirements", () => {
+    expect(
+      createMetaViteRouteManifest({ pages, requiredCapabilities: ["fetch", "react-ssr"] }).pages,
+    ).toHaveLength(1);
+    const routeRegistry = new RouteRegistry();
+    routeRegistry.register(
+      defineRoute({
+        path: "/ssr",
+        mode: "ssr",
+        componentRef: "src/Page.tsx#Page",
+        component: Page,
+      }),
+    );
+    expect(() =>
+      createMetaViteRouteManifestFromRegistry({
+        routeRegistry,
+        requiredCapabilities: ["streaming-response"],
+      }),
+    ).toThrow(MetaViteUnsupportedCapabilityProblem);
+  });
+});
 
 describe("createMetaViteRouteManifestFromRegistry", () => {
   it("emits a deterministic route manifest for pages, API routes, and server actions", () => {
@@ -162,8 +218,7 @@ describe("createMetaViteRouteManifestFromRegistry", () => {
             "componentRef": "src/pages/Feed.server.tsx#FeedPage",
             "runtimeCapabilities": [
               "fetch",
-              "react-server-components",
-              "streaming-response"
+              "react-ssr"
             ],
             "runtimeRequirements": [
               {

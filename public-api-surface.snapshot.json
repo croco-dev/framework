@@ -22932,6 +22932,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "MetaViteUnsupportedCapabilityProblem",
+              "exportKind": "named",
+              "source": "./libs/build/routeManifest",
+              "declarationKind": "class"
+            },
+            {
               "name": "prerenderSsgRoutes",
               "exportKind": "named",
               "source": "./libs/build/ssgPrerender",

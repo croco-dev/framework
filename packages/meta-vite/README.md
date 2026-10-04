@@ -1,6 +1,6 @@
 # @croco/meta-vite
 
-Croco-native Vite SSR/RSC meta-framework. Croco의 유일한 SSR 엔진입니다. 모든 서버 렌더링 페이지는 `@croco/meta-vite`를 통해 제공됩니다.
+Croco-native Vite buffered SSR meta-framework. Croco의 유일한 SSR 엔진입니다. 모든 서버 렌더링 페이지는 `@croco/meta-vite`를 통해 제공됩니다.
 
 ## Installation
 
@@ -19,7 +19,7 @@ pnpm add ioredis
 ## Features
 
 - **SSR**: Server-side rendering with React 19, head metadata injection, XSS-safe HTML shell
-- **RSC**: React Server Components with Flight payload embedding and browser hydration
+- **Legacy `rsc` mode**: Buffered SSR HTML with an embedded JSON marker; React Flight and progressive streaming are unsupported
 - **SSG**: Static site generation at build time (`prerenderSsgRoutes`)
 - **ISR**: TTL-only incremental static regeneration via CacheStore. `InMemoryCacheStore` for local/single-process, `RedisCacheStoreAdapter` for production durable caching (extends `AbstractCacheStoreAdapter`), and runtime support diagnostics for durable production claims
 - **API Co-location**: Define API routes alongside page routes with `defineApiRoute()`. Compose pages and APIs under a single fetch handler using `createMetaFetchHandler`'s `apiRoutes` option
@@ -187,12 +187,26 @@ current server-action registry without rewriting the file.
 
 ## Route Modes
 
-| Mode | Description                                 | Revalidate             |
-| ---- | ------------------------------------------- | ---------------------- |
-| ssr  | Server-side render every request            | N/A                    |
-| ssg  | Static pre-render at build time             | N/A                    |
-| isr  | TTL-based revalidation with CacheStore      | `revalidate` (seconds) |
-| rsc  | React Server Components with Flight payload | N/A                    |
+| Mode | Description                            | Revalidate             |
+| ---- | -------------------------------------- | ---------------------- |
+| ssr  | Server-side render every request       | N/A                    |
+| ssg  | Static pre-render at build time        | N/A                    |
+| isr  | TTL-based revalidation with CacheStore | `revalidate` (seconds) |
+| rsc  | Buffered SSR with embedded JSON marker | N/A                    |
+
+`mode` records the requested route mode. `runtimeCapabilities` records the implementation's
+capabilities; the legacy `rsc` mode reports `fetch` and `react-ssr`. Its
+`runtimeRequirements` retains the requested React Server Components requirement, which the
+buffered implementation does not satisfy. A `Response` body alone does not prove progressive rendering.
+
+Profiles requiring page capabilities must pass `requiredCapabilities` to
+`createMetaViteRouteManifest()` or `createMetaViteRouteManifestFromRegistry()`.
+For example, `requiredCapabilities: ["react-server-components", "streaming-response"]`
+fails before manifest emission with `MetaViteUnsupportedCapabilityProblem`
+(`meta-vite/unsupported-render-capability`, status 501, route path and capability extensions).
+Omitting requirements preserves the legacy buffered payload; it does not certify Flight or streaming.
+Actual Flight and shell-to-host streaming are tracked in #2835 and #2836.
+Adapter preservation of externally supplied streams is a separate capability from page rendering.
 
 ## Provider Adapters
 
@@ -209,7 +223,7 @@ Detailed promotion gates live in [Presentation Runtime Support](../docs/src/cont
 | SSR pages         | Supported through `createNodeComposedHandler()` and `RenderServer`.                                           | Supported through `createLambdaComposedHandler()` with API Gateway event conversion.                      | Supported through `createCloudflareComposedHandler()` and `@croco/frontend-cloudflare`.                 |
 | SSG routes        | Supported at build time through `prerenderSsgRoutes()`.                                                       | Supported before Lambda packaging as static output.                                                       | Supported before Worker asset upload as static output.                                                  |
 | ISR routes        | v1 exact-key TTL. Use `RedisCacheStoreAdapter` or another durable `IsrCacheStore` for production persistence. | v1 exact-key TTL. In-memory cache is warm-container only; use durable storage for production persistence. | v1 exact-key TTL only when a Worker-safe `IsrCacheStore` is supplied. In-memory cache is isolate-local. |
-| RSC routes        | Beta with React 19.                                                                                           | Beta and buffered; no streaming claim.                                                                    | Beta with Worker `Response` streaming; development reload remains full reload.                          |
+| RSC routes        | Buffered SSR with legacy JSON marker; no React Flight support.                                                | Buffered SSR with legacy JSON marker; no React Flight or streaming support.                               | Buffered SSR with legacy JSON marker; no React Flight or progressive rendering.                         |
 | Server actions    | Supported through `createServerActionHandler()`.                                                              | Supported after Lambda request conversion.                                                                | Supported with Cloudflare `RuntimeContext` propagation.                                                 |
 | API routes        | API-first/page-fallback composition.                                                                          | API-first/page-fallback composition.                                                                      | API-first/page-fallback composition or Worker service bindings.                                         |
 | Streaming         | Fetch `Response` streams are preserved by the fetch surface.                                                  | Not supported by this adapter; responses are buffered.                                                    | Supported for streaming `Response` bodies.                                                              |
@@ -278,7 +292,7 @@ Common errors and their diagnostics:
 - **Invalid route**: Route without a `component` field or with an unsupported mode produces an error. The route path is included in the diagnostic.
 - **Invalid ISR revalidate**: `revalidate` without `mode: 'isr'` is silently ignored. A `revalidate` value that is not a positive integer produces a validation warning.
 - **Missing durable ISR configuration**: `evaluateIsrRuntimeSupport({ requireDurable: true })` reports `CROCO_META_VITE_ISR_LOCAL_CACHE_ONLY` for local-only stores and `CROCO_META_VITE_ISR_WORKER_STORE_UNSAFE` for Workers stores that are not explicitly Worker-safe.
-- **RSC rendering failure**: Returns a JSON diagnostic `{ error: 'RSC rendering failed', route: string, detail: string }` with status 500. The `detail` field contains the original error message from the React render call.
+- **RSC rendering failure**: Returns a JSON diagnostic `{ error: 'RSC rendering failed', route: string, detail: string }` with status 500. For `Error` values, `detail` is redacted to `An internal server error occurred`.
 - **Render error (SSR)**: SSR rendering errors fall back to a generic `500 Internal Server Error` HTML response. Error details are not included in the HTML to prevent server-side information leakage.
 - **Route not found**: Unmatched routes return a `404 Not Found` HTML response.
 
@@ -383,16 +397,16 @@ should now read the Problem result shape: `ok === false`, `kind`, RFC 7807 field
 
 ### Route Manifest
 
-| Export                                    | Type     | Description                                                                              |
-| ----------------------------------------- | -------- | ---------------------------------------------------------------------------------------- |
-| `createMetaViteRouteManifest`             | function | Build a deterministic manifest from explicit page, API, and server action IR arrays.     |
-| `createMetaViteRouteManifestFromRegistry` | function | Build a deterministic manifest from `RouteRegistry` and optional `ServerActionRegistry`. |
-| `serializeMetaViteRouteManifest`          | function | Serialize a route manifest as stable pretty JSON with a trailing newline.                |
-| `writeMetaViteRouteManifest`              | function | Write the serialized manifest to disk, creating parent directories when needed.          |
-| `MetaViteRouteManifestError`              | class    | Error thrown when route metadata cannot produce a stable manifest contract.              |
-| `MetaViteRouteManifest`                   | type     | Stable route manifest artifact shape.                                                    |
-| `MetaViteRuntimeCapability`               | type     | Runtime-neutral capability hints such as `isr-cache` and `react-server-components`.      |
-| `MetaViteRuntimeRequirement`              | type     | Build/runtime requirement codes for SSG, ISR, and RSC routes.                            |
+| Export                                    | Type     | Description                                                                                             |
+| ----------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------- |
+| `createMetaViteRouteManifest`             | function | Build a deterministic manifest from explicit page, API, and server action IR arrays.                    |
+| `createMetaViteRouteManifestFromRegistry` | function | Build a deterministic manifest from `RouteRegistry` and optional `ServerActionRegistry`.                |
+| `serializeMetaViteRouteManifest`          | function | Serialize a route manifest as stable pretty JSON with a trailing newline.                               |
+| `writeMetaViteRouteManifest`              | function | Write the serialized manifest to disk, creating parent directories when needed.                         |
+| `MetaViteRouteManifestError`              | class    | Error thrown when route metadata cannot produce a stable manifest contract.                             |
+| `MetaViteRouteManifest`                   | type     | Stable route manifest artifact shape.                                                                   |
+| `MetaViteRuntimeCapability`               | type     | Implemented route capabilities; buffered pages report `react-ssr`, without Flight or streaming support. |
+| `MetaViteRuntimeRequirement`              | type     | Build/runtime requirement codes for SSG, ISR, and RSC routes.                                           |
 
 ### Vite Plugin
 

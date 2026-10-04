@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 885,
+  problemCount: 886,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -15262,6 +15262,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/meta-vite/src/libs/actions/serverActions.ts",
           line: 101,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/unsupported-render-capability",
+      category: "NotImplemented",
+      status: 501,
+      title: "Not Implemented",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-unsupported-render-capability",
+      recovery: {
+        cause: "The requested capability is not supported by this runtime or adapter.",
+        userAction: "Use a supported capability or choose an adapter/runtime that provides it.",
+        operatorAction:
+          "Check runtime capability declarations and provider maturity documentation.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/build/routeManifest.ts",
+          line: 20,
           column: 1,
           kind: "problem-class",
         },
