@@ -73,7 +73,7 @@ describe("CloudinaryDiagnosticsProvider", () => {
         hasApiKey: true,
         hasApiSecret: true,
         metadataSupport: {
-          contentType: "format-only",
+          contentType: "mapped-formats-only",
           customMetadata: "required",
         },
       },
