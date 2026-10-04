@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   assertProblemCodeRegistryValid,
+  CROCO_PROBLEM_CODE_REGISTRY,
   createProblemRegistrySnapshot,
   createProblemCodeRegistry,
   defineProblemRegistry,
@@ -108,6 +109,90 @@ describe("Problem code registry", () => {
     ).toThrow(
       "Status policy references unknown Problem code 'transports-http/renamed-body-too-large'.",
     );
+  });
+
+  it("validates finite runtime categories without a fixed status or title", () => {
+    const registry = createProblemCodeRegistry([
+      discovery(
+        "upstream/failed",
+        ProblemCategory.InternalServerError,
+        "packages/upstream/src/a.ts",
+        1,
+      ),
+    ]);
+    const [fixed] = registry.problems;
+    if (!fixed) throw new Error("expected registry fixture entry");
+    const dynamic = {
+      ...fixed,
+      category: null,
+      status: null,
+      title: null,
+      categoryPolicy: {
+        kind: "runtime-dependent",
+        possibleCategories: [ProblemCategory.BadRequest, ProblemCategory.InternalServerError],
+        possibleStatuses: [400, 500],
+      },
+    } as const;
+    expect(() =>
+      assertProblemCodeRegistryValid({ ...registry, problems: [dynamic] }),
+    ).not.toThrow();
+    for (const invalid of [
+      { ...dynamic, category: ProblemCategory.InternalServerError },
+      { ...dynamic, status: 500 },
+      { ...dynamic, title: "Internal Server Error" },
+      { ...dynamic, categoryPolicy: { ...dynamic.categoryPolicy, possibleCategories: [] } },
+      { ...dynamic, categoryPolicy: { ...dynamic.categoryPolicy, possibleStatuses: [500] } },
+      {
+        ...dynamic,
+        categoryPolicy: { ...dynamic.categoryPolicy, possibleStatuses: [400, 500, 500] },
+      },
+      {
+        ...dynamic,
+        categoryPolicy: {
+          ...dynamic.categoryPolicy,
+          possibleCategories: [ProblemCategory.BadRequest, ProblemCategory.BadRequest],
+        },
+      },
+      { ...dynamic, categoryPolicy: undefined },
+    ]) {
+      expect(() => assertProblemCodeRegistryValid({ ...registry, problems: [invalid] })).toThrow(
+        ProblemRegistryValidationProblem,
+      );
+    }
+  });
+
+  it("requires source evidence and a reason for dynamic code factories", () => {
+    const registry = createProblemCodeRegistry([]);
+    const factory = {
+      className: "GenericProblem",
+      source: {
+        file: "packages/alpha/src/GenericProblem.ts",
+        line: 2,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason: "Code is supplied by the constructor parameter.",
+    } as const;
+    expect(() =>
+      assertProblemCodeRegistryValid({ ...registry, dynamicCodeFactories: [factory] }),
+    ).not.toThrow();
+    for (const invalid of [
+      { ...factory, reason: "" },
+      { ...factory, className: "" },
+      { ...factory, source: { ...factory.source, line: 0 } },
+      { ...factory, source: { ...factory.source, column: 0 } },
+    ]) {
+      expect(() =>
+        assertProblemCodeRegistryValid({ ...registry, dynamicCodeFactories: [invalid] }),
+      ).toThrow(ProblemRegistryValidationProblem);
+    }
+    expect(() =>
+      assertProblemCodeRegistryValid({ ...registry, dynamicCodeFactories: [factory, factory] }),
+    ).toThrow(ProblemRegistryValidationProblem);
+  });
+
+  it("accepts the generated registry through the public validation contract", () => {
+    expect(() => assertProblemCodeRegistryValid(CROCO_PROBLEM_CODE_REGISTRY)).not.toThrow();
   });
 
   it("defines package ProblemRegistry manifests with visibility and redaction metadata", () => {

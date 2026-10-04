@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 886,
+  "problemCount": 896,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -3213,6 +3213,41 @@
       ]
     },
     {
+      "code": "batch-qstash/publish-failed",
+      "category": null,
+      "status": null,
+      "categoryPolicy": {
+        "kind": "runtime-dependent",
+        "possibleCategories": ["BadRequest", "InternalServerError", "TooManyRequests"],
+        "possibleStatuses": [400, 429, 500]
+      },
+      "title": null,
+      "cookbookPath": "/reference/problem-recovery-cookbook/#batch-qstash-publish-failed",
+      "recovery": {
+        "cause": "The QStash provider rejected or failed the batch dispatch.",
+        "userAction": "Check the retryable extension before retrying. Correct invalid requests; use bounded backoff for transient provider failures.",
+        "operatorAction": "Inspect provider status and sanitized operation metadata. Verify credentials, quotas, and QStash availability before replaying the operation.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts",
+          "line": 30,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
       "code": "BILLING_STATUS_MAPPING_FAILED",
       "category": "InternalServerError",
       "status": 500,
@@ -5193,6 +5228,36 @@
       ]
     },
     {
+      "code": "create-croco-app/dependency-install-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#create-croco-app-dependency-install-failed",
+      "recovery": {
+        "cause": "pnpm failed to install generated workspace dependencies.",
+        "userAction": "Run the reported diagnostic command, correct the installation error, and rerun generation.",
+        "operatorAction": "Inspect the command and stage extensions and the local pnpm diagnostic output. Verify registry access and supported tooling versions.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/create-croco-app/src/libs/problems/PnpmCommandProblem.ts",
+          "line": 28,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
       "code": "create-croco-app/directory-not-empty",
       "category": "ValidationError",
       "status": 422,
@@ -5367,6 +5432,66 @@
         {
           "file": "packages/create-croco-app/templates/addons/lambda/apps/graphql-api/src/telemetryFlush.ts",
           "line": 9,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "create-croco-app/lockfile-validation-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#create-croco-app-lockfile-validation-failed",
+      "recovery": {
+        "cause": "pnpm failed to validate the generated workspace lockfile.",
+        "userAction": "Reconcile generated manifests with pnpm-lock.yaml and rerun generation.",
+        "operatorAction": "Inspect the command and stage extensions and the local pnpm diagnostic output. Verify registry access and supported tooling versions.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/create-croco-app/src/libs/problems/PnpmCommandProblem.ts",
+          "line": 28,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "create-croco-app/pnpm-unavailable",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#create-croco-app-pnpm-unavailable",
+      "recovery": {
+        "cause": "pnpm is unavailable for generated workspace installation.",
+        "userAction": "Install pnpm and rerun generation, or use --no-install and install dependencies manually.",
+        "operatorAction": "Inspect the command and stage extensions and the local pnpm diagnostic output. Verify registry access and supported tooling versions.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/create-croco-app/src/libs/problems/PnpmCommandProblem.ts",
+          "line": 28,
           "column": 1,
           "kind": "problem-class"
         }
@@ -13803,6 +13928,66 @@
       ]
     },
     {
+      "code": "journey/admin-denied",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#journey-admin-denied",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/admin-core/src/libs/JourneyOperations.ts",
+          "line": 52,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "journey/admin-validation",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#journey-admin-validation",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/admin-core/src/libs/JourneyOperations.ts",
+          "line": 52,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
       "code": "LAMBDA_TIMEOUT_GUARD",
       "category": "InternalServerError",
       "status": 500,
@@ -13859,6 +14044,36 @@
           "line": 31,
           "column": 5,
           "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "LAST_OWNER_CANNOT_BE_REMOVED",
+      "category": "Forbidden",
+      "status": 403,
+      "title": "Forbidden",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#last-owner-cannot-be-removed",
+      "recovery": {
+        "cause": "Removing this member would leave the tenant without an owner.",
+        "userAction": "Transfer ownership to another member before removing the current owner.",
+        "operatorAction": "Check the tenant membership and ownership transfer workflow; preserve at least one owner.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/membership-core/src/libs/problems/LastOwnerCannotBeRemovedProblem.ts",
+          "line": 3,
+          "column": 1,
+          "kind": "problem-class"
         }
       ]
     },
@@ -14907,6 +15122,41 @@
         {
           "file": "packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts",
           "line": 3,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "metering-upstash/upstream-failed",
+      "category": null,
+      "status": null,
+      "categoryPolicy": {
+        "kind": "runtime-dependent",
+        "possibleCategories": ["BadRequest", "InternalServerError", "TooManyRequests"],
+        "possibleStatuses": [400, 429, 500]
+      },
+      "title": null,
+      "cookbookPath": "/reference/problem-recovery-cookbook/#metering-upstash-upstream-failed",
+      "recovery": {
+        "cause": "The Upstash Redis provider rejected or failed the metering operation.",
+        "userAction": "Check the retryable extension before retrying. Correct invalid requests; use bounded backoff for transient provider failures.",
+        "operatorAction": "Inspect provider status and sanitized operation metadata. Verify credentials, quotas, and Upstash Redis availability before replaying the operation.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/metering-upstash/src/libs/problems/UpstashMeteringProblems.ts",
+          "line": 28,
           "column": 1,
           "kind": "problem-class"
         }
@@ -18236,7 +18486,7 @@
       "sources": [
         {
           "file": "packages/problems-core/src/libs/ProblemRegistry.ts",
-          "line": 212,
+          "line": 224,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -19857,6 +20107,41 @@
         {
           "file": "packages/ratelimit-upstash/src/libs/problems/RateLimitUpstashProblems.ts",
           "line": 20,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "ratelimit-upstash/upstream-failed",
+      "category": null,
+      "status": null,
+      "categoryPolicy": {
+        "kind": "runtime-dependent",
+        "possibleCategories": ["BadRequest", "InternalServerError", "TooManyRequests"],
+        "possibleStatuses": [400, 429, 500]
+      },
+      "title": null,
+      "cookbookPath": "/reference/problem-recovery-cookbook/#ratelimit-upstash-upstream-failed",
+      "recovery": {
+        "cause": "The Upstash Redis provider rejected or failed the rate-limit operation.",
+        "userAction": "Check the retryable extension before retrying. Correct invalid requests; use bounded backoff for transient provider failures.",
+        "operatorAction": "Inspect provider status and sanitized operation metadata. Verify credentials, quotas, and Upstash Redis availability before replaying the operation.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/ratelimit-upstash/src/libs/problems/RateLimitUpstashProblems.ts",
+          "line": 34,
           "column": 1,
           "kind": "problem-class"
         }
@@ -22497,6 +22782,41 @@
         {
           "file": "packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts",
           "line": 3,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "tasks-qstash/publish-failed",
+      "category": null,
+      "status": null,
+      "categoryPolicy": {
+        "kind": "runtime-dependent",
+        "possibleCategories": ["BadRequest", "InternalServerError", "TooManyRequests"],
+        "possibleStatuses": [400, 429, 500]
+      },
+      "title": null,
+      "cookbookPath": "/reference/problem-recovery-cookbook/#tasks-qstash-publish-failed",
+      "recovery": {
+        "cause": "The QStash provider rejected or failed the task publication.",
+        "userAction": "Check the retryable extension before retrying. Correct invalid requests; use bounded backoff for transient provider failures.",
+        "operatorAction": "Inspect provider status and sanitized operation metadata. Verify credentials, quotas, and QStash availability before replaying the operation.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts",
+          "line": 30,
           "column": 1,
           "kind": "problem-class"
         }
@@ -26586,6 +26906,198 @@
           "kind": "problem-class"
         }
       ]
+    }
+  ],
+  "dynamicCodeFactories": [
+    {
+      "className": "EtlEventProblem",
+      "source": {
+        "file": "packages/etl-events-tx/src/libs/EtlEventProblem.ts",
+        "line": 3,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "ExecutionProblem",
+      "source": {
+        "file": "packages/execution-core/src/libs/ExecutionProblem.ts",
+        "line": 63,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "IdempotencyProblem",
+      "source": {
+        "file": "packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts",
+        "line": 26,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "JourneyProblem",
+      "source": {
+        "file": "packages/lifecycle-core/src/libs/journey/JourneyEngine.ts",
+        "line": 18,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "MetricExpressionError",
+      "source": {
+        "file": "packages/metrics-core/src/libs/metric/MetricExpression.ts",
+        "line": 99,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "MetricReadProblem",
+      "source": {
+        "file": "packages/metrics-core/src/libs/read/MetricReadService.ts",
+        "line": 177,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "RecordedEndpointFailureProblem",
+      "source": {
+        "file": "packages/notifications-core/src/libs/NotificationService.ts",
+        "line": 371,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "GenericProblem",
+      "source": {
+        "file": "packages/problems-core/src/libs/ProblemFactory.ts",
+        "line": 4,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "GraphQLValidationProblem",
+      "source": {
+        "file": "packages/protocols-graphql/src/libs/errors/GraphQLProblems.ts",
+        "line": 3,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "GraphQLAuthorizationProblem",
+      "source": {
+        "file": "packages/protocols-graphql/src/libs/errors/GraphQLProblems.ts",
+        "line": 9,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "GraphQLAuthenticationProblem",
+      "source": {
+        "file": "packages/protocols-graphql/src/libs/errors/GraphQLProblems.ts",
+        "line": 15,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "GraphQLInternalError",
+      "source": {
+        "file": "packages/protocols-graphql/src/libs/errors/GraphQLProblems.ts",
+        "line": 31,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "TrpcFilterProblem",
+      "source": {
+        "file": "packages/protocols-trpc/src/libs/TrpcProblemError.ts",
+        "line": 59,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "TenantIsolationProblem",
+      "source": {
+        "file": "packages/tenant-core/src/libs/problems/TenantIsolationProblems.ts",
+        "line": 20,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "ReplayedScenarioProblem",
+      "source": {
+        "file": "packages/testing/src/libs/ScenarioRuntime.ts",
+        "line": 140,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "ContractTestingProblem",
+      "source": {
+        "file": "packages/testing/src/libs/contract-testing.ts",
+        "line": 165,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "WarehouseContractError",
+      "source": {
+        "file": "packages/warehouse-core/src/libs/diagnostics.ts",
+        "line": 3,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "OutboundWebhookProblem",
+      "source": {
+        "file": "packages/webhooks-core/src/libs/outbound/OutboundWebhookProblems.ts",
+        "line": 18,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
+    },
+    {
+      "className": "WebhookProblem",
+      "source": {
+        "file": "packages/webhooks-core/src/libs/problems/WebhookProblems.ts",
+        "line": 26,
+        "column": 1,
+        "kind": "problem-class"
+      },
+      "reason": "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged."
     }
   ]
 }

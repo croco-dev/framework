@@ -71,9 +71,16 @@ export type ProblemCodeSource = {
   readonly kind: ProblemCodeSourceKind;
 };
 
+export type ProblemCategoryPolicy = {
+  readonly kind: "runtime-dependent";
+  readonly possibleCategories: readonly ProblemCategory[];
+  readonly possibleStatuses: readonly number[];
+};
+
 export type ProblemCodeDiscovery = {
   readonly code: string;
-  readonly category: ProblemCategory;
+  readonly category: ProblemCategory | null;
+  readonly categoryPolicy?: ProblemCategoryPolicy;
   readonly sources: readonly ProblemCodeSource[];
 };
 
@@ -92,17 +99,25 @@ export type ProblemRecoveryMetadata = {
 
 export type ProblemCodeRegistryEntry = {
   readonly code: string;
-  readonly category: ProblemCategory;
-  readonly status: number;
+  readonly category: ProblemCategory | null;
+  readonly categoryPolicy?: ProblemCategoryPolicy;
+  readonly status: number | null;
   readonly statusPolicy?: ProblemStatusPolicy;
-  readonly title: string;
+  readonly title: string | null;
   readonly cookbookPath: string;
   readonly recovery: ProblemRecoveryMetadata;
   readonly lifecycle: ProblemLifecycle;
   readonly sources: readonly ProblemCodeSource[];
 };
 
+type DynamicCodeFactory = {
+  readonly className: string;
+  readonly source: ProblemCodeSource;
+  readonly reason: string;
+};
+
 export type ProblemCodeRegistry = {
+  readonly dynamicCodeFactories?: readonly DynamicCodeFactory[];
   readonly version: ProblemCodeRegistryVersion;
   readonly problemCount: number;
   readonly problems: readonly ProblemCodeRegistryEntry[];
@@ -119,7 +134,8 @@ export type ProblemRegistryRunResult = {
 
 type ProblemCodeDiscoveryCandidate = {
   readonly code: string;
-  readonly category: ProblemCategory;
+  readonly category: ProblemCategory | null;
+  readonly categoryPolicy?: ProblemCategoryPolicy;
   readonly kind: ProblemCodeSourceKind;
   readonly file: string;
   readonly line: number;
@@ -222,7 +238,7 @@ export function runProblemRegistryCheck(
   const absoluteRootDir = resolve(rootDir);
 
   try {
-    const discoveries = discoverProblemCodes(absoluteRootDir);
+    const { discoveries, dynamicCodeFactories } = discoverProblemCodeInventory(absoluteRootDir);
     const existingRegistry = readExistingProblemCodeRegistry(absoluteRootDir);
     const baseRegistry = readBaseProblemCodeRegistry(absoluteRootDir, options);
     const implementationBaselineRegistry = mergeProblemRegistryBaselines(
@@ -233,7 +249,10 @@ export function runProblemRegistryCheck(
       discoveries,
       getApplicableStatusPolicies(absoluteRootDir),
     );
-    const registry = mergeDeprecatedProblemEntries(generatedRegistry, existingRegistry);
+    const registry = {
+      ...mergeDeprecatedProblemEntries(generatedRegistry, existingRegistry),
+      ...(dynamicCodeFactories.length ? { dynamicCodeFactories } : {}),
+    };
     const artifacts = formatProblemRegistryArtifacts(createProblemRegistryArtifacts(registry));
     const preflightDiagnostics = [
       ...getProblemCodeRegistryValidationErrors(registry),
@@ -273,9 +292,18 @@ export function runProblemRegistryCheck(
 }
 
 export function discoverProblemCodes(rootDir = process.cwd()): readonly ProblemCodeDiscovery[] {
+  return discoverProblemCodeInventory(rootDir).discoveries;
+}
+
+function discoverProblemCodeInventory(rootDir: string): {
+  discoveries: readonly ProblemCodeDiscovery[];
+  dynamicCodeFactories: readonly DynamicCodeFactory[];
+} {
+  const dynamicCodeFactories: DynamicCodeFactory[] = [];
   const candidates = getSourceFiles(rootDir).flatMap((file) =>
     discoverProblemCodeCandidates(rootDir, file),
   );
+  candidates.push(...discoverUnaccountedProblemClasses(rootDir, candidates, dynamicCodeFactories));
   const implementedProblemKeys = new Set(
     candidates
       .filter((candidate) => !candidate.routeProblemProjection)
@@ -294,7 +322,7 @@ export function discoverProblemCodes(rootDir = process.cwd()): readonly ProblemC
     candidatesByCodeAndCategory.set(key, [...existing, candidate]);
   }
 
-  return [...candidatesByCodeAndCategory.entries()]
+  const discoveries = [...candidatesByCodeAndCategory.entries()]
     .map(([, groupedCandidates]) => {
       const [first] = groupedCandidates;
 
@@ -305,6 +333,7 @@ export function discoverProblemCodes(rootDir = process.cwd()): readonly ProblemC
       return {
         code: first.code,
         category: first.category,
+        ...(first.categoryPolicy ? { categoryPolicy: first.categoryPolicy } : {}),
         sources: groupedCandidates
           .map((candidate) => ({
             file: candidate.file,
@@ -317,8 +346,685 @@ export function discoverProblemCodes(rootDir = process.cwd()): readonly ProblemC
     })
     .sort(
       (left, right) =>
-        left.code.localeCompare(right.code) || left.category.localeCompare(right.category),
+        left.code.localeCompare(right.code) ||
+        String(left.category).localeCompare(String(right.category)),
     );
+  return { discoveries, dynamicCodeFactories };
+}
+
+type ProblemClassNode = ts.ClassDeclaration | ts.ClassExpression;
+
+function getWorkspaceProblemSourcePaths(rootDir: string): Record<string, string[]> {
+  const paths: Record<string, string[]> = {};
+  const packagesDir = join(rootDir, "packages");
+  if (!existsSync(packagesDir)) return paths;
+  function targets(value: unknown): string[] {
+    if (typeof value === "string") return [value];
+    if (!value || typeof value !== "object") return [];
+    return Object.values(value).flatMap(targets);
+  }
+  for (const directory of readdirSync(packagesDir, { withFileTypes: true })) {
+    if (!directory.isDirectory()) continue;
+    const packageDir = join(packagesDir, directory.name);
+    const manifestFile = join(packageDir, "package.json");
+    if (!existsSync(manifestFile)) continue;
+    const manifest = JSON.parse(readFileSync(manifestFile, "utf-8")) as {
+      name?: string;
+      exports?: unknown;
+    };
+    if (!manifest.name) continue;
+    const exports =
+      manifest.exports &&
+      typeof manifest.exports === "object" &&
+      Object.keys(manifest.exports).some((key) => key.startsWith("."))
+        ? Object.entries(manifest.exports)
+        : ([[".", manifest.exports ?? "./src/index.ts"]] as const);
+    for (const [subpath, exported] of exports) {
+      const sources = new Set<string>();
+      for (const target of targets(exported)) {
+        if (!target.startsWith("./") || !/\.(?:[cm]?[jt]sx?)$/.test(target)) continue;
+        const stem = target.replace(/^\.\/dist\//, "./src/").replace(/(?:\.d)?\.[cm]?[jt]sx?$/, "");
+        for (const extension of [".ts", ".tsx", ".mts", ".cts"]) {
+          for (const candidate of [
+            join(packageDir, `${stem}${extension}`),
+            join(packageDir, stem, `index${extension}`),
+          ]) {
+            if (isFile(candidate)) sources.add(candidate);
+          }
+        }
+      }
+      if (sources.size > 1)
+        throw new ProblemRegistryValidationProblem([
+          `${manifestFile}: '${subpath}' resolves to multiple source entrypoints.`,
+        ]);
+      if (sources.size === 1)
+        paths[`${manifest.name}${subpath === "." ? "" : subpath.slice(1)}`] = [...sources];
+    }
+  }
+  return paths;
+}
+
+function discoverUnaccountedProblemClasses(
+  rootDir: string,
+  existing: readonly ProblemCodeDiscoveryCandidate[],
+  dynamicCodeFactories: DynamicCodeFactory[],
+): ProblemCodeDiscoveryCandidate[] {
+  const files = getSourceFiles(rootDir);
+  const program = ts.createProgram(files, {
+    noResolve: true,
+    paths: getWorkspaceProblemSourcePaths(rootDir),
+    noLib: true,
+    skipLibCheck: true,
+    target: ts.ScriptTarget.Latest,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    module: ts.ModuleKind.ESNext,
+  });
+  const checker = program.getTypeChecker();
+  const result: ProblemCodeDiscoveryCandidate[] = [];
+  const diagnostics: string[] = [];
+  function declaration(expression: ts.Node): ts.Declaration | undefined {
+    let symbol = checker.getSymbolAtLocation(expression);
+    if (symbol && symbol.flags & ts.SymbolFlags.Alias) symbol = checker.getAliasedSymbol(symbol);
+    return symbol?.valueDeclaration ?? symbol?.declarations?.[0];
+  }
+  function parentClass(node: ProblemClassNode): ProblemClassNode | "Problem" | undefined {
+    const base = node.heritageClauses?.find(
+      (clause) => clause.token === ts.SyntaxKind.ExtendsKeyword,
+    )?.types[0]?.expression;
+    if (!base) return undefined;
+    const resolved = declaration(base);
+    if (resolved && (ts.isClassDeclaration(resolved) || ts.isClassExpression(resolved))) {
+      if (
+        resolved.name?.text === "Problem" &&
+        resolved.getSourceFile().fileName.includes("problems-core")
+      )
+        return "Problem";
+      return resolved;
+    }
+    if (ts.isPropertyAccessExpression(base) && base.name.text === "Problem") {
+      const namespace = checker.getSymbolAtLocation(base.expression)?.declarations?.[0];
+      if (namespace && ts.isNamespaceImport(namespace)) {
+        const statement = namespace.parent.parent;
+        if (
+          ts.isImportDeclaration(statement) &&
+          ts.isStringLiteral(statement.moduleSpecifier) &&
+          statement.moduleSpecifier.text === "@croco/problems-core"
+        )
+          return "Problem";
+      }
+    }
+    const imported = checker.getSymbolAtLocation(base)?.declarations?.[0];
+    if (
+      imported &&
+      ts.isImportSpecifier(imported) &&
+      (imported.propertyName ?? imported.name).text === "Problem"
+    ) {
+      const statement = imported.parent.parent.parent;
+      if (
+        ts.isImportDeclaration(statement) &&
+        ts.isStringLiteral(statement.moduleSpecifier) &&
+        statement.moduleSpecifier.text === "@croco/problems-core"
+      )
+        return "Problem";
+    }
+    return undefined;
+  }
+  function isProblem(node: ProblemClassNode, seen = new Set<ts.Node>()): boolean {
+    if (seen.has(node)) return false;
+    seen.add(node);
+    const parent = parentClass(node);
+    return parent === "Problem" || Boolean(parent && isProblem(parent, seen));
+  }
+  type Bindings = ReadonlyMap<ts.ParameterDeclaration, ts.Expression | undefined>;
+  const referencedMetadata = new Set<ts.Node>();
+  function values(
+    input: ts.Node | undefined,
+    bindings: Bindings,
+    seen = new Set<ts.Node>(),
+  ): string[] | null {
+    const node = unwrapExpression(input);
+    if (!node || seen.has(node)) return null;
+    const next = new Set(seen).add(node);
+    if (ts.isStringLiteralLike(node)) return [node.text];
+    const category = getProblemCategory(node.getSourceFile(), node);
+    if (category) return [category];
+    if (ts.isConditionalExpression(node)) {
+      const left = values(node.whenTrue, bindings, next),
+        right = values(node.whenFalse, bindings, next);
+      return left && right ? [...left, ...right] : null;
+    }
+    if (ts.isCallExpression(node)) {
+      const fn = declaration(node.expression);
+      if (!fn || !ts.isFunctionDeclaration(fn) || !fn.body) return null;
+      const callBindings = new Map(bindings);
+      for (const [index, parameter] of fn.parameters.entries()) {
+        const argument = node.arguments[index];
+        callBindings.set(parameter, argument ?? parameter.initializer);
+      }
+      const returns: ts.Expression[] = [];
+      function visit(child: ts.Node): void {
+        if (ts.isReturnStatement(child) && child.expression) returns.push(child.expression);
+        else if (!ts.isFunctionLike(child)) ts.forEachChild(child, visit);
+      }
+      ts.forEachChild(fn.body, visit);
+      const resolved = returns.map((expression) => values(expression, callBindings, next));
+      return resolved.length && resolved.every((value) => value !== null)
+        ? resolved.flatMap((value) => value ?? [])
+        : null;
+    }
+    if (ts.isTemplateExpression(node)) {
+      let alternatives = [node.head.text];
+      for (const span of node.templateSpans) {
+        const parts = values(span.expression, bindings, next);
+        if (!parts) return null;
+        alternatives = alternatives.flatMap((prefix) =>
+          parts.map((part) => `${prefix}${part}${span.literal.text}`),
+        );
+      }
+      return alternatives;
+    }
+    const decl = declaration(node);
+    if (decl && ts.isParameter(decl)) {
+      const bound = bindings.get(decl);
+      if (bindings.has(decl)) return values(bound, bindings, next);
+      if (
+        decl.type &&
+        ts.isUnionTypeNode(decl.type) &&
+        decl.type.types.every(
+          (type) => ts.isLiteralTypeNode(type) && ts.isStringLiteral(type.literal),
+        )
+      ) {
+        return decl.type.types.flatMap((type) =>
+          ts.isLiteralTypeNode(type) && ts.isStringLiteral(type.literal) ? [type.literal.text] : [],
+        );
+      }
+      return values(decl.initializer, bindings, next);
+    }
+    if (ts.isPropertyAccessExpression(node)) {
+      const owner = declaration(node.expression);
+      const bound =
+        owner && ts.isParameter(owner) ? unwrapExpression(bindings.get(owner)) : undefined;
+      if (bound && ts.isObjectLiteralExpression(bound)) {
+        referencedMetadata.add(bound);
+        const field = bound.properties.find(
+          (property) =>
+            ts.isPropertyAssignment(property) && getPropertyName(property.name) === node.name.text,
+        );
+        return field && ts.isPropertyAssignment(field)
+          ? values(field.initializer, bindings, next)
+          : null;
+      }
+      const alias = declaration(node.expression);
+      const indexed = ts.isElementAccessExpression(node.expression)
+        ? node.expression
+        : alias && ts.isVariableDeclaration(alias)
+          ? unwrapExpression(alias.initializer)
+          : undefined;
+      if (indexed && ts.isElementAccessExpression(indexed)) {
+        const table = declaration(indexed.expression);
+        const object =
+          table && ts.isVariableDeclaration(table)
+            ? unwrapExpression(table.initializer)
+            : undefined;
+        if (object && ts.isObjectLiteralExpression(object)) {
+          const selectedKeys = values(indexed.argumentExpression, bindings, next);
+          const properties = selectedKeys
+            ? object.properties.filter(
+                (property) =>
+                  ts.isPropertyAssignment(property) &&
+                  selectedKeys.includes(getPropertyName(property.name) ?? ""),
+              )
+            : object.properties;
+          const resolved = properties.map((property) => {
+            const entry = ts.isPropertyAssignment(property)
+              ? unwrapExpression(property.initializer)
+              : undefined;
+            if (entry && ts.isObjectLiteralExpression(entry)) referencedMetadata.add(entry);
+            const field =
+              entry && ts.isObjectLiteralExpression(entry)
+                ? entry.properties.find(
+                    (candidate) =>
+                      ts.isPropertyAssignment(candidate) &&
+                      getPropertyName(candidate.name) === node.name.text,
+                  )
+                : undefined;
+            return field && ts.isPropertyAssignment(field)
+              ? values(field.initializer, bindings, next)
+              : null;
+          });
+          return resolved.length && resolved.every((value) => value !== null)
+            ? resolved.flatMap((value) => value ?? [])
+            : null;
+        }
+      }
+    }
+    if (
+      decl &&
+      (ts.isVariableDeclaration(decl) ||
+        ts.isPropertyAssignment(decl) ||
+        ts.isPropertyDeclaration(decl))
+    )
+      return values(decl.initializer, bindings, next);
+    const constant = getStringValue(
+      node.getSourceFile(),
+      node,
+      collectStringConstants(rootDir, node.getSourceFile()),
+    );
+    return constant ? [constant] : null;
+  }
+  function runtimeCodeParameter(
+    input: ts.Node | undefined,
+    bindings: Bindings,
+    seen = new Set<ts.Node>(),
+  ): boolean {
+    const node = unwrapExpression(input);
+    if (!node || seen.has(node)) return false;
+    const next = new Set(seen).add(node);
+    if (ts.isPropertyAccessExpression(node))
+      return runtimeCodeParameter(node.expression, bindings, next);
+    if (ts.isTemplateExpression(node))
+      return node.templateSpans.some((span) =>
+        runtimeCodeParameter(span.expression, bindings, next),
+      );
+    if (!ts.isIdentifier(node)) return false;
+    const decl = declaration(node);
+    if (decl && ts.isParameter(decl)) {
+      const bound = bindings.get(decl);
+      return bindings.has(decl) ? runtimeCodeParameter(bound, bindings, next) : true;
+    }
+    if (decl && ts.isBindingElement(decl)) {
+      const owner = decl.parent.parent;
+      return (
+        ts.isParameter(owner) ||
+        (ts.isVariableDeclaration(owner) && runtimeCodeParameter(owner.initializer, bindings, next))
+      );
+    }
+    return Boolean(
+      decl &&
+      ts.isVariableDeclaration(decl) &&
+      runtimeCodeParameter(decl.initializer, bindings, next),
+    );
+  }
+  function metadataObjects(
+    input: ts.Expression,
+    bindings: Bindings,
+  ): ts.ObjectLiteralExpression[] | null {
+    const node = unwrapExpression(input);
+    if (!node) return null;
+    if (ts.isObjectLiteralExpression(node)) return [node];
+    if (ts.isIdentifier(node)) {
+      const owner = declaration(node);
+      const initializer =
+        owner && ts.isParameter(owner)
+          ? bindings.get(owner)
+          : owner && ts.isVariableDeclaration(owner)
+            ? owner.initializer
+            : undefined;
+      return initializer ? metadataObjects(initializer, bindings) : null;
+    }
+    if (!ts.isElementAccessExpression(node)) return null;
+    const tables = metadataObjects(node.expression, bindings);
+    if (!tables) return null;
+    const keys = values(node.argumentExpression, bindings);
+    const entries: ts.ObjectLiteralExpression[] = [];
+    for (const table of tables) {
+      for (const property of table.properties) {
+        if (!ts.isPropertyAssignment(property)) return null;
+        if (keys && !keys.includes(getPropertyName(property.name) ?? "")) continue;
+        const value = unwrapExpression(property.initializer);
+        if (!value || !ts.isObjectLiteralExpression(value)) return null;
+        entries.push(value);
+      }
+    }
+    return entries;
+  }
+  function isStableReceiver(input: ts.Expression): boolean {
+    const node = unwrapExpression(input);
+    if (!node) return false;
+    if (ts.isStringLiteralLike(node) || ts.isNumericLiteral(node)) return true;
+    if (ts.isIdentifier(node)) {
+      const owner = declaration(node);
+      return Boolean(
+        owner &&
+        (ts.isParameter(owner) ||
+          (ts.isVariableDeclaration(owner) &&
+            ts.isVariableDeclarationList(owner.parent) &&
+            owner.parent.flags & ts.NodeFlags.Const)),
+      );
+    }
+    return (
+      ts.isElementAccessExpression(node) &&
+      isStableReceiver(node.expression) &&
+      Boolean(node.argumentExpression && isStableReceiver(node.argumentExpression))
+    );
+  }
+  function isSideEffectFree(input: ts.Expression): boolean {
+    const node = unwrapExpression(input);
+    if (!node) return false;
+    if (
+      ts.isIdentifier(node) ||
+      ts.isStringLiteralLike(node) ||
+      ts.isNumericLiteral(node) ||
+      node.kind === ts.SyntaxKind.TrueKeyword ||
+      node.kind === ts.SyntaxKind.FalseKeyword
+    )
+      return true;
+    if (getProblemCategory(node.getSourceFile(), node)) return true;
+    if (ts.isConditionalExpression(node))
+      return (
+        isSideEffectFree(node.condition) &&
+        isSideEffectFree(node.whenTrue) &&
+        isSideEffectFree(node.whenFalse)
+      );
+    if (ts.isPropertyAccessExpression(node) && isStableReceiver(node.expression)) {
+      const objects = metadataObjects(node.expression, new Map());
+      return Boolean(
+        objects?.length &&
+        objects.every((object) => {
+          if (!object.properties.every(ts.isPropertyAssignment)) return false;
+          const members = object.properties.filter(
+            (property) =>
+              ts.isPropertyAssignment(property) &&
+              getPropertyName(property.name) === node.name.text,
+          );
+          const member = members[0];
+          return (
+            members.length === 1 &&
+            member &&
+            ts.isPropertyAssignment(member) &&
+            isSideEffectFree(member.initializer)
+          );
+        }),
+      );
+    }
+    return false;
+  }
+  function codeCategoryPairs(
+    code: ts.Expression | undefined,
+    category: ts.Expression | undefined,
+    bindings: Bindings,
+  ): { pairs: readonly [string, string][]; projection: boolean } | null {
+    if (!code || !category) return null;
+    if (
+      ts.isConditionalExpression(code) &&
+      ts.isConditionalExpression(category) &&
+      ts.isIdentifier(code.condition) &&
+      ts.isIdentifier(category.condition) &&
+      isSideEffectFree(code) &&
+      isSideEffectFree(category) &&
+      declaration(code.condition) !== undefined &&
+      declaration(code.condition) === declaration(category.condition)
+    ) {
+      const left = codeCategoryPairs(code.whenTrue, category.whenTrue, bindings);
+      const right = codeCategoryPairs(code.whenFalse, category.whenFalse, bindings);
+      return left && right ? { pairs: [...left.pairs, ...right.pairs], projection: true } : null;
+    }
+    if (
+      ts.isPropertyAccessExpression(code) &&
+      ts.isPropertyAccessExpression(category) &&
+      isStableReceiver(code.expression) &&
+      isStableReceiver(category.expression) &&
+      code.name.text === "code" &&
+      category.name.text === "category" &&
+      code.expression.getSourceFile() === category.expression.getSourceFile() &&
+      code.expression.getText() === category.expression.getText()
+    ) {
+      const objects = metadataObjects(code.expression, bindings);
+      if (objects) {
+        const pairs: [string, string][] = [];
+        for (const object of objects) {
+          const codeField = object.properties.find(
+            (property) =>
+              ts.isPropertyAssignment(property) && getPropertyName(property.name) === "code",
+          );
+          const categoryField = object.properties.find(
+            (property) =>
+              ts.isPropertyAssignment(property) && getPropertyName(property.name) === "category",
+          );
+          if (
+            !codeField ||
+            !categoryField ||
+            !ts.isPropertyAssignment(codeField) ||
+            !ts.isPropertyAssignment(categoryField)
+          )
+            return null;
+          if (
+            !isSideEffectFree(codeField.initializer) ||
+            !isSideEffectFree(categoryField.initializer)
+          )
+            return null;
+          const entry = codeCategoryPairs(
+            codeField.initializer,
+            categoryField.initializer,
+            bindings,
+          );
+          if (!entry) return null;
+          pairs.push(...entry.pairs);
+        }
+        return { pairs, projection: false };
+      }
+    }
+    const codes = values(code, bindings),
+      categories = values(category, bindings);
+    return codes && categories
+      ? {
+          pairs: codes.flatMap((value) =>
+            categories.map((categoryValue) => [value, categoryValue] as [string, string]),
+          ),
+          projection: false,
+        }
+      : null;
+  }
+  function contract(
+    node: ProblemClassNode,
+    bindings: Bindings = new Map(),
+    seen = new Set<ts.Node>(),
+  ): {
+    codes: string[] | null;
+    categories: string[] | null;
+    dynamicCode: boolean;
+    owner: ProblemClassNode;
+    codeExpression: ts.Expression | undefined;
+    categoryExpression: ts.Expression | undefined;
+    bindings: Bindings;
+  } | null {
+    if (seen.has(node)) return null;
+    const next = new Set(seen).add(node);
+    const constructor = node.members.find(
+      (member): member is ts.ConstructorDeclaration =>
+        ts.isConstructorDeclaration(member) && Boolean(member.body),
+    );
+    let call: ts.CallExpression | undefined;
+    function find(child: ts.Node): void {
+      if (ts.isCallExpression(child) && child.expression.kind === ts.SyntaxKind.SuperKeyword)
+        call = child;
+      else ts.forEachChild(child, find);
+    }
+    if (constructor) find(constructor);
+    const parent = parentClass(node);
+    let inherited: ReturnType<typeof contract> = null;
+    if (parent === "Problem" && call) {
+      inherited = {
+        owner: node,
+        codeExpression: call.arguments[0],
+        categoryExpression: call.arguments[1],
+        bindings,
+        codes: values(call.arguments[0], bindings),
+        categories: values(call.arguments[1], bindings),
+        dynamicCode: runtimeCodeParameter(call.arguments[0], bindings),
+      };
+    } else if (parent && parent !== "Problem") {
+      const bound = new Map(bindings);
+      const parameters =
+        parent.members.find(
+          (member): member is ts.ConstructorDeclaration =>
+            ts.isConstructorDeclaration(member) && Boolean(member.body),
+        )?.parameters ?? [];
+      for (const [index, parameter] of parameters.entries()) {
+        const argument = call?.arguments[index];
+        if (argument) bound.set(parameter, argument);
+      }
+      inherited = contract(parent, bound, next);
+    }
+    const fields = node.members.filter(ts.isPropertyDeclaration);
+    const code = fields.find((field) => getPropertyName(field.name) === "code")?.initializer;
+    const category = fields.find(
+      (field) => getPropertyName(field.name) === "category",
+    )?.initializer;
+    return {
+      owner: code ? node : (inherited?.owner ?? node),
+      codeExpression: code ?? inherited?.codeExpression,
+      categoryExpression: category ?? inherited?.categoryExpression,
+      bindings: inherited?.bindings ?? bindings,
+      codes: code ? values(code, bindings) : (inherited?.codes ?? null),
+      categories: category ? values(category, bindings) : (inherited?.categories ?? null),
+      dynamicCode: !code && Boolean(inherited?.dynamicCode),
+    };
+  }
+  for (const file of files) {
+    const parsedSource = program.getSourceFile(file);
+    if (!parsedSource) continue;
+    const source: ts.SourceFile = parsedSource;
+    function visit(node: ts.Node): void {
+      if (
+        (ts.isClassDeclaration(node) || ts.isClassExpression(node)) &&
+        isProblem(node) &&
+        !ts.getModifiers(node)?.some((modifier) => modifier.kind === ts.SyntaxKind.AbstractKeyword)
+      ) {
+        const relativeFile = toPosixPath(relative(rootDir, file));
+        const constants = collectStringConstants(rootDir, source);
+        const fields = getProblemClassFields(source, node, constants);
+        const constructor = node.members.find(
+          (member): member is ts.ConstructorDeclaration =>
+            ts.isConstructorDeclaration(member) && Boolean(member.body),
+        );
+        const directSuper = constructor?.body?.statements.find(
+          (statement) =>
+            ts.isExpressionStatement(statement) &&
+            ts.isCallExpression(statement.expression) &&
+            statement.expression.expression.kind === ts.SyntaxKind.SuperKeyword,
+        );
+        const covered = Boolean(
+          fields ||
+          (directSuper &&
+            ts.isExpressionStatement(directSuper) &&
+            ts.isCallExpression(directSuper.expression) &&
+            getProblemConstructorCall(source, directSuper.expression, constants)),
+        );
+        if (!covered) {
+          referencedMetadata.clear();
+          const resolved = contract(node);
+          if (
+            resolved?.codes?.length &&
+            resolved.categories?.length &&
+            resolved.categories.every((category) => category in ProblemCategory)
+          ) {
+            const association = codeCategoryPairs(
+              resolved.codeExpression,
+              resolved.categoryExpression,
+              resolved.bindings,
+            );
+            for (const code of new Set(resolved.codes)) {
+              const categories = [
+                ...new Set(
+                  association
+                    ? association.pairs
+                        .filter(([candidateCode]) => candidateCode === code)
+                        .map(([, category]) => category)
+                    : resolved.categories,
+                ),
+              ].sort() as ProblemCategory[];
+              const accounted = existing.some((candidate) => {
+                if (
+                  candidate.code !== code ||
+                  !candidate.category ||
+                  categories.length !== 1 ||
+                  categories[0] !== candidate.category
+                )
+                  return false;
+                if (
+                  candidate.kind === "problem-metadata" &&
+                  [...referencedMetadata].some((metadata) => {
+                    const location = metadata
+                      .getSourceFile()
+                      .getLineAndCharacterOfPosition(metadata.getStart());
+                    return (
+                      candidate.file ===
+                        toPosixPath(relative(rootDir, metadata.getSourceFile().fileName)) &&
+                      candidate.line === location.line + 1 &&
+                      candidate.column === location.character + 1
+                    );
+                  })
+                )
+                  return true;
+                if (
+                  candidate.kind === "problem-metadata" &&
+                  candidate.file === relativeFile &&
+                  association?.projection
+                )
+                  return true;
+                if (resolved.owner === node || categories.length !== 1) return false;
+                const ownerSource = resolved.owner.getSourceFile();
+                const start =
+                  ownerSource.getLineAndCharacterOfPosition(resolved.owner.getStart()).line + 1;
+                const end = ownerSource.getLineAndCharacterOfPosition(resolved.owner.end).line + 1;
+                return (
+                  candidate.file === toPosixPath(relative(rootDir, ownerSource.fileName)) &&
+                  candidate.line >= start &&
+                  candidate.line <= end
+                );
+              });
+              if (accounted) continue;
+              result.push(
+                createCandidate(rootDir, source, node, {
+                  code,
+                  category: categories.length === 1 ? (categories[0] ?? null) : null,
+                  ...(categories.length > 1
+                    ? {
+                        categoryPolicy: {
+                          kind: "runtime-dependent",
+                          possibleCategories: categories,
+                          possibleStatuses: [...new Set(categories.map(toHttpStatus))].sort(
+                            (a, b) => a - b,
+                          ),
+                        },
+                      }
+                    : {}),
+                  kind: "problem-class",
+                }),
+              );
+            }
+          } else if (!resolved?.codes?.length && resolved?.dynamicCode) {
+            const candidate = createCandidate(rootDir, source, node, {
+              code: "",
+              category: null,
+              kind: "problem-class",
+            });
+            dynamicCodeFactories.push({
+              className: node.name?.text ?? "<anonymous>",
+              source: {
+                file: candidate.file,
+                line: candidate.line,
+                column: candidate.column,
+                kind: candidate.kind,
+              },
+              reason:
+                "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+            });
+          } else {
+            const position = source.getLineAndCharacterOfPosition(node.getStart(source));
+            diagnostics.push(
+              `problem-class-unaccounted at ${relativeFile}:${position.line + 1}:${position.character + 1}: ${node.name?.text ?? "<anonymous>"} has no registry entry or dynamic code parameter.`,
+            );
+          }
+        }
+      }
+      ts.forEachChild(node, visit);
+    }
+    visit(source);
+  }
+  if (diagnostics.length) throw new ProblemRegistryValidationProblem(diagnostics);
+  return result;
 }
 
 function getProblemDiscoveryKey(
@@ -360,7 +1066,9 @@ export function createProblemCodeRegistry(
 
     const [category] = categories;
 
-    if (!category) {
+    const categoryPolicy = codeDiscoveries[0]?.categoryPolicy;
+
+    if (!category && !categoryPolicy) {
       errors.push(`Problem code '${code}' did not resolve to a category.`);
       continue;
     }
@@ -375,11 +1083,14 @@ export function createProblemCodeRegistry(
     problems.push({
       code,
       category,
-      status: toHttpStatus(category),
+      status: category ? toHttpStatus(category) : null,
+      ...(categoryPolicy ? { categoryPolicy } : {}),
       ...(statusPolicies[code] ? { statusPolicy: statusPolicies[code] } : {}),
-      title: toTitle(category),
+      title: category ? toTitle(category) : null,
       cookbookPath: `/reference/problem-recovery-cookbook/#${slugifyProblemCode(code)}`,
-      recovery: recoveryMetadataByCode[code] ?? recoveryMetadataByCategory[category],
+      recovery:
+        recoveryMetadataByCode[code] ??
+        recoveryMetadataByCategory[category ?? ProblemCategory.InternalServerError],
       lifecycle: createActiveProblemLifecycle(),
       sources,
     });
@@ -1980,7 +2691,7 @@ function createCandidate(
   node: ts.Node,
   discovery: Pick<
     ProblemCodeDiscoveryCandidate,
-    "category" | "code" | "kind" | "routeProblemProjection"
+    "category" | "categoryPolicy" | "code" | "kind" | "routeProblemProjection"
   >,
 ): ProblemCodeDiscoveryCandidate {
   const location = sourceFile.getLineAndCharacterOfPosition(node.getStart(sourceFile));
@@ -2622,6 +3333,84 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  "batch-qstash/publish-failed": recovery({
+    cause: "The QStash provider rejected or failed the batch dispatch.",
+    userAction:
+      "Check the retryable extension before retrying. Correct invalid requests; use bounded backoff for transient provider failures.",
+    operatorAction:
+      "Inspect provider status and sanitized operation metadata. Verify credentials, quotas, and QStash availability before replaying the operation.",
+    retryability: "conditional",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
+  "tasks-qstash/publish-failed": recovery({
+    cause: "The QStash provider rejected or failed the task publication.",
+    userAction:
+      "Check the retryable extension before retrying. Correct invalid requests; use bounded backoff for transient provider failures.",
+    operatorAction:
+      "Inspect provider status and sanitized operation metadata. Verify credentials, quotas, and QStash availability before replaying the operation.",
+    retryability: "conditional",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
+  "metering-upstash/upstream-failed": recovery({
+    cause: "The Upstash Redis provider rejected or failed the metering operation.",
+    userAction:
+      "Check the retryable extension before retrying. Correct invalid requests; use bounded backoff for transient provider failures.",
+    operatorAction:
+      "Inspect provider status and sanitized operation metadata. Verify credentials, quotas, and Upstash Redis availability before replaying the operation.",
+    retryability: "conditional",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
+  "ratelimit-upstash/upstream-failed": recovery({
+    cause: "The Upstash Redis provider rejected or failed the rate-limit operation.",
+    userAction:
+      "Check the retryable extension before retrying. Correct invalid requests; use bounded backoff for transient provider failures.",
+    operatorAction:
+      "Inspect provider status and sanitized operation metadata. Verify credentials, quotas, and Upstash Redis availability before replaying the operation.",
+    retryability: "conditional",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
+  LAST_OWNER_CANNOT_BE_REMOVED: recovery({
+    cause: "Removing this member would leave the tenant without an owner.",
+    userAction: "Transfer ownership to another member before removing the current owner.",
+    operatorAction:
+      "Check the tenant membership and ownership transfer workflow; preserve at least one owner.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "warning",
+  }),
+  "create-croco-app/pnpm-unavailable": recovery({
+    cause: "pnpm is unavailable for generated workspace installation.",
+    userAction:
+      "Install pnpm and rerun generation, or use --no-install and install dependencies manually.",
+    operatorAction:
+      "Inspect the command and stage extensions and the local pnpm diagnostic output. Verify registry access and supported tooling versions.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
+  "create-croco-app/dependency-install-failed": recovery({
+    cause: "pnpm failed to install generated workspace dependencies.",
+    userAction:
+      "Run the reported diagnostic command, correct the installation error, and rerun generation.",
+    operatorAction:
+      "Inspect the command and stage extensions and the local pnpm diagnostic output. Verify registry access and supported tooling versions.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
+  "create-croco-app/lockfile-validation-failed": recovery({
+    cause: "pnpm failed to validate the generated workspace lockfile.",
+    userAction: "Reconcile generated manifests with pnpm-lock.yaml and rerun generation.",
+    operatorAction:
+      "Inspect the command and stage extensions and the local pnpm diagnostic output. Verify registry access and supported tooling versions.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
   "analytics-core/analysis-input-budget-exceeded": recovery({
     cause:
       "The serialized question, allowed definitions and choices exceeded the input byte budget.",
@@ -3729,10 +4518,32 @@ function getProblemCodeRegistryValidationErrors(registry: ProblemCodeRegistry): 
     seenCodes.add(problem.code);
     const lifecycle = getProblemLifecycle(problem);
 
-    if (problem.status !== toHttpStatus(problem.category)) {
+    if (problem.category !== null && problem.status !== toHttpStatus(problem.category)) {
       errors.push(`Problem code '${problem.code}' has a status/category mismatch.`);
     }
 
+    if (problem.categoryPolicy) {
+      const { possibleCategories, possibleStatuses } = problem.categoryPolicy;
+      const expected = [...new Set(possibleCategories.map(toHttpStatus))].sort((a, b) => a - b);
+      if (
+        problem.categoryPolicy.kind !== "runtime-dependent" ||
+        problem.category !== null ||
+        problem.status !== null ||
+        problem.title !== null ||
+        problem.statusPolicy ||
+        possibleCategories.length < 2 ||
+        new Set(possibleCategories).size !== possibleCategories.length ||
+        JSON.stringify(possibleStatuses) !== JSON.stringify(expected)
+      ) {
+        errors.push(
+          `Problem code '${problem.code}' has an invalid runtime-dependent category policy.`,
+        );
+      }
+    } else if (problem.category === null || problem.status === null || problem.title === null) {
+      errors.push(
+        `Problem code '${problem.code}' is missing its runtime-dependent category policy.`,
+      );
+    }
     errors.push(...getProblemStatusPolicyValidationErrors(problem));
 
     if (!isCompleteRecoveryMetadata(problem.recovery)) {
@@ -3894,7 +4705,7 @@ function formatGeneratedProblemRegistrySource(registry: ProblemCodeRegistry): st
     "export type CrocoProblemRegistryEntry = CrocoProblemRegistry['problems'][number];",
     "export type CrocoProblemCode = CrocoProblemRegistryEntry['code'];",
     "",
-    "type CrocoProblemEntryStatus<Entry extends CrocoProblemRegistryEntry> = Entry extends { readonly statusPolicy: { readonly kind: 'runtime-configurable' } } ? number : Entry['status'];",
+    "type CrocoProblemEntryStatus<Entry extends CrocoProblemRegistryEntry> = Entry extends { readonly statusPolicy: { readonly kind: 'runtime-configurable' } } ? number : Entry extends { readonly categoryPolicy: { readonly possibleStatuses: readonly (infer Status extends number)[] } } ? Status : Extract<Entry['status'], number>;",
     "",
     "export type CrocoProblemStatus<Code extends CrocoProblemCode = CrocoProblemCode> = CrocoProblemEntryStatus<Extract<CrocoProblemRegistryEntry, { readonly code: Code }>>;",
     "",
@@ -3921,7 +4732,7 @@ function formatProblemRecoveryCookbook(registry: ProblemCodeRegistry): string {
     "| --- | --- | ---: | --- | --- | --- | ---: |",
     ...registry.problems.map(
       (problem) =>
-        `| [\`${escapeMarkdownTable(problem.code)}\`](#${slugifyProblemCode(problem.code)}) | ${problem.category} | ${formatProblemStatus(problem)} | ${problem.recovery.retryability} | ${problem.recovery.redactionPolicy} | ${getProblemLifecycleStatus(problem)} | ${problem.sources.length} |`,
+        `| [\`${escapeMarkdownTable(problem.code)}\`](#${slugifyProblemCode(problem.code)}) | ${formatProblemCategory(problem)} | ${formatProblemStatus(problem)} | ${problem.recovery.retryability} | ${problem.recovery.redactionPolicy} | ${getProblemLifecycleStatus(problem)} | ${problem.sources.length} |`,
     ),
     "",
     "\\* Runtime-configurable statuses show their canonical default; see the entry details for the configuration surface.",
@@ -3936,7 +4747,7 @@ function formatProblemRecoveryCookbook(registry: ProblemCodeRegistry): string {
       "",
       `## \`${problem.code}\``,
       "",
-      `- Category: \`${problem.category}\``,
+      `- Category: \`${formatProblemCategory(problem)}\``,
       `- HTTP status: ${formatProblemStatusDetails(problem)}`,
       `- Retryability: \`${problem.recovery.retryability}\``,
       `- Redaction policy: \`${problem.recovery.redactionPolicy}\``,
@@ -3984,11 +4795,20 @@ function escapeMarkdownTable(value: string): string {
   return value.replace(/\|/g, "\\|");
 }
 
+function formatProblemCategory(problem: ProblemCodeRegistryEntry): string {
+  return problem.categoryPolicy
+    ? `Runtime-dependent: ${problem.categoryPolicy.possibleCategories.join(", ")}`
+    : String(problem.category);
+}
+
 function formatProblemStatus(problem: ProblemCodeRegistryEntry): string {
+  if (problem.categoryPolicy) return problem.categoryPolicy.possibleStatuses.join(", ");
   return problem.statusPolicy ? `${problem.status}*` : String(problem.status);
 }
 
 function formatProblemStatusDetails(problem: ProblemCodeRegistryEntry): string {
+  if (problem.categoryPolicy)
+    return `Runtime-dependent: ${problem.categoryPolicy.possibleStatuses.join(", ")}`;
   const fixed = `\`${problem.status}\` ${problem.title}`;
 
   return problem.statusPolicy

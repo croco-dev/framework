@@ -9,6 +9,12 @@ title: "ProblemCodeRegistry"
 
 ## Properties
 
+### dynamicCodeFactories?
+
+> `readonly` `optional` **dynamicCodeFactories?**: readonly `object`[]
+
+---
+
 ### problemCount
 
 > `readonly` **problemCount**: `number`
