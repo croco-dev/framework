@@ -544,6 +544,31 @@ describe("problem-registry.mts", () => {
     });
   });
 
+  it("requires a configuration correction for invalid batch loader sizes", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/dataloader-core/src/problems.ts",
+      [
+        'import { Problem, ProblemCategory } from "@croco/problems-core";',
+        "export class InvalidBatchLoaderConfigurationProblem extends Problem {",
+        "  constructor() {",
+        '    super("dataloader-core/invalid-configuration", ProblemCategory.InternalServerError);',
+        "  }",
+        "}",
+      ].join("\n"),
+    );
+
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+
+    expect(registry.problems[0]?.recovery).toMatchObject({
+      cause: expect.stringContaining("maxBatchSize"),
+      operatorAction: expect.stringContaining("positive safe integer or Infinity"),
+      retryability: "not-retryable",
+      redactionPolicy: "operator-only",
+    });
+  });
+
   it("publishes installation recovery for missing testing resource drivers", () => {
     const repo = createTempRepo();
     writeFile(

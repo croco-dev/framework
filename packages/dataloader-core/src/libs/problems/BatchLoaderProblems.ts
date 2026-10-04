@@ -27,11 +27,12 @@ export class DuplicateBatchLoaderNameProblem extends Problem {
     );
   }
 }
-
-export class InvalidBatchLoaderConfigurationError extends Error {
-  readonly name = "InvalidBatchLoaderConfigurationError";
+/** Raised when batch loader options cannot be used safely. */
+export class InvalidBatchLoaderConfigurationProblem extends Problem {
+  readonly code = "dataloader-core/invalid-configuration";
+  readonly category = ProblemCategory.InternalServerError;
 
   constructor(message: string) {
-    super(`Invalid BatchLoader configuration: ${message}`);
+    super(undefined, undefined, `Invalid BatchLoader configuration: ${message}`);
   }
 }

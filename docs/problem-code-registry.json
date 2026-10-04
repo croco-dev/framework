@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 884,
+  "problemCount": 885,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -6687,6 +6687,36 @@
         {
           "file": "packages/dataloader-core/src/libs/problems/BatchLoaderProblems.ts",
           "line": 18,
+          "column": 1,
+          "kind": "problem-class"
+        }
+      ]
+    },
+    {
+      "code": "dataloader-core/invalid-configuration",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#dataloader-core-invalid-configuration",
+      "recovery": {
+        "cause": "The batch loader configured maxBatchSize outside the positive safe-integer or Infinity domain.",
+        "userAction": "Use an application build with a valid batch loader configuration.",
+        "operatorAction": "Set maxBatchSize to a positive safe integer or Infinity, then recreate the batch loader.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/dataloader-core/src/libs/problems/BatchLoaderProblems.ts",
+          "line": 31,
           "column": 1,
           "kind": "problem-class"
         }
