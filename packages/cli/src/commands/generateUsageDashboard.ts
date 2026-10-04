@@ -87,22 +87,31 @@ export async function runGenerateUsageDashboard(
   } = options;
   const workspace = await detect(cwd);
 
-  if (!workspace.root || !workspace.hasApiServer) {
+  if (!workspace.root) {
+    getCrocoCommandRuntime().stdout("No Croco workspace detected. Run from a Croco project.");
+    return null;
+  }
+
+  if (!workspace.apiServerDir) {
     getCrocoCommandRuntime().stdout(
-      "No Croco API workspace detected. Run from a Croco project with apps/api-server.",
+      "No API server app detected in apps/ (checked api-server, api, server, backend).",
     );
     return null;
   }
 
   const normalizedApiPath = normalizeRoutePath(apiPath, "apiPath");
   const normalizedPagePath = normalizeRoutePath(pagePath, "pagePath");
-  const apiServerSrc = join(workspace.root, "apps", "api-server", "src");
-  const apiSources = createApiSources(apiServerSrc, splitRoutePath(normalizedApiPath));
-  const apiManifestPath = join(workspace.root, "apps", "api-server", "package.json");
+  const apiServerSrc = join(workspace.root, workspace.apiServerDir, "src");
+  const apiSources = createApiSources(
+    apiServerSrc,
+    splitRoutePath(normalizedApiPath),
+    workspace.apiServerDir,
+  );
+  const apiManifestPath = join(workspace.root, workspace.apiServerDir, "package.json");
 
   await assertGeneratedImportDependencies({
     manifestPath: apiManifestPath,
-    manifestLabel: "apps/api-server/package.json",
+    manifestLabel: `${workspace.apiServerDir}/package.json`,
     sources: apiSources,
   });
 
@@ -228,7 +237,11 @@ async function detectConsolePageMode(manifestPath: string): Promise<ConsolePageM
   return "ssr";
 }
 
-function createApiSources(apiServerSrc: string, route: RouteParts): GeneratedSource[] {
+function createApiSources(
+  apiServerSrc: string,
+  route: RouteParts,
+  apiServerDir: string,
+): GeneratedSource[] {
   const usageDashboardDir = join(apiServerSrc, "usage-dashboard");
 
   return [
@@ -242,7 +255,7 @@ function createApiSources(apiServerSrc: string, route: RouteParts): GeneratedSou
     },
     {
       path: join(usageDashboardDir, "UsageDashboardRuntime.ts"),
-      content: runtimeTemplate(),
+      content: runtimeTemplate(apiServerDir),
     },
     {
       path: join(usageDashboardDir, "index.ts"),
@@ -788,7 +801,7 @@ function formatProviderError(label: string, error: unknown): string {
 `;
 }
 
-function runtimeTemplate(): string {
+function runtimeTemplate(apiServerDir: string): string {
   return `import { UsageDashboardProviderUnavailableProblem } from "./UsageDashboardProblems";
 import { UsageDashboardService, type UsageDashboardDependencies } from "./UsageDashboardService";
 
@@ -804,7 +817,7 @@ export async function createUsageDashboardService(): Promise<UsageDashboardServi
     module = (await import(SAAS_RUNTIME_MODULE)) as RuntimeModule;
   } catch (error) {
     throw new UsageDashboardProviderUnavailableProblem(
-      "Usage dashboard runtime module at apps/api-server/src/saasDemo.ts failed to load: " +
+      "Usage dashboard runtime module at ${apiServerDir}/src/saasDemo.ts failed to load: " +
         formatRuntimeImportError(error) +
         ". Wire billingService, meterRegistry, meteringService, entitlementManager, and tenantStore before exposing this endpoint.",
       error instanceof Error ? { cause: error } : undefined,

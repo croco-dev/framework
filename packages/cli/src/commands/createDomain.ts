@@ -45,15 +45,21 @@ export async function runCreateDomain(
   const kebab = normalize(name, "kebab");
   const workspace = await detect(cwd);
 
-  if (!workspace.root || !workspace.hasApiServer) {
+  if (!workspace.root) {
     getCrocoCommandRuntime().stdout("No Croco workspace detected. Run from a Croco project.");
+    return null;
+  }
+
+  if (!workspace.apiServerDir) {
+    getCrocoCommandRuntime().stdout(
+      "No API server app detected in apps/ (checked api-server, api, server, backend).",
+    );
     return null;
   }
 
   const barrelPath = join(
     workspace.root,
-    "apps",
-    "api-server",
+    workspace.apiServerDir,
     "src",
     "domains",
     kebab,
@@ -84,8 +90,8 @@ export async function runCreateDomain(
   ];
 
   await assertGeneratedImportDependencies({
-    manifestPath: join(workspace.root, "apps", "api-server", "package.json"),
-    manifestLabel: "apps/api-server/package.json",
+    manifestPath: join(workspace.root, workspace.apiServerDir, "package.json"),
+    manifestLabel: `${workspace.apiServerDir}/package.json`,
     sources: generatedSources,
   });
 
@@ -98,7 +104,7 @@ export async function runCreateDomain(
     ),
   );
 
-  const apiServerSrc = join(workspace.root, "apps", "api-server", "src");
+  const apiServerSrc = join(workspace.root, workspace.apiServerDir, "src");
   const indexPath = join(apiServerSrc, "index.ts");
   const entryPath = existsSync(indexPath) ? indexPath : join(apiServerSrc, "app.ts");
   const registration = register

@@ -1228,7 +1228,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/createDomain.ts",
-      "line": 140,
+      "line": 146,
       "column": 67,
       "code": "TS2379",
       "message": "Argument of type '{ dryRun: boolean; overwrite: boolean; cwd: string | undefined; register: boolean; }' is not assignable to parameter of type 'RunCreateDomainOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2676,7 +2676,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/generateUsageDashboard.ts",
-      "line": 164,
+      "line": 173,
       "column": 52,
       "code": "TS2379",
       "message": "Argument of type '{ dryRun: boolean; overwrite: boolean; cwd: string | undefined; apiPath: string | undefined; pagePath: string | undefined; page: boolean; }' is not assignable to parameter of type 'RunGenerateUsageDashboardOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2796,7 +2796,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/makeController.ts",
-      "line": 115,
+      "line": 121,
       "column": 70,
       "code": "TS2379",
       "message": "Argument of type '{ dryRun: boolean; overwrite: boolean; cwd: string | undefined; }' is not assignable to parameter of type 'GenerateControllerOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2804,7 +2804,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/makeEntity.ts",
-      "line": 78,
+      "line": 84,
       "column": 66,
       "code": "TS2379",
       "message": "Argument of type '{ dryRun: boolean; overwrite: boolean; cwd: string | undefined; }' is not assignable to parameter of type 'GenerateEntityOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2812,7 +2812,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/makeEvent.ts",
-      "line": 90,
+      "line": 96,
       "column": 65,
       "code": "TS2379",
       "message": "Argument of type '{ dryRun: boolean; overwrite: boolean; cwd: string | undefined; }' is not assignable to parameter of type 'GenerateEventOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2820,7 +2820,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/makeListener.ts",
-      "line": 92,
+      "line": 98,
       "column": 68,
       "code": "TS2379",
       "message": "Argument of type '{ dryRun: boolean; overwrite: boolean; cwd: string | undefined; }' is not assignable to parameter of type 'GenerateListenerOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2828,7 +2828,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/makeRepository.ts",
-      "line": 102,
+      "line": 108,
       "column": 70,
       "code": "TS2379",
       "message": "Argument of type '{ dryRun: boolean; overwrite: boolean; cwd: string | undefined; }' is not assignable to parameter of type 'GenerateRepositoryOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."

@@ -2,9 +2,53 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { describe, expect, it } from "vitest";
+import { createCrocoCommandRuntime, runWithCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import { runCreateDomain } from "../commands/createDomain.js";
 
 describe("runCreateDomain", () => {
+  it.each(["api", "server", "backend"])("should generate in detected apps/%s", async (app) => {
+    const cwd = await createWorkspace();
+    await fs.rename(path.join(cwd, "apps", "api-server"), path.join(cwd, "apps", app));
+    const result = await runCreateDomain("User", { cwd });
+    expect(result?.files).toHaveLength(5);
+    expect(result?.registration?.status).toBe("updated");
+    expect(await fs.readFile(path.join(cwd, "apps", app, "src", "index.ts"), "utf-8")).toContain(
+      "UserController",
+    );
+    await expect(
+      fs.access(path.join(cwd, "apps", app, "src", "domains", "user", "UserController.ts")),
+    ).resolves.toBeUndefined();
+    await expect(fs.access(path.join(cwd, "apps", "api-server"))).rejects.toThrow();
+  });
+
+  it("should distinguish a workspace without an API app", async () => {
+    const cwd = await createWorkspace();
+    await fs.rm(path.join(cwd, "apps", "api-server"), { recursive: true });
+    const messages: string[] = [];
+    const runtime = createCrocoCommandRuntime({ stdout: (message) => messages.push(message) });
+    const result = await runWithCrocoCommandRuntime(runtime, () =>
+      runCreateDomain("User", { cwd }),
+    );
+    expect(result).toBeNull();
+    expect(messages).toEqual([
+      "No API server app detected in apps/ (checked api-server, api, server, backend).",
+    ]);
+    await expect(fs.access(path.join(cwd, "apps", "api-server"))).rejects.toThrow();
+  });
+
+  it.each(["api", "server", "backend"])(
+    "should validate the detected apps/%s manifest before writing",
+    async (app) => {
+      const cwd = await createWorkspace({ apiServerManifest: "{}" });
+      await fs.rename(path.join(cwd, "apps", "api-server"), path.join(cwd, "apps", app));
+      await expect(runCreateDomain("User", { cwd })).rejects.toThrow(
+        `Missing dependencies in apps/${app}/package.json`,
+      );
+      await expect(
+        fs.access(path.join(cwd, "apps", app, "src", "domains/user", "UserController.ts")),
+      ).rejects.toThrow();
+    },
+  );
   it("should create an API server domain file set and register its controller", async () => {
     const cwd = await createWorkspace();
 

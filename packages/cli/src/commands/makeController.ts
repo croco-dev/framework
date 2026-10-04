@@ -34,15 +34,21 @@ export async function generateController(
   const routeName = normalize(name, "kebab");
   const workspace = await detect(cwd);
 
-  if (!workspace.root || !workspace.hasApiServer) {
+  if (!workspace.root) {
     getCrocoCommandRuntime().stdout("No Croco workspace detected. Run from a Croco project.");
+    return null;
+  }
+
+  if (!workspace.apiServerDir) {
+    getCrocoCommandRuntime().stdout(
+      "No API server app detected in apps/ (checked api-server, api, server, backend).",
+    );
     return null;
   }
 
   const targetPath = join(
     workspace.root,
-    "apps",
-    "api-server",
+    workspace.apiServerDir,
     "src",
     "controllers",
     `${className}Controller.ts`,
@@ -84,8 +90,8 @@ export class ${className}Controller {
 `;
 
   await assertGeneratedImportDependencies({
-    manifestPath: join(workspace.root, "apps", "api-server", "package.json"),
-    manifestLabel: "apps/api-server/package.json",
+    manifestPath: join(workspace.root, workspace.apiServerDir, "package.json"),
+    manifestLabel: `${workspace.apiServerDir}/package.json`,
     sources: [{ path: targetPath, content }],
   });
 
