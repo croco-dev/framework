@@ -9,7 +9,7 @@ import type { PaginationParams } from "./types";
 
 export type PaginationQueryInput =
   | Pick<URLSearchParams, "getAll">
-  | Readonly<Record<string, string | readonly string[] | undefined>>;
+  | Readonly<Record<string, string | readonly string[] | null | undefined>>;
 
 type PaginationParameter = "cursor" | "direction" | "limit" | "offset";
 
@@ -74,7 +74,9 @@ function isSearchParams(query: PaginationQueryInput): query is Pick<URLSearchPar
   return "getAll" in query && typeof query.getAll === "function";
 }
 
-function normalizeRecordValue(value: string | readonly string[] | undefined): readonly string[] {
-  if (value === undefined) return [];
+function normalizeRecordValue(
+  value: string | readonly string[] | null | undefined,
+): readonly string[] {
+  if (value === undefined || value === null) return [];
   return typeof value === "string" ? [value] : value;
 }

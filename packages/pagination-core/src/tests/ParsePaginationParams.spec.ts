@@ -10,6 +10,29 @@ import {
 import { CursorParamsSchema, OffsetParamsSchema, PaginationParamsSchema } from "../libs/schemas";
 
 describe("parsePaginationParams", () => {
+  it("should use default pagination when record parameters are null", () => {
+    expect(parsePaginationParams({ cursor: null, limit: null })).toEqual({
+      mode: "cursor",
+      cursor: undefined,
+      limit: DEFAULT_LIMIT,
+    });
+    expect(
+      parsePaginationParams({ cursor: null, offset: null, limit: null, direction: null }),
+    ).toEqual(parsePaginationParams({}));
+  });
+
+  it("should preserve cursor mode with a null offset and direction", () => {
+    expect(
+      parsePaginationParams({ cursor: "abc123", offset: null, limit: "10", direction: null }),
+    ).toEqual({ mode: "cursor", cursor: "abc123", limit: 10 });
+  });
+
+  it("should preserve offset mode with a null cursor, limit, and direction", () => {
+    expect(
+      parsePaginationParams({ cursor: null, offset: "20", limit: null, direction: null }),
+    ).toEqual({ mode: "offset", offset: 20, limit: DEFAULT_LIMIT });
+  });
+
   it.each([
     { field: "cursor", values: ["abc123", "def456"] },
     { field: "offset", values: ["10", "20"] },

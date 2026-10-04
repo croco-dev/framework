@@ -163,6 +163,9 @@ if (params.mode === "cursor") {
 `limit`, `direction` 같은 scalar parameter가 두 번 이상 전달되면 첫 값을 임의로 선택하지 않고
 `AmbiguousPaginationParameterProblem`으로 거부합니다.
 
+plain object의 `null` 값은 생략된 파라미터와 동일하게 처리합니다. 예를 들어
+`{ cursor: null, limit: null }`은 기본 limit을 사용하는 cursor 모드로 파싱됩니다.
+
 HTTP adapter에서 query를 plain object로 바꿀 때도 반복된 값을 보존해야 합니다. 첫 값만 남기는
 adapter API를 거치면 parser가 중복을 감지할 수 없으므로, 값 배열이나 `URLSearchParams`를 전달하세요.
 
