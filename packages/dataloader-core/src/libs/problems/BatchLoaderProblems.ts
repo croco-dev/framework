@@ -27,7 +27,7 @@ export class DuplicateBatchLoaderNameProblem extends Problem {
     );
   }
 }
-
+/** Raised when batch loader options cannot be used safely. */
 export class InvalidBatchLoaderConfigurationProblem extends Problem {
   readonly code = "dataloader-core/invalid-configuration";
   readonly category = ProblemCategory.InternalServerError;
