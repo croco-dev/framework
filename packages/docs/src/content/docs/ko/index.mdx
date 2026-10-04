@@ -4,6 +4,30 @@ description: Croco 프레임워크의 아키텍처와 패키지를 빠르게 이
 template: splash
 hero:
   tagline: 빠르게 움직이고, 견고하게 구축하세요.
+  actions:
+    - text: 시작하기
+      link: /ko/guides/getting-started/
+      icon: right-arrow
+    - text: 아키텍처 개요
+      link: /ko/guides/architecture/
+      icon: open-book
+      variant: secondary
 ---
 
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
 Croco는 AWS Lambda를 1급 시민으로 지원하는 TypeScript 기반 프레임워크입니다.
+
+## 한국어 가이드
+
+<CardGrid stagger>
+  <Card title="시작하기" icon="rocket">
+    첫 SaaS API를 만들고 실행해 보세요. [시작하기 →](/ko/guides/getting-started/)
+  </Card>
+  <Card title="아키텍처 개요" icon="diagram-project">
+    패키지 역할과 Host·Transport·Build Target 경계를 이해하세요. [읽기 →](/ko/guides/architecture/)
+  </Card>
+  <Card title="실패 시맨틱스" icon="triangle-alert">
+    Problem, 재시도, timeout, idempotency 규칙을 확인하세요. [읽기 →](/ko/guides/failure-semantics/)
+  </Card>
+</CardGrid>
