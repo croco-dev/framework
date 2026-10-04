@@ -35,6 +35,7 @@ import {
 import ts from "typescript";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
+import { z as z4 } from "zod/v4";
 import { emitOpenAPIFromContractGraph } from "../../../openapi-spec/src/index";
 import { generateClientFilesFromContractGraph } from "../../../rpc-codegen/src/index";
 import { createApp, type CrocoApp, ErrorHandler, HealthCheckRegistry } from "../index";
@@ -389,6 +390,52 @@ describe("REST contract-to-runtime parity", () => {
     vi.unstubAllGlobals();
     fs.rmSync(GENERATED_RPC_TEMP_ROOT, { recursive: true, force: true });
   });
+
+  it.each(["params", "query", "body", "response"] as const)(
+    "rejects a Zod 4 route-contract %s schema with its source diagnostic",
+    (schemaKind) => {
+      const supportedSchema = z.object({ id: z.string() });
+      const unsupportedSchema = z4.object({ id: z4.string() }) as unknown as typeof supportedSchema;
+      const contract = defineRouteContract({
+        method: HttpMethod.POST,
+        path: "/unsupported-zod/:id",
+        params: supportedSchema,
+        query: supportedSchema,
+        body: supportedSchema,
+        response: supportedSchema,
+        [schemaKind]: unsupportedSchema,
+      });
+
+      @Controller("/unsupported-zod")
+      class UnsupportedZodController {
+        @Post(contract)
+        handle(
+          @Param(contract, "id") _id: string,
+          @Query(contract, "id") _queryId: string,
+          @Body(contract) body: { id: string },
+        ): { id: string } {
+          return body;
+        }
+      }
+
+      expect(() =>
+        createApp({ controllers: [UnsupportedZodController], securityValidation: "off" }).getHono(),
+      ).toThrowError(
+        expect.objectContaining({
+          diagnostics: [
+            expect.objectContaining({
+              code: "contract-schema-unsupported-zod-major",
+              routeId: "UnsupportedZodController.handle",
+              sourceLocation: expect.objectContaining({
+                path: expect.stringContaining("ContractRuntimeParity.spec.ts"),
+              }),
+              message: `Route contract ${schemaKind} uses unsupported Zod major 4 (schema kind: object); Croco route contracts require Zod 3.`,
+            }),
+          ],
+        }),
+      );
+    },
+  );
 
   it.each(["/users", "/api/v1/users"] as const)(
     "mounts contract %s under its controller in the graph and HTTP runtime",

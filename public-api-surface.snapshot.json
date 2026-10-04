@@ -29093,6 +29093,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "getRouteContractSchemaDiagnostics",
+              "exportKind": "named",
+              "source": "./libs/ContractGraph",
+              "declarationKind": "function"
+            },
+            {
               "name": "getSchemaDescriptorDiagnostics",
               "exportKind": "named",
               "source": "./libs/SchemaDescriptor",

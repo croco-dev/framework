@@ -21461,9 +21461,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#protocols-core-contract-graph-diagnostics",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        cause:
+          "The collected route contract failed schema or semantic validation, including unsupported Zod majors.",
+        userAction:
+          "Correct the route declaration identified by the diagnostics before generating contracts or starting the application.",
+        operatorAction:
+          "Inspect diagnostic codes, route IDs, and source locations. For contract-schema-unsupported-zod-major, replace the identified schema with a Zod 3 route contract schema.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {

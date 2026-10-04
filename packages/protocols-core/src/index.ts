@@ -19,6 +19,7 @@ export {
   assertContractGraphHasNoErrors,
   buildContractGraph,
   ContractGraphDiagnosticError,
+  getRouteContractSchemaDiagnostics,
   formatContractDiagnostic,
   formatContractDiagnostics,
   getContractGraphErrors,

@@ -2,6 +2,8 @@ import type { Guard, ILogger } from "@croco/framework-context";
 import { ProblemFactory } from "@croco/problems-core";
 import {
   extractRouteIR,
+  ContractGraphDiagnosticError,
+  getRouteContractSchemaDiagnostics,
   toRuntimeRoutePath,
   type RouteContractSourceLocation,
   type RouteIR,
@@ -92,6 +94,10 @@ export class RouteCompiler {
 
     for (const controller of controllers) {
       const routeIRs = extractRouteIR(controller);
+      const schemaDiagnostics = routeIRs.flatMap(getRouteContractSchemaDiagnostics);
+      if (schemaDiagnostics.length > 0) {
+        throw new ContractGraphDiagnosticError(schemaDiagnostics);
+      }
       if (routeIRs.length === 0) {
         this.logger.warn(`[RouteCompiler] ${controller.name} is not decorated with @Controller`);
         continue;
