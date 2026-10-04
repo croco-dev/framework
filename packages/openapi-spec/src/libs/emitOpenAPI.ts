@@ -16,6 +16,7 @@ import {
   type ContractEntitlementRequirement,
   type ContractGraphObservedConsumerRoute,
   type ContractGraphRoute,
+  getContractFieldSchema,
   getContractPathParams,
   isZodArraySchema,
   normalizeProjectManifestBundlePath,
@@ -424,7 +425,8 @@ function toZodObject(params: ParamIR[]): z.ZodObject<Record<string, ZodType>> | 
 }
 
 function withParameterMetadata(param: ParamIR): ZodType {
-  const schemaWithoutCatch = unwrapZodParameterSchema(param.schema);
+  const resolvedSchema = getContractFieldSchema(param.contractSchema, param.name) ?? param.schema;
+  const schemaWithoutCatch = unwrapZodParameterSchema(resolvedSchema);
   const schema = unwrapZodEffectsSchema(schemaWithoutCatch) ?? z.string();
   const location = toOpenAPIParamLocation(param.kind);
 
@@ -432,7 +434,7 @@ function withParameterMetadata(param: ParamIR): ZodType {
     param: {
       name: param.name,
       in: location,
-      required: isRequiredOpenAPIParameter(param.kind, param.schema),
+      required: isRequiredOpenAPIParameter(param.kind, resolvedSchema),
       ...toArrayParameterSerialization(param.kind, schemaWithoutCatch),
     },
   });

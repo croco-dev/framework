@@ -897,6 +897,81 @@ describe("emitOpenAPI", () => {
     });
   });
 
+  it.each(["plain", "refined"] as const)(
+    "should emit wrapped contract query fields with plain-contract types (%s)",
+    (name) => {
+      const queryInput = z.object({
+        page: z.coerce.number().int().min(1),
+        size: z.coerce.number().int().min(1).max(100),
+      });
+      const query = name === "refined" ? queryInput.refine(({ page }) => page > 0) : queryInput;
+      const listItemsContract = defineRouteContract({
+        id: "items.list",
+        method: HttpMethod.GET,
+        path: "/items",
+        query,
+        response: z.string(),
+      });
+
+      @Controller("/items")
+      class ItemsController {
+        @Get(listItemsContract)
+        listItems(
+          @Query(listItemsContract, "page") _page: number,
+          @Query(listItemsContract, "size") _size: number,
+        ): string {
+          return "ok";
+        }
+      }
+
+      const spec = emitOpenAPI([ItemsController]);
+      const parameters = spec.paths?.["/items"]?.get?.parameters;
+
+      expect(parameters).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            in: "query",
+            name: "page",
+            required: true,
+            schema: expect.objectContaining({ type: "integer" }),
+          }),
+          expect.objectContaining({
+            in: "query",
+            name: "size",
+            required: true,
+            schema: expect.objectContaining({ type: "integer" }),
+          }),
+        ]),
+      );
+    },
+  );
+
+  it("should reject partially bound refined contract query fields", () => {
+    const queryInput = z.object({
+      page: z.coerce.number().int().min(1),
+      size: z.coerce.number().int().min(1).max(100),
+    });
+    const listItemsContract = defineRouteContract({
+      id: "items.list",
+      method: HttpMethod.GET,
+      path: "/items",
+      query: queryInput.refine(({ page }) => page > 0),
+      response: z.string(),
+    });
+
+    @Controller("/items")
+    class ItemsController {
+      @Get(listItemsContract)
+      listItems(@Query(listItemsContract, "page") _page: number): string {
+        return "ok";
+      }
+    }
+
+    expect(() => emitOpenAPI([ItemsController])).toThrow(
+      "contract-route-missing-query-param-binding",
+    );
+  });
+
   it("should document Problem Details responses by default", () => {
     @Controller("/orders")
     class OrdersController {

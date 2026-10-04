@@ -27,6 +27,11 @@ Array query parameters are emitted with OpenAPI `style: form` and `explode: true
 repeated query-key transport semantics. Array header parameters use `style: simple` and
 `explode: false`, matching comma-delimited HTTP header values.
 
+Contract-bound query and path parameters resolve their OpenAPI type and requiredness from
+the named field of the contract's input object. Object-level refinements cannot be
+represented as OpenAPI parameters, so only the field schema is emitted while runtime
+validation keeps the full refined schema.
+
 ## Verification
 
 ```bash

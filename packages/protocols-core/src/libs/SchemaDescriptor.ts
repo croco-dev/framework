@@ -656,6 +656,16 @@ export function getZodObjectShape(schema: unknown): Record<string, unknown> {
   return getObjectShape(schema);
 }
 
+export function getContractFieldSchema(
+  contractSchema: z.ZodType | null | undefined,
+  fieldName: string,
+): z.ZodType | null {
+  const shape = contractSchema ? getZodObjectShape(getZodInputObjectSchema(contractSchema)) : {};
+  const field = shape[fieldName];
+
+  return isZodType(field) ? field : null;
+}
+
 export function getZodObjectUnsupportedDynamicKeyMode(
   schema: unknown,
 ): "catchall" | "passthrough" | undefined {
