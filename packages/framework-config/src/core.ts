@@ -103,12 +103,14 @@ type InvalidClientRuntimeEnvKeys<
 type RuntimeEnvBoundaryValidation<
   TPresets extends readonly RuntimeEnvPreset[],
   TPrefix extends string,
-> = [
-  InvalidServerRuntimeEnvKeys<TPresets, TPrefix>,
-  InvalidClientRuntimeEnvKeys<TPresets, TPrefix>,
-] extends [never, never]
+> = string extends TPrefix
   ? unknown
-  : never;
+  : [
+        InvalidServerRuntimeEnvKeys<TPresets, TPrefix>,
+        InvalidClientRuntimeEnvKeys<TPresets, TPrefix>,
+      ] extends [never, never]
+    ? unknown
+    : never;
 
 export type RuntimeEnv<TPresets extends readonly RuntimeEnvPreset[]> = Readonly<
   UndefinedOptional<Simplify<StandardSchemaDictionary.InferOutput<RuntimeEnvSchema<TPresets>>>>

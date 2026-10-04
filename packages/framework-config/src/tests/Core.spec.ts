@@ -317,6 +317,52 @@ describe("framework-config runtime env preset composition", () => {
     );
   });
 
+  it("accepts a widened client prefix while preserving inferred schema output", async () => {
+    const core = await importCoreWithEnv(undefined);
+    const config = { envPrefix: "VITE_" };
+    process.env.SERVER_PORT = "3000";
+    process.env.VITE_API_URL = "https://api.example.com";
+
+    expectTypeOf(config.envPrefix).toEqualTypeOf<string>();
+    const runtimeEnv = core.defineRuntimeEnv({
+      clientPrefix: config.envPrefix,
+      presets: [
+        {
+          server: { SERVER_PORT: z.coerce.number() },
+          client: { VITE_API_URL: z.url() },
+          shared: {},
+        },
+      ],
+    });
+
+    expectTypeOf(runtimeEnv).toEqualTypeOf<
+      Readonly<{ SERVER_PORT: number; VITE_API_URL: string }>
+    >();
+    expect(runtimeEnv.SERVER_PORT).toBe(3000);
+    expect(runtimeEnv.VITE_API_URL).toBe("https://api.example.com");
+  });
+
+  it.each([undefined, "true"])(
+    "checks widened prefix boundaries with skipValidation=%s",
+    async (skip) => {
+      const core = await importCoreWithEnv(skip);
+      const config = { envPrefix: "VITE_" };
+
+      expect(() =>
+        core.defineRuntimeEnv({
+          clientPrefix: config.envPrefix,
+          presets: [{ server: { VITE_SECRET: z.string() }, client: {}, shared: {} }],
+        }),
+      ).toThrow("server variables cannot use the 'VITE_' prefix");
+      expect(() =>
+        core.defineRuntimeEnv({
+          clientPrefix: config.envPrefix,
+          presets: [{ server: {}, client: { NEXT_PUBLIC_LABEL: z.string() }, shared: {} }],
+        }),
+      ).toThrow("client variables must use the 'VITE_' prefix");
+    },
+  );
+
   it.each([undefined, "true"])(
     "checks configured prefix boundaries with skipValidation=%s",
     async (skip) => {
