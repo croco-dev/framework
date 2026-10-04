@@ -1213,6 +1213,56 @@ describe("QStashTriggerHandler", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
+  it("legacy schedule ID로 도착한 비활성화 트리거의 잔존 호출도 410으로 거부해야 한다", async () => {
+    class LegacyDisabledHandler {
+      async execute(): Promise<string> {
+        return "handled";
+      }
+    }
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "0 9 * * *",
+      methodName: "execute",
+      target: LegacyDisabledHandler.prototype,
+      options: {
+        enabled: false,
+      },
+    });
+
+    const receiver = {
+      verify: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Receiver;
+
+    const { create, manager: executionManager } = createIdempotentExecutionManager();
+    const handler = new QStashTriggerHandler({
+      receiver,
+      executionManager,
+      serviceResolver: () => new LegacyDisabledHandler(),
+    });
+
+    const result = await handler.handle(
+      JSON.stringify({
+        scheduleId: "schedule-legacy-16",
+        className: "LegacyDisabledHandler",
+        methodName: "execute",
+        cronExpression: "0 9 * * *",
+        timestamp: new Date().toISOString(),
+      }),
+      "valid-signature",
+      delivery,
+    );
+
+    expect(result.success).toBe(false);
+    expect(result.statusCode).toBe(410);
+    expect(result.body).toEqual({
+      error: "Trigger is disabled",
+      code: "triggers-qstash/trigger-disabled",
+      category: ProblemCategory.Gone,
+    });
+    expect(create).not.toHaveBeenCalled();
+  });
+
   it("Problem 예외는 안전한 code/category와 statusCode를 유지해야 한다", async () => {
     class ProblemHandler {
       async execute(): Promise<string> {

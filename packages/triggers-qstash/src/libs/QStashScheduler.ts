@@ -326,22 +326,20 @@ export class QStashScheduler {
     readonly disabledScheduleIds: Set<string>;
     readonly enabledScheduleMap: Map<string, CronTriggerMetadata>;
   } {
+    const allScheduleMap = this.buildScheduleMap(triggers);
     const disabledScheduleIds = new Set<string>();
-    const enabledTriggers: CronTriggerMetadata[] = [];
+    const enabledScheduleMap = new Map<string, CronTriggerMetadata>();
 
-    for (const trigger of triggers) {
+    for (const [scheduleId, trigger] of allScheduleMap) {
       if (trigger.options?.enabled === false) {
-        disabledScheduleIds.add(this.generateScheduleId(trigger));
+        disabledScheduleIds.add(scheduleId);
         continue;
       }
 
-      enabledTriggers.push(trigger);
+      enabledScheduleMap.set(scheduleId, trigger);
     }
 
-    return {
-      disabledScheduleIds,
-      enabledScheduleMap: this.buildScheduleMap(enabledTriggers),
-    };
+    return { disabledScheduleIds, enabledScheduleMap };
   }
 
   private buildScheduleMap(triggers: CronTriggerMetadata[]): Map<string, CronTriggerMetadata> {
@@ -430,7 +428,7 @@ export class QStashScheduler {
       name: scheduleId,
       action: "skipped",
       applied: false,
-      expression: metadata.expression,
+      expression: effectiveCron,
       currentExpression: existing?.cron,
       target: triggerName,
       method: methodName,

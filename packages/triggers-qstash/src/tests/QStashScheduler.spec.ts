@@ -1042,4 +1042,91 @@ describe("QStashScheduler", () => {
       }),
     ]);
   });
+
+  it("활성 트리거와 비활성 트리거가 같은 schedule ID이면 동기화가 실패해야 한다", async () => {
+    const FirstCollisionJob = class CollisionScheduleJob {
+      async run(): Promise<void> {}
+    };
+
+    const SecondCollisionJob = class CollisionScheduleJob {
+      async run(): Promise<void> {}
+    };
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "* * * * *",
+      methodName: "run",
+      target: FirstCollisionJob.prototype,
+      options: {
+        name: "shared",
+      },
+    });
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "*/5 * * * *",
+      methodName: "run",
+      target: SecondCollisionJob.prototype,
+      options: {
+        name: "shared",
+        enabled: false,
+      },
+    });
+
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([]),
+        create: vi.fn(),
+        delete: vi.fn(),
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+    });
+
+    await expect(scheduler.sync()).rejects.toThrow(
+      "Duplicate QStash schedule ID detected: croco-trigger:CollisionScheduleJob:shared:run",
+    );
+  });
+
+  it("timezone이 설정된 트리거는 동기화 결과에도 CRON_TZ 형태를 기록해야 한다", async () => {
+    class SeoulDetailJob {
+      async dailyReport(): Promise<void> {}
+    }
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "0 9 * * *",
+      methodName: "dailyReport",
+      target: SeoulDetailJob.prototype,
+      options: {
+        timezone: "Asia/Seoul",
+      },
+    });
+
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([]),
+        create: vi.fn().mockResolvedValue({}),
+        delete: vi.fn(),
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+    });
+
+    const result = await scheduler.sync({ mode: "dry-run" });
+
+    expect(result.details).toEqual([
+      expect.objectContaining({
+        name: "croco-trigger:SeoulDetailJob:dailyReport:dailyReport",
+        action: "created",
+        expression: "CRON_TZ=Asia/Seoul 0 9 * * *",
+      }),
+    ]);
+  });
 });

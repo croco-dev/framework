@@ -454,7 +454,8 @@ export class QStashTriggerHandler {
    * payload carries an explicit disabled flag otherwise.
    */
   private rejectDisabledTrigger(payload: QStashWebhookPayload): HandleResult | undefined {
-    if (payload.options?.enabled === false && !this.findMatchingCronTrigger(payload)) {
+    const authoritative = this.findAuthoritativeCronTrigger(payload);
+    if (authoritative?.options?.enabled === false) {
       return {
         success: false,
         statusCode: 410,
@@ -466,8 +467,7 @@ export class QStashTriggerHandler {
       };
     }
 
-    const matched = this.findMatchingCronTrigger(payload);
-    if (matched?.options?.enabled === false) {
+    if (payload.options?.enabled === false && !authoritative) {
       return {
         success: false,
         statusCode: 410,
@@ -477,6 +477,65 @@ export class QStashTriggerHandler {
           ProblemCategory.Gone,
         ),
       };
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Registry state is authoritative when it uniquely identifies the trigger:
+   * an exact schedule-ID match wins, otherwise the same unique
+   * class/method/trigger-name fallback used by target resolution applies.
+   * Returns undefined on ambiguity so stale payload flags stay fail-open.
+   */
+  private findAuthoritativeCronTrigger(
+    payload: QStashWebhookPayload,
+  ): { readonly options?: { readonly enabled?: boolean } } | undefined {
+    const canonical = this.findMatchingCronTrigger(payload);
+    if (canonical) {
+      return canonical;
+    }
+
+    return this.findUniqueMethodCronTrigger(payload);
+  }
+
+  /**
+   * Mirror of `resolveTargetClass` fallback: triggers matching class,
+   * method, and trigger name without requiring a schedule-ID match.
+   * Only a unique match is authoritative.
+   */
+  private findUniqueMethodCronTrigger(
+    payload: QStashWebhookPayload,
+  ): { readonly options?: { readonly enabled?: boolean } } | undefined {
+    const allTriggers = triggerRegistry.getAllTriggers();
+    const matches: Array<{ readonly options?: { readonly enabled?: boolean } }> = [];
+
+    for (const [target, triggers] of allTriggers.entries()) {
+      const targetClass = this.getTargetClass(target);
+      if (!targetClass) {
+        continue;
+      }
+
+      if (payload.className !== undefined && payload.className !== targetClass.name) {
+        continue;
+      }
+
+      for (const trigger of triggers.values()) {
+        if (
+          trigger.type !== "cron" ||
+          String(trigger.methodName) !== payload.methodName ||
+          (payload.triggerName !== undefined &&
+            payload.triggerName !== (trigger.options?.name ?? String(trigger.methodName)))
+        ) {
+          continue;
+        }
+
+        matches.push(trigger);
+      }
+    }
+
+    if (matches.length === 1) {
+      return matches[0];
     }
 
     return undefined;
