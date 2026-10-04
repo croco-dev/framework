@@ -13282,9 +13282,9 @@ Sources:
 - Retryability: `not-retryable`
 - Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Cause: The collected route contract failed schema or semantic validation, including unsupported Zod majors.
+- User action: Correct the route declaration identified by the diagnostics before generating contracts or starting the application.
+- Operator action: Inspect diagnostic codes, route IDs, and source locations. For contract-schema-unsupported-zod-major, replace the identified schema with a Zod 3 route contract schema.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
