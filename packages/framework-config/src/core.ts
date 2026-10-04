@@ -3,6 +3,7 @@ import { createEnv } from "@t3-oss/env-core";
 import type { StandardSchemaDictionary } from "@t3-oss/env-core";
 
 import {
+  ConfigValidationProblem,
   InvalidBooleanEnvProblem,
   RuntimeEnvPresetBoundaryProblem,
 } from "./libs/problems/ConfigProblems";
@@ -37,11 +38,16 @@ export type RuntimeEnvPreset = {
   readonly shared: StandardSchemaDictionary;
 };
 
-export type DefineRuntimeEnvOptions<TPresets extends readonly RuntimeEnvPreset[]> = {
+export type DefineRuntimeEnvOptions<
+  TPresets extends readonly RuntimeEnvPreset[],
+  TPrefix extends string = "NEXT_PUBLIC_",
+> = {
   readonly presets: number extends TPresets["length"]
     ? never
-    : TPresets & RuntimeEnvBoundaryValidation<TPresets>;
-};
+    : TPresets & RuntimeEnvBoundaryValidation<TPresets, NoInfer<TPrefix>>;
+} & ([TPrefix] extends ["NEXT_PUBLIC_"]
+  ? { readonly clientPrefix?: TPrefix }
+  : { readonly clientPrefix: TPrefix extends "" ? never : TPrefix });
 
 type RuntimeEnvSection = keyof RuntimeEnvPreset;
 
@@ -84,22 +90,27 @@ type RuntimeEnvSchema<TPresets extends readonly RuntimeEnvPreset[]> = MergeRecor
 type KnownStringKeys<T> =
   string extends Extract<keyof T, string> ? never : Extract<keyof T, string>;
 
-type InvalidServerRuntimeEnvKeys<TPresets extends readonly RuntimeEnvPreset[]> = Extract<
-  KnownStringKeys<MergeRuntimeEnvSection<TPresets, "server">>,
-  `NEXT_PUBLIC_${string}`
->;
+type InvalidServerRuntimeEnvKeys<
+  TPresets extends readonly RuntimeEnvPreset[],
+  TPrefix extends string,
+> = Extract<KnownStringKeys<MergeRuntimeEnvSection<TPresets, "server">>, `${TPrefix}${string}`>;
 
-type InvalidClientRuntimeEnvKeys<TPresets extends readonly RuntimeEnvPreset[]> = Exclude<
-  KnownStringKeys<MergeRuntimeEnvSection<TPresets, "client">>,
-  `NEXT_PUBLIC_${string}`
->;
+type InvalidClientRuntimeEnvKeys<
+  TPresets extends readonly RuntimeEnvPreset[],
+  TPrefix extends string,
+> = Exclude<KnownStringKeys<MergeRuntimeEnvSection<TPresets, "client">>, `${TPrefix}${string}`>;
 
-type RuntimeEnvBoundaryValidation<TPresets extends readonly RuntimeEnvPreset[]> = [
-  InvalidServerRuntimeEnvKeys<TPresets>,
-  InvalidClientRuntimeEnvKeys<TPresets>,
-] extends [never, never]
+type RuntimeEnvBoundaryValidation<
+  TPresets extends readonly RuntimeEnvPreset[],
+  TPrefix extends string,
+> = string extends TPrefix
   ? unknown
-  : never;
+  : [
+        InvalidServerRuntimeEnvKeys<TPresets, TPrefix>,
+        InvalidClientRuntimeEnvKeys<TPresets, TPrefix>,
+      ] extends [never, never]
+    ? unknown
+    : never;
 
 export type RuntimeEnv<TPresets extends readonly RuntimeEnvPreset[]> = Readonly<
   UndefinedOptional<Simplify<StandardSchemaDictionary.InferOutput<RuntimeEnvSchema<TPresets>>>>
@@ -115,30 +126,41 @@ function mergeRuntimeEnvSection<
   >;
 }
 
-function assertRuntimeEnvPresetBoundaries(presets: readonly RuntimeEnvPreset[]): void {
+function assertRuntimeEnvPresetBoundaries(
+  presets: readonly RuntimeEnvPreset[],
+  clientPrefix: string,
+): void {
   for (const preset of presets) {
     for (const envName of Object.keys(preset.server)) {
-      if (envName.startsWith("NEXT_PUBLIC_")) {
-        throw new RuntimeEnvPresetBoundaryProblem("server", envName);
+      if (envName.startsWith(clientPrefix)) {
+        throw new RuntimeEnvPresetBoundaryProblem("server", envName, clientPrefix);
       }
     }
 
     for (const envName of Object.keys(preset.client)) {
-      if (!envName.startsWith("NEXT_PUBLIC_")) {
-        throw new RuntimeEnvPresetBoundaryProblem("client", envName);
+      if (!envName.startsWith(clientPrefix)) {
+        throw new RuntimeEnvPresetBoundaryProblem("client", envName, clientPrefix);
       }
     }
   }
 }
 
-export function defineRuntimeEnv<const TPresets extends readonly RuntimeEnvPreset[]>({
+export function defineRuntimeEnv<
+  const TPresets extends readonly RuntimeEnvPreset[],
+  const TPrefix extends string = "NEXT_PUBLIC_",
+>({
   presets,
-}: DefineRuntimeEnvOptions<TPresets>): RuntimeEnv<TPresets> {
-  assertRuntimeEnvPresetBoundaries(presets);
+  clientPrefix: configuredClientPrefix,
+}: DefineRuntimeEnvOptions<TPresets, TPrefix>): RuntimeEnv<TPresets> {
+  const clientPrefix = configuredClientPrefix ?? "NEXT_PUBLIC_";
+  if (clientPrefix.length === 0) {
+    throw new ConfigValidationProblem(["clientPrefix must not be empty"]);
+  }
+  assertRuntimeEnvPresetBoundaries(presets, clientPrefix);
 
   const runtimeEnv = createEnv({
     server: mergeRuntimeEnvSection(presets, "server"),
-    clientPrefix: "NEXT_PUBLIC_",
+    clientPrefix,
     client: mergeRuntimeEnvSection(presets, "client"),
     shared: mergeRuntimeEnvSection(presets, "shared"),
     runtimeEnv: { ...process.env },

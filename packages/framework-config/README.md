@@ -99,6 +99,25 @@ databaseEnv.DATABASE_URL;
 // databaseEnv.REDIS_URL; // 선택하지 않은 preset은 결과 타입에 존재하지 않습니다.
 ```
 
+클라이언트 변수의 기본 접두사는 `NEXT_PUBLIC_`입니다. Vite 등 다른 번들러의 접두사를 사용하려면
+`clientPrefix`를 지정합니다. 모든 client 키는 지정한 접두사로 시작해야 하며 server 키에는 해당
+접두사를 사용할 수 없습니다. 서로 다른 접두사의 client 키를 가진 프리셋은 함께 조합할 수 없습니다.
+
+<!-- Package-local Zod example: validated by src/tests/Core.spec.ts. -->
+
+```typescript no-check
+import { defineRuntimeEnv } from "@croco/framework-config";
+import { z } from "zod";
+
+const viteEnv = defineRuntimeEnv({
+  clientPrefix: "VITE_",
+  presets: [{ server: {}, client: { VITE_API_URL: z.url() }, shared: {} }],
+});
+```
+
+값은 기존과 같이 `process.env`에서 읽습니다. `clientPrefix`는 변수 이름과 노출 경계를 지정하며,
+`import.meta.env`를 주입하거나 번들러의 환경 변수 로딩 방식을 변경하지 않습니다.
+
 preset 순서는 같은 키가 중복될 때 적용되는 우선순위를 결정하므로 tuple로 보존해야 합니다.
 별도 변수로 재사용할 때는 `as const` 또는 `satisfies`로 키와 순서를 유지합니다.
 
