@@ -27187,7 +27187,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashScheduler.ts",
-          line: 354,
+          line: 352,
           column: 15,
           kind: "problem-factory",
         },
@@ -27282,7 +27282,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/triggers-qstash/src/libs/QStashScheduler.ts",
-          line: 622,
+          line: 620,
           column: 9,
           kind: "problem-factory",
         },
