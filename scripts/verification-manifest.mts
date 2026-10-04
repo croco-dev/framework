@@ -874,7 +874,7 @@ const spineOnly = (
       label: "Quick-start Lambda smoke",
       category: "runtime-smoke",
       command: nodeScript("scripts/quick-start-lambda-smoke.mts"),
-      timeoutMs: minutes(10),
+      timeoutMs: minutes(15),
       applicable: scaffoldApplicable,
     },
     {

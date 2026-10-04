@@ -328,7 +328,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("9c63fde1ab939ad04bdf6d7ae09e4f72b19e90a3547058b3568aa23d649b1bdd");
+    ).toBe("1b674555abe090e7a6c7edf6adb72c50d510da02c21ea1a04b637f79d397c1b3");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -1837,6 +1837,7 @@ describe("verification manifest", () => {
     expect(byId.get("release-gate-tests")?.concurrencyGroups).toBeUndefined();
     expect(byId.get("typecheck")?.command).not.toContain("--only");
     expect(byId.get("package-entrypoints-smoke")?.timeoutMs).toBe(15 * 60 * 1_000);
+    expect(byId.get("quick-start-lambda-smoke")?.timeoutMs).toBe(15 * 60 * 1_000);
   });
 
   it("routes compatibility aliases through authoritative profiles", () => {
