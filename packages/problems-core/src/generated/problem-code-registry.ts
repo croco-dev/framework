@@ -6969,12 +6969,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       title: "Internal Server Error",
       cookbookPath: "/reference/problem-recovery-cookbook/#dataloader-core-invalid-configuration",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        cause:
+          "The batch loader configured maxBatchSize outside the positive safe-integer or Infinity domain.",
+        userAction: "Use an application build with a valid batch loader configuration.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
+          "Set maxBatchSize to a positive safe integer or Infinity, then recreate the batch loader.",
+        retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
           eventName: "croco.problem.error",

@@ -3360,6 +3360,16 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "dataloader-core/invalid-configuration": recovery({
+    cause:
+      "The batch loader configured maxBatchSize outside the positive safe-integer or Infinity domain.",
+    userAction: "Use an application build with a valid batch loader configuration.",
+    operatorAction:
+      "Set maxBatchSize to a positive safe integer or Infinity, then recreate the batch loader.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "dataloader-core/duplicate-loader-name": recovery({
     cause: "Two different batch loaders use the same name and scope within one request context.",
     userAction:
