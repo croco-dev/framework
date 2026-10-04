@@ -418,6 +418,11 @@ export class CloudflareImagesProvider extends BaseStorageProvider implements Ima
             signal: options?.signal,
           });
 
+          if (response.status === 404) {
+            await this.cancelResponseBody(response);
+            return;
+          }
+
           if (!response.ok) {
             const errorText = await this.readErrorText(response);
             throw createCloudflareImagesResponseProblem({

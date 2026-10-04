@@ -130,10 +130,24 @@ export function createStorageProviderConformanceSuite(
           await provider.put(key, encodeText("delete me"));
           assert.equal(await provider.exists(key), true);
 
-          await provider.delete(key);
-
+          assert.equal(await provider.delete(key), undefined);
           assert.equal(await provider.exists(key), false);
           await assert.rejects(() => provider.get(key), FileNotFoundProblem);
+
+          assert.equal(await provider.delete(key), undefined);
+          assert.equal(await provider.exists(key), false);
+        },
+      },
+      {
+        name: "deletes missing objects idempotently",
+        run: async () => {
+          const provider = await createProvider();
+          const key = createKey("missing-delete");
+
+          assert.equal(await provider.exists(key), false);
+          assert.equal(await provider.delete(key), undefined);
+          assert.equal(await provider.delete(key), undefined);
+          assert.equal(await provider.exists(key), false);
         },
       },
       {

@@ -3924,7 +3924,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:539:19` (problem-factory)
+- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:544:19` (problem-factory)
 
 <a id="cloudflare-images-upload-intent-null-result"></a>
 
@@ -3942,7 +3942,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:645:15` (problem-factory)
+- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:650:15` (problem-factory)
 
 <a id="cohort-admin-invalid"></a>
 
@@ -14238,7 +14238,7 @@ Sources:
 
 Sources:
 
-- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:590:15` (problem-factory)
+- `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:595:15` (problem-factory)
 
 <a id="strategy-unavailable"></a>
 

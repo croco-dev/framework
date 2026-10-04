@@ -252,6 +252,7 @@ describe("@croco/testing conformance public contract", () => {
       "stores and reads Uint8Array objects with required metadata",
       "stores and streams ReadableStream objects",
       "deletes existing objects and reports them missing",
+      "deletes missing objects idempotently",
       "reports missing objects with deterministic not-found behavior",
       "rejects invalid storage keys consistently",
       "rejects invalid signed URL expiries with one provider-independent contract",

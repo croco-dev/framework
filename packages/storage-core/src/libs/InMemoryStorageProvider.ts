@@ -111,10 +111,6 @@ export class InMemoryStorageProvider extends BaseStorageProvider {
     this.assertOperationNotAborted(options, "delete", key);
     this.validateKey(key);
 
-    if (!this.storage.has(key)) {
-      throw new FileNotFoundProblem(key);
-    }
-
     this.storage.delete(key);
   }
 
