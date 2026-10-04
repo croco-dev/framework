@@ -7444,9 +7444,9 @@ Sources:
 - Retryability: `not-retryable`
 - Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: A selected runtime env preset exposed a client variable without the `NEXT_PUBLIC_` prefix or exposed a server variable with that prefix.
-- User action: Correct the `NEXT_PUBLIC_` prefix or remove the incompatible preset from defineRuntimeEnv, then retry configuration validation.
-- Operator action: Inspect the reported preset section and variable name, then keep public `NEXT_PUBLIC_` variables in client and private variables in server.
+- Cause: A selected runtime env preset exposed a client variable without the configured `clientPrefix` (`NEXT_PUBLIC_` by default) or exposed a server variable with that prefix.
+- User action: Match client keys to the configured `clientPrefix`, keep that prefix out of server keys, or remove the incompatible preset, then retry configuration validation.
+- Operator action: Inspect `clientPrefix`, the reported preset section, and variable name; keep variables with the configured prefix in client and private variables in server.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { afterEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 
-import type { RuntimeEnvPreset } from "../core";
+import type { DefineRuntimeEnvOptions, RuntimeEnvPreset } from "../core";
 
 import { InvalidBooleanEnvProblem } from "../libs/problems/ConfigProblems";
 
@@ -293,6 +293,103 @@ describe("framework-config runtime env preset composition", () => {
       });
     };
     expectTypeOf(assertInvalidBoundaryTypes).toBeFunction();
+  });
+
+  it("uses the configured client prefix for validation and client exposure", async () => {
+    const core = await importCoreWithEnv(undefined);
+    process.env.VITE_API_URL = "https://api.example.com";
+    process.env.SERVER_SECRET = "secret";
+    Reflect.set(globalThis, "window", {});
+
+    const runtimeEnv = core.defineRuntimeEnv({
+      clientPrefix: "VITE_",
+      presets: [
+        { server: { SERVER_SECRET: z.string() }, client: { VITE_API_URL: z.url() }, shared: {} },
+      ],
+    });
+
+    expectTypeOf(runtimeEnv).toEqualTypeOf<
+      Readonly<{ SERVER_SECRET: string; VITE_API_URL: string }>
+    >();
+    expect(runtimeEnv.VITE_API_URL).toBe("https://api.example.com");
+    expect(() => runtimeEnv.SERVER_SECRET).toThrow(
+      "Attempted to access a server-side environment variable on the client",
+    );
+  });
+
+  it.each([undefined, "true"])(
+    "checks configured prefix boundaries with skipValidation=%s",
+    async (skip) => {
+      const core = await importCoreWithEnv(skip);
+      const serverPreset: RuntimeEnvPreset = {
+        server: { VITE_SECRET: z.string() },
+        client: {},
+        shared: {},
+      };
+      const clientPreset: RuntimeEnvPreset = {
+        server: {},
+        client: { NEXT_PUBLIC_LABEL: z.string() },
+        shared: {},
+      };
+
+      expect(() =>
+        core.defineRuntimeEnv({ clientPrefix: "VITE_", presets: [serverPreset] }),
+      ).toThrow("server variables cannot use the 'VITE_' prefix");
+      expect(() =>
+        core.defineRuntimeEnv({ clientPrefix: "VITE_", presets: [clientPreset] }),
+      ).toThrow("client variables must use the 'VITE_' prefix");
+
+      const assertInvalidPrefixTypes = (): void => {
+        core.defineRuntimeEnv({
+          clientPrefix: "VITE_",
+          // @ts-expect-error the configured public prefix cannot appear in the server section
+          presets: [{ server: { VITE_SECRET: z.string() }, client: {}, shared: {} }],
+        });
+        core.defineRuntimeEnv({
+          clientPrefix: "VITE_",
+          // @ts-expect-error client keys must use the configured prefix, even if they use the default prefix
+          presets: [{ server: {}, client: { NEXT_PUBLIC_LABEL: z.string() }, shared: {} }],
+        });
+        core.defineRuntimeEnv({
+          // @ts-expect-error without an option, Vite keys do not match the default prefix
+          presets: [{ server: {}, client: { VITE_LABEL: z.string() }, shared: {} }],
+        });
+      };
+      expectTypeOf<{ presets: readonly [RuntimeEnvPreset] }>().not.toExtend<
+        DefineRuntimeEnvOptions<readonly [RuntimeEnvPreset], "VITE_">
+      >();
+      expectTypeOf(assertInvalidPrefixTypes).toBeFunction();
+    },
+  );
+
+  it("rejects an empty client prefix even when schema validation is skipped", async () => {
+    const core = await importCoreWithEnv("true");
+    const clientPrefix: string = "";
+    expect(() =>
+      core.defineRuntimeEnv({ clientPrefix, presets: [{ server: {}, client: {}, shared: {} }] }),
+    ).toThrow("clientPrefix must not be empty");
+    const assertEmptyPrefixType = (): void => {
+      core.defineRuntimeEnv({
+        // @ts-expect-error an empty literal cannot provide a client exposure prefix
+        clientPrefix: "",
+        presets: [{ server: {}, client: {}, shared: {} }],
+      });
+    };
+    expectTypeOf(assertEmptyPrefixType).toBeFunction();
+  });
+
+  it("supports custom bundler prefixes and last-wins client schema inference", async () => {
+    const core = await importCoreWithEnv(undefined);
+    process.env.PUBLIC_PORT = "8080";
+    const runtimeEnv = core.defineRuntimeEnv({
+      clientPrefix: "PUBLIC_",
+      presets: [
+        { server: {}, client: { PUBLIC_PORT: z.string() }, shared: {} },
+        { server: {}, client: { PUBLIC_PORT: z.coerce.number() }, shared: {} },
+      ],
+    });
+    expectTypeOf(runtimeEnv).toEqualTypeOf<Readonly<{ PUBLIC_PORT: number }>>();
+    expect(runtimeEnv.PUBLIC_PORT).toBe(8080);
   });
 
   it("keeps the previous all-presets behavior behind explicit exports", async () => {
