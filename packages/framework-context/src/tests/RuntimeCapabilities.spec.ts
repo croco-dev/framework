@@ -146,7 +146,7 @@ describe("runtime capabilities", () => {
       requirements: [
         {
           capability: "nodeApi",
-          source: { file: "src/routes/admin.ts", symbol: "AdminController.export" },
+          source: { file: "src/routes/admin.ts", line: 12, column: 3 },
         },
       ],
     });
@@ -158,7 +158,7 @@ describe("runtime capabilities", () => {
         platform: "cloudflare-workers",
         capability: "nodeApi",
         message: "Runtime platform 'cloudflare-workers' does not support capability 'nodeApi'.",
-        source: { file: "src/routes/admin.ts", symbol: "AdminController.export" },
+        source: { file: "src/routes/admin.ts", line: 12, column: 3 },
       },
     ]);
     expect(

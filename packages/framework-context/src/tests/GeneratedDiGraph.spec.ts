@@ -121,7 +121,7 @@ describe("generated DI graph", () => {
     });
   });
 
-  it("reuses request providers only inside the same request", () => {
+  it("reuses request providers only inside the same request", async () => {
     class RequestService {}
     const graph = defineGeneratedDiGraph({
       version: GENERATED_DI_GRAPH_VERSION,
@@ -144,17 +144,17 @@ describe("generated DI graph", () => {
     Container.installGeneratedGraph(graph);
 
     expect(() => Container.get(RequestService)).toThrow(/Request-scoped/);
-    const first = Context.run({ requestId: "first" }, () => [
+    const first = await Context.run({ requestId: "first" }, () => [
       Container.get(RequestService),
       Container.get(RequestService),
     ]);
-    const second = Context.run({ requestId: "second" }, () => Container.get(RequestService));
+    const second = await Context.run({ requestId: "second" }, () => Container.get(RequestService));
 
     expect(first[0]).toBe(first[1]);
     expect(second).not.toBe(first[0]);
   });
 
-  it("keeps request instances separate when one context enters two application scopes", () => {
+  it("keeps request instances separate when one context enters two application scopes", async () => {
     class RequestService {}
     const graph = defineGeneratedDiGraph({
       version: GENERATED_DI_GRAPH_VERSION,
@@ -178,7 +178,7 @@ describe("generated DI graph", () => {
     const firstScope = Container.createScope();
     const secondScope = Container.createScope();
 
-    const [first, second, firstAgain] = Context.run({ requestId: "shared" }, () => [
+    const [first, second, firstAgain] = await Context.run({ requestId: "shared" }, () => [
       firstScope.run(() => Container.get(RequestService)),
       secondScope.run(() => Container.get(RequestService)),
       firstScope.run(() => Container.get(RequestService)),
