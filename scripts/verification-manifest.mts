@@ -189,6 +189,7 @@ export const PUBLISH_REQUIRED_GENERATED_SMOKE_CASES = [
   ),
   "admin-console-starter",
   "ai-saas-golden-path",
+  "trpc-nextjs-vercel-fullstack",
 ] as const;
 
 function isApplicableToChangedFiles(

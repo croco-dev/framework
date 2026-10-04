@@ -326,7 +326,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("9f022424e712b76b4efad7477969d46fa46936a5cbc121d15a65636e05f646ab");
+    ).toBe("6fcdcc6dc861fb66aaeb76e12baf919a62da85e11b1322dd9a4238f9be5b2dd0");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -441,8 +441,9 @@ describe("verification manifest", () => {
         generatedInventoryPaths,
       ).sort(),
     ).toEqual(generatedInventoryPaths);
-    expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toHaveLength(14);
+    expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toHaveLength(15);
     expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toContain("saas-single-tenant");
+    expect(PUBLISH_REQUIRED_GENERATED_SMOKE_CASES).toContain("trpc-nextjs-vercel-fullstack");
 
     const packedCli = createVerificationManifest("publish").find(
       ({ id }) => id === "cli-packed-e2e",
@@ -1084,6 +1085,21 @@ describe("verification manifest", () => {
     expect(selectGeneratedTestPathsForSmokeCases(["rest-spa-contracts"], paths)).toEqual([]);
     expect(() => selectGeneratedTestPathsForSmokeCases(["unknown-smoke-case"], paths)).toThrow(
       "Unknown generated smoke case: unknown-smoke-case",
+    );
+  });
+
+  it("requires every materialized unit test for the Next.js smoke that executes them", () => {
+    const paths = readTestInventory()
+      .inventory.tests.filter(({ lane }) => lane === "generated-app")
+      .map(({ path }) => path);
+
+    expect(selectGeneratedTestPathsForSmokeCases(["trpc-nextjs-vercel-fullstack"], paths)).toEqual([
+      "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/tests/LocalSessionProvider.spec.ts",
+      "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/tests/ProductTrials.spec.ts",
+      "packages/create-croco-app/templates/base-ddd/libs/shared/utils-env/src/tests/createEnv.spec.ts",
+    ]);
+    expect(selectGeneratedTestPathsForSmokeCases(["trpc-nextjs-docker-frontend"], paths)).toEqual(
+      [],
     );
   });
 

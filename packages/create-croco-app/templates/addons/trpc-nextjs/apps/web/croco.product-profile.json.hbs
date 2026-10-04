@@ -1,0 +1,30 @@
+{
+  "schemaVersion": "croco.local-product-profile/v1",
+  "name": "nextjs-trpc-local-product",
+  "owner": "create-croco-app/templates/addons/trpc-nextjs",
+  "runtime": "node+browser",
+  "presentation": "nextjs-ssr",
+  "client": "typed-trpc-native-tanstack-query",
+  "compositionRoot": "src/server/application.ts",
+  "generatedGraph": ".croco/di.generated.ts",
+  "domain": "src/server/product/ProductTrials.ts",
+  "persistence": {
+    "provider": "node:sqlite",
+    "configuration": "CROCO_PRODUCT_DATABASE",
+    "defaultPath": ".local/product.sqlite",
+    "migration": "pnpm migrate",
+    "scope": "single-process-local"
+  },
+  "authentication": {
+    "provider": "src/server/LocalSessionProvider.ts",
+    "mode": "explicit-local-test-identities",
+    "configuration": "CROCO_WEB_DEMO=local",
+    "default": "disabled"
+  },
+  "routes": { "product": "/products/launch-brief", "identity": "/sign-in", "command": "/try", "privateResult": "/results/[id]" },
+  "facts": "SQLite product_trial_facts committed with product_trials",
+  "observation": "best-effort EventPublisher afterCommit; not durable delivery",
+  "syntheticSource": true,
+  "unsupported": ["production-authentication", "multi-process-operation", "real-payment", "warehouse-data-addon", "croco-flight", "provider-certification"],
+  "dataAddonIssue": "https://github.com/croco-dev/framework/issues/2878"
+}

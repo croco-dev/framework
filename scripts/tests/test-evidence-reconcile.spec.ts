@@ -179,7 +179,10 @@ describe("test evidence reconciliation", () => {
     };
     const allPaths = generatedInventory.tests.map(({ path }) => path);
     const executedPaths = allPaths.filter(
-      (path) => !path.includes("/base-ddd/") && !path.includes("/spa-be-split/tests/journeys/"),
+      (path) =>
+        !path.includes("/base-ddd/") &&
+        !path.includes("/spa-be-split/tests/journeys/") &&
+        !path.includes("/addons/trpc-nextjs/"),
     );
     expect(executedPaths).toHaveLength(19);
     const requiredGeneratedPaths = selectGeneratedTestPathsForSmokeCases(
@@ -216,7 +219,7 @@ describe("test evidence reconciliation", () => {
     );
     expect(fullTierPaths).toEqual([...allPaths].sort());
     expect(reconcile(allPaths, fullTierPaths).diagnostics).toEqual([]);
-    expect(reconcile(executedPaths, fullTierPaths).diagnostics).toHaveLength(3);
+    expect(reconcile(executedPaths, fullTierPaths).diagnostics).toHaveLength(5);
   });
 
   it("rejects lane evidence produced from a stale inventory", () => {

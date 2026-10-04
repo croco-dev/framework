@@ -1392,7 +1392,12 @@ const smokeCaseDefinitionsWithoutLint: readonly Omit<SmokeCase, "tier" | "adviso
     ],
     runtimeTarget: "node+browser",
     matrixTargets: ["base-ddd"],
-    validations: [{ label: "build", args: ["build"] }],
+    validations: [
+      { label: "test", args: ["test"] },
+      { label: "product typecheck", packagePath: ["apps", "web"], args: ["typecheck"] },
+      { label: "build", args: ["build"] },
+      { label: "local product HTTP smoke", packagePath: ["apps", "web"], args: ["product:smoke"] },
+    ],
   },
   {
     name: "graphql-nextjs-opennext",

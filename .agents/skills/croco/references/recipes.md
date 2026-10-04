@@ -22,6 +22,18 @@ Use these as navigation routes, not copy-paste implementations. Open the linked 
 
 ## Authentication
 
+### Local SSR product example
+
+The `ddd-fullstack` + Next.js-hosted tRPC scaffold includes a synthetic product → private
+saved launch brief path. Start from the source-owned
+[local product walkthrough](https://github.com/croco-dev/framework/blob/trunk/packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/README.md.hbs)
+and `apps/web/croco.product-profile.json` in a generated app. The same sources define SSR
+pages, typed tRPC inputs, native TanStack Query, generated DI, server test sessions and
+SQLite result/committed-fact storage. Run explicit migration before the local demo.
+The local profile does not support production authentication or multi-process operation;
+its post-commit event observation is best effort, not durable delivery. No warehouse
+add-on is installed; [#2878](https://github.com/croco-dev/framework/issues/2878) is independent.
+
 Start from `@croco/auth-core/AuthProvider`. Choose a listed auth plugin only when its runtime and capabilities match. Both current first-party options are pre-production, so preserve that readiness limitation in the result. If the runtime has no compatible option, implement an application-owned `AuthProvider` adapter and keep controllers and services on the contract.
 
 ## Billing

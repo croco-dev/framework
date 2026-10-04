@@ -43,6 +43,13 @@ LLM 호출은 일반 사용자 요청 경로의 필수 단계가 아닙니다. `
 
 ## 개발 중인 제품 경로
 
+로컬 제품 경로는 `ddd-fullstack + Next.js-hosted tRPC` scaffold에서 실행할 수 있습니다.
+공개 SSR 상품 페이지에서 합성 test identity로 로그인하고, 입력으로 만든 체험 결과와 확정 사실을
+SQLite에 저장한 뒤 사용자·tenant별 private 결과를 조회합니다. 실행·명시 migration·검증·정리는
+[같은 소스의 walkthrough](packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/README.md.hbs)를
+따릅니다. 이 예제는 로컬 Node 전용이며 production 인증·provider 인증·실결제·warehouse add-on을
+지원한다고 주장하지 않습니다. npm 출시 상태와 source 구현 상태는 구분합니다.
+
 - **실제 React Flight 기반 RSC**: 현재 `rsc` 모드는 server-rendered HTML과 JSON payload를 전달하는 beta
   경로입니다. React Flight를 끝까지 연결한 RSC로 간주하지 않습니다.
 - **개인화 SSR·서버 실험 배정·캐시 통합**: SSR와 feature/analytics 계약, exact-key ISR은 존재하지만,
