@@ -340,12 +340,14 @@ commonly share these options:
 
 Commands call `detect()` from `@croco/cli`, which walks up the directory tree looking for `pnpm-workspace.yaml`. When found, it checks for:
 
-- `apps/api-server/package.json` (`hasApiServer`) — required for `make` and `create domain`
+- API app candidates: `apps/api-server`, `apps/api`, `apps/server`, then `apps/backend`. The first directory with `package.json` sets `apiServerDir` and `hasApiServer`. `make`, `create domain`, and `generate usage-dashboard` write to that app. If no candidate has a manifest, `apiServerDir` is `null` and commands report the missing API app.
 - `apps/console-web/package.json` (`hasConsoleWeb`) — required for `create page`
 
 The search stops after a configurable maximum depth. If no workspace is found, commands return an error.
 
 ## Generated File Structure
+
+The examples below use the default `apps/api-server` layout. API files follow the detected `apiServerDir`.
 
 ### domain (5 files)
 
