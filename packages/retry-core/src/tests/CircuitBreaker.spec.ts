@@ -24,6 +24,71 @@ describe("CircuitBreaker", () => {
     });
   };
 
+  it("uses the injected clock at the exact open-duration boundary and after a failed probe", async () => {
+    let time = 100;
+    const stateStore = new InMemoryCircuitBreakerStateStore();
+    const breaker = createBreaker({
+      failureThreshold: 1,
+      openDuration: 1000,
+      stateStore,
+      now: () => time,
+    });
+    const failure = new Error("dependency failed");
+    const fn = vi.fn().mockRejectedValue(failure);
+
+    await expect(breaker.execute(fn)).rejects.toBe(failure);
+    expect(await stateStore.getLastFailureTime("test-circuit")).toBe(100);
+
+    time = 1099;
+    await expect(breaker.execute(fn)).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    expect(fn).toHaveBeenCalledTimes(1);
+
+    time = 1100;
+    await expect(breaker.execute(fn)).rejects.toBe(failure);
+    expect(fn).toHaveBeenCalledTimes(2);
+    expect(await stateStore.getLastFailureTime("test-circuit")).toBe(1100);
+    expect(await breaker.getState()).toBe(CircuitState.OPEN);
+
+    time = 2099;
+    await expect(breaker.execute(fn)).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    expect(fn).toHaveBeenCalledTimes(2);
+
+    time = 2100;
+    fn.mockImplementation(async () => {
+      expect(await breaker.getState()).toBe(CircuitState.HALF_OPEN);
+      return "recovered";
+    });
+    await expect(breaker.execute(fn)).resolves.toBe("recovered");
+    expect(await breaker.getState()).toBe(CircuitState.CLOSED);
+  });
+
+  it("records the injected clock when forceOpen is called", async () => {
+    let time = 1234;
+    const stateStore = new InMemoryCircuitBreakerStateStore();
+    const breaker = createBreaker({ stateStore, now: () => time });
+
+    await breaker.forceOpen();
+    expect(await stateStore.getLastFailureTime("test-circuit")).toBe(1234);
+    time = 4321;
+    await breaker.forceOpen();
+    expect(await stateStore.getLastFailureTime("test-circuit")).toBe(4321);
+    expect(await breaker.getState()).toBe(CircuitState.OPEN);
+  });
+
+  it("passes the injected clock to its default state store for idle expiration", async () => {
+    let time = 0;
+    const breaker = createBreaker({ now: () => time });
+    await expect(
+      breaker.execute(async () => {
+        throw new Error("fail");
+      }),
+    ).rejects.toThrow("fail");
+    expect(await breaker.getFailureCount()).toBe(1);
+
+    time = 5 * 60 * 1000 + 1;
+    expect(await breaker.getFailureCount()).toBe(0);
+  });
+
   it("초기 상태는 CLOSED여야 한다", async () => {
     const breaker = createBreaker();
     const state = await breaker.getState();

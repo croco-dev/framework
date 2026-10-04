@@ -109,6 +109,18 @@ Exception classes to never retry, even when the error declares `retryable: true`
 
 ---
 
+### now?
+
+> `optional` **now?**: () => `number`
+
+Millisecond clock for circuit transitions and registry/default state-store expiry (default: Date.now).
+
+#### Returns
+
+`number`
+
+---
+
 ### recover?
 
 > `optional` **recover?**: `string`

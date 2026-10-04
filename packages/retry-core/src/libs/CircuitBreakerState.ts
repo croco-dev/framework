@@ -26,6 +26,8 @@ export type CircuitStateTransition =
   | { from: CircuitState.HALF_OPEN; to: CircuitState.OPEN; reason: "failure_occurred" };
 
 export type InMemoryCircuitBreakerStateStoreOptions = {
+  /** Millisecond clock for idle expiry (default: Date.now). */
+  now?: () => number;
   maxEntries?: number;
   idleTtlMs?: number;
 };
@@ -176,11 +178,13 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
   private readonly halfOpenSuccessCounts = new Map<string, number>();
   private readonly locks = new Map<string, Promise<void>>();
   private readonly lastAccessed = new Map<string, number>();
+  private readonly now: () => number;
   private readonly maxEntries: number;
   private readonly idleTtlMs: number;
 
   constructor(options: InMemoryCircuitBreakerStateStoreOptions = {}) {
     super();
+    this.now = options.now ?? (() => Date.now());
     this.maxEntries = Math.max(1, options.maxEntries ?? DEFAULT_MAX_ENTRIES);
     this.idleTtlMs = Math.max(0, options.idleTtlMs ?? DEFAULT_IDLE_TTL_MS);
   }
@@ -321,7 +325,7 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
       this.evictOverflow();
     }
 
-    this.lastAccessed.set(circuitId, Date.now());
+    this.lastAccessed.set(circuitId, this.now());
   }
 
   private touchIfTracked(circuitId: string): void {
@@ -329,7 +333,7 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
       return;
     }
 
-    this.lastAccessed.set(circuitId, Date.now());
+    this.lastAccessed.set(circuitId, this.now());
   }
 
   private pruneStaleEntries(): void {
@@ -337,7 +341,7 @@ export class InMemoryCircuitBreakerStateStore extends CircuitBreakerStateStore {
       return;
     }
 
-    const now = Date.now();
+    const now = this.now();
 
     for (const [circuitId, lastAccessedAt] of this.lastAccessed.entries()) {
       if (now - lastAccessedAt <= this.idleTtlMs) {

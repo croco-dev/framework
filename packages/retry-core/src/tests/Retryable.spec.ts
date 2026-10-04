@@ -629,6 +629,80 @@ describe("@Retryable", () => {
     }
   });
 
+  it("uses the injected clock to preserve half-open recovery after a long open duration", async () => {
+    let time = 0;
+    const openDuration = 10 * 60 * 1000;
+    let attempts = 0;
+    let shouldFail = true;
+
+    class TestService {
+      @Retryable({
+        now: () => time,
+        maxAttempts: 1,
+        backoffPolicy: new NoBackoff(),
+        circuitBreaker: {
+          failureThreshold: 3,
+          successThreshold: 2,
+          timeout: openDuration,
+        },
+      })
+      async doWork(): Promise<void> {
+        attempts++;
+        if (shouldFail) {
+          throw new Error("fail");
+        }
+      }
+    }
+
+    const service = new TestService();
+    await expect(service.doWork()).rejects.toThrow("fail");
+    await expect(service.doWork()).rejects.toThrow("fail");
+    await expect(service.doWork()).rejects.toThrow("fail");
+
+    time = openDuration + 1;
+    shouldFail = false;
+    await expect(service.doWork()).resolves.toBeUndefined();
+
+    shouldFail = true;
+    await expect(service.doWork()).rejects.toThrow("fail");
+    await expect(service.doWork()).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    expect(attempts).toBe(5);
+  });
+
+  it("uses the injected clock for registry release and idle eviction boundaries", async () => {
+    let time = 0;
+    const idleTtl = 5 * 60 * 1000;
+    const executeSpy = vi.spyOn(CircuitBreaker.prototype, "execute");
+
+    try {
+      class TestService {
+        @Retryable({
+          now: () => time,
+          maxAttempts: 1,
+          trace: false,
+          circuitBreaker: { failureThreshold: 3 },
+        })
+        async doWork(): Promise<void> {
+          if (time === 0) time = 100;
+        }
+      }
+
+      const service = new TestService();
+      await service.doWork();
+      const firstBreaker = executeSpy.mock.contexts[0];
+
+      time = 100 + idleTtl;
+      await service.doWork();
+      expect(executeSpy.mock.contexts[1]).toBe(firstBreaker);
+
+      time += idleTtl + 1;
+      await service.doWork();
+      expect(executeSpy.mock.contexts[2]).not.toBe(firstBreaker);
+    } finally {
+      executeSpy.mockRestore();
+    }
+  });
+
   it("reopens after a failed half-open probe across calls", async () => {
     vi.useFakeTimers();
     vi.setSystemTime(0);
