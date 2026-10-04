@@ -103,7 +103,9 @@ databaseEnv.DATABASE_URL;
 `clientPrefix`를 지정합니다. 모든 client 키는 지정한 접두사로 시작해야 하며 server 키에는 해당
 접두사를 사용할 수 없습니다. 서로 다른 접두사의 client 키를 가진 프리셋은 함께 조합할 수 없습니다.
 
-```typescript
+<!-- Package-local Zod example: validated by src/tests/Core.spec.ts. -->
+
+```typescript no-check
 import { defineRuntimeEnv } from "@croco/framework-config";
 import { z } from "zod";
 
