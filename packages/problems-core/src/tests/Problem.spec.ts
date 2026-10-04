@@ -122,6 +122,16 @@ describe("Problem", () => {
     expect(configuredDetails.status).toBe(422);
   });
 
+  it("preserves finite upstream status unions for runtime category codes", () => {
+    expectTypeOf<CrocoProblemStatus<"ratelimit-upstash/upstream-failed">>().toEqualTypeOf<
+      400 | 429 | 500
+    >();
+    expectTypeOf<CrocoProblemStatus<"batch-qstash/publish-failed">>().toEqualTypeOf<
+      400 | 429 | 500
+    >();
+    expectTypeOf<CrocoProblemStatus<"LAST_OWNER_CANNOT_BE_REMOVED">>().toEqualTypeOf<403>();
+  });
+
   it.each(["type", "title", "status", "detail", "instance", "code"])(
     'should reject the reserved extension key "%s" before serialization',
     (key) => {

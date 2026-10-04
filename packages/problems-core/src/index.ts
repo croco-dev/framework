@@ -64,6 +64,7 @@ export type {
   PackageProblemRegistryEntry,
   PackageProblemRegistryVersion,
   ProblemCategoryName,
+  ProblemCategoryPolicy,
   ProblemCodeDiscovery,
   ProblemCodeRegistry,
   ProblemCodeRegistryEntry,

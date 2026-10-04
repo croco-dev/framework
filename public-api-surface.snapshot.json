@@ -27862,6 +27862,11 @@
               "source": "./libs/ProblemRegistry"
             },
             {
+              "name": "ProblemCategoryPolicy",
+              "exportKind": "named",
+              "source": "./libs/ProblemRegistry"
+            },
+            {
               "name": "ProblemCodeDiscovery",
               "exportKind": "named",
               "source": "./libs/ProblemRegistry"

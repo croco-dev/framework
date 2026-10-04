@@ -19,6 +19,12 @@ export type ProblemRegistryVisibility = "public" | "private";
 export type ProblemRegistryRedaction = "public" | "safe" | "operator-only";
 export type ProblemLifecycleStatus = "active" | "deprecated";
 
+export type ProblemCategoryPolicy = {
+  readonly kind: "runtime-dependent";
+  readonly possibleCategories: readonly ProblemCategoryName[];
+  readonly possibleStatuses: readonly number[];
+};
+
 export type ProblemStatusPolicy = {
   readonly kind: "runtime-configurable";
   readonly defaultStatus: number;
@@ -76,10 +82,11 @@ export type ProblemRecoveryMetadata = {
 
 export type ProblemCodeRegistryEntry = {
   readonly code: string;
-  readonly category: ProblemCategoryName;
-  readonly status: number;
+  readonly category: ProblemCategoryName | null;
+  readonly categoryPolicy?: ProblemCategoryPolicy;
+  readonly status: number | null;
   readonly statusPolicy?: ProblemStatusPolicy;
-  readonly title: string;
+  readonly title: string | null;
   readonly cookbookPath: string;
   readonly recovery: ProblemRecoveryMetadata;
   readonly lifecycle: ProblemLifecycle;
@@ -90,6 +97,11 @@ export type ProblemCodeRegistry = {
   readonly version: ProblemCodeRegistryVersion;
   readonly problemCount: number;
   readonly problems: readonly ProblemCodeRegistryEntry[];
+  readonly dynamicCodeFactories?: readonly {
+    readonly className: string;
+    readonly source: ProblemCodeSource;
+    readonly reason: string;
+  }[];
 };
 
 export type CreateProblemCodeRegistryOptions = {
@@ -652,22 +664,30 @@ export function getProblemCodeRegistryValidationErrors(
     seenCodes.add(problem.code);
     const lifecycle = problem.lifecycle;
 
-    const expectedStatus = ProblemCategoryMapper.toHttpStatus(toProblemCategory(problem.category));
-    const expectedTitle = ProblemCategoryMapper.toTitle(toProblemCategory(problem.category));
-
-    if (problem.status !== expectedStatus) {
-      errors.push(
-        `Problem code '${problem.code}' has status ${problem.status}, expected ${expectedStatus} for ${problem.category}.`,
+    if (problem.categoryPolicy) {
+      errors.push(...getProblemCategoryPolicyValidationErrors(problem));
+    } else if (problem.category === null) {
+      errors.push(`Problem code '${problem.code}' has no category or runtime category policy.`);
+    } else {
+      const expectedStatus = ProblemCategoryMapper.toHttpStatus(
+        toProblemCategory(problem.category),
       );
+      const expectedTitle = ProblemCategoryMapper.toTitle(toProblemCategory(problem.category));
+
+      if (problem.status !== expectedStatus) {
+        errors.push(
+          `Problem code '${problem.code}' has status ${problem.status}, expected ${expectedStatus} for ${problem.category}.`,
+        );
+      }
+
+      if (problem.title !== expectedTitle) {
+        errors.push(
+          `Problem code '${problem.code}' has title '${problem.title}', expected '${expectedTitle}' for ${problem.category}.`,
+        );
+      }
     }
 
     errors.push(...getProblemStatusPolicyValidationErrors(problem));
-
-    if (problem.title !== expectedTitle) {
-      errors.push(
-        `Problem code '${problem.code}' has title '${problem.title}', expected '${expectedTitle}' for ${problem.category}.`,
-      );
-    }
 
     if (!isCompleteRecoveryMetadata(problem.recovery)) {
       errors.push(`Problem code '${problem.code}' is missing recovery cookbook metadata.`);
@@ -686,6 +706,28 @@ export function getProblemCodeRegistryValidationErrors(
         `Problem code '${problem.code}' is declared ${problem.sources.length} times: ${problem.sources.map(formatProblemCodeSource).join(", ")}.`,
       );
     }
+  }
+
+  const factorySources = new Set<string>();
+  for (const factory of registry.dynamicCodeFactories ?? []) {
+    const { source } = factory;
+    const key = formatProblemCodeSource(source);
+    if (
+      !factory.className.trim() ||
+      !factory.reason.trim() ||
+      !source.file.trim() ||
+      source.kind !== "problem-class" ||
+      !Number.isInteger(source.line) ||
+      source.line < 1 ||
+      !Number.isInteger(source.column) ||
+      source.column < 1
+    ) {
+      errors.push(`Problem registry has invalid dynamic code factory metadata at ${key}.`);
+    }
+    if (factorySources.has(key)) {
+      errors.push(`Problem registry contains duplicate dynamic code factory source '${key}'.`);
+    }
+    factorySources.add(key);
   }
 
   return errors;
@@ -809,6 +851,55 @@ function isCompleteRecoveryMetadata(metadata: ProblemRecoveryMetadata): boolean 
     metadata.telemetry.severity.length > 0 &&
     metadata.telemetry.attributes.length > 0
   );
+}
+
+function getProblemCategoryPolicyValidationErrors(
+  problem: ProblemCodeRegistryEntry,
+): readonly string[] {
+  const policy = problem.categoryPolicy;
+  if (!policy) {
+    return [];
+  }
+
+  const errors: string[] = [];
+  if (policy.kind !== "runtime-dependent") {
+    errors.push(`Problem code '${problem.code}' has an unsupported category policy.`);
+  }
+  if (
+    problem.category !== null ||
+    problem.status !== null ||
+    problem.title !== null ||
+    problem.statusPolicy
+  ) {
+    errors.push(
+      `Problem code '${problem.code}' has a runtime category policy with fixed category/status metadata.`,
+    );
+  }
+  const categories = policy.possibleCategories;
+  if (categories.length === 0 || new Set(categories).size !== categories.length) {
+    errors.push(
+      `Problem code '${problem.code}' must declare a nonempty set of possible categories.`,
+    );
+  }
+  if (categories.some((category) => !Object.hasOwn(ProblemCategory, category))) {
+    errors.push(`Problem code '${problem.code}' has an unknown possible category.`);
+    return errors;
+  }
+  const expectedStatuses = [
+    ...new Set(
+      categories.map((category) => ProblemCategoryMapper.toHttpStatus(toProblemCategory(category))),
+    ),
+  ].sort((left, right) => left - right);
+  const statuses = [...policy.possibleStatuses].sort((left, right) => left - right);
+  if (
+    new Set(statuses).size !== statuses.length ||
+    JSON.stringify(statuses) !== JSON.stringify(expectedStatuses)
+  ) {
+    errors.push(
+      `Problem code '${problem.code}' has possible statuses that do not match its categories.`,
+    );
+  }
+  return errors;
 }
 
 function getProblemStatusPolicyValidationErrors(
