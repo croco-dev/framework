@@ -1,7 +1,10 @@
 import { DiagnosticsCollector, DiagnosticsHealthIndicator } from "@croco/diagnostics-core";
+import { ROOT_CONTEXT, SpanKind, TraceFlags, trace } from "@opentelemetry/api";
+import { AlwaysOffSampler, AlwaysOnSampler, SamplingDecision } from "@opentelemetry/sdk-trace-base";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TelemetryDiagnosticsProvider } from "../libs/diagnostics/TelemetryDiagnosticsProvider";
 import { TelemetryRuntime } from "../runtime";
+import { ProbabilitySampler } from "../libs/samplers/ProbabilitySampler";
 
 describe("TelemetryDiagnosticsProvider", () => {
   let runtime!: TelemetryRuntime;
@@ -132,7 +135,7 @@ describe("TelemetryDiagnosticsProvider", () => {
     expect(JSON.stringify(health)).not.toContain("collector.example.test");
   });
 
-  it("should report sampling probability zero as degraded with safe metadata", async () => {
+  it("should report zero root sampling probability as active with safe metadata", async () => {
     await runtime.init({
       serviceName: "orders",
       enabled: true,
@@ -146,9 +149,11 @@ describe("TelemetryDiagnosticsProvider", () => {
 
     const health = await diagnostics.getHealth();
 
-    expect(health.status).toBe("degraded");
+    expect(health.status).toBe("healthy");
     expect(health.component).toBe("telemetry");
-    expect(health.message).toBe("Telemetry sampling disabled (probability=0)");
+    expect(health.message).toBe(
+      "Telemetry root sampling probability is 0; sampled parent traces are still recorded",
+    );
     expect(health.details).toEqual({
       serviceName: "orders",
       environment: "development",
@@ -160,11 +165,66 @@ describe("TelemetryDiagnosticsProvider", () => {
       probability: 0,
       signals: { traces: "supported" },
       autoInstrumentationModules: [],
-      mode: "sampling_disabled",
+      mode: "active",
     });
     expect(JSON.stringify(health)).not.toContain("Bearer secret");
     expect(JSON.stringify(health)).not.toContain("collector");
   });
+
+  it.each([
+    {
+      name: "without a parent",
+      parentContext: ROOT_CONTEXT,
+      decision: SamplingDecision.NOT_RECORD,
+    },
+    {
+      name: "with a sampled parent",
+      parentContext: trace.setSpanContext(ROOT_CONTEXT, {
+        traceId: "00000000000000000000000000000001",
+        spanId: "0000000000000001",
+        traceFlags: TraceFlags.SAMPLED,
+        isRemote: true,
+      }),
+      decision: SamplingDecision.RECORD_AND_SAMPLED,
+    },
+  ])("should describe probability zero accurately $name", async ({ parentContext, decision }) => {
+    await runtime.init({
+      serviceName: "orders",
+      trace: { exporterUrl: "http://collector:4318/v1/traces", probability: 0 },
+    });
+    const sampler = new ProbabilitySampler({ probability: 0 });
+    const sampling = sampler.shouldSample(
+      parentContext,
+      "00000000000000000000000000000001",
+      "test-span",
+      SpanKind.INTERNAL,
+      {},
+      [],
+    );
+
+    expect(sampling.decision).toBe(decision);
+    await expect(diagnostics.getHealth()).resolves.toMatchObject({
+      status: "healthy",
+      message: "Telemetry root sampling probability is 0; sampled parent traces are still recorded",
+      details: { mode: "active", probability: 0, traceEnabled: true },
+    });
+  });
+
+  it.each([new AlwaysOnSampler(), new AlwaysOffSampler()])(
+    "should avoid probability-based sampling claims when a custom sampler takes precedence: %s",
+    async (sampler) => {
+      await runtime.init({
+        serviceName: "orders",
+        trace: { exporterUrl: "http://collector:4318/v1/traces", probability: 0, sampler },
+      });
+
+      const health = await diagnostics.getHealth();
+
+      expect(health.status).toBe("healthy");
+      expect(health.details).toMatchObject({ mode: "active", probability: 0, traceEnabled: true });
+      expect(health.message).toBeUndefined();
+    },
+  );
 
   it("should keep explicitly disabled telemetry degraded when it is required", async () => {
     await runtime.init({ serviceName: "orders", enabled: false });
