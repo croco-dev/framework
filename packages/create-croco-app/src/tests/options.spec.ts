@@ -63,6 +63,28 @@ describe("noninteractive CLI option validation", () => {
     expect(help).not.toContain("--package-manager");
   });
 
+  it("scopes the API help to presets with configurable protocols", () => {
+    const apiOption = createProgram().options.find((option) => option.long === "--api");
+
+    expect(apiOption?.description).toContain("ddd-api");
+    expect(apiOption?.description).toContain("ddd-fullstack");
+  });
+
+  it.each(["", "rest"])(
+    "rejects invalid explicit Worker fullstack API value %j before prompting",
+    (api) => {
+      expect(() =>
+        validateCliOptions(
+          parseCliOptions("worker-app", {
+            preset: "ddd-vike-fullstack",
+            scope: "@test",
+            api,
+          }),
+        ),
+      ).toThrow(InvalidCliOptionProblem);
+    },
+  );
+
   it("parses the canonical documentation command through the action-free CLI contract", () => {
     const program = createCreateCrocoAppProgram().exitOverride();
 
@@ -100,6 +122,84 @@ describe("noninteractive CLI option validation", () => {
     expect(() => normalizeNonInteractiveOptions(cliOptions)).toThrow(
       "--api is required for ddd-api and ddd-fullstack",
     );
+  });
+
+  it.each(["graphql", "trpc"] as const)(
+    "rejects explicit %s for noninteractive Worker fullstack generation",
+    (api) => {
+      const options = parseCliOptions("worker-app", {
+        preset: "ddd-vike-fullstack",
+        scope: "@test",
+        api,
+        frontendDeploy: "cloudflare-meta-vite",
+        install: false,
+        git: false,
+      });
+
+      expect(() => normalizeNonInteractiveOptions(options)).toThrow(
+        "--api is not supported with the ddd-vike-fullstack preset",
+      );
+    },
+  );
+
+  it.each(["graphql", "trpc"] as const)(
+    "rejects explicit %s in resolved Worker fullstack options",
+    (api) => {
+      expect(() =>
+        validateResolvedOptions({
+          projectName: "worker-app",
+          scope: "@test",
+          preset: "ddd-vike-fullstack",
+          api,
+          webApps: [],
+          apiHosting: "standalone",
+          frontendDeploy: "cloudflare-meta-vite",
+          db: [],
+          agentRules: false,
+          installDeps: false,
+          initGit: false,
+        }),
+      ).toThrow("--api is not supported with the ddd-vike-fullstack preset");
+    },
+  );
+
+  it("rejects Worker fullstack --api before creating the target directory", async () => {
+    const targetDir = `/tmp/croco-worker-api-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const exitSpy = vi.spyOn(process, "exit").mockImplementation((code) => {
+      throw new Error(`process.exit: ${String(code)}`);
+    });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+    try {
+      await expect(
+        createProgram().parseAsync(
+          [
+            targetDir,
+            "--preset",
+            "ddd-vike-fullstack",
+            "--scope",
+            "@test",
+            "--api",
+            "graphql",
+            "--frontend-deploy",
+            "cloudflare-meta-vite",
+            "--no-install",
+            "--no-git",
+          ],
+          { from: "user" },
+        ),
+      ).rejects.toThrow("process.exit: 1");
+
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("--api is not supported with the ddd-vike-fullstack preset"),
+      );
+      expect(generateMock).not.toHaveBeenCalled();
+      expect(existsSync(targetDir)).toBe(false);
+    } finally {
+      exitSpy.mockRestore();
+      errorSpy.mockRestore();
+      rmSync(targetDir, { recursive: true, force: true });
+    }
   });
 
   it("normalizes a goal-first SaaS API request without requiring stack flags", () => {

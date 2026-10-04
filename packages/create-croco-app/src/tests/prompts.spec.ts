@@ -10,6 +10,7 @@ const promptMocks = vi.hoisted(() => ({
   note: vi.fn(),
   outro: vi.fn(),
   text: vi.fn(),
+  select: vi.fn(),
 }));
 
 vi.mock("@clack/prompts", () => promptMocks);
@@ -17,7 +18,101 @@ vi.mock("@clack/prompts", () => promptMocks);
 describe("GeneratorOptions type", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    promptMocks.select.mockReset();
   });
+
+  it("skips the API protocol prompt for the Worker fullstack preset", async () => {
+    promptMocks.select.mockResolvedValue("graphql");
+
+    const options = await runPrompts({
+      projectName: "worker-app",
+      scope: "@test",
+      preset: "ddd-vike-fullstack",
+      backendDeploy: "lambda",
+      frontendDeploy: "cloudflare-meta-vite",
+      db: ["postgres"],
+      agentRules: false,
+      installDeps: false,
+      initGit: false,
+    });
+
+    expect(promptMocks.select).not.toHaveBeenCalledWith(
+      expect.objectContaining({ message: "Select API type:" }),
+    );
+    expect(options.api).toBeUndefined();
+  });
+
+  it.each(["graphql", "trpc"] as const)(
+    "rejects explicit %s in interactive Worker fullstack configuration",
+    async (api) => {
+      await expect(
+        runPrompts({
+          projectName: "worker-app",
+          scope: "@test",
+          preset: "ddd-vike-fullstack",
+          api,
+          backendDeploy: "lambda",
+          frontendDeploy: "cloudflare-meta-vite",
+          db: ["postgres"],
+          agentRules: false,
+          installDeps: false,
+          initGit: false,
+        }),
+      ).rejects.toMatchObject({
+        code: "create-croco-app/invalid-cli-option",
+        extensions: { option: "--api" },
+      });
+    },
+  );
+
+  it("rejects an explicit protocol when Worker fullstack is selected from the preset prompt", async () => {
+    promptMocks.select
+      .mockResolvedValueOnce("custom-preset")
+      .mockResolvedValueOnce("ddd-vike-fullstack");
+
+    await expect(
+      runPrompts({
+        projectName: "worker-app",
+        scope: "@test",
+        api: "trpc",
+        backendDeploy: "lambda",
+        frontendDeploy: "cloudflare-meta-vite",
+        db: ["postgres"],
+        agentRules: false,
+        installDeps: false,
+        initGit: false,
+      }),
+    ).rejects.toMatchObject({
+      code: "create-croco-app/invalid-cli-option",
+      extensions: { option: "--api" },
+    });
+  });
+
+  it.each(["ddd-api", "ddd-fullstack"] as const)(
+    "retains API protocol selection for %s",
+    async (preset) => {
+      promptMocks.select.mockResolvedValueOnce("trpc");
+
+      const options = await runPrompts({
+        projectName: "protocol-app",
+        scope: "@test",
+        preset,
+        webApps: preset === "ddd-fullstack" ? ["web"] : [],
+        apiHosting: "standalone",
+        backendDeploy: "lambda",
+        ...(preset === "ddd-fullstack" ? { frontendDeploy: "vercel" as const } : {}),
+        db: ["postgres"],
+        agentRules: false,
+        installDeps: false,
+        initGit: false,
+      });
+
+      expect(promptMocks.select).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "Select API type:" }),
+      );
+      expect(options.api).toBe("trpc");
+    },
+  );
 
   it("should accept valid blank preset options", () => {
     const opts: GeneratorOptions = {

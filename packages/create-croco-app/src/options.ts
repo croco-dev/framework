@@ -129,7 +129,12 @@ export function validateCliOptions(cliOptions: NormalizedGeneratorOptions): void
   if (cliOptions.tenantModel !== undefined) {
     readChoice("tenant-model", cliOptions.tenantModel, TENANT_MODELS);
   }
-  if (cliOptions.api !== undefined) readChoice("api", cliOptions.api, APIS);
+  if (cliOptions.api !== undefined) {
+    if (cliOptions.preset === "ddd-vike-fullstack") {
+      throwUnsupportedPresetOption("--api", "ddd-vike-fullstack");
+    }
+    readChoice("api", cliOptions.api, APIS);
+  }
   if (cliOptions.apiHosting !== undefined)
     readChoice("api-hosting", cliOptions.apiHosting, API_HOSTING);
   if (cliOptions.backendDeploy !== undefined)
@@ -297,6 +302,7 @@ export function validateResolvedOptions(options: NormalizedGeneratorOptions): Ge
   }
 
   validateResolvedGoalOptions(options);
+  if (options.api !== undefined) throwUnsupportedPresetOption("--api", "ddd-vike-fullstack");
   if (apiHosting !== "standalone") {
     throwInvalidCliOption(
       "--api-hosting nextjs is only supported with ddd-fullstack",
