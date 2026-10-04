@@ -129,6 +129,23 @@ compile error로 거절하므로, 주입 대상 provider에는 constructor와 in
 
 `compileDiGraph()`과 `writeDiGraph()`은 test/build tooling에서 같은 compiler를 직접 실행할 때 사용할 수 있습니다.
 
+## 기존 registry 설정에서 이행
+
+`generateRegistry`는 지원하지 않습니다. 이 옵션을 전달하면 `enabled: false`이거나 browser build여도
+`CROCO_DI_COMPILE_001`로 build가 실패합니다. 옵션을 제거하고 `di`로 출력 위치와 생성 여부를 지정하세요.
+
+component와 같은 `src/registry.gen.ts`에 출력하려면 `di.outFile: "src/registry.gen.ts"`를 지정합니다.
+manifest 위치는 `di.manifestFile: ".croco/di.manifest.json"`으로 지정할 수 있습니다.
+
+기존 `generateRegistry.enabled`는 `di.enabled`로, `outDir`과 `outFile`을 합친 경로는 `di.outFile`로 옮깁니다.
+생성을 끄려면 기존 옵션을 제거하고 `di.enabled: false`를 사용하세요.
+생성 graph는 component와 같은 디렉터리에서도 `./Service` 같은 로컬 import를 사용합니다. 상위·인접 디렉터리는
+`../Parent`, `../other/Sibling`처럼 상대 경로를 유지합니다.
+
+생성물은 기존 전역 등록 registry와 다른 factory graph이며 `generatedDiGraph`를 export합니다. server 앱은
+`createApplicationRuntime(...)`을 사용해야 하며 plugin이 이 호출에 graph를 연결합니다. 생성 파일을 import하는
+것만으로 전역 등록이 수행되지는 않습니다.
+
 ## 패키지 descriptor
 
 라이브러리는 source가 없는 tarball에서도 연결할 수 있도록 빌드한 graph와 descriptor를 함께 배포할 수 있습니다.
