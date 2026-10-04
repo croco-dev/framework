@@ -213,8 +213,13 @@ function affectsScaffold(path: string): boolean {
   );
 }
 
+function affectsSharedComparator(path: string): boolean {
+  return path === "tooling/compareStrings.mjs" || path === "tooling/compareStrings.d.mts";
+}
+
 function affectsPackageEntrypoints(path: string): boolean {
   return (
+    affectsSharedComparator(path) ||
     /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|mise\.toml)$/.test(path) ||
     /^packages\/(?!create-croco-app\/)[^/]+\/(?:package\.json|src\/index\.ts)$/.test(path) ||
     path === "scripts/package-entrypoint-smoke.mts"
@@ -235,6 +240,7 @@ function affectsPackedDecoratorConsumers(path: string): boolean {
 
 function affectsPackageBins(path: string): boolean {
   return (
+    affectsSharedComparator(path) ||
     /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|mise\.toml)$/.test(path) ||
     /^packages\/(?:cli|create-croco-app|migration-runner|openapi-spec|rpc-codegen)\/(?:package\.json|src\/)/.test(
       path,
@@ -249,6 +255,7 @@ function affectsCreateCrocoApp(path: string): boolean {
 
 function affectsPackageGraph(path: string): boolean {
   return (
+    affectsSharedComparator(path) ||
     /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|mise\.toml)$/.test(path) ||
     /^(?:apps|examples|packages)\//.test(path) ||
     path === "docs/package-catalog.json"
@@ -394,6 +401,7 @@ function laneSelection(
   const changedFiles = context.changedFiles ?? [];
   const full = changedFiles.some(
     (path) =>
+      affectsSharedComparator(path) ||
       path === "test-inventory.json" ||
       /^(?:package\.json|pnpm-lock\.yaml|pnpm-workspace\.yaml|turbo\.json|vitest(?:\.[^/]+)?\.ts)$/.test(
         path,

@@ -860,6 +860,70 @@ describe("verification manifest", () => {
     }
   });
 
+  it.each(["tooling/compareStrings.mjs", "tooling/compareStrings.d.mts"])(
+    "selects full verification for shared comparator input %s",
+    (path) => {
+      const byId = new Map(
+        createVerificationManifest("spine", {
+          base: "origin/trunk",
+          changedFiles: [path],
+          head: "HEAD",
+        }).map((command) => [command.id, command]),
+      );
+
+      for (const id of ["build", "typecheck"]) {
+        expect(
+          byId.get(id)?.command.some((argument) => argument.startsWith("--filter=")),
+          id,
+        ).toBe(false);
+      }
+      for (const id of ["test", "integration-test-lane", "published-test-lane"]) {
+        expect(byId.get(id)?.applicable, id).toBe(true);
+        expect(byId.get(id)?.command, id).not.toContain("--owner");
+      }
+      for (const id of [
+        "production-ready",
+        "spine-promotion",
+        "generated-app-smoke",
+        "package-entrypoints-smoke",
+        "package-bins-smoke",
+      ]) {
+        expect(byId.get(id)?.applicable, id).toBe(true);
+      }
+      expect(byId.get("spine-promotion")?.command).not.toContain("--package");
+      expect(byId.get("generated-app-smoke")?.command).toEqual(
+        expect.arrayContaining(["--tier", "spine-blocking"]),
+      );
+    },
+  );
+
+  it.each(["tooling/other.mjs", "tooling/compareStrings.spec.ts", "README.md"])(
+    "does not select shared comparator gates for unrelated root input %s",
+    (path) => {
+      const byId = new Map(
+        createVerificationManifest("spine", {
+          base: "origin/trunk",
+          changedFiles: [path],
+          head: "HEAD",
+        }).map((command) => [command.id, command]),
+      );
+
+      expect(byId.get("build")?.command).toContain("--filter=...[origin/trunk]");
+      for (const id of [
+        "test",
+        "integration-test-lane",
+        "published-test-lane",
+        "production-ready",
+        "spine-promotion",
+        "generated-app-smoke",
+        "package-entrypoints-smoke",
+        "package-bins-smoke",
+      ]) {
+        expect(byId.get(id)?.applicable, id).toBe(false);
+      }
+    },
+  );
+
   it("keeps catalog accountability unscoped when package files change in the same range", () => {
     const byId = new Map(
       createVerificationManifest("spine", {
