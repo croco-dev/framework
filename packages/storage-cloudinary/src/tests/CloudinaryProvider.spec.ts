@@ -859,6 +859,30 @@ describe("CloudinaryProvider", () => {
   });
 
   describe("getMetadata()", () => {
+    it.each([
+      ["jpg", "image/jpeg"],
+      ["jpeg", "image/jpeg"],
+      ["png", "image/png"],
+      ["webp", "image/webp"],
+      ["avif", "image/avif"],
+      ["gif", "image/gif"],
+      ["pdf", "application/pdf"],
+      ["mp4", "video/mp4"],
+      ["unknown", undefined],
+      ["toString", undefined],
+      ["__proto__", undefined],
+      ["", undefined],
+      [undefined, undefined],
+    ])("should map format %s to MIME content type %s", async (format, contentType) => {
+      vi.mocked(global.fetch).mockResolvedValue(
+        jsonResponse({ bytes: 1024, format, created_at: "2024-01-01T00:00:00Z" }),
+      );
+
+      const metadata = await provider.getMetadata("test-key");
+
+      expect(metadata.contentType).toBe(contentType);
+    });
+
     it("should return resource metadata", async () => {
       const mockResource = {
         bytes: 1024,
@@ -874,7 +898,7 @@ describe("CloudinaryProvider", () => {
 
       const expectedMetadata: ObjectMetadata = {
         size: 1024,
-        contentType: "jpg",
+        contentType: "image/jpeg",
         lastModified: new Date("2024-01-01T00:00:00Z"),
         etag: "abc123",
         metadata: { alt: "test", author: "test" },

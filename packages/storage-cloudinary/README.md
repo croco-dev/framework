@@ -194,4 +194,6 @@ pnpm --filter @croco/storage-cloudinary test:live
   `/video/upload`를 반환합니다. 인텐트의 `fields`를 그대로 전송하세요.
 - 이미지 변환 옵션 확장은 제공하지 않습니다.
 - `StorageProvider`의 `list()` 계약은 아직 존재하지 않으므로 provider도 목록 조회를 제공하지 않습니다.
-- custom metadata는 Cloudinary context로 보존됩니다. `getMetadata().contentType`은 원래 MIME 전체가 아니라 Cloudinary resource `format` 값입니다.
+- custom metadata는 Cloudinary context로 보존됩니다. `getMetadata().contentType`은 Cloudinary resource `format`이
+  jpg/jpeg/png/webp/avif/gif/pdf/mp4일 때 해당 MIME 타입을 반환합니다. 포맷이 없거나 매핑되지 않은 경우
+  `undefined`를 반환하며, 업로드 시 지정한 MIME의 매개변수까지 복원하지는 않습니다.
