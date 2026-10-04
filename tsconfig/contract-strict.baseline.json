@@ -2676,7 +2676,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/generateUsageDashboard.ts",
-      "line": 169,
+      "line": 173,
       "column": 52,
       "code": "TS2379",
       "message": "Argument of type '{ dryRun: boolean; overwrite: boolean; cwd: string | undefined; apiPath: string | undefined; pagePath: string | undefined; page: boolean; }' is not assignable to parameter of type 'RunGenerateUsageDashboardOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
