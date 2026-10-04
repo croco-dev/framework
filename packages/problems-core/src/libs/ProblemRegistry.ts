@@ -881,7 +881,9 @@ function getProblemCategoryPolicyValidationErrors(
       `Problem code '${problem.code}' must declare a nonempty set of possible categories.`,
     );
   }
-  if (categories.some((category) => !Object.hasOwn(ProblemCategory, category))) {
+  if (
+    categories.some((category) => !Object.prototype.hasOwnProperty.call(ProblemCategory, category))
+  ) {
     errors.push(`Problem code '${problem.code}' has an unknown possible category.`);
     return errors;
   }
