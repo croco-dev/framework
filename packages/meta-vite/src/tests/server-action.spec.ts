@@ -647,6 +647,82 @@ describe("Server Action HTTP Integration", () => {
     });
   });
 
+  it("returns Problem result for non-form-data POST bodies", async () => {
+    createServerAction({
+      name: "json-post",
+      handler: async () => new Response("ok"),
+    });
+
+    const route = createServerActionHandler();
+
+    const response = await route.handler(
+      new Request("http://localhost/api/action/json-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: "test@example.com" }),
+      }),
+    );
+
+    expect(response.status).toBe(415);
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      kind: "invalid_content_type",
+      title: "Unsupported Media Type",
+      status: 415,
+      code: "meta-vite/server-action-invalid-content-type",
+      detail: "Server actions require a form-data request body",
+      reason: "application/json",
+    });
+  });
+
+  it("returns Problem result for malformed form bodies with a form content type", async () => {
+    createServerAction({
+      name: "malformed-post",
+      handler: async () => new Response("ok"),
+    });
+
+    const route = createServerActionHandler();
+
+    const response = await route.handler(
+      new Request("http://localhost/api/action/malformed-post", {
+        method: "POST",
+        headers: { "Content-Type": "multipart/form-data; boundary=----invalid" },
+        body: "this is not valid multipart",
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+    await expect(response.json()).resolves.toMatchObject({
+      ok: false,
+      kind: "malformed_body",
+      title: "Bad Request",
+      status: 400,
+      code: "meta-vite/server-action-malformed-body",
+      detail: "Server action request body could not be parsed",
+    });
+  });
+
+  it("rethrows request aborts instead of mapping them to 415", async () => {
+    createServerAction({
+      name: "aborted-post",
+      handler: async () => new Response("ok"),
+    });
+
+    const route = createServerActionHandler();
+    const controller = new AbortController();
+    const request = new Request("http://localhost/api/action/aborted-post", {
+      method: "POST",
+      body: new FormData(),
+      signal: controller.signal,
+    });
+    const abortError = new DOMException("This operation was aborted", "AbortError");
+    request.formData = () => Promise.reject(abortError);
+
+    await expect(route.handler(request)).rejects.toBe(abortError);
+  });
+
   it("returns 405 for non-POST method on action endpoint", async () => {
     const handler = createMetaFetchHandler({
       apiRoutes: [createServerActionHandler()],

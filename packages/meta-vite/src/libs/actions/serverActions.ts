@@ -15,6 +15,8 @@ export type ServerActionValidationFields = Record<string, readonly string[]>;
 export type ServerActionProblemKind =
   | "action_not_found"
   | "invalid_path"
+  | "invalid_content_type"
+  | "malformed_body"
   | "validation"
   | "domain_problem";
 
@@ -106,6 +108,39 @@ export class ServerActionValidationProblem extends Problem {
       ProblemCategory.ValidationError,
       "Server action input validation failed",
       { extensions: { fields, formErrors } },
+    );
+  }
+}
+
+export class ServerActionMalformedBodyProblem extends Problem {
+  readonly code = "meta-vite/server-action-malformed-body";
+  readonly category = ProblemCategory.BadRequest;
+
+  constructor(cause?: unknown) {
+    super(
+      "meta-vite/server-action-malformed-body",
+      ProblemCategory.BadRequest,
+      "Server action request body could not be parsed",
+      {
+        cause: cause instanceof Error ? cause : undefined,
+      },
+    );
+  }
+}
+
+export class ServerActionInvalidContentTypeProblem extends Problem {
+  readonly code = "meta-vite/server-action-invalid-content-type";
+  readonly category = ProblemCategory.UnsupportedMediaType;
+
+  constructor(contentType: string | null, cause?: unknown) {
+    super(
+      "meta-vite/server-action-invalid-content-type",
+      ProblemCategory.UnsupportedMediaType,
+      "Server actions require a form-data request body",
+      {
+        extensions: { reason: contentType ?? "missing" },
+        ...(cause instanceof Error ? { cause } : {}),
+      },
     );
   }
 }
@@ -494,9 +529,40 @@ export function createServerActionHandler(
       }
 
       const actionName = segments[3];
-      const formData = await request.formData();
+      const contentType = request.headers.get("content-type");
+      if (!isFormContentType(contentType)) {
+        return createServerActionProblemResponse(
+          new ServerActionInvalidContentTypeProblem(contentType),
+          "invalid_content_type",
+        );
+      }
+
+      let formData: FormData;
+      try {
+        formData = await request.formData();
+      } catch (error) {
+        if (isAbortError(error)) {
+          throw error;
+        }
+        return createServerActionProblemResponse(
+          new ServerActionMalformedBodyProblem(error),
+          "malformed_body",
+        );
+      }
 
       return registry.dispatch(actionName, formData, context);
     },
   };
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
+}
+
+function isFormContentType(contentType: string | null): boolean {
+  if (!contentType) {
+    return false;
+  }
+  const mediaType = contentType.split(";")[0]?.trim().toLowerCase();
+  return mediaType === "multipart/form-data" || mediaType === "application/x-www-form-urlencoded";
 }
