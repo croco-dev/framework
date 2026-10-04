@@ -1,4 +1,5 @@
 import { InvitationStore } from "./InvitationStore";
+import type { InvitationStatusTransitionMeta } from "./InvitationStore";
 import { InvitationIdempotencyConflictProblem } from "./problems/InvitationProblems";
 import type {
   EmailInvitationCreation,
@@ -247,7 +248,7 @@ export class InMemoryInvitationStore extends InvitationStore {
     id: string,
     expected: InvitationStatus,
     desired: InvitationStatus,
-    meta: { acceptedAt?: Date; rejectedAt?: Date } = {},
+    meta: InvitationStatusTransitionMeta = {},
   ): Promise<Invitation | null> {
     const invitation = this.storage.get(id);
     if (!invitation || invitation.tenantId !== tenantId || invitation.status !== expected) {
@@ -255,10 +256,9 @@ export class InMemoryInvitationStore extends InvitationStore {
     }
 
     const transitionTime = Date.now();
-    const acceptedAt =
-      desired === "accepted"
-        ? new Date(Math.max(meta.acceptedAt?.getTime() ?? transitionTime, transitionTime))
-        : meta.acceptedAt;
+    const resolveMetaAt = (value: Date | undefined): Date | undefined =>
+      value ? new Date(Math.max(value.getTime(), transitionTime)) : new Date(transitionTime);
+    const acceptedAt = desired === "accepted" ? resolveMetaAt(meta.acceptedAt) : meta.acceptedAt;
     if (
       acceptedAt &&
       desired === "accepted" &&
@@ -266,11 +266,13 @@ export class InMemoryInvitationStore extends InvitationStore {
     ) {
       return null;
     }
+    const revokedAt = desired === "revoked" ? resolveMetaAt(meta.revokedAt) : meta.revokedAt;
 
     const updated = snapshotInvitation({
       ...invitation,
       status: desired,
       acceptedAt: acceptedAt ?? invitation.acceptedAt,
+      revokedAt: revokedAt ?? invitation.revokedAt,
     });
 
     this.storage.set(id, updated);

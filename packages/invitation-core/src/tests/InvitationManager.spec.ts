@@ -1124,6 +1124,147 @@ describe("InvitationManager", () => {
     expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationRevokedEvent));
   });
 
+  it("should fail a stale revoke after a concurrent accept without publishing a revoke event", async () => {
+    const invitation = createInvitation("revoke-race-token", { id: "inv-revoke-race" });
+    await store.save(invitation);
+    addMember.mockResolvedValue({
+      id: "mem-1",
+      tenantId: "tenant-1",
+      userId: "user-1",
+      role: "member",
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+    } as Membership);
+
+    const rawFindById = store.findById.bind(store);
+    const findById = vi.spyOn(store, "findById");
+    findById.mockImplementationOnce(async (id) => {
+      const snapshot = await rawFindById(id);
+      await manager.acceptInvitation({
+        token: "revoke-race-token",
+        userId: "user-1",
+        email: "member@croco.dev",
+      });
+      return snapshot;
+    });
+
+    await expect(manager.revokeInvitation(invitation.id)).rejects.toMatchObject({
+      code: "INVITATION_INVALID_STATUS",
+      extensions: {
+        invitationId: invitation.id,
+        invitationStatus: "accepted",
+        operation: "revoke",
+      },
+    });
+
+    const final = await store.findById(invitation.id);
+    expect(final?.status).toBe("accepted");
+    expect(final?.revokedAt).toBeNull();
+    expect(publishNow).toHaveBeenCalledTimes(1);
+    expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationAcceptedEvent));
+    expect(publishNow.mock.calls.some(([event]) => event instanceof InvitationRevokedEvent)).toBe(
+      false,
+    );
+    findById.mockRestore();
+  });
+
+  it("should fail a stale accept after revoke wins without adding membership", async () => {
+    const invitation = createInvitation("accept-race-token", { id: "inv-accept-race" });
+    await store.save(invitation);
+
+    const rawFindByTokenHash = store.findByTokenHash.bind(store);
+    vi.spyOn(store, "findByTokenHash").mockImplementationOnce(async (tokenHash) => {
+      const snapshot = await rawFindByTokenHash(tokenHash);
+      await manager.revokeInvitation(invitation.id);
+      return snapshot;
+    });
+
+    await expect(
+      manager.acceptInvitation({
+        token: "accept-race-token",
+        userId: "user-1",
+        email: "member@croco.dev",
+      }),
+    ).rejects.toMatchObject({
+      code: "INVITATION_INVALID_STATUS",
+      extensions: {
+        invitationId: invitation.id,
+        invitationStatus: "revoked",
+        operation: "accept",
+      },
+    });
+
+    const final = await store.findById(invitation.id);
+    expect(final?.status).toBe("revoked");
+    expect(final?.revokedAt).not.toBeNull();
+    expect(addMember).not.toHaveBeenCalled();
+    expect(publishNow).toHaveBeenCalledTimes(1);
+    expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationRevokedEvent));
+  });
+
+  it("should fail revoking a declined invitation without changing it", async () => {
+    const declined = createInvitation("declined-revoke-token", {
+      id: "inv-declined-revoke",
+      status: "declined",
+    });
+    await store.save(declined);
+
+    await expect(manager.revokeInvitation(declined.id)).rejects.toMatchObject({
+      code: "INVITATION_INVALID_STATUS",
+      extensions: {
+        invitationId: declined.id,
+        invitationStatus: "declined",
+        operation: "revoke",
+      },
+    });
+    expect(await store.findById(declined.id)).toEqual(declined);
+    expect(publishNow).not.toHaveBeenCalled();
+  });
+
+  it("should reject resending a declined invitation without issuing a replacement", async () => {
+    const declined = createInvitation("declined-resend-token", {
+      id: "inv-declined-resend",
+      status: "declined",
+    });
+    await store.save(declined);
+
+    await expect(manager.resendInvitation(declined.id, "resend-declined-1")).rejects.toMatchObject({
+      code: "INVITATION_INVALID_STATUS",
+      extensions: {
+        invitationId: declined.id,
+        invitationStatus: "declined",
+        operation: "revoke",
+      },
+    });
+    expect(await store.findById(declined.id)).toEqual(declined);
+    expect(publishNow).not.toHaveBeenCalled();
+  });
+
+  it("should surface a concurrent revoke loss for resend without issuing a replacement", async () => {
+    const invitation = createInvitation("resend-race-token", { id: "inv-resend-race" });
+    await store.save(invitation);
+    const compareAndSetStatus = vi
+      .spyOn(store, "compareAndSetStatus")
+      .mockImplementationOnce(async () => {
+        await store.updateStatus(invitation.tenantId, invitation.id, "accepted");
+        return null;
+      });
+
+    await expect(manager.resendInvitation(invitation.id, "resend-race-1")).rejects.toMatchObject({
+      code: "INVITATION_INVALID_STATUS",
+      extensions: {
+        invitationId: invitation.id,
+        invitationStatus: "accepted",
+        operation: "revoke",
+      },
+    });
+
+    expect(compareAndSetStatus).toHaveBeenCalledTimes(1);
+    expect((await store.findById(invitation.id))?.status).toBe("accepted");
+    expect(publishNow).not.toHaveBeenCalled();
+    compareAndSetStatus.mockRestore();
+  });
+
   it("should reject revoking an expired invitation without changing its audit state", async () => {
     const expired = createInvitation("expired-revoke-token", {
       id: "inv-expired-revoke",
