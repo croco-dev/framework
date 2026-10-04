@@ -48,7 +48,7 @@ pnpm add @croco/execution-core
 
 ```
 pending → running | cancelled
-running → completed | failed | timed_out | cancelled
+running → completed | failed | timed_out | cancelled | retrying
 failed → retrying
 retrying → running | failed
 timed_out → retrying (불확정 결과가 해소된 경우에만)
@@ -236,7 +236,9 @@ console.log(first.id === second.id); // true
 
 ### 재시도 처리
 
-`fail()`이 실행을 `retrying` 상태로 전이했다면 `start()`로 다음 시도를 시작합니다.
+`running` 실행에서 `fail()`에 전달한 오류의 `retryable`이 `true`이고
+`attempts < maxAttempts`이면 `retrying` 상태로 전이합니다. 재시도할 수 없거나 시도 횟수를
+소진했다면 `failed`로 전이합니다. `retrying` 상태에서는 `start()`로 다음 시도를 시작합니다.
 `retry()`는 `failed` 또는 안전하게 해소된 `timed_out` 실행을 다시 시도할 때 사용합니다.
 
 ```typescript
