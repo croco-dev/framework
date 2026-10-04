@@ -3692,6 +3692,12 @@
       "owner": "@croco/protocols-core"
     },
     {
+      "path": "packages/protocols-core/src/tests/UnsupportedZodMajor.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/protocols-core"
+    },
+    {
       "path": "packages/protocols-core/src/tests/controllerDiscovery.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
