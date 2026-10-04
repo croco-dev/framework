@@ -29,6 +29,13 @@ export class ErrorHandler {
   constructor(private readonly logger: ILogger) {}
 
   handleError(error: unknown, ctx: CrocoHttpContext): Response {
+    const response = this.createErrorResponse(error, ctx);
+    response.headers.set("Content-Type", "application/problem+json");
+
+    return response;
+  }
+
+  private createErrorResponse(error: unknown, ctx: CrocoHttpContext): Response {
     if (error instanceof Problem) {
       return this.handleProblem(error, ctx);
     }
@@ -52,10 +59,7 @@ export class ErrorHandler {
   private handleProblem(problem: Problem, ctx: CrocoHttpContext): Response {
     const body = this.createProblemResponseBody(problem, ctx);
     ctx.res.headers["content-type"] = "application/problem+json";
-    const response = ctx.jsonResponse(body, body.status);
-    response.headers.set("Content-Type", "application/problem+json");
-
-    return response;
+    return ctx.jsonResponse(body, body.status);
   }
 
   createProblemResponseBody(problem: Problem, ctx: CrocoHttpContext): ProblemDetails {

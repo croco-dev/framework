@@ -3,9 +3,11 @@ import { Container, Context as FrameworkContext, LOGGER_TOKEN } from "@croco/fra
 import type { Logger } from "@croco/framework-logger";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { HttpExceptionFilter } from "@croco/protocols-rest";
+import { Hono } from "hono";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { HTTP_CONTEXT_KEYS } from "../libs/contextKeys";
 import { ErrorHandler } from "../libs/ErrorHandler";
+import { HttpContext } from "../libs/HttpContext";
 import { HttpRequestBodyTooLargeProblem } from "../libs/problems/HttpRequestBodyProblems";
 import type { CrocoHttpContext } from "../libs/types";
 
@@ -77,6 +79,76 @@ describe("ErrorHandler", () => {
 
     expect(handler).toBeInstanceOf(ErrorHandler);
     expect(Reflect.get(handler, "logger")).toBe(mockLogger);
+  });
+
+  describe("Problem Details media type", () => {
+    it.each([
+      {
+        name: "Problem",
+        error: new TestProblem({ detail: "Invalid request" }),
+        status: 400,
+        body: {
+          type: "about:blank",
+          title: "Bad Request",
+          status: 400,
+          code: "test/error",
+          detail: "Invalid request",
+          instance: "http://localhost/test",
+        },
+      },
+      {
+        name: "Error",
+        error: new Error("private error detail"),
+        status: 500,
+        body: {
+          type: "about:blank",
+          title: "Internal Server Error",
+          status: 500,
+          detail: "An internal error occurred",
+        },
+      },
+      {
+        name: "non-Error exception",
+        error: "private thrown value",
+        status: 500,
+        body: {
+          type: "about:blank",
+          title: "Internal Server Error",
+          status: 500,
+          detail: "An unexpected error occurred",
+        },
+      },
+    ])(
+      "should return application/problem+json for $name through Hono",
+      async ({ error, status, body }) => {
+        const app = new Hono();
+        let context: HttpContext | undefined;
+        app.get("/test", (raw) => {
+          context = new HttpContext(raw);
+          return errorHandler.handleError(error, context);
+        });
+
+        const response = await app.request("/test");
+
+        expect(response.status).toBe(status);
+        expect(response.headers.get("content-type")).toBe("application/problem+json");
+        expect(context?.res.headers["content-type"]).toBe(
+          error instanceof Problem ? "application/problem+json" : undefined,
+        );
+        expect(await response.json()).toEqual(body);
+      },
+    );
+
+    it("should preserve application/json for successful responses", async () => {
+      const app = new Hono();
+      app.get("/test", (raw) => new HttpContext(raw).jsonResponse({ ok: true }));
+
+      const response = await app.request("/test");
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toContain("application/json");
+      expect(await response.json()).toEqual({ ok: true });
+    });
   });
 
   describe("RFC 7807 Standard Field Protection", () => {

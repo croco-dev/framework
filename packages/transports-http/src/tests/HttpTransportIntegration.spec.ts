@@ -28,6 +28,19 @@ class AuthGuard implements Guard {
   }
 }
 
+@Controller("/api/failures")
+class FailureController {
+  @Get("/error")
+  error() {
+    throw new Error("private error detail");
+  }
+
+  @Get("/unexpected")
+  unexpected() {
+    throw "private thrown value";
+  }
+}
+
 @Controller("/api/users")
 class UserController {
   private users = [
@@ -136,6 +149,58 @@ describe("Transport Integration", () => {
     Container.set(HealthCheckRegistry, new HealthCheckRegistry());
 
     app = createApp({ controllers: [UserController], securityValidation: "off" });
+  });
+
+  describe("Error response middleware", () => {
+    it.each([
+      ["error", "text/html", "<p>Recovered</p>"],
+      ["error", "application/json", '{"recovered":true}'],
+      ["unexpected", "text/html", "<p>Recovered</p>"],
+      ["unexpected", "application/json", '{"recovered":true}'],
+    ])("should preserve %s replacement with %s", async (path, contentType, body) => {
+      app = createApp({
+        controllers: [FailureController],
+        securityValidation: "off",
+        middlewares: [
+          async (ctx, next) => {
+            const downstream = await next();
+            expect(downstream?.status).toBe(500);
+            expect(downstream?.headers.get("content-type")).toBe("application/problem+json");
+            ctx.raw.header("x-raw-header", "raw");
+            ctx.res.headers["x-context-header"] = "context";
+            return new Response(body, { status: 200, headers: { "content-type": contentType } });
+          },
+        ],
+      });
+
+      const response = await app.fetch(new Request(`http://localhost/api/failures/${path}`));
+
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-type")).toBe(contentType);
+      expect(response.headers.get("x-raw-header")).toBe("raw");
+      expect(response.headers.get("x-context-header")).toBe("context");
+      expect(await response.text()).toBe(body);
+    });
+
+    it.each(["error", "unexpected"])(
+      "should preserve forwarded %s Problem Details",
+      async (path) => {
+        app = createApp({
+          controllers: [FailureController],
+          securityValidation: "off",
+          middlewares: [async (_ctx, next) => next()],
+        });
+
+        const response = await app.fetch(new Request(`http://localhost/api/failures/${path}`));
+
+        expect(response.status).toBe(500);
+        expect(response.headers.get("content-type")).toBe("application/problem+json");
+        expect(await response.json()).toMatchObject({
+          title: "Internal Server Error",
+          status: 500,
+        });
+      },
+    );
   });
 
   describe("CRUD Operations", () => {
