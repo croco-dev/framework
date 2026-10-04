@@ -99,21 +99,26 @@ describe("private product trials", () => {
     }
   });
 
-  it("rolls back both the result and fact without publishing when fact insertion fails", async () => {
-    const observed: DomainEvent[] = [];
-    const app = fixture((event) => {
-      observed.push(event);
-    });
-    app.database.exec(
-      "CREATE TRIGGER reject_fact BEFORE INSERT ON product_trial_facts BEGIN SELECT RAISE(ABORT, 'fixture rejected fact'); END;",
-    );
-    await expect(app.store.create(owner, input, "request-1")).rejects.toThrow(
-      "fixture rejected fact",
-    );
-    expect(app.database.prepare("SELECT count(*) AS n FROM product_trials").get()?.n).toBe(0);
-    expect(app.database.prepare("SELECT count(*) AS n FROM product_trial_facts").get()?.n).toBe(0);
-    expect(observed).toHaveLength(0);
-  });
+  it.each(["ABORT", "ROLLBACK"])(
+    "preserves a %s failure without stored work or publishing",
+    async (action) => {
+      const observed: DomainEvent[] = [];
+      const app = fixture((event) => {
+        observed.push(event);
+      });
+      app.database.exec(
+        `CREATE TRIGGER reject_fact BEFORE INSERT ON product_trial_facts BEGIN SELECT RAISE(${action}, 'fixture rejected fact'); END;`,
+      );
+      await expect(app.store.create(owner, input, "request-1")).rejects.toThrow(
+        "fixture rejected fact",
+      );
+      expect(app.database.prepare("SELECT count(*) AS n FROM product_trials").get()?.n).toBe(0);
+      expect(app.database.prepare("SELECT count(*) AS n FROM product_trial_facts").get()?.n).toBe(
+        0,
+      );
+      expect(observed).toHaveLength(0);
+    },
+  );
 
   it("returns committed success with observation failure and does not repeat the command", async () => {
     const app = fixture(() => {

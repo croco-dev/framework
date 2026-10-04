@@ -68,7 +68,7 @@ function sqliteAdapter(database: DatabaseSync): TxAdapter<DatabaseSync> {
         database.exec("COMMIT");
         return result;
       } catch (error) {
-        database.exec("ROLLBACK");
+        if (database.isTransaction) database.exec("ROLLBACK");
         throw error;
       }
     },
