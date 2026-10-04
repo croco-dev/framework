@@ -1,3 +1,5 @@
+import { Problem, ProblemCategory } from "@croco/problems-core";
+
 import type { ServerActionContractIR } from "../actions/serverActions";
 import type { ApiMethod, ApiRouteIR, PageRouteIR, RenderMode } from "../routes/types";
 
@@ -12,6 +14,20 @@ export class MetaViteRouteManifestError extends Error {
   constructor(path: string) {
     super(`Route manifest requires componentRef for page route '${path}'`);
     this.name = "MetaViteRouteManifestError";
+  }
+}
+
+export class MetaViteUnsupportedCapabilityProblem extends Problem {
+  readonly code = "meta-vite/unsupported-render-capability";
+  readonly category = ProblemCategory.NotImplemented;
+
+  constructor(path: string, capability: MetaViteRuntimeCapability) {
+    super(
+      "meta-vite/unsupported-render-capability",
+      ProblemCategory.NotImplemented,
+      `Page '${path}' uses buffered rendering and does not support required capability '${capability}'.`,
+      { extensions: { path, capability } },
+    );
   }
 }
 
@@ -79,6 +95,7 @@ export type MetaViteRouteManifest = {
 
 export type MetaViteRouteManifestSource = {
   readonly pages: readonly PageRouteIR[];
+  readonly requiredCapabilities?: readonly MetaViteRuntimeCapability[];
   readonly apiRoutes?: readonly ApiRouteIR[];
   readonly serverActions?: readonly ServerActionContractIR[];
 };
@@ -94,6 +111,7 @@ export type MetaViteServerActionRegistryManifestSource = {
 
 export type MetaViteRouteManifestRegistryOptions = {
   readonly routeRegistry: MetaViteRouteRegistryManifestSource;
+  readonly requiredCapabilities?: readonly MetaViteRuntimeCapability[];
   readonly serverActionRegistry?: MetaViteServerActionRegistryManifestSource;
 };
 
@@ -102,7 +120,15 @@ export function createMetaViteRouteManifest(
 ): MetaViteRouteManifest {
   return {
     schemaVersion: META_VITE_ROUTE_MANIFEST_SCHEMA_VERSION,
-    pages: sortPageRoutes(source.pages).map(createPageRouteEntry),
+    pages: sortPageRoutes(source.pages).map((route, index) => {
+      const entry = createPageRouteEntry(route, index);
+      for (const capability of source.requiredCapabilities ?? []) {
+        if (!entry.runtimeCapabilities.includes(capability)) {
+          throw new MetaViteUnsupportedCapabilityProblem(entry.path, capability);
+        }
+      }
+      return entry;
+    }),
     apiRoutes: sortApiRoutes(source.apiRoutes ?? []).map(createApiRouteEntry),
     serverActions: sortServerActions(source.serverActions ?? []).map(createServerActionEntry),
   };
@@ -113,6 +139,7 @@ export function createMetaViteRouteManifestFromRegistry(
 ): MetaViteRouteManifest {
   return createMetaViteRouteManifest({
     pages: options.routeRegistry.getPageRoutes(),
+    requiredCapabilities: options.requiredCapabilities,
     apiRoutes: options.routeRegistry.getApiRoutes(),
     serverActions: options.serverActionRegistry?.getActions(),
   });
@@ -216,7 +243,7 @@ function getPageRuntimeCapabilities(mode: RenderMode): readonly MetaViteRuntimeC
     case "isr":
       return ["fetch", "react-ssr", "isr-cache"];
     case "rsc":
-      return ["fetch", "react-server-components", "streaming-response"];
+      return ["fetch", "react-ssr"];
   }
 }
 

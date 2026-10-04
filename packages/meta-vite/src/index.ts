@@ -50,6 +50,7 @@ export {
   META_VITE_ROUTE_MANIFEST_COMPONENT_REF_REQUIRED,
   META_VITE_ROUTE_MANIFEST_SCHEMA_VERSION,
   MetaViteRouteManifestError,
+  MetaViteUnsupportedCapabilityProblem,
   serializeMetaViteRouteManifest,
   writeMetaViteRouteManifest,
 } from "./libs/build/routeManifest";

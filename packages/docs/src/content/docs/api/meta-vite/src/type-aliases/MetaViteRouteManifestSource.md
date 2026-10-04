@@ -21,6 +21,12 @@ title: "MetaViteRouteManifestSource"
 
 ---
 
+### requiredCapabilities?
+
+> `readonly` `optional` **requiredCapabilities?**: readonly [`MetaViteRuntimeCapability`](/api/meta-vite/src/type-aliases/metaviteruntimecapability/)[]
+
+---
+
 ### serverActions?
 
 > `readonly` `optional` **serverActions?**: readonly [`ServerActionContractIR`](/api/meta-vite/src/type-aliases/serveractioncontractir/)[]

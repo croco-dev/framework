@@ -9,6 +9,12 @@ title: "MetaViteRouteManifestRegistryOptions"
 
 ## Properties
 
+### requiredCapabilities?
+
+> `readonly` `optional` **requiredCapabilities?**: readonly [`MetaViteRuntimeCapability`](/api/meta-vite/src/type-aliases/metaviteruntimecapability/)[]
+
+---
+
 ### routeRegistry
 
 > `readonly` **routeRegistry**: [`MetaViteRouteRegistryManifestSource`](/api/meta-vite/src/type-aliases/metaviterouteregistrymanifestsource/)
