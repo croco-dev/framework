@@ -295,6 +295,269 @@ describe("@Cacheable", () => {
     expect(await cache.get(createCacheKey("stable-service:getData", ["123"]))).toBeUndefined();
   });
 
+  it("returns the loaded value without restoring the cache when invalidated during load", async () => {
+    let resolveLoad!: (value: string) => void;
+    let loaderStarted!: () => void;
+    const loaderStartedPromise = new Promise<void>((resolve) => {
+      loaderStarted = resolve;
+    });
+
+    class TestService {
+      @Cacheable({ store: cache, namespace: "users" })
+      async getUser(id: string): Promise<string> {
+        loaderStarted();
+        return new Promise<string>((resolve) => {
+          resolveLoad = resolve;
+        });
+      }
+    }
+
+    const service = new TestService();
+    const pending = service.getUser("1");
+    await loaderStartedPromise;
+
+    await cache.invalidatePattern("users:getUser:*");
+    resolveLoad("alice");
+
+    await expect(pending).resolves.toBe("alice");
+    expect(await cache.get(createCacheKey("users:getUser", ["1"]))).toBeUndefined();
+  });
+
+  it("returns the loaded value without restoring the cache when cleared during load", async () => {
+    let resolveLoad!: (value: string) => void;
+    let loaderStarted!: () => void;
+    const loaderStartedPromise = new Promise<void>((resolve) => {
+      loaderStarted = resolve;
+    });
+
+    class TestService {
+      @Cacheable({ store: cache, namespace: "users" })
+      async getUser(id: string): Promise<string> {
+        loaderStarted();
+        return new Promise<string>((resolve) => {
+          resolveLoad = resolve;
+        });
+      }
+    }
+
+    const service = new TestService();
+    const pending = service.getUser("1");
+    await loaderStartedPromise;
+
+    await cache.clear();
+    resolveLoad("alice");
+
+    await expect(pending).resolves.toBe("alice");
+    expect(await cache.get(createCacheKey("users:getUser", ["1"]))).toBeUndefined();
+  });
+
+  it("returns the loaded value when a @CacheEvict overlaps the load", async () => {
+    let resolveLoad!: (value: string) => void;
+    let loaderStarted!: () => void;
+    const loaderStartedPromise = new Promise<void>((resolve) => {
+      loaderStarted = resolve;
+    });
+
+    class UserService {
+      @Cacheable({ store: cache, namespace: "users" })
+      async getUser(id: string): Promise<string> {
+        loaderStarted();
+        return new Promise<string>((resolve) => {
+          resolveLoad = resolve;
+        });
+      }
+
+      @CacheEvict({ store: cache, key: "users:getUser:*" })
+      async updateUser(_id: string): Promise<void> {}
+    }
+
+    const service = new UserService();
+    const pending = service.getUser("1");
+    await loaderStartedPromise;
+
+    await service.updateUser("1");
+    resolveLoad("alice");
+
+    await expect(pending).resolves.toBe("alice");
+    expect(await cache.get(createCacheKey("users:getUser", ["1"]))).toBeUndefined();
+  });
+
+  it("shares the invalidated load result with singleflight waiters", async () => {
+    let resolveLoad!: (value: string) => void;
+    let loaderStarted!: () => void;
+    const loaderStartedPromise = new Promise<void>((resolve) => {
+      loaderStarted = resolve;
+    });
+    let loads = 0;
+
+    class TestService {
+      @Cacheable({ store: cache, namespace: "users" })
+      async getUser(_id: string): Promise<string> {
+        loads++;
+        loaderStarted();
+        return new Promise<string>((resolve) => {
+          resolveLoad = resolve;
+        });
+      }
+    }
+
+    const service = new TestService();
+    const owner = service.getUser("1");
+    await loaderStartedPromise;
+
+    const waiters = [service.getUser("1"), service.getUser("1")];
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(loads).toBe(1);
+
+    await cache.delete(createCacheKey("users:getUser", ["1"]));
+    resolveLoad("alice");
+
+    await expect(owner).resolves.toBe("alice");
+    await expect(Promise.all(waiters)).resolves.toEqual(["alice", "alice"]);
+    expect(loads).toBe(1);
+    expect(await cache.get(createCacheKey("users:getUser", ["1"]))).toBeUndefined();
+  });
+
+  it("returns the loaded value when the same key is deleted during load", async () => {
+    let resolveLoad!: (value: string) => void;
+    let loaderStarted!: () => void;
+    const loaderStartedPromise = new Promise<void>((resolve) => {
+      loaderStarted = resolve;
+    });
+
+    class TestService {
+      @Cacheable({ store: cache, namespace: "users" })
+      async getUser(id: string): Promise<string> {
+        loaderStarted();
+        return new Promise<string>((resolve) => {
+          resolveLoad = resolve;
+        });
+      }
+    }
+
+    const service = new TestService();
+    const pending = service.getUser("1");
+    await loaderStartedPromise;
+
+    await cache.delete(createCacheKey("users:getUser", ["1"]));
+    resolveLoad("alice");
+
+    await expect(pending).resolves.toBe("alice");
+    expect(await cache.get(createCacheKey("users:getUser", ["1"]))).toBeUndefined();
+  });
+
+  it("propagates singleflight load failures to waiters", async () => {
+    let rejectLoad!: (reason: unknown) => void;
+    let loaderStarted!: () => void;
+    const loaderStartedPromise = new Promise<void>((resolve) => {
+      loaderStarted = resolve;
+    });
+    let loads = 0;
+    const failure = new Error("load failed");
+
+    class TestService {
+      @Cacheable({ store: cache, namespace: "users" })
+      async getUser(_id: string): Promise<string> {
+        loads++;
+        loaderStarted();
+        return new Promise<string>((_resolve, reject) => {
+          rejectLoad = reject;
+        });
+      }
+    }
+
+    const service = new TestService();
+    const owner = service.getUser("1");
+    await loaderStartedPromise;
+
+    const waiter = service.getUser("1");
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(loads).toBe(1);
+
+    rejectLoad(failure);
+
+    await expect(owner).rejects.toBe(failure);
+    await expect(waiter).rejects.toBe(failure);
+    expect(loads).toBe(1);
+  });
+
+  it("keeps singleflight for concurrent undefined results", async () => {
+    let loads = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    class TestService {
+      @Cacheable({ store: cache, namespace: "users" })
+      async getUser(_id: string): Promise<string | undefined> {
+        loads++;
+        await gate;
+        return undefined;
+      }
+    }
+
+    const service = new TestService();
+    const pending = Promise.all([service.getUser("1"), service.getUser("1")]);
+    await Promise.resolve();
+    await Promise.resolve();
+    release();
+
+    await expect(pending).resolves.toEqual([undefined, undefined]);
+    expect(loads).toBe(1);
+  });
+
+  it("runs each ttl-0 call independently without coalescing", async () => {
+    let loads = 0;
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    class TestService {
+      @Cacheable({ store: cache, namespace: "users", ttl: 0 })
+      async getUser(id: string): Promise<string> {
+        loads++;
+        const ordinal = loads;
+        await gate;
+        return `data-${id}-${ordinal}`;
+      }
+    }
+
+    const service = new TestService();
+    const pending = Promise.all([service.getUser("1"), service.getUser("1")]);
+    await Promise.resolve();
+    await Promise.resolve();
+    release();
+
+    const [first, second] = await pending;
+    expect(loads).toBe(2);
+    expect(first).not.toBe(second);
+    expect(await cache.get(createCacheKey("users:getUser", ["1"]))).toBeUndefined();
+  });
+
+  it("returns undefined without caching when the method returns undefined", async () => {
+    let loads = 0;
+
+    class TestService {
+      @Cacheable({ store: cache, namespace: "users" })
+      async getUser(_id: string): Promise<string | undefined> {
+        loads++;
+        return undefined;
+      }
+    }
+
+    const service = new TestService();
+
+    await expect(service.getUser("1")).resolves.toBeUndefined();
+    await expect(service.getUser("1")).resolves.toBeUndefined();
+    expect(loads).toBe(2);
+  });
+
   it("throws when neither namespace nor keyPrefix is provided", () => {
     expect(() => {
       class TestService {
