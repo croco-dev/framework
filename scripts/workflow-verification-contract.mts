@@ -1,3 +1,4 @@
+import { compareStrings } from "../tooling/compareStrings.mjs";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -327,7 +328,7 @@ export function findWorkflowPermissionViolations(
   const violations: WorkflowPermissionViolation[] = [];
 
   for (const [path, source] of Object.entries(workflows).sort(([left], [right]) =>
-    left.localeCompare(right),
+    compareStrings(left, right),
   )) {
     let workflow: unknown;
     try {

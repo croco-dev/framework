@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 /**
  * Keeps the root package catalog and package documentation coverage report in sync
  * with package manifests plus the curated group/maturity metadata.
@@ -446,7 +448,7 @@ function collectDocumentedRootPnpmCommands(markdown: string): readonly Documente
 
   return [...commands]
     .map(([name, requiresRootScript]) => ({ name, requiresRootScript }))
-    .sort((left, right) => left.name.localeCompare(right.name));
+    .sort((left, right) => compareStrings(left.name, right.name));
 }
 
 function stripMarkdownContainerPrefix(line: string): string {
@@ -680,7 +682,7 @@ function readPackages(rootDir: string): PackageInfo[] {
     });
   }
 
-  return packages.sort((left, right) => left.shortName.localeCompare(right.shortName));
+  return packages.sort((left, right) => compareStrings(left.shortName, right.shortName));
 }
 
 function parseCatalogGroups(
@@ -840,7 +842,7 @@ function parseSpinePromotionPackages(value: unknown, violations: string[]): read
     return [];
   }
 
-  return Object.keys(packages).sort((left, right) => left.localeCompare(right));
+  return Object.keys(packages).sort((left, right) => compareStrings(left, right));
 }
 
 function parseExtensionMatrix(
@@ -924,8 +926,8 @@ function parseExtensionMatrix(
     packages: records.sort(
       (left, right) =>
         extensionGroups.indexOf(left.group) - extensionGroups.indexOf(right.group) ||
-        left.extension.domain.localeCompare(right.extension.domain) ||
-        left.shortName.localeCompare(right.shortName),
+        compareStrings(left.extension.domain, right.extension.domain) ||
+        compareStrings(left.shortName, right.shortName),
     ),
   };
 }
@@ -2315,7 +2317,8 @@ function generateReadmeCatalog(state: CatalogState): string {
       .filter((pkg) => pkg.maturity === maturity)
       .sort(
         (left, right) =>
-          left.group.localeCompare(right.group) || left.shortName.localeCompare(right.shortName),
+          compareStrings(left.group, right.group) ||
+          compareStrings(left.shortName, right.shortName),
       );
     if (packages.length === 0) {
       continue;
@@ -2810,7 +2813,7 @@ function readDependencyKeys(value: unknown): readonly string[] {
     return [];
   }
 
-  return Object.keys(value).sort((left, right) => left.localeCompare(right));
+  return Object.keys(value).sort((left, right) => compareStrings(left, right));
 }
 
 function readJsonFile<T>(filePath: string): T {

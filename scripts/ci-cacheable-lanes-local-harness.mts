@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { argv, exit } from "node:process";
@@ -413,7 +415,9 @@ export function evaluateLocalEquivalence(input: {
         ? compareCheck(monolithicCheck, splitCheck)
         : [mismatch("CHECK_MISSING", splitCheck.id, null, splitCheck)];
     })
-    .sort((left, right) => `${left.key}:${left.code}`.localeCompare(`${right.key}:${right.code}`));
+    .sort((left, right) =>
+      compareStrings(`${left.key}:${left.code}`, `${right.key}:${right.code}`),
+    );
   const splitSecurityById = new Map(shadow.security.map((result) => [result.id, result]));
   for (const result of monolithicSecurity.filter(({ id }) =>
     LOCALLY_COMPARABLE_SECURITY_IDS.has(id),
@@ -477,7 +481,7 @@ export function evaluateLocalEquivalence(input: {
     );
   }
   mismatches.sort((left, right) =>
-    `${left.key}:${left.code}`.localeCompare(`${right.key}:${right.code}`),
+    compareStrings(`${left.key}:${left.code}`, `${right.key}:${right.code}`),
   );
 
   return {

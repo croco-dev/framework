@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import type { z } from "zod";
 
 export const CONTRACT_SCHEMA_JSON_UNSAFE_DIAGNOSTIC_CODE = "contract-schema-json-unsafe";
@@ -1206,14 +1207,14 @@ function compareSchemaFields(
   left: ContractSchemaFieldDescriptor,
   right: ContractSchemaFieldDescriptor,
 ): number {
-  return left.name.localeCompare(right.name);
+  return compareStrings(left.name, right.name);
 }
 
 function compareSchemaDescriptors(
   left: ContractSchemaDescriptor,
   right: ContractSchemaDescriptor,
 ): number {
-  return JSON.stringify(left).localeCompare(JSON.stringify(right));
+  return compareStrings(JSON.stringify(left), JSON.stringify(right));
 }
 
 function comparePrimitiveValues(left: string | number, right: string | number): number {

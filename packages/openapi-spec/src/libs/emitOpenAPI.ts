@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import {
   extendZodWithOpenApi,
   OpenAPIRegistry,
@@ -364,14 +365,14 @@ function compareDeclaredProblems(
   left: DeclaredProblemOpenAPI,
   right: DeclaredProblemOpenAPI,
 ): number {
-  return left.code.localeCompare(right.code) || left.status - right.status;
+  return compareStrings(left.code, right.code) || left.status - right.status;
 }
 
 function compareDeclaredEntitlements(
   left: DeclaredEntitlementOpenAPI,
   right: DeclaredEntitlementOpenAPI,
 ): number {
-  return JSON.stringify(left).localeCompare(JSON.stringify(right));
+  return compareStrings(JSON.stringify(left), JSON.stringify(right));
 }
 
 function toTags(routes: ContractGraphRoute[]): { name: string; description: string }[] {
@@ -642,8 +643,8 @@ function compareOpenAPIProblemFingerprints(
   right: DeclaredProblemOpenAPI,
 ): number {
   return (
-    left.code.localeCompare(right.code) ||
-    left.category.localeCompare(right.category) ||
+    compareStrings(left.code, right.code) ||
+    compareStrings(left.category, right.category) ||
     left.status - right.status
   );
 }
@@ -676,7 +677,7 @@ function compareOpenAPIEntitlementFingerprints(
   left: DeclaredEntitlementOpenAPI,
   right: DeclaredEntitlementOpenAPI,
 ): number {
-  return JSON.stringify(left).localeCompare(JSON.stringify(right));
+  return compareStrings(JSON.stringify(left), JSON.stringify(right));
 }
 
 function isRequiredOpenAPIParameter(kind: ParamIR["kind"], schema: ParamIR["schema"]): boolean {

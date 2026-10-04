@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import {
@@ -448,16 +449,6 @@ function compareFrontendActionEntitlements(
   return compareStrings(JSON.stringify(left), JSON.stringify(right));
 }
 
-function compareStrings(left: string, right: string): number {
-  if (left < right) {
-    return -1;
-  }
-  if (left > right) {
-    return 1;
-  }
-  return 0;
-}
-
 function assertGeneratedClientRoutes(routes: readonly GeneratedClientRoute[]): void {
   for (const route of routes) {
     if (route.httpMethod.toUpperCase() === "ALL") {
@@ -552,7 +543,7 @@ function groupRoutesByDomain(routes: readonly GeneratedClientRoute[]): DomainRou
   }
 
   return [...groups.entries()]
-    .sort(([left], [right]) => left.localeCompare(right))
+    .sort(([left], [right]) => compareStrings(left, right))
     .map(([domain, domainRoutes]) => ({ domain, routes: domainRoutes }));
 }
 
@@ -897,8 +888,8 @@ function compareGeneratedProblems(
   right: { readonly code: string; readonly category: string; readonly status: number },
 ): number {
   return (
-    left.code.localeCompare(right.code) ||
-    left.category.localeCompare(right.category) ||
+    compareStrings(left.code, right.code) ||
+    compareStrings(left.category, right.category) ||
     left.status - right.status
   );
 }

@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -529,7 +531,7 @@ export function readTurboRunSummary(rootDir: string, output: string): TurboRunSu
       return { path, modifiedAt: statSync(path).mtimeMs };
     })
     .sort(
-      (left, right) => right.modifiedAt - left.modifiedAt || right.path.localeCompare(left.path),
+      (left, right) => right.modifiedAt - left.modifiedAt || compareStrings(right.path, left.path),
     )[0];
   return newest ? (JSON.parse(readFileSync(newest.path, "utf8")) as TurboRunSummary) : undefined;
 }

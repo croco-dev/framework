@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { Problem, ProblemCategory } from "@croco/problems-core";
@@ -1213,10 +1214,6 @@ function compareDiagnostics(
     compareStrings(left.routeId ?? "", right.routeId ?? "") ||
     compareStrings(left.message, right.message)
   );
-}
-
-function compareStrings(left: string, right: string): number {
-  return left.localeCompare(right);
 }
 
 function toCamelCase(value: string): string {

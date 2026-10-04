@@ -1,3 +1,4 @@
+import { compareStrings } from "../tooling/compareStrings.mjs";
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -413,7 +414,7 @@ function publishArtifactTargets(
   for (const fieldName of ["main", "module", "types", "typings", "exports", "bin"] as const) {
     collectPublishArtifactTargets(publishManifest[fieldName], fieldName, targets);
   }
-  return targets.sort((left, right) => left.fieldName.localeCompare(right.fieldName));
+  return targets.sort((left, right) => compareStrings(left.fieldName, right.fieldName));
 }
 
 function collectPublishArtifactTargets(
@@ -857,7 +858,7 @@ function collectInternalRuntimeGraph(
   visit(rootPackage);
 
   return Array.from(graph.values()).sort((left, right) =>
-    left.packageName.localeCompare(right.packageName),
+    compareStrings(left.packageName, right.packageName),
   );
 }
 
@@ -1064,7 +1065,7 @@ function internalPeerPackagesFor(graphPackages: readonly PackedPackageInfo[]): P
   }
 
   return Array.from(peerPackages.values()).sort((left, right) =>
-    left.packageName.localeCompare(right.packageName),
+    compareStrings(left.packageName, right.packageName),
   );
 }
 

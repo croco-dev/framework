@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../tooling/compareStrings.mjs";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -835,10 +836,6 @@ function compareGeneratedArtifacts(
   right: IntentMapGeneratedArtifact,
 ): number {
   return compareStrings(left.kind, right.kind) || compareStrings(left.path, right.path);
-}
-
-function compareStrings(left: string, right: string): number {
-  return left.localeCompare(right);
 }
 
 class IntentMapSourcePathError extends Error {

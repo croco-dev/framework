@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 /**
  * Enforce release metadata for publishable package behavior changes.
  * Generated package source remains release-significant for its owning package.
@@ -403,7 +405,7 @@ function getChangesetCoverage(
   const uncoveredPackages = new Map(
     [...significantChanges]
       .filter(([packageName]) => !validPublishableNames.has(packageName))
-      .sort(([left], [right]) => left.localeCompare(right)),
+      .sort(([left], [right]) => compareStrings(left, right)),
   );
 
   return {
@@ -1172,7 +1174,7 @@ function readPublicApiSnapshotPackages(
         migrationRootKey,
       };
     })
-    .sort((left, right) => left.packageName.localeCompare(right.packageName));
+    .sort((left, right) => compareStrings(left.packageName, right.packageName));
   return { schemaVersion, packages };
 }
 
@@ -1297,7 +1299,7 @@ function logInvalidChangesetFiles(changesets: ChangedChangesetMetadata): void {
   log("");
   log("Invalid changeset files:");
   for (const invalid of [...changesets.invalidFiles].sort((left, right) =>
-    left.file.localeCompare(right.file),
+    compareStrings(left.file, right.file),
   )) {
     log(`- ${invalid.file} (${invalid.state} metadata)`);
   }

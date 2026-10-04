@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import type {
   ContractGraphSnapshot,
   ContractGraphSnapshotRoute,
@@ -628,8 +629,4 @@ function compareSeverity(
   }
 
   return left === "breaking" ? -1 : 1;
-}
-
-function compareStrings(left: string, right: string): number {
-  return left.localeCompare(right);
 }

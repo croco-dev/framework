@@ -14,11 +14,128 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | Code                                                                                                                                  | Category                                                            |        Status | Retryability  | Redaction     | Lifecycle | Sources |
 | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------: | ------------- | ------------- | --------- | ------: |
 | [`ACCESS_DENIED`](#access-denied)                                                                                                     | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`ADMIN_LIFECYCLE_DEMO_INVARIANT`](#admin-lifecycle-demo-invariant)                                                                   | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`ALREADY_MEMBER`](#already-member)                                                                                                   | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
+| [`AMBIGUOUS_PAGINATION_PARAMETER`](#ambiguous-pagination-parameter)                                                                   | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`API_KEY_EXPIRED`](#api-key-expired)                                                                                                 | Unauthorized                                                        |           401 | not-retryable | safe-message  | active    |       1 |
+| [`API_KEY_NOT_FOUND`](#api-key-not-found)                                                                                             | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
+| [`API_KEY_REVOKED`](#api-key-revoked)                                                                                                 | Unauthorized                                                        |           401 | not-retryable | safe-message  | active    |       1 |
+| [`BAD_REQUEST`](#bad-request)                                                                                                         | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`BILLING_STATUS_MAPPING_FAILED`](#billing-status-mapping-failed)                                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`BLOCKED_DURING_IMPERSONATION`](#blocked-during-impersonation)                                                                       | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`CIRCUIT_BREAKER_OPEN`](#circuit-breaker-open)                                                                                       | TooManyRequests                                                     |           429 | retryable     | safe-message  | active    |       1 |
+| [`CONFLICTING_PAGINATION`](#conflicting-pagination)                                                                                   | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`CROCO_CHANGED_TEST_PLAN_INVALID`](#croco-changed-test-plan-invalid)                                                                 | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
+| [`CROCO_CLI_JOBS_001`](#croco-cli-jobs-001)                                                                                           | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`CROCO_CLI_JOBS_002`](#croco-cli-jobs-002)                                                                                           | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`CROCO_CLI_JOBS_003`](#croco-cli-jobs-003)                                                                                           | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`CROCO_CLI_JOBS_004`](#croco-cli-jobs-004)                                                                                           | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
+| [`CROCO_CLI_JOBS_005`](#croco-cli-jobs-005)                                                                                           | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
+| [`CROCO_CLI_OPS_001`](#croco-cli-ops-001)                                                                                             | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`CROCO_CLI_OPS_002`](#croco-cli-ops-002)                                                                                             | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`CROCO_CLI_USAGE_DASHBOARD_005`](#croco-cli-usage-dashboard-005)                                                                     | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`CROCO_EXECUTABLE_ASSURANCE_CONTRACT_INVALID`](#croco-executable-assurance-contract-invalid)                                         | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
+| [`CROCO_EXECUTABLE_ASSURANCE_UNSATISFIED`](#croco-executable-assurance-unsatisfied)                                                   | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
+| [`CROCO_HTTP_MIDDLEWARE_001`](#croco-http-middleware-001)                                                                             | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
+| [`CROCO_HTTP_MIDDLEWARE_002`](#croco-http-middleware-002)                                                                             | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
+| [`CROCO_HTTP_SECURITY_001`](#croco-http-security-001)                                                                                 | InternalServerError                                                 |           500 | not-retryable | public        | active    |       1 |
+| [`CROCO_HTTP_SECURITY_002`](#croco-http-security-002)                                                                                 | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`CROCO_SAAS_PROFILE_MISMATCH`](#croco-saas-profile-mismatch)                                                                         | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
+| [`CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE`](#croco-saas-profile-runtime-unavailable)                                                   | NotImplemented                                                      |           501 | not-retryable | public        | active    |       1 |
+| [`CROCO_TEST_EVIDENCE_CONTRACT_INVALID`](#croco-test-evidence-contract-invalid)                                                       | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
+| [`CROCO_TEST_EVIDENCE_FIDELITY_UNSATISFIED`](#croco-test-evidence-fidelity-unsatisfied)                                               | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
+| [`DOMAIN_AUTO_JOIN_RECOVERY_FAILED`](#domain-auto-join-recovery-failed)                                                               | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`DUPLICATE_INVITATION`](#duplicate-invitation)                                                                                       | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
+| [`DUPLICATE_RECOVER_HANDLER`](#duplicate-recover-handler)                                                                             | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`DURATION_PARSE_ERROR`](#duration-parse-error)                                                                                       | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`ENTITLEMENT_DENIED`](#entitlement-denied)                                                                                           | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`ENTITLEMENT_INACTIVE_SUBSCRIPTION`](#entitlement-inactive-subscription)                                                             | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`ENTITLEMENT_MISSING_PLAN`](#entitlement-missing-plan)                                                                               | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`ENTITLEMENT_NOT_FOUND`](#entitlement-not-found)                                                                                     | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
+| [`ENTITLEMENT_PROVIDER_UNAVAILABLE`](#entitlement-provider-unavailable)                                                               | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`ENTITLEMENT_QUOTA_EXCEEDED`](#entitlement-quota-exceeded)                                                                           | TooManyRequests                                                     |           429 | retryable     | safe-message  | active    |       1 |
+| [`ENTITLEMENT_REQUIREMENT_INVALID`](#entitlement-requirement-invalid)                                                                 | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
+| [`FORBIDDEN`](#forbidden)                                                                                                             | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`GRAPHQL_NOT_FOUND`](#graphql-not-found)                                                                                             | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
+| [`HEALTH_SCORE_NOT_FOUND`](#health-score-not-found)                                                                                   | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
+| [`IMPERSONATION_CONFIGURATION_INVALID`](#impersonation-configuration-invalid)                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`IMPERSONATION_IDENTITY_CONFLICT`](#impersonation-identity-conflict)                                                                 | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING`](#impersonation-lifecycle-publication-pending)                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`IMPERSONATION_REASON_REQUIRED`](#impersonation-reason-required)                                                                     | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`IMPERSONATION_SESSION_ACTOR_MISMATCH`](#impersonation-session-actor-mismatch)                                                       | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`IMPERSONATION_SESSION_NOT_FOUND`](#impersonation-session-not-found)                                                                 | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
+| [`IMPERSONATION_TARGET_NOT_FOUND`](#impersonation-target-not-found)                                                                   | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
+| [`INDEX_NOT_FOUND`](#index-not-found)                                                                                                 | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
+| [`INVALID_AUTO_JOIN_ROLE`](#invalid-auto-join-role)                                                                                   | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`INVALID_CURSOR`](#invalid-cursor)                                                                                                   | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`INVALID_INVITATION_EXPIRY_DURATION`](#invalid-invitation-expiry-duration)                                                           | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
+| [`INVALID_MEMBERSHIP_COMMAND`](#invalid-membership-command)                                                                           | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`INVALID_PAGINATION_DIRECTION`](#invalid-pagination-direction)                                                                       | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`INVALID_PAGINATION_LIMIT`](#invalid-pagination-limit)                                                                               | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`INVALID_RETRY_CONFIGURATION`](#invalid-retry-configuration)                                                                         | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
+| [`INVALID_ROLE`](#invalid-role)                                                                                                       | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`INVITATION_ALREADY_ACCEPTED`](#invitation-already-accepted)                                                                         | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
+| [`INVITATION_CREATION_FAILED`](#invitation-creation-failed)                                                                           | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`INVITATION_EMAIL_MISMATCH`](#invitation-email-mismatch)                                                                             | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`INVITATION_EXPIRED`](#invitation-expired)                                                                                           | Gone                                                                |           410 | not-retryable | public        | active    |       1 |
+| [`INVITATION_IDEMPOTENCY_CONFLICT`](#invitation-idempotency-conflict)                                                                 | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
+| [`INVITATION_INVALID_STATUS`](#invitation-invalid-status)                                                                             | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
+| [`INVITATION_NOT_FOUND`](#invitation-not-found)                                                                                       | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
+| [`INVITATION_RATE_LIMIT_EXCEEDED`](#invitation-rate-limit-exceeded)                                                                   | TooManyRequests                                                     |           429 | retryable     | safe-message  | active    |       1 |
+| [`LAMBDA_TIMEOUT_GUARD`](#lambda-timeout-guard)                                                                                       | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`LAST_OWNER`](#last-owner)                                                                                                           | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`LAST_OWNER_CANNOT_BE_REMOVED`](#last-owner-cannot-be-removed)                                                                       | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`MEMBERSHIP_CONSTRAINT`](#membership-constraint)                                                                                     | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`MEMBERSHIP_EVENT_PUBLICATION_FAILED`](#membership-event-publication-failed)                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`MEMBERSHIP_IDEMPOTENCY_CONFLICT`](#membership-idempotency-conflict)                                                                 | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
+| [`MEMBERSHIP_NOT_FOUND`](#membership-not-found)                                                                                       | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
+| [`METRIC_INVALID_ZONE`](#metric-invalid-zone)                                                                                         | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
+| [`METRIC_UNSUPPORTED_OPERATION`](#metric-unsupported-operation)                                                                       | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
+| [`MIDDLEWARE_EXECUTION_ERROR`](#middleware-execution-error)                                                                           | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`MISSING_TENANT`](#missing-tenant)                                                                                                   | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`NESTED_IMPERSONATION_NOT_ALLOWED`](#nested-impersonation-not-allowed)                                                               | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`OTLP_ENDPOINT_REQUIRED`](#otlp-endpoint-required)                                                                                   | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`OWNERSHIP_TRANSFER_REQUIRED`](#ownership-transfer-required)                                                                         | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`PUBLIC_EMAIL_DOMAIN_NOT_ALLOWED`](#public-email-domain-not-allowed)                                                                 | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`RATE_LIMIT_EXCEEDED`](#rate-limit-exceeded)                                                                                         | TooManyRequests                                                     |           429 | retryable     | safe-message  | active    |       1 |
+| [`RATE_LIMIT_KEY_BUILDER_ERROR`](#rate-limit-key-builder-error)                                                                       | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`RATE_LIMIT_REFUND_UNSUPPORTED`](#rate-limit-refund-unsupported)                                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`RATE_LIMIT_WINDOW_ERROR`](#rate-limit-window-error)                                                                                 | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`RESEND_NOTIFICATION_FAILED`](#resend-notification-failed)                                                                           | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`RETRY_ABORTED`](#retry-aborted)                                                                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`RETRY_CIRCUIT_BREAKER_INVALID_STATE`](#retry-circuit-breaker-invalid-state)                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`RETRY_CIRCUIT_BREAKER_LOCK_FAILED`](#retry-circuit-breaker-lock-failed)                                                             | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`RETRY_EXHAUSTED`](#retry-exhausted)                                                                                                 | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`ROLE_HIERARCHY_VIOLATION`](#role-hierarchy-violation)                                                                               | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`SEARCH_CAPABILITY_UNAVAILABLE`](#search-capability-unavailable)                                                                     | NotImplemented                                                      |           501 | not-retryable | public        | active    |       1 |
+| [`SEARCH_DRIZZLE_INVALID_ROW`](#search-drizzle-invalid-row)                                                                           | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`SEAT_LIMIT_EXCEEDED`](#seat-limit-exceeded)                                                                                         | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`SELF_IMPERSONATION_NOT_ALLOWED`](#self-impersonation-not-allowed)                                                                   | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`STORAGE_DELETE_FAILED`](#storage-delete-failed)                                                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`STORAGE_FILE_NOT_FOUND`](#storage-file-not-found)                                                                                   | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
+| [`STORAGE_INVALID_KEY`](#storage-invalid-key)                                                                                         | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`STORAGE_INVALID_NODE_BODY`](#storage-invalid-node-body)                                                                             | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`STORAGE_INVALID_SIGNED_URL_EXPIRY`](#storage-invalid-signed-url-expiry)                                                             | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`STORAGE_OPERATION_ABORTED`](#storage-operation-aborted)                                                                             | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`STORAGE_R2_EMPTY_BODY`](#storage-r2-empty-body)                                                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`STORAGE_R2_MISSING_CONFIG`](#storage-r2-missing-config)                                                                             | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`STORAGE_R2_OBJECT_TOO_LARGE`](#storage-r2-object-too-large)                                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`STORAGE_R2_READINESS_FAILED`](#storage-r2-readiness-failed)                                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`STORAGE_UPLOAD_FAILED`](#storage-upload-failed)                                                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`STRATEGY_UNAVAILABLE`](#strategy-unavailable)                                                                                       | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG`](#telemetry-auto-instrumentation-invalid-config)                                     | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
+| [`TELEMETRY_FORCE_FLUSH_UNSUPPORTED`](#telemetry-force-flush-unsupported)                                                             | NotImplemented                                                      |           501 | not-retryable | public        | active    |       1 |
+| [`TELEMETRY_RUNTIME_ERROR`](#telemetry-runtime-error)                                                                                 | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`TELEMETRY_SAMPLER_INVALID_CONFIG`](#telemetry-sampler-invalid-config)                                                               | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`TELEMETRY_SIGNAL_UNSUPPORTED`](#telemetry-signal-unsupported)                                                                       | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`TRPC_ACCESS_DENIED`](#trpc-access-denied)                                                                                           | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`UNAUTHORIZED`](#unauthorized)                                                                                                       | Unauthorized                                                        |           401 | not-retryable | safe-message  | active    |       1 |
+| [`WEBHOOK_PROCESSING_FAILED`](#webhook-processing-failed)                                                                             | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`WEBHOOK_VALIDATION_FAILED`](#webhook-validation-failed)                                                                             | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
 | [`access-core/forbidden`](#access-core-forbidden)                                                                                     | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
 | [`access-core/invalid-provider-result`](#access-core-invalid-provider-result)                                                         | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
 | [`access-core/invalid-relation-tuple`](#access-core-invalid-relation-tuple)                                                           | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
 | [`access-core/unauthorized`](#access-core-unauthorized)                                                                               | Unauthorized                                                        |           401 | not-retryable | safe-message  | active    |       1 |
-| [`ADMIN_LIFECYCLE_DEMO_INVARIANT`](#admin-lifecycle-demo-invariant)                                                                   | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`admin-console/user-not-found`](#admin-console-user-not-found)                                                                       | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
 | [`admin-core/contact-policy-denied`](#admin-core-contact-policy-denied)                                                               | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
 | [`admin-core/contact-policy-invalid`](#admin-core-contact-policy-invalid)                                                             | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
@@ -43,8 +160,6 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`ai-usage/pricing-registry-conflict`](#ai-usage-pricing-registry-conflict)                                                           | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`ai-usage/quota-exceeded`](#ai-usage-quota-exceeded)                                                                                 | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
 | [`ai-usage/record-failed`](#ai-usage-record-failed)                                                                                   | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
-| [`ALREADY_MEMBER`](#already-member)                                                                                                   | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
-| [`AMBIGUOUS_PAGINATION_PARAMETER`](#ambiguous-pagination-parameter)                                                                   | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
 | [`analytics-core/analysis-cancelled`](#analytics-core-analysis-cancelled)                                                             | BadRequest                                                          |           400 | conditional   | public        | active    |       1 |
 | [`analytics-core/analysis-concurrency-exceeded`](#analytics-core-analysis-concurrency-exceeded)                                       | TooManyRequests                                                     |           429 | retryable     | safe-message  | active    |       1 |
 | [`analytics-core/analysis-input-budget-exceeded`](#analytics-core-analysis-input-budget-exceeded)                                     | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
@@ -75,9 +190,6 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`analytics/fact-history/projection-conflict`](#analytics-fact-history-projection-conflict)                                           | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`analytics/fact-history/revision-conflict`](#analytics-fact-history-revision-conflict)                                               | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`analytics/fact-history/source-conflict`](#analytics-fact-history-source-conflict)                                                   | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
-| [`API_KEY_EXPIRED`](#api-key-expired)                                                                                                 | Unauthorized                                                        |           401 | not-retryable | safe-message  | active    |       1 |
-| [`API_KEY_NOT_FOUND`](#api-key-not-found)                                                                                             | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
-| [`API_KEY_REVOKED`](#api-key-revoked)                                                                                                 | Unauthorized                                                        |           401 | not-retryable | safe-message  | active    |       1 |
 | [`architecture-policy/manifest-json-parse`](#architecture-policy-manifest-json-parse)                                                 | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`architecture-policy/manifest-schema-version`](#architecture-policy-manifest-schema-version)                                         | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`architecture-policy/manifest-shape`](#architecture-policy-manifest-shape)                                                           | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
@@ -114,14 +226,12 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`auth-core/invalid-route-metadata-target`](#auth-core-invalid-route-metadata-target)                                                 | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
 | [`auth-drizzle/duplicate-tenant-mapping`](#auth-drizzle-duplicate-tenant-mapping)                                                     | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`auth-drizzle/tenant-mapping-conflict-resolution-failed`](#auth-drizzle-tenant-mapping-conflict-resolution-failed)                   | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`BAD_REQUEST`](#bad-request)                                                                                                         | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
 | [`batch-core/duplicate-step-name`](#batch-core-duplicate-step-name)                                                                   | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`batch-core/invalid-chunk-size`](#batch-core-invalid-chunk-size)                                                                     | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`batch-core/invalid-step-name`](#batch-core-invalid-step-name)                                                                       | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`batch-qstash/invalid-publish-request`](#batch-qstash-invalid-publish-request)                                                       | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
 | [`batch-qstash/missing-config`](#batch-qstash-missing-config)                                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`batch-qstash/publish-failed`](#batch-qstash-publish-failed)                                                                         | Runtime-dependent: BadRequest, InternalServerError, TooManyRequests | 400, 429, 500 | conditional   | safe-message  | active    |       1 |
-| [`BILLING_STATUS_MAPPING_FAILED`](#billing-status-mapping-failed)                                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`billing-polar/checkout-idempotency-conflict`](#billing-polar-checkout-idempotency-conflict)                                         | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`billing-polar/customer-not-found`](#billing-polar-customer-not-found)                                                               | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
 | [`billing-polar/missing-config`](#billing-polar-missing-config)                                                                       | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
@@ -169,7 +279,6 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`billing/unknown-provider-plan-mapping`](#billing-unknown-provider-plan-mapping)                                                     | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
 | [`billing/webhook-already-processed`](#billing-webhook-already-processed)                                                             | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`billing/webhook-event-intents-pending`](#billing-webhook-event-intents-pending)                                                     | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
-| [`BLOCKED_DURING_IMPERSONATION`](#blocked-during-impersonation)                                                                       | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
 | [`cache-core/cache-key-argument-unsupported`](#cache-core-cache-key-argument-unsupported)                                             | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`cache-core/invalid-configuration`](#cache-core-invalid-configuration)                                                               | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`cache-core/invalid-decorator-config`](#cache-core-invalid-decorator-config)                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
@@ -179,14 +288,12 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`cache-core/invalidation-event-unknown`](#cache-core-invalidation-event-unknown)                                                     | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`cache-core/invalidation-failed`](#cache-core-invalidation-failed)                                                                   | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`cache-core/invalidation-graph-invalid`](#cache-core-invalidation-graph-invalid)                                                     | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
-| [`CIRCUIT_BREAKER_OPEN`](#circuit-breaker-open)                                                                                       | TooManyRequests                                                     |           429 | retryable     | safe-message  | active    |       1 |
 | [`cloudflare/images-invalid-ttl`](#cloudflare-images-invalid-ttl)                                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`cloudflare/images-null-result`](#cloudflare-images-null-result)                                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`cloudflare/images-upload-intent-null-result`](#cloudflare-images-upload-intent-null-result)                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`cohort/admin-invalid`](#cohort-admin-invalid)                                                                                       | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`cohort/invalid`](#cohort-invalid)                                                                                                   | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`cohort/unavailable`](#cohort-unavailable)                                                                                           | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
-| [`CONFLICTING_PAGINATION`](#conflicting-pagination)                                                                                   | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
 | [`create-croco-app/dependency-install-failed`](#create-croco-app-dependency-install-failed)                                           | InternalServerError                                                 |           500 | not-retryable | safe-message  | active    |       1 |
 | [`create-croco-app/directory-not-empty`](#create-croco-app-directory-not-empty)                                                       | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`create-croco-app/generated-dependency-range-missing`](#create-croco-app-generated-dependency-range-missing)                         | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
@@ -213,25 +320,6 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`credits-core/stale-ledger-position`](#credits-core-stale-ledger-position)                                                           | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`credits-core/transaction-not-found`](#credits-core-transaction-not-found)                                                           | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
 | [`credits-drizzle/persistence-failure`](#credits-drizzle-persistence-failure)                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`CROCO_CHANGED_TEST_PLAN_INVALID`](#croco-changed-test-plan-invalid)                                                                 | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
-| [`CROCO_CLI_JOBS_001`](#croco-cli-jobs-001)                                                                                           | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`CROCO_CLI_JOBS_002`](#croco-cli-jobs-002)                                                                                           | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`CROCO_CLI_JOBS_003`](#croco-cli-jobs-003)                                                                                           | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`CROCO_CLI_JOBS_004`](#croco-cli-jobs-004)                                                                                           | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
-| [`CROCO_CLI_JOBS_005`](#croco-cli-jobs-005)                                                                                           | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
-| [`CROCO_CLI_OPS_001`](#croco-cli-ops-001)                                                                                             | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`CROCO_CLI_OPS_002`](#croco-cli-ops-002)                                                                                             | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`CROCO_CLI_USAGE_DASHBOARD_005`](#croco-cli-usage-dashboard-005)                                                                     | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`CROCO_EXECUTABLE_ASSURANCE_CONTRACT_INVALID`](#croco-executable-assurance-contract-invalid)                                         | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
-| [`CROCO_EXECUTABLE_ASSURANCE_UNSATISFIED`](#croco-executable-assurance-unsatisfied)                                                   | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
-| [`CROCO_HTTP_MIDDLEWARE_001`](#croco-http-middleware-001)                                                                             | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
-| [`CROCO_HTTP_MIDDLEWARE_002`](#croco-http-middleware-002)                                                                             | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
-| [`CROCO_HTTP_SECURITY_001`](#croco-http-security-001)                                                                                 | InternalServerError                                                 |           500 | not-retryable | public        | active    |       1 |
-| [`CROCO_HTTP_SECURITY_002`](#croco-http-security-002)                                                                                 | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`CROCO_SAAS_PROFILE_MISMATCH`](#croco-saas-profile-mismatch)                                                                         | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
-| [`CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE`](#croco-saas-profile-runtime-unavailable)                                                   | NotImplemented                                                      |           501 | not-retryable | public        | active    |       1 |
-| [`CROCO_TEST_EVIDENCE_CONTRACT_INVALID`](#croco-test-evidence-contract-invalid)                                                       | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
-| [`CROCO_TEST_EVIDENCE_FIDELITY_UNSATISFIED`](#croco-test-evidence-fidelity-unsatisfied)                                               | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`customer-health-core/event-intent-conflict`](#customer-health-core-event-intent-conflict)                                           | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`customer-health-core/event-publisher-not-configured`](#customer-health-core-event-publisher-not-configured)                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`customer-health-core/invalid-score-input`](#customer-health-core-invalid-score-input)                                               | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
@@ -243,10 +331,6 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`dataloader-core/invalid-configuration`](#dataloader-core-invalid-configuration)                                                     | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
 | [`diagnostics-core/duplicate-provider`](#diagnostics-core-duplicate-provider)                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`diagnostics-core/invalid-timeout`](#diagnostics-core-invalid-timeout)                                                               | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
-| [`DOMAIN_AUTO_JOIN_RECOVERY_FAILED`](#domain-auto-join-recovery-failed)                                                               | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`DUPLICATE_INVITATION`](#duplicate-invitation)                                                                                       | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
-| [`DUPLICATE_RECOVER_HANDLER`](#duplicate-recover-handler)                                                                             | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`DURATION_PARSE_ERROR`](#duration-parse-error)                                                                                       | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
 | [`engagement-core/audience-already-registered`](#engagement-core-audience-already-registered)                                         | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`engagement-core/audience-definition-invalid`](#engagement-core-audience-definition-invalid)                                         | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`engagement-core/audience-metadata-missing`](#engagement-core-audience-metadata-missing)                                             | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
@@ -289,13 +373,6 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`engagement-core/send-command-invalid`](#engagement-core-send-command-invalid)                                                       | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`engagement-core/store-input-invalid`](#engagement-core-store-input-invalid)                                                         | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`engagement-core/suppression-evaluation-failed`](#engagement-core-suppression-evaluation-failed)                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`ENTITLEMENT_DENIED`](#entitlement-denied)                                                                                           | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
-| [`ENTITLEMENT_INACTIVE_SUBSCRIPTION`](#entitlement-inactive-subscription)                                                             | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
-| [`ENTITLEMENT_MISSING_PLAN`](#entitlement-missing-plan)                                                                               | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
-| [`ENTITLEMENT_NOT_FOUND`](#entitlement-not-found)                                                                                     | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
-| [`ENTITLEMENT_PROVIDER_UNAVAILABLE`](#entitlement-provider-unavailable)                                                               | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`ENTITLEMENT_QUOTA_EXCEEDED`](#entitlement-quota-exceeded)                                                                           | TooManyRequests                                                     |           429 | retryable     | safe-message  | active    |       1 |
-| [`ENTITLEMENT_REQUIREMENT_INVALID`](#entitlement-requirement-invalid)                                                                 | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`entitlements-core/definition-invalid`](#entitlements-core-definition-invalid)                                                       | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`entitlements-core/plan-version-already-registered`](#entitlements-core-plan-version-already-registered)                             | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`entitlements-core/plan-version-mismatch`](#entitlements-core-plan-version-mismatch)                                                 | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
@@ -376,7 +453,6 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`features/policy/stale-review`](#features-policy-stale-review)                                                                       | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`features/policy/unavailable`](#features-policy-unavailable)                                                                         | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`features/policy/validation-failed`](#features-policy-validation-failed)                                                             | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
-| [`FORBIDDEN`](#forbidden)                                                                                                             | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
 | [`framework-config/config-schema-not-found`](#framework-config-config-schema-not-found)                                               | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`framework-config/config-validation-failed`](#framework-config-config-validation-failed)                                             | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`framework-config/invalid-boolean-env`](#framework-config-invalid-boolean-env)                                                       | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
@@ -434,8 +510,6 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`governance-core/export-not-supported`](#governance-core-export-not-supported)                                                       | NotImplemented                                                      |           501 | not-retryable | public        | active    |       1 |
 | [`governance-core/resource-validation-failed`](#governance-core-resource-validation-failed)                                           | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`governance-core/retention-policy-violation`](#governance-core-retention-policy-violation)                                           | BusinessRuleViolation                                               |           422 | conditional   | safe-message  | active    |       1 |
-| [`GRAPHQL_NOT_FOUND`](#graphql-not-found)                                                                                             | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
-| [`HEALTH_SCORE_NOT_FOUND`](#health-score-not-found)                                                                                   | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
 | [`health-core/duplicate-indicator-id`](#health-core-duplicate-indicator-id)                                                           | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`health-core/invalid-indicator-id`](#health-core-invalid-indicator-id)                                                               | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`health-core/invalid-timeout`](#health-core-invalid-timeout)                                                                         | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
@@ -448,40 +522,13 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`idempotency-core/reservation-expired`](#idempotency-core-reservation-expired)                                                       | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`idempotency-core/reservation-not-found`](#idempotency-core-reservation-not-found)                                                   | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`idempotency-core/reservation-state`](#idempotency-core-reservation-state)                                                           | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
-| [`IMPERSONATION_CONFIGURATION_INVALID`](#impersonation-configuration-invalid)                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`IMPERSONATION_IDENTITY_CONFLICT`](#impersonation-identity-conflict)                                                                 | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
-| [`IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING`](#impersonation-lifecycle-publication-pending)                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`IMPERSONATION_REASON_REQUIRED`](#impersonation-reason-required)                                                                     | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`IMPERSONATION_SESSION_ACTOR_MISMATCH`](#impersonation-session-actor-mismatch)                                                       | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
-| [`IMPERSONATION_SESSION_NOT_FOUND`](#impersonation-session-not-found)                                                                 | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
-| [`IMPERSONATION_TARGET_NOT_FOUND`](#impersonation-target-not-found)                                                                   | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
 | [`impersonation-core/event-intent-conflict`](#impersonation-core-event-intent-conflict)                                               | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`impersonation-core/event-intent-limit-invalid`](#impersonation-core-event-intent-limit-invalid)                                     | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
-| [`INDEX_NOT_FOUND`](#index-not-found)                                                                                                 | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
 | [`integrations-posthog/missing-config`](#integrations-posthog-missing-config)                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`INVALID_AUTO_JOIN_ROLE`](#invalid-auto-join-role)                                                                                   | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`INVALID_CURSOR`](#invalid-cursor)                                                                                                   | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`INVALID_INVITATION_EXPIRY_DURATION`](#invalid-invitation-expiry-duration)                                                           | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
-| [`INVALID_MEMBERSHIP_COMMAND`](#invalid-membership-command)                                                                           | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`INVALID_PAGINATION_DIRECTION`](#invalid-pagination-direction)                                                                       | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`INVALID_PAGINATION_LIMIT`](#invalid-pagination-limit)                                                                               | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`INVALID_RETRY_CONFIGURATION`](#invalid-retry-configuration)                                                                         | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
-| [`INVALID_ROLE`](#invalid-role)                                                                                                       | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`INVITATION_ALREADY_ACCEPTED`](#invitation-already-accepted)                                                                         | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
-| [`INVITATION_CREATION_FAILED`](#invitation-creation-failed)                                                                           | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`INVITATION_EMAIL_MISMATCH`](#invitation-email-mismatch)                                                                             | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
-| [`INVITATION_EXPIRED`](#invitation-expired)                                                                                           | Gone                                                                |           410 | not-retryable | public        | active    |       1 |
-| [`INVITATION_IDEMPOTENCY_CONFLICT`](#invitation-idempotency-conflict)                                                                 | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
-| [`INVITATION_INVALID_STATUS`](#invitation-invalid-status)                                                                             | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
-| [`INVITATION_NOT_FOUND`](#invitation-not-found)                                                                                       | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
-| [`INVITATION_RATE_LIMIT_EXCEEDED`](#invitation-rate-limit-exceeded)                                                                   | TooManyRequests                                                     |           429 | retryable     | safe-message  | active    |       1 |
 | [`invitation-core/batch-size-exceeded`](#invitation-core-batch-size-exceeded)                                                         | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
 | [`invitation-drizzle/token-cipher-failed`](#invitation-drizzle-token-cipher-failed)                                                   | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`journey/admin-denied`](#journey-admin-denied)                                                                                       | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`journey/admin-validation`](#journey-admin-validation)                                                                               | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
-| [`LAMBDA_TIMEOUT_GUARD`](#lambda-timeout-guard)                                                                                       | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`LAST_OWNER`](#last-owner)                                                                                                           | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
-| [`LAST_OWNER_CANNOT_BE_REMOVED`](#last-owner-cannot-be-removed)                                                                       | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
 | [`lifecycle-core/action-adapter-failed`](#lifecycle-core-action-adapter-failed)                                                       | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`lifecycle-core/duplicate-rule`](#lifecycle-core-duplicate-rule)                                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`lifecycle-core/monetization-recipe-capability-missing`](#lifecycle-core-monetization-recipe-capability-missing)                     | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
@@ -500,10 +547,6 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`lifecycle-core/source-identity-missing`](#lifecycle-core-source-identity-missing)                                                   | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`lifecycle-core/source-payload-conflict`](#lifecycle-core-source-payload-conflict)                                                   | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`lifecycle-core/webhook-timeout-invalid`](#lifecycle-core-webhook-timeout-invalid)                                                   | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
-| [`MEMBERSHIP_CONSTRAINT`](#membership-constraint)                                                                                     | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
-| [`MEMBERSHIP_EVENT_PUBLICATION_FAILED`](#membership-event-publication-failed)                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`MEMBERSHIP_IDEMPOTENCY_CONFLICT`](#membership-idempotency-conflict)                                                                 | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
-| [`MEMBERSHIP_NOT_FOUND`](#membership-not-found)                                                                                       | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
 | [`meta-vite/server-action-invalid-content-type`](#meta-vite-server-action-invalid-content-type)                                       | UnsupportedMediaType                                                |           415 | not-retryable | public        | active    |       1 |
 | [`meta-vite/server-action-invalid-path`](#meta-vite-server-action-invalid-path)                                                       | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
 | [`meta-vite/server-action-malformed-body`](#meta-vite-server-action-malformed-body)                                                   | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
@@ -530,8 +573,6 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`metering/redis-error`](#metering-redis-error)                                                                                       | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`metering/transition-conflict`](#metering-transition-conflict)                                                                       | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`metering/usage-flush-configuration`](#metering-usage-flush-configuration)                                                           | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`METRIC_INVALID_ZONE`](#metric-invalid-zone)                                                                                         | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
-| [`METRIC_UNSUPPORTED_OPERATION`](#metric-unsupported-operation)                                                                       | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`metrics-billing/invalid-order-payment-reason`](#metrics-billing-invalid-order-payment-reason)                                       | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
 | [`metrics-billing/metric-dropped`](#metrics-billing-metric-dropped)                                                                   | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`metrics-billing/recording-failed`](#metrics-billing-recording-failed)                                                               | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
@@ -547,7 +588,6 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`metrics-core/read-timeout`](#metrics-core-read-timeout)                                                                             | BadRequest                                                          |           400 | conditional   | public        | active    |       1 |
 | [`metrics-core/retention-metrics-unavailable`](#metrics-core-retention-metrics-unavailable)                                           | NotImplemented                                                      |           501 | not-retryable | public        | active    |       1 |
 | [`metrics-core/snapshot-tenant-required`](#metrics-core-snapshot-tenant-required)                                                     | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
-| [`MIDDLEWARE_EXECUTION_ERROR`](#middleware-execution-error)                                                                           | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`migration-runner/database-url-required`](#migration-runner-database-url-required)                                                   | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
 | [`migration-runner/file-load-failed`](#migration-runner-file-load-failed)                                                             | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`migration-runner/history-drift`](#migration-runner-history-drift)                                                                   | Conflict                                                            |           409 | not-retryable | public        | active    |       1 |
@@ -558,8 +598,6 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`migration-runner/transaction-required`](#migration-runner-transaction-required)                                                     | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`migration-runner/unsupported-dialect`](#migration-runner-unsupported-dialect)                                                       | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
 | [`migration-runner/unsupported-query-result`](#migration-runner-unsupported-query-result)                                             | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`MISSING_TENANT`](#missing-tenant)                                                                                                   | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`NESTED_IMPERSONATION_NOT_ALLOWED`](#nested-impersonation-not-allowed)                                                               | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
 | [`notifications-core/default-provider-conflict`](#notifications-core-default-provider-conflict)                                       | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`notifications-core/delivery-failed`](#notifications-core-delivery-failed)                                                           | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`notifications-core/idempotency-key-required`](#notifications-core-idempotency-key-required)                                         | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
@@ -614,13 +652,11 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`openapi-spec/controller-typescript-diagnostics`](#openapi-spec-controller-typescript-diagnostics)                                   | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`openapi-spec/invalid-contract`](#openapi-spec-invalid-contract)                                                                     | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`openapi-spec/no-rest-controllers-found`](#openapi-spec-no-rest-controllers-found)                                                   | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`OTLP_ENDPOINT_REQUIRED`](#otlp-endpoint-required)                                                                                   | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`outbox-core/claim-configuration-invalid`](#outbox-core-claim-configuration-invalid)                                                 | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
 | [`outbox-core/dispatch-failed`](#outbox-core-dispatch-failed)                                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`outbox-core/failure-metadata-missing`](#outbox-core-failure-metadata-missing)                                                       | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
 | [`outbox-core/record-id-conflict`](#outbox-core-record-id-conflict)                                                                   | Conflict                                                            |           409 | not-retryable | safe-message  | active    |       1 |
 | [`outbox-core/unit-of-work-context-invalid`](#outbox-core-unit-of-work-context-invalid)                                               | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
-| [`OWNERSHIP_TRANSFER_REQUIRED`](#ownership-transfer-required)                                                                         | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
 | [`presentation-preset/frontend-action-manifest-duplicate-conflict`](#presentation-preset-frontend-action-manifest-duplicate-conflict) | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`presentation-preset/frontend-action-manifest-invalid`](#presentation-preset-frontend-action-manifest-invalid)                       | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`preset-node/invalid-close-timeout`](#preset-node-invalid-close-timeout)                                                             | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
@@ -674,11 +710,6 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`protocols-trpc/request-normalization-failed`](#protocols-trpc-request-normalization-failed)                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`protocols-trpc/request-unavailable`](#protocols-trpc-request-unavailable)                                                           | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`protocols-trpc/route-handler-not-callable`](#protocols-trpc-route-handler-not-callable)                                             | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`PUBLIC_EMAIL_DOMAIN_NOT_ALLOWED`](#public-email-domain-not-allowed)                                                                 | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`RATE_LIMIT_EXCEEDED`](#rate-limit-exceeded)                                                                                         | TooManyRequests                                                     |           429 | retryable     | safe-message  | active    |       1 |
-| [`RATE_LIMIT_KEY_BUILDER_ERROR`](#rate-limit-key-builder-error)                                                                       | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`RATE_LIMIT_REFUND_UNSUPPORTED`](#rate-limit-refund-unsupported)                                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`RATE_LIMIT_WINDOW_ERROR`](#rate-limit-window-error)                                                                                 | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
 | [`ratelimit-core/duplicate-default-policy`](#ratelimit-core-duplicate-default-policy)                                                 | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`ratelimit-core/unexpected-policy`](#ratelimit-core-unexpected-policy)                                                               | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`ratelimit-upstash/invalid-policy`](#ratelimit-upstash-invalid-policy)                                                               | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
@@ -692,15 +723,9 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`repository-core/batch-loader-factory-not-registered`](#repository-core-batch-loader-factory-not-registered)                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`repository-core/batch-loader-factory-resolution-failed`](#repository-core-batch-loader-factory-resolution-failed)                   | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`repository-core/batch-loader-scope-collision`](#repository-core-batch-loader-scope-collision)                                       | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`RESEND_NOTIFICATION_FAILED`](#resend-notification-failed)                                                                           | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`RETRY_ABORTED`](#retry-aborted)                                                                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`RETRY_CIRCUIT_BREAKER_INVALID_STATE`](#retry-circuit-breaker-invalid-state)                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`RETRY_CIRCUIT_BREAKER_LOCK_FAILED`](#retry-circuit-breaker-lock-failed)                                                             | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`RETRY_EXHAUSTED`](#retry-exhausted)                                                                                                 | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`retry-core/backoff-cancellation-unsupported`](#retry-core-backoff-cancellation-unsupported)                                         | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`retry-core/circuit-breaker-unexpected-state`](#retry-core-circuit-breaker-unexpected-state)                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`retry-core/success-hook-failed`](#retry-core-success-hook-failed)                                                                   | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
-| [`ROLE_HIERARCHY_VIOLATION`](#role-hierarchy-violation)                                                                               | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
 | [`rpc-codegen/controller-typescript-diagnostics`](#rpc-codegen-controller-typescript-diagnostics)                                     | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`rpc-codegen/invalid-contract`](#rpc-codegen-invalid-contract)                                                                       | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`rpc-codegen/no-rest-controllers-found`](#rpc-codegen-no-rest-controllers-found)                                                     | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
@@ -718,8 +743,6 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`saas-demo/sqlite-fixture-state-invalid`](#saas-demo-sqlite-fixture-state-invalid)                                                   | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`saas-demo/tenant-already-exists`](#saas-demo-tenant-already-exists)                                                                 | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`saas-demo/tenant-not-found`](#saas-demo-tenant-not-found)                                                                           | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
-| [`SEARCH_CAPABILITY_UNAVAILABLE`](#search-capability-unavailable)                                                                     | NotImplemented                                                      |           501 | not-retryable | public        | active    |       1 |
-| [`SEARCH_DRIZZLE_INVALID_ROW`](#search-drizzle-invalid-row)                                                                           | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`search-core/operation-aborted`](#search-core-operation-aborted)                                                                     | BadRequest                                                          |           400 | conditional   | public        | active    |       1 |
 | [`search-core/searchable-index-conflict`](#search-core-searchable-index-conflict)                                                     | Conflict                                                            |           409 | not-retryable | operator-only | active    |       1 |
 | [`search-core/sync-identity-conflict`](#search-core-sync-identity-conflict)                                                           | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
@@ -735,24 +758,11 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`search-meilisearch/task-canceled`](#search-meilisearch-task-canceled)                                                               | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
 | [`search-meilisearch/tenant-token-not-configured`](#search-meilisearch-tenant-token-not-configured)                                   | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`search-meilisearch/terminal-upstream`](#search-meilisearch-terminal-upstream)                                                       | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`SEAT_LIMIT_EXCEEDED`](#seat-limit-exceeded)                                                                                         | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
-| [`SELF_IMPERSONATION_NOT_ALLOWED`](#self-impersonation-not-allowed)                                                                   | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
 | [`starter/application-cleanup-failed`](#starter-application-cleanup-failed)                                                           | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`starter/invalid-environment`](#starter-invalid-environment)                                                                         | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`starter/node-host-lifecycle-failed`](#starter-node-host-lifecycle-failed)                                                           | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`starter/unhandled-api-request`](#starter-unhandled-api-request)                                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`starter/user-not-found`](#starter-user-not-found)                                                                                   | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
-| [`STORAGE_DELETE_FAILED`](#storage-delete-failed)                                                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`STORAGE_FILE_NOT_FOUND`](#storage-file-not-found)                                                                                   | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
-| [`STORAGE_INVALID_KEY`](#storage-invalid-key)                                                                                         | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`STORAGE_INVALID_NODE_BODY`](#storage-invalid-node-body)                                                                             | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`STORAGE_INVALID_SIGNED_URL_EXPIRY`](#storage-invalid-signed-url-expiry)                                                             | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`STORAGE_OPERATION_ABORTED`](#storage-operation-aborted)                                                                             | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`STORAGE_R2_EMPTY_BODY`](#storage-r2-empty-body)                                                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`STORAGE_R2_MISSING_CONFIG`](#storage-r2-missing-config)                                                                             | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`STORAGE_R2_OBJECT_TOO_LARGE`](#storage-r2-object-too-large)                                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`STORAGE_R2_READINESS_FAILED`](#storage-r2-readiness-failed)                                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`STORAGE_UPLOAD_FAILED`](#storage-upload-failed)                                                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`storage-cloudflare/missing-config`](#storage-cloudflare-missing-config)                                                             | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`storage-cloudflare/retryable-upstream`](#storage-cloudflare-retryable-upstream)                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`storage-cloudflare/terminal-upstream`](#storage-cloudflare-terminal-upstream)                                                       | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
@@ -763,7 +773,6 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`storage-cloudinary/terminal-upstream`](#storage-cloudinary-terminal-upstream)                                                       | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`storage-cloudinary/validation-failed`](#storage-cloudinary-validation-failed)                                                       | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`storage/invalid-upload-intent-ttl`](#storage-invalid-upload-intent-ttl)                                                             | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`STRATEGY_UNAVAILABLE`](#strategy-unavailable)                                                                                       | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`tasks-core/duplicate-task-registration`](#tasks-core-duplicate-task-registration)                                                   | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`tasks-core/execution-already-settled`](#tasks-core-execution-already-settled)                                                       | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`tasks-core/execution-timeout`](#tasks-core-execution-timeout)                                                                       | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
@@ -773,11 +782,6 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`tasks-qstash/invalid-publish-request`](#tasks-qstash-invalid-publish-request)                                                       | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
 | [`tasks-qstash/missing-config`](#tasks-qstash-missing-config)                                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`tasks-qstash/publish-failed`](#tasks-qstash-publish-failed)                                                                         | Runtime-dependent: BadRequest, InternalServerError, TooManyRequests | 400, 429, 500 | conditional   | safe-message  | active    |       1 |
-| [`TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG`](#telemetry-auto-instrumentation-invalid-config)                                     | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
-| [`TELEMETRY_FORCE_FLUSH_UNSUPPORTED`](#telemetry-force-flush-unsupported)                                                             | NotImplemented                                                      |           501 | not-retryable | public        | active    |       1 |
-| [`TELEMETRY_RUNTIME_ERROR`](#telemetry-runtime-error)                                                                                 | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`TELEMETRY_SAMPLER_INVALID_CONFIG`](#telemetry-sampler-invalid-config)                                                               | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`TELEMETRY_SIGNAL_UNSUPPORTED`](#telemetry-signal-unsupported)                                                                       | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
 | [`telemetry-sdk-node/batch-configuration-invalid`](#telemetry-sdk-node-batch-configuration-invalid)                                   | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
 | [`telemetry-sdk-node/init-configuration-conflict`](#telemetry-sdk-node-init-configuration-conflict)                                   | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
 | [`telemetry-sdk-node/shutdown-timeout`](#telemetry-sdk-node-shutdown-timeout)                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
@@ -852,7 +856,6 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`triggers-qstash/invalid-execution-timeout`](#triggers-qstash-invalid-execution-timeout)                                             | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
 | [`triggers-qstash/invalid-sync-mode`](#triggers-qstash-invalid-sync-mode)                                                             | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
 | [`triggers-qstash/service-resolution-failed`](#triggers-qstash-service-resolution-failed)                                             | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`TRPC_ACCESS_DENIED`](#trpc-access-denied)                                                                                           | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
 | [`tx-core/after-commit-hooks-failed`](#tx-core-after-commit-hooks-failed)                                                             | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`tx-core/after-commit-outcome-required`](#tx-core-after-commit-outcome-required)                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`tx-core/after-commit-registration-closed`](#tx-core-after-commit-registration-closed)                                               | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
@@ -873,10 +876,7 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 | [`tx-drizzle/rls-execute-unsupported`](#tx-drizzle-rls-execute-unsupported)                                                           | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`tx-drizzle/savepoint-unsupported`](#tx-drizzle-savepoint-unsupported)                                                               | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`tx-drizzle/tenant-context-required`](#tx-drizzle-tenant-context-required)                                                           | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`UNAUTHORIZED`](#unauthorized)                                                                                                       | Unauthorized                                                        |           401 | not-retryable | safe-message  | active    |       1 |
 | [`warehouse-postgres/metrics-row-invalid`](#warehouse-postgres-metrics-row-invalid)                                                   | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
-| [`WEBHOOK_PROCESSING_FAILED`](#webhook-processing-failed)                                                                             | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`WEBHOOK_VALIDATION_FAILED`](#webhook-validation-failed)                                                                             | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
 | [`webhooks-core/configuration`](#webhooks-core-configuration)                                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`webhooks-core/dispatch-failed`](#webhooks-core-dispatch-failed)                                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
 | [`webhooks-core/duplicate-event`](#webhooks-core-duplicate-event)                                                                     | Conflict                                                            |           409 | conditional   | safe-message  | active    |       1 |
@@ -929,6 +929,2130 @@ This cookbook documents 896 public Croco Problem codes. The deterministic JSON r
 Sources:
 
 - `packages/transports-http/src/libs/PipelineRunner.ts:239:15` (problem-factory)
+
+<a id="admin-lifecycle-demo-invariant"></a>
+
+## `ADMIN_LIFECYCLE_DEMO_INVARIANT`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/create-croco-app/templates/admin-console/apps/console-web/src/LifecycleAutomationDemo.tsx:66:5` (problem-constructor)
+
+<a id="already-member"></a>
+
+## `ALREADY_MEMBER`
+
+- Category: `Conflict`
+- HTTP status: `409` Conflict
+- Retryability: `conditional`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The request conflicts with current state or an idempotency constraint.
+- User action: Refresh state, resolve the conflict, and retry with the updated intent.
+- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/membership-core/src/libs/problems/MembershipProblems.ts:18:5` (problem-constructor)
+
+<a id="ambiguous-pagination-parameter"></a>
+
+## `AMBIGUOUS_PAGINATION_PARAMETER`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/pagination-core/src/libs/problems.ts:6:1` (problem-class)
+
+<a id="api-key-expired"></a>
+
+## `API_KEY_EXPIRED`
+
+- Category: `Unauthorized`
+- HTTP status: `401` Unauthorized
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The request did not include valid authentication credentials.
+- User action: Sign in again or provide a valid credential.
+- Operator action: Check authentication configuration, token issuer, and clock skew.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/auth-core/src/libs/problems/AuthProblems.ts:47:1` (problem-class)
+
+<a id="api-key-not-found"></a>
+
+## `API_KEY_NOT_FOUND`
+
+- Category: `NotFound`
+- HTTP status: `404` Not Found
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The requested resource or route-visible record does not exist.
+- User action: Verify the identifier and refresh the resource list before retrying.
+- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/auth-core/src/libs/apikey/problems/ApiKeyNotFoundProblem.ts:3:1` (problem-class)
+
+<a id="api-key-revoked"></a>
+
+## `API_KEY_REVOKED`
+
+- Category: `Unauthorized`
+- HTTP status: `401` Unauthorized
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The request did not include valid authentication credentials.
+- User action: Sign in again or provide a valid credential.
+- Operator action: Check authentication configuration, token issuer, and clock skew.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/auth-core/src/libs/problems/AuthProblems.ts:55:1` (problem-class)
+
+<a id="bad-request"></a>
+
+## `BAD_REQUEST`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/access-core/src/libs/guards/AccessGuard.ts:11:5` (problem-constructor)
+
+<a id="billing-status-mapping-failed"></a>
+
+## `BILLING_STATUS_MAPPING_FAILED`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/billing-polar/src/libs/problems/BillingStatusMappingProblem.ts:3:1` (problem-class)
+
+<a id="blocked-during-impersonation"></a>
+
+## `BLOCKED_DURING_IMPERSONATION`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The authenticated caller is not allowed to perform the requested action.
+- User action: Request the required permission or choose an allowed action.
+- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:94:1` (problem-class)
+
+<a id="circuit-breaker-open"></a>
+
+## `CIRCUIT_BREAKER_OPEN`
+
+- Category: `TooManyRequests`
+- HTTP status: `429` Too Many Requests
+- Retryability: `retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The caller exceeded a rate, quota, or concurrency limit.
+- User action: Wait for the retry window or reduce request volume.
+- Operator action: Check limiter state, quota configuration, and abuse signals.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/retry-core/src/libs/errors/CircuitBreakerOpenProblem.ts:6:1` (problem-class)
+
+<a id="conflicting-pagination"></a>
+
+## `CONFLICTING_PAGINATION`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/pagination-core/src/libs/problems.ts:42:1` (problem-class)
+
+<a id="croco-changed-test-plan-invalid"></a>
+
+## `CROCO_CHANGED_TEST_PLAN_INVALID`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/testing/src/libs/changed-test-plan.mts:99:5` (problem-constructor)
+
+<a id="croco-cli-jobs-001"></a>
+
+## `CROCO_CLI_JOBS_001`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/cli/src/commands/jobs.ts:89:5` (problem-constructor)
+
+<a id="croco-cli-jobs-002"></a>
+
+## `CROCO_CLI_JOBS_002`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/cli/src/commands/jobs.ts:100:5` (problem-constructor)
+
+<a id="croco-cli-jobs-003"></a>
+
+## `CROCO_CLI_JOBS_003`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/cli/src/commands/jobs.ts:111:5` (problem-constructor)
+
+<a id="croco-cli-jobs-004"></a>
+
+## `CROCO_CLI_JOBS_004`
+
+- Category: `Conflict`
+- HTTP status: `409` Conflict
+- Retryability: `conditional`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The request conflicts with current state or an idempotency constraint.
+- User action: Refresh state, resolve the conflict, and retry with the updated intent.
+- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/cli/src/commands/jobs.ts:138:49` (problem-metadata)
+
+<a id="croco-cli-jobs-005"></a>
+
+## `CROCO_CLI_JOBS_005`
+
+- Category: `NotFound`
+- HTTP status: `404` Not Found
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The requested resource or route-visible record does not exist.
+- User action: Verify the identifier and refresh the resource list before retrying.
+- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/cli/src/commands/jobs.ts:133:63` (problem-metadata)
+
+<a id="croco-cli-ops-001"></a>
+
+## `CROCO_CLI_OPS_001`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/cli/src/libs/ops.ts:66:5` (problem-constructor)
+
+<a id="croco-cli-ops-002"></a>
+
+## `CROCO_CLI_OPS_002`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/cli/src/libs/ops.ts:55:5` (problem-constructor)
+
+<a id="croco-cli-usage-dashboard-005"></a>
+
+## `CROCO_CLI_USAGE_DASHBOARD_005`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/cli/src/commands/generateUsageDashboard.ts:30:5` (problem-constructor)
+
+<a id="croco-executable-assurance-contract-invalid"></a>
+
+## `CROCO_EXECUTABLE_ASSURANCE_CONTRACT_INVALID`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/testing/src/libs/executable-assurance.mts:245:5` (problem-constructor)
+
+<a id="croco-executable-assurance-unsatisfied"></a>
+
+## `CROCO_EXECUTABLE_ASSURANCE_UNSATISFIED`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/testing/src/libs/executable-assurance.mts:259:5` (problem-constructor)
+
+<a id="croco-http-middleware-001"></a>
+
+## `CROCO_HTTP_MIDDLEWARE_001`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `not-retryable`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: HTTP middleware returned without a Response, without shortCircuit(reason), and without calling next() exactly once.
+- User action: Retry only after the service owner ships a middleware contract fix.
+- Operator action: Update the named @croco/transports-http middleware to return next(), await next() once, return a Response, or return shortCircuit(reason) for intentional termination.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:371:12` (problem-factory)
+
+<a id="croco-http-middleware-002"></a>
+
+## `CROCO_HTTP_MIDDLEWARE_002`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `not-retryable`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: HTTP middleware attempted to resume the downstream pipeline more than once.
+- User action: Retry only after the service owner ships a middleware contract fix.
+- Operator action: Store the Response from a single next() call and reuse or transform it instead of calling next() again.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:276:15` (problem-factory)
+
+<a id="croco-http-security-001"></a>
+
+## `CROCO_HTTP_SECURITY_001`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: HTTP bootstrap validation found a generated or application app without the required security middleware set.
+- User action: Use an app build that registers security headers, CORS, body limit, and rate-limit middleware before first run.
+- Operator action: Add the missing @croco/transports-http middleware or keep securityValidation disabled only in an explicit local migration/testing fixture.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/transports-http/src/libs/CrocoApp.ts:313:11` (problem-factory)
+
+<a id="croco-http-security-002"></a>
+
+## `CROCO_HTTP_SECURITY_002`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/transports-http/src/libs/middleware/SecurityMiddlewareMarker.ts:154:11` (problem-factory)
+
+<a id="croco-saas-profile-mismatch"></a>
+
+## `CROCO_SAAS_PROFILE_MISMATCH`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The generated profile and requested profile do not match.
+- User action: Select the generated profile or correct the explicit profile override.
+- Operator action: Compare the generated manifest with the requested profile override.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:100:1` (problem-class)
+
+<a id="croco-saas-profile-runtime-unavailable"></a>
+
+## `CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE`
+
+- Category: `NotImplemented`
+- HTTP status: `501` Not Implemented
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The requested capability is not supported by this runtime or adapter.
+- User action: Use a supported capability or choose an adapter/runtime that provides it.
+- Operator action: Check runtime capability declarations and provider maturity documentation.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:113:1` (problem-class)
+
+<a id="croco-test-evidence-contract-invalid"></a>
+
+## `CROCO_TEST_EVIDENCE_CONTRACT_INVALID`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/testing/src/libs/test-evidence.mts:163:5` (problem-constructor)
+
+<a id="croco-test-evidence-fidelity-unsatisfied"></a>
+
+## `CROCO_TEST_EVIDENCE_FIDELITY_UNSATISFIED`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/testing/src/libs/test-evidence.mts:177:5` (problem-constructor)
+
+<a id="domain-auto-join-recovery-failed"></a>
+
+## `DOMAIN_AUTO_JOIN_RECOVERY_FAILED`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/invitation-core/src/libs/problems/DomainPolicyProblems.ts:29:1` (problem-class)
+
+<a id="duplicate-invitation"></a>
+
+## `DUPLICATE_INVITATION`
+
+- Category: `Conflict`
+- HTTP status: `409` Conflict
+- Retryability: `conditional`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The request conflicts with current state or an idempotency constraint.
+- User action: Refresh state, resolve the conflict, and retry with the updated intent.
+- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/invitation-core/src/libs/problems/RateLimitProblems.ts:12:1` (problem-class)
+
+<a id="duplicate-recover-handler"></a>
+
+## `DUPLICATE_RECOVER_HANDLER`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/retry-core/src/libs/errors/DuplicateRecoverHandlerProblem.ts:6:1` (problem-class)
+
+<a id="duration-parse-error"></a>
+
+## `DURATION_PARSE_ERROR`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/framework-context/src/libs/problems/ContextProblems.ts:14:1` (problem-class)
+
+<a id="entitlement-denied"></a>
+
+## `ENTITLEMENT_DENIED`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The authenticated caller is not allowed to perform the requested action.
+- User action: Request the required permission or choose an allowed action.
+- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:19:1` (problem-class)
+
+<a id="entitlement-inactive-subscription"></a>
+
+## `ENTITLEMENT_INACTIVE_SUBSCRIPTION`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The authenticated caller is not allowed to perform the requested action.
+- User action: Request the required permission or choose an allowed action.
+- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:45:1` (problem-class)
+
+<a id="entitlement-missing-plan"></a>
+
+## `ENTITLEMENT_MISSING_PLAN`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The authenticated caller is not allowed to perform the requested action.
+- User action: Request the required permission or choose an allowed action.
+- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:31:1` (problem-class)
+
+<a id="entitlement-not-found"></a>
+
+## `ENTITLEMENT_NOT_FOUND`
+
+- Category: `NotFound`
+- HTTP status: `404` Not Found
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The requested resource or route-visible record does not exist.
+- User action: Verify the identifier and refresh the resource list before retrying.
+- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:85:1` (problem-class)
+
+<a id="entitlement-provider-unavailable"></a>
+
+## `ENTITLEMENT_PROVIDER_UNAVAILABLE`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:73:1` (problem-class)
+
+<a id="entitlement-quota-exceeded"></a>
+
+## `ENTITLEMENT_QUOTA_EXCEEDED`
+
+- Category: `TooManyRequests`
+- HTTP status: `429` Too Many Requests
+- Retryability: `retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The caller exceeded a rate, quota, or concurrency limit.
+- User action: Wait for the retry window or reduce request volume.
+- Operator action: Check limiter state, quota configuration, and abuse signals.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:59:1` (problem-class)
+
+<a id="entitlement-requirement-invalid"></a>
+
+## `ENTITLEMENT_REQUIREMENT_INVALID`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:10:1` (problem-class)
+
+<a id="forbidden"></a>
+
+## `FORBIDDEN`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The authenticated caller is not allowed to perform the requested action.
+- User action: Request the required permission or choose an allowed action.
+- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/auth-core/src/libs/problems/AuthProblems.ts:12:1` (problem-class)
+
+<a id="graphql-not-found"></a>
+
+## `GRAPHQL_NOT_FOUND`
+
+- Category: `NotFound`
+- HTTP status: `404` Not Found
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The requested resource or route-visible record does not exist.
+- User action: Verify the identifier and refresh the resource list before retrying.
+- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/protocols-graphql/src/libs/errors/GraphQLProblems.ts:23:5` (problem-constructor)
+
+<a id="health-score-not-found"></a>
+
+## `HEALTH_SCORE_NOT_FOUND`
+
+- Category: `NotFound`
+- HTTP status: `404` Not Found
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The requested resource or route-visible record does not exist.
+- User action: Verify the identifier and refresh the resource list before retrying.
+- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/customer-health-core/src/libs/problems/HealthProblems.ts:24:1` (problem-class)
+
+<a id="impersonation-configuration-invalid"></a>
+
+## `IMPERSONATION_CONFIGURATION_INVALID`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:29:1` (problem-class)
+
+<a id="impersonation-identity-conflict"></a>
+
+## `IMPERSONATION_IDENTITY_CONFLICT`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The authenticated caller is not allowed to perform the requested action.
+- User action: Request the required permission or choose an allowed action.
+- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:58:1` (problem-class)
+
+<a id="impersonation-lifecycle-publication-pending"></a>
+
+## `IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: The impersonation session mutation committed, but its lifecycle event remains pending at the reported publish, acknowledge, or predecessor stage.
+- User action: Do not repeat a failed start request. An end request may be retried with the same session and authenticated actor; ask the service operator to reconcile the pending lifecycle event if it remains pending.
+- Operator action: Inspect the Problem reconciliationState and stage, call getLifecycleDiagnostics() to confirm reconciliation_required, then call publishPendingEvents() to replay and acknowledge the stored intent.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:128:1` (problem-class)
+
+<a id="impersonation-reason-required"></a>
+
+## `IMPERSONATION_REASON_REQUIRED`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:85:1` (problem-class)
+
+<a id="impersonation-session-actor-mismatch"></a>
+
+## `IMPERSONATION_SESSION_ACTOR_MISMATCH`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The authenticated caller is not allowed to perform the requested action.
+- User action: Request the required permission or choose an allowed action.
+- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:117:1` (problem-class)
+
+<a id="impersonation-session-not-found"></a>
+
+## `IMPERSONATION_SESSION_NOT_FOUND`
+
+- Category: `NotFound`
+- HTTP status: `404` Not Found
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The requested resource or route-visible record does not exist.
+- User action: Verify the identifier and refresh the resource list before retrying.
+- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:103:1` (problem-class)
+
+<a id="impersonation-target-not-found"></a>
+
+## `IMPERSONATION_TARGET_NOT_FOUND`
+
+- Category: `NotFound`
+- HTTP status: `404` Not Found
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The requested resource or route-visible record does not exist.
+- User action: Verify the identifier and refresh the resource list before retrying.
+- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:67:1` (problem-class)
+
+<a id="index-not-found"></a>
+
+## `INDEX_NOT_FOUND`
+
+- Category: `NotFound`
+- HTTP status: `404` Not Found
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The requested resource or route-visible record does not exist.
+- User action: Verify the identifier and refresh the resource list before retrying.
+- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/search-core/src/libs/problems/SearchProblems.ts:127:5` (problem-constructor)
+
+<a id="invalid-auto-join-role"></a>
+
+## `INVALID_AUTO_JOIN_ROLE`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/invitation-core/src/libs/problems/DomainPolicyProblems.ts:18:5` (problem-constructor)
+
+<a id="invalid-cursor"></a>
+
+## `INVALID_CURSOR`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/pagination-core/src/libs/problems.ts:29:1` (problem-class)
+
+<a id="invalid-invitation-expiry-duration"></a>
+
+## `INVALID_INVITATION_EXPIRY_DURATION`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:31:1` (problem-class)
+
+<a id="invalid-membership-command"></a>
+
+## `INVALID_MEMBERSHIP_COMMAND`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/membership-core/src/libs/problems/MembershipProblems.ts:104:5` (problem-constructor)
+
+<a id="invalid-pagination-direction"></a>
+
+## `INVALID_PAGINATION_DIRECTION`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/pagination-core/src/libs/problems.ts:88:1` (problem-class)
+
+<a id="invalid-pagination-limit"></a>
+
+## `INVALID_PAGINATION_LIMIT`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/pagination-core/src/libs/problems.ts:55:1` (problem-class)
+
+<a id="invalid-retry-configuration"></a>
+
+## `INVALID_RETRY_CONFIGURATION`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:51:1` (problem-class)
+
+<a id="invalid-role"></a>
+
+## `INVALID_ROLE`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/membership-core/src/libs/problems/MembershipProblems.ts:44:5` (problem-constructor)
+
+<a id="invitation-already-accepted"></a>
+
+## `INVITATION_ALREADY_ACCEPTED`
+
+- Category: `Conflict`
+- HTTP status: `409` Conflict
+- Retryability: `conditional`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The request conflicts with current state or an idempotency constraint.
+- User action: Refresh state, resolve the conflict, and retry with the updated intent.
+- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:72:1` (problem-class)
+
+<a id="invitation-creation-failed"></a>
+
+## `INVITATION_CREATION_FAILED`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:3:1` (problem-class)
+
+<a id="invitation-email-mismatch"></a>
+
+## `INVITATION_EMAIL_MISMATCH`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The authenticated caller is not allowed to perform the requested action.
+- User action: Request the required permission or choose an allowed action.
+- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:83:1` (problem-class)
+
+<a id="invitation-expired"></a>
+
+## `INVITATION_EXPIRED`
+
+- Category: `Gone`
+- HTTP status: `410` Gone
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The requested resource is no longer available through this API surface.
+- User action: Stop using the stale reference and follow the replacement flow when available.
+- Operator action: Verify lifecycle, migration, deprecation, and retention state.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:61:1` (problem-class)
+
+<a id="invitation-idempotency-conflict"></a>
+
+## `INVITATION_IDEMPOTENCY_CONFLICT`
+
+- Category: `Conflict`
+- HTTP status: `409` Conflict
+- Retryability: `conditional`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The request conflicts with current state or an idempotency constraint.
+- User action: Refresh state, resolve the conflict, and retry with the updated intent.
+- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:18:1` (problem-class)
+
+<a id="invitation-invalid-status"></a>
+
+## `INVITATION_INVALID_STATUS`
+
+- Category: `Conflict`
+- HTTP status: `409` Conflict
+- Retryability: `conditional`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The request conflicts with current state or an idempotency constraint.
+- User action: Refresh state, resolve the conflict, and retry with the updated intent.
+- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:94:1` (problem-class)
+
+<a id="invitation-not-found"></a>
+
+## `INVITATION_NOT_FOUND`
+
+- Category: `NotFound`
+- HTTP status: `404` Not Found
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The requested resource or route-visible record does not exist.
+- User action: Verify the identifier and refresh the resource list before retrying.
+- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:50:1` (problem-class)
+
+<a id="invitation-rate-limit-exceeded"></a>
+
+## `INVITATION_RATE_LIMIT_EXCEEDED`
+
+- Category: `TooManyRequests`
+- HTTP status: `429` Too Many Requests
+- Retryability: `retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The caller exceeded a rate, quota, or concurrency limit.
+- User action: Wait for the retry window or reduce request volume.
+- Operator action: Check limiter state, quota configuration, and abuse signals.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/invitation-core/src/libs/problems/RateLimitProblems.ts:3:1` (problem-class)
+
+<a id="lambda-timeout-guard"></a>
+
+## `LAMBDA_TIMEOUT_GUARD`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:38:1` (problem-class)
+
+<a id="last-owner"></a>
+
+## `LAST_OWNER`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The authenticated caller is not allowed to perform the requested action.
+- User action: Request the required permission or choose an allowed action.
+- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/membership-core/src/libs/problems/MembershipProblems.ts:31:5` (problem-constructor)
+
+<a id="last-owner-cannot-be-removed"></a>
+
+## `LAST_OWNER_CANNOT_BE_REMOVED`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: Removing this member would leave the tenant without an owner.
+- User action: Transfer ownership to another member before removing the current owner.
+- Operator action: Check the tenant membership and ownership transfer workflow; preserve at least one owner.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/membership-core/src/libs/problems/LastOwnerCannotBeRemovedProblem.ts:3:1` (problem-class)
+
+<a id="membership-constraint"></a>
+
+## `MEMBERSHIP_CONSTRAINT`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The authenticated caller is not allowed to perform the requested action.
+- User action: Request the required permission or choose an allowed action.
+- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/membership-core/src/libs/problems/MembershipConstraintProblem.ts:9:5` (problem-constructor)
+
+<a id="membership-event-publication-failed"></a>
+
+## `MEMBERSHIP_EVENT_PUBLICATION_FAILED`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/membership-core/src/libs/problems/MembershipProblems.ts:115:5` (problem-constructor)
+
+<a id="membership-idempotency-conflict"></a>
+
+## `MEMBERSHIP_IDEMPOTENCY_CONFLICT`
+
+- Category: `Conflict`
+- HTTP status: `409` Conflict
+- Retryability: `conditional`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The request conflicts with current state or an idempotency constraint.
+- User action: Refresh state, resolve the conflict, and retry with the updated intent.
+- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/membership-core/src/libs/problems/MembershipProblems.ts:92:5` (problem-constructor)
+
+<a id="membership-not-found"></a>
+
+## `MEMBERSHIP_NOT_FOUND`
+
+- Category: `NotFound`
+- HTTP status: `404` Not Found
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The requested resource or route-visible record does not exist.
+- User action: Verify the identifier and refresh the resource list before retrying.
+- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/membership-core/src/libs/problems/MembershipProblems.ts:5:5` (problem-constructor)
+
+<a id="metric-invalid-zone"></a>
+
+## `METRIC_INVALID_ZONE`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/metrics-core/src/libs/metric/MetricExpression.ts:208:11` (problem-constructor)
+
+<a id="metric-unsupported-operation"></a>
+
+## `METRIC_UNSUPPORTED_OPERATION`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/metrics-core/src/libs/metric/MetricExpression.ts:233:11` (problem-constructor)
+
+<a id="middleware-execution-error"></a>
+
+## `MIDDLEWARE_EXECUTION_ERROR`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/framework-context/src/libs/problems/MiddlewareProblems.ts:6:1` (problem-class)
+
+<a id="missing-tenant"></a>
+
+## `MISSING_TENANT`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/search-core/src/libs/problems/SearchProblems.ts:57:5` (problem-constructor)
+
+<a id="nested-impersonation-not-allowed"></a>
+
+## `NESTED_IMPERSONATION_NOT_ALLOWED`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The authenticated caller is not allowed to perform the requested action.
+- User action: Request the required permission or choose an allowed action.
+- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:76:1` (problem-class)
+
+<a id="otlp-endpoint-required"></a>
+
+## `OTLP_ENDPOINT_REQUIRED`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:18:1` (problem-class)
+
+<a id="ownership-transfer-required"></a>
+
+## `OWNERSHIP_TRANSFER_REQUIRED`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The authenticated caller is not allowed to perform the requested action.
+- User action: Request the required permission or choose an allowed action.
+- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/membership-core/src/libs/problems/MembershipProblems.ts:65:5` (problem-constructor)
+
+<a id="public-email-domain-not-allowed"></a>
+
+## `PUBLIC_EMAIL_DOMAIN_NOT_ALLOWED`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/invitation-core/src/libs/problems/DomainPolicyProblems.ts:5:5` (problem-constructor)
+
+<a id="rate-limit-exceeded"></a>
+
+## `RATE_LIMIT_EXCEEDED`
+
+- Category: `TooManyRequests`
+- HTTP status: `429` Too Many Requests
+- Retryability: `retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The caller exceeded a rate, quota, or concurrency limit.
+- User action: Wait for the retry window or reduce request volume.
+- Operator action: Check limiter state, quota configuration, and abuse signals.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/ratelimit-core/src/libs/problems/RateLimitExceededProblem.ts:15:5` (problem-constructor)
+
+<a id="rate-limit-key-builder-error"></a>
+
+## `RATE_LIMIT_KEY_BUILDER_ERROR`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts:5:1` (problem-class)
+
+<a id="rate-limit-refund-unsupported"></a>
+
+## `RATE_LIMIT_REFUND_UNSUPPORTED`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts:43:5` (problem-constructor)
+
+<a id="rate-limit-window-error"></a>
+
+## `RATE_LIMIT_WINDOW_ERROR`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts:15:1` (problem-class)
+
+<a id="resend-notification-failed"></a>
+
+## `RESEND_NOTIFICATION_FAILED`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts:113:5` (problem-constructor)
+
+<a id="retry-aborted"></a>
+
+## `RETRY_ABORTED`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/retry-core/src/libs/errors/RetryAbortedProblem.ts:6:1` (problem-class)
+
+<a id="retry-circuit-breaker-invalid-state"></a>
+
+## `RETRY_CIRCUIT_BREAKER_INVALID_STATE`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:12:1` (problem-class)
+
+<a id="retry-circuit-breaker-lock-failed"></a>
+
+## `RETRY_CIRCUIT_BREAKER_LOCK_FAILED`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:25:1` (problem-class)
+
+<a id="retry-exhausted"></a>
+
+## `RETRY_EXHAUSTED`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:6:1` (problem-class)
+
+<a id="role-hierarchy-violation"></a>
+
+## `ROLE_HIERARCHY_VIOLATION`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The authenticated caller is not allowed to perform the requested action.
+- User action: Request the required permission or choose an allowed action.
+- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/membership-core/src/libs/problems/MembershipProblems.ts:52:5` (problem-constructor)
+
+<a id="search-capability-unavailable"></a>
+
+## `SEARCH_CAPABILITY_UNAVAILABLE`
+
+- Category: `NotImplemented`
+- HTTP status: `501` Not Implemented
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The requested capability is not supported by this runtime or adapter.
+- User action: Use a supported capability or choose an adapter/runtime that provides it.
+- Operator action: Check runtime capability declarations and provider maturity documentation.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/search-core/src/libs/problems/SearchProblems.ts:135:5` (problem-constructor)
+
+<a id="search-drizzle-invalid-row"></a>
+
+## `SEARCH_DRIZZLE_INVALID_ROW`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/search-drizzle/src/libs/problems/InvalidSearchRowProblem.ts:6:1` (problem-class)
+
+<a id="seat-limit-exceeded"></a>
+
+## `SEAT_LIMIT_EXCEEDED`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The authenticated caller is not allowed to perform the requested action.
+- User action: Request the required permission or choose an allowed action.
+- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/membership-core/src/libs/problems/MembershipProblems.ts:78:5` (problem-constructor)
+
+<a id="self-impersonation-not-allowed"></a>
+
+## `SELF_IMPERSONATION_NOT_ALLOWED`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The authenticated caller is not allowed to perform the requested action.
+- User action: Request the required permission or choose an allowed action.
+- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:49:1` (problem-class)
+
+<a id="storage-delete-failed"></a>
+
+## `STORAGE_DELETE_FAILED`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/storage-core/src/libs/problems/DeleteFailedProblem.ts:8:5` (problem-constructor)
+
+<a id="storage-file-not-found"></a>
+
+## `STORAGE_FILE_NOT_FOUND`
+
+- Category: `NotFound`
+- HTTP status: `404` Not Found
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The requested resource or route-visible record does not exist.
+- User action: Verify the identifier and refresh the resource list before retrying.
+- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/storage-core/src/libs/problems/FileNotFoundProblem.ts:11:5` (problem-constructor)
+
+<a id="storage-invalid-key"></a>
+
+## `STORAGE_INVALID_KEY`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/storage-core/src/libs/problems/InvalidKeyProblem.ts:4:1` (problem-class)
+
+<a id="storage-invalid-node-body"></a>
+
+## `STORAGE_INVALID_NODE_BODY`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/storage-core/src/libs/problems/InvalidNodeStorageBodyProblem.ts:4:1` (problem-class)
+
+<a id="storage-invalid-signed-url-expiry"></a>
+
+## `STORAGE_INVALID_SIGNED_URL_EXPIRY`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/storage-core/src/libs/problems/InvalidSignedUrlExpiryProblem.ts:8:1` (problem-class)
+
+<a id="storage-operation-aborted"></a>
+
+## `STORAGE_OPERATION_ABORTED`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/storage-core/src/libs/problems/StorageOperationAbortedProblem.ts:12:5` (problem-constructor)
+
+<a id="storage-r2-empty-body"></a>
+
+## `STORAGE_R2_EMPTY_BODY`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/storage-r2/src/libs/problems/EmptyR2BodyProblem.ts:9:5` (problem-constructor)
+
+<a id="storage-r2-missing-config"></a>
+
+## `STORAGE_R2_MISSING_CONFIG`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/storage-r2/src/libs/problems/MissingR2ConfigProblem.ts:7:1` (problem-class)
+
+<a id="storage-r2-object-too-large"></a>
+
+## `STORAGE_R2_OBJECT_TOO_LARGE`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/storage-r2/src/libs/problems/R2ObjectTooLargeProblem.ts:7:1` (problem-class)
+
+<a id="storage-r2-readiness-failed"></a>
+
+## `STORAGE_R2_READINESS_FAILED`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/storage-r2/src/libs/problems/R2ReadinessProblem.ts:13:1` (problem-class)
+
+<a id="storage-upload-failed"></a>
+
+## `STORAGE_UPLOAD_FAILED`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/storage-core/src/libs/problems/UploadFailedProblem.ts:11:5` (problem-constructor)
+
+<a id="strategy-unavailable"></a>
+
+## `STRATEGY_UNAVAILABLE`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/search-core/src/libs/problems/SearchProblems.ts:114:5` (problem-constructor)
+
+<a id="telemetry-auto-instrumentation-invalid-config"></a>
+
+## `TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/telemetry-sdk-node/src/libs/problems/TelemetryAutoInstrumentationProblem.ts:6:1` (problem-class)
+
+<a id="telemetry-force-flush-unsupported"></a>
+
+## `TELEMETRY_FORCE_FLUSH_UNSUPPORTED`
+
+- Category: `NotImplemented`
+- HTTP status: `501` Not Implemented
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The requested capability is not supported by this runtime or adapter.
+- User action: Use a supported capability or choose an adapter/runtime that provides it.
+- Operator action: Check runtime capability declarations and provider maturity documentation.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:100:1` (problem-class)
+
+<a id="telemetry-runtime-error"></a>
+
+## `TELEMETRY_RUNTIME_ERROR`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:180:1` (problem-class)
+
+<a id="telemetry-sampler-invalid-config"></a>
+
+## `TELEMETRY_SAMPLER_INVALID_CONFIG`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:6:1` (problem-class)
+
+<a id="telemetry-signal-unsupported"></a>
+
+## `TELEMETRY_SIGNAL_UNSUPPORTED`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:82:1` (problem-class)
+
+<a id="trpc-access-denied"></a>
+
+## `TRPC_ACCESS_DENIED`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The authenticated caller is not allowed to perform the requested action.
+- User action: Request the required permission or choose an allowed action.
+- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/protocols-trpc/src/libs/TrpcExecutionPipeline.ts:40:15` (problem-factory)
+
+<a id="unauthorized"></a>
+
+## `UNAUTHORIZED`
+
+- Category: `Unauthorized`
+- HTTP status: `401` Unauthorized
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The request did not include valid authentication credentials.
+- User action: Sign in again or provide a valid credential.
+- Operator action: Check authentication configuration, token issuer, and clock skew.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/auth-core/src/libs/problems/AuthProblems.ts:4:1` (problem-class)
+
+<a id="webhook-processing-failed"></a>
+
+## `WEBHOOK_PROCESSING_FAILED`
+
+- Category: `InternalServerError`
+- HTTP status: `500` Internal Server Error
+- Retryability: `conditional`
+- Redaction policy: `operator-only`
+- Lifecycle: `active`
+- Cause: Croco or an upstream dependency failed after accepting the request.
+- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
+- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/billing-polar/src/libs/problems/WebhookProcessingProblem.ts:3:1` (problem-class)
+
+<a id="webhook-validation-failed"></a>
+
+## `WEBHOOK_VALIDATION_FAILED`
+
+- Category: `BadRequest`
+- HTTP status: `400` Bad Request
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The caller sent malformed input or unsupported request options.
+- User action: Correct the request input and retry after validation passes.
+- Operator action: Inspect validation details and request logs; do not retry unchanged input.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/billing-polar/src/libs/problems/WebhookValidationProblem.ts:3:1` (problem-class)
 
 <a id="access-core-forbidden"></a>
 
@@ -1001,24 +3125,6 @@ Sources:
 Sources:
 
 - `packages/access-core/src/libs/guards/AccessGuard.ts:17:5` (problem-constructor)
-
-<a id="admin-lifecycle-demo-invariant"></a>
-
-## `ADMIN_LIFECYCLE_DEMO_INVARIANT`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/create-croco-app/templates/admin-console/apps/console-web/src/LifecycleAutomationDemo.tsx:66:5` (problem-constructor)
 
 <a id="admin-console-user-not-found"></a>
 
@@ -1234,7 +3340,7 @@ Sources:
 
 Sources:
 
-- `packages/admin-generated/src/libs/generate.ts:56:5` (problem-constructor)
+- `packages/admin-generated/src/libs/generate.ts:57:5` (problem-constructor)
 
 <a id="ai-saas-model-required"></a>
 
@@ -1451,42 +3557,6 @@ Sources:
 Sources:
 
 - `packages/ai-usage/src/libs/problems/AiUsageProblems.ts:7:5` (problem-constructor)
-
-<a id="already-member"></a>
-
-## `ALREADY_MEMBER`
-
-- Category: `Conflict`
-- HTTP status: `409` Conflict
-- Retryability: `conditional`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The request conflicts with current state or an idempotency constraint.
-- User action: Refresh state, resolve the conflict, and retry with the updated intent.
-- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/membership-core/src/libs/problems/MembershipProblems.ts:18:5` (problem-constructor)
-
-<a id="ambiguous-pagination-parameter"></a>
-
-## `AMBIGUOUS_PAGINATION_PARAMETER`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/pagination-core/src/libs/problems.ts:6:1` (problem-class)
 
 <a id="analytics-core-analysis-cancelled"></a>
 
@@ -2027,60 +4097,6 @@ Sources:
 Sources:
 
 - `packages/analytics-core/src/libs/FactHistory.ts:113:22` (problem-metadata)
-
-<a id="api-key-expired"></a>
-
-## `API_KEY_EXPIRED`
-
-- Category: `Unauthorized`
-- HTTP status: `401` Unauthorized
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The request did not include valid authentication credentials.
-- User action: Sign in again or provide a valid credential.
-- Operator action: Check authentication configuration, token issuer, and clock skew.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/auth-core/src/libs/problems/AuthProblems.ts:47:1` (problem-class)
-
-<a id="api-key-not-found"></a>
-
-## `API_KEY_NOT_FOUND`
-
-- Category: `NotFound`
-- HTTP status: `404` Not Found
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The requested resource or route-visible record does not exist.
-- User action: Verify the identifier and refresh the resource list before retrying.
-- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/auth-core/src/libs/apikey/problems/ApiKeyNotFoundProblem.ts:3:1` (problem-class)
-
-<a id="api-key-revoked"></a>
-
-## `API_KEY_REVOKED`
-
-- Category: `Unauthorized`
-- HTTP status: `401` Unauthorized
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The request did not include valid authentication credentials.
-- User action: Sign in again or provide a valid credential.
-- Operator action: Check authentication configuration, token issuer, and clock skew.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/auth-core/src/libs/problems/AuthProblems.ts:55:1` (problem-class)
 
 <a id="architecture-policy-manifest-json-parse"></a>
 
@@ -2730,24 +4746,6 @@ Sources:
 
 - `packages/auth-drizzle/src/libs/problems/DrizzleTenantMappingProblems.ts:22:1` (problem-class)
 
-<a id="bad-request"></a>
-
-## `BAD_REQUEST`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/access-core/src/libs/guards/AccessGuard.ts:11:5` (problem-constructor)
-
 <a id="batch-core-duplicate-step-name"></a>
 
 ## `batch-core/duplicate-step-name`
@@ -2855,24 +4853,6 @@ Sources:
 Sources:
 
 - `packages/batch-qstash/src/libs/problems/QStashBatchProblems.ts:30:1` (problem-class)
-
-<a id="billing-status-mapping-failed"></a>
-
-## `BILLING_STATUS_MAPPING_FAILED`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/billing-polar/src/libs/problems/BillingStatusMappingProblem.ts:3:1` (problem-class)
 
 <a id="billing-polar-checkout-idempotency-conflict"></a>
 
@@ -3720,24 +5700,6 @@ Sources:
 
 - `packages/billing-core/src/libs/problems/BillingProblems.ts:66:1` (problem-class)
 
-<a id="blocked-during-impersonation"></a>
-
-## `BLOCKED_DURING_IMPERSONATION`
-
-- Category: `Forbidden`
-- HTTP status: `403` Forbidden
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The authenticated caller is not allowed to perform the requested action.
-- User action: Request the required permission or choose an allowed action.
-- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:94:1` (problem-class)
-
 <a id="cache-core-cache-key-argument-unsupported"></a>
 
 ## `cache-core/cache-key-argument-unsupported`
@@ -3900,24 +5862,6 @@ Sources:
 
 - `packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts:52:1` (problem-class)
 
-<a id="circuit-breaker-open"></a>
-
-## `CIRCUIT_BREAKER_OPEN`
-
-- Category: `TooManyRequests`
-- HTTP status: `429` Too Many Requests
-- Retryability: `retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The caller exceeded a rate, quota, or concurrency limit.
-- User action: Wait for the retry window or reduce request volume.
-- Operator action: Check limiter state, quota configuration, and abuse signals.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/retry-core/src/libs/errors/CircuitBreakerOpenProblem.ts:6:1` (problem-class)
-
 <a id="cloudflare-images-invalid-ttl"></a>
 
 ## `cloudflare/images-invalid-ttl`
@@ -4025,24 +5969,6 @@ Sources:
 Sources:
 
 - `packages/cohort-core/src/libs/evaluation.ts:25:5` (problem-constructor)
-
-<a id="conflicting-pagination"></a>
-
-## `CONFLICTING_PAGINATION`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/pagination-core/src/libs/problems.ts:42:1` (problem-class)
 
 <a id="create-croco-app-dependency-install-failed"></a>
 
@@ -4512,348 +6438,6 @@ Sources:
 
 - `packages/credits-drizzle/src/libs/problems.ts:4:1` (problem-class)
 
-<a id="croco-changed-test-plan-invalid"></a>
-
-## `CROCO_CHANGED_TEST_PLAN_INVALID`
-
-- Category: `ValidationError`
-- HTTP status: `422` Validation Error
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/testing/src/libs/changed-test-plan.mts:99:5` (problem-constructor)
-
-<a id="croco-cli-jobs-001"></a>
-
-## `CROCO_CLI_JOBS_001`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/cli/src/commands/jobs.ts:89:5` (problem-constructor)
-
-<a id="croco-cli-jobs-002"></a>
-
-## `CROCO_CLI_JOBS_002`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/cli/src/commands/jobs.ts:100:5` (problem-constructor)
-
-<a id="croco-cli-jobs-003"></a>
-
-## `CROCO_CLI_JOBS_003`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/cli/src/commands/jobs.ts:111:5` (problem-constructor)
-
-<a id="croco-cli-jobs-004"></a>
-
-## `CROCO_CLI_JOBS_004`
-
-- Category: `Conflict`
-- HTTP status: `409` Conflict
-- Retryability: `conditional`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The request conflicts with current state or an idempotency constraint.
-- User action: Refresh state, resolve the conflict, and retry with the updated intent.
-- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/cli/src/commands/jobs.ts:138:49` (problem-metadata)
-
-<a id="croco-cli-jobs-005"></a>
-
-## `CROCO_CLI_JOBS_005`
-
-- Category: `NotFound`
-- HTTP status: `404` Not Found
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The requested resource or route-visible record does not exist.
-- User action: Verify the identifier and refresh the resource list before retrying.
-- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/cli/src/commands/jobs.ts:133:63` (problem-metadata)
-
-<a id="croco-cli-ops-001"></a>
-
-## `CROCO_CLI_OPS_001`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/cli/src/libs/ops.ts:66:5` (problem-constructor)
-
-<a id="croco-cli-ops-002"></a>
-
-## `CROCO_CLI_OPS_002`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/cli/src/libs/ops.ts:55:5` (problem-constructor)
-
-<a id="croco-cli-usage-dashboard-005"></a>
-
-## `CROCO_CLI_USAGE_DASHBOARD_005`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/cli/src/commands/generateUsageDashboard.ts:30:5` (problem-constructor)
-
-<a id="croco-executable-assurance-contract-invalid"></a>
-
-## `CROCO_EXECUTABLE_ASSURANCE_CONTRACT_INVALID`
-
-- Category: `ValidationError`
-- HTTP status: `422` Validation Error
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/testing/src/libs/executable-assurance.mts:245:5` (problem-constructor)
-
-<a id="croco-executable-assurance-unsatisfied"></a>
-
-## `CROCO_EXECUTABLE_ASSURANCE_UNSATISFIED`
-
-- Category: `ValidationError`
-- HTTP status: `422` Validation Error
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/testing/src/libs/executable-assurance.mts:259:5` (problem-constructor)
-
-<a id="croco-http-middleware-001"></a>
-
-## `CROCO_HTTP_MIDDLEWARE_001`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `not-retryable`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: HTTP middleware returned without a Response, without shortCircuit(reason), and without calling next() exactly once.
-- User action: Retry only after the service owner ships a middleware contract fix.
-- Operator action: Update the named @croco/transports-http middleware to return next(), await next() once, return a Response, or return shortCircuit(reason) for intentional termination.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:371:12` (problem-factory)
-
-<a id="croco-http-middleware-002"></a>
-
-## `CROCO_HTTP_MIDDLEWARE_002`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `not-retryable`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: HTTP middleware attempted to resume the downstream pipeline more than once.
-- User action: Retry only after the service owner ships a middleware contract fix.
-- Operator action: Store the Response from a single next() call and reuse or transform it instead of calling next() again.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/transports-http/src/libs/CrocoRouteRegistrar.ts:276:15` (problem-factory)
-
-<a id="croco-http-security-001"></a>
-
-## `CROCO_HTTP_SECURITY_001`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: HTTP bootstrap validation found a generated or application app without the required security middleware set.
-- User action: Use an app build that registers security headers, CORS, body limit, and rate-limit middleware before first run.
-- Operator action: Add the missing @croco/transports-http middleware or keep securityValidation disabled only in an explicit local migration/testing fixture.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/transports-http/src/libs/CrocoApp.ts:313:11` (problem-factory)
-
-<a id="croco-http-security-002"></a>
-
-## `CROCO_HTTP_SECURITY_002`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/transports-http/src/libs/middleware/SecurityMiddlewareMarker.ts:154:11` (problem-factory)
-
-<a id="croco-saas-profile-mismatch"></a>
-
-## `CROCO_SAAS_PROFILE_MISMATCH`
-
-- Category: `ValidationError`
-- HTTP status: `422` Validation Error
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The generated profile and requested profile do not match.
-- User action: Select the generated profile or correct the explicit profile override.
-- Operator action: Compare the generated manifest with the requested profile override.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:100:1` (problem-class)
-
-<a id="croco-saas-profile-runtime-unavailable"></a>
-
-## `CROCO_SAAS_PROFILE_RUNTIME_UNAVAILABLE`
-
-- Category: `NotImplemented`
-- HTTP status: `501` Not Implemented
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The requested capability is not supported by this runtime or adapter.
-- User action: Use a supported capability or choose an adapter/runtime that provides it.
-- Operator action: Check runtime capability declarations and provider maturity documentation.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:113:1` (problem-class)
-
-<a id="croco-test-evidence-contract-invalid"></a>
-
-## `CROCO_TEST_EVIDENCE_CONTRACT_INVALID`
-
-- Category: `ValidationError`
-- HTTP status: `422` Validation Error
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/testing/src/libs/test-evidence.mts:163:5` (problem-constructor)
-
-<a id="croco-test-evidence-fidelity-unsatisfied"></a>
-
-## `CROCO_TEST_EVIDENCE_FIDELITY_UNSATISFIED`
-
-- Category: `ValidationError`
-- HTTP status: `422` Validation Error
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/testing/src/libs/test-evidence.mts:177:5` (problem-constructor)
-
 <a id="customer-health-core-event-intent-conflict"></a>
 
 ## `customer-health-core/event-intent-conflict`
@@ -5051,78 +6635,6 @@ Sources:
 Sources:
 
 - `packages/diagnostics-core/src/libs/problems/DiagnosticsProblems.ts:8:1` (problem-class)
-
-<a id="domain-auto-join-recovery-failed"></a>
-
-## `DOMAIN_AUTO_JOIN_RECOVERY_FAILED`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/invitation-core/src/libs/problems/DomainPolicyProblems.ts:29:1` (problem-class)
-
-<a id="duplicate-invitation"></a>
-
-## `DUPLICATE_INVITATION`
-
-- Category: `Conflict`
-- HTTP status: `409` Conflict
-- Retryability: `conditional`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The request conflicts with current state or an idempotency constraint.
-- User action: Refresh state, resolve the conflict, and retry with the updated intent.
-- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/invitation-core/src/libs/problems/RateLimitProblems.ts:12:1` (problem-class)
-
-<a id="duplicate-recover-handler"></a>
-
-## `DUPLICATE_RECOVER_HANDLER`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/retry-core/src/libs/errors/DuplicateRecoverHandlerProblem.ts:6:1` (problem-class)
-
-<a id="duration-parse-error"></a>
-
-## `DURATION_PARSE_ERROR`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/framework-context/src/libs/problems/ContextProblems.ts:14:1` (problem-class)
 
 <a id="engagement-core-audience-already-registered"></a>
 
@@ -5879,132 +7391,6 @@ Sources:
 Sources:
 
 - `packages/engagement-core/src/libs/EngagementService.ts:1113:5` (problem-constructor)
-
-<a id="entitlement-denied"></a>
-
-## `ENTITLEMENT_DENIED`
-
-- Category: `Forbidden`
-- HTTP status: `403` Forbidden
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The authenticated caller is not allowed to perform the requested action.
-- User action: Request the required permission or choose an allowed action.
-- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:19:1` (problem-class)
-
-<a id="entitlement-inactive-subscription"></a>
-
-## `ENTITLEMENT_INACTIVE_SUBSCRIPTION`
-
-- Category: `Forbidden`
-- HTTP status: `403` Forbidden
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The authenticated caller is not allowed to perform the requested action.
-- User action: Request the required permission or choose an allowed action.
-- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:45:1` (problem-class)
-
-<a id="entitlement-missing-plan"></a>
-
-## `ENTITLEMENT_MISSING_PLAN`
-
-- Category: `Forbidden`
-- HTTP status: `403` Forbidden
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The authenticated caller is not allowed to perform the requested action.
-- User action: Request the required permission or choose an allowed action.
-- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:31:1` (problem-class)
-
-<a id="entitlement-not-found"></a>
-
-## `ENTITLEMENT_NOT_FOUND`
-
-- Category: `NotFound`
-- HTTP status: `404` Not Found
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The requested resource or route-visible record does not exist.
-- User action: Verify the identifier and refresh the resource list before retrying.
-- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:85:1` (problem-class)
-
-<a id="entitlement-provider-unavailable"></a>
-
-## `ENTITLEMENT_PROVIDER_UNAVAILABLE`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:73:1` (problem-class)
-
-<a id="entitlement-quota-exceeded"></a>
-
-## `ENTITLEMENT_QUOTA_EXCEEDED`
-
-- Category: `TooManyRequests`
-- HTTP status: `429` Too Many Requests
-- Retryability: `retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The caller exceeded a rate, quota, or concurrency limit.
-- User action: Wait for the retry window or reduce request volume.
-- Operator action: Check limiter state, quota configuration, and abuse signals.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:59:1` (problem-class)
-
-<a id="entitlement-requirement-invalid"></a>
-
-## `ENTITLEMENT_REQUIREMENT_INVALID`
-
-- Category: `ValidationError`
-- HTTP status: `422` Validation Error
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/entitlements-core/src/libs/problems/EntitlementProblems.ts:10:1` (problem-class)
 
 <a id="entitlements-core-definition-invalid"></a>
 
@@ -7446,24 +8832,6 @@ Sources:
 
 - `packages/features-core/src/libs/problems/PolicyProblems.ts:70:24` (problem-metadata)
 
-<a id="forbidden"></a>
-
-## `FORBIDDEN`
-
-- Category: `Forbidden`
-- HTTP status: `403` Forbidden
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The authenticated caller is not allowed to perform the requested action.
-- User action: Request the required permission or choose an allowed action.
-- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/auth-core/src/libs/problems/AuthProblems.ts:12:1` (problem-class)
-
 <a id="framework-config-config-schema-not-found"></a>
 
 ## `framework-config/config-schema-not-found`
@@ -8490,42 +9858,6 @@ Sources:
 
 - `packages/governance-core/src/libs/problems/DataGovernanceProblems.ts:59:5` (problem-constructor)
 
-<a id="graphql-not-found"></a>
-
-## `GRAPHQL_NOT_FOUND`
-
-- Category: `NotFound`
-- HTTP status: `404` Not Found
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The requested resource or route-visible record does not exist.
-- User action: Verify the identifier and refresh the resource list before retrying.
-- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/protocols-graphql/src/libs/errors/GraphQLProblems.ts:23:5` (problem-constructor)
-
-<a id="health-score-not-found"></a>
-
-## `HEALTH_SCORE_NOT_FOUND`
-
-- Category: `NotFound`
-- HTTP status: `404` Not Found
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The requested resource or route-visible record does not exist.
-- User action: Verify the identifier and refresh the resource list before retrying.
-- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/customer-health-core/src/libs/problems/HealthProblems.ts:24:1` (problem-class)
-
 <a id="health-core-duplicate-indicator-id"></a>
 
 ## `health-core/duplicate-indicator-id`
@@ -8742,132 +10074,6 @@ Sources:
 
 - `packages/idempotency-core/src/libs/problems/IdempotencyProblems.ts:161:11` (problem-metadata)
 
-<a id="impersonation-configuration-invalid"></a>
-
-## `IMPERSONATION_CONFIGURATION_INVALID`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:29:1` (problem-class)
-
-<a id="impersonation-identity-conflict"></a>
-
-## `IMPERSONATION_IDENTITY_CONFLICT`
-
-- Category: `Forbidden`
-- HTTP status: `403` Forbidden
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The authenticated caller is not allowed to perform the requested action.
-- User action: Request the required permission or choose an allowed action.
-- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:58:1` (problem-class)
-
-<a id="impersonation-lifecycle-publication-pending"></a>
-
-## `IMPERSONATION_LIFECYCLE_PUBLICATION_PENDING`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: The impersonation session mutation committed, but its lifecycle event remains pending at the reported publish, acknowledge, or predecessor stage.
-- User action: Do not repeat a failed start request. An end request may be retried with the same session and authenticated actor; ask the service operator to reconcile the pending lifecycle event if it remains pending.
-- Operator action: Inspect the Problem reconciliationState and stage, call getLifecycleDiagnostics() to confirm reconciliation_required, then call publishPendingEvents() to replay and acknowledge the stored intent.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:128:1` (problem-class)
-
-<a id="impersonation-reason-required"></a>
-
-## `IMPERSONATION_REASON_REQUIRED`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:85:1` (problem-class)
-
-<a id="impersonation-session-actor-mismatch"></a>
-
-## `IMPERSONATION_SESSION_ACTOR_MISMATCH`
-
-- Category: `Forbidden`
-- HTTP status: `403` Forbidden
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The authenticated caller is not allowed to perform the requested action.
-- User action: Request the required permission or choose an allowed action.
-- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:117:1` (problem-class)
-
-<a id="impersonation-session-not-found"></a>
-
-## `IMPERSONATION_SESSION_NOT_FOUND`
-
-- Category: `NotFound`
-- HTTP status: `404` Not Found
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The requested resource or route-visible record does not exist.
-- User action: Verify the identifier and refresh the resource list before retrying.
-- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:103:1` (problem-class)
-
-<a id="impersonation-target-not-found"></a>
-
-## `IMPERSONATION_TARGET_NOT_FOUND`
-
-- Category: `NotFound`
-- HTTP status: `404` Not Found
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The requested resource or route-visible record does not exist.
-- User action: Verify the identifier and refresh the resource list before retrying.
-- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:67:1` (problem-class)
-
 <a id="impersonation-core-event-intent-conflict"></a>
 
 ## `impersonation-core/event-intent-conflict`
@@ -8904,24 +10110,6 @@ Sources:
 
 - `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:171:1` (problem-class)
 
-<a id="index-not-found"></a>
-
-## `INDEX_NOT_FOUND`
-
-- Category: `NotFound`
-- HTTP status: `404` Not Found
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The requested resource or route-visible record does not exist.
-- User action: Verify the identifier and refresh the resource list before retrying.
-- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/search-core/src/libs/problems/SearchProblems.ts:127:5` (problem-constructor)
-
 <a id="integrations-posthog-missing-config"></a>
 
 ## `integrations-posthog/missing-config`
@@ -8939,294 +10127,6 @@ Sources:
 Sources:
 
 - `packages/integrations-posthog/src/libs/problems/PostHogProblems.ts:3:1` (problem-class)
-
-<a id="invalid-auto-join-role"></a>
-
-## `INVALID_AUTO_JOIN_ROLE`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/invitation-core/src/libs/problems/DomainPolicyProblems.ts:18:5` (problem-constructor)
-
-<a id="invalid-cursor"></a>
-
-## `INVALID_CURSOR`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/pagination-core/src/libs/problems.ts:29:1` (problem-class)
-
-<a id="invalid-invitation-expiry-duration"></a>
-
-## `INVALID_INVITATION_EXPIRY_DURATION`
-
-- Category: `ValidationError`
-- HTTP status: `422` Validation Error
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:31:1` (problem-class)
-
-<a id="invalid-membership-command"></a>
-
-## `INVALID_MEMBERSHIP_COMMAND`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/membership-core/src/libs/problems/MembershipProblems.ts:104:5` (problem-constructor)
-
-<a id="invalid-pagination-direction"></a>
-
-## `INVALID_PAGINATION_DIRECTION`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/pagination-core/src/libs/problems.ts:88:1` (problem-class)
-
-<a id="invalid-pagination-limit"></a>
-
-## `INVALID_PAGINATION_LIMIT`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/pagination-core/src/libs/problems.ts:55:1` (problem-class)
-
-<a id="invalid-retry-configuration"></a>
-
-## `INVALID_RETRY_CONFIGURATION`
-
-- Category: `ValidationError`
-- HTTP status: `422` Validation Error
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:51:1` (problem-class)
-
-<a id="invalid-role"></a>
-
-## `INVALID_ROLE`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/membership-core/src/libs/problems/MembershipProblems.ts:44:5` (problem-constructor)
-
-<a id="invitation-already-accepted"></a>
-
-## `INVITATION_ALREADY_ACCEPTED`
-
-- Category: `Conflict`
-- HTTP status: `409` Conflict
-- Retryability: `conditional`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The request conflicts with current state or an idempotency constraint.
-- User action: Refresh state, resolve the conflict, and retry with the updated intent.
-- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:72:1` (problem-class)
-
-<a id="invitation-creation-failed"></a>
-
-## `INVITATION_CREATION_FAILED`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:3:1` (problem-class)
-
-<a id="invitation-email-mismatch"></a>
-
-## `INVITATION_EMAIL_MISMATCH`
-
-- Category: `Forbidden`
-- HTTP status: `403` Forbidden
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The authenticated caller is not allowed to perform the requested action.
-- User action: Request the required permission or choose an allowed action.
-- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:83:1` (problem-class)
-
-<a id="invitation-expired"></a>
-
-## `INVITATION_EXPIRED`
-
-- Category: `Gone`
-- HTTP status: `410` Gone
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The requested resource is no longer available through this API surface.
-- User action: Stop using the stale reference and follow the replacement flow when available.
-- Operator action: Verify lifecycle, migration, deprecation, and retention state.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:61:1` (problem-class)
-
-<a id="invitation-idempotency-conflict"></a>
-
-## `INVITATION_IDEMPOTENCY_CONFLICT`
-
-- Category: `Conflict`
-- HTTP status: `409` Conflict
-- Retryability: `conditional`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The request conflicts with current state or an idempotency constraint.
-- User action: Refresh state, resolve the conflict, and retry with the updated intent.
-- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:18:1` (problem-class)
-
-<a id="invitation-invalid-status"></a>
-
-## `INVITATION_INVALID_STATUS`
-
-- Category: `Conflict`
-- HTTP status: `409` Conflict
-- Retryability: `conditional`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The request conflicts with current state or an idempotency constraint.
-- User action: Refresh state, resolve the conflict, and retry with the updated intent.
-- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:94:1` (problem-class)
-
-<a id="invitation-not-found"></a>
-
-## `INVITATION_NOT_FOUND`
-
-- Category: `NotFound`
-- HTTP status: `404` Not Found
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The requested resource or route-visible record does not exist.
-- User action: Verify the identifier and refresh the resource list before retrying.
-- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/invitation-core/src/libs/problems/InvitationProblems.ts:50:1` (problem-class)
-
-<a id="invitation-rate-limit-exceeded"></a>
-
-## `INVITATION_RATE_LIMIT_EXCEEDED`
-
-- Category: `TooManyRequests`
-- HTTP status: `429` Too Many Requests
-- Retryability: `retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The caller exceeded a rate, quota, or concurrency limit.
-- User action: Wait for the retry window or reduce request volume.
-- Operator action: Check limiter state, quota configuration, and abuse signals.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/invitation-core/src/libs/problems/RateLimitProblems.ts:3:1` (problem-class)
 
 <a id="invitation-core-batch-size-exceeded"></a>
 
@@ -9299,60 +10199,6 @@ Sources:
 Sources:
 
 - `packages/admin-core/src/libs/JourneyOperations.ts:52:1` (problem-class)
-
-<a id="lambda-timeout-guard"></a>
-
-## `LAMBDA_TIMEOUT_GUARD`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:38:1` (problem-class)
-
-<a id="last-owner"></a>
-
-## `LAST_OWNER`
-
-- Category: `Forbidden`
-- HTTP status: `403` Forbidden
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The authenticated caller is not allowed to perform the requested action.
-- User action: Request the required permission or choose an allowed action.
-- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/membership-core/src/libs/problems/MembershipProblems.ts:31:5` (problem-constructor)
-
-<a id="last-owner-cannot-be-removed"></a>
-
-## `LAST_OWNER_CANNOT_BE_REMOVED`
-
-- Category: `Forbidden`
-- HTTP status: `403` Forbidden
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: Removing this member would leave the tenant without an owner.
-- User action: Transfer ownership to another member before removing the current owner.
-- Operator action: Check the tenant membership and ownership transfer workflow; preserve at least one owner.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/membership-core/src/libs/problems/LastOwnerCannotBeRemovedProblem.ts:3:1` (problem-class)
 
 <a id="lifecycle-core-action-adapter-failed"></a>
 
@@ -9677,78 +10523,6 @@ Sources:
 Sources:
 
 - `packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts:314:1` (problem-class)
-
-<a id="membership-constraint"></a>
-
-## `MEMBERSHIP_CONSTRAINT`
-
-- Category: `Forbidden`
-- HTTP status: `403` Forbidden
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The authenticated caller is not allowed to perform the requested action.
-- User action: Request the required permission or choose an allowed action.
-- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/membership-core/src/libs/problems/MembershipConstraintProblem.ts:9:5` (problem-constructor)
-
-<a id="membership-event-publication-failed"></a>
-
-## `MEMBERSHIP_EVENT_PUBLICATION_FAILED`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/membership-core/src/libs/problems/MembershipProblems.ts:115:5` (problem-constructor)
-
-<a id="membership-idempotency-conflict"></a>
-
-## `MEMBERSHIP_IDEMPOTENCY_CONFLICT`
-
-- Category: `Conflict`
-- HTTP status: `409` Conflict
-- Retryability: `conditional`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The request conflicts with current state or an idempotency constraint.
-- User action: Refresh state, resolve the conflict, and retry with the updated intent.
-- Operator action: Inspect concurrent writes, idempotency keys, and uniqueness constraints.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/membership-core/src/libs/problems/MembershipProblems.ts:92:5` (problem-constructor)
-
-<a id="membership-not-found"></a>
-
-## `MEMBERSHIP_NOT_FOUND`
-
-- Category: `NotFound`
-- HTTP status: `404` Not Found
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The requested resource or route-visible record does not exist.
-- User action: Verify the identifier and refresh the resource list before retrying.
-- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/membership-core/src/libs/problems/MembershipProblems.ts:5:5` (problem-constructor)
 
 <a id="meta-vite-server-action-invalid-content-type"></a>
 
@@ -10218,42 +10992,6 @@ Sources:
 
 - `packages/metering-core/src/libs/problems/UsageFlushConfigurationProblem.ts:5:5` (problem-constructor)
 
-<a id="metric-invalid-zone"></a>
-
-## `METRIC_INVALID_ZONE`
-
-- Category: `ValidationError`
-- HTTP status: `422` Validation Error
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/metrics-core/src/libs/metric/MetricExpression.ts:208:11` (problem-constructor)
-
-<a id="metric-unsupported-operation"></a>
-
-## `METRIC_UNSUPPORTED_OPERATION`
-
-- Category: `ValidationError`
-- HTTP status: `422` Validation Error
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/metrics-core/src/libs/metric/MetricExpression.ts:233:11` (problem-constructor)
-
 <a id="metrics-billing-invalid-order-payment-reason"></a>
 
 ## `metrics-billing/invalid-order-payment-reason`
@@ -10524,24 +11262,6 @@ Sources:
 
 - `packages/metrics-core/src/libs/SnapshotScheduler.ts:18:1` (problem-class)
 
-<a id="middleware-execution-error"></a>
-
-## `MIDDLEWARE_EXECUTION_ERROR`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/framework-context/src/libs/problems/MiddlewareProblems.ts:6:1` (problem-class)
-
 <a id="migration-runner-database-url-required"></a>
 
 ## `migration-runner/database-url-required`
@@ -10721,42 +11441,6 @@ Sources:
 Sources:
 
 - `packages/migration-runner/src/libs/problems/UnsupportedMigrationQueryResultProblem.ts:10:1` (problem-class)
-
-<a id="missing-tenant"></a>
-
-## `MISSING_TENANT`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/search-core/src/libs/problems/SearchProblems.ts:57:5` (problem-constructor)
-
-<a id="nested-impersonation-not-allowed"></a>
-
-## `NESTED_IMPERSONATION_NOT_ALLOWED`
-
-- Category: `Forbidden`
-- HTTP status: `403` Forbidden
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The authenticated caller is not allowed to perform the requested action.
-- User action: Request the required permission or choose an allowed action.
-- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:76:1` (problem-class)
 
 <a id="notifications-core-default-provider-conflict"></a>
 
@@ -11710,7 +12394,7 @@ Sources:
 
 Sources:
 
-- `packages/openapi-spec/src/libs/emitOpenAPI.ts:106:5` (problem-constructor)
+- `packages/openapi-spec/src/libs/emitOpenAPI.ts:107:5` (problem-constructor)
 
 <a id="openapi-spec-no-rest-controllers-found"></a>
 
@@ -11729,24 +12413,6 @@ Sources:
 Sources:
 
 - `packages/openapi-spec/src/libs/loadControllers.ts:19:5` (problem-constructor)
-
-<a id="otlp-endpoint-required"></a>
-
-## `OTLP_ENDPOINT_REQUIRED`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:18:1` (problem-class)
 
 <a id="outbox-core-claim-configuration-invalid"></a>
 
@@ -11837,24 +12503,6 @@ Sources:
 Sources:
 
 - `packages/outbox-core/src/libs/problems/OutboxProblems.ts:146:5` (problem-constructor)
-
-<a id="ownership-transfer-required"></a>
-
-## `OWNERSHIP_TRANSFER_REQUIRED`
-
-- Category: `Forbidden`
-- HTTP status: `403` Forbidden
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The authenticated caller is not allowed to perform the requested action.
-- User action: Request the required permission or choose an allowed action.
-- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/membership-core/src/libs/problems/MembershipProblems.ts:65:5` (problem-constructor)
 
 <a id="presentation-preset-frontend-action-manifest-duplicate-conflict"></a>
 
@@ -12358,7 +13006,7 @@ Sources:
 
 Sources:
 
-- `packages/protocol-codegen/src/libs/ControllerProject.ts:59:5` (problem-constructor)
+- `packages/protocol-codegen/src/libs/ControllerProject.ts:60:5` (problem-constructor)
 
 <a id="protocol-codegen-controller-project-state"></a>
 
@@ -12376,7 +13024,7 @@ Sources:
 
 Sources:
 
-- `packages/protocol-codegen/src/libs/ControllerProject.ts:80:5` (problem-constructor)
+- `packages/protocol-codegen/src/libs/ControllerProject.ts:81:5` (problem-constructor)
 
 <a id="protocols-core-contract-graph-diagnostics"></a>
 
@@ -12394,7 +13042,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-core/src/libs/ContractGraph.ts:161:5` (problem-constructor)
+- `packages/protocols-core/src/libs/ContractGraph.ts:162:5` (problem-constructor)
 
 <a id="protocols-graphql-auth-invalid-header-format"></a>
 
@@ -12810,96 +13458,6 @@ Sources:
 
 - `packages/protocols-trpc/src/libs/createTrpcRouter.ts:63:1` (problem-class)
 
-<a id="public-email-domain-not-allowed"></a>
-
-## `PUBLIC_EMAIL_DOMAIN_NOT_ALLOWED`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/invitation-core/src/libs/problems/DomainPolicyProblems.ts:5:5` (problem-constructor)
-
-<a id="rate-limit-exceeded"></a>
-
-## `RATE_LIMIT_EXCEEDED`
-
-- Category: `TooManyRequests`
-- HTTP status: `429` Too Many Requests
-- Retryability: `retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The caller exceeded a rate, quota, or concurrency limit.
-- User action: Wait for the retry window or reduce request volume.
-- Operator action: Check limiter state, quota configuration, and abuse signals.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/ratelimit-core/src/libs/problems/RateLimitExceededProblem.ts:15:5` (problem-constructor)
-
-<a id="rate-limit-key-builder-error"></a>
-
-## `RATE_LIMIT_KEY_BUILDER_ERROR`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts:5:1` (problem-class)
-
-<a id="rate-limit-refund-unsupported"></a>
-
-## `RATE_LIMIT_REFUND_UNSUPPORTED`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts:43:5` (problem-constructor)
-
-<a id="rate-limit-window-error"></a>
-
-## `RATE_LIMIT_WINDOW_ERROR`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/ratelimit-core/src/libs/problems/RateLimitConfigProblems.ts:15:1` (problem-class)
-
 <a id="ratelimit-core-duplicate-default-policy"></a>
 
 ## `ratelimit-core/duplicate-default-policy`
@@ -13134,96 +13692,6 @@ Sources:
 
 - `packages/repository-core/src/libs/problems/BatchLoadProblems.ts:28:1` (problem-class)
 
-<a id="resend-notification-failed"></a>
-
-## `RESEND_NOTIFICATION_FAILED`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/notifications-resend/src/libs/problems/ResendNotificationProblem.ts:113:5` (problem-constructor)
-
-<a id="retry-aborted"></a>
-
-## `RETRY_ABORTED`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/retry-core/src/libs/errors/RetryAbortedProblem.ts:6:1` (problem-class)
-
-<a id="retry-circuit-breaker-invalid-state"></a>
-
-## `RETRY_CIRCUIT_BREAKER_INVALID_STATE`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:12:1` (problem-class)
-
-<a id="retry-circuit-breaker-lock-failed"></a>
-
-## `RETRY_CIRCUIT_BREAKER_LOCK_FAILED`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:25:1` (problem-class)
-
-<a id="retry-exhausted"></a>
-
-## `RETRY_EXHAUSTED`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/retry-core/src/libs/errors/RetryExhaustedProblem.ts:6:1` (problem-class)
-
 <a id="retry-core-backoff-cancellation-unsupported"></a>
 
 ## `retry-core/backoff-cancellation-unsupported`
@@ -13278,24 +13746,6 @@ Sources:
 
 - `packages/retry-core/src/libs/errors/RetryInfrastructureProblem.ts:74:1` (problem-class)
 
-<a id="role-hierarchy-violation"></a>
-
-## `ROLE_HIERARCHY_VIOLATION`
-
-- Category: `Forbidden`
-- HTTP status: `403` Forbidden
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The authenticated caller is not allowed to perform the requested action.
-- User action: Request the required permission or choose an allowed action.
-- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/membership-core/src/libs/problems/MembershipProblems.ts:52:5` (problem-constructor)
-
 <a id="rpc-codegen-controller-typescript-diagnostics"></a>
 
 ## `rpc-codegen/controller-typescript-diagnostics`
@@ -13330,7 +13780,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:114:5` (problem-constructor)
+- `packages/rpc-codegen/src/libs/generate.ts:115:5` (problem-constructor)
 
 <a id="rpc-codegen-no-rest-controllers-found"></a>
 
@@ -13366,7 +13816,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:1950:38` (problem-metadata)
+- `packages/rpc-codegen/src/libs/generate.ts:1941:38` (problem-metadata)
 
 <a id="rpc-codegen-unsupported-form-schema"></a>
 
@@ -13384,7 +13834,7 @@ Sources:
 
 Sources:
 
-- `packages/rpc-codegen/src/libs/generate.ts:120:5` (problem-constructor)
+- `packages/rpc-codegen/src/libs/generate.ts:121:5` (problem-constructor)
 
 <a id="saas-demo-application-bootstrap-failed"></a>
 
@@ -13601,42 +14051,6 @@ Sources:
 Sources:
 
 - `packages/create-croco-app/templates/saas/apps/api-server/src/problems.ts:149:1` (problem-class)
-
-<a id="search-capability-unavailable"></a>
-
-## `SEARCH_CAPABILITY_UNAVAILABLE`
-
-- Category: `NotImplemented`
-- HTTP status: `501` Not Implemented
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The requested capability is not supported by this runtime or adapter.
-- User action: Use a supported capability or choose an adapter/runtime that provides it.
-- Operator action: Check runtime capability declarations and provider maturity documentation.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/search-core/src/libs/problems/SearchProblems.ts:135:5` (problem-constructor)
-
-<a id="search-drizzle-invalid-row"></a>
-
-## `SEARCH_DRIZZLE_INVALID_ROW`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/search-drizzle/src/libs/problems/InvalidSearchRowProblem.ts:6:1` (problem-class)
 
 <a id="search-core-operation-aborted"></a>
 
@@ -13908,42 +14322,6 @@ Sources:
 
 - `packages/search-meilisearch/src/libs/problems/MeilisearchProblems.ts:117:5` (problem-constructor)
 
-<a id="seat-limit-exceeded"></a>
-
-## `SEAT_LIMIT_EXCEEDED`
-
-- Category: `Forbidden`
-- HTTP status: `403` Forbidden
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The authenticated caller is not allowed to perform the requested action.
-- User action: Request the required permission or choose an allowed action.
-- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/membership-core/src/libs/problems/MembershipProblems.ts:78:5` (problem-constructor)
-
-<a id="self-impersonation-not-allowed"></a>
-
-## `SELF_IMPERSONATION_NOT_ALLOWED`
-
-- Category: `Forbidden`
-- HTTP status: `403` Forbidden
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The authenticated caller is not allowed to perform the requested action.
-- User action: Request the required permission or choose an allowed action.
-- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/impersonation-core/src/libs/problems/ImpersonationProblems.ts:49:1` (problem-class)
-
 <a id="starter-application-cleanup-failed"></a>
 
 ## `starter/application-cleanup-failed`
@@ -14033,204 +14411,6 @@ Sources:
 Sources:
 
 - `packages/create-croco-app/templates/spa-be-split/apps/api-server/src/problems.ts:12:1` (problem-class)
-
-<a id="storage-delete-failed"></a>
-
-## `STORAGE_DELETE_FAILED`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/storage-core/src/libs/problems/DeleteFailedProblem.ts:8:5` (problem-constructor)
-
-<a id="storage-file-not-found"></a>
-
-## `STORAGE_FILE_NOT_FOUND`
-
-- Category: `NotFound`
-- HTTP status: `404` Not Found
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The requested resource or route-visible record does not exist.
-- User action: Verify the identifier and refresh the resource list before retrying.
-- Operator action: Confirm tenant scoping, data retention, and backing-store lookup behavior.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/storage-core/src/libs/problems/FileNotFoundProblem.ts:11:5` (problem-constructor)
-
-<a id="storage-invalid-key"></a>
-
-## `STORAGE_INVALID_KEY`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/storage-core/src/libs/problems/InvalidKeyProblem.ts:4:1` (problem-class)
-
-<a id="storage-invalid-node-body"></a>
-
-## `STORAGE_INVALID_NODE_BODY`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/storage-core/src/libs/problems/InvalidNodeStorageBodyProblem.ts:4:1` (problem-class)
-
-<a id="storage-invalid-signed-url-expiry"></a>
-
-## `STORAGE_INVALID_SIGNED_URL_EXPIRY`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/storage-core/src/libs/problems/InvalidSignedUrlExpiryProblem.ts:8:1` (problem-class)
-
-<a id="storage-operation-aborted"></a>
-
-## `STORAGE_OPERATION_ABORTED`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/storage-core/src/libs/problems/StorageOperationAbortedProblem.ts:12:5` (problem-constructor)
-
-<a id="storage-r2-empty-body"></a>
-
-## `STORAGE_R2_EMPTY_BODY`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/storage-r2/src/libs/problems/EmptyR2BodyProblem.ts:9:5` (problem-constructor)
-
-<a id="storage-r2-missing-config"></a>
-
-## `STORAGE_R2_MISSING_CONFIG`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/storage-r2/src/libs/problems/MissingR2ConfigProblem.ts:7:1` (problem-class)
-
-<a id="storage-r2-object-too-large"></a>
-
-## `STORAGE_R2_OBJECT_TOO_LARGE`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/storage-r2/src/libs/problems/R2ObjectTooLargeProblem.ts:7:1` (problem-class)
-
-<a id="storage-r2-readiness-failed"></a>
-
-## `STORAGE_R2_READINESS_FAILED`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/storage-r2/src/libs/problems/R2ReadinessProblem.ts:13:1` (problem-class)
-
-<a id="storage-upload-failed"></a>
-
-## `STORAGE_UPLOAD_FAILED`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/storage-core/src/libs/problems/UploadFailedProblem.ts:11:5` (problem-constructor)
 
 <a id="storage-cloudflare-missing-config"></a>
 
@@ -14412,24 +14592,6 @@ Sources:
 
 - `packages/storage-cloudflare/src/libs/CloudflareImagesProvider.ts:595:15` (problem-factory)
 
-<a id="strategy-unavailable"></a>
-
-## `STRATEGY_UNAVAILABLE`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/search-core/src/libs/problems/SearchProblems.ts:114:5` (problem-constructor)
-
 <a id="tasks-core-duplicate-task-registration"></a>
 
 ## `tasks-core/duplicate-task-registration`
@@ -14591,96 +14753,6 @@ Sources:
 Sources:
 
 - `packages/tasks-qstash/src/libs/problems/QStashTaskProblems.ts:30:1` (problem-class)
-
-<a id="telemetry-auto-instrumentation-invalid-config"></a>
-
-## `TELEMETRY_AUTO_INSTRUMENTATION_INVALID_CONFIG`
-
-- Category: `ValidationError`
-- HTTP status: `422` Validation Error
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/telemetry-sdk-node/src/libs/problems/TelemetryAutoInstrumentationProblem.ts:6:1` (problem-class)
-
-<a id="telemetry-force-flush-unsupported"></a>
-
-## `TELEMETRY_FORCE_FLUSH_UNSUPPORTED`
-
-- Category: `NotImplemented`
-- HTTP status: `501` Not Implemented
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The requested capability is not supported by this runtime or adapter.
-- User action: Use a supported capability or choose an adapter/runtime that provides it.
-- Operator action: Check runtime capability declarations and provider maturity documentation.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:100:1` (problem-class)
-
-<a id="telemetry-runtime-error"></a>
-
-## `TELEMETRY_RUNTIME_ERROR`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:180:1` (problem-class)
-
-<a id="telemetry-sampler-invalid-config"></a>
-
-## `TELEMETRY_SAMPLER_INVALID_CONFIG`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:6:1` (problem-class)
-
-<a id="telemetry-signal-unsupported"></a>
-
-## `TELEMETRY_SIGNAL_UNSUPPORTED`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/telemetry-sdk-node/src/libs/problems/TelemetryProblems.ts:82:1` (problem-class)
 
 <a id="telemetry-sdk-node-batch-configuration-invalid"></a>
 
@@ -16014,24 +16086,6 @@ Sources:
 
 - `packages/triggers-qstash/src/libs/QStashTriggerHandler.ts:257:13` (problem-factory)
 
-<a id="trpc-access-denied"></a>
-
-## `TRPC_ACCESS_DENIED`
-
-- Category: `Forbidden`
-- HTTP status: `403` Forbidden
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The authenticated caller is not allowed to perform the requested action.
-- User action: Request the required permission or choose an allowed action.
-- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/protocols-trpc/src/libs/TrpcExecutionPipeline.ts:40:15` (problem-factory)
-
 <a id="tx-core-after-commit-hooks-failed"></a>
 
 ## `tx-core/after-commit-hooks-failed`
@@ -16392,24 +16446,6 @@ Sources:
 
 - `packages/tx-drizzle/src/libs/problems/TxDrizzleProblems.ts:25:1` (problem-class)
 
-<a id="unauthorized"></a>
-
-## `UNAUTHORIZED`
-
-- Category: `Unauthorized`
-- HTTP status: `401` Unauthorized
-- Retryability: `not-retryable`
-- Redaction policy: `safe-message`
-- Lifecycle: `active`
-- Cause: The request did not include valid authentication credentials.
-- User action: Sign in again or provide a valid credential.
-- Operator action: Check authentication configuration, token issuer, and clock skew.
-- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/auth-core/src/libs/problems/AuthProblems.ts:4:1` (problem-class)
-
 <a id="warehouse-postgres-metrics-row-invalid"></a>
 
 ## `warehouse-postgres/metrics-row-invalid`
@@ -16427,42 +16463,6 @@ Sources:
 Sources:
 
 - `packages/warehouse-postgres/src/metrics/PostgresMetricsStore.ts:345:9` (problem-factory)
-
-<a id="webhook-processing-failed"></a>
-
-## `WEBHOOK_PROCESSING_FAILED`
-
-- Category: `InternalServerError`
-- HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
-- Redaction policy: `operator-only`
-- Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
-- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/billing-polar/src/libs/problems/WebhookProcessingProblem.ts:3:1` (problem-class)
-
-<a id="webhook-validation-failed"></a>
-
-## `WEBHOOK_VALIDATION_FAILED`
-
-- Category: `BadRequest`
-- HTTP status: `400` Bad Request
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/billing-polar/src/libs/problems/WebhookValidationProblem.ts:3:1` (problem-class)
 
 <a id="webhooks-core-configuration"></a>
 

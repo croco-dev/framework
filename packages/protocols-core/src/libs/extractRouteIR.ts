@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 import "reflect-metadata";
 import { getProblemCookbookPath, ProblemCategoryMapper } from "@croco/problems-core";
 import type { Problem } from "@croco/problems-core";
@@ -229,7 +230,7 @@ function getProblemResponseStatus(response: ProblemResponseMetadata): number {
 }
 
 function compareProblemResponses(left: ProblemResponseIR, right: ProblemResponseIR): number {
-  return left.code.localeCompare(right.code) || left.status - right.status;
+  return compareStrings(left.code, right.code) || left.status - right.status;
 }
 
 function extractParams(paramsMeta: ParamMetadata[]): ParamIR[] {

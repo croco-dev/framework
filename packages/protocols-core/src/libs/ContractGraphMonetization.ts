@@ -1,3 +1,4 @@
+import { compareStrings } from "../../../../tooling/compareStrings.mjs";
 export const CONTRACT_METERED_METADATA_KEY = Symbol.for("croco:metering:metered");
 
 type ContractMonetizationDiagnostic = {
@@ -300,7 +301,7 @@ function normalizeMeter(meter: ContractMeterDescriptor): ContractMeterDescriptor
     billing: meter.billing,
     dimensions: Object.fromEntries(
       Object.entries(meter.dimensions ?? {})
-        .sort(([left], [right]) => left.localeCompare(right))
+        .sort(([left], [right]) => compareStrings(left, right))
         .map(([key, descriptor]) => [
           key,
           {
@@ -331,7 +332,7 @@ function normalizePlanVersion(plan: ContractPlanVersionDescriptor): ContractPlan
               meterBindings: binding.meterBindings
                 .map(({ meterKey, meterId }) => ({ meterKey, meterId }))
                 .sort((left, right) =>
-                  canonicalStringify(left).localeCompare(canonicalStringify(right)),
+                  compareStrings(canonicalStringify(left), canonicalStringify(right)),
                 ),
             }
           : {}),
@@ -361,7 +362,7 @@ function normalizeEntitlementSet(
           ...(rule.overagePolicy ? { overagePolicy: rule.overagePolicy } : {}),
         };
       })
-      .sort((left, right) => canonicalStringify(left).localeCompare(canonicalStringify(right))),
+      .sort((left, right) => compareStrings(canonicalStringify(left), canonicalStringify(right))),
   };
 }
 
@@ -408,11 +409,11 @@ export function getContractProviderMappingDriftInput(
           productId: binding.productId,
           priceIds: [...binding.priceIds].sort(),
           meterBindings: [...(binding.meterBindings ?? [])].sort((left, right) =>
-            left.meterKey.localeCompare(right.meterKey),
+            compareStrings(left.meterKey, right.meterKey),
           ),
         })),
     )
-    .sort((left, right) => canonicalStringify(left).localeCompare(canonicalStringify(right)));
+    .sort((left, right) => compareStrings(canonicalStringify(left), canonicalStringify(right)));
 }
 
 function validateMonetization(
@@ -623,7 +624,7 @@ function validateMonetization(
   }
 
   return diagnostics.sort((left, right) =>
-    `${left.code}:${left.message}`.localeCompare(`${right.code}:${right.message}`),
+    compareStrings(`${left.code}:${left.message}`, `${right.code}:${right.message}`),
   );
 }
 
@@ -631,7 +632,7 @@ function compareProviderBindings(
   left: ContractProviderPlanBinding,
   right: ContractProviderPlanBinding,
 ): number {
-  return canonicalStringify(left).localeCompare(canonicalStringify(right));
+  return compareStrings(canonicalStringify(left), canonicalStringify(right));
 }
 
 function validateDescriptorConflicts(
@@ -713,8 +714,8 @@ function createDiagnostic(
 function uniqueBy<T>(values: readonly T[], key: (value: T) => string): readonly T[] {
   const sorted = [...values].sort(
     (left, right) =>
-      key(left).localeCompare(key(right)) ||
-      canonicalStringify(left).localeCompare(canonicalStringify(right)),
+      compareStrings(key(left), key(right)) ||
+      compareStrings(canonicalStringify(left), canonicalStringify(right)),
   );
   const unique: T[] = [];
   let previousKey: string | undefined;
@@ -735,7 +736,7 @@ function canonicalStringify(value: unknown): string {
   }
   if (typeof value === "object" && value !== null) {
     return `{${Object.entries(value)
-      .sort(([left], [right]) => left.localeCompare(right))
+      .sort(([left], [right]) => compareStrings(left, right))
       .map(([key, nested]) => `${JSON.stringify(key)}:${canonicalStringify(nested)}`)
       .join(",")}}`;
   }
@@ -746,7 +747,7 @@ function compareDimensionValues(
   left: string | number | boolean,
   right: string | number | boolean,
 ): number {
-  return canonicalStringify(left).localeCompare(canonicalStringify(right));
+  return compareStrings(canonicalStringify(left), canonicalStringify(right));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -894,10 +895,11 @@ function subscriptionNodeId(id: string): string {
   return `subscription-mapping:${id}`;
 }
 function compareById(left: ContractMonetizationNode, right: ContractMonetizationNode): number {
-  return left.id.localeCompare(right.id);
+  return compareStrings(left.id, right.id);
 }
 function compareEdges(left: ContractMonetizationEdge, right: ContractMonetizationEdge): number {
-  return `${left.kind}:${left.from}:${left.to}:${JSON.stringify(left.metadata ?? {})}`.localeCompare(
+  return compareStrings(
+    `${left.kind}:${left.from}:${left.to}:${JSON.stringify(left.metadata ?? {})}`,
     `${right.kind}:${right.from}:${right.to}:${JSON.stringify(right.metadata ?? {})}`,
   );
 }

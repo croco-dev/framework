@@ -3382,6 +3382,12 @@
       "owner": "@croco/openapi-spec"
     },
     {
+      "path": "packages/openapi-spec/src/tests/LocaleGeneration.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/openapi-spec"
+    },
+    {
       "path": "packages/openapi-spec/src/tests/OpenApiCliGeneration.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -4007,6 +4013,12 @@
     },
     {
       "path": "packages/rpc-codegen/src/tests/ContractCheckCli.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/rpc-codegen"
+    },
+    {
+      "path": "packages/rpc-codegen/src/tests/LocaleGeneration.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/rpc-codegen"
@@ -5351,6 +5363,12 @@
     },
     {
       "path": "scripts/tests/ci-workflow.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
+      "path": "scripts/tests/compareStrings.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:ci"

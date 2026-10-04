@@ -1,5 +1,7 @@
 #!/usr/bin/env node
 
+import { compareStrings } from "../tooling/compareStrings.mjs";
+
 import { spawnSync } from "node:child_process";
 import {
   existsSync,
@@ -693,10 +695,6 @@ function minimumString(left: string | undefined, right: string | undefined): str
   return [left, right]
     .filter((value): value is string => value !== undefined)
     .sort(compareStrings)[0];
-}
-
-function compareStrings(left: string, right: string): number {
-  return left < right ? -1 : left > right ? 1 : 0;
 }
 
 function minimumAuditId(
@@ -1449,7 +1447,7 @@ function uniqueSuppressions(
         .filter((suppression) => isSuppressionId(suppression.id))
         .map((suppression) => [`${suppression.key}:${suppression.id}`, suppression]),
     ).values(),
-  ].sort((left, right) => left.id.localeCompare(right.id) || left.key.localeCompare(right.key));
+  ].sort((left, right) => compareStrings(left.id, right.id) || compareStrings(left.key, right.key));
 }
 
 function findPackageJsonFiles(root: string): readonly string[] {
