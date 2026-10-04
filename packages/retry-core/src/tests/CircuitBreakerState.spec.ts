@@ -136,6 +136,19 @@ describe("InMemoryCircuitBreakerStateStore", () => {
   });
 
   describe("메모리 경계 관리", () => {
+    it("uses the injected clock to expire idle CLOSED state while retaining OPEN and HALF_OPEN", async () => {
+      let time = 0;
+      const store = new InMemoryCircuitBreakerStateStore({ idleTtlMs: 5, now: () => time });
+      await store.incrementFailureCount("closed");
+      await store.setState("open", CircuitState.OPEN);
+      await store.setState("half-open", CircuitState.HALF_OPEN);
+
+      time = 6;
+      expect(await store.getFailureCount("closed")).toBe(0);
+      expect(await store.getState("open")).toBe(CircuitState.OPEN);
+      expect(await store.getState("half-open")).toBe(CircuitState.HALF_OPEN);
+    });
+
     it("maxEntries 압박에서는 OPEN과 HALF_OPEN을 보존하고 CLOSED 회로만 제거해야 한다", async () => {
       const store = new InMemoryCircuitBreakerStateStore({ maxEntries: 2, idleTtlMs: 60_000 });
 

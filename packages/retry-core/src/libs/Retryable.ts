@@ -58,16 +58,20 @@ class RetryableCircuitBreakerRegistry {
   private readonly entries = new Map<string, CircuitBreakerRegistryEntry>();
   private readonly stateStore: CircuitBreakerStateStore;
 
-  constructor(private readonly config: CircuitBreakerConfig) {
+  constructor(
+    private readonly config: CircuitBreakerConfig,
+    private readonly now: () => number,
+  ) {
     this.stateStore =
       config.stateStore ??
       new InMemoryCircuitBreakerStateStore({
         idleTtlMs: resolveDefaultStateStoreIdleTtl(config.timeout),
+        now: this.now,
       });
   }
 
   acquire(circuitId: string): CircuitBreakerRegistryEntry {
-    const now = Date.now();
+    const now = this.now();
     this.prune(now);
 
     let entry = this.entries.get(circuitId);
@@ -77,6 +81,7 @@ class RetryableCircuitBreakerRegistry {
         activeCalls: 0,
         breaker: new CircuitBreaker({
           circuitId,
+          now: this.now,
           failureThreshold: this.config.failureThreshold,
           stateStore: this.stateStore,
           ...(this.config.recordFailure === undefined
@@ -99,7 +104,7 @@ class RetryableCircuitBreakerRegistry {
 
   release(entry: CircuitBreakerRegistryEntry): void {
     entry.activeCalls = Math.max(0, entry.activeCalls - 1);
-    entry.lastAccessedAt = Date.now();
+    entry.lastAccessedAt = this.now();
     this.prune(entry.lastAccessedAt);
     this.trimOverflow();
   }
@@ -186,6 +191,9 @@ export interface RetryableOptions extends RetryPolicyOptions {
 
   /** Resolve a caller cancellation signal for each invocation */
   signalResolver?: (context: RetrySignalResolverContext) => AbortSignal | undefined;
+
+  /** Millisecond clock for circuit transitions and registry/default state-store expiry (default: Date.now). */
+  now?: () => number;
 
   /** CircuitBreaker options */
   circuitBreaker?: CircuitBreakerConfig;
@@ -293,7 +301,10 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
       (_target as { constructor?: { name?: string } }).constructor?.name ?? "UnknownTarget";
     const defaultCircuitId = `${targetName}.${methodName}`;
     const circuitBreakerRegistry = options.circuitBreaker
-      ? new RetryableCircuitBreakerRegistry(options.circuitBreaker)
+      ? new RetryableCircuitBreakerRegistry(
+          options.circuitBreaker,
+          options.now ?? (() => Date.now()),
+        )
       : undefined;
 
     descriptor.value = async function (this: unknown, ...args: unknown[]): Promise<unknown> {
