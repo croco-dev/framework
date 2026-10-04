@@ -160,7 +160,7 @@ describe("wrapped route parameter schemas", () => {
 
 describe("route contract Zod major boundary", () => {
   it("accepts Zod 3 body and response from another module instance", () => {
-    const cjsZod: typeof import("zod") = createRequire(import.meta.url)("zod");
+    const cjsZod = createRequire(import.meta.url)("zod") as { readonly z: typeof z };
     const schema = cjsZod.z.object({ id: cjsZod.z.string() });
     expect(
       isRouteContractSpec({
