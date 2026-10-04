@@ -132,7 +132,9 @@ describe("ErrorHandler", () => {
 
         expect(response.status).toBe(status);
         expect(response.headers.get("content-type")).toBe("application/problem+json");
-        expect(context?.res.headers["content-type"]).toBe("application/problem+json");
+        expect(context?.res.headers["content-type"]).toBe(
+          error instanceof Problem ? "application/problem+json" : undefined,
+        );
         expect(await response.json()).toEqual(body);
       },
     );
