@@ -29594,6 +29594,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "getContractFieldSchema",
+              "exportKind": "named",
+              "source": "./libs/SchemaDescriptor",
+              "declarationKind": "function"
+            },
+            {
               "name": "getContractGraphConsumerRouteCoverageDiagnostics",
               "exportKind": "named",
               "source": "./libs/ContractGraphConsumerCoverage",
