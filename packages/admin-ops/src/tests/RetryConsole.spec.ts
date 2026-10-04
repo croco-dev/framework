@@ -826,6 +826,80 @@ describe("RetryConsole", () => {
     });
   });
 
+  it.each([
+    ["indeterminate", false],
+    ["indeterminate", true],
+    ["skipped", false],
+    ["skipped", true],
+  ] as const)(
+    "inspects a %s lifecycle run with provider configured: %s without invoking recovery",
+    async (status, hasProvider) => {
+      const run = failedLifecycleRun({ status });
+      const recover = vi.fn(async () => ({ providerResult: { accepted: true } }));
+      const console = createRetryConsole([
+        createLifecycleRetryConsoleSource({
+          store: new MemoryLifecycleRunStore([run]),
+          recover: hasProvider ? recover : undefined,
+        }),
+      ]);
+      const item = await console.show(run.id);
+
+      expect(item?.recoveryActions[0]).toMatchObject({ kind: "inspect", allowed: true });
+      const result = await console.recover({
+        itemId: run.id,
+        actionId: "inspect",
+        permission: {
+          granted: true,
+          descriptor: permission("inspect", "lifecycle", run.id),
+        },
+        audit,
+      });
+
+      expect(result.status).toBe("succeeded");
+      if (result.status !== "succeeded") {
+        throw new Error("Expected successful lifecycle inspection");
+      }
+      expect(result.item).toEqual(item);
+      expect(result.providerResult).toBeUndefined();
+      expect(recover).not.toHaveBeenCalled();
+    },
+  );
+
+  it("replays a failed lifecycle run through the configured provider", async () => {
+    const run = failedLifecycleRun();
+    const providerResult = { accepted: true };
+    const recover = vi.fn(async () => ({ providerResult }));
+    const console = createRetryConsole([
+      createLifecycleRetryConsoleSource({
+        store: new MemoryLifecycleRunStore([run]),
+        recover,
+      }),
+    ]);
+    const request = lifecycleRecoveryInput();
+
+    const result = await console.recover(request);
+
+    expect(result.status).toBe("succeeded");
+    if (result.status !== "succeeded") {
+      throw new Error("Expected successful lifecycle replay");
+    }
+    expect(result.providerResult).toBe(providerResult);
+    expect(recover).toHaveBeenCalledExactlyOnceWith(run, request);
+  });
+
+  it("denies lifecycle replay without a recovery provider", async () => {
+    const run = failedLifecycleRun();
+    const console = createRetryConsole([
+      createLifecycleRetryConsoleSource({ store: new MemoryLifecycleRunStore([run]) }),
+    ]);
+
+    expect((await console.show(run.id))?.recoveryActions[0]).toMatchObject({
+      kind: "replay",
+      allowed: false,
+    });
+    expect((await console.recover(lifecycleRecoveryInput())).status).toBe("denied");
+  });
+
   it("deduplicates concurrent lifecycle recovery by audit idempotency key", async () => {
     let releaseRecovery: () => void = () => {
       throw new Error("Recovery started before its release gate was initialized");
