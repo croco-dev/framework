@@ -5,7 +5,7 @@ prev: false
 title: "defineRuntimeEnv"
 ---
 
-> **defineRuntimeEnv**\<`TPresets`\>(`__namedParameters`): [`RuntimeEnv`](/api/framework-config/src/type-aliases/runtimeenv/)\<`TPresets`\>
+> **defineRuntimeEnv**\<`TPresets`, `TPrefix`\>(`__namedParameters`): [`RuntimeEnv`](/api/framework-config/src/type-aliases/runtimeenv/)\<`TPresets`\>
 
 ## Type Parameters
 
@@ -13,11 +13,15 @@ title: "defineRuntimeEnv"
 
 `TPresets` _extends_ readonly [`RuntimeEnvPreset`](/api/framework-config/src/type-aliases/runtimeenvpreset/)[]
 
+### TPrefix
+
+`TPrefix` _extends_ `string` = `"NEXT_PUBLIC_"`
+
 ## Parameters
 
 ### \_\_namedParameters
 
-[`DefineRuntimeEnvOptions`](/api/framework-config/src/type-aliases/defineruntimeenvoptions/)\<`TPresets`\>
+[`DefineRuntimeEnvOptions`](/api/framework-config/src/type-aliases/defineruntimeenvoptions/)\<`TPresets`, `TPrefix`\>
 
 ## Returns
 
