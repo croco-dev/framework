@@ -1,5 +1,6 @@
 import type { HttpContext as ProtocolHttpContext } from "@croco/protocols-rest";
 import type { Context as HonoContext } from "hono";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { CrocoHttpContext, CrocoRequest, CrocoResponse } from "./types";
 
 /**
@@ -81,9 +82,14 @@ export class HttpContext implements CrocoHttpContext, ProtocolHttpContext {
   jsonResponse<T>(body: T, status: number = 200): Response {
     this.res.status = status;
     const serializedBody = JSON.stringify(body);
-    this.bufferedResponseBody =
-      typeof serializedBody === "string" ? toBufferedBytes(serializedBody) : null;
-    return this.raw.json(body, status as Parameters<HonoContext["json"]>[1]);
+    if (typeof serializedBody !== "string") {
+      this.bufferedResponseBody = null;
+      return this.raw.json(body, status as Parameters<HonoContext["json"]>[1]);
+    }
+    this.bufferedResponseBody = toBufferedBytes(serializedBody);
+    return this.raw.newResponse(serializedBody, status as ContentfulStatusCode, {
+      "Content-Type": "application/json",
+    });
   }
 
   redirect(url: string, status: number = 302): Response {

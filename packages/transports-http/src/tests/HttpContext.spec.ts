@@ -17,6 +17,12 @@ describe("HttpContext", () => {
       },
       text: vi.fn(),
       json: vi.fn(),
+      newResponse: vi.fn(
+        (data: BodyInit | null, status?: number | ResponseInit, headers?: HeadersInit) =>
+          typeof status === "number"
+            ? new Response(data, { status, headers })
+            : new Response(data, status),
+      ),
       redirect: vi.fn(),
     };
 
@@ -44,6 +50,12 @@ describe("HttpContext", () => {
       },
       text: vi.fn(),
       json: vi.fn(),
+      newResponse: vi.fn(
+        (data: BodyInit | null, status?: number | ResponseInit, headers?: HeadersInit) =>
+          typeof status === "number"
+            ? new Response(data, { status, headers })
+            : new Response(data, status),
+      ),
       redirect: vi.fn(),
     };
 
@@ -67,6 +79,12 @@ describe("HttpContext", () => {
       },
       text: vi.fn(),
       json: vi.fn(),
+      newResponse: vi.fn(
+        (data: BodyInit | null, status?: number | ResponseInit, headers?: HeadersInit) =>
+          typeof status === "number"
+            ? new Response(data, { status, headers })
+            : new Response(data, status),
+      ),
       redirect: vi.fn(),
     };
 
@@ -89,6 +107,12 @@ describe("HttpContext", () => {
       },
       text: vi.fn(),
       json: vi.fn(),
+      newResponse: vi.fn(
+        (data: BodyInit | null, status?: number | ResponseInit, headers?: HeadersInit) =>
+          typeof status === "number"
+            ? new Response(data, { status, headers })
+            : new Response(data, status),
+      ),
       redirect: vi.fn(),
     };
 
@@ -110,6 +134,12 @@ describe("HttpContext", () => {
       },
       text: vi.fn(),
       json: vi.fn(),
+      newResponse: vi.fn(
+        (data: BodyInit | null, status?: number | ResponseInit, headers?: HeadersInit) =>
+          typeof status === "number"
+            ? new Response(data, { status, headers })
+            : new Response(data, status),
+      ),
       redirect: vi.fn(),
     };
 
@@ -117,5 +147,74 @@ describe("HttpContext", () => {
 
     ctx.set("user", { id: 1, name: "test" });
     expect(ctx.get("user")).toEqual({ id: 1, name: "test" });
+  });
+
+  it("should serialize JSON responses exactly once", () => {
+    const stringify = vi.spyOn(JSON, "stringify");
+    try {
+      const mockCtx = {
+        req: {
+          method: "GET",
+          url: "https://example.com/test",
+          raw: { headers: new Headers() },
+          param: vi.fn(),
+          query: vi.fn(),
+          header: vi.fn(),
+          json: vi.fn(),
+        },
+        text: vi.fn(),
+        json: vi.fn(),
+        newResponse: vi.fn(
+          (data: BodyInit | null, status?: number | ResponseInit, headers?: HeadersInit) =>
+            typeof status === "number"
+              ? new Response(data, { status, headers })
+              : new Response(data, status),
+        ),
+        redirect: vi.fn(),
+      };
+
+      const ctx = new HttpContext(mockCtx as unknown as HonoContext);
+      const body = { payload: "large response body" };
+
+      stringify.mockClear();
+      ctx.jsonResponse(body, 201);
+
+      expect(stringify).toHaveBeenCalledTimes(1);
+      expect(mockCtx.json).not.toHaveBeenCalled();
+      expect(mockCtx.text).not.toHaveBeenCalled();
+      expect(ctx.getBufferedResponseBody()).toEqual(new TextEncoder().encode(JSON.stringify(body)));
+    } finally {
+      stringify.mockRestore();
+    }
+  });
+
+  it("should keep JSON response content type and status", async () => {
+    const mockCtx = {
+      req: {
+        method: "GET",
+        url: "https://example.com/test",
+        raw: { headers: new Headers() },
+        param: vi.fn().mockReturnValue({}),
+        query: vi.fn(),
+        header: vi.fn(),
+        json: vi.fn(),
+      },
+      text: vi.fn(),
+      json: vi.fn(),
+      newResponse: vi.fn(
+        (data: BodyInit | null, status?: number | ResponseInit, headers?: HeadersInit) =>
+          typeof status === "number"
+            ? new Response(data, { status, headers })
+            : new Response(data, status),
+      ),
+      redirect: vi.fn(),
+    };
+
+    const ctx = new HttpContext(mockCtx as unknown as HonoContext);
+    const response = ctx.jsonResponse({ ok: true }, 201);
+
+    expect(response.status).toBe(201);
+    expect(response.headers.get("content-type")).toBe("application/json");
+    await expect(response.json()).resolves.toEqual({ ok: true });
   });
 });
