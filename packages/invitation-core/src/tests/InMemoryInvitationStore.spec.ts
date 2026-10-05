@@ -111,4 +111,26 @@ describe("InMemoryInvitationStore compareAndSetStatus", () => {
     expect(result?.status).toBe("accepted");
     expect(result?.acceptedAt).toEqual(acceptedAt);
   });
+
+  it("should revoke a pending invitation with the supplied revocation time", async () => {
+    await store.save(createInvitation());
+    const revokedAt = new Date("2026-01-05T00:00:00.000Z");
+
+    const result = await store.compareAndSetStatus("tenant-1", "inv-1", "pending", "revoked", {
+      revokedAt,
+    });
+
+    expect(result?.status).toBe("revoked");
+    expect(result?.revokedAt).toEqual(revokedAt);
+    expect(result?.acceptedAt).toBeNull();
+  });
+
+  it("should default revocation time to the transition time", async () => {
+    await store.save(createInvitation());
+
+    const result = await store.compareAndSetStatus("tenant-1", "inv-1", "pending", "revoked");
+
+    expect(result?.status).toBe("revoked");
+    expect(result?.revokedAt).toEqual(new Date("2026-01-01T00:00:00.000Z"));
+  });
 });

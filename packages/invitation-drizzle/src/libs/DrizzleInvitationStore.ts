@@ -6,6 +6,7 @@ import {
   type InvitationCreationPhaseStatus,
   InvitationIdempotencyConflictProblem,
   type InvitationStatus,
+  type InvitationStatusTransitionMeta,
   InvitationStore,
 } from "@croco/invitation-core";
 // Runtime value required for constructor metadata.
@@ -498,75 +499,77 @@ export class DrizzleInvitationStore extends InvitationStore {
     id: string,
     expected: InvitationStatus,
     desired: InvitationStatus,
-    meta: { acceptedAt?: Date; rejectedAt?: Date } = {},
+    meta: InvitationStatusTransitionMeta = {},
   ): Promise<Invitation | null> {
-    if (desired === "accepted") {
-      return this.txManager.run(async () => {
-        const client = this.txManager.getClient() ?? this.db;
-        const locked = await client
-          .select({ id: invitations.id })
-          .from(invitations)
-          .where(
-            and(
-              eq(invitations.tenantId, tenantId),
-              eq(invitations.id, id),
-              eq(invitations.status, expected),
-            ),
-          )
-          .for("update");
-        if (locked.length === 0) {
-          return null;
-        }
+    if (desired !== "accepted") {
+      const revokedAt = desired === "revoked" ? (meta.revokedAt ?? new Date()) : meta.revokedAt;
+      const client = this.txManager.getClient() ?? this.db;
+      const result = (await client
+        .update(invitations)
+        .set({
+          status: desired,
+          acceptedAt: meta.acceptedAt,
+          revokedAt,
+        })
+        .where(
+          and(
+            eq(invitations.tenantId, tenantId),
+            eq(invitations.id, id),
+            eq(invitations.status, expected),
+          ),
+        )
+        .returning()) as InvitationRow[];
 
-        const databaseAcceptedAt = sql<Date>`statement_timestamp() AT TIME ZONE 'UTC'`;
-        const acceptedAt = meta.acceptedAt
-          ? sql<Date>`greatest(${meta.acceptedAt.toISOString()}::timestamptz AT TIME ZONE 'UTC', ${databaseAcceptedAt})`
-          : databaseAcceptedAt;
-        const result = (await client
-          .update(invitations)
-          .set({
-            status: desired,
-            acceptedAt,
-          })
-          .where(
-            and(
-              eq(invitations.tenantId, tenantId),
-              eq(invitations.id, id),
-              eq(invitations.status, expected),
-              gt(invitations.expiresAt, acceptedAt),
-            ),
-          )
-          .returning()) as InvitationRow[];
+      if (result.length === 0) {
+        return null;
+      }
 
-        if (result.length === 0) {
-          return null;
-        }
-
-        return this.mapToInvitation(result[0]);
-      });
+      return this.mapToInvitation(result[0]);
     }
 
-    const client = this.txManager.getClient() ?? this.db;
-    const result = (await client
-      .update(invitations)
-      .set({
-        status: desired,
-        acceptedAt: meta.acceptedAt,
-      })
-      .where(
-        and(
-          eq(invitations.tenantId, tenantId),
-          eq(invitations.id, id),
-          eq(invitations.status, expected),
-        ),
-      )
-      .returning()) as InvitationRow[];
+    return this.txManager.run(async () => {
+      const client = this.txManager.getClient() ?? this.db;
+      const locked = await client
+        .select({ id: invitations.id })
+        .from(invitations)
+        .where(
+          and(
+            eq(invitations.tenantId, tenantId),
+            eq(invitations.id, id),
+            eq(invitations.status, expected),
+          ),
+        )
+        .for("update");
+      if (locked.length === 0) {
+        return null;
+      }
 
-    if (result.length === 0) {
-      return null;
-    }
+      const databaseAcceptedAt = sql<Date>`statement_timestamp() AT TIME ZONE 'UTC'`;
+      const acceptedAt = meta.acceptedAt
+        ? sql<Date>`greatest(${meta.acceptedAt.toISOString()}::timestamptz AT TIME ZONE 'UTC', ${databaseAcceptedAt})`
+        : databaseAcceptedAt;
+      const result = (await client
+        .update(invitations)
+        .set({
+          status: desired,
+          acceptedAt,
+        })
+        .where(
+          and(
+            eq(invitations.tenantId, tenantId),
+            eq(invitations.id, id),
+            eq(invitations.status, expected),
+            gt(invitations.expiresAt, acceptedAt),
+          ),
+        )
+        .returning()) as InvitationRow[];
 
-    return this.mapToInvitation(result[0]);
+      if (result.length === 0) {
+        return null;
+      }
+
+      return this.mapToInvitation(result[0]);
+    });
   }
 
   /**

@@ -356,10 +356,27 @@ export class InvitationManager {
       return invitation;
     }
 
-    const revoked = await this.updateInvitation(invitation, {
-      status: "revoked",
-      revokedAt: new Date(),
-    });
+    if (invitation.status !== "pending") {
+      throw new InvitationInvalidStatusProblem(invitation.id, invitation.status, "revoke");
+    }
+
+    const revoked = await this.store.compareAndSetStatus(
+      invitation.tenantId,
+      invitation.id,
+      "pending",
+      "revoked",
+      { revokedAt: new Date() },
+    );
+    if (!revoked) {
+      const current = await this.store.findById(invitation.id);
+      if (!current) {
+        throw new InvitationNotFoundProblem("");
+      }
+      if (current.status === "revoked") {
+        return current;
+      }
+      throw new InvitationInvalidStatusProblem(current.id, current.status, "revoke");
+    }
 
     await this.publishSafely(
       new InvitationRevokedEvent({

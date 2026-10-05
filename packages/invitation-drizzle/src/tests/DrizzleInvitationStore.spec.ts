@@ -435,4 +435,33 @@ describe("DrizzleInvitationStore", () => {
       mockDb.update.mock.invocationCallOrder[0],
     );
   });
+
+  it("should write a supplied revocation time through conditional revoke", async () => {
+    const revoked = createInvitation({ status: "revoked" });
+    const update = createUpdateChain([revoked]);
+    mockDb.update.mockReturnValue(update);
+    const revokedAt = new Date("2026-01-05T00:00:00.000Z");
+
+    const result = await store.compareAndSetStatus("tenant-1", "inv-1", "pending", "revoked", {
+      revokedAt,
+    });
+
+    expect(result?.status).toBe("revoked");
+    const setCall = update.set.mock.calls[0]?.[0] as { revokedAt?: Date } | undefined;
+    expect(setCall?.revokedAt).toEqual(revokedAt);
+    const whereCall = update.where.mock.calls[0];
+    const query = new PgDialect().sqlToQuery(whereCall?.[0] as SQL);
+    expect(query.params).toEqual(["tenant-1", "inv-1", "pending"]);
+  });
+
+  it("should default revocation time when it is omitted", async () => {
+    const revoked = createInvitation({ status: "revoked" });
+    const update = createUpdateChain([revoked]);
+    mockDb.update.mockReturnValue(update);
+
+    await store.compareAndSetStatus("tenant-1", "inv-1", "pending", "revoked");
+
+    const setCall = update.set.mock.calls[0]?.[0] as { revokedAt?: Date } | undefined;
+    expect(setCall?.revokedAt).toBeInstanceOf(Date);
+  });
 });
