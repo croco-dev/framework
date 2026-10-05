@@ -152,7 +152,7 @@ the React explorer displays these same results and saves only the viewed source 
 `serializePolicyReplayReport(report)` and `importPolicyReplayReport(json)` round-trip the
 snapshot, with import recomputing the result and rejecting tampering.
 
-```ts
+```ts typecheck
 import { createPolicyReplayReport, validatePolicyReplayInput } from "@croco/metrics-core";
 
 const input = validatePolicyReplayInput({
