@@ -9,13 +9,17 @@ title: "SagaRunner"
 
 ### Constructor
 
-> **new SagaRunner**(`store?`): `SagaRunner`
+> **new SagaRunner**(`store?`, `clock?`): `SagaRunner`
 
 #### Parameters
 
 ##### store?
 
-[`SagaStore`](/api/workflow-core/src/interfaces/sagastore/) = `...`
+[`SagaStore`](/api/workflow-core/src/interfaces/sagastore/)
+
+##### clock?
+
+() => `Date`
 
 #### Returns
 

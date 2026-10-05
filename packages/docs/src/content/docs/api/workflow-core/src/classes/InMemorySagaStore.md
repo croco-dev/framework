@@ -13,7 +13,13 @@ title: "InMemorySagaStore"
 
 ### Constructor
 
-> **new InMemorySagaStore**(): `InMemorySagaStore`
+> **new InMemorySagaStore**(`clock?`): `InMemorySagaStore`
+
+#### Parameters
+
+##### clock?
+
+() => `Date`
 
 #### Returns
 
