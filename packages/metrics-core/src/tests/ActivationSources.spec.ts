@@ -168,6 +168,79 @@ describe("activation shared sources", () => {
       calculateActivationSource(source(), binding, definition, AbortSignal.abort()),
     ).rejects.toThrow();
   });
+  it("preserves cancellation reasons before consuming source or import bytes", async () => {
+    const reason = { code: "caller-cancelled" };
+    const signal = AbortSignal.abort(reason);
+    const next = vi.fn(async () => ({ done: true as const, value: undefined }));
+    const unconsumed = { [Symbol.asyncIterator]: () => ({ next }) };
+    await expect(calculateActivationSource(unconsumed, binding, definition, signal)).rejects.toBe(
+      reason,
+    );
+    await expect(
+      importActivationSource(unconsumed, schema, binding, definition, signal),
+    ).rejects.toBe(reason);
+    expect(next).not.toHaveBeenCalled();
+  });
+  it("preserves cancellation during source iteration", async () => {
+    const controller = new AbortController();
+    const reason = new DOMException("Read deadline exceeded", "TimeoutError");
+    async function* interrupted() {
+      await Promise.resolve();
+      controller.abort(reason);
+      yield flat;
+    }
+    await expect(
+      calculateActivationSource(interrupted(), binding, definition, controller.signal),
+    ).rejects.toBe(reason);
+  });
+  it.each(["before", "during"] as const)(
+    "preserves warehouse cancellation %s reading a page",
+    async (when) => {
+      const controller = new AbortController();
+      const reason = { code: "warehouse-cancelled" };
+      if (when === "before") controller.abort(reason);
+      const read = vi.fn<WarehouseReader["read"]>(async () => {
+        await Promise.resolve();
+        controller.abort(reason);
+        return page();
+      });
+      const iterator = readActivationWarehouse(
+        { read },
+        { ...request, signal: controller.signal },
+        limits,
+      )[Symbol.asyncIterator]();
+      await expect(iterator.next()).rejects.toBe(reason);
+      expect(read).toHaveBeenCalledTimes(when === "before" ? 0 : 1);
+    },
+  );
+  it.each(["before", "during"] as const)(
+    "preserves executor cancellation %s awaiting source",
+    async (when) => {
+      const controller = new AbortController();
+      const reason = new DOMException("Query deadline exceeded", "TimeoutError");
+      const sourceRead = vi.fn(async () => {
+        await Promise.resolve();
+        controller.abort(reason);
+        return { rows: [normalizeActivationRow(flat, binding, definition)], quality };
+      });
+      const registration = await registerActivationQuery({
+        definition,
+        source: sourceRead,
+        requiredFields: [],
+        limits: budget,
+      });
+      if (when === "before") controller.abort(reason);
+      await expect(
+        registration.query.readExecutor({
+          input: null,
+          window: { from: flat.anchor, to: "2026-01-02T00:00:00.000Z" },
+          context,
+          signal: controller.signal,
+        }),
+      ).rejects.toBe(reason);
+      expect(sourceRead).toHaveBeenCalledTimes(when === "before" ? 0 : 1);
+    },
+  );
   it("keeps one snapshot through pages and feeds the actual calculator", async () => {
     const read = vi
       .fn<WarehouseReader["read"]>()

@@ -236,14 +236,15 @@ export async function calculateActivationSource(
   definition: ActivationDefinition,
   signal?: AbortSignal,
 ): Promise<{ readonly report: ActivationReport; readonly rows: readonly ActivationRow[] }> {
+  signal?.throwIfAborted();
   const rows: ActivationRow[] = [];
   for await (const row of source) {
-    if (signal?.aborted) throw new ActivationValidationProblem("Activation read cancelled");
+    signal?.throwIfAborted();
     if (rows.length >= definition.maxRows)
       throw new ActivationValidationProblem("Activation row budget exceeded");
     rows.push(normalizeActivationRow(row, binding, definition));
   }
-  if (signal?.aborted) throw new ActivationValidationProblem("Activation read cancelled");
+  signal?.throwIfAborted();
   return { report: calculateActivationCandidates(rows, definition), rows };
 }
 
@@ -268,8 +269,9 @@ export async function* readActivationWarehouse(
   let bytes = 0;
   const cursors = new Set<string>();
   for (let pageIndex = 0; pageIndex < limits.maxPages; pageIndex++) {
-    if (request.signal?.aborted) throw new ActivationValidationProblem("Activation read cancelled");
+    request.signal?.throwIfAborted();
     const page = await reader.read({ ...request, ...(cursor ? { cursor } : {}) });
+    request.signal?.throwIfAborted();
     if (
       page.snapshotId !== request.snapshotId ||
       page.permissionEpoch !== request.access.permissionEpoch ||
@@ -281,7 +283,10 @@ export async function* readActivationWarehouse(
     bytes += new TextEncoder().encode(JSON.stringify(page.rows)).length;
     if (rows > limits.maxRows || bytes > limits.maxBytes)
       throw new ActivationValidationProblem("Activation source budget exceeded");
-    for (const row of page.rows) yield row;
+    for (const row of page.rows) {
+      request.signal?.throwIfAborted();
+      yield row;
+    }
     if (page.nextCursor === null) return;
     if (!page.rows.length || cursors.has(page.nextCursor)) invalid();
     cursors.add(page.nextCursor);
@@ -340,6 +345,7 @@ export async function registerActivationQuery(options: {
     },
     outputSchema: { parse: (output) => parseReport(output, declaration) },
     async readExecutor({ context, signal, window }) {
+      signal.throwIfAborted();
       if (
         definition.sourceRefs.some(
           (ref) =>
@@ -351,7 +357,7 @@ export async function registerActivationQuery(options: {
       )
         invalid();
       const { rows, quality } = await source(context, signal);
-      if (signal.aborted) throw new ActivationValidationProblem("Activation read cancelled");
+      signal.throwIfAborted();
       if (
         rows.some(
           (row) =>

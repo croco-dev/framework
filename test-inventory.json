@@ -296,12 +296,6 @@
       "owner": "@croco/admin-react"
     },
     {
-      "path": "packages/admin-react/src/tests/ActivationCandidateExplorerInteraction.spec.ts",
-      "lane": "fast",
-      "qualifiers": [],
-      "owner": "@croco/admin-react"
-    },
-    {
       "path": "packages/admin-react/src/tests/ActivationGuideConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
