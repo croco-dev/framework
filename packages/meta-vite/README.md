@@ -127,7 +127,7 @@ const response = await handler(new Request("https://example.com/api/hello"));
 Critical shells stream first; deferred regions resolve later through React Suspense:
 
 ```typescript no-check
-import { defineRoute, RenderServer } from "@croco/meta-vite";
+import { defineRoute, RenderServer, RouteRegistry } from "@croco/meta-vite";
 
 const registry = new RouteRegistry();
 registry.register(
@@ -247,7 +247,7 @@ For example, `requiredCapabilities: ["react-server-components", "streaming-respo
 fails before manifest emission with `MetaViteUnsupportedCapabilityProblem`
 (`meta-vite/unsupported-render-capability`, status 501, route path and capability extensions).
 Omitting requirements preserves the legacy buffered payload; it does not certify Flight or streaming.
-Actual Flight and shell-to-host streaming are tracked in #2835 and #2836.
+Actual Flight streaming remains tracked in #2835; SSR shell-first streaming shipped in #2836.
 Adapter preservation of externally supplied streams is a separate capability from page rendering.
 
 ## Provider Adapters

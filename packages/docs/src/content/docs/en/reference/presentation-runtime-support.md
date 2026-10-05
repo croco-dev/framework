@@ -68,8 +68,8 @@ Route manifests retain the requested mode and RSC requirement but report only `f
 status rewrites or stack exposure, and request cancellation propagates through the region signal.
 Profiles must pass their page requirements through
 `requiredCapabilities` when creating the route manifest; unsupported requirements fail with
-`meta-vite/unsupported-render-capability` (501). Actual Flight and end-to-end streaming
-remain tracked in #2835 and #2836.
+`meta-vite/unsupported-render-capability` (501). Actual Flight streaming remains
+tracked in #2835; SSR shell-first streaming shipped in #2836.
 
 Legacy `rsc` development recovery remains conservative: render failures return controlled diagnostics, and
 development reload recovery is a full page reload rather than an HMR-based RSC recovery claim.

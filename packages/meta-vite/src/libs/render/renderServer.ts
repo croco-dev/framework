@@ -49,6 +49,7 @@ export class RenderServer {
       return this.handleRsc(route, request, context);
     }
 
+    const startedAt = Date.now();
     const streamOptions = route.stream ?? {};
     const policy = resolveShellStreamPolicy(context?.platform, {
       signal: request.signal,
@@ -66,7 +67,16 @@ export class RenderServer {
       return this.handleBuffered(route, request, context);
     }
 
-    return this.handleShellStream(route, request, context, policy);
+    // One overall deadline budget shared by shell resolution and rendering:
+    // subtract the elapsed shell-resolution time (clamped at zero) so a slow
+    // resolveShell cannot double the nominal deadline.
+    const elapsedMs = Date.now() - startedAt;
+    const remainingPolicy: ShellStreamPolicy = {
+      ...policy,
+      deadlineMs: Math.max(0, policy.deadlineMs - elapsedMs),
+    };
+
+    return this.handleShellStream(route, request, context, remainingPolicy);
   }
 
   private async handleBuffered(
@@ -178,6 +188,9 @@ export class RenderServer {
       // The html shell (doctype/head) wraps the streamed React tree below:
       // renderToReadableStream emits the shell element first, so head metadata
       // commits with the critical shell before deferred regions resolve.
+      // The tree keeps the `<div id="root">` container (and full head
+      // metadata) that generated meta-vite clients hydrate.
+      const head = route.head?.() ?? {};
       const element = createElement(
         "html",
         { lang: "en" },
@@ -189,16 +202,26 @@ export class RenderServer {
             name: "viewport",
             content: "width=device-width, initial-scale=1",
           }),
-          createElement("title", null, route.head?.()?.title ?? "Croco App"),
+          createElement("title", null, head.title),
+          ...(head.description
+            ? [createElement("meta", { name: "description", content: head.description })]
+            : []),
+          ...(head.canonical
+            ? [createElement("link", { rel: "canonical", href: head.canonical })]
+            : []),
         ),
         createElement(
           "body",
           null,
-          this.withDeferredBoundaries(
-            module.default,
-            props,
-            route.path,
-            (route.regions ?? []).map((region) => region.id),
+          createElement(
+            "div",
+            { id: "root" },
+            this.withDeferredBoundaries(
+              module.default,
+              props,
+              route.path,
+              (route.regions ?? []).map((region) => region.id),
+            ),
           ),
         ),
       );
@@ -239,7 +262,7 @@ export class RenderServer {
             regionsFailed: counts.failed,
             regionsCancelled: counts.cancelled,
             bytes: 0,
-            timedOut: !request.signal.aborted,
+            timedOut: this.timedOutFor(error, request.signal.aborted),
             clientAborted: request.signal.aborted,
             abortReason: this.toAbortReason(error, request.signal.aborted),
           });
@@ -289,7 +312,7 @@ export class RenderServer {
         regionsFailed: 0,
         regionsCancelled: 0,
         bytes: 0,
-        timedOut: !request.signal.aborted,
+        timedOut: this.timedOutFor(error, request.signal.aborted),
         clientAborted: request.signal.aborted,
         abortReason: this.toAbortReason(error, request.signal.aborted),
       });
@@ -564,6 +587,10 @@ export class RenderServer {
           }
         },
         cancel: async (reason) => {
+          // Abort render/region work first: region loaders observe the linked
+          // controller signal, so awaiting settlement before aborting would
+          // hang up to the region timeout (or indefinitely when disabled).
+          events.onDone();
           const counts = await events.settleRegions().catch(() => ({
             settled: 0,
             failed: 0,
@@ -597,6 +624,15 @@ export class RenderServer {
       return "deadline";
     }
     return "render-error";
+  }
+
+  /**
+   * `timedOut` answers "did the render exceed its deadline" — derive it from
+   * the computed `abortReason` so render errors and byte-bound aborts are not
+   * misclassified as deadline timeouts.
+   */
+  private timedOutFor(error: unknown, clientAborted: boolean): boolean {
+    return this.toAbortReason(error, clientAborted) === "deadline";
   }
 
   private logAndCreateSafeErrorResponse(error: unknown, routePath: string): Response {

@@ -111,18 +111,31 @@ async function runRegion(
 
   const timeoutMs = normalizeTimeout(definition.timeoutMs, defaultTimeoutMs);
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  // Per-region controller: the loader observes this signal so a region
+  // timeout aborts upstream work (the race alone would only ignore the
+  // result). Parent aborts forward into the region controller.
+  const regionController = new AbortController();
+  const forwardAbort = () => {
+    regionController.abort(signal.reason);
+  };
+  if (signal.aborted) {
+    forwardAbort();
+  } else {
+    signal.addEventListener("abort", forwardAbort, { once: true });
+  }
 
   try {
-    const loaderResult = definition.loader({ ...input, signal });
+    const loaderResult = definition.loader({ ...input, signal: regionController.signal });
     if (timeoutMs === undefined) {
       return await loaderResult;
     }
 
     const timeoutPromise = new Promise<never>((_, reject) => {
-      timeoutId = setTimeout(
-        () => reject(new DeferredRegionTimeoutError(definition.id, timeoutMs)),
-        timeoutMs,
-      );
+      timeoutId = setTimeout(() => {
+        const error = new DeferredRegionTimeoutError(definition.id, timeoutMs);
+        regionController.abort(error);
+        reject(error);
+      }, timeoutMs);
     });
 
     return await Promise.race([loaderResult, timeoutPromise]);
@@ -130,6 +143,7 @@ async function runRegion(
     if (timeoutId !== undefined) {
       clearTimeout(timeoutId);
     }
+    signal.removeEventListener("abort", forwardAbort);
   }
 }
 

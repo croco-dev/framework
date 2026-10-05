@@ -101,6 +101,11 @@ describe("RenderServer shell streaming", () => {
         }),
         regions: [{ id: "fast", loader: async () => "REGION-OK" }],
         stream: { maxBufferedBytes: 16 },
+        head: () => ({
+          title: "Stream Head",
+          description: "stream description",
+          canonical: "https://example.com/stream-small-cap",
+        }),
       },
     ]);
 
@@ -112,6 +117,12 @@ describe("RenderServer shell streaming", () => {
     const html = await response.text();
     expect(html).toContain("REGION-OK");
     expect(html.length).toBeGreaterThan(4096);
+    // The streamed tree keeps the hydration container and full head metadata
+    // that generated meta-vite clients hydrate.
+    expect(html).toContain('<div id="root">');
+    expect(html).toContain("<title>Stream Head</title>");
+    expect(html).toContain('name="description" content="stream description"');
+    expect(html).toContain('rel="canonical" href="https://example.com/stream-small-cap"');
   });
 
   it("commits 404/redirect/critical failure before the first flush", async () => {
@@ -382,7 +393,7 @@ describe("RenderServer shell streaming", () => {
     expect(summaries).toHaveLength(1);
     expect(summaries[0]).toMatchObject({
       delivery: "buffered",
-      timedOut: true,
+      timedOut: false,
       abortReason: "max-buffered-bytes",
     });
   });
