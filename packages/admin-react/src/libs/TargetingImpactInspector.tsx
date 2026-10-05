@@ -50,6 +50,7 @@ export function TargetingImpactInspector({
       <form
         onSubmit={(event) => {
           event.preventDefault();
+          setDraft({ inputHash: report?.inputHash, value: unknownPolicy });
           onReplay(unknownPolicy);
         }}
       >

@@ -213,3 +213,47 @@ it("selects exclude when an existing exclude report is the initial state", () =>
     '<option value="exclude" selected="">',
   );
 });
+
+it("retains a loaded report policy through a failed comparison and unchanged retry", () => {
+  type Props = {
+    children?: unknown;
+    value?: string;
+    onSubmit?: (event: { preventDefault: () => void }) => void;
+  };
+  function find(tree: unknown, type: string): Props | undefined {
+    if (Array.isArray(tree)) return tree.map((child) => find(child, type)).find(Boolean);
+    if (!isValidElement<Props>(tree)) return undefined;
+    return tree.type === type ? tree.props : find(tree.props.children, type);
+  }
+  const submitted: string[] = [];
+  function view(state: TargetingImpactInspectorState): unknown {
+    hooks.index = 0;
+    return TargetingImpactInspector({ state, onReplay: (policy) => submitted.push(policy) });
+  }
+  function submit(tree: unknown): void {
+    const form = find(tree, "form");
+    if (!form?.onSubmit) throw new Error("Missing comparison form");
+    form.onSubmit({ preventDefault: () => {} });
+  }
+  hooks.active = true;
+  hooks.slots = [];
+  try {
+    view({ kind: "loading" });
+    const loaded = {
+      ...report,
+      input: {
+        ...report.input,
+        definition: { ...report.input.definition, unknownPolicy: "exclude" as const },
+      },
+    };
+    submit(view({ kind: "ready", report: loaded }));
+    expect(find(view({ kind: "loading" }), "select")?.value).toBe("exclude");
+    const failed = view({ kind: "error", code: "SOURCE_FAILED" });
+    expect(find(failed, "select")?.value).toBe("exclude");
+    submit(failed);
+    expect(submitted).toEqual(["exclude", "exclude"]);
+  } finally {
+    hooks.active = false;
+    hooks.slots = [];
+  }
+});
