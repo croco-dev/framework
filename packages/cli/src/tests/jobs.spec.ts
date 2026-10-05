@@ -9,6 +9,7 @@ import {
   type ExecutionStore,
   type ListExecutionsOptions,
 } from "@croco/execution-core";
+import { Problem } from "@croco/problems-core";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { JobsCommandClient, JobsStatusFetch } from "../commands/jobs.js";
 import {
@@ -345,6 +346,84 @@ describe("jobs command", () => {
         legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.jobsHttpError,
       },
       status: 409,
+    });
+  });
+
+  describe.each([
+    { command: "show", run: runJobsShow, suffix: "" },
+    { command: "logs", run: runJobsLogs, suffix: "/logs" },
+    { command: "cancel", run: runJobsCancel, suffix: "/cancel" },
+    { command: "replay", run: runJobsReplay, suffix: "/replay" },
+  ])("$command job ID boundary", ({ command, run, suffix }) => {
+    it.each(["", ".", ".."])("rejects unsafe ID %j before authenticated fetch", async (id) => {
+      const fetchJobs = vi.fn<JobsStatusFetch>(async () =>
+        Response.json(command === "logs" ? [] : createHttpJob(id)),
+      );
+
+      const result = run(id, "https://api.example.test/ops", {
+        fetch: fetchJobs,
+        token: "secret",
+      });
+
+      await expect(result).rejects.toBeInstanceOf(Problem);
+      await expect(result).rejects.toMatchObject({
+        code: CLI_DIAGNOSTIC_CODES.jobsInvalidId,
+        status: 400,
+        extensions: { legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.jobsInvalidId },
+        detail: expect.stringContaining(command),
+      });
+      await expect(result).rejects.toMatchObject({
+        detail: id === "" ? expect.stringMatching(/empty|""|''/i) : expect.stringContaining(id),
+      });
+      expect(fetchJobs).not.toHaveBeenCalled();
+    });
+
+    it.each(["", ".", ".."])(
+      "rejects unsafe ID %j before calling an injected client",
+      async (id) => {
+        const dispatch = vi.fn(async () => {
+          throw new Error("The invalid ID reached the injected client");
+        });
+        const client: JobsCommandClient = {
+          list: dispatch,
+          show: dispatch,
+          logs: dispatch,
+          cancel: dispatch,
+          replay: dispatch,
+        };
+
+        await expect(run(id, "", { client })).rejects.toMatchObject({
+          code: CLI_DIAGNOSTIC_CODES.jobsInvalidId,
+          status: 400,
+          extensions: { legacyCode: CLI_LEGACY_DIAGNOSTIC_CODES.jobsInvalidId },
+          detail: expect.stringContaining(command),
+        });
+        expect(dispatch).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([
+      ["exec-1", "exec-1"],
+      ["a/b", "a%2Fb"],
+      ["...", "..."],
+      [".a", ".a"],
+      ["%2e", "%252e"],
+      ["%2e%2e", "%252e%252e"],
+      ["../", "..%2F"],
+      ["/", "%2F"],
+      ["a?b#c", "a%3Fb%23c"],
+    ])("preserves ID %j as one encoded path segment", async (id, encodedId) => {
+      const fetchJobs = vi.fn<JobsStatusFetch>(async () =>
+        Response.json(command === "logs" ? [] : createHttpJob(id)),
+      );
+
+      await run(id, "https://api.example.test/ops", { fetch: fetchJobs, token: "secret" });
+
+      expect(fetchJobs).toHaveBeenCalledOnce();
+      const [url, init] = fetchJobs.mock.calls[0];
+      expect(url).toBe(`https://api.example.test/ops/jobs/${encodedId}${suffix}`);
+      expect(new URL(url).pathname).toBe(`/ops/jobs/${encodedId}${suffix}`);
+      expect(new Headers(init?.headers).get("X-Diagnostics-Token")).toBe("secret");
     });
   });
 });

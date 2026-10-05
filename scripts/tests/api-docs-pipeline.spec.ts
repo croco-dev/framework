@@ -235,6 +235,12 @@ describe("API documentation pipeline", () => {
       "| ------------------------------- | ----------------------------------------- | ------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |",
     );
     expect(normalized).toContain("---\n\n## CLI Diagnostic Definitions");
+    const jobsIdRow = normalized.split("\n").find((line) => line.includes("`CROCO_CLI_JOBS_006`"));
+    expect(jobsIdRow).toContain("`cli/invalid-jobs-id`");
+    expect(jobsIdRow).toContain("Jobs command job id is invalid");
+    expect(jobsIdRow).toContain(
+      'Pass a job id other than an empty string, ".", or ".." before retrying the command.',
+    );
     expect(normalizeCliDiagnosticDefinitions(normalized)).toBe(normalized);
   });
 

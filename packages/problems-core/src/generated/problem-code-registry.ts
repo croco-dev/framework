@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 907,
+  problemCount: 908,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -553,6 +553,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 133,
           column: 63,
           kind: "problem-metadata",
+        },
+      ],
+    },
+    {
+      code: "CROCO_CLI_JOBS_006",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-jobs-006",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cli/src/commands/jobs.ts",
+          line: 728,
+          column: 5,
+          kind: "problem-constructor",
         },
       ],
     },

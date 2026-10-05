@@ -1095,6 +1095,20 @@ export const CROCO_DIAGNOSTIC_CODE_DEFINITIONS = [
     },
   }),
   createCliDiagnosticCodeDefinition({
+    code: "CROCO_CLI_JOBS_006",
+    category: "runtime",
+    title: "Jobs command job id is invalid",
+    cause:
+      'A croco jobs command received an empty job id, ".", or "..", which cannot identify a job path segment.',
+    action: 'Pass a job id other than an empty string, ".", or ".." before retrying the command.',
+    legacyCodes: ["cli/invalid-jobs-id"],
+    searchKeywords: ["croco jobs", "invalid job id", "dot segment"],
+    fixExample: {
+      label: "Show a job with a valid id",
+      command: "pnpm exec croco jobs show exec-1 --url http://localhost:3000",
+    },
+  }),
+  createCliDiagnosticCodeDefinition({
     code: "CROCO_CLI_DI_CHECK_001",
     category: "build-time",
     title: "DI check manifest is invalid",

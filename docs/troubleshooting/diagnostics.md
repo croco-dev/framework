@@ -223,6 +223,7 @@ ERROR CROCO_CLI_DOCTOR_005
 | `CROCO_CLI_JOBS_003`                                | `cli/missing-jobs-target-url`              | `croco jobs`        | jobs target URL이 없음                                                                  |
 | `CROCO_CLI_JOBS_004`                                | `cli/jobs-http-error`                      | `croco jobs`        | jobs endpoint가 404 외 실패 응답을 반환함                                               |
 | `CROCO_CLI_JOBS_005`                                | `cli/jobs-endpoint-not-found`              | `croco jobs`        | jobs endpoint 또는 job id를 찾을 수 없음                                                |
+| `CROCO_CLI_JOBS_006`                                | `cli/invalid-jobs-id`                      | `croco jobs`        | job id가 빈 문자열, `.` 또는 `..`임                                                     |
 | `CROCO_DI_001`                                      | `framework-context/di-missing-provider`    | DI graph manifest   | provider 등록 누락                                                                      |
 | `CROCO_DI_002`                                      | `framework-context/di-circular-dependency` | DI graph manifest   | provider dependency cycle                                                               |
 | `CROCO_DI_003`                                      | `framework-context/di-scope-mismatch`      | DI graph manifest   | singleton-to-request/transient 의존성                                                   |
