@@ -123,6 +123,31 @@ describe("ActivationCandidateOperations", () => {
     );
     expect(await f.operations.read("report")).toEqual(saved);
   });
+  it("rejects a valid saved receipt for a different attempted candidate", async () => {
+    const f = fixture();
+    const multipleCandidates = {
+      ...definition,
+      candidates: [
+        ...definition.candidates,
+        {
+          id: "publish-twice",
+          actionId: "publish",
+          windowId: "first",
+          threshold: 2,
+          countMode: "frequency" as const,
+        },
+      ],
+    };
+    f.loadInput.mockResolvedValue({ definition: multipleCandidates, rows });
+    const report = await f.operations.load();
+    const original = await f.operations.save("report", "publish", "new", report);
+    f.write.mockImplementationOnce(async () => {});
+
+    await expect(f.operations.save("report", "publish-twice", "new", report)).rejects.toThrow(
+      "Saved report does not match the attempted save.",
+    );
+    expect(await f.operations.read("report")).toEqual(original);
+  });
   it("denies read and write before source or persistence access", async () => {
     const f = fixture();
     f.setAccess({ ...f.access(), permissions: [] });

@@ -201,6 +201,8 @@ export class ActivationCandidateOperations {
     await this.access(true, scope, signal);
     if (!sameScope(scope, saved.scope))
       throw new ActivationAdminProblem("Saved scope changed.", true);
+    if (saved.reportHash !== record.reportHash)
+      throw new ActivationAdminProblem("Saved report does not match the attempted save.");
     return saved;
   }
 

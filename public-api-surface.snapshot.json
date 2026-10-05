@@ -319,6 +319,18 @@
               "declarationKind": "const"
             },
             {
+              "name": "ActivationAdminProblem",
+              "exportKind": "named",
+              "source": "./libs/ActivationCandidateOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ActivationCandidateOperations",
+              "exportKind": "named",
+              "source": "./libs/ActivationCandidateOperations",
+              "declarationKind": "class"
+            },
+            {
               "name": "ActivationGuideValidationProblem",
               "exportKind": "named",
               "source": "./libs/ActivationGuide",
@@ -990,6 +1002,26 @@
           ],
           "typeExports": [
             {
+              "name": "ActivationAdminAccess",
+              "exportKind": "named",
+              "source": "./libs/ActivationCandidateOperations"
+            },
+            {
+              "name": "ActivationAdminScope",
+              "exportKind": "named",
+              "source": "./libs/ActivationCandidateOperations"
+            },
+            {
+              "name": "ActivationCandidateOperationsOptions",
+              "exportKind": "named",
+              "source": "./libs/ActivationCandidateOperations"
+            },
+            {
+              "name": "ActivationExplorerState",
+              "exportKind": "named",
+              "source": "./libs/ActivationCandidateOperations"
+            },
+            {
               "name": "ActivationGuideAccess",
               "exportKind": "named",
               "source": "./libs/ActivationGuide"
@@ -1018,6 +1050,11 @@
               "name": "ActivationGuideState",
               "exportKind": "named",
               "source": "./libs/ActivationGuide"
+            },
+            {
+              "name": "ActivationSavedReport",
+              "exportKind": "named",
+              "source": "./libs/ActivationCandidateOperations"
             },
             {
               "name": "AdminAction",
@@ -3000,6 +3037,12 @@
           "sourceEntrypoint": "packages/admin-react/src/index.ts",
           "runtimeExports": [
             {
+              "name": "ActivationCandidateExplorer",
+              "exportKind": "named",
+              "source": "./libs/ActivationCandidateExplorer",
+              "declarationKind": "function"
+            },
+            {
               "name": "ActivationGuideConsole",
               "exportKind": "named",
               "source": "./libs/ActivationGuideConsole",
@@ -3487,6 +3530,11 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "ActivationCandidateExplorerProps",
+              "exportKind": "named",
+              "source": "./libs/ActivationCandidateExplorer"
+            },
             {
               "name": "ActivationGuideConsoleProps",
               "exportKind": "named",
@@ -24861,16 +24909,10 @@
           "sourceEntrypoint": "packages/metrics-core/src/index.ts",
           "runtimeExports": [
             {
-              "name": "and",
+              "name": "ActivationValidationProblem",
               "exportKind": "named",
-              "source": "./libs/metric/MetricExpression",
-              "declarationKind": "function"
-            },
-            {
-              "name": "average",
-              "exportKind": "named",
-              "source": "./libs/metric/MetricExpression",
-              "declarationKind": "function"
+              "source": "./libs/activation/ActivationCandidates",
+              "declarationKind": "class"
             },
             {
               "name": "CarryingCapacityCalculator",
@@ -24889,6 +24931,126 @@
               "exportKind": "named",
               "source": "./libs/problems/MetricsProblems",
               "declarationKind": "class"
+            },
+            {
+              "name": "ExperimentInputProblem",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ExperimentPlanProblem",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview",
+              "declarationKind": "class"
+            },
+            {
+              "name": "GrossMarginRequiredProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/MetricsProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "GrowthCalculator",
+              "exportKind": "named",
+              "source": "./libs/GrowthCalculator",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidCarryingCapacityConfigProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/MetricsProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidRetentionMovementProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/MetricsProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidUserCarryingCapacityMetricProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/MetricsProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "LtvCalculator",
+              "exportKind": "named",
+              "source": "./libs/LtvCalculator",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MetricExpressionError",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MetricsEngine",
+              "exportKind": "named",
+              "source": "./libs/MetricsEngine",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MetricsRepository",
+              "exportKind": "named",
+              "source": "./libs/interfaces/MetricsRepository",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MixedCurrencyMRRProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/MetricsProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MrrCalculator",
+              "exportKind": "named",
+              "source": "./libs/MrrCalculator",
+              "declarationKind": "class"
+            },
+            {
+              "name": "RetentionCalculator",
+              "exportKind": "named",
+              "source": "./libs/RetentionCalculator",
+              "declarationKind": "class"
+            },
+            {
+              "name": "RetentionMetricsUnavailableProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/MetricsProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SnapshotScheduler",
+              "exportKind": "named",
+              "source": "./libs/SnapshotScheduler",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SnapshotTenantRequiredProblem",
+              "exportKind": "named",
+              "source": "./libs/SnapshotScheduler",
+              "declarationKind": "class"
+            },
+            {
+              "name": "and",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
+            },
+            {
+              "name": "average",
+              "exportKind": "named",
+              "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
+            },
+            {
+              "name": "calculateActivationCandidates",
+              "exportKind": "named",
+              "source": "./libs/activation/ActivationCandidates",
+              "declarationKind": "function"
             },
             {
               "name": "checkSampleRatioMismatch",
@@ -24945,52 +25107,10 @@
               "declarationKind": "function"
             },
             {
-              "name": "ExperimentInputProblem",
+              "name": "hashActivationInputs",
               "exportKind": "named",
-              "source": "./libs/experiment/ExperimentReview",
-              "declarationKind": "class"
-            },
-            {
-              "name": "ExperimentPlanProblem",
-              "exportKind": "named",
-              "source": "./libs/experiment/ExperimentReview",
-              "declarationKind": "class"
-            },
-            {
-              "name": "GrossMarginRequiredProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/MetricsProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "GrowthCalculator",
-              "exportKind": "named",
-              "source": "./libs/GrowthCalculator",
-              "declarationKind": "class"
-            },
-            {
-              "name": "InvalidCarryingCapacityConfigProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/MetricsProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "InvalidRetentionMovementProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/MetricsProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "InvalidUserCarryingCapacityMetricProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/MetricsProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "LtvCalculator",
-              "exportKind": "named",
-              "source": "./libs/LtvCalculator",
-              "declarationKind": "class"
+              "source": "./libs/activation/ActivationCandidates",
+              "declarationKind": "function"
             },
             {
               "name": "max",
@@ -24999,40 +25119,10 @@
               "declarationKind": "function"
             },
             {
-              "name": "MetricExpressionError",
-              "exportKind": "named",
-              "source": "./libs/metric/MetricExpression",
-              "declarationKind": "class"
-            },
-            {
-              "name": "MetricsEngine",
-              "exportKind": "named",
-              "source": "./libs/MetricsEngine",
-              "declarationKind": "class"
-            },
-            {
-              "name": "MetricsRepository",
-              "exportKind": "named",
-              "source": "./libs/interfaces/MetricsRepository",
-              "declarationKind": "class"
-            },
-            {
               "name": "min",
               "exportKind": "named",
               "source": "./libs/metric/MetricExpression",
               "declarationKind": "function"
-            },
-            {
-              "name": "MixedCurrencyMRRProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/MetricsProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "MrrCalculator",
-              "exportKind": "named",
-              "source": "./libs/MrrCalculator",
-              "declarationKind": "class"
             },
             {
               "name": "project",
@@ -25045,30 +25135,6 @@
               "exportKind": "named",
               "source": "./libs/metric/MetricExpression",
               "declarationKind": "function"
-            },
-            {
-              "name": "RetentionCalculator",
-              "exportKind": "named",
-              "source": "./libs/RetentionCalculator",
-              "declarationKind": "class"
-            },
-            {
-              "name": "RetentionMetricsUnavailableProblem",
-              "exportKind": "named",
-              "source": "./libs/problems/MetricsProblems",
-              "declarationKind": "class"
-            },
-            {
-              "name": "SnapshotScheduler",
-              "exportKind": "named",
-              "source": "./libs/SnapshotScheduler",
-              "declarationKind": "class"
-            },
-            {
-              "name": "SnapshotTenantRequiredProblem",
-              "exportKind": "named",
-              "source": "./libs/SnapshotScheduler",
-              "declarationKind": "class"
             },
             {
               "name": "standardizedMeanDifference",
@@ -25090,6 +25156,46 @@
             }
           ],
           "typeExports": [
+            {
+              "name": "ActivationCandidate",
+              "exportKind": "named",
+              "source": "./libs/activation/ActivationCandidates"
+            },
+            {
+              "name": "ActivationCandidateResult",
+              "exportKind": "named",
+              "source": "./libs/activation/ActivationCandidates"
+            },
+            {
+              "name": "ActivationDefinition",
+              "exportKind": "named",
+              "source": "./libs/activation/ActivationCandidates"
+            },
+            {
+              "name": "ActivationOutcomeWindow",
+              "exportKind": "named",
+              "source": "./libs/activation/ActivationCandidates"
+            },
+            {
+              "name": "ActivationRatio",
+              "exportKind": "named",
+              "source": "./libs/activation/ActivationCandidates"
+            },
+            {
+              "name": "ActivationReport",
+              "exportKind": "named",
+              "source": "./libs/activation/ActivationCandidates"
+            },
+            {
+              "name": "ActivationRow",
+              "exportKind": "named",
+              "source": "./libs/activation/ActivationCandidates"
+            },
+            {
+              "name": "ActivationWindow",
+              "exportKind": "named",
+              "source": "./libs/activation/ActivationCandidates"
+            },
             {
               "name": "ActiveUserProvider",
               "exportKind": "named",
@@ -25266,6 +25372,16 @@
               "source": "./libs/LtvCalculator"
             },
             {
+              "name": "MRRMovement",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
+              "name": "MRRMovementType",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
               "name": "MetricColumn",
               "exportKind": "named",
               "source": "./libs/metric/MetricExpression"
@@ -25306,27 +25422,17 @@
               "source": "./libs/metric/MetricExpression"
             },
             {
-              "name": "MetricsSnapshot",
-              "exportKind": "named",
-              "source": "./types"
-            },
-            {
               "name": "MetricWindow",
               "exportKind": "named",
               "source": "./libs/metric/MetricExpression"
             },
             {
+              "name": "MetricsSnapshot",
+              "exportKind": "named",
+              "source": "./types"
+            },
+            {
               "name": "Money",
-              "exportKind": "named",
-              "source": "./types"
-            },
-            {
-              "name": "MRRMovement",
-              "exportKind": "named",
-              "source": "./types"
-            },
-            {
-              "name": "MRRMovementType",
               "exportKind": "named",
               "source": "./types"
             },
@@ -25437,9 +25543,44 @@
               "exportKind": "named",
               "source": "./libs/read/MetricReadService",
               "declarationKind": "class"
+            },
+            {
+              "name": "calculateActivationSource",
+              "exportKind": "named",
+              "source": "./libs/activation/ActivationSources",
+              "declarationKind": "function"
+            },
+            {
+              "name": "importActivationSource",
+              "exportKind": "named",
+              "source": "./libs/activation/ActivationSources",
+              "declarationKind": "function"
+            },
+            {
+              "name": "normalizeActivationRow",
+              "exportKind": "named",
+              "source": "./libs/activation/ActivationSources",
+              "declarationKind": "function"
+            },
+            {
+              "name": "readActivationWarehouse",
+              "exportKind": "named",
+              "source": "./libs/activation/ActivationSources",
+              "declarationKind": "function"
+            },
+            {
+              "name": "registerActivationQuery",
+              "exportKind": "named",
+              "source": "./libs/activation/ActivationSources",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
+            {
+              "name": "ActivationColumnBinding",
+              "exportKind": "named",
+              "source": "./libs/activation/ActivationSources"
+            },
             {
               "name": "MetricDefinitionExplanation",
               "exportKind": "named",
