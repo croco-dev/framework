@@ -19,7 +19,7 @@ function setup(container: ContainerInstance) {
 
 ## Extends
 
-- `Error`
+- [`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/)
 
 ## Constructors
 
@@ -39,17 +39,57 @@ function setup(container: ContainerInstance) {
 
 #### Overrides
 
-`Error.constructor`
+[`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/).[`constructor`](/api/framework-context/src/classes/containerresolutionproblem/#constructor)
 
 ## Properties
 
-### cause?
+### category
 
-> `optional` **cause?**: `unknown`
+> `readonly` **category**: [`InternalServerError`](/api/problems-core/src/enumerations/problemcategory/#internalservererror) = `ProblemCategory.InternalServerError`
 
 #### Inherited from
 
-`Error.cause`
+[`ServiceNotFoundError`](/api/framework-context/src/classes/servicenotfounderror/).[`category`](/api/framework-context/src/classes/servicenotfounderror/#category)
+
+---
+
+### cause?
+
+> `readonly` `optional` **cause?**: `Error`
+
+#### Inherited from
+
+[`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/).[`cause`](/api/framework-context/src/classes/containerresolutionproblem/#cause)
+
+---
+
+### code
+
+> `readonly` **code**: `"framework-context/di-resolution-failed"` = `"framework-context/di-resolution-failed"`
+
+#### Inherited from
+
+[`ServiceNotFoundError`](/api/framework-context/src/classes/servicenotfounderror/).[`code`](/api/framework-context/src/classes/servicenotfounderror/#code)
+
+---
+
+### detail?
+
+> `readonly` `optional` **detail?**: `string`
+
+#### Inherited from
+
+[`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/).[`detail`](/api/framework-context/src/classes/containerresolutionproblem/#detail)
+
+---
+
+### extensions?
+
+> `readonly` `optional` **extensions?**: [`ProblemExtensions`](/api/problems-core/src/type-aliases/problemextensions/)
+
+#### Inherited from
+
+[`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/).[`extensions`](/api/framework-context/src/classes/containerresolutionproblem/#extensions)
 
 ---
 
@@ -59,13 +99,23 @@ function setup(container: ContainerInstance) {
 
 ---
 
+### instance?
+
+> `readonly` `optional` **instance?**: `string`
+
+#### Inherited from
+
+[`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/).[`instance`](/api/framework-context/src/classes/containerresolutionproblem/#instance)
+
+---
+
 ### message
 
 > **message**: `string`
 
 #### Inherited from
 
-`Error.message`
+[`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/).[`message`](/api/framework-context/src/classes/containerresolutionproblem/#message)
 
 ---
 
@@ -75,7 +125,17 @@ function setup(container: ContainerInstance) {
 
 #### Inherited from
 
-`Error.name`
+[`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/).[`name`](/api/framework-context/src/classes/containerresolutionproblem/#name)
+
+---
+
+### reason
+
+> `readonly` **reason**: [`ContainerResolutionFailureReason`](/api/framework-context/src/type-aliases/containerresolutionfailurereason/)
+
+#### Inherited from
+
+[`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/).[`reason`](/api/framework-context/src/classes/containerresolutionproblem/#reason)
 
 ---
 
@@ -85,7 +145,27 @@ function setup(container: ContainerInstance) {
 
 #### Inherited from
 
-`Error.stack`
+[`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/).[`stack`](/api/framework-context/src/classes/containerresolutionproblem/#stack)
+
+---
+
+### trace
+
+> `readonly` **trace**: [`DependencyResolutionTrace`](/api/framework-context/src/type-aliases/dependencyresolutiontrace/)
+
+#### Inherited from
+
+[`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/).[`trace`](/api/framework-context/src/classes/containerresolutionproblem/#trace)
+
+---
+
+### type
+
+> `readonly` **type**: `string`
+
+#### Inherited from
+
+[`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/).[`type`](/api/framework-context/src/classes/containerresolutionproblem/#type)
 
 ---
 
@@ -105,9 +185,55 @@ not capture any frames.
 
 #### Inherited from
 
-`Error.stackTraceLimit`
+[`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/).[`stackTraceLimit`](/api/framework-context/src/classes/containerresolutionproblem/#stacktracelimit)
+
+## Accessors
+
+### status
+
+#### Get Signature
+
+> **get** **status**(): `number`
+
+##### Returns
+
+`number`
+
+#### Inherited from
+
+[`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/).[`status`](/api/framework-context/src/classes/containerresolutionproblem/#status)
+
+---
+
+### title
+
+#### Get Signature
+
+> **get** **title**(): `string`
+
+##### Returns
+
+`string`
+
+#### Inherited from
+
+[`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/).[`title`](/api/framework-context/src/classes/containerresolutionproblem/#title)
 
 ## Methods
+
+### toJSON()
+
+> **toJSON**(): [`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
+
+#### Returns
+
+[`ProblemDetails`](/api/problems-core/src/type-aliases/problemdetails/)
+
+#### Inherited from
+
+[`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/).[`toJSON`](/api/framework-context/src/classes/containerresolutionproblem/#tojson)
+
+---
 
 ### captureStackTrace()
 
@@ -173,7 +299,7 @@ a();
 
 #### Inherited from
 
-`Error.captureStackTrace`
+[`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/).[`captureStackTrace`](/api/framework-context/src/classes/containerresolutionproblem/#capturestacktrace)
 
 ---
 
@@ -201,4 +327,4 @@ https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 
 #### Inherited from
 
-`Error.prepareStackTrace`
+[`ContainerResolutionProblem`](/api/framework-context/src/classes/containerresolutionproblem/).[`prepareStackTrace`](/api/framework-context/src/classes/containerresolutionproblem/#preparestacktrace)

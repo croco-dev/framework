@@ -14225,7 +14225,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 287,
+          line: 288,
           column: 13,
           kind: "problem-factory",
         },
@@ -14258,7 +14258,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 161,
+          line: 162,
           column: 10,
           kind: "problem-factory",
         },
@@ -14291,7 +14291,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 437,
+          line: 438,
           column: 17,
           kind: "problem-factory",
         },
@@ -14324,7 +14324,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 458,
+          line: 459,
           column: 13,
           kind: "problem-factory",
         },
@@ -14355,7 +14355,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 230,
+          line: 231,
           column: 13,
           kind: "problem-factory",
         },
@@ -14420,7 +14420,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ContainerResolutionProblem.ts",
-          line: 9,
+          line: 10,
           column: 1,
           kind: "problem-class",
         },
@@ -14452,7 +14452,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/problems/ContainerResolutionProblem.ts",
-          line: 30,
+          line: 31,
           column: 1,
           kind: "problem-class",
         },
@@ -14484,7 +14484,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 836,
+          line: 845,
           column: 13,
           kind: "problem-factory",
         },
@@ -14516,7 +14516,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 830,
+          line: 839,
           column: 13,
           kind: "problem-factory",
         },
@@ -14547,7 +14547,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 1454,
+          line: 1463,
           column: 15,
           kind: "problem-factory",
         },
@@ -14578,7 +14578,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 1522,
+          line: 1531,
           column: 13,
           kind: "problem-factory",
         },
@@ -14830,7 +14830,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 2590,
+          line: 2603,
           column: 12,
           kind: "problem-factory",
         },

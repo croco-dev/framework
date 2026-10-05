@@ -40,6 +40,7 @@ import {
   RuntimeContainer as RuntimeContainerBackend,
   type ContainerInstance as RuntimeContainerInstance,
   ServiceNotFoundError,
+  CannotInstantiateValueError,
 } from "./RuntimeContainer";
 import { Token as CrocoToken, type TokenIdentifier as CrocoTokenIdentifier } from "./Token";
 
@@ -513,6 +514,10 @@ export class Container {
       const failureTrace = Container.normalizeFailureTrace(trace, error);
       Container.setLastResolutionTrace(failureTrace);
 
+      if (error instanceof ServiceNotFoundError || error instanceof CannotInstantiateValueError) {
+        throw Container.toContainerResolutionProblem(token, error, failureTrace);
+      }
+
       if (error instanceof Problem) {
         throw error;
       }
@@ -541,6 +546,10 @@ export class Container {
     } catch (error) {
       const failureTrace = Container.normalizeFailureTrace(trace, error);
       Container.setLastResolutionTrace(failureTrace);
+
+      if (error instanceof ServiceNotFoundError || error instanceof CannotInstantiateValueError) {
+        throw Container.toContainerResolutionProblem(token, error, failureTrace);
+      }
 
       if (error instanceof Problem) {
         throw error;
@@ -2292,6 +2301,13 @@ export class Container {
     trace: DependencyResolutionTrace,
     error: unknown,
   ): DependencyResolutionTrace {
+    if (error instanceof ServiceNotFoundError || error instanceof CannotInstantiateValueError) {
+      return Container.withTraceStatus(
+        trace,
+        error.reason === "missing-provider" ? "missing" : "failed",
+      );
+    }
+
     if (
       error instanceof ContainerResolutionProblem ||
       error instanceof ContainerScopeMismatchProblem
@@ -2301,10 +2317,6 @@ export class Container {
 
     if (error instanceof CircularDependencyProblem) {
       return Container.withTraceStatus(trace, "circular");
-    }
-
-    if (Container.isRuntimeResolutionError(error)) {
-      return Container.withTraceStatus(trace, "missing");
     }
 
     if (trace.status !== "ready") {
@@ -2320,16 +2332,17 @@ export class Container {
     trace: DependencyResolutionTrace,
   ): ContainerResolutionProblem {
     const cause = error instanceof Error ? error : undefined;
-    const reason = Container.isRuntimeResolutionError(error)
-      ? "missing-provider"
-      : "construction-failed";
+    const reason = Container.isRuntimeResolutionError(error) ? error.reason : "construction-failed";
     const label = Container.describeToken(token).label;
     const causeDetail = cause?.message ? ` Cause: ${cause.message}` : "";
     const path = Container.getTracePath(trace);
-    const detail =
+    const failure =
       reason === "missing-provider"
-        ? `DI resolution failed for ${label}: provider is not registered or cannot be constructed. Resolution path: ${path}.${causeDetail}`
-        : `DI resolution failed for ${label}: construction failed. Resolution path: ${path}.${causeDetail}`;
+        ? "provider is not registered"
+        : reason === "not-instantiable"
+          ? "provider cannot be constructed"
+          : "construction failed";
+    const detail = `DI resolution failed for ${label}: ${failure}. Resolution path: ${path}.${causeDetail}`;
 
     return new ContainerResolutionProblem(detail, trace, reason, cause);
   }
@@ -2553,10 +2566,10 @@ export class Container {
     return first === second;
   }
 
-  private static isRuntimeResolutionError(error: unknown): error is Error {
+  private static isRuntimeResolutionError(error: unknown): error is ContainerResolutionProblem {
     return (
-      error instanceof Error &&
-      (error.name === "ServiceNotFoundError" || error.name === "CannotInstantiateValueError")
+      error instanceof ContainerResolutionProblem &&
+      (error.reason === "missing-provider" || error.reason === "not-instantiable")
     );
   }
 

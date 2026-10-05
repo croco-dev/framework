@@ -1,6 +1,7 @@
-import type { Constructor } from "./types";
+import type { Constructor, DependencyResolutionTrace } from "./types";
 import { inspectInjectionMetadata } from "./InjectionMetadata";
 import { Token } from "./Token";
+import { ContainerResolutionProblem } from "./problems/ContainerResolutionProblem";
 
 export type Constructable<T> = new (...args: never[]) => T;
 export type ServiceIdentifier<T = unknown> = Constructor<T> | Token<T> | string | symbol;
@@ -26,18 +27,63 @@ export type ServiceOptions<T> = {
   readonly scope?: ServiceMetadata<T>["scope"];
 };
 
-export class ServiceNotFoundError extends Error {
+export class ServiceNotFoundError extends ContainerResolutionProblem {
   constructor(readonly identifier: ServiceIdentifier<unknown>) {
-    super(`Service with identifier '${formatIdentifier(identifier)}' was not found.`);
+    super(
+      `Service with identifier '${formatIdentifier(identifier)}' was not found.`,
+      createFailureTrace(identifier, "missing-provider"),
+      "missing-provider",
+    );
     this.name = "ServiceNotFoundError";
   }
 }
 
-export class CannotInstantiateValueError extends Error {
+export class CannotInstantiateValueError extends ContainerResolutionProblem {
   constructor(readonly identifier: ServiceIdentifier<unknown>) {
-    super(`Service with identifier '${formatIdentifier(identifier)}' has no value or factory.`);
+    super(
+      `Service with identifier '${formatIdentifier(identifier)}' has no value or factory.`,
+      createFailureTrace(identifier, "not-instantiable"),
+      "not-instantiable",
+    );
     this.name = "CannotInstantiateValueError";
   }
+}
+
+function createFailureTrace(
+  identifier: ServiceIdentifier<unknown>,
+  reason: "missing-provider" | "not-instantiable",
+): DependencyResolutionTrace {
+  const label = formatIdentifier(identifier);
+  const tokenKind =
+    typeof identifier === "function"
+      ? "constructor"
+      : identifier instanceof Token
+        ? "token"
+        : typeof identifier === "symbol"
+          ? "symbol"
+          : "string";
+  const tokenId = `${tokenKind}:${label}`;
+  const missing = reason === "missing-provider";
+  return {
+    root: label,
+    status: missing ? "missing" : "failed",
+    steps: [
+      {
+        token: label,
+        tokenId,
+        tokenKind,
+        provider: missing
+          ? "missing"
+          : typeof identifier === "function"
+            ? "component"
+            : "registered-value",
+        status: missing ? "missing" : "uninspectable",
+        reason,
+        path: [label],
+        pathIds: [tokenId],
+      },
+    ],
+  };
 }
 
 function formatIdentifier(identifier: ServiceIdentifier<unknown>): string {

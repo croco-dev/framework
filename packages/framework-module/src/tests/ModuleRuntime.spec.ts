@@ -1,5 +1,7 @@
 import {
   Component as Service,
+  ContainerResolutionProblem,
+  ServiceNotFoundError,
   GENERATED_DI_GRAPH_VERSION,
   Inject,
   RuntimeContainer as Container,
@@ -115,6 +117,33 @@ describe("ModuleRuntime", () => {
 
     await expect(runtime.initialize()).rejects.toMatchObject({
       cause: expect.any(ModuleProviderUnavailableProblem),
+    });
+    await runtime.dispose();
+  });
+
+  it("preserves coded DI failures as the cause of unavailable module providers", async () => {
+    const token = new Token<string>("missing-runtime-provider");
+    const runtime = createModuleRuntime();
+    runtime.use({ name: "app", providers: [token] });
+    const context = await runtime.initialize();
+
+    let failure: unknown;
+    try {
+      context.get(token);
+    } catch (error) {
+      failure = error;
+    }
+    expect(failure).toBeInstanceOf(ModuleProviderUnavailableProblem);
+    expect(failure).toMatchObject({
+      cause: expect.any(ServiceNotFoundError),
+    });
+    const cause = (failure as ModuleProviderUnavailableProblem).cause;
+    expect(cause).toBeInstanceOf(ContainerResolutionProblem);
+    expect(cause).toMatchObject({
+      code: "framework-context/di-resolution-failed",
+      reason: "missing-provider",
+      identifier: token,
+      trace: { root: token.toString() },
     });
     await runtime.dispose();
   });
