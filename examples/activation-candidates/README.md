@@ -32,3 +32,8 @@ write capability. Partial observations exclude five outcomes. Loading delays the
 Save and export call ActivationCandidateOperations, which verifies current scope, source run and
 hashes against the immutable source before returning the saved artifact. Errors remain errors.
 The exported report is descriptive association and does not select an optimum or establish causality.
+
+`?state=timed` uses a separate two-subject event fixture with four explicit timestamps on
+August 2–4. Every event is on a different UTC activity day. It derives counts and threshold-specific
+achievement times from those events and renders the supported cumulative curve. It does not
+infer event times from the default aggregate-only fixture.

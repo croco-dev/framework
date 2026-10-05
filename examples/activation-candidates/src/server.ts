@@ -6,7 +6,7 @@ import { join, resolve } from "node:path";
 import { ActivationAdminProblem, ActivationCandidateOperations } from "@croco/admin-core";
 import type { ActivationAdminScope, ActivationSavedReport } from "@croco/admin-core";
 import type { ActivationReport } from "@croco/metrics-core";
-import { definition, rows } from "./fixture";
+import { definition, rows, timedDefinition, timedRows } from "./fixture";
 
 async function main() {
   const directory = await mkdtemp(join(tmpdir(), "croco-activation-"));
@@ -23,7 +23,7 @@ async function main() {
         .update(JSON.stringify([authorized, id]))
         .digest("hex")}.json`,
     );
-  const operations = (denied: boolean, partial: boolean) =>
+  const operations = (denied: boolean, partial: boolean, timed: boolean, empty: boolean) =>
     new ActivationCandidateOperations({
       authenticate: async () => ({
         scope,
@@ -31,18 +31,38 @@ async function main() {
       }),
       loadInput: async (authorized, run, signal) => {
         signal?.throwIfAborted();
-        const selectedRun = run ?? (partial ? "synthetic-100-partial-v1" : definition.sourceRunRef);
+        const selectedRun =
+          run ??
+          (empty
+            ? "synthetic-empty-v1"
+            : timed
+              ? timedDefinition.sourceRunRef
+              : partial
+                ? "synthetic-100-partial-v1"
+                : definition.sourceRunRef);
         if (
           JSON.stringify(authorized) !== JSON.stringify(scope) ||
-          ![definition.sourceRunRef, "synthetic-100-partial-v1"].includes(selectedRun)
+          ![
+            definition.sourceRunRef,
+            "synthetic-100-partial-v1",
+            "synthetic-empty-v1",
+            timedDefinition.sourceRunRef,
+          ].includes(selectedRun)
         )
           throw new ActivationAdminProblem("Unknown source scope or run");
         return {
-          definition: { ...definition, sourceRunRef: selectedRun },
+          definition:
+            selectedRun === timedDefinition.sourceRunRef
+              ? timedDefinition
+              : { ...definition, sourceRunRef: selectedRun },
           rows:
-            selectedRun === "synthetic-100-partial-v1"
-              ? rows.map((row, index) => (index < 5 ? { ...row, outcome: null } : row))
-              : rows,
+            selectedRun === "synthetic-empty-v1"
+              ? []
+              : selectedRun === timedDefinition.sourceRunRef
+                ? timedRows
+                : selectedRun === "synthetic-100-partial-v1"
+                  ? rows.map((row, index) => (index < 5 ? { ...row, outcome: null } : row))
+                  : rows,
         };
       },
       store: {
@@ -86,14 +106,19 @@ async function main() {
       }
       response.setHeader("Content-Type", "application/json");
       const state = url.searchParams.get("state") ?? "ready";
-      const service = operations(state === "denied", state === "partial");
+      const service = operations(
+        state === "denied",
+        state === "partial",
+        state === "timed",
+        state === "empty",
+      );
       if (url.pathname === "/api/load" && request.method === "GET") {
         if (state === "error") throw new ActivationAdminProblem("Synthetic source failure");
         if (state === "loading") await new Promise((resolve) => setTimeout(resolve, 1500));
         const report = await service.load(controller.signal);
         response.end(
           JSON.stringify(
-            state === "empty"
+            report.rowCount === 0
               ? { kind: "empty" }
               : { kind: state === "partial" ? "partial" : "ready", report },
           ),

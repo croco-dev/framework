@@ -88,3 +88,38 @@ export async function* importedBytes(format: "csv" | "jsonl") {
         "\n";
   yield new TextEncoder().encode(text);
 }
+
+// Independent event fixture: timestamps, rather than aggregate totals, define achievement times.
+const timedEvents = [
+  { subjectId: "event-subject-a", at: "2026-08-02T00:00:00.000Z" },
+  { subjectId: "event-subject-a", at: "2026-08-03T00:00:00.000Z" },
+  { subjectId: "event-subject-a", at: "2026-08-04T00:00:00.000Z" },
+  { subjectId: "event-subject-b", at: "2026-08-03T00:00:00.000Z" },
+] as const;
+export const timedDefinition: ActivationDefinition = {
+  ...definition,
+  sourceRunRef: "synthetic-event-times-v1",
+  sourceRevisions: { events: "v1" },
+};
+export const timedRows = ["event-subject-a", "event-subject-b"].map((subjectId) => {
+  const events = timedEvents
+    .filter((event) => event.subjectId === subjectId)
+    .map((event) => event.at);
+  const count = events.length;
+  return {
+    subjectId,
+    anchorAt: "2026-08-01T00:00:00.000Z",
+    cohort: "new" as const,
+    outcome: true,
+    completeThrough: "2026-08-30T00:00:00.000Z",
+    outcomeWindow: definition.outcomeWindow,
+    actionCountsByWindow: { week: { publish: count }, fortnight: { publish: count } },
+    activeDaysByWindow: { week: { publish: count }, fortnight: { publish: count } },
+    achievementAtByCandidate: Object.fromEntries(
+      definition.candidates.flatMap((candidate) => {
+        const at = events[candidate.threshold - 1];
+        return at ? [[candidate.id, at]] : [];
+      }),
+    ),
+  };
+});

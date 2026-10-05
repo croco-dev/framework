@@ -5,7 +5,15 @@ import {
   MetricReadService,
   registerActivationQuery,
 } from "@croco/metrics-core/runtime";
-import { binding, definition, importedBytes, rows, schema } from "./fixture";
+import {
+  binding,
+  definition,
+  importedBytes,
+  rows,
+  schema,
+  timedDefinition,
+  timedRows,
+} from "./fixture";
 
 export async function checkSources() {
   const expected = calculateActivationCandidates(rows, definition);
@@ -100,3 +108,8 @@ void checkSources().catch((error) => {
   console.error(error);
   process.exitCode = 1;
 });
+
+const timed = calculateActivationCandidates(timedRows, timedDefinition);
+assert.equal(timed.candidates[0]?.achievementCurve.status, "available");
+assert.equal(timed.candidates[0]?.DO, 2);
+console.log("Explicit synthetic event-time fixture provides supported achievement curves.");
