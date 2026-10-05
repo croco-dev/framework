@@ -431,6 +431,7 @@ export async function runJobsShow(
   target: string,
   options: RunJobsOptions = {},
 ): Promise<JobDetails> {
+  validateJobId("show", id);
   return createJobsClient(target, options).show(id);
 }
 
@@ -439,6 +440,7 @@ export async function runJobsLogs(
   target: string,
   options: RunJobsOptions = {},
 ): Promise<readonly JobLogEntry[]> {
+  validateJobId("logs", id);
   return createJobsClient(target, options).logs(id);
 }
 
@@ -448,6 +450,7 @@ export async function runJobsCancel(
   options: RunJobsOptions = {},
   params: { readonly reason?: string } = {},
 ): Promise<JobDetails> {
+  validateJobId("cancel", id);
   return createJobsClient(target, options).cancel(id, params);
 }
 
@@ -457,6 +460,7 @@ export async function runJobsReplay(
   options: RunJobsOptions = {},
   params: { readonly reason?: string } = {},
 ): Promise<JobDetails> {
+  validateJobId("replay", id);
   return createJobsClient(target, options).replay(id, params);
 }
 
@@ -717,4 +721,21 @@ function formatJobSummary(job: JobSummary): string {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+class InvalidJobsIdProblem extends Problem {
+  constructor(command: string, id: string) {
+    super(
+      CLI_DIAGNOSTIC_CODES.jobsInvalidId,
+      ProblemCategory.BadRequest,
+      `Invalid job id for jobs ${command}: ${JSON.stringify(id)}. Job id must not be empty, ".", or "..".`,
+      withLegacyCode("jobsInvalidId"),
+    );
+  }
+}
+
+function validateJobId(command: "show" | "logs" | "cancel" | "replay", id: string): void {
+  if (id === "" || id === "." || id === "..") {
+    throw new InvalidJobsIdProblem(command, id);
+  }
 }

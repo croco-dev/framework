@@ -2724,7 +2724,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/jobs.ts",
-      "line": 541,
+      "line": 545,
       "column": 46,
       "code": "TS2379",
       "message": "Argument of type '{ fetchJobEndpoint: JobsStatusFetch; token: string | undefined; tokenHeader: string; timeoutMs: number; query: JobsListFilters | undefined; }' is not assignable to parameter of type '{ readonly fetchJobEndpoint: JobsStatusFetch; readonly timeoutMs: number; readonly token?: string; readonly tokenHeader: string; readonly method?: \"GET\" | \"POST\"; readonly body?: unknown; readonly query?: Record<...>; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2732,7 +2732,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/jobs.ts",
-      "line": 550,
+      "line": 554,
       "column": 72,
       "code": "TS2379",
       "message": "Argument of type '{ fetchJobEndpoint: JobsStatusFetch; token: string | undefined; tokenHeader: string; timeoutMs: number; }' is not assignable to parameter of type '{ readonly fetchJobEndpoint: JobsStatusFetch; readonly timeoutMs: number; readonly token?: string; readonly tokenHeader: string; readonly method?: \"GET\" | \"POST\"; readonly body?: unknown; readonly query?: Record<...>; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2740,7 +2740,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/jobs.ts",
-      "line": 558,
+      "line": 562,
       "column": 77,
       "code": "TS2379",
       "message": "Argument of type '{ fetchJobEndpoint: JobsStatusFetch; token: string | undefined; tokenHeader: string; timeoutMs: number; }' is not assignable to parameter of type '{ readonly fetchJobEndpoint: JobsStatusFetch; readonly timeoutMs: number; readonly token?: string; readonly tokenHeader: string; readonly method?: \"GET\" | \"POST\"; readonly body?: unknown; readonly query?: Record<...>; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2748,7 +2748,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/jobs.ts",
-      "line": 566,
+      "line": 570,
       "column": 79,
       "code": "TS2379",
       "message": "Argument of type '{ fetchJobEndpoint: JobsStatusFetch; token: string | undefined; tokenHeader: string; timeoutMs: number; method: \"POST\"; body: { readonly reason?: string; }; }' is not assignable to parameter of type '{ readonly fetchJobEndpoint: JobsStatusFetch; readonly timeoutMs: number; readonly token?: string; readonly tokenHeader: string; readonly method?: \"GET\" | \"POST\"; readonly body?: unknown; readonly query?: Record<...>; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2756,7 +2756,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/jobs.ts",
-      "line": 576,
+      "line": 580,
       "column": 79,
       "code": "TS2379",
       "message": "Argument of type '{ fetchJobEndpoint: JobsStatusFetch; token: string | undefined; tokenHeader: string; timeoutMs: number; method: \"POST\"; body: { readonly reason?: string; }; }' is not assignable to parameter of type '{ readonly fetchJobEndpoint: JobsStatusFetch; readonly timeoutMs: number; readonly token?: string; readonly tokenHeader: string; readonly method?: \"GET\" | \"POST\"; readonly body?: unknown; readonly query?: Record<...>; }' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2764,7 +2764,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/jobs.ts",
-      "line": 613,
+      "line": 617,
       "column": 98,
       "code": "TS2379",
       "message": "Argument of type '{ method: \"GET\" | \"POST\"; headers: Headers; body: string | undefined; signal: AbortSignal; }' is not assignable to parameter of type 'RequestInit' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
@@ -2772,7 +2772,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/jobs.ts",
-      "line": 670,
+      "line": 674,
       "column": 25,
       "code": "TS4111",
       "message": "Property 'detail' comes from an index signature, so it must be accessed with ['detail']."
@@ -2780,7 +2780,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/jobs.ts",
-      "line": 674,
+      "line": 678,
       "column": 26,
       "code": "TS4111",
       "message": "Property 'message' comes from an index signature, so it must be accessed with ['message']."
@@ -2788,7 +2788,7 @@
     {
       "packageName": "@croco/cli",
       "file": "packages/cli/src/commands/jobs.ts",
-      "line": 687,
+      "line": 691,
       "column": 48,
       "code": "TS4111",
       "message": "Property 'CROCO_JOBS_URL' comes from an index signature, so it must be accessed with ['CROCO_JOBS_URL']."
