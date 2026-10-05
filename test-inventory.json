@@ -170,6 +170,12 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/ExperimentReviewConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/FactHistoryEntrypoints.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -333,6 +339,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/ExperimentConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ExperimentReviewConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -3153,6 +3165,12 @@
     },
     {
       "path": "packages/metrics-core/src/tests/CarryingCapacity.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
+      "path": "packages/metrics-core/src/tests/ExperimentReview.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/metrics-core"

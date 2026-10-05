@@ -24,6 +24,8 @@ export {
 } from "./libs/components";
 export { CreditOperationsConsole } from "./libs/CreditOperationsConsole";
 export { OfferConsole } from "./libs/OfferConsole";
+export { ExperimentReviewConsole } from "./libs/ExperimentReviewConsole";
+export type { ExperimentReviewConsoleProps } from "./libs/ExperimentReviewConsole";
 export { ActivationGuideConsole } from "./libs/ActivationGuideConsole";
 export type {
   ActivationGuideConsoleProps,

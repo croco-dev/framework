@@ -7,6 +7,7 @@
       "@croco/problems-core": ["../problems-core/src/index.ts"],
       "@croco/analytics-core": ["../analytics-core/src/index.ts"],
       "@croco/features-core": ["../features-core/src/index.ts"],
+      "@croco/metrics-core": ["../metrics-core/src/index.ts"],
       "@croco/engagement-core": ["../engagement-core/src/index.ts"]
     }
   },

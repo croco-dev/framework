@@ -114,6 +114,46 @@ export type { SnapshotInput, SnapshotSchedulerConfig } from "./libs/SnapshotSche
 export { SnapshotScheduler, SnapshotTenantRequiredProblem } from "./libs/SnapshotScheduler";
 
 /**
+ * 실험 배정 품질 진단을 위한 순수 계산 계약입니다.
+ */
+export {
+  checkSampleRatioMismatch,
+  chiSquarePValue,
+  ExperimentInputProblem,
+  ExperimentPlanProblem,
+  standardizedMeanDifference,
+  summarizeExperiment,
+} from "./libs/experiment/ExperimentReview";
+export type {
+  ExperimentAnalysisPlan,
+  ExperimentAssignment,
+  ExperimentConditionalAggregate,
+  ExperimentDatasetInput,
+  ExperimentExposure,
+  ExperimentFunnelCounts,
+  ExperimentMetricResult,
+  ExperimentOutcome,
+  ExperimentOutcomeKind,
+  ExperimentProviderInterval,
+  ExperimentProviderResultInput,
+  ExperimentProviderSnapshot,
+  ExperimentRandomizationUnit,
+  ExperimentReview,
+  ExperimentReviewInput,
+  ExperimentSliceCell,
+  ExperimentSliceResult,
+  ExperimentSrm,
+  ExperimentSrmDetail,
+  ExperimentTreatmentReceipt,
+  ExperimentVariantAggregate,
+  ExperimentVariantInput,
+  ExperimentMetricRole,
+  QualityCheck,
+  QualityResult,
+  StandardizedMeanDifference,
+} from "./libs/experiment/ExperimentReview";
+
+/**
  * metrics-core에서 공통으로 사용하는 핵심 메트릭 타입들입니다.
  */
 export type {
