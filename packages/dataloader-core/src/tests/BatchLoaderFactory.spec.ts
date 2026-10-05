@@ -19,6 +19,23 @@ describe("BatchLoaderFactory", () => {
     expect(secondBatchFn).not.toHaveBeenCalled();
   });
 
+  it("documents direct-caller name sharing with sequentially created same-name loaders", async () => {
+    await Context.run({ requestId: "factory-shared-name" }, async () => {
+      const factory = new BatchLoaderFactory();
+      const users = factory.create({
+        name: "byId",
+        batchFn: async (ids: readonly number[]) => ids.map((id) => `user:${id}`),
+      });
+      expect(await users.load(1)).toBe("user:1");
+
+      const posts = factory.create({
+        name: "byId",
+        batchFn: async (ids: readonly number[]) => ids.map((id) => `post:${id}`),
+      });
+      expect(await posts.load(2)).toBe("user:2");
+    });
+  });
+
   it("rejects a createBatchLoader factory that reuses a factory-created loader name", async () => {
     const batchFn = double();
 
