@@ -428,6 +428,34 @@ importers:
         specifier: 6.0.3
         version: 6.0.3
 
+  examples/experiment-review:
+    dependencies:
+      '@croco/admin-core':
+        specifier: workspace:*
+        version: link:../../packages/admin-core
+      '@croco/etl-core':
+        specifier: workspace:*
+        version: link:../../packages/etl-core
+      '@croco/metrics-core':
+        specifier: workspace:*
+        version: link:../../packages/metrics-core
+      '@croco/problems-core':
+        specifier: workspace:*
+        version: link:../../packages/problems-core
+      '@croco/warehouse-core':
+        specifier: workspace:*
+        version: link:../../packages/warehouse-core
+    devDependencies:
+      '@types/node':
+        specifier: ^24
+        version: 24.13.2
+      tsx:
+        specifier: ^4.0.0
+        version: 4.21.0
+      typescript:
+        specifier: 6.0.3
+        version: 6.0.3
+
   examples/experiment-runtime:
     dependencies:
       '@croco/admin-core':
@@ -1114,6 +1142,9 @@ importers:
       '@croco/lifecycle-core':
         specifier: workspace:*
         version: link:../lifecycle-core
+      '@croco/metrics-core':
+        specifier: workspace:*
+        version: link:../metrics-core
       '@croco/onboarding-core':
         specifier: workspace:*
         version: link:../onboarding-core

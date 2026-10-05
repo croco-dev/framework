@@ -517,6 +517,36 @@
               "declarationKind": "function"
             },
             {
+              "name": "createExperimentReviewActions",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createExperimentReviewLoadingState",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createExperimentReviewReadyState",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createExperimentReviewTenantRequiredState",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createExperimentReviewUnitPage",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "createInMemoryTenantBusinessSource",
               "exportKind": "named",
               "source": "./libs/TenantWorkspace",
@@ -679,6 +709,24 @@
               "declarationKind": "class"
             },
             {
+              "name": "EXPERIMENT_REVIEW_PII_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole",
+              "declarationKind": "const"
+            },
+            {
+              "name": "EXPERIMENT_REVIEW_READ_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole",
+              "declarationKind": "const"
+            },
+            {
+              "name": "EXPERIMENT_REVIEW_REPORT_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole",
+              "declarationKind": "const"
+            },
+            {
               "name": "ExperimentAdminProblem",
               "exportKind": "named",
               "source": "./libs/ExperimentOperations",
@@ -688,6 +736,12 @@
               "name": "ExperimentOperations",
               "exportKind": "named",
               "source": "./libs/ExperimentOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ExperimentReviewConsoleValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole",
               "declarationKind": "class"
             },
             {
@@ -744,6 +798,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "loadExperimentReviewConsole",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "loadOfferConsole",
               "exportKind": "named",
               "source": "./libs/OfferConsole",
@@ -759,6 +819,12 @@
               "name": "maskEmailAddress",
               "exportKind": "named",
               "source": "./libs/EngagementOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "maskExperimentUnitId",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole",
               "declarationKind": "function"
             },
             {
@@ -1540,6 +1606,96 @@
               "name": "ExperimentAdminSnapshot",
               "exportKind": "named",
               "source": "./libs/ExperimentOperations"
+            },
+            {
+              "name": "ExperimentReviewAction",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
+            },
+            {
+              "name": "ExperimentReviewActionKind",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
+            },
+            {
+              "name": "ExperimentReviewConditionalView",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
+            },
+            {
+              "name": "ExperimentReviewConsoleScope",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
+            },
+            {
+              "name": "ExperimentReviewConsoleState",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
+            },
+            {
+              "name": "ExperimentReviewPlanView",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
+            },
+            {
+              "name": "ExperimentReviewProviderNote",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
+            },
+            {
+              "name": "ExperimentReviewQualityView",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
+            },
+            {
+              "name": "ExperimentReviewReadyState",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
+            },
+            {
+              "name": "ExperimentReviewSliceCellView",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
+            },
+            {
+              "name": "ExperimentReviewSliceView",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
+            },
+            {
+              "name": "ExperimentReviewSnapshot",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
+            },
+            {
+              "name": "ExperimentReviewSource",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
+            },
+            {
+              "name": "ExperimentReviewSourceResult",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
+            },
+            {
+              "name": "ExperimentReviewSrmView",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
+            },
+            {
+              "name": "ExperimentReviewUnitPage",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
+            },
+            {
+              "name": "ExperimentReviewUnitView",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
+            },
+            {
+              "name": "ExperimentReviewVariantView",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
             },
             {
               "name": "FactHistoryComparisonRequest",
@@ -2862,6 +3018,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "ExperimentReviewConsole",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "FactHistoryPanel",
               "exportKind": "named",
               "source": "./libs/FactHistoryPanel",
@@ -3652,6 +3814,11 @@
               "name": "ExperimentConsoleState",
               "exportKind": "named",
               "source": "./libs/ExperimentConsole"
+            },
+            {
+              "name": "ExperimentReviewConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole"
             },
             {
               "name": "FactHistoryPanelProps",
@@ -24187,6 +24354,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "checkSampleRatioMismatch",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview",
+              "declarationKind": "function"
+            },
+            {
+              "name": "chiSquarePValue",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview",
+              "declarationKind": "function"
+            },
+            {
               "name": "compileMetric",
               "exportKind": "named",
               "source": "./libs/metric/MetricExpression",
@@ -24227,6 +24406,18 @@
               "exportKind": "named",
               "source": "./libs/metric/MetricExpression",
               "declarationKind": "function"
+            },
+            {
+              "name": "ExperimentInputProblem",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ExperimentPlanProblem",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview",
+              "declarationKind": "class"
             },
             {
               "name": "GrossMarginRequiredProblem",
@@ -24343,9 +24534,21 @@
               "declarationKind": "class"
             },
             {
+              "name": "standardizedMeanDifference",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview",
+              "declarationKind": "function"
+            },
+            {
               "name": "sum",
               "exportKind": "named",
               "source": "./libs/metric/MetricExpression",
+              "declarationKind": "function"
+            },
+            {
+              "name": "summarizeExperiment",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview",
               "declarationKind": "function"
             }
           ],
@@ -24394,6 +24597,121 @@
               "name": "CustomerMetrics",
               "exportKind": "named",
               "source": "./types"
+            },
+            {
+              "name": "ExperimentAnalysisPlan",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentAssignment",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentConditionalAggregate",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentDatasetInput",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentExposure",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentFunnelCounts",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentMetricResult",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentMetricRole",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentOutcome",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentOutcomeKind",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentProviderInterval",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentProviderResultInput",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentProviderSnapshot",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentRandomizationUnit",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentReview",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentReviewInput",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentSliceCell",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentSliceResult",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentSrm",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentSrmDetail",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentTreatmentReceipt",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentVariantAggregate",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ExperimentVariantInput",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
             },
             {
               "name": "GrowthMetrics",
@@ -24501,6 +24819,16 @@
               "source": "./types"
             },
             {
+              "name": "QualityCheck",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "QualityResult",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
+            },
+            {
               "name": "RetentionMetrics",
               "exportKind": "named",
               "source": "./types"
@@ -24524,6 +24852,11 @@
               "name": "SnapshotSchedulerConfig",
               "exportKind": "named",
               "source": "./libs/SnapshotScheduler"
+            },
+            {
+              "name": "StandardizedMeanDifference",
+              "exportKind": "named",
+              "source": "./libs/experiment/ExperimentReview"
             },
             {
               "name": "SubscriptionSnapshot",

@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["node"],
+    "paths": {
+      "@croco/admin-core": ["../../packages/admin-core/src/index.ts"],
+      "@croco/etl-core/source": ["../../packages/etl-core/src/source.ts"],
+      "@croco/metrics-core": ["../../packages/metrics-core/src/index.ts"],
+      "@croco/metrics-core/runtime": ["../../packages/metrics-core/src/runtime.ts"],
+      "@croco/problems-core": ["../../packages/problems-core/src/index.ts"],
+      "@croco/warehouse-core": ["../../packages/warehouse-core/src/index.ts"],
+      "@croco/warehouse-core/runtime": ["../../packages/warehouse-core/src/runtime.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}
