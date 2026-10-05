@@ -9472,7 +9472,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:2603:12` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:2653:12` (problem-factory)
 
 <a id="framework-context-runtime-inspector-invalid-configuration"></a>
 

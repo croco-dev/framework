@@ -2679,6 +2679,7 @@ function isProductionPackageSourceFile(relativeFile: string): boolean {
     parts.length >= 4 &&
     parts[2] === "src" &&
     !parts.includes("tests") &&
+    !parts.includes("__tests__") &&
     !relativeFile.endsWith(".spec.js") &&
     !relativeFile.endsWith(".test.js") &&
     !relativeFile.endsWith(".spec.jsx") &&

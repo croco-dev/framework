@@ -14830,7 +14830,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Container.ts",
-          line: 2603,
+          line: 2653,
           column: 12,
           kind: "problem-factory",
         },

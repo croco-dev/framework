@@ -511,7 +511,7 @@ export class Container {
       Container.setLastResolutionTrace(Container.withTraceStatus(trace, "resolved"));
       return result;
     } catch (error) {
-      const failureTrace = Container.normalizeFailureTrace(trace, error);
+      const failureTrace = Container.normalizeFailureTrace(token, trace, error);
       Container.setLastResolutionTrace(failureTrace);
 
       if (error instanceof ServiceNotFoundError || error instanceof CannotInstantiateValueError) {
@@ -544,7 +544,7 @@ export class Container {
       Container.setLastResolutionTrace(Container.withTraceStatus(trace, "resolved"));
       return result;
     } catch (error) {
-      const failureTrace = Container.normalizeFailureTrace(trace, error);
+      const failureTrace = Container.normalizeFailureTrace(token, trace, error);
       Container.setLastResolutionTrace(failureTrace);
 
       if (error instanceof ServiceNotFoundError || error instanceof CannotInstantiateValueError) {
@@ -1768,50 +1768,58 @@ export class Container {
     trace: DependencyResolutionTrace,
     stack: TokenIdentifier<unknown>[],
   ): T {
-    Container.assertNoRuntimeCircularDependency(token, stack);
+    try {
+      Container.assertNoRuntimeCircularDependency(token, stack);
 
-    if (Container.hasRegisteredValue(token)) {
-      return Container.getRegisteredValue(token);
-    }
+      if (Container.hasRegisteredValue(token)) {
+        return Container.getRegisteredValue(token);
+      }
 
-    const generated = Container.getGeneratedProviders().get(token)?.[0] as
-      | GeneratedProviderDefinition<T>
-      | undefined;
-    if (generated) {
-      return Container.resolveGeneratedProvider(generated, trace, stack);
-    }
+      const generated = Container.getGeneratedProviders().get(token)?.[0] as
+        | GeneratedProviderDefinition<T>
+        | undefined;
+      if (generated) {
+        return Container.resolveGeneratedProvider(generated, trace, stack);
+      }
 
-    if (Container.shouldResolveLazy(token)) {
-      return Container.resolveLazy(token);
-    }
+      if (Container.shouldResolveLazy(token)) {
+        return Container.resolveLazy(token);
+      }
 
-    if (!Container.isConstructorToken(token)) {
-      return Container.getRegisteredValue(token);
-    }
+      if (!Container.isConstructorToken(token)) {
+        return Container.getRegisteredValue(token);
+      }
 
-    const constructorToken = token as Constructor<T>;
-    const metadata = Container.getComponentMetadata(constructorToken);
+      const constructorToken = token as Constructor<T>;
+      const metadata = Container.getComponentMetadata(constructorToken);
 
-    if (!metadata) {
-      return Container.getRegisteredValue(constructorToken);
-    }
-
-    Container.assertScopeCompatibility(constructorToken, stack, trace);
-
-    const nextStack = [...stack, token as TokenIdentifier<unknown>];
-
-    switch (metadata.scope) {
-      case "singleton":
-        return Container.getSingletonInstance(constructorToken, trace, nextStack);
-
-      case "transient":
-        return Container.createTransientInstance(constructorToken, trace, nextStack);
-
-      case "request":
-        return Container.getRequestScoped(constructorToken, trace, nextStack);
-
-      default:
+      if (!metadata) {
         return Container.getRegisteredValue(constructorToken);
+      }
+
+      Container.assertScopeCompatibility(constructorToken, stack, trace);
+
+      const nextStack = [...stack, token as TokenIdentifier<unknown>];
+
+      switch (metadata.scope) {
+        case "singleton":
+          return Container.getSingletonInstance(constructorToken, trace, nextStack);
+
+        case "transient":
+          return Container.createTransientInstance(constructorToken, trace, nextStack);
+
+        case "request":
+          return Container.getRequestScoped(constructorToken, trace, nextStack);
+
+        default:
+          return Container.getRegisteredValue(constructorToken);
+      }
+    } catch (error) {
+      if (error instanceof ServiceNotFoundError || error instanceof CannotInstantiateValueError) {
+        const failureTrace = Container.normalizeFailureTrace(token, trace, error, stack);
+        throw Container.toContainerResolutionProblem(token, error, failureTrace);
+      }
+      throw error;
     }
   }
 
@@ -1846,7 +1854,16 @@ export class Container {
           ? Container.resolveWithTrace(token, trace, nextStack)
           : undefined,
     };
-    const instance = provider.factory(resolver);
+    let instance: T;
+    try {
+      instance = provider.factory(resolver);
+    } catch (error) {
+      if (error instanceof ServiceNotFoundError || error instanceof CannotInstantiateValueError) {
+        const failureTrace = Container.normalizeFailureTrace(provider.token, trace, error, stack);
+        throw Container.toContainerResolutionProblem(provider.token, error, failureTrace);
+      }
+      throw error;
+    }
     if (provider.scope === "singleton") {
       singletons.set(provider, instance);
     } else if (provider.scope === "request") {
@@ -2297,15 +2314,48 @@ export class Container {
     return { ...trace, status };
   }
 
-  private static normalizeFailureTrace(
+  private static normalizeFailureTrace<T>(
+    token: TokenIdentifier<T>,
     trace: DependencyResolutionTrace,
     error: unknown,
+    stack: TokenIdentifier<unknown>[] = [],
   ): DependencyResolutionTrace {
     if (error instanceof ServiceNotFoundError || error instanceof CannotInstantiateValueError) {
-      return Container.withTraceStatus(
-        trace,
-        error.reason === "missing-provider" ? "missing" : "failed",
+      const failureToken = Container.describeToken(error.identifier);
+      const providerPath = [...stack, token].map((entry) => Container.describeToken(entry));
+      const failurePath = Container.isSameToken(token, error.identifier)
+        ? providerPath
+        : [...providerPath, failureToken];
+      const pathIds = failurePath.map((entry) => entry.id);
+      const existingStep = trace.steps.find(
+        (step) =>
+          step.pathIds.length === pathIds.length &&
+          step.pathIds.every((id, index) => id === pathIds[index]),
       );
+      const parent = failurePath[failurePath.length - 2];
+      return {
+        ...trace,
+        status: error.trace.status,
+        steps: existingStep
+          ? [
+              ...trace.steps.filter((step) => step !== existingStep),
+              {
+                ...existingStep,
+                status: error.reason === "missing-provider" ? "missing" : "uninspectable",
+                reason: error.reason,
+              },
+            ]
+          : [
+              ...trace.steps,
+              ...error.trace.steps.map((step) => ({
+                ...step,
+                tokenId: failureToken.id,
+                path: failurePath.map((entry) => entry.label),
+                pathIds,
+                ...(parent ? { dependencyOf: parent.label, dependencyOfId: parent.id } : {}),
+              })),
+            ],
+      };
     }
 
     if (

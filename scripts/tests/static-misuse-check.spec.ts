@@ -88,6 +88,22 @@ describe("static-misuse-check.mts", () => {
     );
   });
 
+  it("excludes __tests__ directories while checking production Error subclasses", () => {
+    const repo = createTempRepo();
+    const productionFile = "packages/runtime-boundary/src/index.ts";
+    for (const file of [
+      productionFile,
+      "packages/runtime-boundary/src/__tests__/Fixture.ts",
+      "packages/runtime-boundary/src/libs/__tests__/nested/Fixture.ts",
+    ]) {
+      writeFile(repo, file, "export class FixtureError extends Error {}\n");
+    }
+
+    const result = findResult(repo, "direct-error-subclass-boundary");
+    expect(result?.status).toBe("fail");
+    expect(result?.diagnostics.map(({ file }) => file)).toEqual([productionFile]);
+  });
+
   it("requires a source-pinned reviewed exception and fails on a new unallowlisted subclass", () => {
     const repo = createTempRepo();
     const file = "packages/runtime-boundary/src/index.ts";
