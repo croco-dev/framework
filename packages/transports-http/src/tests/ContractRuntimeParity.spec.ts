@@ -544,7 +544,7 @@ describe("REST contract-to-runtime parity", () => {
     expect(repeated.status).toBe(422);
     expect(await repeated.json()).toMatchObject({
       code: "protocols-rest/request-validation-failed",
-      issues: [expect.objectContaining({ path: "query.value" })],
+      issues: [expect.objectContaining({ path: "query.tag" })],
     });
 
     const fallbackGraph = buildContractGraph([SchemaLessParametersController]);
@@ -587,7 +587,7 @@ describe("REST contract-to-runtime parity", () => {
     expect(await repeated.json()).toMatchObject({
       code: "protocols-rest/request-validation-failed",
       status: 422,
-      issues: [{ path: "query.value", message: "Expected a single query value" }],
+      issues: [{ path: "query.mode", message: "Expected a single query value" }],
     });
   });
 
@@ -633,7 +633,7 @@ describe("REST contract-to-runtime parity", () => {
     );
     expect(invalidElement.status).toBe(422);
     expect(await invalidElement.json()).toMatchObject({
-      issues: [expect.objectContaining({ path: "query.0" })],
+      issues: [expect.objectContaining({ path: "query.tag.0" })],
     });
 
     const invalidRefinement = await app.fetch(
@@ -643,7 +643,7 @@ describe("REST contract-to-runtime parity", () => {
     );
     expect(invalidRefinement.status).toBe(422);
     expect(await invalidRefinement.json()).toMatchObject({
-      issues: [{ path: "query.value", message: "Expected at least three values" }],
+      issues: [{ path: "query.scope", message: "Expected at least three values" }],
     });
   });
 
@@ -672,7 +672,7 @@ describe("REST contract-to-runtime parity", () => {
     );
     expect(invalidElement.status).toBe(422);
     expect(await invalidElement.json()).toMatchObject({
-      issues: [expect.objectContaining({ path: "headers.0" })],
+      issues: [expect.objectContaining({ path: "headers.x-tag.0" })],
     });
 
     const invalidRefinement = await app.fetch(
@@ -682,7 +682,7 @@ describe("REST contract-to-runtime parity", () => {
     );
     expect(invalidRefinement.status).toBe(422);
     expect(await invalidRefinement.json()).toMatchObject({
-      issues: [{ path: "headers.value", message: "Expected at least three scopes" }],
+      issues: [{ path: "headers.x-scope", message: "Expected at least three scopes" }],
     });
   });
 
@@ -697,7 +697,7 @@ describe("REST contract-to-runtime parity", () => {
       }),
       schemaLocation: "path" as const,
       schemaInput: { id: "invalid" },
-      issuePath: "params.value",
+      issuePath: "params.id",
     },
     {
       name: "query parameter",
@@ -709,7 +709,7 @@ describe("REST contract-to-runtime parity", () => {
       }),
       schemaLocation: "query" as const,
       schemaInput: { mode: "delete" },
-      issuePath: "query.value",
+      issuePath: "query.mode",
     },
     {
       name: "header parameter",
@@ -721,7 +721,7 @@ describe("REST contract-to-runtime parity", () => {
       }),
       schemaLocation: "headers" as const,
       schemaInput: { "x-tenant-id": "x" },
-      issuePath: "headers.value",
+      issuePath: "headers.x-tenant-id",
     },
     {
       name: "body payload",

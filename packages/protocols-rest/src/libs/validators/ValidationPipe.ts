@@ -20,7 +20,7 @@ export class ValidationPipe<T = unknown> implements PipeTransform<unknown, T> {
         : undefined;
 
     if (metadata.type === "query" && Array.isArray(value) && !repeatedQuerySchema) {
-      throwRepeatedQueryValueProblem();
+      throwRepeatedQueryValueProblem(metadata);
     }
 
     const schemaWithoutCatch = (repeatedQuerySchema ??
@@ -52,9 +52,9 @@ export class ValidationPipe<T = unknown> implements PipeTransform<unknown, T> {
   }
 }
 
-function throwRepeatedQueryValueProblem(): never {
+function throwRepeatedQueryValueProblem(metadata: ArgumentMetadata): never {
   throw new RequestValidationProblem("query", [
-    { path: "value", message: "Expected a single query value" },
+    { path: metadata.name ?? "value", message: "Expected a single query value" },
   ]);
 }
 
@@ -62,10 +62,20 @@ function throwValidationProblem(issues: readonly z.ZodIssue[], metadata: Argumen
   throw new RequestValidationProblem(
     mapMetadataTypeToSource(metadata.type),
     issues.map((issue) => ({
-      path: issue.path.join(".") || "value",
+      path: resolveIssuePath(issue, metadata),
       message: issue.message,
     })),
   );
+}
+
+function resolveIssuePath(issue: z.ZodIssue, metadata: ArgumentMetadata): string {
+  const issuePath = issue.path.join(".");
+
+  if (issuePath.length > 0) {
+    return metadata.name ? `${metadata.name}.${issuePath}` : issuePath;
+  }
+
+  return metadata.name ?? "value";
 }
 
 function mapMetadataTypeToSource(

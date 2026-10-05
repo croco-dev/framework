@@ -3,8 +3,10 @@ import { z } from "zod";
 import { ValidationPipe } from "../libs/validators/ValidationPipe";
 import { RequestValidationProblem } from "../libs/validators/ValidationProblem";
 
-const QUERY_METADATA = { type: "query", name: "value" } as const;
-const HEADER_METADATA = { type: "header", name: "x-scope" } as const;
+const QUERY_METADATA = { type: "query", name: "size" } as const;
+const PARAM_METADATA = { type: "param", name: "id" } as const;
+const HEADER_METADATA = { type: "header", name: "x-tenant-id" } as const;
+const ARRAY_QUERY_METADATA = { type: "query", name: "tags" } as const;
 
 describe("ValidationPipe", () => {
   it("should parse async refinements and map rejection to request issues", async () => {
@@ -15,7 +17,39 @@ describe("ValidationPipe", () => {
     await expect(pipe.transform("ada", QUERY_METADATA)).resolves.toBe("ada");
     await expect(pipe.transform("taken", QUERY_METADATA)).rejects.toThrowError(
       expect.objectContaining({
-        issues: [{ path: "query.value", message: "name is taken" }],
+        issues: [{ path: "query.size", message: "name is taken" }],
+      }),
+    );
+  });
+
+  it("should point scalar param and header failures at the parameter name", async () => {
+    const paramPipe = new ValidationPipe(z.number());
+    const headerPipe = new ValidationPipe(z.number());
+
+    await expect(paramPipe.transform("first", PARAM_METADATA)).rejects.toThrowError(
+      expect.objectContaining({
+        issues: [{ path: "params.id", message: "Expected number, received string" }],
+      }),
+    );
+    await expect(headerPipe.transform("first", HEADER_METADATA)).rejects.toThrowError(
+      expect.objectContaining({
+        issues: [{ path: "headers.x-tenant-id", message: "Expected number, received string" }],
+      }),
+    );
+  });
+
+  it("should keep the legacy path for unnamed parameters and body failures", async () => {
+    const unnamedPipe = new ValidationPipe(z.number());
+    const bodyPipe = new ValidationPipe(z.object({ page: z.number() }));
+
+    await expect(unnamedPipe.transform("first", { type: "query" })).rejects.toThrowError(
+      expect.objectContaining({
+        issues: [{ path: "query.value", message: "Expected number, received string" }],
+      }),
+    );
+    await expect(bodyPipe.transform({}, { type: "body" })).rejects.toThrowError(
+      expect.objectContaining({
+        issues: [{ path: "body.page", message: expect.any(String) }],
       }),
     );
   });
@@ -32,7 +66,7 @@ describe("ValidationPipe", () => {
 
     expect(caught).toBeInstanceOf(RequestValidationProblem);
     expect(caught).toMatchObject({
-      issues: [{ path: "query.value", message: "Expected a single query value" }],
+      issues: [{ path: "query.size", message: "Expected a single query value" }],
     });
   });
 
@@ -48,7 +82,7 @@ describe("ValidationPipe", () => {
 
     expect(caught).toBeInstanceOf(RequestValidationProblem);
     expect(caught).toMatchObject({
-      issues: [{ path: "query.value", message: "Expected a single query value" }],
+      issues: [{ path: "query.size", message: "Expected a single query value" }],
     });
   });
 
@@ -66,18 +100,28 @@ describe("ValidationPipe", () => {
 
       await expect(pipe.transform(["first", "second"], QUERY_METADATA)).rejects.toThrowError(
         expect.objectContaining({
-          issues: [{ path: "query.value", message: "Expected a single query value" }],
+          issues: [{ path: "query.size", message: "Expected a single query value" }],
         }),
       );
     },
   );
+
+  it("should reject repeated query values with the unnamed fallback path", async () => {
+    const pipe = new ValidationPipe(z.string());
+
+    await expect(pipe.transform(["first", "second"], { type: "query" })).rejects.toThrowError(
+      expect.objectContaining({
+        issues: [{ path: "query.value", message: "Expected a single query value" }],
+      }),
+    );
+  });
 
   it("should preserve scalar schema errors for a single query value", async () => {
     const pipe = new ValidationPipe(z.number());
 
     await expect(pipe.transform("first", QUERY_METADATA)).rejects.toThrowError(
       expect.objectContaining({
-        issues: [{ path: "query.value", message: "Expected number, received string" }],
+        issues: [{ path: "query.size", message: "Expected number, received string" }],
       }),
     );
   });
@@ -113,16 +157,16 @@ describe("ValidationPipe", () => {
         .catch([]),
     );
 
-    await expect(elementPipe.transform(["a", "valid"], QUERY_METADATA)).rejects.toThrowError(
+    await expect(elementPipe.transform(["a", "valid"], ARRAY_QUERY_METADATA)).rejects.toThrowError(
       expect.objectContaining({
-        issues: [expect.objectContaining({ path: "query.0" })],
+        issues: [expect.objectContaining({ path: "query.tags.0" })],
       }),
     );
     await expect(
-      refinementPipe.transform(["first", "second"], QUERY_METADATA),
+      refinementPipe.transform(["first", "second"], ARRAY_QUERY_METADATA),
     ).rejects.toThrowError(
       expect.objectContaining({
-        issues: [{ path: "query.value", message: "Expected at least three values" }],
+        issues: [{ path: "query.tags", message: "Expected at least three values" }],
       }),
     );
   });
@@ -195,12 +239,12 @@ describe("ValidationPipe", () => {
 
     await expect(elementPipe.transform("a, valid", HEADER_METADATA)).rejects.toThrowError(
       expect.objectContaining({
-        issues: [expect.objectContaining({ path: "headers.0" })],
+        issues: [expect.objectContaining({ path: "headers.x-tenant-id.0" })],
       }),
     );
     await expect(refinementPipe.transform("read, write", HEADER_METADATA)).rejects.toThrowError(
       expect.objectContaining({
-        issues: [{ path: "headers.value", message: "Expected at least three scopes" }],
+        issues: [{ path: "headers.x-tenant-id", message: "Expected at least three scopes" }],
       }),
     );
   });
