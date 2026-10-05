@@ -1,3 +1,4 @@
+export { DrizzleReminderStore, type DrizzleReminderClient } from "./libs/DrizzleReminderStore";
 export {
   DrizzleContactPolicyAdminStore,
   type DrizzleContactPolicyAdminClient,
@@ -20,6 +21,10 @@ export {
   type DrizzleEngagementTxManager,
 } from "./libs/DrizzleEngagementStore";
 export {
+  engagementReminderBuckets,
+  engagementReminders,
+  engagementReminderOccurrences,
+  engagementReminderMutations,
   engagementCampaignMemberOutcomes,
   engagementCampaignSnapshotMembers,
   engagementCampaignSnapshots,

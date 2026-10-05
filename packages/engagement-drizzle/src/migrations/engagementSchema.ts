@@ -244,6 +244,46 @@ export async function createEngagementSchema(client: EngagementMigrationClient):
     `);
 
     await client.execute(sql`
+      create table if not exists engagement_reminder_buckets (
+        scope_key text not null, subject text not null, primary key (scope_key, subject)
+      )
+    `);
+    await client.execute(sql`
+      create table if not exists engagement_reminders (
+        scope_key text not null, subject text not null, id text not null,
+        topic text not null, resource_ref text not null, timezone text not null, schedule jsonb not null,
+        channel text not null, late_delivery_ms bigint not null check (late_delivery_ms >= 0),
+        version integer not null check (version > 0), state text not null check (state in ('active', 'snoozed', 'canceled')),
+        next_scheduled_at timestamptz,
+        primary key (scope_key, subject, id),
+        foreign key (scope_key, subject) references engagement_reminder_buckets (scope_key, subject)
+      )
+    `);
+    await client.execute(sql`
+      create table if not exists engagement_reminder_occurrences (
+        scope_key text not null, subject text not null, id text not null,
+        reminder_id text not null, reminder_version integer not null, scheduled_at timestamptz not null,
+        state text not null check (state in ('pending', 'claimed', 'queued', 'suppressed', 'expired', 'unknown')),
+        reason text, execution_ids jsonb not null,
+        primary key (scope_key, subject, id),
+        foreign key (scope_key, subject, reminder_id) references engagement_reminders (scope_key, subject, id)
+      )
+    `);
+    await client.execute(sql`
+      create unique index if not exists engagement_reminder_occurrence_identity
+      on engagement_reminder_occurrences (scope_key, subject, reminder_id, reminder_version, scheduled_at)
+    `);
+    await client.execute(sql`
+      create table if not exists engagement_reminder_mutations (
+        scope_key text not null, subject text not null, idempotency_key text not null,
+        fingerprint text not null, actor text not null, reason text not null, recorded_at timestamptz not null,
+        result jsonb not null, occurrence_id text, evidence text, outcome text,
+        primary key (scope_key, subject, idempotency_key),
+        foreign key (scope_key, subject) references engagement_reminder_buckets (scope_key, subject)
+      )
+    `);
+
+    await client.execute(sql`
       create table if not exists engagement_campaign_snapshots (
         scope_key text not null,
         id text not null,
@@ -324,6 +364,10 @@ export async function createEngagementSchema(client: EngagementMigrationClient):
 /** Removes the engagement adapter schema in dependency order. Intended for tests and local teardown. */
 export async function dropEngagementSchema(client: EngagementMigrationClient): Promise<void> {
   return migrate("drop-schema", async () => {
+    await client.execute(sql`drop table if exists engagement_reminder_mutations`);
+    await client.execute(sql`drop table if exists engagement_reminder_occurrences`);
+    await client.execute(sql`drop table if exists engagement_reminders`);
+    await client.execute(sql`drop table if exists engagement_reminder_buckets`);
     await client.execute(sql`drop table if exists engagement_contact_policy_audit`);
     await client.execute(sql`drop table if exists engagement_contact_policy_settings`);
     await client.execute(sql`drop table if exists engagement_contact_policy_reservations`);

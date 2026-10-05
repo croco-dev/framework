@@ -426,3 +426,15 @@ export type {
   ExplorerResolvedNote,
   CustomerExplorerOptions,
 } from "./libs/CustomerExplorer";
+
+export {
+  ReminderOperationsProblem,
+  assertReminderOperatorCancel,
+  loadReminderOperations,
+} from "./libs/ReminderOperations";
+export type {
+  ReminderOperationsRow,
+  ReminderOperationsState,
+  ReminderOperatorCancel,
+  ReminderOperationsSource,
+} from "./libs/ReminderOperations";

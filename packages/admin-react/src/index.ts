@@ -342,3 +342,6 @@ export type {
   CustomerExplorerOperations,
   CustomerExplorerProps,
 } from "./libs/CustomerExplorer";
+
+export { ReminderOperationsPanel } from "./libs/ReminderOperationsPanel";
+export type { ReminderOperationsPanelProps } from "./libs/ReminderOperationsPanel";

@@ -10,15 +10,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -252,15 +258,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -292,15 +304,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -534,6 +552,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "ReminderOperationsProblem",
+              "exportKind": "named",
+              "source": "./libs/ReminderOperations",
+              "declarationKind": "class"
+            },
+            {
               "name": "WebhookOperationsActionValidationProblem",
               "exportKind": "named",
               "source": "./libs/WebhookOperations",
@@ -634,6 +658,12 @@
               "exportKind": "named",
               "source": "./libs/EngagementOperations",
               "declarationKind": "const"
+            },
+            {
+              "name": "assertReminderOperatorCancel",
+              "exportKind": "named",
+              "source": "./libs/ReminderOperations",
+              "declarationKind": "function"
             },
             {
               "name": "assertRemoveSuppressionValid",
@@ -879,6 +909,12 @@
               "name": "loadOfferConsole",
               "exportKind": "named",
               "source": "./libs/OfferConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "loadReminderOperations",
+              "exportKind": "named",
+              "source": "./libs/ReminderOperations",
               "declarationKind": "function"
             },
             {
@@ -1992,6 +2028,26 @@
               "source": "./libs/EngagementOperations"
             },
             {
+              "name": "ReminderOperationsRow",
+              "exportKind": "named",
+              "source": "./libs/ReminderOperations"
+            },
+            {
+              "name": "ReminderOperationsSource",
+              "exportKind": "named",
+              "source": "./libs/ReminderOperations"
+            },
+            {
+              "name": "ReminderOperationsState",
+              "exportKind": "named",
+              "source": "./libs/ReminderOperations"
+            },
+            {
+              "name": "ReminderOperatorCancel",
+              "exportKind": "named",
+              "source": "./libs/ReminderOperations"
+            },
+            {
               "name": "Sample",
               "exportKind": "named",
               "source": "./libs/CustomerExplorer"
@@ -2228,15 +2284,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/fact-history-operations.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/fact-history-operations.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/fact-history-operations.js"
             }
           ],
@@ -2256,15 +2318,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/fact-history-validation.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/fact-history-validation.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/fact-history-validation.js"
             }
           ],
@@ -2302,15 +2370,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -2442,15 +2516,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -2886,15 +2966,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -2947,15 +3033,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -3193,6 +3285,12 @@
               "name": "ProblemNotice",
               "exportKind": "named",
               "source": "./libs/components",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ReminderOperationsPanel",
+              "exportKind": "named",
+              "source": "./libs/ReminderOperationsPanel",
               "declarationKind": "function"
             },
             {
@@ -4444,6 +4542,11 @@
               "source": "./libs/PolicyReleaseConsole"
             },
             {
+              "name": "ReminderOperationsPanelProps",
+              "exportKind": "named",
+              "source": "./libs/ReminderOperationsPanel"
+            },
+            {
               "name": "TenantBusinessWorkspaceProps",
               "exportKind": "named",
               "source": "./libs/TenantBusinessWorkspace"
@@ -4505,15 +4608,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/experience-console.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/experience-console.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/experience-console.js"
             }
           ],
@@ -4539,15 +4648,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/experiment-console.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/experiment-console.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/experiment-console.js"
             }
           ],
@@ -4589,15 +4704,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.js"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.cjs"
             }
           ],
@@ -4799,15 +4920,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -5143,15 +5270,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/runtime.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/runtime.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/runtime.js"
             }
           ],
@@ -5210,15 +5343,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -5267,15 +5406,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -5364,11 +5509,15 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -5515,15 +5664,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -5700,15 +5855,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -5782,15 +5943,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -6047,15 +6214,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -6382,15 +6555,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -6825,15 +7004,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -6937,15 +7122,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -7085,15 +7276,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -7180,15 +7377,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -8210,15 +8413,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -8479,15 +8688,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -8891,11 +9106,15 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -9617,11 +9836,15 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/agent.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/agent.js"
             }
           ],
@@ -9658,11 +9881,15 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/jobs.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/jobs.js"
             }
           ],
@@ -9782,11 +10009,15 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/ops.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/ops.js"
             }
           ],
@@ -9861,15 +10092,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -10057,15 +10294,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -10118,15 +10361,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -10547,15 +10796,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -10678,15 +10933,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -10913,15 +11174,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -11055,15 +11322,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.js"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.cjs"
             }
           ],
@@ -11129,15 +11402,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -11322,44 +11601,26 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
           "sourceEntrypoint": "packages/engagement-core/src/index.ts",
           "runtimeExports": [
-            {
-              "name": "assertContactPolicyScope",
-              "exportKind": "named",
-              "source": "./libs/ContactPolicy",
-              "declarationKind": "function"
-            },
-            {
-              "name": "assertEngagementPreference",
-              "exportKind": "named",
-              "source": "./libs/EngagementStores",
-              "declarationKind": "function"
-            },
-            {
-              "name": "assertEngagementStoreText",
-              "exportKind": "named",
-              "source": "./libs/EngagementStores",
-              "declarationKind": "function"
-            },
-            {
-              "name": "assertEngagementSuppression",
-              "exportKind": "named",
-              "source": "./libs/EngagementStores",
-              "declarationKind": "function"
-            },
             {
               "name": "Audience",
               "exportKind": "named",
@@ -11457,28 +11718,10 @@
               "declarationKind": "class"
             },
             {
-              "name": "campaignOutcomeFromSendResult",
-              "exportKind": "named",
-              "source": "./libs/CampaignStore",
-              "declarationKind": "function"
-            },
-            {
               "name": "CampaignRegistry",
               "exportKind": "named",
               "source": "./libs/CampaignContracts",
               "declarationKind": "class"
-            },
-            {
-              "name": "campaignScopeForTenant",
-              "exportKind": "named",
-              "source": "./libs/CampaignStore",
-              "declarationKind": "function"
-            },
-            {
-              "name": "campaignScopeKey",
-              "exportKind": "named",
-              "source": "./libs/CampaignStore",
-              "declarationKind": "function"
             },
             {
               "name": "CampaignSnapshotCreationProblem",
@@ -11547,66 +11790,6 @@
               "declarationKind": "class"
             },
             {
-              "name": "createEngagementDeliveryEventId",
-              "exportKind": "named",
-              "source": "./libs/EngagementStores",
-              "declarationKind": "function"
-            },
-            {
-              "name": "createEngagementDispatchId",
-              "exportKind": "named",
-              "source": "./libs/EngagementStores",
-              "declarationKind": "function"
-            },
-            {
-              "name": "createEngagementDispatchIdentityKey",
-              "exportKind": "named",
-              "source": "./libs/EngagementStores",
-              "declarationKind": "function"
-            },
-            {
-              "name": "createEngagementIdempotencyKey",
-              "exportKind": "named",
-              "source": "./libs/EngagementService",
-              "declarationKind": "function"
-            },
-            {
-              "name": "createEngagementStoreConformanceSuite",
-              "exportKind": "named",
-              "source": "./libs/EngagementStoreConformance",
-              "declarationKind": "function"
-            },
-            {
-              "name": "createPushEndpointId",
-              "exportKind": "named",
-              "source": "./libs/PushEndpointLifecycle",
-              "declarationKind": "function"
-            },
-            {
-              "name": "decodeCampaignSnapshotData",
-              "exportKind": "named",
-              "source": "./libs/CampaignStore",
-              "declarationKind": "function"
-            },
-            {
-              "name": "defineCampaign",
-              "exportKind": "named",
-              "source": "./libs/CampaignContracts",
-              "declarationKind": "function"
-            },
-            {
-              "name": "defineMessage",
-              "exportKind": "named",
-              "source": "./libs/MessageContracts",
-              "declarationKind": "function"
-            },
-            {
-              "name": "encodeCampaignSnapshotData",
-              "exportKind": "named",
-              "source": "./libs/CampaignStore",
-              "declarationKind": "function"
-            },
-            {
               "name": "ENGAGEMENT_DELIVERY_EVENT_TYPES",
               "exportKind": "named",
               "source": "./libs/EngagementStores",
@@ -11673,18 +11856,6 @@
               "declarationKind": "class"
             },
             {
-              "name": "getAudienceDescriptor",
-              "exportKind": "named",
-              "source": "./libs/CampaignContracts",
-              "declarationKind": "function"
-            },
-            {
-              "name": "getMessageRendererBinding",
-              "exportKind": "named",
-              "source": "./libs/MessageContracts",
-              "declarationKind": "function"
-            },
-            {
               "name": "InMemoryCampaignStore",
               "exportKind": "named",
               "source": "./libs/CampaignStore",
@@ -11712,6 +11883,12 @@
               "name": "InMemoryRecipientDirectory",
               "exportKind": "named",
               "source": "./libs/EngagementService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InMemoryReminderStore",
+              "exportKind": "named",
+              "source": "./libs/InMemoryReminderStore",
               "declarationKind": "class"
             },
             {
@@ -11781,12 +11958,6 @@
               "declarationKind": "class"
             },
             {
-              "name": "normalizeEngagementEvidence",
-              "exportKind": "named",
-              "source": "./libs/EngagementStores",
-              "declarationKind": "function"
-            },
-            {
               "name": "PushEndpointLifecycle",
               "exportKind": "named",
               "source": "./libs/PushEndpointLifecycle",
@@ -11811,15 +11982,45 @@
               "declarationKind": "class"
             },
             {
-              "name": "recipientRefForEndpoint",
-              "exportKind": "named",
-              "source": "./libs/EngagementStores",
-              "declarationKind": "function"
-            },
-            {
               "name": "RegistryEngagementMessageRenderer",
               "exportKind": "named",
               "source": "./libs/EngagementService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReminderAccessDeniedProblem",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReminderConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReminderDispatchProblem",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReminderInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReminderNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReminderService",
+              "exportKind": "named",
+              "source": "./libs/ReminderService",
               "declarationKind": "class"
             },
             {
@@ -11839,6 +12040,168 @@
               "exportKind": "named",
               "source": "./libs/PersistentEngagement",
               "declarationKind": "class"
+            },
+            {
+              "name": "assertContactPolicyScope",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicy",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertEngagementPreference",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertEngagementStoreText",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertEngagementSuppression",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertReminderInput",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertReminderSchedule",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertReminderScope",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "campaignOutcomeFromSendResult",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore",
+              "declarationKind": "function"
+            },
+            {
+              "name": "campaignScopeForTenant",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore",
+              "declarationKind": "function"
+            },
+            {
+              "name": "campaignScopeKey",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createEngagementDeliveryEventId",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createEngagementDispatchId",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createEngagementDispatchIdentityKey",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createEngagementIdempotencyKey",
+              "exportKind": "named",
+              "source": "./libs/EngagementService",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createEngagementStoreConformanceSuite",
+              "exportKind": "named",
+              "source": "./libs/EngagementStoreConformance",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createPushEndpointId",
+              "exportKind": "named",
+              "source": "./libs/PushEndpointLifecycle",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createReminderEngagementSender",
+              "exportKind": "named",
+              "source": "./libs/ReminderEngagement",
+              "declarationKind": "function"
+            },
+            {
+              "name": "decodeCampaignSnapshotData",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore",
+              "declarationKind": "function"
+            },
+            {
+              "name": "defineCampaign",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "defineMessage",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "encodeCampaignSnapshotData",
+              "exportKind": "named",
+              "source": "./libs/CampaignStore",
+              "declarationKind": "function"
+            },
+            {
+              "name": "getAudienceDescriptor",
+              "exportKind": "named",
+              "source": "./libs/CampaignContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "getMessageRendererBinding",
+              "exportKind": "named",
+              "source": "./libs/MessageContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "nextOccurrence",
+              "exportKind": "named",
+              "source": "./libs/nextOccurrence",
+              "declarationKind": "function"
+            },
+            {
+              "name": "normalizeEngagementEvidence",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "function"
+            },
+            {
+              "name": "recipientRefForEndpoint",
+              "exportKind": "named",
+              "source": "./libs/EngagementStores",
+              "declarationKind": "function"
+            },
+            {
+              "name": "reminderOccurrenceId",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts",
+              "declarationKind": "function"
             },
             {
               "name": "validateContactPolicyConfig",
@@ -12439,6 +12802,76 @@
               "source": "./libs/PushEndpointLifecycle"
             },
             {
+              "name": "Reminder",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts"
+            },
+            {
+              "name": "ReminderAccess",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts"
+            },
+            {
+              "name": "ReminderActor",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts"
+            },
+            {
+              "name": "ReminderCommand",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts"
+            },
+            {
+              "name": "ReminderInput",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts"
+            },
+            {
+              "name": "ReminderMessageBinding",
+              "exportKind": "named",
+              "source": "./libs/ReminderEngagement"
+            },
+            {
+              "name": "ReminderMutation",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts"
+            },
+            {
+              "name": "ReminderOccurrence",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts"
+            },
+            {
+              "name": "ReminderRevisionCommand",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts"
+            },
+            {
+              "name": "ReminderSchedule",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts"
+            },
+            {
+              "name": "ReminderScope",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts"
+            },
+            {
+              "name": "ReminderServiceOptions",
+              "exportKind": "named",
+              "source": "./libs/ReminderService"
+            },
+            {
+              "name": "ReminderStore",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts"
+            },
+            {
+              "name": "ReminderTransaction",
+              "exportKind": "named",
+              "source": "./libs/ReminderContracts"
+            },
+            {
               "name": "ResolvedRecipient",
               "exportKind": "named",
               "source": "./libs/EngagementService"
@@ -12471,26 +12904,26 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
           "sourceEntrypoint": "packages/engagement-drizzle/src/index.ts",
           "runtimeExports": [
-            {
-              "name": "createEngagementSchema",
-              "exportKind": "named",
-              "source": "./migrations/engagementSchema",
-              "declarationKind": "function"
-            },
             {
               "name": "DrizzleCampaignStore",
               "exportKind": "named",
@@ -12514,6 +12947,18 @@
               "exportKind": "named",
               "source": "./libs/DrizzleEngagementStore",
               "declarationKind": "class"
+            },
+            {
+              "name": "DrizzleReminderStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleReminderStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "createEngagementSchema",
+              "exportKind": "named",
+              "source": "./migrations/engagementSchema",
+              "declarationKind": "function"
             },
             {
               "name": "dropEngagementSchema",
@@ -12576,19 +13021,43 @@
               "declarationKind": "const"
             },
             {
-              "name": "engagementDispatches",
-              "exportKind": "named",
-              "source": "./libs/schema",
-              "declarationKind": "const"
-            },
-            {
               "name": "engagementDispatchTargets",
               "exportKind": "named",
               "source": "./libs/schema",
               "declarationKind": "const"
             },
             {
+              "name": "engagementDispatches",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
               "name": "engagementPreferences",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "engagementReminderBuckets",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "engagementReminderMutations",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "engagementReminderOccurrences",
+              "exportKind": "named",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "engagementReminders",
               "exportKind": "named",
               "source": "./libs/schema",
               "declarationKind": "const"
@@ -12642,6 +13111,11 @@
               "source": "./libs/DrizzleEngagementStore"
             },
             {
+              "name": "DrizzleReminderClient",
+              "exportKind": "named",
+              "source": "./libs/DrizzleReminderStore"
+            },
+            {
               "name": "EngagementMigrationClient",
               "exportKind": "named",
               "source": "./migrations/engagementSchema"
@@ -12664,15 +13138,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -13109,15 +13589,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -13196,15 +13682,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -13370,15 +13862,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -13452,15 +13950,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/source.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/source.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/source.js"
             }
           ],
@@ -13540,15 +14044,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -13616,15 +14126,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/postgres.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/postgres.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/postgres.js"
             }
           ],
@@ -13672,15 +14188,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -14015,15 +14537,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -14192,15 +14720,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -14550,15 +15084,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -14948,15 +15488,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -14999,15 +15545,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -15193,15 +15745,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -15238,15 +15796,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -15976,15 +16540,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -16341,15 +16911,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -16381,15 +16957,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -16608,14 +17190,20 @@
           "title": "Middleware and request pipeline",
           "owner": "Middleware pipeline owner",
           "breakingChangePolicy": "Middleware callable shape, pipeline graph node/phase constants, and failure propagation changes require a documented migration path.",
-          "coverage": ["public-api:check grouped snapshot", "generated app request pipeline usage"]
+          "coverage": [
+            "public-api:check grouped snapshot",
+            "generated app request pipeline usage"
+          ]
         },
         {
           "id": "shutdown",
           "title": "Shutdown lifecycle",
           "owner": "Shutdown lifecycle owner",
           "breakingChangePolicy": "Shutdown hook signatures, timeout/configuration problem behavior, and signal listener semantics are breaking without migration guidance.",
-          "coverage": ["public-api:check grouped snapshot", "generated app smoke workspace build"]
+          "coverage": [
+            "public-api:check grouped snapshot",
+            "generated app smoke workspace build"
+          ]
         }
       ],
       "entrypoints": [
@@ -16624,15 +17212,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -18093,15 +18687,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -18150,15 +18750,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -18549,15 +19155,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -18625,15 +19237,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -19010,15 +19628,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/worker.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/worker.js"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/worker.cjs"
             }
           ],
@@ -19096,15 +19720,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -19383,15 +20013,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -19419,6 +20055,114 @@
               "name": "AuthBridgeRecoveryActions",
               "exportKind": "named",
               "source": "./libs/authBridge",
+              "declarationKind": "function"
+            },
+            {
+              "name": "CrocoAuthBridgeProvider",
+              "exportKind": "named",
+              "source": "./libs/authBridge",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ExperienceSlot",
+              "exportKind": "named",
+              "source": "./libs/ExperienceSlot",
+              "declarationKind": "function"
+            },
+            {
+              "name": "GoalProgress",
+              "exportKind": "named",
+              "source": "./libs/GoalProgress",
+              "declarationKind": "function"
+            },
+            {
+              "name": "MyBenefits",
+              "exportKind": "named",
+              "source": "./libs/OfferCard",
+              "declarationKind": "function"
+            },
+            {
+              "name": "NextActionCard",
+              "exportKind": "named",
+              "source": "./libs/GoalProgress",
+              "declarationKind": "function"
+            },
+            {
+              "name": "OfferCard",
+              "exportKind": "named",
+              "source": "./libs/OfferCard",
+              "declarationKind": "function"
+            },
+            {
+              "name": "PageDataContext",
+              "exportKind": "named",
+              "source": "./libs/hooks/usePageData",
+              "declarationKind": "const"
+            },
+            {
+              "name": "PageDataProvider",
+              "exportKind": "named",
+              "source": "./libs/hooks/usePageData",
+              "declarationKind": "const"
+            },
+            {
+              "name": "PageDataUnavailableProblem",
+              "exportKind": "named",
+              "source": "./libs/hooks/usePageData",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ProblemBoundary",
+              "exportKind": "named",
+              "source": "./libs/problemUi",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ProblemPanel",
+              "exportKind": "named",
+              "source": "./libs/problemUi",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ProblemRecoveryActions",
+              "exportKind": "named",
+              "source": "./libs/problemUi",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ProblemToastAdapter",
+              "exportKind": "named",
+              "source": "./libs/problemUi",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ReminderSettingsForm",
+              "exportKind": "named",
+              "source": "./libs/ReminderSettingsForm",
+              "declarationKind": "function"
+            },
+            {
+              "name": "RequireEntitlement",
+              "exportKind": "named",
+              "source": "./libs/authBridge",
+              "declarationKind": "function"
+            },
+            {
+              "name": "RequirePermission",
+              "exportKind": "named",
+              "source": "./libs/authBridge",
+              "declarationKind": "function"
+            },
+            {
+              "name": "RequireSession",
+              "exportKind": "named",
+              "source": "./libs/authBridge",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SnoozeControl",
+              "exportKind": "named",
+              "source": "./libs/ReminderSettingsForm",
               "declarationKind": "function"
             },
             {
@@ -19482,111 +20226,15 @@
               "declarationKind": "function"
             },
             {
-              "name": "CrocoAuthBridgeProvider",
-              "exportKind": "named",
-              "source": "./libs/authBridge",
-              "declarationKind": "function"
-            },
-            {
               "name": "evaluateSessionGateState",
               "exportKind": "named",
               "source": "./libs/authBridge",
               "declarationKind": "function"
             },
             {
-              "name": "ExperienceSlot",
-              "exportKind": "named",
-              "source": "./libs/ExperienceSlot",
-              "declarationKind": "function"
-            },
-            {
-              "name": "GoalProgress",
-              "exportKind": "named",
-              "source": "./libs/GoalProgress",
-              "declarationKind": "function"
-            },
-            {
-              "name": "MyBenefits",
-              "exportKind": "named",
-              "source": "./libs/OfferCard",
-              "declarationKind": "function"
-            },
-            {
-              "name": "NextActionCard",
-              "exportKind": "named",
-              "source": "./libs/GoalProgress",
-              "declarationKind": "function"
-            },
-            {
               "name": "normalizeProblemDetails",
               "exportKind": "named",
               "source": "./libs/problemUi",
-              "declarationKind": "function"
-            },
-            {
-              "name": "OfferCard",
-              "exportKind": "named",
-              "source": "./libs/OfferCard",
-              "declarationKind": "function"
-            },
-            {
-              "name": "PageDataContext",
-              "exportKind": "named",
-              "source": "./libs/hooks/usePageData",
-              "declarationKind": "const"
-            },
-            {
-              "name": "PageDataProvider",
-              "exportKind": "named",
-              "source": "./libs/hooks/usePageData",
-              "declarationKind": "const"
-            },
-            {
-              "name": "PageDataUnavailableProblem",
-              "exportKind": "named",
-              "source": "./libs/hooks/usePageData",
-              "declarationKind": "class"
-            },
-            {
-              "name": "ProblemBoundary",
-              "exportKind": "named",
-              "source": "./libs/problemUi",
-              "declarationKind": "class"
-            },
-            {
-              "name": "ProblemPanel",
-              "exportKind": "named",
-              "source": "./libs/problemUi",
-              "declarationKind": "function"
-            },
-            {
-              "name": "ProblemRecoveryActions",
-              "exportKind": "named",
-              "source": "./libs/problemUi",
-              "declarationKind": "function"
-            },
-            {
-              "name": "ProblemToastAdapter",
-              "exportKind": "named",
-              "source": "./libs/problemUi",
-              "declarationKind": "function"
-            },
-            {
-              "name": "RequireEntitlement",
-              "exportKind": "named",
-              "source": "./libs/authBridge",
-              "declarationKind": "function"
-            },
-            {
-              "name": "RequirePermission",
-              "exportKind": "named",
-              "source": "./libs/authBridge",
-              "declarationKind": "function"
-            },
-            {
-              "name": "RequireSession",
-              "exportKind": "named",
-              "source": "./libs/authBridge",
               "declarationKind": "function"
             },
             {
@@ -19891,6 +20539,41 @@
               "source": "./libs/problemUiTypes"
             },
             {
+              "name": "ReminderSettingsFormProps",
+              "exportKind": "named",
+              "source": "./libs/ReminderSettingsForm"
+            },
+            {
+              "name": "ReminderSettingsInput",
+              "exportKind": "named",
+              "source": "./libs/ReminderSettingsForm"
+            },
+            {
+              "name": "ReminderSettingsRevision",
+              "exportKind": "named",
+              "source": "./libs/ReminderSettingsForm"
+            },
+            {
+              "name": "ReminderSettingsSave",
+              "exportKind": "named",
+              "source": "./libs/ReminderSettingsForm"
+            },
+            {
+              "name": "ReminderSettingsSource",
+              "exportKind": "named",
+              "source": "./libs/ReminderSettingsForm"
+            },
+            {
+              "name": "ReminderSettingsState",
+              "exportKind": "named",
+              "source": "./libs/ReminderSettingsForm"
+            },
+            {
+              "name": "ReminderSettingsView",
+              "exportKind": "named",
+              "source": "./libs/ReminderSettingsForm"
+            },
+            {
               "name": "RequireEntitlementProps",
               "exportKind": "named",
               "source": "./libs/authBridgeTypes"
@@ -19904,6 +20587,11 @@
               "name": "RequireSessionProps",
               "exportKind": "named",
               "source": "./libs/authBridgeTypes"
+            },
+            {
+              "name": "SnoozeControlProps",
+              "exportKind": "named",
+              "source": "./libs/ReminderSettingsForm"
             }
           ]
         },
@@ -19912,15 +20600,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/experience-slot.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/experience-slot.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/experience-slot.js"
             }
           ],
@@ -19957,15 +20651,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -20025,15 +20725,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -20094,15 +20800,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -20366,15 +21078,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -20485,15 +21203,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -20847,15 +21571,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -21085,15 +21815,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -21149,15 +21885,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -21464,15 +22206,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -21617,15 +22365,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -22719,15 +23473,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -22759,15 +23519,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -23065,15 +23831,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -23152,19 +23924,29 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types", "import"],
+              "conditions": [
+                "types",
+                "import"
+              ],
               "target": "./dist/index.d.mts"
             },
             {
-              "conditions": ["types", "require"],
+              "conditions": [
+                "types",
+                "require"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -23748,19 +24530,29 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types", "import"],
+              "conditions": [
+                "types",
+                "import"
+              ],
               "target": "./dist/libs/isr/adapters/index.d.mts"
             },
             {
-              "conditions": ["types", "require"],
+              "conditions": [
+                "types",
+                "require"
+              ],
               "target": "./dist/libs/isr/adapters/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/libs/isr/adapters/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/libs/isr/adapters/index.js"
             }
           ],
@@ -23792,15 +24584,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -24262,15 +25060,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -24424,15 +25228,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -24500,15 +25310,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -24562,15 +25378,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -25128,15 +25950,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/runtime.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/runtime.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/runtime.js"
             }
           ],
@@ -25279,15 +26107,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -25430,15 +26264,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/cli.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/cli.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/cli.js"
             }
           ],
@@ -25513,15 +26353,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -25956,15 +26802,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -26046,15 +26898,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -26103,15 +26961,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -26205,15 +27069,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -26535,15 +27405,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/goal-validation.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/goal-validation.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/goal-validation.js"
             }
           ],
@@ -26581,15 +27457,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -26719,15 +27601,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -26781,15 +27669,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -27025,15 +27919,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -27269,15 +28169,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -27517,11 +28423,15 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             }
           ],
@@ -27633,11 +28543,15 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/fetch.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/fetch.mjs"
             }
           ],
@@ -27748,15 +28662,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -27850,15 +28770,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/handler.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/handler.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/handler.js"
             }
           ],
@@ -27923,15 +28849,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/handler.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/handler.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/handler.js"
             }
           ],
@@ -28002,15 +28934,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -28107,15 +29045,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/entry.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/entry.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/entry.js"
             }
           ],
@@ -28172,15 +29116,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -28605,15 +29555,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -28955,15 +29911,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/credit-grant.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/credit-grant.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/credit-grant.js"
             }
           ],
@@ -28995,15 +29957,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -29046,15 +30014,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -29163,15 +30137,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -29951,15 +30931,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.js"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.cjs"
             }
           ],
@@ -30455,15 +31441,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -31278,15 +32270,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.js"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.cjs"
             }
           ],
@@ -31330,15 +32328,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -31703,15 +32707,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -31773,15 +32783,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -31920,15 +32936,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -32302,15 +33324,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.js"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.cjs"
             }
           ],
@@ -32382,11 +33410,15 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -32731,11 +33763,15 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/ko/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/ko/index.js"
             }
           ],
@@ -32803,11 +33839,15 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -32912,11 +33952,15 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -33045,15 +34089,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -33179,15 +34229,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -33331,15 +34387,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -33504,15 +34566,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/node.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/node.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/node.js"
             }
           ],
@@ -33556,15 +34624,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -33647,15 +34721,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -33823,15 +34903,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -33903,15 +34989,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -34060,15 +35152,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -34281,15 +35379,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -34770,15 +35874,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/tenant-model.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/tenant-model.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/tenant-model.js"
             }
           ],
@@ -34954,15 +36064,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -36983,15 +38099,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/drizzle.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/drizzle.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/drizzle.js"
             }
           ],
@@ -37058,15 +38180,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/executable-assurance.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/executable-assurance.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/executable-assurance.js"
             }
           ],
@@ -37269,15 +38397,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/notifications.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/notifications.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/notifications.js"
             }
           ],
@@ -37328,15 +38462,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/playwright-reporter.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/playwright-reporter.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/playwright-reporter.js"
             }
           ],
@@ -37390,15 +38530,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/vitest-reporter.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/vitest-reporter.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/vitest-reporter.js"
             }
           ],
@@ -37436,15 +38582,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -37543,15 +38695,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -37593,15 +38751,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.js"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.cjs"
             }
           ],
@@ -37703,15 +38867,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -38402,15 +39572,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -38557,15 +39733,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -38669,15 +39851,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -38867,15 +40055,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -39088,15 +40282,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -39203,15 +40403,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -39340,15 +40546,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/runtime.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/runtime.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/runtime.js"
             }
           ],
@@ -39530,15 +40742,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -39551,15 +40769,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/facts.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/facts.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/facts.js"
             }
           ],
@@ -39619,15 +40843,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/metrics.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/metrics.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/metrics.js"
             }
           ],
@@ -39677,15 +40907,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -40256,15 +41492,21 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.mjs"
             },
             {
-              "conditions": ["require"],
+              "conditions": [
+                "require"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -40684,11 +41926,15 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/index.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/index.js"
             }
           ],
@@ -40747,11 +41993,15 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/verification.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/verification.js"
             }
           ],
@@ -40841,11 +42091,15 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/generator.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/generator.js"
             }
           ],
@@ -40912,11 +42166,15 @@
           "kind": "code",
           "targets": [
             {
-              "conditions": ["types"],
+              "conditions": [
+                "types"
+              ],
               "target": "./dist/programmatic.d.ts"
             },
             {
-              "conditions": ["import"],
+              "conditions": [
+                "import"
+              ],
               "target": "./dist/programmatic.js"
             }
           ],
