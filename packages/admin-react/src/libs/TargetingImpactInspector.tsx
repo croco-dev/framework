@@ -29,10 +29,17 @@ export function TargetingImpactInspector({
   onReplay,
   onExport,
 }: TargetingImpactInspectorProps): React.ReactElement {
-  const [unknownPolicy, setUnknownPolicy] = React.useState<"preserve" | "exclude">("preserve");
+  const report = state.kind === "ready" || state.kind === "partial" ? state.report : undefined;
+  const [draft, setDraft] = React.useState<{ inputHash?: string; value: "preserve" | "exclude" }>({
+    inputHash: report?.inputHash,
+    value: report?.input.definition.unknownPolicy ?? "preserve",
+  });
+  const unknownPolicy =
+    report && draft.inputHash !== report.inputHash
+      ? report.input.definition.unknownPolicy
+      : draft.value;
   const id = React.useId();
   const busy = state.kind === "loading";
-  const report = state.kind === "ready" || state.kind === "partial" ? state.report : undefined;
   return (
     <section aria-label="Targeting impact inspector" data-state={state.kind} aria-busy={busy}>
       <h2>Targeting impact inspector</h2>
@@ -52,7 +59,10 @@ export function TargetingImpactInspector({
           value={unknownPolicy}
           disabled={busy || state.kind === "denied"}
           onChange={(event) =>
-            setUnknownPolicy(event.currentTarget.value as "preserve" | "exclude")
+            setDraft({
+              inputHash: report?.inputHash,
+              value: event.currentTarget.value as "preserve" | "exclude",
+            })
           }
         >
           <option value="preserve">Preserve unknown subjects</option>

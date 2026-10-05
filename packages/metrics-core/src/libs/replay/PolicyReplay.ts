@@ -421,7 +421,7 @@ export function replayPolicy(value: PolicyReplayInput): PolicyDiffResult {
             evidenceRows.some(
               (row) =>
                 row.dispatch &&
-                Date.parse(row.dispatch.at) + input.attributionWindowMs >
+                Date.parse(row.dispatch.at) + input.attributionWindowMs >=
                   Date.parse(input.observationWindow.end),
             )
           ? "partial"
@@ -458,7 +458,7 @@ export function replayPolicy(value: PolicyReplayInput): PolicyDiffResult {
     input.rows.some(
       (row) =>
         row.dispatch &&
-        Date.parse(row.dispatch.at) + input.attributionWindowMs >
+        Date.parse(row.dispatch.at) + input.attributionWindowMs >=
           Date.parse(input.observationWindow.end),
     )
   )

@@ -1,9 +1,10 @@
-import { createElement } from "react";
+import { createElement, isValidElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { TargetingImpactInspector } from "../libs/TargetingImpactInspector";
 import type { TargetingImpactInspectorState } from "../libs/TargetingImpactInspector";
 import type { TargetingImpactReport } from "@croco/admin-core";
+import type * as ReactAPI from "react";
 
 const report: TargetingImpactReport = {
   version: 1,
@@ -138,4 +139,77 @@ describe("TargetingImpactInspector", () => {
     expect(html).toContain("Unavailable");
     expect(html).not.toContain("200 KRW");
   });
+});
+
+const hooks = vi.hoisted(() => ({ active: false, index: 0, slots: [] as unknown[] }));
+vi.mock("react", async (loadOriginal) => {
+  const original = await loadOriginal<typeof ReactAPI>();
+  return {
+    ...original,
+    useId: () => (hooks.active ? "policy-test" : original.useId()),
+    useState: <T>(initial: T) => {
+      if (!hooks.active) return original.useState(initial);
+      const slot = hooks.index++;
+      if (!(slot in hooks.slots)) hooks.slots[slot] = initial;
+      return [
+        hooks.slots[slot] as T,
+        (value: T) => {
+          hooks.slots[slot] = value;
+        },
+      ];
+    },
+  };
+});
+it("loads a different report policy while preserving intentional edits for the same report", () => {
+  type Props = {
+    children?: unknown;
+    value?: string;
+    onChange?: (event: { currentTarget: { value: string } }) => void;
+  };
+  function select(tree: unknown): Props | undefined {
+    if (Array.isArray(tree)) return tree.map(select).find(Boolean);
+    if (!isValidElement<Props>(tree)) return undefined;
+    return tree.type === "select" ? tree.props : select(tree.props.children);
+  }
+  function view(state: TargetingImpactInspectorState): Props {
+    hooks.index = 0;
+    const props = select(TargetingImpactInspector({ state, onReplay: () => {} }));
+    if (!props) throw new Error("Missing policy selector");
+    return props;
+  }
+  hooks.active = true;
+  hooks.slots = [];
+  try {
+    expect(view({ kind: "loading" }).value).toBe("preserve");
+    const loaded = {
+      ...report,
+      input: {
+        ...report.input,
+        definition: { ...report.input.definition, unknownPolicy: "exclude" as const },
+      },
+    };
+    const props = view({ kind: "ready", report: loaded });
+    expect(props.value).toBe("exclude");
+    props.onChange?.({ currentTarget: { value: "preserve" } });
+    expect(view({ kind: "ready", report: loaded }).value).toBe("preserve");
+    expect(view({ kind: "ready", report: { ...loaded, inputHash: "different-input" } }).value).toBe(
+      "exclude",
+    );
+  } finally {
+    hooks.active = false;
+    hooks.slots = [];
+  }
+});
+
+it("selects exclude when an existing exclude report is the initial state", () => {
+  const loaded = {
+    ...report,
+    input: {
+      ...report.input,
+      definition: { ...report.input.definition, unknownPolicy: "exclude" as const },
+    },
+  };
+  expect(render({ kind: "ready", report: loaded })).toContain(
+    '<option value="exclude" selected="">',
+  );
 });

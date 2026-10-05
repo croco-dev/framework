@@ -299,3 +299,21 @@ describe("PolicyReplay review regressions", () => {
     expect(result.scenarioValues.map((s) => s.status)).toEqual(["partial", "partial"]);
   });
 });
+
+it("keeps inclusive attribution endpoints partial at an exclusive observation boundary", () => {
+  const input = fixture();
+  const result = replayPolicy({
+    ...input,
+    rows: [
+      {
+        subjectId: "u",
+        atDecision: at(1),
+        traitsAtDecision: { eligible: false },
+        dispatch: { dispatchId: "boundary-send", at: at(18) },
+        touchpoints: [],
+        outcomes: [],
+      },
+    ],
+  });
+  expect(result.scenarioValues.map((s) => s.status)).toEqual(["partial", "partial"]);
+});
