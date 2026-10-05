@@ -33,7 +33,8 @@ Presentation SSR/runtime support is tracked separately in
 
 ## Shared deployment rules
 
-- Import `reflect-metadata` once at the first runtime entry point.
+- Load reflection metadata before declaring decorated classes. The checked entry points import
+  `@croco/framework-context`, which loads `reflect-metadata`.
 - Validate required env, secrets, and feature flags before accepting traffic. Missing production
   config should fail startup or the Lambda cold start rather than producing partial behavior.
 - Keep secrets server-side. Do not expose diagnostics without a private network boundary, token
@@ -51,7 +52,7 @@ invocation returns.
 Install the runtime dependencies:
 
 ```bash
-pnpm add @croco/framework-module @croco/preset-lambda @croco/problems-core @croco/protocols-rest @croco/ratelimit-core @croco/telemetry-sdk-node @croco/transports-http reflect-metadata
+pnpm add @croco/framework-context @croco/framework-module @croco/preset-lambda @croco/problems-core @croco/protocols-rest @croco/ratelimit-core @croco/telemetry-sdk-node @croco/transports-http reflect-metadata
 ```
 
 Set these environment variables in the Lambda function configuration:
@@ -65,10 +66,35 @@ Set these environment variables in the Lambda function configuration:
 | `TRACE_SAMPLE_RATE`                                                   | no                        | Sampling probability between `0` and `1`. Defaults to Croco's Lambda preset.      |
 | `CROCO_DIAGNOSTICS_TOKEN`                                             | no                        | Enables token-guarded `/health/diagnostics`. Leave unset to keep diagnostics off. |
 
-Create `src/runtime/env.ts`:
+Create `src/handler.ts`. The environment validation, HTTP app, and Lambda entry point are
+kept in one module so this complete recipe is typechecked together:
 
-```typescript no-check
+```typescript typecheck
+import "@croco/framework-context";
 import { ProblemFactory } from "@croco/problems-core";
+import {
+  createSlidingWindowPolicy,
+  RateLimitKeyBuilder,
+  RateLimiter,
+  SlidingWindowInMemoryStore,
+} from "@croco/ratelimit-core";
+import { Controller, Get } from "@croco/protocols-rest";
+import {
+  bodyLimitMiddleware,
+  corsMiddleware,
+  createApp,
+  mb,
+  rateLimitHttpMiddleware,
+  securityHeadersMiddleware,
+} from "@croco/transports-http";
+import { createApplicationRuntime } from "@croco/framework-module";
+import { createLambdaHost } from "@croco/preset-lambda";
+import {
+  lambdaPreset,
+  TelemetryForceFlushUnsupportedProblem,
+  TelemetryRuntime,
+} from "@croco/telemetry-sdk-node";
+import type { LambdaContext, LambdaEvent, LambdaResponse } from "@croco/transports-http";
 
 export type DeploymentEnv = {
   serviceName: string;
@@ -135,27 +161,8 @@ export function readDeploymentEnv(): DeploymentEnv {
     diagnosticsToken: optionalEnv("CROCO_DIAGNOSTICS_TOKEN"),
   };
 }
-```
 
-Create `src/app.ts`:
-
-```typescript no-check
-import {
-  createSlidingWindowPolicy,
-  RateLimitKeyBuilder,
-  RateLimiter,
-  SlidingWindowInMemoryStore,
-} from "@croco/ratelimit-core";
-import { Controller, Get } from "@croco/protocols-rest";
-import {
-  bodyLimitMiddleware,
-  corsMiddleware,
-  createApp,
-  mb,
-  rateLimitHttpMiddleware,
-  securityHeadersMiddleware,
-} from "@croco/transports-http";
-import type { DeploymentEnv } from "./runtime/env";
+// Shared HTTP application.
 
 @Controller("/api")
 class HealthController {
@@ -192,22 +199,8 @@ export function createDeploymentApp(env: DeploymentEnv) {
     ],
   });
 }
-```
 
-Create `src/handler.ts`:
-
-```typescript no-check
-import "reflect-metadata";
-import { createApplicationRuntime } from "@croco/framework-module";
-import { createLambdaHost } from "@croco/preset-lambda";
-import {
-  lambdaPreset,
-  TelemetryForceFlushUnsupportedProblem,
-  TelemetryRuntime,
-} from "@croco/telemetry-sdk-node";
-import type { LambdaContext, LambdaEvent, LambdaResponse } from "@croco/transports-http";
-import { createDeploymentApp } from "./app";
-import { readDeploymentEnv } from "./runtime/env";
+// Lambda entry point.
 
 const env = readDeploymentEnv();
 const telemetry = TelemetryRuntime.getInstance();
@@ -279,8 +272,8 @@ compatibility_date = "2026-06-18"
 compatibility_flags = ["nodejs_compat"]
 ```
 
-```typescript no-check
-import "reflect-metadata";
+```typescript typecheck
+import "@croco/framework-context";
 import { createApplicationRuntime } from "@croco/framework-module";
 import { createCloudflareWorkersHost } from "@croco/preset-cloudflare";
 import {
@@ -379,7 +372,12 @@ and close; the bound `CrocoApp.fetch()` callback owns HTTP execution.
 pnpm add @croco/framework-module @croco/preset-node @croco/telemetry-sdk-node @croco/transports-http reflect-metadata
 ```
 
+This entry point reuses `createDeploymentApp` and `readDeploymentEnv` from the Lambda recipe.
+Move those two helpers and their dependencies into `src/app.ts` and `src/runtime/env.ts` respectively
+without importing the Lambda host or initializing Lambda telemetry in the Node process.
+
 ```typescript no-check
+// Not checked in isolation: ./app and ./runtime/env are application-owned modules extracted above.
 import "reflect-metadata";
 import { createApplicationRuntime } from "@croco/framework-module";
 import { createNodeHost } from "@croco/preset-node";
