@@ -23,3 +23,12 @@ export type {
   VerifiedReportOutcome,
   VerifiedReportReader,
 } from "./libs/read/MetricReadService";
+
+export {
+  calculateActivationSource,
+  importActivationSource,
+  normalizeActivationRow,
+  readActivationWarehouse,
+  registerActivationQuery,
+} from "./libs/activation/ActivationSources";
+export type { ActivationColumnBinding } from "./libs/activation/ActivationSources";

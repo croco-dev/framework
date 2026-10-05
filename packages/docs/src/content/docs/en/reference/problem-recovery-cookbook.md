@@ -146,6 +146,8 @@ This cookbook documents 915 public Croco Problem codes. The deterministic JSON r
 | [`access-core/invalid-relation-tuple`](#access-core-invalid-relation-tuple)                                                           | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
 | [`access-core/unauthorized`](#access-core-unauthorized)                                                                               | Unauthorized                                                        |           401 | not-retryable | safe-message  | active    |       1 |
 | [`admin-console/user-not-found`](#admin-console-user-not-found)                                                                       | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
+| [`admin-core/activation-denied`](#admin-core-activation-denied)                                                                       | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
+| [`admin-core/activation-invalid-report`](#admin-core-activation-invalid-report)                                                       | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`admin-core/contact-policy-denied`](#admin-core-contact-policy-denied)                                                               | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
 | [`admin-core/contact-policy-invalid`](#admin-core-contact-policy-invalid)                                                             | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`admin-core/credit-operations-permission-denied`](#admin-core-credit-operations-permission-denied)                                   | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
@@ -598,6 +600,7 @@ This cookbook documents 915 public Croco Problem codes. The deterministic JSON r
 | [`metrics-core/experiment-input-invalid`](#metrics-core-experiment-input-invalid)                                                     | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`metrics-core/experiment-plan-invalid`](#metrics-core-experiment-plan-invalid)                                                       | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`metrics-core/gross-margin-required`](#metrics-core-gross-margin-required)                                                           | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
+| [`metrics-core/invalid-activation-input`](#metrics-core-invalid-activation-input)                                                     | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`metrics-core/invalid-carrying-capacity-config`](#metrics-core-invalid-carrying-capacity-config)                                     | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`metrics-core/invalid-retention-movement`](#metrics-core-invalid-retention-movement)                                                 | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`metrics-core/invalid-user-carrying-capacity-metric`](#metrics-core-invalid-user-carrying-capacity-metric)                           | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
@@ -3324,6 +3327,42 @@ Sources:
 Sources:
 
 - `packages/create-croco-app/templates/admin-console/apps/api-server/src/controllers/adminSchemas.ts:20:79` (problem-metadata)
+
+<a id="admin-core-activation-denied"></a>
+
+## `admin-core/activation-denied`
+
+- Category: `Forbidden`
+- HTTP status: `403` Forbidden
+- Retryability: `not-retryable`
+- Redaction policy: `safe-message`
+- Lifecycle: `active`
+- Cause: The authenticated caller is not allowed to perform the requested action.
+- User action: Request the required permission or choose an allowed action.
+- Operator action: Review policy, role, tenant, entitlement, and impersonation context.
+- Telemetry: `croco.problem.warning` (warning) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/admin-core/src/libs/ActivationCandidateOperations.ts:59:1` (problem-class)
+
+<a id="admin-core-activation-invalid-report"></a>
+
+## `admin-core/activation-invalid-report`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/admin-core/src/libs/ActivationCandidateOperations.ts:59:1` (problem-class)
 
 <a id="admin-core-contact-policy-denied"></a>
 
@@ -11460,6 +11499,24 @@ Sources:
 Sources:
 
 - `packages/metrics-core/src/libs/problems/MetricsProblems.ts:87:1` (problem-class)
+
+<a id="metrics-core-invalid-activation-input"></a>
+
+## `metrics-core/invalid-activation-input`
+
+- Category: `ValidationError`
+- HTTP status: `422` Validation Error
+- Retryability: `not-retryable`
+- Redaction policy: `public`
+- Lifecycle: `active`
+- Cause: The request or generated contract failed schema or semantic validation.
+- User action: Fix the invalid fields and retry with schema-conformant input.
+- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+
+Sources:
+
+- `packages/metrics-core/src/libs/activation/ActivationCandidates.ts:81:1` (problem-class)
 
 <a id="metrics-core-invalid-carrying-capacity-config"></a>
 

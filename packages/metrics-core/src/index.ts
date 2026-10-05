@@ -176,3 +176,19 @@ export type {
   RetentionMetrics,
   SubscriptionSnapshot,
 } from "./types";
+
+export {
+  calculateActivationCandidates,
+  hashActivationInputs,
+  ActivationValidationProblem,
+} from "./libs/activation/ActivationCandidates";
+export type {
+  ActivationWindow,
+  ActivationOutcomeWindow,
+  ActivationCandidate,
+  ActivationDefinition,
+  ActivationRow,
+  ActivationRatio,
+  ActivationCandidateResult,
+  ActivationReport,
+} from "./libs/activation/ActivationCandidates";
