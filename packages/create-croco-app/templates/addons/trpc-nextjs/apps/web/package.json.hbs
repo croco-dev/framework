@@ -3,12 +3,25 @@
   "version": "0.0.1",
   "private": true,
   "scripts": {
-    "build": "next build",
-    "dev": "next dev",
+    "di:generate": "tsx scripts/generate-di.ts",
+    "migrate": "tsx scripts/migrate-product.ts",
+    "product:smoke": "tsx scripts/product-smoke.mts",
+    "build": "pnpm di:generate && next build",
+    "dev": "pnpm di:generate && next dev",
+    "dev:demo": "pnpm di:generate && cross-env CROCO_WEB_DEMO=local next dev --hostname 127.0.0.1",
+    "start:demo": "cross-env CROCO_WEB_DEMO=local next start --hostname 127.0.0.1",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "pnpm di:generate && tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@croco/auth-core": "workspace:*",
+    "@croco/events-core": "workspace:*",
+    "@croco/events-inmemory": "workspace:*",
+    "@croco/framework-context": "workspace:*",
+    "@croco/framework-module": "workspace:*",
+    "@croco/problems-core": "workspace:*",
+    "@croco/tx-core": "workspace:*",
     "@trpc/client": "^11.0.0",
     "@trpc/react-query": "^11.0.0",
     "@trpc/server": "^11.0.0",
@@ -17,9 +30,16 @@
     "next": "^15.5.25",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "sharp": "^0.35.4"
+    "sharp": "^0.35.4",
+    "reflect-metadata": "0.2.2",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@croco/esbuild-plugin": "workspace:*",
+    "@types/node": "^24",
+    "cross-env": "^10.1.0",
+    "tsx": "^4.20.3",
+    "vitest": "^4.1.8",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "typescript": "^6.0.3"

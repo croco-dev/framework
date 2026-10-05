@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 896,
+  problemCount: 904,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -3562,6 +3562,256 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 82,
           column: 1,
           kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "TRIAL_AUTH_REQUIRED",
+      category: "Unauthorized",
+      status: 401,
+      title: "Unauthorized",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trial-auth-required",
+      recovery: {
+        cause: "The request did not include valid authentication credentials.",
+        userAction: "Sign in again or provide a valid credential.",
+        operatorAction: "Check authentication configuration, token issuer, and clock skew.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",
+          line: 113,
+          column: 13,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "TRIAL_COMMAND_CONFLICT",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trial-command-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",
+          line: 137,
+          column: 17,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "TRIAL_EVENT_INVALID",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trial-event-invalid",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",
+          line: 209,
+          column: 13,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "TRIAL_INPUT_INVALID",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trial-input-invalid",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",
+          line: 121,
+          column: 13,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "TRIAL_MIGRATION_REQUIRED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trial-migration-required",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",
+          line: 44,
+          column: 10,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "TRIAL_NESTING_UNSUPPORTED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trial-nesting-unsupported",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",
+          line: 76,
+          column: 13,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "TRIAL_NOT_FOUND",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trial-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",
+          line: 200,
+          column: 13,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "TRIAL_STORAGE_FAILED",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#trial-storage-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",
+          line: 255,
+          column: 13,
+          kind: "problem-constructor",
         },
       ],
     },
@@ -28172,6 +28422,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
     },
   ],
   dynamicCodeFactories: [
+    {
+      className: "TrialProblem",
+      source: {
+        file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",
+        line: 37,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
     {
       className: "EtlEventProblem",
       source: {

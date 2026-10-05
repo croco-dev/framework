@@ -615,7 +615,7 @@ describe("cacheable producer lane evidence", () => {
     expect(hit.cacheHit).toBe(true);
   });
 
-  it("emits seven-case producer facts for 19 executed paths and rejects a missing selected test", async () => {
+  it("emits seven-case producer facts for 21 executed paths and rejects a missing selected test", async () => {
     useCurrentRunEnvironment();
     const rootDir = mkdtempSync(join(tmpdir(), "croco-cacheable-generated-seven-cases-"));
     const selectedPath = (path: string) =>
@@ -637,10 +637,18 @@ describe("cacheable producer lane evidence", () => {
     const facts = JSON.parse(
       readFileSync(join(result.outputDir, "producer-facts.json"), "utf8"),
     ) as { requiredSourcePaths: string[]; executedSourcePaths: string[] };
-    expect(facts.executedSourcePaths).toHaveLength(19);
+    expect(facts.executedSourcePaths).toHaveLength(21);
+    expect(facts.executedSourcePaths).toEqual(
+      expect.arrayContaining([
+        "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/tests/LocalSessionProvider.spec.ts",
+        "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/tests/ProductTrials.spec.ts",
+      ]),
+    );
     expect(facts.requiredSourcePaths).toEqual(
       facts.executedSourcePaths.filter(
-        (path) => !path.endsWith("/graphql-api/src/formatGraphQLError.spec.ts"),
+        (path) =>
+          !path.endsWith("/graphql-api/src/formatGraphQLError.spec.ts") &&
+          !path.includes("/addons/trpc-nextjs/apps/web/"),
       ),
     );
     expect(

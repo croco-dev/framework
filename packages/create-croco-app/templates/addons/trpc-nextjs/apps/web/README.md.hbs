@@ -1,0 +1,78 @@
+# Local product path
+
+This Node + Next.js SSR example follows a synthetic product detail → server session →
+trial command → private saved brief. It uses typed tRPC with one native TanStack Query
+client, an app-owned Croco `ApplicationRuntime`, generated DI and native SQLite.
+`croco.product-profile.json` records the same configuration and source locations.
+
+From this directory:
+
+```sh
+# From the generated project root first: pnpm install
+pnpm migrate       # Explicit SQLite schema migration; runtime never creates tables
+pnpm dev:demo      # Explicit local identities; binds 127.0.0.1
+# Open http://127.0.0.1:3000/products/launch-brief
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm product:smoke # Built server: SSR/status/auth/isolation/idempotency/restart/sink fault
+pnpm start:demo    # Run the production build locally, still with synthetic identities
+```
+
+The dev-only identity fixture is enabled explicitly by `CROCO_WEB_DEMO=local`, independently
+of Next's development/build optimization mode. Normal `pnpm dev` and `pnpm start` leave
+authentication disabled. The demo commands bind loopback; do not expose the local profile
+to a network or deploy it. Production authentication is unsupported by this profile;
+replace the local `AuthProvider` and remove the fixture endpoint before deployment.
+Alice and Carol belong to Studio A; Bob belongs to Studio B. Server-created, one-hour
+HttpOnly/SameSite sessions authenticate every private SSR read and tRPC operation.
+Changing a user or tenant in a URL or input never grants access to another result.
+Session fixtures reset when the server restarts; saved results remain in SQLite.
+
+`CROCO_PRODUCT_DATABASE` selects the SQLite file (default `.local/product.sqlite`, relative
+to this app). Use the same value for migrate and run. No external credentials or secret
+values are needed. Keep real credentials in server environment/ref configuration;
+never put them in `NEXT_PUBLIC_*`, HTML, logs, or client modules.
+
+The public product body and link are SSR HTML. Unknown products/results return 404.
+The command derives a brief from the supplied idea and audience, rather than returning
+a precomputed result. The browser retains one command ID across retries; changed input
+with that ID conflicts. A new command creates a new result. SQLite commits the result
+and its immutable domain fact in one `TxManager` transaction. Request correlation and
+event ID are stored in both records. A duplicate returns the original result without
+another fact or observation callback.
+
+The first value action is **creating a saved brief**. `product_trial_facts` records that
+server-confirmed action; a click or HTTP response alone does not count as completion.
+The brief's suggested experiment and success signal are synthetic, application-owned
+guidance; they do not run an experiment or collect conversions.
+
+`EventPublisher.publishAfterCommit()` observes the committed fact. `runWithOutcome()`
+reports sink failure separately from command success. This callback is best effort;
+the persisted fact is audit evidence, not an outbox relay or a delivery guarantee.
+The PostgreSQL `events-tx` adapter is not presented as a SQLite adapter. Failed
+observations are not automatically retried, and duplicate commands do not republish.
+
+Edit `src/server/product/ProductTrials.ts` for business/growth definitions,
+`src/server/product/migrateProduct.ts` for the reviewed schema, `src/server/routers/product.ts`
+for typed operation inputs, and `src/app/products`, `src/app/try`, `src/app/results` for
+the product loop. Add `@Component` services under `src/server`; `pnpm di:generate`
+discovers them without service lists in bootstrap. HTTP callbacks and private page
+reads enter `src/server/application.ts`'s app scope.
+
+This example verifies local Node and browser behavior. It does not certify a production
+provider, deployment, Croco Flight/RSC, multi-process SQLite operation, real payment,
+warehouse/ETL, personalization snapshots, SEO/RUM integrations or experiment engines.
+[The data add-on (#2878)](https://github.com/croco-dev/framework/issues/2878) is separate,
+uninstalled, and unnecessary to run this example. The legacy health tRPC endpoint remains
+available at `/api/trpc/health.check`.
+
+Stop the server before cleanup. To remove only this example's default generated data:
+
+```sh
+node -e "require('node:fs').rmSync('.local/product.sqlite', { force: true })"
+```
+
+For a custom database path, remove that reviewed local fixture separately. Re-run migrate
+to start an empty store. Migration and fixture login are explicit; app startup does not
+seed data, run DDL, or silently authenticate requests.

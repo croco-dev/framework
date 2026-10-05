@@ -1262,6 +1262,12 @@
       "owner": "create-croco-app"
     },
     {
+      "path": "packages/create-croco-app/src/tests/LocalProductProfile.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "create-croco-app"
+    },
+    {
       "path": "packages/create-croco-app/src/tests/NextTemplateSecurity.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -1383,6 +1389,28 @@
       "generated": {
         "sourcePath": "packages/create-croco-app/templates/addons/graphql-standalone/apps/graphql-api/src/formatGraphQLError.spec.ts",
         "generatedPath": "apps/graphql-api/src/formatGraphQLError.spec.ts",
+        "commandId": "create-croco-app"
+      }
+    },
+    {
+      "path": "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/tests/LocalSessionProvider.spec.ts",
+      "lane": "generated-app",
+      "qualifiers": [],
+      "owner": "create-croco-app",
+      "generated": {
+        "sourcePath": "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/tests/LocalSessionProvider.spec.ts",
+        "generatedPath": "apps/web/src/server/tests/LocalSessionProvider.spec.ts",
+        "commandId": "create-croco-app"
+      }
+    },
+    {
+      "path": "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/tests/ProductTrials.spec.ts",
+      "lane": "generated-app",
+      "qualifiers": [],
+      "owner": "create-croco-app",
+      "generated": {
+        "sourcePath": "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/tests/ProductTrials.spec.ts",
+        "generatedPath": "apps/web/src/server/tests/ProductTrials.spec.ts",
         "commandId": "create-croco-app"
       }
     },
