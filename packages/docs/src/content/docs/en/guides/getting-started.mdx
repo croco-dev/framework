@@ -79,11 +79,29 @@ in production. The CLI `pnpm demo:smoke` path does not require opening those HTT
 ## 4. Extend the Generated Controller
 
 Add REST behavior in `apps/api-server/src/controllers/SaasController.ts`, where the generated app
-already keeps route metadata and Problem responses together:
+already keeps route metadata and Problem responses together. This excerpt is excluded from standalone
+documentation typechecking because it imports generated `saasDemo`, route schemas, provider profiles,
+and Problem modules. Validate changes in the generated workspace with `pnpm demo:smoke`.
 
 ```typescript no-check
 import { Inject } from "@croco/framework-context";
+import {
+  Controller,
+  Get,
+  Post,
+  ProblemResponses,
+  routeProblemResponses,
+} from "@croco/protocols-rest";
 import { SAAS_RUNTIME_STATE_TOKEN, runSaasDemoFlow, type SaasRuntimeState } from "../saasDemo";
+import { seedSaasDemoRoute, smokeSaasDemoRoute } from "./schemas";
+
+export async function assertDemoEndpointsEnabled(): Promise<void> {
+  const { isSaasDemoEndpointEnabled } = await import("../providerProfiles");
+  if (!isSaasDemoEndpointEnabled()) {
+    const { DemoEndpointDisabledProblem } = await import("../problems");
+    throw new DemoEndpointDisabledProblem();
+  }
+}
 
 @Controller("/saas")
 export class SaasController {

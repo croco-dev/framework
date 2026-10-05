@@ -88,6 +88,45 @@ describe("doc-examples-check.mts", () => {
   );
 
   it(
+    "resolves documentation dependencies from the Markdown package directory",
+    () => {
+      const root = createTempRoot();
+      writeValidDocs(root);
+      const packageDir = join(root, "packages", "docs");
+      const dependencyDir = join(packageDir, "node_modules", "doc-schema");
+      writeJson(join(dependencyDir, "package.json"), {
+        name: "doc-schema",
+        types: "index.d.ts",
+      });
+      writeFileSync(join(dependencyDir, "index.d.ts"), "export declare const value: string;\n");
+      const guidePath = join(packageDir, "src", "content", "docs", "en", "guides", "schema.mdx");
+      mkdirSync(dirname(guidePath), { recursive: true });
+      writeFileSync(
+        guidePath,
+        [
+          "```ts typecheck",
+          'import { value } from "doc-schema";',
+          "const result: string = value;",
+          "```",
+          "",
+        ].join("\n"),
+      );
+
+      const passing = runScript(root, "--check");
+      expect(passing.stdout).toContain("checked 2 TypeScript documentation examples");
+      expect(passing.status).toBe(0);
+
+      writeFileSync(join(dependencyDir, "index.d.ts"), "export declare const value: number;\n");
+      const drift = runScript(root, "--check");
+      expect(drift.status).toBe(1);
+      expect(drift.stdout).toContain(
+        "schema.mdx:3: Type 'number' is not assignable to type 'string'",
+      );
+    },
+    scriptTestTimeout,
+  );
+
+  it(
     "requires untypechecked TypeScript fences to be explicitly marked or recorded",
     () => {
       const root = createTempRoot();

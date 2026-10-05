@@ -1038,8 +1038,8 @@ function generateVirtualFiles(
     const extension = block.language === "tsx" ? "tsx" : "ts";
     const fileName = join(
       rootDir,
-      ".croco-doc-examples",
-      `${sanitizeFileName(block.file)}.${block.typeScriptBlockIndex}.${extension}`,
+      dirname(block.file),
+      `.croco-doc-example.${sanitizeFileName(block.file)}.${block.typeScriptBlockIndex}.${extension}`,
     );
     const source = [`// Source: ${formatBlock(block)}`, "", block.code, "", "export {};", ""].join(
       "\n",

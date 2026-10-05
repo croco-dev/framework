@@ -18,7 +18,7 @@ path, request schemas, and response schema:
 - `@croco/openapi-spec` and `@croco/rpc-codegen` derive artifacts from the contract graph instead of
   reading parallel DTO interfaces or hand-written OpenAPI metadata.
 
-```typescript no-check
+```typescript typecheck
 import {
   Body,
   Controller,
@@ -68,7 +68,25 @@ type move together.
 Move existing loose decorators one route at a time. Replace the parallel path/param/body/response values
 with a single route contract, then point the decorators at that contract:
 
-```typescript no-check
+```typescript typecheck
+import {
+  Controller,
+  defineRouteContract,
+  Get,
+  HttpMethod,
+  Param,
+  type RouteMethodReturn,
+  type RouteParam,
+} from "@croco/protocols-rest";
+import { z } from "zod";
+
+const userIdSchema = z.string().uuid();
+const userSchema = z.object({
+  id: userIdSchema,
+  name: z.string(),
+  email: z.string().email(),
+});
+
 const getUserRoute = defineRouteContract({
   id: "users.get",
   method: HttpMethod.GET,
@@ -83,7 +101,7 @@ class UsersController {
   getUser(
     @Param(getUserRoute, "id") id: RouteParam<typeof getUserRoute, "id">,
   ): RouteMethodReturn<typeof getUserRoute> {
-    return getUser(id);
+    return { id, name: "Ada", email: "ada@example.com" };
   }
 }
 ```
@@ -105,10 +123,33 @@ contract route, `buildContractGraph()` emits a contract diagnostic before OpenAP
 
 Generated contract artifacts must read the contract graph:
 
-```typescript no-check
+```typescript typecheck
 import { buildContractGraph } from "@croco/protocols-core";
 import { emitOpenAPIFromContractGraph } from "@croco/openapi-spec";
 import { generateClientFilesFromContractGraph } from "@croco/rpc-codegen";
+import {
+  Controller,
+  defineRouteContract,
+  Get,
+  HttpMethod,
+  type RouteMethodReturn,
+} from "@croco/protocols-rest";
+import { z } from "zod";
+
+const listUsersRoute = defineRouteContract({
+  id: "users.list",
+  method: HttpMethod.GET,
+  path: "/users",
+  response: z.array(z.object({ id: z.string(), name: z.string() })),
+});
+
+@Controller("/users")
+class UsersController {
+  @Get(listUsersRoute)
+  listUsers(): RouteMethodReturn<typeof listUsersRoute> {
+    return [{ id: "user-1", name: "Ada" }];
+  }
+}
 
 const graph = buildContractGraph([UsersController]);
 
@@ -126,18 +167,37 @@ GraphQL APIs use a different source of truth. The executable schema comes from c
 `type-graphql` resolver metadata, so the review artifact is the compiled SDL plus Croco resolver
 metadata rather than the REST Contract Graph.
 
-Use `createGraphQLContractSnapshot()` after schema compilation:
+Use `createGraphQLContractSnapshot()` after schema compilation. Pass the compiled schema and the
+previously saved snapshot to this comparison function:
 
-```typescript no-check
+```typescript typecheck
 import {
   createGraphQLContractSnapshot,
   diffGraphQLContractSnapshots,
+  GraphQLResolver,
+  Query,
   stringifyGraphQLContractSnapshot,
+  type GraphQLContractSnapshot,
 } from "@croco/protocols-graphql";
 
-const schema = await createSchema();
-const snapshot = createGraphQLContractSnapshot(schema, { resolvers: [HealthResolver] });
-const diff = diffGraphQLContractSnapshots(baselineSnapshot, snapshot);
+@GraphQLResolver()
+export class HealthResolver {
+  @Query(() => String)
+  health(): string {
+    return "ok";
+  }
+}
+
+export function compareHealthContract(
+  schema: Parameters<typeof createGraphQLContractSnapshot>[0],
+  baselineSnapshot: GraphQLContractSnapshot,
+) {
+  const snapshot = createGraphQLContractSnapshot(schema, { resolvers: [HealthResolver] });
+  return {
+    diff: diffGraphQLContractSnapshots(baselineSnapshot, snapshot),
+    serializedSnapshot: stringifyGraphQLContractSnapshot(snapshot),
+  };
+}
 ```
 
 The snapshot version is `croco.graphql-contract.snapshot.v2`. It records:
