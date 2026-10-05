@@ -147,6 +147,8 @@ the React explorer displays these same results and saves only the viewed source 
 ## Historical policy replay
 
 `validatePolicyReplayInput(unknown)` imports a detached, recursively frozen JSON input.
+Explicit `undefined` values and sparse arrays are not JSON and fail with `PolicyReplayProblem`;
+omit optional properties when the source has no evidence.
 `replayPolicy(input)` performs the same pure calculation used by the admin inspector.
 `createPolicyReplayReport(input)` adds SHA-256 definition/input hashes using Web Crypto;
 `serializePolicyReplayReport(report)` and `importPolicyReplayReport(json)` round-trip the

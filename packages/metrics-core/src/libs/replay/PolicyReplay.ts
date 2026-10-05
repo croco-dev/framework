@@ -172,12 +172,13 @@ function predicate(value: unknown, depth = 0): void {
   } else fail("Unsupported predicate");
 }
 function canonical(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  if (Array.isArray(value)) return `[${Array.from(value, canonical).join(",")}]`;
   if (value && typeof value === "object")
     return `{${Object.entries(value)
       .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
       .map(([k, v]) => `${JSON.stringify(k)}:${canonical(v)}`)
       .join(",")}}`;
+  scalar(value);
   return JSON.stringify(value);
 }
 function freeze<T>(value: T): T {

@@ -317,3 +317,27 @@ it("keeps inclusive attribution endpoints partial at an exclusive observation bo
   });
   expect(result.scenarioValues.map((s) => s.status)).toEqual(["partial", "partial"]);
 });
+
+it.each(["traitsAtDecision", "dispatch", "cost", "touchpoints", "outcomes"])(
+  "rejects an explicitly undefined optional %s with the replay Problem",
+  (field) => {
+    expect(() =>
+      validatePolicyReplayInput({
+        ...fixture(),
+        rows: [{ subjectId: "u", atDecision: at(1), [field]: undefined }],
+      }),
+    ).toThrow(PolicyReplayProblem);
+  },
+);
+
+it("rejects sparse declarative conditions with the replay Problem", () => {
+  const input = fixture();
+  const conditions: unknown[] = [];
+  conditions.length = 1;
+  expect(() =>
+    validatePolicyReplayInput({
+      ...input,
+      definition: { ...input.definition, newPredicate: { op: "and", conditions } },
+    }),
+  ).toThrow(PolicyReplayProblem);
+});
