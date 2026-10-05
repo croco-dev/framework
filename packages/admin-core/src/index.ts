@@ -450,3 +450,11 @@ export type {
   ActivationExplorerState,
   ActivationCandidateOperationsOptions,
 } from "./libs/ActivationCandidateOperations";
+
+export { SavedIntentOperations, SavedIntentAdminDeniedProblem } from "./libs/SavedIntentOperations";
+export type {
+  SavedIntentAdminPermission,
+  SavedIntentAdminAccess,
+  SavedIntentInspection,
+  SavedIntentAdminState,
+} from "./libs/SavedIntentOperations";

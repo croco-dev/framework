@@ -305,3 +305,18 @@ are persisted or exported. Existing host storage supplies scoped `read`/`write`;
 current access and retain the referenced source run. SHA-256 digests detect inconsistency, not
 malicious replacement by a fully privileged storage operator. Cancellation and permission changes
 remain explicit failures.
+
+### Saved intent operations
+
+`SavedIntentOperations` connects the operator console to the same
+`SavedIntentService` used by customers. Construct access from the verified server
+session and require `saved-intent.read`, `saved-intent.write`, or
+`saved-intent.inspect` as appropriate. The underlying service independently
+checks the principal and exact app/environment/tenant/subject for every action.
+
+`readPolicy` reads a code-declared resource type's effective policy. `updatePolicy`
+requires the expected revision, actor, reason, and idempotency key; it cannot edit
+resolvers, URLs, or the declared resource catalog. `inspect` uses bounded service
+pagination and returns availability, rank, and exclusion reasons. It omits private
+resource IDs, titles, URLs, progress references, and subject data. The server must
+only offer inspection targets the operator can access.

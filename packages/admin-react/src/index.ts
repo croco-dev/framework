@@ -348,3 +348,6 @@ export type { ReminderOperationsPanelProps } from "./libs/ReminderOperationsPane
 
 export { ActivationCandidateExplorer } from "./libs/ActivationCandidateExplorer";
 export type { ActivationCandidateExplorerProps } from "./libs/ActivationCandidateExplorer";
+
+export { SavedIntentConsole } from "./libs/SavedIntentConsole";
+export type { SavedIntentConsoleProps } from "./libs/SavedIntentConsole";

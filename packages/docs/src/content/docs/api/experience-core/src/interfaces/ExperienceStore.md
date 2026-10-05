@@ -65,7 +65,7 @@ title: "ExperienceStore"
 
 ### recordExposure()
 
-> **recordExposure**(`input`): `Promise`\<`"recorded"` \| `"duplicate"`\>
+> **recordExposure**(`input`): `Promise`\<`"duplicate"` \| `"recorded"`\>
 
 #### Parameters
 
@@ -75,7 +75,7 @@ title: "ExperienceStore"
 
 #### Returns
 
-`Promise`\<`"recorded"` \| `"duplicate"`\>
+`Promise`\<`"duplicate"` \| `"recorded"`\>
 
 ---
 

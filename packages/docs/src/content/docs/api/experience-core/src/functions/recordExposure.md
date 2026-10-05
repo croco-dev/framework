@@ -5,7 +5,7 @@ prev: false
 title: "recordExposure"
 ---
 
-> **recordExposure**(`store`, `input`): `Promise`\<`"recorded"` \| `"duplicate"`\>
+> **recordExposure**(`store`, `input`): `Promise`\<`"duplicate"` \| `"recorded"`\>
 
 ## Parameters
 
@@ -19,4 +19,4 @@ title: "recordExposure"
 
 ## Returns
 
-`Promise`\<`"recorded"` \| `"duplicate"`\>
+`Promise`\<`"duplicate"` \| `"recorded"`\>

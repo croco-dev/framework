@@ -367,3 +367,20 @@ future occurrences; messages already accepted cannot be recalled. Change
 `scopeKey` when the authenticated owner changes. The server must derive identity,
 authorize every request, enforce version checks, and return decoded `Date` values.
 Partial history and failed mutations require reload before further writes.
+
+## Saved items without an ExperienceSlot
+
+`SavedItems` and `ContinueCard` consume the server's `SavedIntentPage` in its policy-selected
+order. Their controlled state explicitly represents loading, empty, ready, partial, denied,
+and error. One page is rendered at a time; `onNextPage` requests the supplied bounded server
+offset. `onRemove`, `onComplete`, and `onPin` receive the intent including its current revision.
+Use that revision and an idempotency key for each server command, then reload the page.
+Failed actions require a reload before another mutation; unavailable candidates mask their
+labels and disable continuation.
+
+`onContinue` must call the authenticated server's `resolveIntent` immediately before navigating.
+The components deliberately emit no cached `safeUrl` anchor. The destination must also enforce
+its own current authorization. Keep server responses uncached and bind scope/subject to the
+verified server session, never client request fields. See the executable
+[Saved reports example](../../examples/saved-intents/README.md), which uses the same service for
+customer components and operator policy editing.

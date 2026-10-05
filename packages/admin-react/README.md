@@ -580,3 +580,18 @@ results do not automatically name a best candidate or claim causation.
 
 See [activation-candidates](../../examples/activation-candidates/README.md) for executable callbacks
 backed by `ActivationCandidateOperations`, common file decoding and a real PostgreSQL smoke.
+
+### Saved intent console
+
+`SavedIntentConsole` edits display limits, retention days, and completion exclusion
+for the code-declared resource types in its server-provided policy state. Its
+`onSave` callback must call `SavedIntentOperations.updatePolicy`; supply the
+verified operator identity on the server rather than trusting a client actor.
+The console preserves the same idempotency key when retrying an unchanged failed
+save and offers a reload action after a revision or provider failure.
+
+Inspection targets are an authorized, masked server-provided list. `onInspect`
+uses `SavedIntentOperations.inspect` and bounded pagination to display current
+availability and exclusion reasons without cached source labels or links. Loading,
+denied, and error states hide the policy editor. See `examples/saved-intents` for
+the shared customer and operator flow.
