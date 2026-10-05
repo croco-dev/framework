@@ -351,3 +351,9 @@ export type { ActivationCandidateExplorerProps } from "./libs/ActivationCandidat
 
 export { SavedIntentConsole } from "./libs/SavedIntentConsole";
 export type { SavedIntentConsoleProps } from "./libs/SavedIntentConsole";
+
+export { TargetingImpactInspector } from "./libs/TargetingImpactInspector";
+export type {
+  TargetingImpactInspectorProps,
+  TargetingImpactInspectorState,
+} from "./libs/TargetingImpactInspector";

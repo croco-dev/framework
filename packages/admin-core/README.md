@@ -320,3 +320,32 @@ resolvers, URLs, or the declared resource catalog. `inspect` uses bounded servic
 pagination and returns availability, rank, and exclusion reasons. It omits private
 resource IDs, titles, URLs, progress references, and subject data. The server must
 only offer inspection targets the operator can access.
+
+## Targeting impact replay
+
+`TargetingImpactOperations` (`@croco/admin-core/targeting-impact-operations`, server only) validates replay JSON and authorizes each action through
+an injected server session authorizer. App, environment, tenant and subject kind
+are mandatory; request bodies never grant permissions. `replay(input)` and
+`save(input)` return aggregate `TargetingImpactReport` views. `load(scope, inputHash)`
+and `export(scope, inputHash)` authorize before reading and verify saved evidence
+by recomputing its hashes and result. Save is immutable and checks the persisted
+report by reading it back. Exports omit subject rows, historical traits and predicate
+literals.
+
+`TargetingImpactReportStore` holds the complete private evidence needed for
+reproducibility. Restrict this server-only store to authorized operators and apply
+application retention and privacy policy. `InMemoryTargetingImpactReportStore` is
+an executable implementation; it does not provide durable process storage.
+
+`replayCampaign` reads an existing complete tenant `CampaignStore` snapshot with
+explicit member, page and page-size bounds. Register `campaignScope` alongside the
+store to bind its app, environment, tenant and `user` subject kind. The adapter
+validates contiguous pages and recipient ownership. Ready members may declare historical `data.policyReplayRow`
+evidence with the metrics replay schema, including its actual historical decision
+time. Ordinary message payloads and mapping failures are counted as missing
+history. The result includes total membership, replayed membership and missing
+membership, and is partial or unavailable when history is absent. A partial report
+covers only validated historical rows; its denominator is not the entire snapshot.
+Queued outcomes never become dispatches, and current traits, costs, touchpoints or
+outcomes are never substituted for missing evidence. No dispatch or campaign
+mutation method is called.

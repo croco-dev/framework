@@ -595,3 +595,19 @@ uses `SavedIntentOperations.inspect` and bounded pagination to display current
 availability and exclusion reasons without cached source labels or links. Loading,
 denied, and error states hide the policy editor. See `examples/saved-intents` for
 the shared customer and operator flow.
+
+## Targeting impact inspector
+
+`TargetingImpactInspector` renders controlled loading, empty, denied, unavailable, error,
+partial, and ready states. Its `onReplay(unknownPolicy)` callback must invoke the
+server-owned `TargetingImpactOperations`; its optional `onExport` callback uses the
+same server authorization and aggregate projection as report reads.
+
+The comparison keeps historical populations, observed dispatch costs, temporal visit
+categories, and crediting assumptions separate. Missing costs and history remain
+unavailable. Changing unknown handling requires a new definition revision in the
+server request; the report retains the applied revision and hashes. The component
+does not execute browser code or SQL and does not expose individual historical rows.
+
+Run the synthetic HTTP example in `examples/targeting-impact` to exercise comparison,
+save/re-read, export, and failure recovery without a campaign execution engine or DB.
