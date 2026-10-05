@@ -409,36 +409,39 @@ describe("RenderServer shell streaming", () => {
   });
 
   it("aborts the render when the deadline elapses before shell commit", async () => {
-    const summaries: ShellSettleSummary[] = [];
-    const loaderGate = createGate<never>();
-    const server = new RenderServer([
-      {
-        path: "/deadline",
-        mode: "ssr",
-        componentLoader: () => loaderGate.promise as Promise<never>,
-        regions: [{ id: "slow", loader: async () => "late payload" }],
-        stream: {
-          deadlineMs: 10,
-          onSettle: (summary) => {
-            summaries.push(summary);
+    vi.useFakeTimers();
+    try {
+      const summaries: ShellSettleSummary[] = [];
+      const server = new RenderServer([
+        {
+          path: "/deadline",
+          mode: "ssr",
+          // Never-resolving loader: the hard deadline race must settle the
+          // request without waiting on the loader.
+          componentLoader: () => new Promise<never>(() => {}),
+          regions: [{ id: "slow", loader: async () => "late payload" }],
+          stream: {
+            deadlineMs: 10,
+            onSettle: (summary) => {
+              summaries.push(summary);
+            },
           },
         },
-      },
-    ]);
+      ]);
 
-    const pending = server.handle(new Request("https://example.com/deadline"), {
-      platform: "node",
-    });
-    // Release the loader only after the deadline has fired: the pre-commit
-    // abort path must already have settled without waiting on the loader.
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    loaderGate.resolve(undefined as never);
-    const response = await pending;
+      const pending = server.handle(new Request("https://example.com/deadline"), {
+        platform: "node",
+      });
+      await vi.advanceTimersByTimeAsync(50);
+      const response = await pending;
 
-    expect(response.status).toBe(503);
-    await expect(response.text()).resolves.toContain("Service Unavailable");
-    expect(summaries).toHaveLength(1);
-    expect(summaries[0]).toMatchObject({ abortReason: "deadline", shellCommitted: false });
+      expect(response.status).toBe(503);
+      await expect(response.text()).resolves.toContain("Service Unavailable");
+      expect(summaries).toHaveLength(1);
+      expect(summaries[0]).toMatchObject({ abortReason: "deadline", shellCommitted: false });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("reports client cancellation through the settle summary", async () => {

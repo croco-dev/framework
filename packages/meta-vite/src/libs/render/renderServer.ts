@@ -128,7 +128,24 @@ export class RenderServer {
     };
 
     try {
-      const module = await route.componentLoader();
+      // Hard deadline on the loader phase too: a hanging componentLoader
+      // must not hold the request past the deadline even if it ignores
+      // `signal`. The linked controller still cancels cooperative loaders.
+      // On expiry the race throws the linked abort error, which the catch
+      // below funnels into the same 503 pre-commit path.
+      const deadline = new Promise<never>((_, reject) => {
+        if (controller.signal.aborted) {
+          reject(toShellAbortError(controller.signal.reason));
+        } else {
+          controller.signal.addEventListener(
+            "abort",
+            () => reject(toShellAbortError(controller.signal.reason)),
+            { once: true },
+          );
+        }
+      });
+      let module: Awaited<ReturnType<RenderRouteIR["componentLoader"]>>;
+      module = await Promise.race([route.componentLoader(), deadline]);
       if (controller.signal.aborted) {
         const counts = await createDeferredRegionStore(
           route.regions ?? [],
@@ -241,6 +258,29 @@ export class RenderServer {
       return new Response(tracked, { status: 200, headers });
     } catch (error) {
       teardown();
+      if (error instanceof ShellStreamAbortedError) {
+        // Pre-commit deadline/client-abort during the loader phase: same
+        // 503 path as the post-loader abort check above.
+        const counts = await createDeferredRegionStore(
+          route.regions ?? [],
+          controller.signal,
+          policy.regionTimeoutMs,
+          { request, ...(context ? { context } : {}) },
+        ).settle();
+        streamOptions.onSettle?.({
+          delivery: policy.delivery,
+          platform: context?.platform ?? "unknown",
+          shellCommitted: false,
+          regionsSettled: counts.settled,
+          regionsFailed: counts.failed,
+          regionsCancelled: counts.cancelled,
+          bytes: 0,
+          timedOut: true,
+          clientAborted: request.signal.aborted,
+          abortReason: request.signal.aborted ? "client-abort" : "deadline",
+        });
+        return this.createHtmlResponse("<h1>Service Unavailable</h1>", 503, FALLBACK_HEAD_500);
+      }
       streamOptions.onSettle?.({
         delivery: policy.delivery,
         platform: context?.platform ?? "unknown",
