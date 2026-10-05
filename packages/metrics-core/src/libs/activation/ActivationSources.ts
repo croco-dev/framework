@@ -304,6 +304,9 @@ export async function registerActivationQuery(options: {
   readonly query: RegisteredMetricQuery;
 }> {
   const declaration = structuredClone(options.definition);
+  const requiredFields = [...options.requiredFields];
+  const limits = structuredClone(options.limits);
+  const source = options.source;
   const { definitionHash } = await hashActivationInputs([], declaration);
   const definition: RegisteredMetricDefinition = {
     id: declaration.id,
@@ -313,7 +316,7 @@ export async function registerActivationQuery(options: {
     population: `${declaration.subjectKind}:${declaration.cohortPolicy}`,
     sourceRefs: Object.keys(declaration.sourceRevisions).sort(),
     description: "Activation candidate association; no causal or optimality claim",
-    requiredFields: options.requiredFields,
+    requiredFields: [...requiredFields],
     requiresRaw: false,
   };
   const parse = (input: unknown) => {
@@ -327,9 +330,9 @@ export async function registerActivationQuery(options: {
     unit: definition.unit,
     population: definition.population,
     filter: declaration.cohortPolicy,
-    requiredFields: options.requiredFields,
+    requiredFields: [...requiredFields],
     requiresRaw: false,
-    limits: options.limits,
+    limits,
     inputSchema: { parse },
     inputKey: (input) => {
       parse(input);
@@ -347,7 +350,7 @@ export async function registerActivationQuery(options: {
         )
       )
         invalid();
-      const { rows, quality } = await options.source(context, signal);
+      const { rows, quality } = await source(context, signal);
       if (signal.aborted) throw new ActivationValidationProblem("Activation read cancelled");
       if (
         rows.some(
@@ -357,15 +360,15 @@ export async function registerActivationQuery(options: {
         )
       )
         invalid();
-      const data = calculateActivationCandidates(rows, declaration);
+      const data = calculateActivationCandidates(rows, structuredClone(declaration));
       return {
         data,
         principal: context.principal,
-        definition,
+        definition: structuredClone(definition),
         unit: definition.unit,
         population: definition.population,
         filter: declaration.cohortPolicy,
-        fieldRefs: options.requiredFields,
+        fieldRefs: [...requiredFields],
         window,
         sourceRevisions: context.sourceRevisions,
         snapshotRefs: context.snapshotRefs,
@@ -381,5 +384,5 @@ export async function registerActivationQuery(options: {
       };
     },
   };
-  return { definition, query };
+  return { definition: structuredClone(definition), query };
 }

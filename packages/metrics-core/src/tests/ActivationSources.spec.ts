@@ -346,6 +346,51 @@ describe("activation shared sources", () => {
     }
     expect(registration.query.outputSchema.parse(good)).toEqual(good);
   });
+  it("isolates registered declarations from returned reports and registration inputs", async () => {
+    const input = structuredClone(definition);
+    const requiredFields = ["count"];
+    const inputLimits = { ...budget };
+    const options = {
+      definition: input,
+      source: async () => ({ rows: [normalizeActivationRow(flat, binding, definition)], quality }),
+      requiredFields,
+      limits: inputLimits,
+    };
+    const registering = registerActivationQuery(options);
+    Object.assign(input.candidates[0]!, { threshold: 9 });
+    Object.assign(input.sourceRevisions, { events: "changed" });
+    requiredFields.push("unexpected");
+    inputLimits.maxRows = 1;
+    const registration = await registering;
+    const hash = registration.definition.hash;
+    const execution = {
+      input: null,
+      window: { from: flat.anchor, to: "2026-01-02T00:00:00.000Z" },
+      context,
+      signal: new AbortController().signal,
+    };
+    const first = await registration.query.readExecutor(execution);
+    const report = first.data as ReturnType<typeof calculateActivationCandidates>;
+    expect(report.candidates[0]?.DO).toBe(1);
+    Object.assign(report.definition.candidates[0]!, { threshold: 3 });
+    Object.assign(report.candidates[0]!.candidate, { threshold: 4 });
+    Object.assign(report.definition.sourceRevisions, { events: "changed-report" });
+    Object.assign(first.definition, { hash: "changed-result-hash" });
+    Object.assign(registration.definition, { hash: "changed-registration-hash" });
+    const second = await registration.query.readExecutor(execution);
+    expect(second.data).toEqual(
+      calculateActivationCandidates(
+        [normalizeActivationRow(flat, binding, definition)],
+        definition,
+      ),
+    );
+    expect(second.definition.hash).toBe(hash);
+    expect(registration.query.inputKey(null)).toBe(hash);
+    expect(second.fieldRefs).toEqual(["count"]);
+    expect(registration.query.limits.maxRows).toBe(budget.maxRows);
+    expect(() => registration.query.outputSchema.parse(second.data)).not.toThrow();
+    expect(() => registration.query.outputSchema.parse(report)).toThrow();
+  });
   it("does not promote source partial quality to complete", async () => {
     const registration = await registerActivationQuery({
       definition,
