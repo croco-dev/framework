@@ -68,7 +68,8 @@ function Panel({ actor, permissions, source }: ReminderOperationsPanelProps): Re
     }
   };
   const cancel = (row: ReminderOperationsRow) => {
-    if (!permissions.includes("reminder.cancel") || state.kind !== "ready" || error) return;
+    if (!canRead || !permissions.includes("reminder.cancel") || state.kind !== "ready" || error)
+      return;
     void run(async () => {
       const request = {
         scope: row.reminder.scope,
@@ -83,6 +84,14 @@ function Panel({ actor, permissions, source }: ReminderOperationsPanelProps): Re
       return source.cancel(request);
     });
   };
+  if (!canRead) {
+    return (
+      <section aria-label="Reminder operations">
+        <h2>Reminder operations</h2>
+        <p role="alert">Reminder read permission is required.</p>
+      </section>
+    );
+  }
   return (
     <section aria-label="Reminder operations" aria-busy={pending || state.kind === "loading"}>
       <h2>Reminder operations</h2>
@@ -120,7 +129,15 @@ function Panel({ actor, permissions, source }: ReminderOperationsPanelProps): Re
             </label>
           )}
           {state.rows.map((row) => (
-            <article key={row.reminder.id}>
+            <article
+              key={JSON.stringify([
+                row.reminder.scope.app,
+                row.reminder.scope.environment,
+                row.reminder.scope.tenantId,
+                row.reminder.subject,
+                row.reminder.id,
+              ])}
+            >
               <h3>{row.reminder.id}</h3>
               <p>
                 {row.reminder.state} · {row.reminder.timezone} · version {row.reminder.version}
