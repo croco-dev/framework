@@ -118,10 +118,11 @@ const orderLoader = createBatchLoader<Order, string>({
 
 Create or retrieve a context-scoped batch loader.
 
-Retrieval is by name: a call with an already-used name returns the loader
-created by the first call, and a different `batchFn` in the later call is
-ignored. Direct callers must therefore keep the `batchFn` identical for a
-shared name or use a unique name per batch function.
+Retrieval is by name: same-name calls share one request loader, installed
+by whichever wrapper first uses it; a different `batchFn` in another
+same-name call is then ignored. Direct callers must therefore keep the
+`batchFn` identical for a shared name or use a unique name per batch
+function.
 
 #### Type Parameters
 

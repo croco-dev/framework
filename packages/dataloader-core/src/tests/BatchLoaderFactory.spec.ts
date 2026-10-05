@@ -19,7 +19,7 @@ describe("BatchLoaderFactory", () => {
     expect(secondBatchFn).not.toHaveBeenCalled();
   });
 
-  it("documents direct-caller name sharing with sequentially created same-name loaders", async () => {
+  it("documents direct-caller name sharing with sequentially used same-name loaders", async () => {
     await Context.run({ requestId: "factory-shared-name" }, async () => {
       const factory = new BatchLoaderFactory();
       const users = factory.create({
@@ -33,6 +33,22 @@ describe("BatchLoaderFactory", () => {
         batchFn: async (ids: readonly number[]) => ids.map((id) => `post:${id}`),
       });
       expect(await posts.load(2)).toBe("user:2");
+    });
+  });
+
+  it("serves the first-used wrapper's batchFn when the second wrapper loads first", async () => {
+    await Context.run({ requestId: "factory-first-use-wins" }, async () => {
+      const factory = new BatchLoaderFactory();
+      const first = factory.create({
+        name: "byId",
+        batchFn: async (ids: readonly number[]) => ids.map((id) => `first:${id}`),
+      });
+      const second = factory.create({
+        name: "byId",
+        batchFn: async (ids: readonly number[]) => ids.map((id) => `second:${id}`),
+      });
+      expect(await second.load(1)).toBe("second:1");
+      expect(await first.load(2)).toBe("second:2");
     });
   });
 

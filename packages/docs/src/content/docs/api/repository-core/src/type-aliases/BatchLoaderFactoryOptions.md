@@ -53,9 +53,12 @@ Array of values (may contain nulls or Errors for partial failures)
 
 The name of the loader (used for caching and debugging).
 
-Within one request, every `create()` call with the same name retrieves the
-loader built by the first call, regardless of the `batchFn` passed later.
-Direct callers must therefore pass the same `batchFn` for a shared name, or
-use a unique name (or scope, where supported) per batch function. Passing a
-different `batchFn` under an already-used name does not fail: the first
-loader keeps serving its own data.
+Within one request, every `create()` call with the same name shares one
+request loader: the wrapper whose `load()` (or `loadMany()`/`clear()`/
+`clearAll()`/`prime()`) first touches the request cache installs its
+loader, and the other wrapper delegates to that loader from then on. A
+different `batchFn` passed by another same-name call is therefore ignored
+once a loader is installed. Direct callers must pass the same `batchFn`
+for a shared name, or use a unique name (or scope, where supported) per
+batch function. Sharing a name across different `batchFn`s does not fail:
+the installed loader keeps serving its own data.
