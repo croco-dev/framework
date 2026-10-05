@@ -27,6 +27,7 @@ import { type Context, Hono } from "hono";
 import { getMimeType } from "hono/utils/mime";
 import { CrocoLambdaAdapter, type LambdaHandlerOptions } from "./CrocoLambdaAdapter";
 import { CrocoRouteRegistrar } from "./CrocoRouteRegistrar";
+import { isGracefulShutdownActive } from "./middleware/GracefulShutdownMiddleware.js";
 import {
   DEV_INSPECTOR_ENDPOINT_PATH,
   authorizeDevInspectorRequest,
@@ -501,9 +502,15 @@ export class CrocoApp {
     this.hono.get("/health/live", (c) => c.json({ status: "ok" }, 200));
 
     const readinessHandler = async (c: Context) => {
+      if (isGracefulShutdownActive(this.config.middlewares)) {
+        return c.json({ status: "down", results: [] }, 503);
+      }
       const result = sanitizeHealthCheckResult(
         await this.healthCheckRegistry.checkReadiness({ signal: c.req.raw.signal }),
       );
+      if (isGracefulShutdownActive(this.config.middlewares)) {
+        return c.json({ status: "down", results: [] }, 503);
+      }
       return c.json(result, result.status === "up" ? 200 : 503);
     };
 
