@@ -312,6 +312,31 @@ describe("workflow-core", () => {
     manager = new ExecutionManagerImpl(store);
   });
 
+  it("uses its clock for workflow invocation IDs", async () => {
+    @Component()
+    class ClockTasks {
+      @Task({ name: "clock.task" })
+      run() {
+        return "done";
+      }
+    }
+    @Component()
+    class ClockWorkflows {
+      @Workflow({ name: "clock.workflow", steps: ["clock.task"], idempotencyKey: "clock" })
+      run() {}
+    }
+    const instant = new Date("2001-02-03T04:05:06.000Z");
+    const registry = WorkflowRegistry.fromMetadata();
+    const taskRunner = new TaskRunner(manager, registry.taskRegistry, undefined, {
+      serviceResolver: () => new ClockTasks(),
+    });
+    const runner = new WorkflowRunner(manager, registry, taskRunner, () => new Date(instant));
+    const result = await runner.execute("clock.workflow", {});
+    expect((await manager.get(result.executionId)).metadata?.workflowInvocationId).toMatch(
+      new RegExp(`^clock.workflow:${instant.getTime()}:`),
+    );
+  });
+
   it.each([
     ["completed", false],
     ["failed", false],

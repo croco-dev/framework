@@ -14,6 +14,8 @@ export class InMemorySagaStore implements SagaStore {
   private readonly executions = new Map<string, SagaExecution>();
   private idCounter = 0;
 
+  constructor(private readonly clock: () => Date = () => new Date()) {}
+
   async create(params: CreateSagaExecutionParams): Promise<SagaExecution> {
     if (params.idempotencyKey !== undefined) {
       const existing = this.findExistingByIdempotencyKey(params.sagaName, params.idempotencyKey);
@@ -29,7 +31,7 @@ export class InMemorySagaStore implements SagaStore {
       payload: params.payload,
       steps: [],
       compensationFailures: [],
-      createdAt: new Date(),
+      createdAt: this.clock(),
       ...(params.idempotencyKey !== undefined ? { idempotencyKey: params.idempotencyKey } : {}),
       ...(params.replayOf !== undefined ? { replayOf: params.replayOf } : {}),
       ...(params.metadata !== undefined ? { metadata: params.metadata } : {}),

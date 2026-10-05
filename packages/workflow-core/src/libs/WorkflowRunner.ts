@@ -117,8 +117,8 @@ function supportsReplay(manager: ExecutionManager): manager is ReplayableExecuti
   return typeof (manager as { replay?: unknown }).replay === "function";
 }
 
-function createInvocationId(workflowName: string): string {
-  return `${workflowName}:${Date.now()}:${Math.random().toString(36).slice(2)}`;
+function createInvocationId(workflowName: string, now: Date): string {
+  return `${workflowName}:${now.getTime()}:${Math.random().toString(36).slice(2)}`;
 }
 
 function createStepExecutionIdempotencyKey(
@@ -200,6 +200,7 @@ export class WorkflowRunner {
       executionManager,
       registry.taskRegistry,
     ),
+    private readonly clock: () => Date = () => new Date(),
   ) {}
 
   async execute<TPayload, TSteps extends readonly WorkflowStepResult[]>(
@@ -235,7 +236,9 @@ export class WorkflowRunner {
 
     const resolvedKey = this.resolveIdempotencyKey(workflow, payload);
     const idempotency = await resolveExecutionIdempotency(workflow.name, resolvedKey);
-    const invocationId = idempotency.idempotencyKey ? createInvocationId(workflow.name) : undefined;
+    const invocationId = idempotency.idempotencyKey
+      ? createInvocationId(workflow.name, this.clock())
+      : undefined;
     const execution = await this.executionManager.create({
       type: "workflow",
       payload,

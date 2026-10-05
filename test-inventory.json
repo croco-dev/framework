@@ -5228,6 +5228,12 @@
       "owner": "@croco/workflow-core"
     },
     {
+      "path": "packages/workflow-core/src/tests/WorkflowClock.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/workflow-core"
+    },
+    {
       "path": "packages/workflow-core/src/tests/WorkflowCore.spec.ts",
       "lane": "fast",
       "qualifiers": [],
