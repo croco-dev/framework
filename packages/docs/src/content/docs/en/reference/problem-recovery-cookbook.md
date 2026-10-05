@@ -12755,7 +12755,7 @@ Sources:
 
 Sources:
 
-- `packages/openapi-spec/src/libs/emitOpenAPI.ts:107:5` (problem-constructor)
+- `packages/openapi-spec/src/libs/emitOpenAPI.ts:108:5` (problem-constructor)
 
 <a id="openapi-spec-no-rest-controllers-found"></a>
 
