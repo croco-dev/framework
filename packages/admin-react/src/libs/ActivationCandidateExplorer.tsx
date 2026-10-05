@@ -308,24 +308,31 @@ export function ActivationCandidateExplorer(
               {chosen.achievementCurve.status === "unsupported" ? (
                 <p>Unavailable: {chosen.achievementCurve.reason}</p>
               ) : (
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Elapsed milliseconds</th>
-                      <th>Achieved</th>
-                      <th>Fraction</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {chosen.achievementCurve.points.map((point) => (
-                      <tr key={point.elapsedMs}>
-                        <td>{point.elapsedMs}</td>
-                        <td>{point.achieved}</td>
-                        <td>{(point.fraction * 100).toFixed(1)}%</td>
+                <div
+                  role="region"
+                  aria-label="Achievement times"
+                  tabIndex={0}
+                  style={{ overflowX: "auto" }}
+                >
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Elapsed milliseconds</th>
+                        <th>Achieved</th>
+                        <th>Fraction</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {chosen.achievementCurve.points.map((point) => (
+                        <tr key={point.elapsedMs}>
+                          <td>{point.elapsedMs}</td>
+                          <td>{point.achieved}</td>
+                          <td>{(point.fraction * 100).toFixed(1)}%</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               )}
             </section>
           )}
