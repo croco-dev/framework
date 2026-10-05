@@ -386,7 +386,7 @@ describe("PolarWebhookHandler", () => {
       ["subscription.past_due", "past_due", "past_due"],
       ["subscription.canceled", "canceled", "canceled"],
       ["subscription.updated", "trialing", "trialing"],
-      ["subscription.revoked", "canceled", "revoked"],
+      ["subscription.revoked", "canceled", "canceled"],
       ["subscription.revoked", "revoked", "revoked"],
       ["subscription.updated", "revoked", "revoked"],
     ])("maps %s with raw status %s to %s", async (eventType, rawStatus, status) => {

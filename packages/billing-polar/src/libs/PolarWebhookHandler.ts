@@ -612,7 +612,7 @@ export class PolarWebhookHandler {
       case "trialing":
         return polarStatus;
       case "canceled":
-        return eventType === "subscription.revoked" ? "revoked" : "canceled";
+        return "canceled";
       case "incomplete":
       case "incomplete_expired":
       case "unpaid":
