@@ -28,15 +28,17 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts --external react --external react-dom",
+    "build": "tsup",
     "lint": "oxlint .",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run src/tests/CustomerExplorerAdapters.spec.ts src/tests/EngagementAdapters.spec.ts src/tests/OperationsTimeline.spec.ts src/tests/RetryConsole.spec.ts src/tests/RetryConsoleReact.spec.tsx src/tests/WebhookAdapters.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
     "test:watch": "vitest",
-    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts",
+    "test:live": "vitest run src/tests/CustomerExplorerAdapters.postgres.spec.ts"
   },
   "dependencies": {
+    "@croco/admin-core": "workspace:*",
     "@croco/execution-core": "workspace:*",
     "@croco/lifecycle-core": "workspace:*",
     "@croco/problems-core": "workspace:*"

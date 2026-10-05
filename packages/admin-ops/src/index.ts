@@ -82,3 +82,24 @@ export type {
 } from "./libs/types";
 export type { WebhookOperationsFailureEvidence } from "./libs/webhookAdapters";
 export type { EngagementOperationsFailureEvidence } from "./libs/engagementAdapters";
+
+export {
+  PostgresCustomerExplorerRepository,
+  PostgresTimelineSource,
+} from "./libs/CustomerExplorerAdapters";
+export type {
+  ExplorerPgExecutor,
+  ExplorerPgDatabase,
+  ExplorerSqlTimelineMapping,
+  PostgresTimelineSourceOptions,
+} from "./libs/CustomerExplorerAdapters";
+export {
+  EngagementCustomerExplorerSource,
+  OperationsCustomerExplorerSource,
+} from "./libs/CustomerExplorerAdapters";
+export type {
+  ExplorerEngagementDispatch,
+  ExplorerEngagementStore,
+  EngagementExplorerSourceOptions,
+  OperationsExplorerSourceOptions,
+} from "./libs/CustomerExplorerAdapters";

@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "jsx": "react-jsx",
+    "experimentalDecorators": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "types": ["node"],
+    "noEmit": true,
+    "paths": {
+      "@croco/admin-core": ["../../packages/admin-core/src/index.ts"],
+      "@croco/admin-ops": ["../../packages/admin-ops/src/index.ts"],
+      "@croco/billing-core": ["../../packages/billing-core/src/index.ts"],
+      "@croco/entitlements-core": ["../../packages/entitlements-core/src/libs/types.ts"],
+      "@croco/impersonation-core": ["../../packages/impersonation-core/src/libs/types.ts"],
+      "@croco/lifecycle-core": ["../../packages/lifecycle-core/src/index.ts"],
+      "@croco/metering-core": ["../../packages/metering-core/src/libs/types.ts"],
+      "@croco/pagination-core": ["../../packages/pagination-core/src/index.ts"],
+      "@croco/problems-core": ["../../packages/problems-core/src/index.ts"],
+      "@croco/search-core": ["../../packages/search-core/src/index.ts"],
+      "@croco/tenant-core": ["../../packages/tenant-core/src/libs/types.ts"],
+      "@croco/analytics-core": ["../../packages/analytics-core/src/index.ts"],
+      "@croco/admin-react": ["../../packages/admin-react/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

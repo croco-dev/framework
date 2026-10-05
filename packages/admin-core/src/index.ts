@@ -394,3 +394,35 @@ export type {
   JourneyAdminCommand,
   JourneyOperationsOptions,
 } from "./libs/JourneyOperations";
+
+export {
+  CustomerExplorerProblem,
+  CustomerExplorerService,
+  createCustomerExplorerSample,
+  explorerScopeKey,
+} from "./libs/CustomerExplorer";
+export type {
+  ExplorerScope,
+  ExplorerSubject,
+  ExplorerCandidate,
+  SampleQuery,
+  ExplorerPopulation,
+  Sample,
+  TimelineItem,
+  ExplorerSourceStatus,
+  TimelineRequest,
+  TimelineSourcePage,
+  TimelineSource,
+  ExplorerEventRef,
+  ExplorerNote,
+  ExplorerNoteAudit,
+  CustomerExplorerRepository,
+  ExplorerPermission,
+  ExplorerAuthorization,
+  ExplorerTimeline,
+  ExplorerQueryDraft,
+  ExplorerProblemCode,
+  ExplorerNoteInput,
+  ExplorerResolvedNote,
+  CustomerExplorerOptions,
+} from "./libs/CustomerExplorer";
