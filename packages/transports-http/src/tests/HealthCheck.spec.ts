@@ -7,6 +7,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../libs/CrocoApp";
 import { ErrorHandler } from "../libs/ErrorHandler";
 import { HealthCheckRegistry } from "../libs/HealthCheckRegistry";
+import {
+  createGracefulShutdownController,
+  gracefulShutdownMiddleware,
+  resetShutdownState,
+  setupGracefulShutdown,
+} from "../libs/middleware/GracefulShutdownMiddleware";
 import { sanitizeHealthCheckResult } from "../libs/operationalEndpoints";
 
 describe("HealthCheck", () => {
@@ -33,6 +39,7 @@ describe("HealthCheck", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    resetShutdownState();
   });
 
   describe("HealthCheckRegistry", () => {
@@ -407,6 +414,137 @@ describe("HealthCheck", () => {
   });
 
   describe("GET /ready", () => {
+    it("should return 503 readiness while graceful shutdown is active and keep liveness 200", async () => {
+      const controller = createGracefulShutdownController({
+        signals: [],
+        isLambdaEnvironment: true,
+      });
+      const app = createApp({
+        controllers: [],
+        securityValidation: "off",
+        middlewares: [controller.middleware],
+      });
+
+      for (const path of ["/ready", "/health/ready"]) {
+        const before = await app.fetch(new Request(`http://localhost${path}`));
+        expect(before.status).toBe(200);
+      }
+
+      const shutdownPromise = controller.shutdown();
+      try {
+        expect(controller.isShuttingDown()).toBe(true);
+        const checkReadiness = vi.spyOn(registry, "checkReadiness");
+
+        for (const path of ["/ready", "/health/ready"]) {
+          const response = await app.fetch(new Request(`http://localhost${path}`));
+          expect(response.status).toBe(503);
+          await expect(response.json()).resolves.toEqual({ status: "down", results: [] });
+        }
+        expect(checkReadiness).not.toHaveBeenCalled();
+
+        const live = await app.fetch(new Request("http://localhost/health/live"));
+        expect(live.status).toBe(200);
+        await expect(live.json()).resolves.toEqual({ status: "ok" });
+      } finally {
+        await shutdownPromise;
+      }
+
+      for (const path of ["/ready", "/health/ready"]) {
+        const after = await app.fetch(new Request(`http://localhost${path}`));
+        expect(after.status).toBe(503);
+        await expect(after.json()).resolves.toEqual({ status: "down", results: [] });
+      }
+    });
+
+    it("should return 503 when shutdown starts while a readiness check is in flight", async () => {
+      let releaseCheck!: () => void;
+      const gate = new Promise<void>((resolve) => {
+        releaseCheck = resolve;
+      });
+      registry.registerReadiness("slow", async () => {
+        await gate;
+        return { status: "up" as const };
+      });
+      const controller = createGracefulShutdownController({
+        signals: [],
+        isLambdaEnvironment: true,
+      });
+      const app = createApp({
+        controllers: [],
+        securityValidation: "off",
+        middlewares: [controller.middleware],
+      });
+
+      const pending = app.fetch(new Request("http://localhost/ready"));
+      await Promise.resolve();
+      const shutdownPromise = controller.shutdown();
+      releaseCheck();
+      try {
+        const response = await pending;
+        expect(response.status).toBe(503);
+        await expect(response.json()).resolves.toEqual({ status: "down", results: [] });
+      } finally {
+        await shutdownPromise;
+      }
+    });
+
+    it("should return 503 readiness for the legacy middleware entrypoint during shutdown", async () => {
+      resetShutdownState();
+      const middleware = gracefulShutdownMiddleware({ isLambdaEnvironment: true });
+      const app = createApp({
+        controllers: [],
+        securityValidation: "off",
+        middlewares: [middleware],
+      });
+      const shutdown = setupGracefulShutdown();
+
+      await shutdown();
+
+      for (const path of ["/ready", "/health/ready"]) {
+        const response = await app.fetch(new Request(`http://localhost${path}`));
+        expect(response.status).toBe(503);
+        await expect(response.json()).resolves.toEqual({ status: "down", results: [] });
+      }
+
+      const live = await app.fetch(new Request("http://localhost/health/live"));
+      expect(live.status).toBe(200);
+    });
+
+    it("should isolate readiness shutdown state per controller", async () => {
+      const first = createGracefulShutdownController({ signals: [], isLambdaEnvironment: true });
+      const second = createGracefulShutdownController({ signals: [], isLambdaEnvironment: true });
+      const firstApp = createApp({
+        controllers: [],
+        securityValidation: "off",
+        middlewares: [first.middleware],
+      });
+      const secondApp = createApp({
+        controllers: [],
+        securityValidation: "off",
+        middlewares: [second.middleware],
+      });
+
+      const shutdownPromise = first.shutdown();
+      try {
+        const shuttingDown = await firstApp.fetch(new Request("http://localhost/ready"));
+        expect(shuttingDown.status).toBe(503);
+
+        const unaffected = await secondApp.fetch(new Request("http://localhost/ready"));
+        expect(unaffected.status).toBe(200);
+      } finally {
+        await shutdownPromise;
+      }
+    });
+
+    it("should keep readiness unchanged without a shutdown middleware", async () => {
+      const app = createApp({ controllers: [], securityValidation: "off" });
+
+      for (const path of ["/ready", "/health/ready"]) {
+        const response = await app.fetch(new Request(`http://localhost${path}`));
+        expect(response.status).toBe(200);
+        await expect(response.json()).resolves.toEqual({ status: "up", results: [] });
+      }
+    });
     it("should pass the request signal to the registry on both readiness routes", async () => {
       const app = createApp({ controllers: [], securityValidation: "off" });
       const checkReadiness = vi.spyOn(registry, "checkReadiness");
