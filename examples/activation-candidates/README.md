@@ -13,7 +13,7 @@ active days in a fortnight window. Flat columns explicitly bind each action, cou
 they never imply that aggregate counts are event logs. Verified achievement timestamps are absent,
 so achievement curves are explicitly unsupported.
 
-`pnpm --dir examples/activation-candidates test` checks these denominators, common CSV/JSONL
+`pnpm --dir examples/activation-candidates smoke:sources` checks these denominators, common CSV/JSONL
 source decoding and the registered MetricReadService query. The service resolves its principal,
 field grant, source revision and budget on the server.
 
