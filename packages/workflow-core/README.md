@@ -153,7 +153,14 @@ calls use the system clock. `SagaRunner` uses its clock for lifecycle, step, com
 outbox timestamps, and the time component of invocation IDs. Its default store shares that clock.
 A supplied store owns its creation timestamps and must be configured separately.
 
-```typescript
+```typescript typecheck
+import type { ExecutionManager } from "@croco/execution-core";
+import { TaskRunner } from "@croco/tasks-core";
+import { InMemorySagaStore, SagaRunner, WorkflowRegistry, WorkflowRunner } from "@croco/workflow-core";
+
+declare const executionManager: ExecutionManager;
+const registry = WorkflowRegistry.fromMetadata();
+const taskRunner = new TaskRunner(executionManager, registry.taskRegistry);
 const clock = () => new Date("2030-01-01T00:00:00.000Z");
 const sagaRunner = new SagaRunner(undefined, clock);
 // With an explicit store:
