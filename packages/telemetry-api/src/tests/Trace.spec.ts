@@ -200,23 +200,28 @@ describe("Trace", () => {
     async (outcome) => {
       const mockSpan = createMockSpan();
       vi.spyOn(tracerModule, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
-      const deferred = Promise.withResolvers<object>();
+      let resolve!: (value: object) => void;
+      let reject!: (reason: unknown) => void;
+      const promise = new Promise<object>((resolvePromise, rejectPromise) => {
+        resolve = resolvePromise;
+        reject = rejectPromise;
+      });
       const value = { outcome };
       class TestService {
         run(): Promise<object> {
-          return deferred.promise;
+          return promise;
         }
       }
       decorateMethodWithTrace(TestService.prototype, "run", {});
       const result = new TestService().run();
       expect(mockSpan.end).not.toHaveBeenCalled();
       if (outcome === "resolve") {
-        deferred.resolve(value);
+        resolve(value);
         await expect(result).resolves.toBe(value);
         expect(mockSpan.recordException).not.toHaveBeenCalled();
       } else {
         const error = new Error("deferred failure");
-        deferred.reject(error);
+        reject(error);
         await expect(result).rejects.toBe(error);
         expect(mockSpan.recordException).toHaveBeenCalledTimes(1);
       }
@@ -536,7 +541,7 @@ describe("Trace return value identity", () => {
     const mockSpan = createMockSpan();
     vi.spyOn(tracerModule, "getTracer").mockReturnValue(createMockTracer(mockSpan.span));
     class TestService {
-      async *rows(): AsyncGenerator<number, number, unknown> {
+      async *rows(): AsyncGenerator<number, number | void, unknown> {
         try {
           yield 1;
         } finally {
@@ -669,14 +674,16 @@ describe("Trace async iterable lifecycle", () => {
     };
 
     const iterator = createTracedAsyncIterable(iterable, mockSpan.span)[Symbol.asyncIterator]();
+    expect(Reflect.get(iterator, Symbol.asyncIterator)).toEqual(expect.any(Function));
+    const iterableIterator = iterator as AsyncIterableIterator<number>;
     const values: number[] = [];
 
-    for await (const value of iterator) {
+    for await (const value of iterableIterator) {
       values.push(value);
     }
 
     expect(values).toEqual([1]);
-    expect(iterator[Symbol.asyncIterator]()).toBe(iterator);
+    expect(iterableIterator[Symbol.asyncIterator]()).toBe(iterator);
     expect(mockSpan.end).toHaveBeenCalledTimes(1);
   });
 

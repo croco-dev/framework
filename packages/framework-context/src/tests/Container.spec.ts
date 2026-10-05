@@ -1,10 +1,11 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { Container } from "./Container";
-import { Context } from "./Context";
-import { Inject } from "./decorators/Inject";
-import { registerInjectionMetadata } from "./InjectionMetadata";
-import { Token } from "./Token";
-import { Component } from "../tests/registerTestComponent";
+import { Container } from "../libs/Container";
+import { Context } from "../libs/Context";
+import { Inject } from "../libs/decorators/Inject";
+import { registerInjectionMetadata } from "../libs/InjectionMetadata";
+import { Token } from "../libs/Token";
+import { Component } from "./registerTestComponent";
+import { createDeferred } from "./createDeferred";
 
 describe("Container.getRequestScoped", () => {
   beforeEach(() => {
@@ -232,8 +233,8 @@ describe("ContainerScope", () => {
 
     const first = Container.createScope();
     const second = Container.createScope();
-    const firstReady = Promise.withResolvers<void>();
-    const secondReady = Promise.withResolvers<void>();
+    const firstReady = createDeferred();
+    const secondReady = createDeferred();
 
     const [firstValue, secondValue] = await Promise.all([
       first.run(async () => {
@@ -263,8 +264,8 @@ describe("ContainerScope", () => {
     const createNamedService = () => class SharedService {};
     const firstServices = [createNamedService(), createNamedService()] as const;
     const secondServices = [createNamedService(), createNamedService()] as const;
-    const firstReady = Promise.withResolvers<void>();
-    const secondReady = Promise.withResolvers<void>();
+    const firstReady = createDeferred();
+    const secondReady = createDeferred();
     const first = Container.createScope();
     const second = Container.createScope();
 
@@ -355,7 +356,7 @@ describe("ContainerScope", () => {
 
   it("rejects container access from work that resumes after disposal", async () => {
     const scope = Container.createScope();
-    const resume = Promise.withResolvers<void>();
+    const resume = createDeferred();
     const operation = scope.run(async () => {
       await resume.promise;
       return Container.set("late-value", "late");

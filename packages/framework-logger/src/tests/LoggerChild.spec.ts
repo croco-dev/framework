@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { assert, beforeEach, describe, expect, it, vi } from "vitest";
 import pino from "pino";
 import type { ConfigService } from "@croco/framework-config";
 import { Logger } from "../Logger";
@@ -71,6 +71,7 @@ describe("Logger.child() - Request-scoped Isolation", () => {
     it("child Logger가 부모와 동일한 ConfigService를 유지해야 함", () => {
       // biome-ignore lint/complexity/useLiteralKeys: private property access for testing
       const childLogger = logger.child({ module: "Test" });
+      assert.instanceOf(childLogger, Logger);
       // biome-ignore lint/complexity/useLiteralKeys: private property access for testing
       expect(childLogger["config"]).toBe(logger["config"]);
     });
@@ -93,10 +94,12 @@ describe("Logger.child() - Request-scoped Isolation", () => {
       const rootChildSpy = vi.spyOn(logger["logger"], "child");
 
       const child1 = logger.child({ layer: "service" });
+      assert.instanceOf(child1, Logger);
       // biome-ignore lint/complexity/useLiteralKeys: private property access for testing
       const child1ChildSpy = vi.spyOn(child1["logger"], "child");
 
       const child2 = child1.child({ component: "user" });
+      assert.instanceOf(child2, Logger);
 
       // 각 logger 인스턴스에서 child가 한 번씩 호출됨
       expect(rootChildSpy).toHaveBeenCalledTimes(1);
@@ -114,6 +117,7 @@ describe("Logger.child() - Request-scoped Isolation", () => {
       // biome-ignore lint/complexity/useLiteralKeys: private property access for testing
       const parentPino = logger["logger"];
       const childLogger = logger.child({ requestId: "req-123" });
+      assert.instanceOf(childLogger, Logger);
       // biome-ignore lint/complexity/useLiteralKeys: private property access for testing
       const childPino = childLogger["logger"];
 
@@ -123,7 +127,9 @@ describe("Logger.child() - Request-scoped Isolation", () => {
 
     it("각 child가 독립적인 로그 컨텍스트를 가져야 함", () => {
       const child1 = logger.child({ requestId: "req-1" });
+      assert.instanceOf(child1, Logger);
       const child2 = logger.child({ requestId: "req-2" });
+      assert.instanceOf(child2, Logger);
 
       // biome-ignore lint/complexity/useLiteralKeys: private property access for testing
       const infoSpy1 = vi.spyOn(child1["logger"], "info");
@@ -156,6 +162,7 @@ describe("Logger.child() - Request-scoped Isolation", () => {
 
     it("child()로 생성된 Logger의 info가 Pino child의 info를 호출해야 함", () => {
       const childLogger = logger.child({ service: "auth-service" });
+      assert.instanceOf(childLogger, Logger);
       // biome-ignore lint/complexity/useLiteralKeys: private property access for testing
       const childPinoInfoSpy = vi.spyOn(childLogger["logger"], "info");
 

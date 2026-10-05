@@ -2306,18 +2306,6 @@
       "owner": "@croco/framework-config"
     },
     {
-      "path": "packages/framework-context/src/libs/Container.test.ts",
-      "lane": "fast",
-      "qualifiers": ["coverage"],
-      "owner": "@croco/framework-context"
-    },
-    {
-      "path": "packages/framework-context/src/libs/Middleware.test.ts",
-      "lane": "fast",
-      "qualifiers": ["coverage"],
-      "owner": "@croco/framework-context"
-    },
-    {
       "path": "packages/framework-context/src/tests/ApplicationIntentManifest.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -2331,6 +2319,12 @@
     },
     {
       "path": "packages/framework-context/src/tests/CircularDependency.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/framework-context"
+    },
+    {
+      "path": "packages/framework-context/src/tests/Container.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/framework-context"
@@ -2367,6 +2361,12 @@
     },
     {
       "path": "packages/framework-context/src/tests/ILogger.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/framework-context"
+    },
+    {
+      "path": "packages/framework-context/src/tests/Middleware.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/framework-context"
@@ -5505,6 +5505,12 @@
     },
     {
       "path": "scripts/tests/package-roles.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:ci"
+    },
+    {
+      "path": "scripts/tests/package-test-typecheck-check.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:ci"

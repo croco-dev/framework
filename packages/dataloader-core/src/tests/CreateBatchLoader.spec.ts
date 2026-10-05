@@ -121,11 +121,11 @@ describe("createBatchLoader inside a request context", () => {
   it.each([
     [
       { name: "x", scope: "y:scope:z" },
-      { name: "x", scope: "y", resolveScope: () => "z" },
+      { name: "x", scope: "y", resolveScope: (): string => "z" },
     ],
     [
       { name: "x", scope: "scope:t" },
-      { name: "x", resolveScope: () => "t" },
+      { name: "x", resolveScope: (): string => "t" },
     ],
     [{ name: "a:v1:b" }, { name: "a", scope: "b:v1" }],
   ])(

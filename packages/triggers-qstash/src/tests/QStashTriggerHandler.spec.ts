@@ -1507,9 +1507,7 @@ describe("QStashTriggerHandler", () => {
 
     const receiver = { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver;
     const { manager } = createIdempotentExecutionManager();
-    const attemptManager = manager as ExecutionManager & {
-      failAttempt: ReturnType<typeof vi.fn>;
-    };
+    const attemptManager = vi.mocked(manager);
     const handler = new QStashTriggerHandler({
       receiver,
       executionManager: manager,
@@ -1551,10 +1549,7 @@ describe("QStashTriggerHandler", () => {
 
     const receiver = { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver;
     const { manager } = createIdempotentExecutionManager();
-    const attemptManager = manager as ExecutionManager & {
-      completeAttempt: ReturnType<typeof vi.fn>;
-      failAttempt: ReturnType<typeof vi.fn>;
-    };
+    const attemptManager = vi.mocked(manager);
     attemptManager.completeAttempt.mockRejectedValueOnce(new Error("completion store unavailable"));
     const handler = new QStashTriggerHandler({
       receiver,
@@ -1667,10 +1662,7 @@ describe("QStashTriggerHandler", () => {
 
         const receiver = { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver;
         const { manager } = createIdempotentExecutionManager();
-        const attemptManager = manager as ExecutionManager & {
-          completeAttempt: ReturnType<typeof vi.fn>;
-          failAttempt: ReturnType<typeof vi.fn>;
-        };
+        const attemptManager = vi.mocked(manager);
         const handler = new QStashTriggerHandlerBase({
           receiver,
           deliveryIdentityVerifier: vi.fn().mockResolvedValue(true),
@@ -1746,10 +1738,7 @@ describe("QStashTriggerHandler", () => {
 
         const receiver = { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver;
         const { manager } = createIdempotentExecutionManager();
-        const attemptManager = manager as ExecutionManager & {
-          completeAttempt: ReturnType<typeof vi.fn>;
-          failAttempt: ReturnType<typeof vi.fn>;
-        };
+        const attemptManager = vi.mocked(manager);
         const handler = new QStashTriggerHandlerBase({
           receiver,
           deliveryIdentityVerifier: vi.fn().mockResolvedValue(true),

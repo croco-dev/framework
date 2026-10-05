@@ -129,6 +129,7 @@ const repoIds = [
   "dependency-boundaries",
   "security-allowlists",
   "generated-secret-placeholders",
+  "package-test-typecheck",
   "compiler-baseline",
   "decorator-signature-spike",
   "strict-contract-typecheck",
@@ -190,6 +191,7 @@ const expectedLaneIds = {
     "architecture-policy",
     "architecture-circular-allowlist",
     "dependency-boundaries",
+    "package-test-typecheck",
     "compiler-baseline",
     "decorator-signature-spike",
     "strict-contract-typecheck",
@@ -305,12 +307,12 @@ describe("verification manifest", () => {
     });
   });
 
-  it("owns all 54 commands exactly once across the closed verification lanes", () => {
+  it("owns all 55 commands exactly once across the closed verification lanes", () => {
     const publishIds = [...repoIds, ...spineOnlyIds, ...publishOnlyIds];
     const ownedIds = Object.values(expectedLaneIds).flat();
 
-    expect(publishIds).toHaveLength(54);
-    expect(new Set(ownedIds).size).toBe(54);
+    expect(publishIds).toHaveLength(55);
+    expect(new Set(ownedIds).size).toBe(55);
     expect([...ownedIds].sort()).toEqual([...publishIds].sort());
     expect(VERIFICATION_LANE_OWNERSHIP).toEqual(
       Object.fromEntries(
@@ -326,7 +328,7 @@ describe("verification manifest", () => {
     expect(
       createHash("sha256").update(JSON.stringify(manifests)).digest("hex"),
       "The pre-split monolithic manifest changed; update this digest only after intentionally verifying the new serialized commands.",
-    ).toBe("6fcdcc6dc861fb66aaeb76e12baf919a62da85e11b1322dd9a4238f9be5b2dd0");
+    ).toBe("1b674555abe090e7a6c7edf6adb72c50d510da02c21ea1a04b637f79d397c1b3");
   });
 
   it("classifies every dependency edge and every cross-lane edge for synthesis", () => {
@@ -1512,7 +1514,7 @@ describe("verification manifest", () => {
       readFileSync(resolve(__dirname, "../../package.json"), "utf8"),
     ) as { scripts?: Record<string, string> };
 
-    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(54);
+    expect(RELEASE_GATE_TEST_PATHS).toHaveLength(55);
     expect(RELEASE_GATE_TEST_PATHS).toEqual([...RELEASE_GATE_TEST_PATHS].sort());
     expect(RELEASE_GATE_ENTRYPOINT_PATHS).toEqual([...RELEASE_GATE_ENTRYPOINT_PATHS].sort());
     expect(RELEASE_GATE_FIXTURE_PATHS).toEqual([...RELEASE_GATE_FIXTURE_PATHS].sort());
@@ -1662,6 +1664,7 @@ describe("verification manifest", () => {
       "scripts/tests/test-inventory.spec.ts",
       "scripts/tests/test-lane-runner.spec.ts",
       "scripts/tests/turbo-cache-contract.spec.ts",
+      "scripts/tests/package-test-typecheck-check.spec.ts",
     ]);
   });
 
@@ -1834,6 +1837,7 @@ describe("verification manifest", () => {
     expect(byId.get("release-gate-tests")?.concurrencyGroups).toBeUndefined();
     expect(byId.get("typecheck")?.command).not.toContain("--only");
     expect(byId.get("package-entrypoints-smoke")?.timeoutMs).toBe(15 * 60 * 1_000);
+    expect(byId.get("quick-start-lambda-smoke")?.timeoutMs).toBe(15 * 60 * 1_000);
   });
 
   it("routes compatibility aliases through authoritative profiles", () => {

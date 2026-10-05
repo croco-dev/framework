@@ -4,7 +4,7 @@ import {
   createQStashBatchConformanceSuite,
   type QStashBatchConformanceScenario,
 } from "@croco/testing";
-import type { Client } from "@upstash/qstash";
+import { Client } from "@upstash/qstash";
 import { describe, expect, it, vi } from "vitest";
 import {
   QStashChunkExecutor,
