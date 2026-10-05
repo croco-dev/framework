@@ -86,6 +86,7 @@ const cliDiagnosticDefinitionsTable = [
     "| `CROCO_CLI_JOBS_003` | `cli/missing-jobs-target-url` | Jobs command target URL is missing | Pass `--url` or set `CROCO_JOBS_URL` before running the jobs command. |",
     "| `CROCO_CLI_JOBS_004` | `cli/jobs-http-error` | Jobs endpoint returned an error | Inspect the endpoint response detail and retry after the app or requested job id is corrected. |",
     "| `CROCO_CLI_JOBS_005` | `cli/jobs-endpoint-not-found` | Jobs endpoint was not found | Check the app base URL and requested job id, then retry the jobs command. |",
+    '| `CROCO_CLI_JOBS_006` | `cli/invalid-jobs-id` | Jobs command job id is invalid | Pass a job id other than an empty string, ".", or ".." before retrying the command. |',
     "| `CROCO_CLI_DI_CHECK_001` | `cli/di-manifest-invalid` | DI check manifest is invalid | Regenerate the manifest or pass a path to a valid JSON manifest. |",
     "| `CROCO_CLI_DI_CHECK_002` | `cli/di-manifest-failed` | DI check manifest failed without diagnostics | Regenerate the manifest with diagnostics or fix the producer that emitted the failed manifest. |",
     "| `CROCO_CLI_DI_CHECK_003` | `cli/di-diagnostic-unknown` | DI check diagnostic code is missing | Fix the manifest producer so every diagnostic carries a stable code. |",
