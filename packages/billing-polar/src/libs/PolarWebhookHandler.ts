@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { SubscriptionStatus as PolarSubscriptionStatus } from "@polar-sh/sdk/models/components/subscriptionstatus";
 import type {
   BillingSubscriptionWebhookTransition,
   BillingStore,
@@ -338,7 +339,7 @@ export class PolarWebhookHandler {
       return {
         kind: "subscription",
         eventType: eventType as PolarSubscriptionEventType,
-        payload: this.parseSubscriptionPayload(data),
+        payload: this.parseSubscriptionPayload(data, eventType),
       };
     }
 
@@ -364,14 +365,17 @@ export class PolarWebhookHandler {
     }
   }
 
-  private parseSubscriptionPayload(data: unknown): ParsedSubscriptionPayload {
+  private parseSubscriptionPayload(data: unknown, eventType: string): ParsedSubscriptionPayload {
     const subscriptionData = PolarSubscriptionDataSchema.parse(data);
     const providerModifiedAt = new Date(subscriptionData.modifiedAt ?? subscriptionData.createdAt);
     if (Number.isNaN(providerModifiedAt.getTime())) {
       throw new WebhookValidationProblem("Subscription provider timestamp is invalid");
     }
 
-    const status = this.mapStatus(subscriptionData.status);
+    const status =
+      subscriptionData.status === "revoked"
+        ? "revoked"
+        : this.mapStatus(subscriptionData.status, eventType);
     return {
       id: subscriptionData.id,
       tenantId: this.extractTenantId(subscriptionData.customer),
@@ -599,21 +603,23 @@ export class PolarWebhookHandler {
   }
 
   private mapStatus(
-    polarStatus: string,
-  ): "active" | "past_due" | "canceled" | "revoked" | "trialing" {
+    polarStatus: (typeof PolarSubscriptionStatus)[keyof typeof PolarSubscriptionStatus],
+    eventType: string,
+  ): Subscription["status"] {
     switch (polarStatus) {
       case "active":
-        return "active";
       case "past_due":
-        return "past_due";
+      case "trialing":
+        return polarStatus;
       case "canceled":
         return "canceled";
-      case "revoked":
-        return "revoked";
-      case "trialing":
-        return "trialing";
+      case "incomplete":
+      case "incomplete_expired":
+      case "unpaid":
+      case "paused":
+        throw new BillingStatusMappingProblem(polarStatus, eventType);
       default:
-        throw new BillingStatusMappingProblem(polarStatus);
+        throw new BillingStatusMappingProblem(polarStatus satisfies never, eventType);
     }
   }
 

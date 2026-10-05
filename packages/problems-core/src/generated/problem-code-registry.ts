@@ -257,12 +257,11 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       title: "Internal Server Error",
       cookbookPath: "/reference/problem-recovery-cookbook/#billing-status-mapping-failed",
       recovery: {
-        cause: "Croco or an upstream dependency failed after accepting the request.",
-        userAction:
-          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        cause: "Polar sent a valid subscription status that the billing contract cannot represent.",
+        userAction: "Do not retry the unchanged webhook payload.",
         operatorAction:
-          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
-        retryability: "conditional",
+          "Inspect rawStatus and eventType. Define a supported billing mapping before replaying the webhook.",
+        retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {
           eventName: "croco.problem.error",

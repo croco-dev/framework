@@ -21,7 +21,7 @@ This cookbook documents 907 public Croco Problem codes. The deterministic JSON r
 | [`API_KEY_NOT_FOUND`](#api-key-not-found)                                                                                             | NotFound                                                            |           404 | not-retryable | public        | active    |       1 |
 | [`API_KEY_REVOKED`](#api-key-revoked)                                                                                                 | Unauthorized                                                        |           401 | not-retryable | safe-message  | active    |       1 |
 | [`BAD_REQUEST`](#bad-request)                                                                                                         | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
-| [`BILLING_STATUS_MAPPING_FAILED`](#billing-status-mapping-failed)                                                                     | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
+| [`BILLING_STATUS_MAPPING_FAILED`](#billing-status-mapping-failed)                                                                     | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
 | [`BLOCKED_DURING_IMPERSONATION`](#blocked-during-impersonation)                                                                       | Forbidden                                                           |           403 | not-retryable | safe-message  | active    |       1 |
 | [`CIRCUIT_BREAKER_OPEN`](#circuit-breaker-open)                                                                                       | TooManyRequests                                                     |           429 | retryable     | safe-message  | active    |       1 |
 | [`CONFLICTING_PAGINATION`](#conflicting-pagination)                                                                                   | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
@@ -1073,12 +1073,12 @@ Sources:
 
 - Category: `InternalServerError`
 - HTTP status: `500` Internal Server Error
-- Retryability: `conditional`
+- Retryability: `not-retryable`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: Croco or an upstream dependency failed after accepting the request.
-- User action: Retry later only when the operation is idempotent or the caller owns retry safety.
-- Operator action: Use traces, logs, and upstream diagnostics to isolate the failing boundary.
+- Cause: Polar sent a valid subscription status that the billing contract cannot represent.
+- User action: Do not retry the unchanged webhook payload.
+- Operator action: Inspect rawStatus and eventType. Define a supported billing mapping before replaying the webhook.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:

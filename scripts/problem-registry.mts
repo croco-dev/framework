@@ -3335,6 +3335,15 @@ const recoveryMetadataByCategory = {
 } as const satisfies Record<ProblemCategory, ProblemRecoveryMetadata>;
 
 const recoveryMetadataByCode = {
+  BILLING_STATUS_MAPPING_FAILED: recovery({
+    cause: "Polar sent a valid subscription status that the billing contract cannot represent.",
+    userAction: "Do not retry the unchanged webhook payload.",
+    operatorAction:
+      "Inspect rawStatus and eventType. Define a supported billing mapping before replaying the webhook.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "batch-qstash/publish-failed": recovery({
     cause: "The QStash provider rejected or failed the batch dispatch.",
     userAction:

@@ -18,9 +18,13 @@ import { createBillingProviderConformanceSuite } from "@croco/testing";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { PolarWebhookHandler } from "../libs/PolarWebhookHandler";
 import type { WebhookDependencies } from "../libs/PolarWebhookHandler";
+import { BillingStatusMappingProblem } from "../libs/problems/BillingStatusMappingProblem";
 import { WebhookProcessingProblem } from "../libs/problems/WebhookProcessingProblem";
 import { WebhookValidationProblem } from "../libs/problems/WebhookValidationProblem";
-import { PolarOrderDataSchema } from "../libs/schemas/polarWebhookSchema";
+import {
+  PolarOrderDataSchema,
+  PolarSubscriptionDataSchema,
+} from "../libs/schemas/polarWebhookSchema";
 import type { PolarConfig } from "../types";
 
 function createMockStore(): BillingStore {
@@ -248,6 +252,30 @@ const webhookValidationFailureCases: readonly {
   },
 ];
 
+describe("PolarSubscriptionDataSchema SDK status matrix", () => {
+  it.each([
+    "incomplete",
+    "incomplete_expired",
+    "trialing",
+    "active",
+    "past_due",
+    "canceled",
+    "unpaid",
+    "paused",
+  ])("accepts the SDK status %s", (status) => {
+    expect(
+      PolarSubscriptionDataSchema.parse({ ...signedSubscriptionEvent.data, status }).status,
+    ).toBe(status);
+  });
+
+  it("preserves the legacy revoked input", () => {
+    expect(
+      PolarSubscriptionDataSchema.parse({ ...signedSubscriptionEvent.data, status: "revoked" })
+        .status,
+    ).toBe("revoked");
+  });
+});
+
 describe("PolarOrderDataSchema", () => {
   it("accepts zero net amounts and rejects negative or fractional net amounts", () => {
     expect(() =>
@@ -311,6 +339,75 @@ describe("PolarWebhookHandler", () => {
     });
 
     vi.clearAllMocks();
+  });
+
+  describe("SDK subscription status mapping", () => {
+    it.each([
+      ["subscription.updated", "incomplete"],
+      ["subscription.updated", "incomplete_expired"],
+      ["subscription.updated", "unpaid"],
+      ["subscription.updated", "paused"],
+      ["subscription.revoked", "unpaid"],
+    ])(
+      "rejects %s with unsupported SDK status %s before any store mutation",
+      async (eventType, rawStatus) => {
+        const event = {
+          ...signedSubscriptionEvent,
+          type: eventType,
+          data: { ...signedSubscriptionEvent.data, status: rawStatus },
+        };
+        mockVerifyPolarWebhook.mockReturnValue(event);
+
+        const failure = await handler
+          .handle(JSON.stringify(event), { "webhook-id": event.id })
+          .catch((error: unknown) => error);
+
+        expect(failure).toBeInstanceOf(BillingStatusMappingProblem);
+        expect(failure).toMatchObject({
+          code: "BILLING_STATUS_MAPPING_FAILED",
+          extensions: { rawStatus, eventType: event.type, retryable: false },
+        });
+        expect((failure as BillingStatusMappingProblem).toJSON()).toMatchObject({
+          code: "BILLING_STATUS_MAPPING_FAILED",
+          rawStatus,
+          eventType: event.type,
+          retryable: false,
+        });
+        for (const method of Object.values(mockStore)) {
+          expect(method).not.toHaveBeenCalled();
+        }
+        expect(mockPlanRegistry.resolveProviderPlanVersion).not.toHaveBeenCalled();
+        expect(mockEventPublisher.publishIdempotently).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each([
+      ["subscription.updated", "active", "active"],
+      ["subscription.past_due", "past_due", "past_due"],
+      ["subscription.canceled", "canceled", "canceled"],
+      ["subscription.updated", "trialing", "trialing"],
+      ["subscription.revoked", "canceled", "canceled"],
+      ["subscription.revoked", "revoked", "revoked"],
+      ["subscription.updated", "revoked", "revoked"],
+    ])("maps %s with raw status %s to %s", async (eventType, rawStatus, status) => {
+      vi.mocked(mockStore.findSubscription).mockResolvedValue(null);
+      const event = {
+        ...signedSubscriptionEvent,
+        type: eventType,
+        data: { ...signedSubscriptionEvent.data, status: rawStatus },
+      };
+      mockVerifyPolarWebhook.mockReturnValue(event);
+
+      await expect(
+        handler.handle(JSON.stringify(event), { "webhook-id": event.id }),
+      ).resolves.toEqual({
+        success: true,
+        eventId: event.id,
+      });
+      expect(mockStore.saveSubscription).toHaveBeenCalledExactlyOnceWith(
+        expect.objectContaining({ status }),
+      );
+    });
   });
 
   describe("billing provider conformance", () => {

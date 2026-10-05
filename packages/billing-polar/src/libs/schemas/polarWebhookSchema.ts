@@ -1,3 +1,4 @@
+import { SubscriptionStatus } from "@polar-sh/sdk/models/components/subscriptionstatus";
 import { z } from "zod";
 
 export const PolarEventSchema = z.object({
@@ -22,7 +23,7 @@ const PolarPriceSchema = z.object({
 export const PolarSubscriptionDataSchema = z
   .object({
     id: z.string(),
-    status: z.enum(["active", "past_due", "canceled", "revoked", "trialing"]),
+    status: z.union([z.enum(SubscriptionStatus), z.literal("revoked")]),
     customer: PolarCustomerSchema.optional(),
     product: PolarProductSchema.optional(),
     prices: z.array(PolarPriceSchema).optional(),
