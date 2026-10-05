@@ -171,9 +171,9 @@ export class RenderServer {
           regionsFailed: counts.failed,
           regionsCancelled: counts.cancelled,
           bytes: 0,
-          timedOut: true,
+          timedOut: this.timedOutFor(controller.signal.reason, request.signal.aborted),
           clientAborted: request.signal.aborted,
-          abortReason: request.signal.aborted ? "client-abort" : "deadline",
+          abortReason: this.toAbortReason(controller.signal.reason, request.signal.aborted),
         });
         teardown();
         return this.createHtmlResponse("<h1>Service Unavailable</h1>", 503, FALLBACK_HEAD_500);
@@ -284,6 +284,7 @@ export class RenderServer {
       if (error instanceof ShellStreamAbortedError) {
         // Pre-commit deadline/client-abort during the loader phase: same
         // 503 path as the post-loader abort check above.
+        const abortReason = this.toAbortReason(error, request.signal.aborted);
         const counts = await createDeferredRegionStore(
           route.regions ?? [],
           controller.signal,
@@ -298,9 +299,9 @@ export class RenderServer {
           regionsFailed: counts.failed,
           regionsCancelled: counts.cancelled,
           bytes: 0,
-          timedOut: true,
+          timedOut: abortReason === "deadline",
           clientAborted: request.signal.aborted,
-          abortReason: request.signal.aborted ? "client-abort" : "deadline",
+          abortReason,
         });
         return this.createHtmlResponse("<h1>Service Unavailable</h1>", 503, FALLBACK_HEAD_500);
       }
@@ -525,11 +526,14 @@ export class RenderServer {
           }
           try {
             if (signal.aborted) {
-              const counts = await events.settleRegions().catch(() => ({
+              const countsPromise = events.settleRegions().catch(() => ({
                 settled: 0,
                 failed: 0,
                 cancelled: 0,
               }));
+              const cancelPromise = reader.cancel(signal.reason).catch(() => {});
+              const counts = await countsPromise;
+              await cancelPromise;
               finish(
                 {
                   regionsSettled: counts.settled,
@@ -564,11 +568,13 @@ export class RenderServer {
             shellCommitted = true;
             controller.enqueue(chunk);
           } catch (error) {
-            const counts = await events.settleRegions().catch(() => ({
+            const countsPromise = events.settleRegions().catch(() => ({
               settled: 0,
               failed: 0,
               cancelled: 0,
             }));
+            const cancelPromise = reader.cancel(error).catch(reportBestEffortStreamTeardown);
+            const counts = await countsPromise;
             finish(
               {
                 regionsSettled: counts.settled,
@@ -581,15 +587,17 @@ export class RenderServer {
             try {
               controller.error(error);
             } finally {
-              await reader.cancel(error).catch(reportBestEffortStreamTeardown);
+              await cancelPromise;
               reader.releaseLock();
             }
           }
         },
         cancel: async (reason) => {
           // Abort render/region work first: region loaders observe the linked
-          // controller signal, so awaiting settlement before aborting would
-          // hang up to the region timeout (or indefinitely when disabled).
+          // controller signal. Start upstream cancellation independently so
+          // the cancel handler never waits on a region loader that ignores
+          // its abort signal.
+          const cancelPromise = reader.cancel(reason).catch(reportBestEffortStreamTeardown);
           events.onDone();
           const counts = await events.settleRegions().catch(() => ({
             settled: 0,
@@ -605,7 +613,7 @@ export class RenderServer {
             },
             "client-abort",
           );
-          await reader.cancel(reason).catch(reportBestEffortStreamTeardown);
+          await cancelPromise;
           reader.releaseLock();
         },
       },
