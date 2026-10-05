@@ -2475,18 +2475,6 @@
               "declarationKind": "class"
             },
             {
-              "name": "PostgresCustomerExplorerRepository",
-              "exportKind": "named",
-              "source": "./libs/CustomerExplorerAdapters",
-              "declarationKind": "class"
-            },
-            {
-              "name": "PostgresTimelineSource",
-              "exportKind": "named",
-              "source": "./libs/CustomerExplorerAdapters",
-              "declarationKind": "class"
-            },
-            {
               "name": "RetryConsoleAuditConfirmation",
               "exportKind": "named",
               "source": "./libs/react",
@@ -2691,21 +2679,6 @@
               "source": "./libs/CustomerExplorerAdapters"
             },
             {
-              "name": "ExplorerPgDatabase",
-              "exportKind": "named",
-              "source": "./libs/CustomerExplorerAdapters"
-            },
-            {
-              "name": "ExplorerPgExecutor",
-              "exportKind": "named",
-              "source": "./libs/CustomerExplorerAdapters"
-            },
-            {
-              "name": "ExplorerSqlTimelineMapping",
-              "exportKind": "named",
-              "source": "./libs/CustomerExplorerAdapters"
-            },
-            {
               "name": "LifecycleRunTimelineExtension",
               "exportKind": "named",
               "source": "./libs/types"
@@ -2769,11 +2742,6 @@
               "name": "OperationsTimelineSourceAdapter",
               "exportKind": "named",
               "source": "./libs/types"
-            },
-            {
-              "name": "PostgresTimelineSourceOptions",
-              "exportKind": "named",
-              "source": "./libs/CustomerExplorerAdapters"
             },
             {
               "name": "RetryConsole",
@@ -2904,6 +2872,67 @@
               "name": "WorkflowExecutionTimelineSource",
               "exportKind": "named",
               "source": "./libs/types"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/admin-postgres",
+      "relativeDir": "packages/admin-postgres",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/admin-postgres/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "PostgresCustomerExplorerRepository",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorerAdapters",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PostgresTimelineSource",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorerAdapters",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "ExplorerPgDatabase",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorerAdapters"
+            },
+            {
+              "name": "ExplorerPgExecutor",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorerAdapters"
+            },
+            {
+              "name": "ExplorerSqlTimelineMapping",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorerAdapters"
+            },
+            {
+              "name": "PostgresTimelineSourceOptions",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorerAdapters"
             }
           ]
         }

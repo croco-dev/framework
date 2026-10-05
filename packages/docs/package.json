@@ -31,6 +31,7 @@
     "@croco/admin-core": "workspace:*",
     "@croco/admin-generated": "workspace:*",
     "@croco/admin-ops": "workspace:*",
+    "@croco/admin-postgres": "workspace:*",
     "@croco/admin-react": "workspace:*",
     "@croco/ai-usage": "workspace:*",
     "@croco/analytics-core": "workspace:*",

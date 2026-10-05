@@ -230,12 +230,6 @@
       "owner": "@croco/admin-generated"
     },
     {
-      "path": "packages/admin-ops/src/tests/CustomerExplorerAdapters.postgres.spec.ts",
-      "lane": "live",
-      "qualifiers": [],
-      "owner": "@croco/admin-ops"
-    },
-    {
       "path": "packages/admin-ops/src/tests/CustomerExplorerAdapters.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -270,6 +264,18 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-ops"
+    },
+    {
+      "path": "packages/admin-postgres/src/tests/CustomerExplorerAdapters.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/admin-postgres"
+    },
+    {
+      "path": "packages/admin-postgres/src/tests/CustomerExplorerAdapters.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-postgres"
     },
     {
       "path": "packages/admin-react/src/tests/ActivationGuideConsole.spec.ts",

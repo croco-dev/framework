@@ -12,7 +12,7 @@
     "noEmit": true,
     "paths": {
       "@croco/admin-core": ["../../packages/admin-core/src/index.ts"],
-      "@croco/admin-ops": ["../../packages/admin-ops/src/index.ts"],
+      "@croco/admin-postgres": ["../../packages/admin-postgres/src/index.ts"],
       "@croco/billing-core": ["../../packages/billing-core/src/index.ts"],
       "@croco/entitlements-core": ["../../packages/entitlements-core/src/libs/types.ts"],
       "@croco/impersonation-core": ["../../packages/impersonation-core/src/libs/types.ts"],

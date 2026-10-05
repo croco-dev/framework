@@ -7,7 +7,6 @@ export default defineConfig({
   dts: true,
   clean: true,
   minify: true,
-  external: ["react", "react-dom"],
   onSuccess: async () => {
     mkdirSync("dist/migrations", { recursive: true });
     copyFileSync(

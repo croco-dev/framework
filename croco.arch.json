@@ -82,6 +82,7 @@
     "plugins": {
       "packages": [
         "@croco/access-drizzle",
+        "@croco/admin-postgres",
         "@croco/admin-react",
         "@croco/analytics-drizzle",
         "@croco/analytics-posthog",

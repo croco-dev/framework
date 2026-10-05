@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@croco/admin-core": "workspace:*",
-    "@croco/admin-ops": "workspace:*",
+    "@croco/admin-postgres": "workspace:*",
     "@croco/admin-react": "workspace:*",
     "pg": "8.22.0",
     "react": "^19.0.0",

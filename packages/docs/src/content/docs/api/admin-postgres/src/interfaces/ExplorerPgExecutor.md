@@ -7,7 +7,7 @@ title: "ExplorerPgExecutor"
 
 ## Extended by
 
-- [`ExplorerPgDatabase`](/api/admin-ops/src/interfaces/explorerpgdatabase/)
+- [`ExplorerPgDatabase`](/api/admin-postgres/src/interfaces/explorerpgdatabase/)
 
 ## Methods
 

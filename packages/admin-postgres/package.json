@@ -1,0 +1,46 @@
+{
+  "name": "@croco/admin-postgres",
+  "version": "0.1.0",
+  "description": "PostgreSQL customer explorer repository and live timeline source",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/croco-dev/framework.git",
+    "directory": "packages/admin-postgres"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "commonjs",
+  "sideEffects": false,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "publishConfig": {
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts",
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "import": "./dist/index.mjs",
+        "require": "./dist/index.js"
+      }
+    },
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "lint": "oxlint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run src/tests/CustomerExplorerAdapters.spec.ts",
+    "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
+    "test:watch": "vitest",
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts",
+    "test:live": "vitest run src/tests/CustomerExplorerAdapters.postgres.spec.ts"
+  },
+  "dependencies": {
+    "@croco/admin-core": "workspace:*"
+  },
+  "devDependencies": {
+    "vitest": "4.1.8"
+  }
+}

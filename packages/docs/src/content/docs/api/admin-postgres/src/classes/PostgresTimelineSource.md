@@ -19,7 +19,7 @@ title: "PostgresTimelineSource"
 
 ##### options
 
-[`PostgresTimelineSourceOptions`](/api/admin-ops/src/type-aliases/postgrestimelinesourceoptions/)
+[`PostgresTimelineSourceOptions`](/api/admin-postgres/src/type-aliases/postgrestimelinesourceoptions/)
 
 #### Returns
 

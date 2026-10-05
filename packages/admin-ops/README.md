@@ -94,14 +94,10 @@ These primitives render from `RetryConsoleItem` contracts and leave authorizatio
 
 ## Customer Explorer adapters
 
-`PostgresTimelineSource` reads an application's existing normalized table through a validated `ExplorerSqlTimelineMapping`. Scope, subject and time predicates are parameterized before the per-subject `LIMIT`; keyset cursors bind the source, scope, subject and window, preserve PostgreSQL timestamp precision and order event keys with the `C` collation. Configure a source status callback that checks provider authorization and reports real coverage. A complete empty source and an unavailable source are different results.
-
 `EngagementCustomerExplorerSource` wraps the existing tenant/recipient dispatch store's `listByRecipient` and `getDispatch`, reusing the engagement normalizer. Pin its app/environment/tenant scope because the underlying store is tenant-aware. Queued and accepted delivery evidence must retain their original meanings; this adapter does not infer a click or server payment from message delivery. A page can have no in-window events while still carrying a continuation cursor.
 
 `OperationsCustomerExplorerSource` wraps an existing normalized `OperationsTimelineSourceAdapter` and checks tenant/customer boundaries. Its upstream `collect` contract is unbounded, so use the SQL source for large histories. Original source and event ID form a composite reference; unrelated sources are never merged by ID alone.
 
-`PostgresCustomerExplorerRepository` accepts a structural PostgreSQL pool interface, without choosing a driver. Apply the packaged `dist/migrations/0001_customer_explorer.up.sql` through your existing deployment migration owner. The repository performs no boot DDL. It stores only samples, notes, revision/actor audit records and snapshot content digests, not source logs. Note updates and their audits commit atomically. Deleted notes retain a content-free revision tombstone until sample deletion or expiry purge, so old writers cannot recreate an ID and overwrite new evidence; stale revisions fail with `customer-explorer/revision-conflict`.
-
-Expiry prevents reads; call `purgeExpired(scope, now)` through a privileged retention job to delete expired sample data and cascading notes/audits. Explicit scoped sample deletion has the same cascade. Snapshot digests contain no source payload or membership list and remain after deletion to reject later content changes under the same snapshot ID. The schema is additive; rolling it back discards saved observations and requires the deployment owner's explicit data-retention decision.
+PostgreSQL persistence and normalized SQL timeline reads are provided by the [`@croco/admin-postgres` provider package](../admin-postgres/README.md).
 
 [Standalone PostgreSQL example](../../examples/customer-explorer/README.md) demonstrates source mapping, authorization, migration setup and durable note rereads. These adapters are source-verified implementations; local synthetic tests do not establish provider certification or production identity policy.

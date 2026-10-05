@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { Pool } from "pg";
 import { CustomerExplorerService, explorerScopeKey } from "@croco/admin-core";
-import { PostgresCustomerExplorerRepository, PostgresTimelineSource } from "@croco/admin-ops";
+import { PostgresCustomerExplorerRepository, PostgresTimelineSource } from "@croco/admin-postgres";
 import type { ExplorerScope } from "@croco/admin-core";
 
 const url = process.env.CUSTOMER_EXPLORER_DATABASE_URL;
@@ -60,7 +60,10 @@ export async function setup(): Promise<void> {
   }
   await pool.query(
     readFileSync(
-      resolve(__dirname, "../../../packages/admin-ops/migrations/0001_customer_explorer.up.sql"),
+      resolve(
+        __dirname,
+        "../../../packages/admin-postgres/migrations/0001_customer_explorer.up.sql",
+      ),
       "utf8",
     ),
   );

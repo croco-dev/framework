@@ -19,7 +19,7 @@ title: "PostgresCustomerExplorerRepository"
 
 ##### database
 
-[`ExplorerPgDatabase`](/api/admin-ops/src/interfaces/explorerpgdatabase/)
+[`ExplorerPgDatabase`](/api/admin-postgres/src/interfaces/explorerpgdatabase/)
 
 #### Returns
 
