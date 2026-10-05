@@ -275,6 +275,30 @@ describe("Static asset and SPA fallback conformance", () => {
     }
   });
 
+  it("matches quoted entity-tag lists without splitting inside quotes", async () => {
+    const { app, fixture } = await createStaticApp({
+      "index.html": "<html><body><main>spa shell</main></body></html>",
+      "assets/app.js": 'console.log("asset app");',
+    });
+
+    try {
+      const first = await app.fetch(new Request("http://localhost/assets/app.js"));
+      const etag = first.headers.get("etag");
+      expect(etag).toBeTruthy();
+
+      const conditional = await app.fetch(
+        new Request("http://localhost/assets/app.js", {
+          headers: { "if-none-match": `"a,b", ${etag ?? "*"}` },
+        }),
+      );
+
+      expect(conditional.status).toBe(304);
+      expect(await conditional.text()).toBe("");
+    } finally {
+      await fixture.cleanup();
+    }
+  });
+
   it("serves HEAD for static assets and SPA fallback without a body", async () => {
     const { app, fixture } = await createStaticApp({
       "index.html": "<html><body><main>spa shell</main></body></html>",

@@ -1,5 +1,5 @@
-import { createReadStream, existsSync, statSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { readFile, stat } from "node:fs/promises";
 import { extname, join, normalize, resolve, sep } from "node:path";
 import { Readable } from "node:stream";
 import type { DiagnosticsCollector } from "@croco/diagnostics-core";
@@ -724,7 +724,7 @@ export class CrocoApp {
 
     this.hono.get("*", async (c, next) => {
       const requestPath = this.normalizeRequestPath(c.req.path);
-      const filePath = this.resolveStaticFilePath(staticDir, requestPath);
+      const filePath = await this.resolveStaticFilePath(staticDir, requestPath);
 
       if (filePath) {
         return this.respondWithStaticFile(
@@ -739,7 +739,7 @@ export class CrocoApp {
         return next();
       }
 
-      const indexPath = this.resolveStaticFilePath(staticDir, "/index.html");
+      const indexPath = await this.resolveStaticFilePath(staticDir, "/index.html");
 
       if (!indexPath) {
         return next();
@@ -764,16 +764,26 @@ export class CrocoApp {
     return requestPath;
   }
 
-  private resolveStaticFilePath(staticDir: string, requestPath: string): string | null {
+  private async resolveStaticFilePath(
+    staticDir: string,
+    requestPath: string,
+  ): Promise<string | null> {
     const normalizedRelativePath = normalize(requestPath).replace(/^([/\\])+/, "");
     const filePath = resolve(join(staticDir, normalizedRelativePath));
 
-    if (!this.isPathInsideDirectory(staticDir, filePath) || !existsSync(filePath)) {
+    if (!this.isPathInsideDirectory(staticDir, filePath)) {
       return null;
     }
 
-    if (!statSync(filePath).isFile()) {
-      return null;
+    try {
+      if (!(await stat(filePath)).isFile()) {
+        return null;
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
+        return null;
+      }
+      throw error;
     }
 
     return filePath;
@@ -825,7 +835,7 @@ export class CrocoApp {
   ): Promise<Response> {
     let stats: { size: number; mtime: Date; mtimeMs: number };
     try {
-      stats = statSync(filePath);
+      stats = await stat(filePath);
     } catch (error) {
       if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
         return new Response("404 Not Found", {
@@ -876,8 +886,7 @@ export class CrocoApp {
     if (ifNoneMatch) {
       const expected = etag.replace(/^W\//, "");
 
-      return ifNoneMatch
-        .split(",")
+      return splitEntityTagList(ifNoneMatch)
         .map((value) => value.trim().replace(/^W\//, ""))
         .some((value) => value === "*" || value === expected);
     }
@@ -896,6 +905,32 @@ export class CrocoApp {
 
     return false;
   }
+}
+
+function splitEntityTagList(header: string): string[] {
+  const tags: string[] = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (const char of header) {
+    if (char === '"') {
+      inQuotes = !inQuotes;
+      current += char;
+      continue;
+    }
+
+    if (char === "," && !inQuotes) {
+      tags.push(current);
+      current = "";
+      continue;
+    }
+
+    current += char;
+  }
+
+  tags.push(current);
+
+  return tags;
 }
 
 function routeSegmentRank(segment: string): number {
