@@ -1,6 +1,7 @@
-import { existsSync, statSync } from "node:fs";
+import { createReadStream, existsSync, statSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize, resolve, sep } from "node:path";
+import { Readable } from "node:stream";
 import type { DiagnosticsCollector } from "@croco/diagnostics-core";
 import {
   Container,
@@ -71,6 +72,13 @@ type FetchRuntimeOptions = {
   executionContext?: HonoFetchExecutionContext;
 };
 type NodeServerEnv = HttpBindings | Http2Bindings;
+
+type StaticFileServingOptions = {
+  readonly cacheControl: string | false;
+  readonly streamThresholdBytes: number;
+  readonly spaFallbackCacheControl: string | false;
+};
+
 type DiBootstrapDiagnostic = {
   readonly code: string;
   readonly message: string;
@@ -91,6 +99,10 @@ const LEGACY_SECURITY_MIDDLEWARE_VALIDATION_PROBLEM = {
   code: LEGACY_SECURITY_MIDDLEWARE_VALIDATION_CODE,
   category: ProblemCategory.InternalServerError,
 } as const;
+
+const STATIC_DEFAULT_MAX_AGE_SECONDS = 3600;
+const STATIC_SPA_FALLBACK_MAX_AGE_SECONDS = 0;
+const STATIC_DEFAULT_STREAM_THRESHOLD_BYTES = 1024 * 1024;
 
 const REQUIRED_SECURITY_MIDDLEWARES: readonly RequiredSecurityMiddleware[] = [
   {
@@ -708,13 +720,19 @@ export class CrocoApp {
 
     const staticDir = resolve(options.staticDir);
     const spaFallback = options.spaFallback ?? false;
+    const servingOptions = this.resolveStaticFileServingOptions(options);
 
     this.hono.get("*", async (c, next) => {
       const requestPath = this.normalizeRequestPath(c.req.path);
       const filePath = this.resolveStaticFilePath(staticDir, requestPath);
 
       if (filePath) {
-        return this.respondWithStaticFile(filePath);
+        return this.respondWithStaticFile(
+          filePath,
+          c.req.raw,
+          servingOptions.cacheControl,
+          servingOptions.streamThresholdBytes,
+        );
       }
 
       if (!spaFallback || this.shouldSkipSpaFallback(c.req.path, c.req.header("accept"))) {
@@ -727,7 +745,12 @@ export class CrocoApp {
         return next();
       }
 
-      return this.respondWithStaticFile(indexPath);
+      return this.respondWithStaticFile(
+        indexPath,
+        c.req.raw,
+        servingOptions.spaFallbackCacheControl,
+        servingOptions.streamThresholdBytes,
+      );
     });
 
     this.nodeStaticRoutesRegistered = true;
@@ -777,15 +800,101 @@ export class CrocoApp {
     return !acceptedTypes.some((value) => value === "text/html" || value === "*/*");
   }
 
-  private async respondWithStaticFile(filePath: string): Promise<Response> {
-    const file = await readFile(filePath);
-    const contentType = getMimeType(filePath) ?? "application/octet-stream";
+  private resolveStaticFileServingOptions(options?: ListenOptions): StaticFileServingOptions {
+    const streamThresholdBytes =
+      options?.staticStreamThresholdBytes ?? STATIC_DEFAULT_STREAM_THRESHOLD_BYTES;
 
-    return new Response(file, {
-      headers: {
-        "content-type": contentType,
-      },
-    });
+    return {
+      cacheControl:
+        options?.staticCacheControl ?? `public, max-age=${STATIC_DEFAULT_MAX_AGE_SECONDS}`,
+      streamThresholdBytes:
+        Number.isFinite(streamThresholdBytes) && streamThresholdBytes >= 0
+          ? streamThresholdBytes
+          : STATIC_DEFAULT_STREAM_THRESHOLD_BYTES,
+      spaFallbackCacheControl:
+        options?.staticSpaFallbackCacheControl ??
+        `public, max-age=${STATIC_SPA_FALLBACK_MAX_AGE_SECONDS}, must-revalidate`,
+    };
+  }
+
+  private async respondWithStaticFile(
+    filePath: string,
+    request: Request,
+    cacheControl: string | false,
+    streamThresholdBytes: number,
+  ): Promise<Response> {
+    let stats: { size: number; mtime: Date; mtimeMs: number };
+    try {
+      stats = statSync(filePath);
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException)?.code === "ENOENT") {
+        return new Response("404 Not Found", {
+          status: 404,
+          headers: { "content-type": "text/plain; charset=UTF-8" },
+        });
+      }
+      throw error;
+    }
+    const etag = `W/"${stats.size.toString(16)}-${Math.floor(stats.mtimeMs).toString(16)}"`;
+    const lastModified = stats.mtime.toUTCString();
+    const headers: Record<string, string> = {
+      "content-type": getMimeType(filePath) ?? "application/octet-stream",
+      etag,
+      "last-modified": lastModified,
+    };
+
+    if (cacheControl !== false) {
+      headers["cache-control"] = cacheControl;
+    }
+
+    if (this.matchesStaticPrecondition(request, etag, stats.mtime)) {
+      return new Response(null, { status: 304, headers });
+    }
+
+    if (request.method.toUpperCase() === "HEAD") {
+      return new Response(null, {
+        headers: { ...headers, "content-length": stats.size.toString() },
+      });
+    }
+
+    if (stats.size >= streamThresholdBytes) {
+      const body = Readable.toWeb(createReadStream(filePath)) as ReadableStream<Uint8Array>;
+
+      return new Response(body, {
+        headers: { ...headers, "content-length": stats.size.toString() },
+      });
+    }
+
+    const file = await readFile(filePath);
+
+    return new Response(file, { headers });
+  }
+
+  private matchesStaticPrecondition(request: Request, etag: string, mtime: Date): boolean {
+    const ifNoneMatch = request.headers.get("if-none-match");
+
+    if (ifNoneMatch) {
+      const expected = etag.replace(/^W\//, "");
+
+      return ifNoneMatch
+        .split(",")
+        .map((value) => value.trim().replace(/^W\//, ""))
+        .some((value) => value === "*" || value === expected);
+    }
+
+    const ifModifiedSince = request.headers.get("if-modified-since");
+
+    if (ifModifiedSince) {
+      const sinceTime = Date.parse(ifModifiedSince);
+
+      if (Number.isNaN(sinceTime)) {
+        return false;
+      }
+
+      return Math.floor(mtime.getTime() / 1000) <= Math.floor(sinceTime / 1000);
+    }
+
+    return false;
   }
 }
 
