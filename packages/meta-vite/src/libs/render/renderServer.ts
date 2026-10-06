@@ -249,11 +249,36 @@ export class RenderServer {
           });
           return new Response(body.buffer as ArrayBuffer, { status: 200, headers });
         } catch (error) {
+          // Abort-before-settle: region loaders observe controller.signal,
+          // so abort first to unblock cooperative loaders before settle
+          // waits on them. Capture the abort state before teardown because
+          // teardown itself aborts the controller.
+          const wasAborted = controller.signal.aborted;
+          controller.abort(toShellAbortError(error));
           const counts = await store.settle().catch(() => ({
             settled: 0,
             failed: 0,
             cancelled: 0,
           }));
+          const clientAborted = request.signal.aborted;
+          // Classify explicitly: wasAborted (controller already aborted at
+          // catch time) means the deadline timer fired, since teardown has
+          // not run yet and a client abort would show in request.signal.
+          // Folding wasAborted into the clientAborted flag would misreport
+          // a deadline abort as "client-abort".
+          let abortReason: ShellSettleSummary["abortReason"];
+          if (error instanceof ShellStreamMaxBufferedBytesError) {
+            abortReason = "max-buffered-bytes";
+          } else if (clientAborted) {
+            abortReason = "client-abort";
+          } else if (wasAborted || error instanceof ShellStreamAbortedError) {
+            abortReason = "deadline";
+          } else if (error instanceof Error && error.name === "AbortError") {
+            abortReason = "client-abort";
+          } else {
+            abortReason = "render-error";
+          }
+          const aborted = wasAborted || abortReason === "client-abort" || abortReason === "deadline";
           streamOptions.onSettle?.({
             delivery: "buffered",
             platform: context?.platform ?? "unknown",
@@ -262,11 +287,14 @@ export class RenderServer {
             regionsFailed: counts.failed,
             regionsCancelled: counts.cancelled,
             bytes: 0,
-            timedOut: this.timedOutFor(error, request.signal.aborted),
-            clientAborted: request.signal.aborted,
-            abortReason: this.toAbortReason(error, request.signal.aborted),
+            timedOut: abortReason === "deadline",
+            clientAborted,
+            abortReason,
           });
           teardown();
+          if (aborted) {
+            return this.createHtmlResponse("<h1>Service Unavailable</h1>", 503, FALLBACK_HEAD_500);
+          }
           return this.logAndCreateSafeErrorResponse(error, route.path);
         }
       }
@@ -285,8 +313,13 @@ export class RenderServer {
       );
       return new Response(tracked, { status: 200, headers });
     } catch (error) {
+      // Capture the abort state before teardown: teardown aborts the
+      // controller itself, so a post-teardown check would misclassify any
+      // render error as a client abort. Non-abort Error reasons from a
+      // client disconnect still map to client-abort/503 via toAbortReason.
+      const wasAborted = controller.signal.aborted;
       teardown();
-      if (error instanceof ShellStreamAbortedError) {
+      if (error instanceof ShellStreamAbortedError || wasAborted || request.signal.aborted) {
         // Pre-commit deadline/client-abort during the loader phase: same
         // 503 path as the post-loader abort check above.
         const abortReason = this.toAbortReason(error, request.signal.aborted);
@@ -405,10 +438,18 @@ export class RenderServer {
       ]);
       return decision;
     } catch (error) {
-      reportShellFailure("SSR shell resolution failed", { route: route.path, error }, route.path);
-      if (error instanceof ShellStreamAbortedError) {
+      // Classify first: a client disconnect forwards the raw request reason
+      // (not always ShellStreamAbortedError), and it must bypass the 500
+      // failure report as a 503. Only genuine loader failures are reported
+      // and mapped to 500.
+      if (
+        error instanceof ShellStreamAbortedError ||
+        linked.signal.aborted ||
+        request.signal.aborted
+      ) {
         return { kind: "failed", status: 503 };
       }
+      reportShellFailure("SSR shell resolution failed", { route: route.path, error }, route.path);
       return { kind: "failed", status: 500 };
     } finally {
       clearTimeout(timer);
@@ -449,11 +490,23 @@ export class RenderServer {
     let bufferedBytes = 0;
 
     try {
+      const aborted = new Promise<never>((_, reject) => {
+        if (signal.aborted) {
+          reject(toShellAbortError(signal.reason));
+        } else {
+          signal.addEventListener("abort", () => reject(toShellAbortError(signal.reason)), {
+            once: true,
+          });
+        }
+      });
       for (;;) {
         if (signal.aborted) {
           throw toShellAbortError(signal.reason);
         }
-        const { done, value } = await reader.read();
+        // Race each read against the deadline: a pending region loader keeps
+        // the React stream open, so without this the awaited read would hold
+        // past the deadline until the region timeout settles the stream.
+        const { done, value } = await Promise.race([reader.read(), aborted]);
         if (done) {
           break;
         }

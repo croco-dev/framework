@@ -1,6 +1,7 @@
 import { createElement } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { RenderServer } from "../libs/render/renderServer";
+import { SHELL_STREAM_DEFAULT_REGION_TIMEOUT_MS } from "../libs/render/shellStream";
 import type { ShellSettleSummary } from "../libs/routes/shell";
 import type { RenderRouteComponentProps } from "../libs/routes/types";
 
@@ -597,34 +598,99 @@ describe("RenderServer shell streaming", () => {
       }),
     ).toThrow("requires mode 'ssr'");
   });
-});
 
-it("does not hang cancel when a region loader ignores abort with no timeout", async () => {
-  const summaries: ShellSettleSummary[] = [];
-  const server = new RenderServer([
-    {
-      path: "/stubborn-cancel",
-      mode: "ssr",
-      componentLoader: async () => ({
-        default: () => createElement("main", null, "SHELL"),
-      }),
-      // Loader ignores its abort signal and never resolves.
-      regions: [{ id: "stubborn", loader: () => new Promise<string>(() => {}) }],
-      stream: {
-        regionTimeoutMs: 50,
-        onSettle: (summary) => {
-          summaries.push(summary);
+  it("does not hang cancel when a region loader ignores abort and the region timeout is disabled", async () => {
+    const summaries: ShellSettleSummary[] = [];
+    const server = new RenderServer([
+      {
+        path: "/stubborn-cancel",
+        mode: "ssr",
+        componentLoader: async () => ({
+          default: () => createElement("main", null, "SHELL"),
+        }),
+        // Loader ignores its abort signal and never resolves.
+        regions: [{ id: "stubborn", loader: () => new Promise<string>(() => {}) }],
+        stream: {
+          // Disabled region timeout: teardown must still bound cancel at
+          // the default budget instead of waiting indefinitely.
+          regionTimeoutMs: 0,
+          onSettle: (summary) => {
+            summaries.push(summary);
+          },
         },
       },
-    },
-  ]);
+    ]);
 
-  const response = await server.handle(new Request("https://example.com/stubborn-cancel"), {
-    platform: "node",
+    const response = await server.handle(new Request("https://example.com/stubborn-cancel"), {
+      platform: "node",
+    });
+    const startedAt = Date.now();
+    await response.body?.cancel().catch(() => {});
+    expect(Date.now() - startedAt).toBeLessThan(SHELL_STREAM_DEFAULT_REGION_TIMEOUT_MS + 5000);
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0]).toMatchObject({ abortReason: "client-abort" });
   });
-  const startedAt = Date.now();
-  await response.body?.cancel().catch(() => {});
-  expect(Date.now() - startedAt).toBeLessThan(5000);
-  expect(summaries).toHaveLength(1);
-  expect(summaries[0]).toMatchObject({ abortReason: "client-abort" });
+
+  it("returns 503 when the client aborts a buffered render mid-flight", async () => {
+    const gate = createGate<string>();
+    const summaries: ShellSettleSummary[] = [];
+    const controller = new AbortController();
+    const server = new RenderServer([
+      {
+        path: "/buffered-abort",
+        mode: "ssr",
+        componentLoader: async () => ({
+          default: () => createElement("main", null, "SHELL"),
+        }),
+        regions: [{ id: "slow", loader: () => gate.promise }],
+        stream: {
+          onSettle: (summary) => {
+            summaries.push(summary);
+          },
+        },
+      },
+    ]);
+
+    const pending = server.handle(
+      new Request("https://example.com/buffered-abort", { signal: controller.signal }),
+      { platform: "lambda" },
+    );
+    controller.abort(new Error("client disconnect"));
+    gate.resolve("late payload");
+    const response = await pending;
+    expect(response.status).toBe(503);
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0]).toMatchObject({ abortReason: "client-abort" });
+  });
+
+  it("returns 503 when the deadline aborts a buffered render before commit", async () => {
+    const summaries: ShellSettleSummary[] = [];
+    const server = new RenderServer([
+      {
+        path: "/buffered-deadline",
+        mode: "ssr",
+        componentLoader: async () => ({
+          default: () => createElement("main", null, "SHELL"),
+        }),
+        regions: [{ id: "slow", loader: () => new Promise<string>(() => {}) }],
+        stream: {
+          deadlineMs: 50,
+          // Region timeout must exceed the deadline: otherwise the region
+          // settles into its Suspense fallback first and the stream
+          // completes normally (200) before the deadline fires.
+          regionTimeoutMs: 5000,
+          onSettle: (summary) => {
+            summaries.push(summary);
+          },
+        },
+      },
+    ]);
+
+    const response = await server.handle(new Request("https://example.com/buffered-deadline"), {
+      platform: "lambda",
+    });
+    expect(response.status).toBe(503);
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0]).toMatchObject({ abortReason: "deadline", timedOut: true });
+  });
 });
