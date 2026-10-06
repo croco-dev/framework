@@ -11,6 +11,11 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 - [`Problem`](/api/problems-core/src/classes/problem/)
 
+## Extended by
+
+- [`CannotInstantiateValueError`](/api/framework-context/src/classes/cannotinstantiatevalueerror/)
+- [`ServiceNotFoundError`](/api/framework-context/src/classes/servicenotfounderror/)
+
 ## Constructors
 
 ### Constructor

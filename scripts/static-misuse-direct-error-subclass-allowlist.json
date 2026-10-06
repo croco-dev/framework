@@ -1,0 +1,268 @@
+{
+  "schemaVersion": 1,
+  "baselineEntryCount": 29,
+  "description": "Reviewed direct built-in Error subclass baseline for #2926. Preserve existing diagnostic, client, internal aggregate, and Problem root boundaries; new subclasses require explicit review.",
+  "entries": [
+    {
+      "package": "@croco/audit-core",
+      "file": "packages/audit-core/src/libs/AuditInterceptor.ts",
+      "line": 42,
+      "excerpt": "class AuditWriteFailureAggregateError extends Error {",
+      "reason": "Internal aggregate preserves both the primary operation failure and audit-write failure evidence.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-15"
+    },
+    {
+      "package": "@croco/audit-core",
+      "file": "packages/audit-core/src/libs/Auditable.ts",
+      "line": 114,
+      "excerpt": "class AuditWriteFailureAggregateError extends Error {",
+      "reason": "Internal aggregate preserves both the primary operation failure and audit-write failure evidence.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-15"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/commands/createPage.ts",
+      "line": 186,
+      "excerpt": "class InvalidPageRoutePathError extends Error {",
+      "reason": "CLI route validation already exposes the stable CROCO_CLI_PAGE_ROUTE_PATH_INVALID diagnostic code.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-22"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/libs/CliError.ts",
+      "line": 13,
+      "excerpt": "export class CliError extends Error {",
+      "reason": "CLI errors expose the CliErrorCode contract consumed by command diagnostics.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-22"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/libs/cliRuntime.ts",
+      "line": 86,
+      "excerpt": "class CrocoCommandExit extends Error {",
+      "reason": "Internal CLI control-flow signal carries the requested exit code to the command runner.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-22"
+    },
+    {
+      "package": "@croco/cli",
+      "file": "packages/cli/src/libs/prompts.ts",
+      "line": 3,
+      "excerpt": "export class NoTtyError extends Error {",
+      "reason": "Existing CLI interactive-prompt boundary reports missing TTY; migration is outside the DI failure scope of #2926.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-22"
+    },
+    {
+      "package": "create-croco-app",
+      "file": "packages/create-croco-app/src/saas-provider-profiles.ts",
+      "line": 167,
+      "excerpt": "export class SaasProviderProfileError extends Error {",
+      "reason": "Scaffolding policy error preserves the provider-profile diagnostic code and detail.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-23"
+    },
+    {
+      "package": "create-croco-app",
+      "file": "packages/create-croco-app/src/secret-placeholder-policy.ts",
+      "line": 55,
+      "excerpt": "export class SecretPlaceholderPolicyError extends Error {",
+      "reason": "Scaffolding policy error preserves a stable diagnostic code and the complete placeholder violation list.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-23"
+    },
+    {
+      "package": "@croco/credits-core",
+      "file": "packages/credits-core/src/libs/CreditLedgerService.ts",
+      "line": 46,
+      "excerpt": "class CreditEventDeliveryFailure extends Error {",
+      "reason": "Internal aggregate preserves publication and claim-release failures as separate evidence.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-10"
+    },
+    {
+      "package": "@croco/diagnostics-core",
+      "file": "packages/diagnostics-core/src/libs/DiagnosticsCollector.ts",
+      "line": 29,
+      "excerpt": "class DiagnosticsProviderTimeoutError extends Error {",
+      "reason": "Internal health-provider timeout signal is collected into provider diagnostics; migration is outside #2926.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-16"
+    },
+    {
+      "package": "@croco/esbuild-plugin",
+      "file": "packages/esbuild-plugin/src/libs/ComponentScanner.ts",
+      "line": 41,
+      "excerpt": "export class ComponentScannerError extends Error {",
+      "reason": "Build-tool scanner error carries the source file and original cause for compiler diagnostics.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-14"
+    },
+    {
+      "package": "@croco/esbuild-plugin",
+      "file": "packages/esbuild-plugin/src/libs/DiCompiler.ts",
+      "line": 174,
+      "excerpt": "export class DiCompilerError extends Error {",
+      "reason": "Compiler boundary carries the complete list of coded DI diagnostics for build-time reporting.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-14"
+    },
+    {
+      "package": "@croco/framework-routes",
+      "file": "packages/framework-routes/src/framework-manifest.ts",
+      "line": 202,
+      "excerpt": "export class FrameworkManifestDiagnosticError extends Error {",
+      "reason": "Build-tool boundary carries a stable code and manifest diagnostics.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-23"
+    },
+    {
+      "package": "@croco/framework-routes",
+      "file": "packages/framework-routes/src/intent-map.ts",
+      "line": 841,
+      "excerpt": "class IntentMapSourcePathError extends Error {",
+      "reason": "Build-tool boundary already exposes the intent-map-source-path-not-found diagnostic code.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-23"
+    },
+    {
+      "package": "@croco/frontend-problems",
+      "file": "packages/frontend-problems/src/index.ts",
+      "line": 191,
+      "excerpt": "export class ProblemClientError extends Error {",
+      "reason": "Browser client wrapper preserves the server Problem details and HTTP response without depending on server Problem runtime.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-27"
+    },
+    {
+      "package": "@croco/frontend-problems",
+      "file": "packages/frontend-problems/src/index.ts",
+      "line": 203,
+      "excerpt": "export class ProblemResponseError extends Error {",
+      "reason": "Browser client wrapper preserves non-Problem HTTP response, bounded body evidence, content type, and cause.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-27"
+    },
+    {
+      "package": "@croco/impersonation-core",
+      "file": "packages/impersonation-core/src/libs/ImpersonationService.ts",
+      "line": 55,
+      "excerpt": "class ImpersonationPublicationStatusConfirmationError extends Error {",
+      "reason": "Internal aggregate preserves publication and status-confirmation failure evidence.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-16"
+    },
+    {
+      "package": "@croco/meta-vite",
+      "file": "packages/meta-vite/src/libs/build/routeManifest.ts",
+      "line": 11,
+      "excerpt": "export class MetaViteRouteManifestError extends Error {",
+      "reason": "Build-tool route manifest boundary already exposes the component-reference diagnostic code.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-18"
+    },
+    {
+      "package": "@croco/meta-vite",
+      "file": "packages/meta-vite/src/libs/isr/isrMiddleware.ts",
+      "line": 6,
+      "excerpt": "class NonCacheableResponseError extends Error {",
+      "reason": "Internal ISR control-flow signal preserves the original non-cacheable Response.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-18"
+    },
+    {
+      "package": "@croco/meta-vite",
+      "file": "packages/meta-vite/src/libs/routes/routeRegistry.ts",
+      "line": 10,
+      "excerpt": "export class RouteConflictError extends Error {",
+      "reason": "Existing route-registration conflict boundary is retained; migration is outside the DI failure scope of #2926.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-18"
+    },
+    {
+      "package": "@croco/problems-core",
+      "file": "packages/problems-core/src/libs/Problem.ts",
+      "line": 40,
+      "excerpt": "export abstract class Problem extends Error {",
+      "reason": "Canonical Problem root must inherit Error to provide the shared code, category, cause, and serialization contract.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-28"
+    },
+    {
+      "package": "@croco/tasks-core",
+      "file": "packages/tasks-core/src/libs/TaskRunner.ts",
+      "line": 132,
+      "excerpt": "class TaskFailureRecordingAggregateError extends Error {",
+      "reason": "Internal aggregate preserves execution and failure-recording errors together.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-10"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/operational-failure-drill.ts",
+      "line": 6,
+      "excerpt": "class OperationalFailureDrillContractError extends Error {",
+      "reason": "Testing helper validates operational drill contracts with a stable diagnostic code.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-16"
+    },
+    {
+      "package": "@croco/testing",
+      "file": "packages/testing/src/libs/testing.ts",
+      "line": 179,
+      "excerpt": "class TestingProviderConfigurationError extends Error {",
+      "reason": "Testing helper validates provider configuration with a stable diagnostic code.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-16"
+    },
+    {
+      "package": "@croco/transports-http",
+      "file": "packages/transports-http/src/libs/CrocoLambdaAdapter.ts",
+      "line": 170,
+      "excerpt": "class LambdaFlushBoundaryError extends Error {",
+      "reason": "Lambda boundary carries a stable code plus original handler and flush failure evidence.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-23"
+    },
+    {
+      "package": "@croco/transports-http",
+      "file": "packages/transports-http/src/libs/CrocoLambdaAdapter.ts",
+      "line": 193,
+      "excerpt": "class LambdaEventValidationError extends Error {",
+      "reason": "Lambda adapter validates the external event shape with a stable diagnostic code.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-23"
+    },
+    {
+      "package": "@croco/transports-http",
+      "file": "packages/transports-http/src/libs/CrocoLambdaAdapter.ts",
+      "line": 202,
+      "excerpt": "class LambdaWaitUntilDeadlineError extends Error {",
+      "reason": "Lambda deadline boundary carries a stable code, reason, and outstanding-task evidence.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-23"
+    },
+    {
+      "package": "@croco/tx-core",
+      "file": "packages/tx-core/src/libs/TxManager.ts",
+      "line": 55,
+      "excerpt": "class AfterCommitFailureAggregateError extends Error {",
+      "reason": "Internal aggregate preserves multiple afterCommit hook or reporting failures.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-16"
+    },
+    {
+      "package": "@croco/workflow-core",
+      "file": "packages/workflow-core/src/libs/saga/SagaRunner.ts",
+      "line": 46,
+      "excerpt": "class StepCompletionPersistenceError extends Error {",
+      "reason": "Internal saga signal preserves the persistence cause and completed-step record for failure handling.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-11"
+    }
+  ]
+}

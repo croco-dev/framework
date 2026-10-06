@@ -12,6 +12,7 @@ and format pass. Current rules:
 - `REST_MULTIPLE_ROUTE_DECORATORS`
 - `CROCO_STATIC_RAW_ERROR_RUNTIME_BOUNDARY`
 - `CROCO_STATIC_EMPTY_CATCH_RUNTIME_BOUNDARY`
+- `CROCO_STATIC_DIRECT_ERROR_SUBCLASS_BOUNDARY`
 
 ## Repository Boundary Rule
 
@@ -109,13 +110,27 @@ failure evidence:
   body only contains comments. Runtime package catches should either handle the failure explicitly or
   preserve a reviewed reason for intentionally best-effort recovery.
 
+`CROCO_STATIC_DIRECT_ERROR_SUBCLASS_BOUNDARY` flags class declarations and expressions that directly
+extend `Error`, `TypeError`, `RangeError`, `ReferenceError`, `SyntaxError`, `EvalError`, `URIError`, or
+`AggregateError`, including multiline heritage and `globalThis.Error` forms. Extend an existing
+`Problem` subclass so failures carry the shared stable code, category, and recovery metadata. Adding a
+`code` field alone does not exempt a new direct subclass: diagnostic-carrying boundary errors require
+an explicit reviewed exception.
+
+This rule inspects syntax. It does not resolve aliases, shadowed built-in names, or dynamic heritage.
+Comments and generated source strings (including the browser client errors emitted by `rpc-codegen`)
+are not executable class declarations and are excluded. Existing browser client wrappers in
+`frontend-problems`, internal aggregates, build-tool diagnostics, and the canonical `Problem` root are
+source-pinned in the baseline; their migration is outside #2926.
+
 Reviewed exceptions use structured JSON baselines instead of ad hoc inline comments:
 
 - `scripts/static-misuse-raw-error-allowlist.json`
 - `scripts/static-misuse-empty-catch-allowlist.json`
+- `scripts/static-misuse-direct-error-subclass-allowlist.json`
 
-Each baseline entry must include the package name, source file, line, excerpt, reason, and either
-`owner` or `expiresOn`. The checker validates that the package matches the source package and that
+Each baseline entry must include the package name, source file, line, excerpt, reason, `owner`, and a current
+`expiresOn` date. The checker validates that the package matches the source package and that
 the excerpt still matches the current line, so stale exceptions fail the gate.
 
 Example empty-catch entry:
@@ -127,10 +142,11 @@ Example empty-catch entry:
   "line": 594,
   "excerpt": "} catch {",
   "reason": "Dev inspector warning logging is best-effort and must not affect request handling.",
-  "owner": "framework-error-handling"
+  "owner": "framework-error-handling",
+  "expiresOn": "2027-01-15"
 }
 ```
 
 Inline `croco-static-misuse-ignore-line` and `croco-static-misuse-ignore-next-line` comments remain
-available for line-oriented false positives, but they do not suppress the empty-catch rule. Add a
+available for line-oriented false positives, but they do not suppress the empty-catch or direct Error subclass rules. Add a
 structured baseline entry or make the catch handle the failure directly.

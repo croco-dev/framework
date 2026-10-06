@@ -5,4 +5,4 @@ prev: false
 title: "ContainerResolutionFailureReason"
 ---
 
-> **ContainerResolutionFailureReason** = `"missing-provider"` \| `"construction-failed"` \| `"scope-mismatch"`
+> **ContainerResolutionFailureReason** = `"missing-provider"` \| `"not-instantiable"` \| `"construction-failed"` \| `"scope-mismatch"`

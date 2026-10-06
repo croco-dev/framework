@@ -21,6 +21,193 @@ describe("static-misuse-check.mts", () => {
     }
   });
 
+  it("flags direct built-in Error subclasses, multiline heritage, and class expressions", () => {
+    const repo = createTempRepo();
+    const builtIns = [
+      "Error",
+      "TypeError",
+      "RangeError",
+      "ReferenceError",
+      "SyntaxError",
+      "EvalError",
+      "URIError",
+      "AggregateError",
+    ];
+    writeFile(
+      repo,
+      "packages/runtime-boundary/src/index.ts",
+      [
+        ...builtIns.map((base, index) => `export class Failure${index} extends ${base} {}`),
+        "export class MultilineFailure extends",
+        "  Error {}",
+        "export const AnonymousFailure = class extends Error {};",
+        "export class GlobalFailure extends globalThis.Error {}",
+      ].join("\n"),
+    );
+
+    const result = findResult(repo, "direct-error-subclass-boundary");
+    expect(result?.status).toBe("fail");
+    expect(result?.code).toBe("CROCO_STATIC_DIRECT_ERROR_SUBCLASS_BOUNDARY");
+    expect(result?.diagnostics.map(({ line }) => line)).toEqual([
+      1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12,
+    ]);
+    expect(result?.diagnostics[0]).toEqual(
+      expect.objectContaining({
+        file: "packages/runtime-boundary/src/index.ts",
+        column: 31,
+        excerpt: "export class Failure0 extends Error {}",
+      }),
+    );
+  });
+
+  it("does not flag Problem subclasses, comments, generated strings, or excluded test sources", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/runtime-boundary/src/index.ts",
+      [
+        'import { Problem } from "@croco/problems-core";',
+        "export class Failure extends Problem {}",
+        "// class CommentFailure extends Error {}",
+        "export const generated = `export class ClientError extends Error {}`;",
+      ].join("\n"),
+    );
+    for (const file of [
+      "src/tests/Fixture.ts",
+      "src/index.spec.ts",
+      "src/widget.test.jsx",
+      "templates/index.ts",
+    ]) {
+      writeFile(repo, `packages/runtime-boundary/${file}`, "class Fixture extends Error {}\n");
+    }
+    expect(findResult(repo, "direct-error-subclass-boundary")).toEqual(
+      expect.objectContaining({
+        status: "pass",
+        diagnostics: [],
+      }),
+    );
+  });
+
+  it("excludes __tests__ directories while checking production Error subclasses", () => {
+    const repo = createTempRepo();
+    const productionFile = "packages/runtime-boundary/src/index.ts";
+    for (const file of [
+      productionFile,
+      "packages/runtime-boundary/src/__tests__/Fixture.ts",
+      "packages/runtime-boundary/src/libs/__tests__/nested/Fixture.ts",
+    ]) {
+      writeFile(repo, file, "export class FixtureError extends Error {}\n");
+    }
+
+    const result = findResult(repo, "direct-error-subclass-boundary");
+    expect(result?.status).toBe("fail");
+    expect(result?.diagnostics.map(({ file }) => file)).toEqual([productionFile]);
+  });
+
+  it("requires a source-pinned reviewed exception and fails on a new unallowlisted subclass", () => {
+    const repo = createTempRepo();
+    const file = "packages/runtime-boundary/src/index.ts";
+    const excerpt = "export class ExistingError extends Error {}";
+    writeFile(
+      repo,
+      "packages/runtime-boundary/package.json",
+      JSON.stringify({ name: "@croco/runtime-boundary" }),
+    );
+    writeFile(repo, file, `${excerpt}\n`);
+    writeFile(
+      repo,
+      "scripts/static-misuse-direct-error-subclass-allowlist.json",
+      JSON.stringify({
+        schemaVersion: 1,
+        baselineEntryCount: 1,
+        entries: [
+          {
+            package: "@croco/runtime-boundary",
+            file,
+            line: 1,
+            excerpt,
+            reason: "Existing diagnostic-carrying boundary retained during migration.",
+            owner: "framework-error-handling",
+            expiresOn: "2099-12-31",
+          },
+        ],
+      }),
+    );
+    expect(findResult(repo, "direct-error-subclass-boundary")?.status).toBe("pass");
+
+    writeFile(repo, file, `${excerpt}\nexport class NewError extends Error {}\n`);
+    const result = findResult(repo, "direct-error-subclass-boundary");
+    expect(result?.status).toBe("fail");
+    expect(result?.diagnostics).toEqual([expect.objectContaining({ file, line: 2 })]);
+    const cli = runStaticMisuseCli(repo);
+    expect(cli.status).toBe(1);
+    expect(cli.output).toContain(`${file}:2:`);
+    expect(cli.output).toContain("CROCO_STATIC_DIRECT_ERROR_SUBCLASS_BOUNDARY");
+    expect(cli.output).toContain(
+      "reviewed baseline: scripts/static-misuse-direct-error-subclass-allowlist.json",
+    );
+  });
+
+  it.each([
+    [{ owner: "" }, "owner must be a non-empty string"],
+    [{ expiresOn: "2000-01-01" }, "expiresOn is stale"],
+    [{ expiresOn: undefined }, "expiresOn must be a valid YYYY-MM-DD date"],
+  ])("rejects invalid direct Error subclass exception metadata %j", (override, message) => {
+    const repo = createTempRepo();
+    const file = "packages/runtime-boundary/src/index.ts";
+    const excerpt = "class ExistingError extends Error {}";
+    writeFile(
+      repo,
+      "packages/runtime-boundary/package.json",
+      JSON.stringify({ name: "@croco/runtime-boundary" }),
+    );
+    writeFile(repo, file, `${excerpt}\n`);
+    writeFile(
+      repo,
+      "scripts/static-misuse-direct-error-subclass-allowlist.json",
+      JSON.stringify({
+        schemaVersion: 1,
+        baselineEntryCount: 1,
+        entries: [
+          {
+            package: "@croco/runtime-boundary",
+            file,
+            line: 1,
+            excerpt,
+            reason: "Temporary reviewed exception.",
+            owner: "framework-error-handling",
+            expiresOn: "2099-12-31",
+            ...override,
+          },
+        ],
+      }),
+    );
+    const result = findResult(repo, "direct-error-subclass-boundary");
+    expect(result?.status).toBe("fail");
+    expect(result?.diagnostics).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ message: expect.stringContaining(message) }),
+        expect.objectContaining({ file, line: 1 }),
+      ]),
+    );
+  });
+
+  it("does not allow inline comments to suppress direct Error inheritance", () => {
+    const repo = createTempRepo();
+    writeFile(
+      repo,
+      "packages/runtime-boundary/src/index.ts",
+      [
+        "// croco-static-misuse-ignore-next-line CROCO_STATIC_DIRECT_ERROR_SUBCLASS_BOUNDARY -- needs review",
+        "class Failure extends Error {}",
+        "class OtherFailure extends Error {} // croco-static-misuse-ignore-line CROCO_STATIC_DIRECT_ERROR_SUBCLASS_BOUNDARY -- needs review",
+      ].join("\n"),
+    );
+    expect(
+      findResult(repo, "direct-error-subclass-boundary")?.diagnostics.map(({ line }) => line),
+    ).toEqual([2, 3]);
+  });
+
   it("flags default-locale localeCompare calls in deterministic generation sources", () => {
     const repo = createTempRepo();
     writeFile(

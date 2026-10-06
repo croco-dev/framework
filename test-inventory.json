@@ -2408,6 +2408,12 @@
       "owner": "@croco/framework-context"
     },
     {
+      "path": "packages/framework-context/src/tests/RuntimeContainerProblems.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/framework-context"
+    },
+    {
       "path": "packages/framework-context/src/tests/RuntimeInspector.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],

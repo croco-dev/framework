@@ -123,14 +123,6 @@
     },
     {
       "packageName": "@croco/framework-context",
-      "file": "packages/framework-context/src/libs/problems/ContainerResolutionProblem.ts",
-      "line": 21,
-      "column": 98,
-      "code": "TS2379",
-      "message": "Argument of type '{ cause: Error | undefined; extensions: { reason: ContainerResolutionFailureReason; resolution: DependencyResolutionTrace; }; }' is not assignable to parameter of type 'ProblemOptions' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties."
-    },
-    {
-      "packageName": "@croco/framework-context",
       "file": "packages/framework-context/src/libs/RequestPipelineGraph.ts",
       "line": 142,
       "column": 3,

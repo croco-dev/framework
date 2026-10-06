@@ -203,6 +203,24 @@ const rawErrorRuntimeBoundaryRule: StaticMisuseRule = {
   ],
 };
 
+const directErrorSubclassRule: StaticMisuseRule = {
+  id: "direct-error-subclass-boundary",
+  code: "CROCO_STATIC_DIRECT_ERROR_SUBCLASS_BOUNDARY",
+  title: "Production package errors must inherit from Problem or have a reviewed exception",
+  targetDir: "packages",
+  description:
+    "Direct built-in Error subclasses bypass the shared Problem code, category, and recovery contract unless their boundary has a reviewed exception.",
+  limitation:
+    "This syntax-aware rule checks class declarations and expressions with direct built-in Error names, including globalThis properties, in production packages/*/src. It does not resolve aliases, shadowed names, dynamic heritage, or generated source strings.",
+  recovery:
+    "Extend an existing Problem subclass, or add a reviewed exception with package, file, line, excerpt, reason, owner, and expiresOn to scripts/static-misuse-direct-error-subclass-allowlist.json.",
+  detectors: [],
+  syntaxDetectors: [{ detect: detectDirectErrorSubclasses }],
+  includeFile: isProductionPackageSourceFile,
+  allowlistPath: "scripts/static-misuse-direct-error-subclass-allowlist.json",
+  allowInlineIgnore: false,
+};
+
 const emptyCatchRuntimeBoundaryRule: StaticMisuseRule = {
   id: "empty-catch-runtime-boundary",
   code: "CROCO_STATIC_EMPTY_CATCH_RUNTIME_BOUNDARY",
@@ -386,6 +404,7 @@ const STATIC_MISUSE_RULES: readonly StaticMisuseRule[] = [
   restOverloadedParameterDecoratorRule,
   restOverloadedContractRouteDecoratorRule,
   rawErrorRuntimeBoundaryRule,
+  directErrorSubclassRule,
   emptyCatchRuntimeBoundaryRule,
   deterministicLocaleCompareRule,
 ];
@@ -400,6 +419,62 @@ function matchImportSpecifier(line: string, specifierPattern: RegExp): RegExpMat
 
 function matchSchemaLessNamedParamDecorator(line: string): RegExpMatchArray | null {
   return line.match(/@(Param|Query|Header)\s*\(\s*(['"`])[^'"`]+\2\s*\)/);
+}
+
+function detectDirectErrorSubclasses({
+  lines,
+  relativeFile,
+  rule,
+  sourceFile,
+}: SyntaxDetectorContext): readonly StaticMisuseDiagnostic[] {
+  const diagnostics: StaticMisuseDiagnostic[] = [];
+  const builtInErrors = new Set([
+    "Error",
+    "TypeError",
+    "RangeError",
+    "ReferenceError",
+    "SyntaxError",
+    "EvalError",
+    "URIError",
+    "AggregateError",
+  ]);
+
+  function visit(node: ts.Node): void {
+    if (ts.isClassLike(node)) {
+      const heritage = node.heritageClauses?.find(
+        (clause) => clause.token === ts.SyntaxKind.ExtendsKeyword,
+      );
+      for (const base of heritage?.types ?? []) {
+        const expression = unwrapExpression(base.expression);
+        const baseName =
+          expression && ts.isIdentifier(expression)
+            ? expression.text
+            : expression &&
+                ts.isPropertyAccessExpression(expression) &&
+                ts.isIdentifier(expression.expression) &&
+                expression.expression.text === "globalThis"
+              ? expression.name.text
+              : null;
+        if (!baseName || !builtInErrors.has(baseName)) continue;
+
+        const start = sourceFile.getLineAndCharacterOfPosition(base.getStart(sourceFile));
+        diagnostics.push({
+          code: rule.code,
+          ruleId: rule.id,
+          file: relativeFile,
+          line: start.line + 1,
+          column: start.character + 1,
+          message: `Production package class directly extends built-in ${baseName} without a reviewed exception.`,
+          excerpt: (lines[start.line] ?? "").trim(),
+          action: rule.recovery,
+        });
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+
+  visit(sourceFile);
+  return diagnostics;
 }
 
 function detectEmptyCatchClauses({
@@ -2604,6 +2679,7 @@ function isProductionPackageSourceFile(relativeFile: string): boolean {
     parts.length >= 4 &&
     parts[2] === "src" &&
     !parts.includes("tests") &&
+    !parts.includes("__tests__") &&
     !relativeFile.endsWith(".spec.js") &&
     !relativeFile.endsWith(".test.js") &&
     !relativeFile.endsWith(".spec.jsx") &&
