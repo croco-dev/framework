@@ -598,3 +598,33 @@ describe("RenderServer shell streaming", () => {
     ).toThrow("requires mode 'ssr'");
   });
 });
+
+it("does not hang cancel when a region loader ignores abort with no timeout", async () => {
+  const summaries: ShellSettleSummary[] = [];
+  const server = new RenderServer([
+    {
+      path: "/stubborn-cancel",
+      mode: "ssr",
+      componentLoader: async () => ({
+        default: () => createElement("main", null, "SHELL"),
+      }),
+      // Loader ignores its abort signal and never resolves.
+      regions: [{ id: "stubborn", loader: () => new Promise<string>(() => {}) }],
+      stream: {
+        regionTimeoutMs: 50,
+        onSettle: (summary) => {
+          summaries.push(summary);
+        },
+      },
+    },
+  ]);
+
+  const response = await server.handle(new Request("https://example.com/stubborn-cancel"), {
+    platform: "node",
+  });
+  const startedAt = Date.now();
+  await response.body?.cancel().catch(() => {});
+  expect(Date.now() - startedAt).toBeLessThan(5000);
+  expect(summaries).toHaveLength(1);
+  expect(summaries[0]).toMatchObject({ abortReason: "client-abort" });
+});

@@ -271,13 +271,18 @@ export class RenderServer {
         }
       }
 
-      const tracked = this.trackStream(stream, controller.signal, {
-        platform: context?.platform ?? "unknown",
-        onSettle: streamOptions.onSettle,
-        settleRegions: () => store.settle(),
-        clientAborted: () => request.signal.aborted,
-        onDone: teardown,
-      });
+      const tracked = this.trackStream(
+        stream,
+        controller.signal,
+        {
+          platform: context?.platform ?? "unknown",
+          onSettle: streamOptions.onSettle,
+          settleRegions: () => store.settle(),
+          clientAborted: () => request.signal.aborted,
+          onDone: teardown,
+        },
+        policy.regionTimeoutMs,
+      );
       return new Response(tracked, { status: 200, headers });
     } catch (error) {
       teardown();
@@ -485,11 +490,39 @@ export class RenderServer {
       clientAborted: () => boolean;
       onDone: () => void;
     },
+    regionTimeoutMs = SHELL_STREAM_DEFAULT_REGION_TIMEOUT_MS,
   ): ReadableStream<Uint8Array> {
     const reader = stream.getReader();
     let bytes = 0;
     let shellCommitted = false;
     let settled = false;
+    // Bounded teardown: a region loader that ignores abort and has no
+    // timeout must not hang cancel/pull/teardown forever. After the region
+    // timeout budget the summary reports whatever settled so far.
+    const settleBounded = async (): Promise<{
+      settled: number;
+      failed: number;
+      cancelled: number;
+    }> => {
+      const fallback = { settled: 0, failed: 0, cancelled: 0 };
+      const settlePromise = events.settleRegions().catch(() => fallback);
+      if (!Number.isFinite(regionTimeoutMs) || regionTimeoutMs <= 0) {
+        return settlePromise;
+      }
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        return await Promise.race([
+          settlePromise,
+          new Promise<typeof fallback>((resolve) => {
+            timer = setTimeout(() => resolve(fallback), Math.floor(regionTimeoutMs));
+          }),
+        ]);
+      } finally {
+        if (timer !== undefined) {
+          clearTimeout(timer);
+        }
+      }
+    };
     const finish = (
       summary: {
         regionsSettled: number;
@@ -526,29 +559,56 @@ export class RenderServer {
           }
           try {
             if (signal.aborted) {
-              const countsPromise = events.settleRegions().catch(() => ({
+              const clientAborted = events.clientAborted();
+              const cancelPromise = reader.cancel(signal.reason).catch(() => {});
+              // Abort region work first: loaders observe the linked
+              // controller signal, so onDone must run before awaiting
+              // settlement. A loader that ignores abort and has no timeout
+              // would otherwise hang settleRegions indefinitely.
+              events.onDone();
+              const counts = await settleBounded().catch(() => ({
                 settled: 0,
                 failed: 0,
                 cancelled: 0,
               }));
-              const cancelPromise = reader.cancel(signal.reason).catch(() => {});
-              const counts = await countsPromise;
               await cancelPromise;
               finish(
                 {
                   regionsSettled: counts.settled,
                   regionsFailed: counts.failed,
                   regionsCancelled: counts.cancelled,
-                  timedOut: true,
+                  timedOut: !clientAborted,
                 },
-                events.clientAborted() ? "client-abort" : "deadline",
+                clientAborted ? "client-abort" : "deadline",
               );
               controller.error(toShellAbortError(signal.reason));
               return;
             }
             const { done, value } = await reader.read();
             if (done) {
-              const counts = await events.settleRegions();
+              if (signal.aborted || events.clientAborted()) {
+                const clientAborted = events.clientAborted();
+                const cancelPromise = reader.cancel(signal.reason).catch(() => {});
+                events.onDone();
+                const counts = await settleBounded().catch(() => ({
+                  settled: 0,
+                  failed: 0,
+                  cancelled: 0,
+                }));
+                await cancelPromise;
+                finish(
+                  {
+                    regionsSettled: counts.settled,
+                    regionsFailed: counts.failed,
+                    regionsCancelled: counts.cancelled,
+                    timedOut: !clientAborted,
+                  },
+                  clientAborted ? "client-abort" : "deadline",
+                );
+                controller.error(toShellAbortError(signal.reason));
+                return;
+              }
+              const counts = await settleBounded();
               finish({
                 regionsSettled: counts.settled,
                 regionsFailed: counts.failed,
@@ -568,13 +628,16 @@ export class RenderServer {
             shellCommitted = true;
             controller.enqueue(chunk);
           } catch (error) {
-            const countsPromise = events.settleRegions().catch(() => ({
+            const cancelPromise = reader.cancel(error).catch(reportBestEffortStreamTeardown);
+            // Same abort-before-settle ordering as above: reader.cancel
+            // forwards into the linked controller, unblocking teardown for
+            // cooperative loaders before settleRegions waits on them.
+            events.onDone();
+            const counts = await settleBounded().catch(() => ({
               settled: 0,
               failed: 0,
               cancelled: 0,
             }));
-            const cancelPromise = reader.cancel(error).catch(reportBestEffortStreamTeardown);
-            const counts = await countsPromise;
             finish(
               {
                 regionsSettled: counts.settled,
@@ -599,7 +662,7 @@ export class RenderServer {
           // its abort signal.
           const cancelPromise = reader.cancel(reason).catch(reportBestEffortStreamTeardown);
           events.onDone();
-          const counts = await events.settleRegions().catch(() => ({
+          const counts = await settleBounded().catch(() => ({
             settled: 0,
             failed: 0,
             cancelled: 0,
