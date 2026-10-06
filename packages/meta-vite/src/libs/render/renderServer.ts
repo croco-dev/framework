@@ -498,7 +498,9 @@ export class RenderServer {
     let settled = false;
     // Bounded teardown: a region loader that ignores abort and has no
     // timeout must not hang cancel/pull/teardown forever. After the region
-    // timeout budget the summary reports whatever settled so far.
+    // timeout budget the summary reports whatever settled so far. When the
+    // region timeout is disabled, teardown still caps at the default budget
+    // so client disconnect always settles.
     const settleBounded = async (): Promise<{
       settled: number;
       failed: number;
@@ -506,15 +508,16 @@ export class RenderServer {
     }> => {
       const fallback = { settled: 0, failed: 0, cancelled: 0 };
       const settlePromise = events.settleRegions().catch(() => fallback);
-      if (!Number.isFinite(regionTimeoutMs) || regionTimeoutMs <= 0) {
-        return settlePromise;
-      }
+      const budgetMs =
+        Number.isFinite(regionTimeoutMs) && regionTimeoutMs > 0
+          ? Math.floor(regionTimeoutMs)
+          : SHELL_STREAM_DEFAULT_REGION_TIMEOUT_MS;
       let timer: ReturnType<typeof setTimeout> | undefined;
       try {
         return await Promise.race([
           settlePromise,
           new Promise<typeof fallback>((resolve) => {
-            timer = setTimeout(() => resolve(fallback), Math.floor(regionTimeoutMs));
+            timer = setTimeout(() => resolve(fallback), budgetMs);
           }),
         ]);
       } finally {
