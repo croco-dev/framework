@@ -9,6 +9,9 @@ onlyBuiltDependencies:
 
 overrides:
   typescript: 6.0.3
+  oxfmt>tinypool: 2.1.2
+  source-map-js: 1.2.2
+  "@graphql-tools/utils@<=12.0.0": 12.0.3
   sharp: 0.35.4
   "@clerk/shared": 3.47.7
   "@hono/node-server": 1.19.17
@@ -85,3 +88,6 @@ auditConfig:
 patchedDependencies:
   "@changesets/assemble-release-plan@7.0.0": patches/@changesets__assemble-release-plan@7.0.0.patch
   tsup@8.5.1: patches/tsup@8.5.1.patch
+
+minimumReleaseAgeExclude:
+  - graphql-yoga@5.24.2
