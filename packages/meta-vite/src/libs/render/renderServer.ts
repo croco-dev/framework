@@ -278,7 +278,8 @@ export class RenderServer {
           } else {
             abortReason = "render-error";
           }
-          const aborted = wasAborted || abortReason === "client-abort" || abortReason === "deadline";
+          const aborted =
+            wasAborted || abortReason === "client-abort" || abortReason === "deadline";
           streamOptions.onSettle?.({
             delivery: "buffered",
             platform: context?.platform ?? "unknown",
