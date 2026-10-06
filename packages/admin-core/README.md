@@ -270,3 +270,17 @@ The dry-run adapter resolves a registered sample in the authenticated scope and
 uses an isolated, non-dispatching preview. Returned views exclude raw subjects,
 business objects, action parameters and audit payloads; receipt reason codes are
 allowlisted. `safeResume` is false when admitted or indeterminate actions remain.
+
+## Customer Explorer
+
+Timestamp inputs require an explicit ISO timezone and support up to six fractional second digits. Finer precision is rejected rather than rounded; occurrence order, anchor phases and observation windows preserve microseconds.
+
+`CustomerExplorerService` owns deterministic SHA-256 sampling, scoped authorization, per-subject timeline merging, API property minimization, notes and typed observation drafts. Bind `ExplorerAuthorization` to an authenticated server actor; callers cannot supply a trusted actor or permission grant. Scope always includes `appId`, `environment` and `tenantId`; an omitted tenant is invalid.
+
+`SampleQuery` pins the seed, population snapshot, definition revision, anchor window and sample counts (defaults: 10 achievers and 5 prior-step comparisons; maximum 100 of each). These are exploratory UX limits, not a statistical representation claim. Supply an immutable, authorized `ExplorerPopulation` from your existing source snapshot. Anonymous identities must remain separate unless the application supplies authorized identity-link evidence before constructing that population.
+
+A `TimelineSource` reads one subject and one bounded window at a time. Pages default to 50 rows per source and accept at most 200. Events are ordered by occurrence time, source and stable event ID; equal times do not imply causality. Source denied, failed, delayed and partial statuses remain visible even when no records can be displayed. Property names require a server allowlist; contact/credential keys are dropped, email/phone text is masked and object references are omitted. Hosts must use pseudonymous subject/event identifiers and safe categorical event kinds; automatic text masking is not a general PII classifier.
+
+Notes distinguish `fact` and `hypothesis`, preserve server actor/revision audit records, and use repository compare-and-set for edits. New evidence references must exist inside the selected subject's window. Existing references survive source deletion as `unavailable`; source payloads are never cached in a note. Samples and notes have explicit expiry bounded by service policy. `deleteSample` removes its notes and audit records through the selected repository; use its explicit retention purge for expired storage.
+
+`exportDraft` requires a separate export permission and returns an `ExplorerQueryDraft` containing typed source/kind/anchor conditions, the population snapshot and definition revision. It does not export raw records. Integrations without Cohort Builder can download this definition directly. The React workspace uses the same service callbacks. See [the standalone PostgreSQL example](../../examples/customer-explorer/README.md).

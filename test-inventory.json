@@ -146,6 +146,12 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/CustomerExplorer.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/EngagementOperations.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -224,6 +230,12 @@
       "owner": "@croco/admin-generated"
     },
     {
+      "path": "packages/admin-ops/src/tests/CustomerExplorerAdapters.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-ops"
+    },
+    {
       "path": "packages/admin-ops/src/tests/EngagementAdapters.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -252,6 +264,18 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-ops"
+    },
+    {
+      "path": "packages/admin-postgres/src/tests/CustomerExplorerAdapters.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/admin-postgres"
+    },
+    {
+      "path": "packages/admin-postgres/src/tests/CustomerExplorerAdapters.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-postgres"
     },
     {
       "path": "packages/admin-react/src/tests/ActivationGuideConsole.spec.ts",
@@ -303,6 +327,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/CreditOperationsConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/CustomerExplorer.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"

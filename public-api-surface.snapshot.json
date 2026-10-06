@@ -313,21 +313,230 @@
               "declarationKind": "const"
             },
             {
-              "name": "ActivationGuideValidationProblem",
-              "exportKind": "named",
-              "source": "./libs/ActivationGuide",
-              "declarationKind": "class"
-            },
-            {
               "name": "ADMIN_CORE_DIAGNOSTIC_CODES",
               "exportKind": "named",
               "source": "./libs/AdminResource",
               "declarationKind": "const"
             },
             {
+              "name": "ActivationGuideValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/ActivationGuide",
+              "declarationKind": "class"
+            },
+            {
               "name": "AdminResourceValidationProblem",
               "exportKind": "named",
               "source": "./libs/AdminResource",
+              "declarationKind": "class"
+            },
+            {
+              "name": "COHORT_PERMISSIONS",
+              "exportKind": "named",
+              "source": "./libs/CohortOperations",
+              "declarationKind": "const"
+            },
+            {
+              "name": "CREDIT_OPERATIONS_READ_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations",
+              "declarationKind": "const"
+            },
+            {
+              "name": "CohortAdminProblem",
+              "exportKind": "named",
+              "source": "./libs/CohortOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ContactPolicyAdminAccessProblem",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ContactPolicyAdminProblem",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ContactPolicyOperations",
+              "exportKind": "named",
+              "source": "./libs/ContactPolicyOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CreditOperationsValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/CreditOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CustomerExplorerProblem",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CustomerExplorerService",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ENGAGEMENT_PERMISSIONS",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations",
+              "declarationKind": "const"
+            },
+            {
+              "name": "EVENT_CATALOG_APP_READ_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog",
+              "declarationKind": "const"
+            },
+            {
+              "name": "EVENT_CATALOG_APP_VALIDATE_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog",
+              "declarationKind": "const"
+            },
+            {
+              "name": "EVENT_CATALOG_READ_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog",
+              "declarationKind": "const"
+            },
+            {
+              "name": "EVENT_CATALOG_VALIDATE_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog",
+              "declarationKind": "const"
+            },
+            {
+              "name": "EXPERIMENT_REVIEW_PII_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole",
+              "declarationKind": "const"
+            },
+            {
+              "name": "EXPERIMENT_REVIEW_READ_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole",
+              "declarationKind": "const"
+            },
+            {
+              "name": "EXPERIMENT_REVIEW_REPORT_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole",
+              "declarationKind": "const"
+            },
+            {
+              "name": "EngagementOperationsValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "EventCatalogValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/EventCatalog",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ExperienceAdminProblem",
+              "exportKind": "named",
+              "source": "./libs/ExperienceOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ExperienceOperations",
+              "exportKind": "named",
+              "source": "./libs/ExperienceOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ExperimentAdminProblem",
+              "exportKind": "named",
+              "source": "./libs/ExperimentOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ExperimentOperations",
+              "exportKind": "named",
+              "source": "./libs/ExperimentOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ExperimentReviewConsoleValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole",
+              "declarationKind": "class"
+            },
+            {
+              "name": "FactHistoryInputProblem",
+              "exportKind": "named",
+              "source": "@croco/admin-core/fact-history-validation"
+            },
+            {
+              "name": "JourneyAdminProblem",
+              "exportKind": "named",
+              "source": "./libs/JourneyOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "JourneyOperations",
+              "exportKind": "named",
+              "source": "./libs/JourneyOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OFFER_CONSOLE_PII_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "const"
+            },
+            {
+              "name": "OFFER_CONSOLE_READ_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "const"
+            },
+            {
+              "name": "OFFER_CONSOLE_RESOLVE_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "const"
+            },
+            {
+              "name": "OFFER_CONSOLE_WRITE_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "const"
+            },
+            {
+              "name": "OfferConsoleValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PolicyReleaseAccessProblem",
+              "exportKind": "named",
+              "source": "./libs/PolicyReleaseOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PolicyReleaseOperations",
+              "exportKind": "named",
+              "source": "./libs/PolicyReleaseOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "WebhookOperationsActionValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/WebhookOperations",
               "declarationKind": "class"
             },
             {
@@ -451,36 +660,6 @@
               "declarationKind": "function"
             },
             {
-              "name": "COHORT_PERMISSIONS",
-              "exportKind": "named",
-              "source": "./libs/CohortOperations",
-              "declarationKind": "const"
-            },
-            {
-              "name": "CohortAdminProblem",
-              "exportKind": "named",
-              "source": "./libs/CohortOperations",
-              "declarationKind": "class"
-            },
-            {
-              "name": "ContactPolicyAdminAccessProblem",
-              "exportKind": "named",
-              "source": "./libs/ContactPolicyOperations",
-              "declarationKind": "class"
-            },
-            {
-              "name": "ContactPolicyAdminProblem",
-              "exportKind": "named",
-              "source": "./libs/ContactPolicyOperations",
-              "declarationKind": "class"
-            },
-            {
-              "name": "ContactPolicyOperations",
-              "exportKind": "named",
-              "source": "./libs/ContactPolicyOperations",
-              "declarationKind": "class"
-            },
-            {
               "name": "createCreditOperationsActionRequest",
               "exportKind": "named",
               "source": "./libs/CreditOperations",
@@ -502,6 +681,12 @@
               "name": "createCreditOperationsTenantExtension",
               "exportKind": "named",
               "source": "./libs/CreditOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createCustomerExplorerSample",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer",
               "declarationKind": "function"
             },
             {
@@ -619,70 +804,16 @@
               "declarationKind": "function"
             },
             {
-              "name": "CREDIT_OPERATIONS_READ_PERMISSION",
-              "exportKind": "named",
-              "source": "./libs/CreditOperations",
-              "declarationKind": "const"
-            },
-            {
-              "name": "CreditOperationsValidationProblem",
-              "exportKind": "named",
-              "source": "./libs/CreditOperations",
-              "declarationKind": "class"
-            },
-            {
               "name": "defineAdminResource",
               "exportKind": "named",
               "source": "./libs/AdminResource",
               "declarationKind": "function"
             },
             {
-              "name": "ENGAGEMENT_PERMISSIONS",
-              "exportKind": "named",
-              "source": "./libs/EngagementOperations",
-              "declarationKind": "const"
-            },
-            {
-              "name": "EngagementOperationsValidationProblem",
-              "exportKind": "named",
-              "source": "./libs/EngagementOperations",
-              "declarationKind": "class"
-            },
-            {
               "name": "evaluateTenantWorkspaceAction",
               "exportKind": "named",
               "source": "./libs/TenantWorkspace",
               "declarationKind": "function"
-            },
-            {
-              "name": "EVENT_CATALOG_APP_READ_PERMISSION",
-              "exportKind": "named",
-              "source": "./libs/EventCatalog",
-              "declarationKind": "const"
-            },
-            {
-              "name": "EVENT_CATALOG_APP_VALIDATE_PERMISSION",
-              "exportKind": "named",
-              "source": "./libs/EventCatalog",
-              "declarationKind": "const"
-            },
-            {
-              "name": "EVENT_CATALOG_READ_PERMISSION",
-              "exportKind": "named",
-              "source": "./libs/EventCatalog",
-              "declarationKind": "const"
-            },
-            {
-              "name": "EVENT_CATALOG_VALIDATE_PERMISSION",
-              "exportKind": "named",
-              "source": "./libs/EventCatalog",
-              "declarationKind": "const"
-            },
-            {
-              "name": "EventCatalogValidationProblem",
-              "exportKind": "named",
-              "source": "./libs/EventCatalog",
-              "declarationKind": "class"
             },
             {
               "name": "executeCreditOperationsAction",
@@ -697,57 +828,10 @@
               "declarationKind": "function"
             },
             {
-              "name": "ExperienceAdminProblem",
+              "name": "explorerScopeKey",
               "exportKind": "named",
-              "source": "./libs/ExperienceOperations",
-              "declarationKind": "class"
-            },
-            {
-              "name": "ExperienceOperations",
-              "exportKind": "named",
-              "source": "./libs/ExperienceOperations",
-              "declarationKind": "class"
-            },
-            {
-              "name": "EXPERIMENT_REVIEW_PII_PERMISSION",
-              "exportKind": "named",
-              "source": "./libs/ExperimentReviewConsole",
-              "declarationKind": "const"
-            },
-            {
-              "name": "EXPERIMENT_REVIEW_READ_PERMISSION",
-              "exportKind": "named",
-              "source": "./libs/ExperimentReviewConsole",
-              "declarationKind": "const"
-            },
-            {
-              "name": "EXPERIMENT_REVIEW_REPORT_PERMISSION",
-              "exportKind": "named",
-              "source": "./libs/ExperimentReviewConsole",
-              "declarationKind": "const"
-            },
-            {
-              "name": "ExperimentAdminProblem",
-              "exportKind": "named",
-              "source": "./libs/ExperimentOperations",
-              "declarationKind": "class"
-            },
-            {
-              "name": "ExperimentOperations",
-              "exportKind": "named",
-              "source": "./libs/ExperimentOperations",
-              "declarationKind": "class"
-            },
-            {
-              "name": "ExperimentReviewConsoleValidationProblem",
-              "exportKind": "named",
-              "source": "./libs/ExperimentReviewConsole",
-              "declarationKind": "class"
-            },
-            {
-              "name": "FactHistoryInputProblem",
-              "exportKind": "named",
-              "source": "@croco/admin-core/fact-history-validation"
+              "source": "./libs/CustomerExplorer",
+              "declarationKind": "function"
             },
             {
               "name": "filterCreditOperationsTransactions",
@@ -766,18 +850,6 @@
               "exportKind": "named",
               "source": "./libs/WebhookOperations",
               "declarationKind": "function"
-            },
-            {
-              "name": "JourneyAdminProblem",
-              "exportKind": "named",
-              "source": "./libs/JourneyOperations",
-              "declarationKind": "class"
-            },
-            {
-              "name": "JourneyOperations",
-              "exportKind": "named",
-              "source": "./libs/JourneyOperations",
-              "declarationKind": "class"
             },
             {
               "name": "loadCreditOperations",
@@ -846,48 +918,6 @@
               "declarationKind": "function"
             },
             {
-              "name": "OFFER_CONSOLE_PII_PERMISSION",
-              "exportKind": "named",
-              "source": "./libs/OfferConsole",
-              "declarationKind": "const"
-            },
-            {
-              "name": "OFFER_CONSOLE_READ_PERMISSION",
-              "exportKind": "named",
-              "source": "./libs/OfferConsole",
-              "declarationKind": "const"
-            },
-            {
-              "name": "OFFER_CONSOLE_RESOLVE_PERMISSION",
-              "exportKind": "named",
-              "source": "./libs/OfferConsole",
-              "declarationKind": "const"
-            },
-            {
-              "name": "OFFER_CONSOLE_WRITE_PERMISSION",
-              "exportKind": "named",
-              "source": "./libs/OfferConsole",
-              "declarationKind": "const"
-            },
-            {
-              "name": "OfferConsoleValidationProblem",
-              "exportKind": "named",
-              "source": "./libs/OfferConsole",
-              "declarationKind": "class"
-            },
-            {
-              "name": "PolicyReleaseAccessProblem",
-              "exportKind": "named",
-              "source": "./libs/PolicyReleaseOperations",
-              "declarationKind": "class"
-            },
-            {
-              "name": "PolicyReleaseOperations",
-              "exportKind": "named",
-              "source": "./libs/PolicyReleaseOperations",
-              "declarationKind": "class"
-            },
-            {
               "name": "redactWebhookOperationsText",
               "exportKind": "named",
               "source": "./libs/WebhookOperations",
@@ -938,12 +968,6 @@
               "exportKind": "named",
               "source": "./libs/OfferConsole",
               "declarationKind": "function"
-            },
-            {
-              "name": "WebhookOperationsActionValidationProblem",
-              "exportKind": "named",
-              "source": "./libs/WebhookOperations",
-              "declarationKind": "class"
             }
           ],
           "typeExports": [
@@ -963,12 +987,12 @@
               "source": "./libs/ActivationGuide"
             },
             {
-              "name": "ActivationGuidePublished",
+              "name": "ActivationGuidePublishRequest",
               "exportKind": "named",
               "source": "./libs/ActivationGuide"
             },
             {
-              "name": "ActivationGuidePublishRequest",
+              "name": "ActivationGuidePublished",
               "exportKind": "named",
               "source": "./libs/ActivationGuide"
             },
@@ -1296,6 +1320,16 @@
               "name": "Customer360CommunicationState",
               "exportKind": "named",
               "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "CustomerExplorerOptions",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "CustomerExplorerRepository",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
             },
             {
               "name": "EngagementAudienceDescriptorRow",
@@ -1698,6 +1732,81 @@
               "source": "./libs/ExperimentReviewConsole"
             },
             {
+              "name": "ExplorerAuthorization",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "ExplorerCandidate",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "ExplorerEventRef",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "ExplorerNote",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "ExplorerNoteAudit",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "ExplorerNoteInput",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "ExplorerPermission",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "ExplorerPopulation",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "ExplorerProblemCode",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "ExplorerQueryDraft",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "ExplorerResolvedNote",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "ExplorerScope",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "ExplorerSourceStatus",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "ExplorerSubject",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "ExplorerTimeline",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
               "name": "FactHistoryComparisonRequest",
               "exportKind": "named",
               "source": "./libs/FactHistoryValidation"
@@ -1883,6 +1992,16 @@
               "source": "./libs/EngagementOperations"
             },
             {
+              "name": "Sample",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "SampleQuery",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
               "name": "TenantBusinessSource",
               "exportKind": "named",
               "source": "./libs/TenantWorkspace"
@@ -1996,6 +2115,26 @@
               "name": "TenantWorkspaceSourceState",
               "exportKind": "named",
               "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "TimelineItem",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "TimelineRequest",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "TimelineSource",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "TimelineSourcePage",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
             },
             {
               "name": "WebhookAttemptOperationsRow",
@@ -2318,6 +2457,54 @@
           "sourceEntrypoint": "packages/admin-ops/src/index.ts",
           "runtimeExports": [
             {
+              "name": "EngagementCustomerExplorerSource",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorerAdapters",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InMemoryOperationsTimelineSourceAdapter",
+              "exportKind": "named",
+              "source": "./libs/OperationsTimeline",
+              "declarationKind": "class"
+            },
+            {
+              "name": "OperationsCustomerExplorerSource",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorerAdapters",
+              "declarationKind": "class"
+            },
+            {
+              "name": "RetryConsoleAuditConfirmation",
+              "exportKind": "named",
+              "source": "./libs/react",
+              "declarationKind": "function"
+            },
+            {
+              "name": "RetryConsoleDetailPanel",
+              "exportKind": "named",
+              "source": "./libs/react",
+              "declarationKind": "function"
+            },
+            {
+              "name": "RetryConsoleFailedWorkList",
+              "exportKind": "named",
+              "source": "./libs/react",
+              "declarationKind": "function"
+            },
+            {
+              "name": "RetryConsoleNonRetryableExplanation",
+              "exportKind": "named",
+              "source": "./libs/react",
+              "declarationKind": "function"
+            },
+            {
+              "name": "RetryConsoleRetryButton",
+              "exportKind": "named",
+              "source": "./libs/react",
+              "declarationKind": "function"
+            },
+            {
               "name": "collectOperationsTimeline",
               "exportKind": "named",
               "source": "./libs/OperationsTimeline",
@@ -2370,12 +2557,6 @@
               "exportKind": "named",
               "source": "./libs/sourceAdapters",
               "declarationKind": "function"
-            },
-            {
-              "name": "InMemoryOperationsTimelineSourceAdapter",
-              "exportKind": "named",
-              "source": "./libs/OperationsTimeline",
-              "declarationKind": "class"
             },
             {
               "name": "matchesOperationsTimelineQuery",
@@ -2432,24 +2613,6 @@
               "declarationKind": "function"
             },
             {
-              "name": "RetryConsoleAuditConfirmation",
-              "exportKind": "named",
-              "source": "./libs/react",
-              "declarationKind": "function"
-            },
-            {
-              "name": "RetryConsoleDetailPanel",
-              "exportKind": "named",
-              "source": "./libs/react",
-              "declarationKind": "function"
-            },
-            {
-              "name": "RetryConsoleFailedWorkList",
-              "exportKind": "named",
-              "source": "./libs/react",
-              "declarationKind": "function"
-            },
-            {
               "name": "retryConsoleItemFromEngagementDispatch",
               "exportKind": "named",
               "source": "./libs/engagementAdapters",
@@ -2471,18 +2634,6 @@
               "name": "retryConsoleItemFromWebhookDelivery",
               "exportKind": "named",
               "source": "./libs/webhookAdapters",
-              "declarationKind": "function"
-            },
-            {
-              "name": "RetryConsoleNonRetryableExplanation",
-              "exportKind": "named",
-              "source": "./libs/react",
-              "declarationKind": "function"
-            },
-            {
-              "name": "RetryConsoleRetryButton",
-              "exportKind": "named",
-              "source": "./libs/react",
               "declarationKind": "function"
             }
           ],
@@ -2508,9 +2659,24 @@
               "source": "./libs/types"
             },
             {
+              "name": "EngagementExplorerSourceOptions",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorerAdapters"
+            },
+            {
               "name": "EngagementOperationsFailureEvidence",
               "exportKind": "named",
               "source": "./libs/engagementAdapters"
+            },
+            {
+              "name": "ExplorerEngagementDispatch",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorerAdapters"
+            },
+            {
+              "name": "ExplorerEngagementStore",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorerAdapters"
             },
             {
               "name": "LifecycleRunTimelineExtension",
@@ -2521,6 +2687,11 @@
               "name": "LifecycleRunTimelineSource",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "OperationsExplorerSourceOptions",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorerAdapters"
             },
             {
               "name": "OperationsTimelineActor",
@@ -2707,6 +2878,67 @@
       ]
     },
     {
+      "packageName": "@croco/admin-postgres",
+      "relativeDir": "packages/admin-postgres",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/admin-postgres/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "PostgresCustomerExplorerRepository",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorerAdapters",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PostgresTimelineSource",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorerAdapters",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "ExplorerPgDatabase",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorerAdapters"
+            },
+            {
+              "name": "ExplorerPgExecutor",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorerAdapters"
+            },
+            {
+              "name": "ExplorerSqlTimelineMapping",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorerAdapters"
+            },
+            {
+              "name": "PostgresTimelineSourceOptions",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorerAdapters"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "packageName": "@croco/admin-react",
       "relativeDir": "packages/admin-react",
       "entrypoints": [
@@ -2790,12 +3022,6 @@
               "declarationKind": "function"
             },
             {
-              "name": "classifyLifecycleRun",
-              "exportKind": "named",
-              "source": "./libs/lifecycleAutomation",
-              "declarationKind": "function"
-            },
-            {
               "name": "CohortBuilder",
               "exportKind": "named",
               "source": "./libs/CohortBuilder",
@@ -2805,6 +3031,204 @@
               "name": "ContactPolicyConsole",
               "exportKind": "named",
               "source": "./libs/ContactPolicyConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "CreditOperationsConsole",
+              "exportKind": "named",
+              "source": "./libs/CreditOperationsConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "Customer360CommunicationPanel",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperationsConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "CustomerExplorer",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer",
+              "declarationKind": "function"
+            },
+            {
+              "name": "DatasetExplorer",
+              "exportKind": "named",
+              "source": "./libs/DatasetExplorer",
+              "declarationKind": "function"
+            },
+            {
+              "name": "DeliveryOperationsPanel",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperationsConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "EngagementOperationsConsole",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperationsConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "EntitlementList",
+              "exportKind": "named",
+              "source": "./libs/components",
+              "declarationKind": "function"
+            },
+            {
+              "name": "EventCatalogPanel",
+              "exportKind": "named",
+              "source": "./libs/EventCatalogPanel",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ExperienceConsole",
+              "exportKind": "named",
+              "source": "./libs/ExperienceConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ExperimentConsole",
+              "exportKind": "named",
+              "source": "./libs/ExperimentConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ExperimentReviewConsole",
+              "exportKind": "named",
+              "source": "./libs/ExperimentReviewConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "FactHistoryPanel",
+              "exportKind": "named",
+              "source": "./libs/FactHistoryPanel",
+              "declarationKind": "function"
+            },
+            {
+              "name": "GrowthAnalysisPanel",
+              "exportKind": "named",
+              "source": "./libs/GrowthAnalysisPanel",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ImpersonationBanner",
+              "exportKind": "named",
+              "source": "./libs/components",
+              "declarationKind": "function"
+            },
+            {
+              "name": "JourneyConsole",
+              "exportKind": "named",
+              "source": "./libs/JourneyConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "LifecycleAutomationConsole",
+              "exportKind": "named",
+              "source": "./libs/LifecycleAutomationConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "LifecycleDryRunPanel",
+              "exportKind": "named",
+              "source": "./libs/LifecycleAutomationConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "LifecycleRuleOperations",
+              "exportKind": "named",
+              "source": "./libs/LifecycleAutomationConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "LifecycleRunHistory",
+              "exportKind": "named",
+              "source": "./libs/LifecycleAutomationConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "MessageOperationsPanel",
+              "exportKind": "named",
+              "source": "./libs/EngagementOperationsConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "MetricInspector",
+              "exportKind": "named",
+              "source": "./libs/MetricInspector",
+              "declarationKind": "function"
+            },
+            {
+              "name": "OfferConsole",
+              "exportKind": "named",
+              "source": "./libs/OfferConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "PermissionInspector",
+              "exportKind": "named",
+              "source": "./libs/components",
+              "declarationKind": "function"
+            },
+            {
+              "name": "PlanReleaseConsole",
+              "exportKind": "named",
+              "source": "./libs/PlanReleaseConsoleView",
+              "declarationKind": "function"
+            },
+            {
+              "name": "PlanSummary",
+              "exportKind": "named",
+              "source": "./libs/components",
+              "declarationKind": "function"
+            },
+            {
+              "name": "PolicyReleaseConsole",
+              "exportKind": "named",
+              "source": "./libs/PolicyReleaseConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ProblemNotice",
+              "exportKind": "named",
+              "source": "./libs/components",
+              "declarationKind": "function"
+            },
+            {
+              "name": "TenantBusinessWorkspace",
+              "exportKind": "named",
+              "source": "./libs/TenantBusinessWorkspace",
+              "declarationKind": "function"
+            },
+            {
+              "name": "TenantImpersonationConsole",
+              "exportKind": "named",
+              "source": "./libs/components",
+              "declarationKind": "function"
+            },
+            {
+              "name": "TenantSwitcher",
+              "exportKind": "named",
+              "source": "./libs/components",
+              "declarationKind": "function"
+            },
+            {
+              "name": "UsageQuotaMeter",
+              "exportKind": "named",
+              "source": "./libs/components",
+              "declarationKind": "function"
+            },
+            {
+              "name": "WebhookReliabilityConsole",
+              "exportKind": "named",
+              "source": "./libs/WebhookReliabilityConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "classifyLifecycleRun",
+              "exportKind": "named",
+              "source": "./libs/lifecycleAutomation",
               "declarationKind": "function"
             },
             {
@@ -2952,45 +3376,9 @@
               "declarationKind": "function"
             },
             {
-              "name": "CreditOperationsConsole",
-              "exportKind": "named",
-              "source": "./libs/CreditOperationsConsole",
-              "declarationKind": "function"
-            },
-            {
-              "name": "Customer360CommunicationPanel",
-              "exportKind": "named",
-              "source": "./libs/EngagementOperationsConsole",
-              "declarationKind": "function"
-            },
-            {
-              "name": "DatasetExplorer",
-              "exportKind": "named",
-              "source": "./libs/DatasetExplorer",
-              "declarationKind": "function"
-            },
-            {
-              "name": "DeliveryOperationsPanel",
-              "exportKind": "named",
-              "source": "./libs/EngagementOperationsConsole",
-              "declarationKind": "function"
-            },
-            {
               "name": "diffLifecycleRuleDescriptors",
               "exportKind": "named",
               "source": "./libs/lifecycleAutomation",
-              "declarationKind": "function"
-            },
-            {
-              "name": "EngagementOperationsConsole",
-              "exportKind": "named",
-              "source": "./libs/EngagementOperationsConsole",
-              "declarationKind": "function"
-            },
-            {
-              "name": "EntitlementList",
-              "exportKind": "named",
-              "source": "./libs/components",
               "declarationKind": "function"
             },
             {
@@ -3000,51 +3388,9 @@
               "declarationKind": "function"
             },
             {
-              "name": "EventCatalogPanel",
-              "exportKind": "named",
-              "source": "./libs/EventCatalogPanel",
-              "declarationKind": "function"
-            },
-            {
-              "name": "ExperienceConsole",
-              "exportKind": "named",
-              "source": "./libs/ExperienceConsole",
-              "declarationKind": "function"
-            },
-            {
-              "name": "ExperimentConsole",
-              "exportKind": "named",
-              "source": "./libs/ExperimentConsole",
-              "declarationKind": "function"
-            },
-            {
-              "name": "ExperimentReviewConsole",
-              "exportKind": "named",
-              "source": "./libs/ExperimentReviewConsole",
-              "declarationKind": "function"
-            },
-            {
-              "name": "FactHistoryPanel",
-              "exportKind": "named",
-              "source": "./libs/FactHistoryPanel",
-              "declarationKind": "function"
-            },
-            {
               "name": "getAllowedPlanReleaseActions",
               "exportKind": "named",
               "source": "./libs/planReleaseConsole",
-              "declarationKind": "function"
-            },
-            {
-              "name": "GrowthAnalysisPanel",
-              "exportKind": "named",
-              "source": "./libs/GrowthAnalysisPanel",
-              "declarationKind": "function"
-            },
-            {
-              "name": "ImpersonationBanner",
-              "exportKind": "named",
-              "source": "./libs/components",
               "declarationKind": "function"
             },
             {
@@ -3054,87 +3400,9 @@
               "declarationKind": "function"
             },
             {
-              "name": "JourneyConsole",
-              "exportKind": "named",
-              "source": "./libs/JourneyConsole",
-              "declarationKind": "function"
-            },
-            {
-              "name": "LifecycleAutomationConsole",
-              "exportKind": "named",
-              "source": "./libs/LifecycleAutomationConsole",
-              "declarationKind": "function"
-            },
-            {
-              "name": "LifecycleDryRunPanel",
-              "exportKind": "named",
-              "source": "./libs/LifecycleAutomationConsole",
-              "declarationKind": "function"
-            },
-            {
-              "name": "LifecycleRuleOperations",
-              "exportKind": "named",
-              "source": "./libs/LifecycleAutomationConsole",
-              "declarationKind": "function"
-            },
-            {
-              "name": "LifecycleRunHistory",
-              "exportKind": "named",
-              "source": "./libs/LifecycleAutomationConsole",
-              "declarationKind": "function"
-            },
-            {
               "name": "loadLifecycleAutomationConsole",
               "exportKind": "named",
               "source": "./libs/lifecycleAutomation",
-              "declarationKind": "function"
-            },
-            {
-              "name": "MessageOperationsPanel",
-              "exportKind": "named",
-              "source": "./libs/EngagementOperationsConsole",
-              "declarationKind": "function"
-            },
-            {
-              "name": "MetricInspector",
-              "exportKind": "named",
-              "source": "./libs/MetricInspector",
-              "declarationKind": "function"
-            },
-            {
-              "name": "OfferConsole",
-              "exportKind": "named",
-              "source": "./libs/OfferConsole",
-              "declarationKind": "function"
-            },
-            {
-              "name": "PermissionInspector",
-              "exportKind": "named",
-              "source": "./libs/components",
-              "declarationKind": "function"
-            },
-            {
-              "name": "PlanReleaseConsole",
-              "exportKind": "named",
-              "source": "./libs/PlanReleaseConsoleView",
-              "declarationKind": "function"
-            },
-            {
-              "name": "PlanSummary",
-              "exportKind": "named",
-              "source": "./libs/components",
-              "declarationKind": "function"
-            },
-            {
-              "name": "PolicyReleaseConsole",
-              "exportKind": "named",
-              "source": "./libs/PolicyReleaseConsole",
-              "declarationKind": "function"
-            },
-            {
-              "name": "ProblemNotice",
-              "exportKind": "named",
-              "source": "./libs/components",
               "declarationKind": "function"
             },
             {
@@ -3150,24 +3418,6 @@
               "declarationKind": "function"
             },
             {
-              "name": "TenantBusinessWorkspace",
-              "exportKind": "named",
-              "source": "./libs/TenantBusinessWorkspace",
-              "declarationKind": "function"
-            },
-            {
-              "name": "TenantImpersonationConsole",
-              "exportKind": "named",
-              "source": "./libs/components",
-              "declarationKind": "function"
-            },
-            {
-              "name": "TenantSwitcher",
-              "exportKind": "named",
-              "source": "./libs/components",
-              "declarationKind": "function"
-            },
-            {
               "name": "updateAdminFormField",
               "exportKind": "named",
               "source": "./libs/snapshot",
@@ -3180,12 +3430,6 @@
               "declarationKind": "function"
             },
             {
-              "name": "UsageQuotaMeter",
-              "exportKind": "named",
-              "source": "./libs/components",
-              "declarationKind": "function"
-            },
-            {
               "name": "useAdminForm",
               "exportKind": "named",
               "source": "./libs/hooks",
@@ -3195,12 +3439,6 @@
               "name": "validatePlanReleaseActionRequest",
               "exportKind": "named",
               "source": "./libs/planReleaseConsole",
-              "declarationKind": "function"
-            },
-            {
-              "name": "WebhookReliabilityConsole",
-              "exportKind": "named",
-              "source": "./libs/WebhookReliabilityConsole",
               "declarationKind": "function"
             }
           ],
@@ -3756,6 +3994,21 @@
               "source": "./libs/EngagementOperationsConsole"
             },
             {
+              "name": "CustomerExplorerNote",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "CustomerExplorerOperations",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
+              "name": "CustomerExplorerProps",
+              "exportKind": "named",
+              "source": "./libs/CustomerExplorer"
+            },
+            {
               "name": "DatasetExplorerAction",
               "exportKind": "named",
               "source": "./libs/DatasetExplorer"
@@ -4066,22 +4319,22 @@
               "source": "./libs/planReleaseConsole"
             },
             {
-              "name": "PlanReleaseEditor",
-              "exportKind": "named",
-              "source": "./libs/planReleaseConsole"
-            },
-            {
-              "name": "PlanReleaseEditorCatalog",
-              "exportKind": "named",
-              "source": "./libs/planReleaseConsole"
-            },
-            {
               "name": "PlanReleaseEditRequest",
               "exportKind": "named",
               "source": "./libs/planReleaseConsole"
             },
             {
               "name": "PlanReleaseEditResult",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseEditor",
+              "exportKind": "named",
+              "source": "./libs/planReleaseConsole"
+            },
+            {
+              "name": "PlanReleaseEditorCatalog",
               "exportKind": "named",
               "source": "./libs/planReleaseConsole"
             },
@@ -27934,6 +28187,60 @@
           "sourceEntrypoint": "packages/problems-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "CROCO_PROBLEM_CODE_REGISTRY",
+              "exportKind": "named",
+              "source": "./generated/problem-code-registry",
+              "declarationKind": "const"
+            },
+            {
+              "name": "HttpStatus",
+              "exportKind": "named",
+              "source": "./libs/HttpStatus",
+              "declarationKind": "const"
+            },
+            {
+              "name": "OPERATOR_ONLY_PROBLEM_DETAIL",
+              "exportKind": "named",
+              "source": "./libs/ProblemResponseRedaction",
+              "declarationKind": "const"
+            },
+            {
+              "name": "Problem",
+              "exportKind": "named",
+              "source": "./libs/Problem",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ProblemCategory",
+              "exportKind": "named",
+              "source": "./libs/ProblemCategory",
+              "declarationKind": "enum"
+            },
+            {
+              "name": "ProblemCategoryMapper",
+              "exportKind": "named",
+              "source": "./libs/ProblemCategoryMapper",
+              "declarationKind": "const"
+            },
+            {
+              "name": "ProblemFactory",
+              "exportKind": "named",
+              "source": "./libs/ProblemFactory",
+              "declarationKind": "const"
+            },
+            {
+              "name": "ProblemRegistryValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/ProblemRegistry",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ProblemSerializer",
+              "exportKind": "named",
+              "source": "./libs/ProblemSerializer",
+              "declarationKind": "const"
+            },
+            {
               "name": "assertPackageProblemRegistryValid",
               "exportKind": "named",
               "source": "./libs/ProblemRegistry",
@@ -27974,12 +28281,6 @@
               "exportKind": "named",
               "source": "./libs/ProblemResponseRedaction",
               "declarationKind": "function"
-            },
-            {
-              "name": "CROCO_PROBLEM_CODE_REGISTRY",
-              "exportKind": "named",
-              "source": "./generated/problem-code-registry",
-              "declarationKind": "const"
             },
             {
               "name": "defineProblemRegistry",
@@ -28030,58 +28331,10 @@
               "declarationKind": "function"
             },
             {
-              "name": "HttpStatus",
-              "exportKind": "named",
-              "source": "./libs/HttpStatus",
-              "declarationKind": "const"
-            },
-            {
               "name": "isValidExtensions",
               "exportKind": "named",
               "source": "./libs/validators/validateExtensions",
               "declarationKind": "function"
-            },
-            {
-              "name": "OPERATOR_ONLY_PROBLEM_DETAIL",
-              "exportKind": "named",
-              "source": "./libs/ProblemResponseRedaction",
-              "declarationKind": "const"
-            },
-            {
-              "name": "Problem",
-              "exportKind": "named",
-              "source": "./libs/Problem",
-              "declarationKind": "class"
-            },
-            {
-              "name": "ProblemCategory",
-              "exportKind": "named",
-              "source": "./libs/ProblemCategory",
-              "declarationKind": "enum"
-            },
-            {
-              "name": "ProblemCategoryMapper",
-              "exportKind": "named",
-              "source": "./libs/ProblemCategoryMapper",
-              "declarationKind": "const"
-            },
-            {
-              "name": "ProblemFactory",
-              "exportKind": "named",
-              "source": "./libs/ProblemFactory",
-              "declarationKind": "const"
-            },
-            {
-              "name": "ProblemRegistryValidationProblem",
-              "exportKind": "named",
-              "source": "./libs/ProblemRegistry",
-              "declarationKind": "class"
-            },
-            {
-              "name": "ProblemSerializer",
-              "exportKind": "named",
-              "source": "./libs/ProblemSerializer",
-              "declarationKind": "const"
             },
             {
               "name": "readExplicitRetryability",
@@ -28170,12 +28423,12 @@
               "source": "./generated/problem-code-registry"
             },
             {
-              "name": "DefinedProblemRegistryEntries",
+              "name": "DefineProblemRegistryOptions",
               "exportKind": "named",
               "source": "./libs/ProblemRegistry"
             },
             {
-              "name": "DefineProblemRegistryOptions",
+              "name": "DefinedProblemRegistryEntries",
               "exportKind": "named",
               "source": "./libs/ProblemRegistry"
             },

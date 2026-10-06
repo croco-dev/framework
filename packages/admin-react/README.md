@@ -549,3 +549,13 @@ the server rechecks authority. Pause/resume/stop require an audit reason, carry 
 shown revision and a fresh idempotency key, and display operation failure without
 marking it successful. Dry-runs never publish the edited definition. The host owns
 publication policy and production registration.
+
+## Customer Explorer
+
+`CustomerExplorer` accepts a required scope, saved sample ID and `CustomerExplorerOperations` callbacks bound to an authorized server `CustomerExplorerService`. It reads the saved sample, navigates achievers and prior-step comparisons, and loads 50 events per source per page. Source completeness/truncation, anchor phase, observed time, gaps and session grouping remain visible. Subject progress is explicitly local to the current workspace session.
+
+The workspace provides source/kind filters, explicit fact/hypothesis notes with event references, note edits using the expected revision, conflict reload/recovery and a downloadable typed observation definition. Unavailable references remain visible after originals are deleted. It has no raw-record download or link to an absent Cohort screen. Server permissions apply even when a user invokes callbacks outside the UI.
+
+See the [standalone example](../../examples/customer-explorer/README.md) for PostgreSQL-backed callbacks. Loading, empty, partial, denied, error and ready states are exercised by the mounted browser regression in `src/tests/CustomerExplorer.mounted.ts`.
+
+Run the committed browser regression with `node packages/admin-react/scripts/verify-customer-explorer-browser.mjs` from the repository root. It uses the repository's existing Playwright/tsup tooling and requires installed Chrome; its fixture stays outside published artifacts.

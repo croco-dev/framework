@@ -44,6 +44,12 @@ export const apiDocPackages = [
     moduleName: "admin-ops/src",
   },
   {
+    packageName: "@croco/admin-postgres",
+    directory: "admin-postgres",
+    entryPoint: "src/index.ts",
+    moduleName: "admin-postgres/src",
+  },
+  {
     packageName: "@croco/admin-react",
     directory: "admin-react",
     entryPoint: "src/index.ts",

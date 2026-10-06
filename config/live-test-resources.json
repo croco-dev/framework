@@ -1,4 +1,5 @@
 {
+  "@croco/admin-postgres": ["CUSTOMER_EXPLORER_TEST_DATABASE_URL"],
   "@croco/auth-drizzle": ["AUTH_POSTGRES_URL"],
   "@croco/billing-polar": [
     "POLAR_ACCESS_TOKEN",

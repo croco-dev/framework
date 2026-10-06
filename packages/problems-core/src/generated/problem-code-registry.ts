@@ -28576,6 +28576,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
   ],
   dynamicCodeFactories: [
     {
+      className: "CustomerExplorerProblem",
+      source: {
+        file: "packages/admin-core/src/libs/CustomerExplorer.ts",
+        line: 145,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
       className: "TrialProblem",
       source: {
         file: "packages/create-croco-app/templates/addons/trpc-nextjs/apps/web/src/server/product/ProductTrials.ts",

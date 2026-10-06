@@ -72,13 +72,31 @@ describe("scheduled live test workflow", () => {
       expect(Object.keys(step?.env ?? {}).sort(), owner).toEqual([...requiredNames].sort());
       for (const name of requiredNames) {
         const secretName =
-          owner === "@croco/cohort-drizzle" || owner === "@croco/onboarding-drizzle"
+          owner === "@croco/admin-postgres" ||
+          owner === "@croco/cohort-drizzle" ||
+          owner === "@croco/onboarding-drizzle"
             ? "MEMBERSHIP_POSTGRES_URL"
             : name;
         const expected = name.startsWith("CROCO_LIVE_") ? "true" : `\${{ secrets.${secretName} }}`;
         expect(step?.env?.[name], `${owner}:${name}`).toBe(expected);
       }
     }
+  });
+
+  it("runs the admin PostgreSQL provider with the existing database resource and reconciles its report", () => {
+    const owner = "@croco/admin-postgres";
+    const step = parsed.jobs.live.steps.find(({ run }) => run?.includes(`--owner ${owner}`));
+    const reconciliation = parsed.jobs.live.steps.find(
+      ({ name }) => name === "Enforce scheduled-live evidence",
+    );
+    expect(resources[owner]).toEqual(["CUSTOMER_EXPLORER_TEST_DATABASE_URL"]);
+    expect(resources["@croco/admin-ops"]).toBeUndefined();
+    expect(step?.env).toEqual({
+      CUSTOMER_EXPLORER_TEST_DATABASE_URL: "${{ secrets.MEMBERSHIP_POSTGRES_URL }}",
+    });
+    expect(reconciliation?.run).toContain(
+      "--lane-report ci-reports/package-quality/live-test-lanes/admin-postgres.json",
+    );
   });
 
   it("keeps every Polar smoke prerequisite aligned with its inventory and workflow step", () => {

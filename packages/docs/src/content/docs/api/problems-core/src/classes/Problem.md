@@ -22,6 +22,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 - [`ContactPolicyAdminAccessProblem`](/api/admin-core/src/classes/contactpolicyadminaccessproblem/)
 - [`ContactPolicyAdminProblem`](/api/admin-core/src/classes/contactpolicyadminproblem/)
 - [`CreditOperationsValidationProblem`](/api/admin-core/src/classes/creditoperationsvalidationproblem/)
+- [`CustomerExplorerProblem`](/api/admin-core/src/classes/customerexplorerproblem/)
 - [`EngagementOperationsValidationProblem`](/api/admin-core/src/classes/engagementoperationsvalidationproblem/)
 - [`EventCatalogValidationProblem`](/api/admin-core/src/classes/eventcatalogvalidationproblem/)
 - [`ExperienceAdminProblem`](/api/admin-core/src/classes/experienceadminproblem/)

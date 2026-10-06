@@ -689,6 +689,7 @@ jobs:
               - 'packages/admin-core/src/**'
               - 'packages/admin-generated/src/**'
               - 'packages/admin-ops/src/**'
+              - 'packages/admin-postgres/src/**'
               - 'packages/admin-react/src/**'
               - 'packages/ai-usage/src/**'
               - 'packages/analytics-core/src/**'

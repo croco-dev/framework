@@ -335,3 +335,10 @@ export type { GrowthAnalysisPanelProps } from "./libs/GrowthAnalysisPanel";
 
 export { JourneyConsole } from "./libs/JourneyConsole";
 export type { JourneyConsoleProps } from "./libs/JourneyConsole";
+
+export { CustomerExplorer } from "./libs/CustomerExplorer";
+export type {
+  CustomerExplorerNote,
+  CustomerExplorerOperations,
+  CustomerExplorerProps,
+} from "./libs/CustomerExplorer";

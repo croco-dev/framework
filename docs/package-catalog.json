@@ -477,6 +477,12 @@
       "runtimes": [],
       "domain": "Admin Ops"
     },
+    "admin-postgres": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node"],
+      "domain": "Admin"
+    },
     "admin-react": {
       "role": "Plugins",
       "subtype": "presentation",
@@ -1301,6 +1307,7 @@
       "description": "Concrete datastore, SaaS provider, and external service adapters",
       "packages": [
         "access-drizzle",
+        "admin-postgres",
         "analytics-drizzle",
         "audit-drizzle",
         "auth-better-auth",
@@ -1521,6 +1528,7 @@
       "label": "🔴 alpha/WIP",
       "packages": [
         "admin-generated",
+        "admin-postgres",
         "admin-react",
         "analytics-drizzle",
         "auth-better-auth",
@@ -2224,6 +2232,18 @@
           "compare-and-set claim transitions",
           "deterministic idempotency receipts",
           "indeterminate grant reconciliation"
+        ]
+      },
+      "admin-postgres": {
+        "domain": "Admin",
+        "adapter": "PostgreSQL Customer Explorer repository and timeline source",
+        "runtimes": ["node"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "scoped immutable samples",
+          "atomic audited note revisions",
+          "explicit retention purge",
+          "bounded live source keyset pagination"
         ]
       }
     }

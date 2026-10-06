@@ -4,6 +4,7 @@
   "@croco/admin-core": "contracts",
   "@croco/admin-generated": "tooling",
   "@croco/admin-ops": "contracts",
+  "@croco/admin-postgres": "plugins",
   "@croco/admin-react": "plugins",
   "@croco/ai-usage": "plugins",
   "@croco/analytics-core": "contracts",
