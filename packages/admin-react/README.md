@@ -600,8 +600,9 @@ the shared customer and operator flow.
 
 `TargetingImpactInspector` renders controlled loading, empty, denied, unavailable, error,
 partial, and ready states. Its `onReplay(unknownPolicy)` callback must invoke the
-server-owned `TargetingImpactOperations`; its optional `onExport` callback uses the
-same server authorization and aggregate projection as report reads.
+server-owned `TargetingImpactOperations`. Callers must wire its optional `onExport`
+callback to a server export operation that applies the same authorization and
+aggregate projection as report reads; the component does not enforce these protections.
 
 The comparison keeps historical populations, observed dispatch costs, temporal visit
 categories, and crediting assumptions separate. Missing costs and history remain
