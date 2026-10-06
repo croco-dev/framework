@@ -550,6 +550,15 @@ shown revision and a fresh idempotency key, and display operation failure withou
 marking it successful. Dry-runs never publish the edited definition. The host owns
 publication policy and production registration.
 
+### Reminder operations
+
+`ReminderOperationsPanel` shows canonical local and UTC next times and occurrence
+outcomes from `ReminderOperationsSource`. `reminder.read` controls loading;
+`reminder.cancel` exposes cancellation with actor, reason, idempotency key and
+expected version. The server independently authorizes both operations. Operators
+cannot enable or change owner schedules. Change `scopeKey` with authenticated
+scope and decode server timestamps to `Date` values before returning source data.
+
 ## Customer Explorer
 
 `CustomerExplorer` accepts a required scope, saved sample ID and `CustomerExplorerOperations` callbacks bound to an authorized server `CustomerExplorerService`. It reads the saved sample, navigates achievers and prior-step comparisons, and loads 50 events per source per page. Source completeness/truncation, anchor phase, observed time, gaps and session grouping remain visible. Subject progress is explicitly local to the current workspace session.

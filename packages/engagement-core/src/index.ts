@@ -243,3 +243,34 @@ export type {
   ContactPolicyReservationRef,
   EngagementContactPolicyGate,
 } from "./libs/ContactPolicy";
+export {
+  ReminderInvalidProblem,
+  ReminderConflictProblem,
+  ReminderAccessDeniedProblem,
+  ReminderNotFoundProblem,
+  ReminderDispatchProblem,
+  assertReminderScope,
+  assertReminderInput,
+  assertReminderSchedule,
+  reminderOccurrenceId,
+} from "./libs/ReminderContracts";
+export type {
+  ReminderScope,
+  ReminderSchedule,
+  ReminderInput,
+  Reminder,
+  ReminderOccurrence,
+  ReminderMutation,
+  ReminderTransaction,
+  ReminderStore,
+  ReminderActor,
+  ReminderAccess,
+  ReminderCommand,
+  ReminderRevisionCommand,
+} from "./libs/ReminderContracts";
+export { nextOccurrence } from "./libs/nextOccurrence";
+export { createReminderEngagementSender } from "./libs/ReminderEngagement";
+export type { ReminderMessageBinding } from "./libs/ReminderEngagement";
+export { ReminderService } from "./libs/ReminderService";
+export type { ReminderServiceOptions } from "./libs/ReminderService";
+export { InMemoryReminderStore } from "./libs/InMemoryReminderStore";

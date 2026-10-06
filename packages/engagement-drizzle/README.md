@@ -113,3 +113,25 @@ idempotently. For rollback, stop contact-policy writers before removing these fo
 them discards deduplication and budget evidence. `dropEngagementSchema` removes all engagement tables
 and is intended for disposable test databases, not a production feature rollback. Preserve unknown
 reservations until provider acceptance is reconciled.
+
+## Reminder persistence
+
+Use `DrizzleReminderStore(db)` with `ReminderService`. It locks a dedicated
+app/environment/tenant/subject bucket before reading reminders, occurrences and mutation audit,
+including the first transaction for an empty subject. Competing database connections therefore
+serialize creation, revision checks and occurrence claims. Callback and database failures roll back
+the entire transaction. The store rejects reminder and audit writes outside the locked subject and
+occurrences whose reminder is absent from that subject.
+
+Reminders and occurrences use separate typed tables. Mutation results retain their original revision
+for idempotent replay; persisted timestamps are returned as `Date` values. Reconciliation audit keeps
+the actor, reason, occurrence ID, evidence reference and acceptance outcome. Store opaque evidence
+references rather than provider responses or credentials. Unknown occurrences remain available after
+a process restart for explicit reconciliation.
+
+Run `createEngagementSchema` in your migration process to add the four reminder tables idempotently.
+Existing engagement data is preserved. For feature rollback, stop reminder writers before removing
+`engagement_reminder_mutations`, `engagement_reminder_occurrences`, `engagement_reminders`, then
+`engagement_reminder_buckets`. Removing them discards replay and acceptance evidence; reconcile
+unknown outcomes and retain the required audit before removal. `dropEngagementSchema` removes all
+engagement tables and is intended for disposable databases.

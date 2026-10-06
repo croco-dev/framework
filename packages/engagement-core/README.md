@@ -352,3 +352,38 @@ continues to return the original stored revision. A resolver error fails the sen
 Campaign broadcasts pass `campaignId` as send metadata without changing logical send keys. Charged
 reservations retain it. Limit and spacing denials expose `blockingCampaignIds`, and persisted denial
 evidence includes both the denied `campaignId` and the campaigns whose reservations blocked it.
+
+## User-owned weekly reminders
+
+`ReminderService` provides explicit user create/update/snooze/cancel commands, read-only
+`list`/`history`, `dueOccurrences`, `runDue`, and evidence-backed `reconcile`. Every command
+requires app/environment/tenant, a verified subject, actor/reason, server authorization, and
+mutations require an idempotency key. Create/update/snooze require the subject's own request;
+operators cannot enable a canceled reminder. The application validates resource ownership
+and registered topic/channel choices with `validateInput`.
+
+`nextOccurrence(schedule, timezone, referenceTime)` is pure and returns the first weekly
+instant strictly after the reference. Weekdays use Sunday=0. IANA zones are required. DST
+gaps advance to the next valid minute; folds use their first instant once. The host's IANA
+timezone database determines historical rules. Late delivery requires an explicit nonnegative
+`lateDeliveryMs`; zero is the default policy choice. `skip_missed` expires overdue occurrences
+and advances directly to the next future schedule, without sending a backlog.
+
+Snooze changes one next occurrence; the weekly schedule remains unchanged. Update, timezone
+change, snooze and cancel increment the version and invalidate pending/claimed occurrences.
+The store serializes a subject's mutations and dispatch admission. `runDue` rechecks the
+version, cancellation, deadline and application resource predicate before durably recording
+`unknown`. That committed transition is the admission boundary. Cancellation completed before
+admission prevents dispatch; after admission it cannot promise recall. Already queued messages
+remain queued. Admission happens before invoking the external engagement sender. Provider or
+storage failures after admission retain unknown acceptance and require reconciliation; restart
+never automatically resends unknown occurrences. Reconciliation records actor/reason/evidence.
+
+`createReminderEngagementSender(engagement, bindings)` uses the existing EngagementService
+recipient, preference, suppression, rendering and notification path. Register one message
+channel per topic/channel binding; the application owns service/marketing classification.
+Reminder rows contain resource references, not endpoint addresses or tokens.
+
+See [`examples/user-reminders`](../../examples/user-reminders/README.md) for PostgreSQL,
+user/operator screens, an existing Cron trigger bridge and a CLI tick. The in-memory store
+is a development/test adapter; deployment migration and subject inventory belong to the host.

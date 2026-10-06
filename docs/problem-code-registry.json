@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 909,
+  "problemCount": 915,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -4257,6 +4257,36 @@
         {
           "file": "packages/admin-core/src/libs/OfferConsole.ts",
           "line": 187,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "admin-core/reminder-operation-invalid",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#admin-core-reminder-operation-invalid",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/admin-core/src/libs/ReminderOperations.ts",
+          "line": 28,
           "column": 5,
           "kind": "problem-constructor"
         }
@@ -10802,6 +10832,156 @@
         {
           "file": "packages/engagement-core/src/libs/EngagementService.ts",
           "line": 1168,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/reminder-access-denied",
+      "category": "Forbidden",
+      "status": 403,
+      "title": "Forbidden",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-reminder-access-denied",
+      "recovery": {
+        "cause": "The authenticated caller is not allowed to perform the requested action.",
+        "userAction": "Request the required permission or choose an allowed action.",
+        "operatorAction": "Review policy, role, tenant, entitlement, and impersonation context.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/ReminderContracts.ts",
+          "line": 92,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/reminder-conflict",
+      "category": "Conflict",
+      "status": 409,
+      "title": "Conflict",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-reminder-conflict",
+      "recovery": {
+        "cause": "The request conflicts with current state or an idempotency constraint.",
+        "userAction": "Refresh state, resolve the conflict, and retry with the updated intent.",
+        "operatorAction": "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        "retryability": "conditional",
+        "redactionPolicy": "safe-message",
+        "telemetry": {
+          "eventName": "croco.problem.warning",
+          "severity": "warning",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/ReminderContracts.ts",
+          "line": 87,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/reminder-dispatch-failed",
+      "category": "InternalServerError",
+      "status": 500,
+      "title": "Internal Server Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-reminder-dispatch-failed",
+      "recovery": {
+        "cause": "Croco or an upstream dependency failed after accepting the request.",
+        "userAction": "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        "operatorAction": "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        "retryability": "conditional",
+        "redactionPolicy": "operator-only",
+        "telemetry": {
+          "eventName": "croco.problem.error",
+          "severity": "error",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/ReminderContracts.ts",
+          "line": 174,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/reminder-invalid",
+      "category": "ValidationError",
+      "status": 422,
+      "title": "Validation Error",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-reminder-invalid",
+      "recovery": {
+        "cause": "The request or generated contract failed schema or semantic validation.",
+        "userAction": "Fix the invalid fields and retry with schema-conformant input.",
+        "operatorAction": "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/ReminderContracts.ts",
+          "line": 82,
+          "column": 5,
+          "kind": "problem-constructor"
+        }
+      ]
+    },
+    {
+      "code": "engagement-core/reminder-not-found",
+      "category": "NotFound",
+      "status": 404,
+      "title": "Not Found",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#engagement-core-reminder-not-found",
+      "recovery": {
+        "cause": "The requested resource or route-visible record does not exist.",
+        "userAction": "Verify the identifier and refresh the resource list before retrying.",
+        "operatorAction": "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/engagement-core/src/libs/ReminderContracts.ts",
+          "line": 101,
           "column": 5,
           "kind": "problem-constructor"
         }

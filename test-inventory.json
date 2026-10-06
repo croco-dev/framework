@@ -212,6 +212,12 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/ReminderOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/TenantWorkspace.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -441,6 +447,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/PolicyReleaseConsoleInteraction.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ReminderOperationsPanel.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -1886,6 +1898,12 @@
       "owner": "@croco/engagement-core"
     },
     {
+      "path": "packages/engagement-core/src/tests/NextOccurrence.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-core"
+    },
+    {
       "path": "packages/engagement-core/src/tests/PublishedMessageContracts.spec.ts",
       "lane": "published",
       "qualifiers": [],
@@ -1893,6 +1911,18 @@
     },
     {
       "path": "packages/engagement-core/src/tests/PushEndpointLifecycle.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-core"
+    },
+    {
+      "path": "packages/engagement-core/src/tests/ReminderEngagement.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-core"
+    },
+    {
+      "path": "packages/engagement-core/src/tests/ReminderService.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/engagement-core"
@@ -1930,6 +1960,24 @@
     {
       "path": "packages/engagement-drizzle/src/tests/DrizzleEngagementStore.spec.ts",
       "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-drizzle"
+    },
+    {
+      "path": "packages/engagement-drizzle/src/tests/DrizzleReminderStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/engagement-drizzle"
+    },
+    {
+      "path": "packages/engagement-drizzle/src/tests/DrizzleReminderStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/engagement-drizzle"
+    },
+    {
+      "path": "packages/engagement-drizzle/src/tests/ReminderRunner.postgres.spec.ts",
+      "lane": "live",
       "qualifiers": [],
       "owner": "@croco/engagement-drizzle"
     },
@@ -2595,6 +2643,12 @@
     },
     {
       "path": "packages/frontend-react/src/tests/OfferCard.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
+      "path": "packages/frontend-react/src/tests/ReminderSettingsForm.spec.tsx",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/frontend-react"

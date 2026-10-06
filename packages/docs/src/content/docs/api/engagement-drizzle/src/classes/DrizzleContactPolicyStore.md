@@ -31,7 +31,7 @@ Serializes budget evaluation and ledger updates across PostgreSQL connections.
 
 ### read()
 
-> **read**(`scope`, `subject`): `Promise`\<readonly `Readonly`\<\{ `campaignId?`: `string`; `channel`: `"email"` \| `"push"` \| `"sms"` \| `"inApp"`; `createdAt`: `Date`; `executionIds`: readonly `string`[]; `exempt`: `boolean`; `expiresAt`: `Date`; `logicalSendId`: `string`; `messageId`: `string`; `payloadFingerprint`: `string`; `policyVersion`: `string`; `recipient`: `string`; `reconciliation?`: [`ContactPolicyReconciliation`](/api/engagement-core/src/type-aliases/contactpolicyreconciliation/); `scope`: [`ContactPolicyScope`](/api/engagement-core/src/type-aliases/contactpolicyscope/); `state`: `"released"` \| `"unknown"` \| `"reserved"` \| `"committed"`; `subject`: `string`; `topic`: `string`; `windowKey`: `string`; \}\>[]\>
+> **read**(`scope`, `subject`): `Promise`\<readonly `Readonly`\<\{ `campaignId?`: `string`; `channel`: `"email"` \| `"push"` \| `"sms"` \| `"inApp"`; `createdAt`: `Date`; `executionIds`: readonly `string`[]; `exempt`: `boolean`; `expiresAt`: `Date`; `logicalSendId`: `string`; `messageId`: `string`; `payloadFingerprint`: `string`; `policyVersion`: `string`; `recipient`: `string`; `reconciliation?`: [`ContactPolicyReconciliation`](/api/engagement-core/src/type-aliases/contactpolicyreconciliation/); `scope`: [`ContactPolicyScope`](/api/engagement-core/src/type-aliases/contactpolicyscope/); `state`: `"unknown"` \| `"released"` \| `"reserved"` \| `"committed"`; `subject`: `string`; `topic`: `string`; `windowKey`: `string`; \}\>[]\>
 
 #### Parameters
 
@@ -45,7 +45,7 @@ Serializes budget evaluation and ledger updates across PostgreSQL connections.
 
 #### Returns
 
-`Promise`\<readonly `Readonly`\<\{ `campaignId?`: `string`; `channel`: `"email"` \| `"push"` \| `"sms"` \| `"inApp"`; `createdAt`: `Date`; `executionIds`: readonly `string`[]; `exempt`: `boolean`; `expiresAt`: `Date`; `logicalSendId`: `string`; `messageId`: `string`; `payloadFingerprint`: `string`; `policyVersion`: `string`; `recipient`: `string`; `reconciliation?`: [`ContactPolicyReconciliation`](/api/engagement-core/src/type-aliases/contactpolicyreconciliation/); `scope`: [`ContactPolicyScope`](/api/engagement-core/src/type-aliases/contactpolicyscope/); `state`: `"released"` \| `"unknown"` \| `"reserved"` \| `"committed"`; `subject`: `string`; `topic`: `string`; `windowKey`: `string`; \}\>[]\>
+`Promise`\<readonly `Readonly`\<\{ `campaignId?`: `string`; `channel`: `"email"` \| `"push"` \| `"sms"` \| `"inApp"`; `createdAt`: `Date`; `executionIds`: readonly `string`[]; `exempt`: `boolean`; `expiresAt`: `Date`; `logicalSendId`: `string`; `messageId`: `string`; `payloadFingerprint`: `string`; `policyVersion`: `string`; `recipient`: `string`; `reconciliation?`: [`ContactPolicyReconciliation`](/api/engagement-core/src/type-aliases/contactpolicyreconciliation/); `scope`: [`ContactPolicyScope`](/api/engagement-core/src/type-aliases/contactpolicyscope/); `state`: `"unknown"` \| `"released"` \| `"reserved"` \| `"committed"`; `subject`: `string`; `topic`: `string`; `windowKey`: `string`; \}\>[]\>
 
 #### Implementation of
 

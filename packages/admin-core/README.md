@@ -271,6 +271,14 @@ uses an isolated, non-dispatching preview. Returned views exclude raw subjects,
 business objects, action parameters and audit payloads; receipt reason codes are
 allowlisted. `safeResume` is false when admitted or indeterminate actions remain.
 
+### Reminder operations contract
+
+`ReminderOperationsSource` loads reminder rows and occurrence outcomes, and accepts
+operator cancellation only. `assertReminderOperatorCancel` validates scope,
+actor, reason, idempotency key and expected version; the adapter must also enforce
+server authorization and compare-and-swap. `loadReminderOperations` checks
+`reminder.read` before calling the source and preserves source failure evidence.
+
 ## Customer Explorer
 
 Timestamp inputs require an explicit ISO timezone and support up to six fractional second digits. Finer precision is rejected rather than rounded; occurrence order, anchor phases and observation windows preserve microseconds.

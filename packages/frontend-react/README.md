@@ -357,3 +357,13 @@ export type FrontendAuthBridgeState = {
 ## 라이선스
 
 Apache-2.0
+
+### Owner reminder controls
+
+`ReminderSettingsForm` loads an owner-scoped `ReminderSettingsSource`, previews the
+next occurrence on the server, then creates or updates an explicit schedule.
+`SnoozeControl` accepts a UTC timestamp for a one-shot snooze. Cancellation stops
+future occurrences; messages already accepted cannot be recalled. Change
+`scopeKey` when the authenticated owner changes. The server must derive identity,
+authorize every request, enforce version checks, and return decoded `Date` values.
+Partial history and failed mutations require reload before further writes.
