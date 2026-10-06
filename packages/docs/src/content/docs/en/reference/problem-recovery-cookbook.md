@@ -602,7 +602,6 @@ This cookbook documents 922 public Croco Problem codes. The deterministic JSON r
 | [`metrics-core/gross-margin-required`](#metrics-core-gross-margin-required)                                                           | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`metrics-core/invalid-activation-input`](#metrics-core-invalid-activation-input)                                                     | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`metrics-core/invalid-carrying-capacity-config`](#metrics-core-invalid-carrying-capacity-config)                                     | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
-| [`metrics-core/invalid-policy-replay`](#metrics-core-invalid-policy-replay)                                                           | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`metrics-core/invalid-retention-movement`](#metrics-core-invalid-retention-movement)                                                 | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`metrics-core/invalid-user-carrying-capacity-metric`](#metrics-core-invalid-user-carrying-capacity-metric)                           | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`metrics-core/mixed-currency-mrr`](#metrics-core-mixed-currency-mrr)                                                                 | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
@@ -11540,24 +11539,6 @@ Sources:
 Sources:
 
 - `packages/metrics-core/src/libs/problems/MetricsProblems.ts:19:1` (problem-class)
-
-<a id="metrics-core-invalid-policy-replay"></a>
-
-## `metrics-core/invalid-policy-replay`
-
-- Category: `ValidationError`
-- HTTP status: `422` Validation Error
-- Retryability: `not-retryable`
-- Redaction policy: `public`
-- Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
-
-Sources:
-
-- `packages/metrics-core/src/libs/replay/PolicyReplay.ts:101:1` (problem-class)
 
 <a id="metrics-core-invalid-retention-movement"></a>
 
