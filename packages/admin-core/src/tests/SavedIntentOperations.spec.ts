@@ -72,6 +72,17 @@ describe("SavedIntentOperations", () => {
   });
   it("keeps private labels, URLs, resource ids, progress and subjects out of the console response", async () => {
     const { service, operations } = setup();
+    const enrichedExclusion = {
+      scope,
+      subject,
+      resourceId: "private-report",
+      label: "Private title",
+      safeUrl: "/private/url",
+      progressRef: "private-progress",
+      intentId: "removed",
+      resourceType: "report",
+      reason: "removed" as const,
+    };
     vi.mocked(service.listResumeCandidates).mockResolvedValue({
       candidates: [
         {
@@ -95,7 +106,7 @@ describe("SavedIntentOperations", () => {
           rankReason: "recent",
         },
       ],
-      exclusions: [{ intentId: "removed", resourceType: "report", reason: "removed" }],
+      exclusions: [enrichedExclusion],
       nextOffset: 5,
     });
     const result = await operations.inspect(subject, access, { offset: 0, limit: 5 });

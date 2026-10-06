@@ -405,12 +405,13 @@ export function createSavedIntentService(
       object(input, resourceKeys);
       resource(input);
       await authorize(input, "read");
-      const intent = (await rows(input)).find(
-        (row) =>
-          row.resourceType === input.resourceType &&
-          row.resourceId === input.resourceId &&
-          row.sourceKind === input.sourceKind,
-      );
+      const intent = await options.store.read({
+        scope: input.scope,
+        subject: input.subject,
+        resourceType: input.resourceType,
+        resourceId: input.resourceId,
+        sourceKind: input.sourceKind,
+      });
       if (!intent) return undefined;
       const { progressRef: _progress, ...metadata } = intent;
       return metadata;
@@ -419,12 +420,13 @@ export function createSavedIntentService(
       object(input, resourceKeys);
       resource(input);
       await authorize(input, "read");
-      const intent = (await rows(input)).find(
-        (row) =>
-          row.resourceType === input.resourceType &&
-          row.resourceId === input.resourceId &&
-          row.sourceKind === input.sourceKind,
-      );
+      const intent = await options.store.read({
+        scope: input.scope,
+        subject: input.subject,
+        resourceType: input.resourceType,
+        resourceId: input.resourceId,
+        sourceKind: input.sourceKind,
+      });
       if (!intent || intent.state === "removed")
         throw new SavedIntentDeniedProblem("Saved intent unavailable");
       const settings = await policy(input, input.resourceType);

@@ -157,6 +157,19 @@ export class PostgresSavedIntentStore implements SavedIntentStore {
     });
   }
 
+  async read(input: Parameters<SavedIntentStore["read"]>[0]): Promise<SavedIntent | undefined> {
+    const key = scopeKey(input.scope);
+    const subject = subjectKey(input.subject);
+    [input.resourceType, input.resourceId].forEach(required);
+    if (input.sourceKind !== "explicit" && input.sourceKind !== "recent")
+      throw new SavedIntentInvalidProblem("Invalid sourceKind");
+    const result = await this.database.execute(sql`SELECT intent FROM croco_saved_intents
+      WHERE scope_key = ${key} AND subject_key = ${subject}
+        AND resource_type = ${input.resourceType} AND resource_id = ${input.resourceId}
+        AND source_kind = ${input.sourceKind}`);
+    return result.rows[0]?.intent as SavedIntent | undefined;
+  }
+
   async list(
     input: SubjectInput & Readonly<{ offset: number; limit: number }>,
   ): Promise<readonly SavedIntent[]> {

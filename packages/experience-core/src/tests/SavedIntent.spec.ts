@@ -47,6 +47,19 @@ function fixture(items: readonly SavedIntent[] = []) {
         pinOrder: command.pinOrder ?? undefined,
       }),
     ),
+    read: vi.fn(async (key) =>
+      items.find(
+        (item) =>
+          item.scope.appId === key.scope.appId &&
+          item.scope.environment === key.scope.environment &&
+          item.scope.tenantId === key.scope.tenantId &&
+          item.subject.kind === key.subject.kind &&
+          item.subject.id === key.subject.id &&
+          item.resourceType === key.resourceType &&
+          item.resourceId === key.resourceId &&
+          item.sourceKind === key.sourceKind,
+      ),
+    ),
     list: vi.fn(async () => items),
     readPolicy: vi.fn(async () => undefined),
     updatePolicy: vi.fn(async (input) => input.policy),
@@ -102,6 +115,76 @@ describe("Saved Intent server service", () => {
     expect(store.mutate).not.toHaveBeenCalled();
     expect(store.deleteSubject).not.toHaveBeenCalled();
     expect(store.purgeExpired).not.toHaveBeenCalled();
+  });
+  it("reads and resolves an exact intent even when the subject exceeds list capacity", async () => {
+    const target = intent({ resourceId: "target", revision: 7 });
+    const { service, store, resolver } = fixture([
+      ...Array.from({ length: 10001 }, (_, index) => intent({ resourceId: String(index) })),
+      target,
+    ]);
+    const key = {
+      ...access,
+      resourceType: "report",
+      resourceId: "target",
+      sourceKind: "explicit" as const,
+    };
+    expect(await service.readIntent(key)).toEqual(expect.objectContaining({ revision: 7 }));
+    expect((await service.readIntent(key))?.progressRef).toBeUndefined();
+    expect(await service.resolveIntent(key)).toEqual(
+      expect.objectContaining({
+        availability: "available",
+        intent: target,
+      }),
+    );
+    expect(store.list).not.toHaveBeenCalled();
+    expect(store.read).toHaveBeenCalledWith({
+      scope: access.scope,
+      subject: access.subject,
+      resourceType: "report",
+      resourceId: "target",
+      sourceKind: "explicit",
+    });
+    resolver.mockResolvedValue({ availability: "denied" } as never);
+    expect((await service.resolveIntent(key)).intent.progressRef).toBeUndefined();
+    await expect(service.listResumeCandidates(access)).rejects.toBeInstanceOf(
+      SavedIntentInvalidProblem,
+    );
+  });
+  it("authorizes direct reads before accessing the store", async () => {
+    const { service, store, authorize } = fixture([intent()]);
+    authorize.mockResolvedValue(false);
+    const key = {
+      ...access,
+      resourceType: "report",
+      resourceId: "r",
+      sourceKind: "explicit" as const,
+    };
+    await expect(service.readIntent(key)).rejects.toBeInstanceOf(SavedIntentDeniedProblem);
+    await expect(service.resolveIntent(key)).rejects.toBeInstanceOf(SavedIntentDeniedProblem);
+    expect(store.read).not.toHaveBeenCalled();
+  });
+  it("does not read another scope, subject or source kind", async () => {
+    const { service } = fixture([intent()]);
+    const key = {
+      ...access,
+      resourceType: "report",
+      resourceId: "r",
+      sourceKind: "explicit" as const,
+    };
+    for (const alternate of [
+      { ...key, scope: { ...key.scope, appId: "other" } },
+      { ...key, scope: { ...key.scope, environment: "other" } },
+      { ...key, scope: { ...key.scope, tenantId: "other" } },
+      { ...key, subject: { ...key.subject, kind: "other" } },
+      { ...key, subject: { ...key.subject, id: "other" } },
+      { ...key, resourceId: "other" },
+      { ...key, sourceKind: "recent" as const },
+    ]) {
+      expect(await service.readIntent(alternate)).toBeUndefined();
+      await expect(service.resolveIntent(alternate)).rejects.toBeInstanceOf(
+        SavedIntentDeniedProblem,
+      );
+    }
   });
   it("deduplicates explicit ahead of recent globally, then orders pins, recency and stable ids before pagination", async () => {
     const { service } = fixture([

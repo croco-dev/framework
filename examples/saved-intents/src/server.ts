@@ -64,10 +64,16 @@ async function main(): Promise<void> {
         return;
       }
       if (request.method === "GET" && url.pathname.startsWith("/reports/")) {
-        const report = await readReport(
-          scope,
-          decodeURIComponent(url.pathname.slice("/reports/".length)),
-        );
+        let resourceId: string;
+        try {
+          resourceId = decodeURIComponent(url.pathname.slice("/reports/".length));
+        } catch (error) {
+          if (!(error instanceof URIError)) throw error;
+          response.statusCode = 403;
+          response.end("Report unavailable");
+          return;
+        }
+        const report = await readReport(scope, resourceId);
         if (
           !report ||
           report.deleted ||

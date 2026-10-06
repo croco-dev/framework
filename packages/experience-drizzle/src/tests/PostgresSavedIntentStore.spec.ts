@@ -73,6 +73,50 @@ describe("PostgresSavedIntentStore", () => {
     expect(queries[0]?.params).toEqual(['["shop","test","one"]', '["customer","one"]', 20, 10]);
     await expect(store.list({ scope, subject, offset: -1, limit: 20 })).rejects.toThrow();
   });
+  it("reads the unique resource key without a list limit and returns absence explicitly", async () => {
+    const intent = { ...input, revision: 3, state: "removed" };
+    const { store, queries } = harness([[{ intent }], []]);
+    const key = {
+      scope,
+      subject,
+      resourceType: "report",
+      resourceId: "one",
+      sourceKind: "explicit" as const,
+    };
+    expect(await store.read(key)).toEqual(intent);
+    expect(queries[0]?.sql).toMatch(/scope_key = \$1 AND subject_key = \$2/);
+    expect(queries[0]?.sql).toMatch(/resource_type = \$3 AND resource_id = \$4/);
+    expect(queries[0]?.sql).toContain("source_kind = $5");
+    expect(queries[0]?.sql).not.toMatch(/LIMIT|OFFSET/);
+    expect(queries[0]?.params).toEqual([
+      '["shop","test","one"]',
+      '["customer","one"]',
+      "report",
+      "one",
+      "explicit",
+    ]);
+    expect(await store.read({ ...key, sourceKind: "recent" })).toBeUndefined();
+    expect(queries[1]?.params.at(-1)).toBe("recent");
+  });
+  it("validates every direct read identity before querying", async () => {
+    const { store, queries } = harness();
+    const key = {
+      scope,
+      subject,
+      resourceType: "report",
+      resourceId: "one",
+      sourceKind: "explicit" as const,
+    };
+    for (const invalid of [
+      { ...key, scope: { ...scope, tenantId: "" } },
+      { ...key, subject: { ...subject, id: "" } },
+      { ...key, resourceType: "" },
+      { ...key, resourceId: "" },
+      { ...key, sourceKind: "invalid" as never },
+    ])
+      await expect(store.read(invalid)).rejects.toThrow();
+    expect(queries).toHaveLength(0);
+  });
   it("privacy deletes all subject copies under the exclusive subject lock", async () => {
     const { store, queries } = harness();
     await store.deleteSubject({ scope, subject });
@@ -135,5 +179,14 @@ describe("PostgresSavedIntentStore", () => {
       },
     });
     await expect(store.list({ scope, subject, offset: 0, limit: 10 })).rejects.toBe(failure);
+    await expect(
+      store.read({
+        scope,
+        subject,
+        resourceType: "report",
+        resourceId: "one",
+        sourceKind: "explicit",
+      }),
+    ).rejects.toBe(failure);
   });
 });

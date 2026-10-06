@@ -8,7 +8,9 @@
     "typecheck": "tsc --noEmit",
     "build:browser": "tsup",
     "dev": "pnpm build:browser && tsx src/server.ts",
-    "migrate": "tsx src/migrate.ts"
+    "migrate": "tsx src/migrate.ts",
+    "test": "vitest run",
+    "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json"
   },
   "dependencies": {
     "@croco/admin-core": "workspace:*",

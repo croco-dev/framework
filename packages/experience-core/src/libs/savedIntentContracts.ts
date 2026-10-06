@@ -91,6 +91,9 @@ export type SavedIntentPolicyMutation = Readonly<{
 /** Implement atomically: receipt equality, resource suppression, unique key and revision CAS. */
 export interface SavedIntentStore {
   mutate(input: SavedIntentMutation): Promise<SavedIntent>;
+  read(
+    input: Pick<SavedIntent, "scope" | "subject" | "resourceType" | "resourceId" | "sourceKind">,
+  ): Promise<SavedIntent | undefined>;
   list(
     input: Readonly<{
       scope: ExperienceScope;

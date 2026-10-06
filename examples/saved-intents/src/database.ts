@@ -17,16 +17,22 @@ export const database: ExperiencePgDatabase = {
   ...executor(pool),
   transaction: async (work) => {
     const client = await pool.connect();
+    let discard = false;
     try {
       await client.query("BEGIN");
       const result = await work(executor(client));
       await client.query("COMMIT");
       return result;
     } catch (error) {
-      await client.query("ROLLBACK");
+      try {
+        await client.query("ROLLBACK");
+      } catch {
+        discard = true;
+        process.stderr.write("Saved intent transaction rollback failed; connection discarded\n");
+      }
       throw error;
     } finally {
-      client.release();
+      client.release(discard);
     }
   },
 };

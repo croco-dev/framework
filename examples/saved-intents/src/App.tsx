@@ -1,3 +1,4 @@
+import { request } from "./request";
 import { createElement as h, useCallback, useEffect, useState } from "react";
 import { SavedItems } from "@croco/frontend-react";
 import { SavedIntentConsole } from "@croco/admin-react";
@@ -10,18 +11,6 @@ import type {
   SavedIntentPolicy,
 } from "@croco/experience-core";
 
-async function request<T>(path: string, body: unknown = {}): Promise<T> {
-  const response = await fetch(path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
-  const value = await response.json();
-  if (!response.ok)
-    throw Object.assign(new Error(value.code), { code: value.code, status: response.status });
-  return value as T;
-}
 function denied(error: unknown): boolean {
   return error instanceof Error && "status" in error && error.status === 403;
 }

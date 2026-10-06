@@ -81,6 +81,25 @@ describe.skipIf(!url)("PostgreSQL saved intent durability", () => {
       const save = command({ progressRef: "report-progress:5" });
       const saved = await storeA.mutate(save);
       expect(saved.revision).toBe(1);
+      const readKey = {
+        scope,
+        subject,
+        resourceType: "report",
+        resourceId: "1",
+        sourceKind: "explicit" as const,
+      };
+      expect(await storeB.read(readKey)).toEqual(saved);
+      for (const otherKey of [
+        { ...readKey, scope: { ...scope, appId: "other" } },
+        { ...readKey, scope: { ...scope, environment: "other" } },
+        { ...readKey, scope: { ...scope, tenantId: "other" } },
+        { ...readKey, subject: { ...subject, kind: "other" } },
+        { ...readKey, subject: { ...subject, id: "other" } },
+        { ...readKey, resourceType: "other" },
+        { ...readKey, resourceId: "other" },
+        { ...readKey, sourceKind: "recent" as const },
+      ])
+        expect(await storeB.read(otherKey)).toBeUndefined();
       expect(
         await storeB.mutate({ ...save, id: randomUUID(), now: "2026-10-02T12:00:00Z" }),
       ).toEqual(saved);

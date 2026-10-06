@@ -68,6 +68,24 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/saved-intents/src/tests/Database.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/saved-intents/src/tests/Request.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/saved-intents/src/tests/Server.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "packages/access-core/src/tests/Access.spec.ts",
       "lane": "fast",
       "qualifiers": [],

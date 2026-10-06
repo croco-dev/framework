@@ -107,7 +107,11 @@ export class SavedIntentOperations {
         availability,
         rankReason,
       })),
-      exclusions: result.exclusions,
+      exclusions: result.exclusions.map(({ intentId, resourceType, reason }) => ({
+        intentId,
+        resourceType,
+        reason,
+      })),
       ...(result.nextOffset === undefined ? {} : { nextOffset: result.nextOffset }),
     };
   }

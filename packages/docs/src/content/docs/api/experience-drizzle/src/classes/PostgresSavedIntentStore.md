@@ -113,6 +113,26 @@ Purge expired private rows and receipts; retain minimal resource suppression.
 
 ---
 
+### read()
+
+> **read**(`input`): `Promise`\<`Readonly`\<\{ `id`: `string`; `lastUsedAt`: `string`; `pinOrder?`: `number`; `progressRef?`: `string`; `resourceId`: `string`; `resourceType`: `string`; `revision`: `number`; `savedAt`: `string`; `scope`: [`ExperienceScope`](/api/experience-core/src/type-aliases/experiencescope/); `sourceKind`: [`SavedIntentSourceKind`](/api/experience-core/src/type-aliases/savedintentsourcekind/); `state`: `"saved"` \| `"completed"` \| `"removed"`; `subject`: [`ExperienceSubject`](/api/experience-core/src/type-aliases/experiencesubject/); `updatedAt`: `string`; \}\> \| `undefined`\>
+
+#### Parameters
+
+##### input
+
+`Pick`\<`Readonly`\<\{ `id`: `string`; `lastUsedAt`: `string`; `pinOrder?`: `number`; `progressRef?`: `string`; `resourceId`: `string`; `resourceType`: `string`; `revision`: `number`; `savedAt`: `string`; `scope`: [`ExperienceScope`](/api/experience-core/src/type-aliases/experiencescope/); `sourceKind`: [`SavedIntentSourceKind`](/api/experience-core/src/type-aliases/savedintentsourcekind/); `state`: `"saved"` \| `"completed"` \| `"removed"`; `subject`: [`ExperienceSubject`](/api/experience-core/src/type-aliases/experiencesubject/); `updatedAt`: `string`; \}\>, `"scope"` \| `"subject"` \| `"resourceType"` \| `"resourceId"` \| `"sourceKind"`\>
+
+#### Returns
+
+`Promise`\<`Readonly`\<\{ `id`: `string`; `lastUsedAt`: `string`; `pinOrder?`: `number`; `progressRef?`: `string`; `resourceId`: `string`; `resourceType`: `string`; `revision`: `number`; `savedAt`: `string`; `scope`: [`ExperienceScope`](/api/experience-core/src/type-aliases/experiencescope/); `sourceKind`: [`SavedIntentSourceKind`](/api/experience-core/src/type-aliases/savedintentsourcekind/); `state`: `"saved"` \| `"completed"` \| `"removed"`; `subject`: [`ExperienceSubject`](/api/experience-core/src/type-aliases/experiencesubject/); `updatedAt`: `string`; \}\> \| `undefined`\>
+
+#### Implementation of
+
+[`SavedIntentStore`](/api/experience-core/src/interfaces/savedintentstore/).[`read`](/api/experience-core/src/interfaces/savedintentstore/#read)
+
+---
+
 ### readPolicy()
 
 > **readPolicy**(`input`): `Promise`\<`Readonly`\<\{ `actorId`: `string`; `displayLimit`: `number`; `excludeCompleted`: `boolean`; `reason`: `string`; `resourceType`: `string`; `retentionDays`: `number`; `revision`: `number`; `scope`: [`ExperienceScope`](/api/experience-core/src/type-aliases/experiencescope/); `updatedAt`: `string`; \}\> \| `undefined`\>
