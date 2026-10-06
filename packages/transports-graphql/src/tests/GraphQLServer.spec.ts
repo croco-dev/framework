@@ -578,6 +578,40 @@ describe("GraphQLServer integration", () => {
     expect(data.data.hello).toBe("Hello, GraphQL!");
   });
 
+  it.each([true, false])(
+    "executes fragments with directive variables (%s)",
+    async (includeEmail) => {
+      const response = await server.getHandler()(
+        new Request("http://localhost/graphql", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            query: `query Users($includeEmail: Boolean!) {
+          getUsers { ...UserFields }
+        }
+        fragment UserFields on User {
+          name
+          email @include(if: $includeEmail)
+        }`,
+            variables: { includeEmail },
+          }),
+        }),
+      );
+      const result = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(result.errors).toBeUndefined();
+      expect(result.data.getUsers).toEqual(
+        includeEmail
+          ? [
+              { name: "Alice", email: "alice@example.com" },
+              { name: "Bob", email: "bob@example.com" },
+            ]
+          : [{ name: "Alice" }, { name: "Bob" }],
+      );
+    },
+  );
+
   it("should execute users query returning array", async () => {
     const handler = server.getHandler();
     const request = new Request("http://localhost/graphql", {
