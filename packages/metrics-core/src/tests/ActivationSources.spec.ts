@@ -193,6 +193,145 @@ describe("activation shared sources", () => {
       calculateActivationSource(interrupted(), binding, definition, controller.signal),
     ).rejects.toBe(reason);
   });
+  it.each([
+    ["source", "pending"],
+    ["import", "pending"],
+    ["source", "rejecting"],
+    ["import", "rejecting"],
+  ] as const)("cancels a pending %s read with %s iterator cleanup", async (kind, cleanup) => {
+    const controller = new AbortController();
+    const reason = { code: "pending-read-cancelled" };
+    let rejectNext!: (reason: unknown) => void;
+    const next = vi.fn(
+      () =>
+        new Promise<IteratorResult<never>>((_, reject) => {
+          rejectNext = reject;
+        }),
+    );
+    const close = vi.fn(() =>
+      cleanup === "pending"
+        ? new Promise<IteratorResult<never>>(() => {})
+        : Promise.reject(new Error("cleanup failure")),
+    );
+    const pending = { [Symbol.asyncIterator]: () => ({ next, return: close }) };
+    const result =
+      kind === "source"
+        ? calculateActivationSource(pending, binding, definition, controller.signal)
+        : importActivationSource(pending, schema, binding, definition, controller.signal);
+    const outcome = result.then(
+      () => "unexpected-success",
+      (error: unknown) => error,
+    );
+    await vi.waitFor(() => expect(next).toHaveBeenCalledOnce());
+    controller.abort(reason);
+    try {
+      await expect(
+        Promise.race([
+          outcome,
+          new Promise((resolve) => setTimeout(() => resolve("still-pending"), 100)),
+        ]),
+      ).resolves.toBe(reason);
+      expect(close).toHaveBeenCalledOnce();
+    } finally {
+      rejectNext(new Error("late read failure"));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+  });
+  it.each(["pending", "rejecting"] as const)(
+    "cancels after failed source reading has entered %s cleanup",
+    async (cleanup) => {
+      const controller = new AbortController();
+      const reason = { code: "cancel-blocked-cleanup" };
+      const failure = new Error("producer-failed");
+      let rejectCleanup!: (reason: unknown) => void;
+      const close = vi.fn(
+        () =>
+          new Promise<IteratorResult<never>>((_, reject) => {
+            rejectCleanup = reject;
+          }),
+      );
+      const failed = {
+        [Symbol.asyncIterator]: () => ({
+          next: () => Promise.reject(failure),
+          return: close,
+        }),
+      };
+      const outcome = calculateActivationSource(
+        failed,
+        binding,
+        definition,
+        controller.signal,
+      ).then(
+        () => "unexpected-success",
+        (error: unknown) => error,
+      );
+      await vi.waitFor(() => expect(close).toHaveBeenCalledOnce());
+      controller.abort(reason);
+      try {
+        await expect(
+          Promise.race([
+            outcome,
+            new Promise((resolve) => setTimeout(() => resolve("still-pending"), 100)),
+          ]),
+        ).resolves.toBe(reason);
+      } finally {
+        if (cleanup === "rejecting") {
+          rejectCleanup(new Error("late cleanup failure"));
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+      }
+    },
+  );
+  it("preserves source failure when cleanup finishes before cancellation", async () => {
+    const failure = new Error("producer-failed");
+    const close = vi.fn(async () => ({ done: true as const, value: undefined }));
+    const failed = {
+      [Symbol.asyncIterator]: () => ({ next: () => Promise.reject(failure), return: close }),
+    };
+    await expect(
+      calculateActivationSource(failed, binding, definition, new AbortController().signal),
+    ).rejects.toBe(failure);
+    expect(close).toHaveBeenCalledOnce();
+  });
+  it("caps warehouse page requests to the remaining row and byte budgets", async () => {
+    const pageBytes = new TextEncoder().encode(JSON.stringify([flat])).length;
+    const read = vi
+      .fn<WarehouseReader["read"]>()
+      .mockResolvedValueOnce(page({ nextCursor: "next" }))
+      .mockResolvedValueOnce(page({ rows: [{ ...flat, id: "s2" }] }));
+    await calculateActivationSource(
+      readActivationWarehouse(
+        { read },
+        { ...request, maxRows: 50, maxBytes: 10000 },
+        { maxRows: 2, maxBytes: pageBytes * 2, maxPages: 3 },
+      ),
+      binding,
+      definition,
+    );
+    expect(read.mock.calls.map(([value]) => [value.maxRows, value.maxBytes])).toEqual([
+      [2, pageBytes * 2],
+      [1, pageBytes],
+    ]);
+  });
+  it.each(["rows", "bytes"] as const)(
+    "stops before another warehouse read when %s are exhausted",
+    async (kind) => {
+      const read = vi.fn<WarehouseReader["read"]>().mockResolvedValue(page({ nextCursor: "next" }));
+      const pageBytes = new TextEncoder().encode(JSON.stringify([flat])).length;
+      await expect(
+        calculateActivationSource(
+          readActivationWarehouse({ read }, request, {
+            maxRows: kind === "rows" ? 1 : 100,
+            maxBytes: kind === "bytes" ? pageBytes : 10000,
+            maxPages: 3,
+          }),
+          binding,
+          definition,
+        ),
+      ).rejects.toThrow("Activation source budget exceeded");
+      expect(read).toHaveBeenCalledOnce();
+    },
+  );
   it.each(["before", "during"] as const)(
     "preserves warehouse cancellation %s reading a page",
     async (when) => {

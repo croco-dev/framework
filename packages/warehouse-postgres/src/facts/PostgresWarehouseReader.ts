@@ -137,7 +137,7 @@ export class PostgresWarehouseReader implements WarehouseReader {
     }
     const scope = scopeKey(access.scope);
     const queryHash = createHash("sha256")
-      .update(JSON.stringify([selected, request.filters, order, request.maxRows]))
+      .update(JSON.stringify([selected, request.filters, order]))
       .digest("hex");
     const cursor = request.cursor ? this.parseCursor(request.cursor) : null;
     if (

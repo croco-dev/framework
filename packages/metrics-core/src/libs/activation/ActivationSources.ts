@@ -230,6 +230,55 @@ export function normalizeActivationRow(
   };
 }
 
+async function awaitSourceOperation<T>(operation: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return operation;
+  let onAbort: (() => void) | undefined;
+  try {
+    return await new Promise<T>((resolve, reject) => {
+      onAbort = () => reject(signal.reason);
+      if (signal.aborted) onAbort();
+      else signal.addEventListener("abort", onAbort, { once: true });
+      operation.then(resolve, reject);
+    });
+  } finally {
+    if (onAbort) signal.removeEventListener("abort", onAbort);
+  }
+}
+
+async function* cancellableSource<T>(
+  source: AsyncIterable<T>,
+  signal?: AbortSignal,
+): AsyncIterable<T> {
+  signal?.throwIfAborted();
+  const iterator = source[Symbol.asyncIterator]();
+  let complete = false;
+  try {
+    while (true) {
+      const result = await awaitSourceOperation(
+        Promise.resolve().then(() => {
+          signal?.throwIfAborted();
+          return iterator.next();
+        }),
+        signal,
+      );
+      signal?.throwIfAborted();
+      if (result.done) {
+        complete = true;
+        return;
+      }
+      yield result.value;
+    }
+  } finally {
+    if (!complete && iterator.return) {
+      // Cleanup is attempted, but cancellation also interrupts a blocked return operation.
+      await awaitSourceOperation(
+        Promise.resolve().then(() => iterator.return?.()),
+        signal,
+      );
+    }
+  }
+}
+
 export async function calculateActivationSource(
   source: AsyncIterable<Readonly<Record<string, unknown>>>,
   binding: ActivationColumnBinding,
@@ -238,7 +287,7 @@ export async function calculateActivationSource(
 ): Promise<{ readonly report: ActivationReport; readonly rows: readonly ActivationRow[] }> {
   signal?.throwIfAborted();
   const rows: ActivationRow[] = [];
-  for await (const row of source) {
+  for await (const row of cancellableSource(source, signal)) {
     signal?.throwIfAborted();
     if (rows.length >= definition.maxRows)
       throw new ActivationValidationProblem("Activation row budget exceeded");
@@ -255,7 +304,12 @@ export function importActivationSource(
   definition: ActivationDefinition,
   signal?: AbortSignal,
 ): Promise<{ readonly report: ActivationReport; readonly rows: readonly ActivationRow[] }> {
-  return calculateActivationSource(decodeSource(bytes, schema), binding, definition, signal);
+  return calculateActivationSource(
+    decodeSource(cancellableSource(bytes, signal), schema),
+    binding,
+    definition,
+    signal,
+  );
 }
 
 export async function* readActivationWarehouse(
@@ -270,7 +324,16 @@ export async function* readActivationWarehouse(
   const cursors = new Set<string>();
   for (let pageIndex = 0; pageIndex < limits.maxPages; pageIndex++) {
     request.signal?.throwIfAborted();
-    const page = await reader.read({ ...request, ...(cursor ? { cursor } : {}) });
+    const maxRows = Math.min(request.maxRows, limits.maxRows - rows);
+    const maxBytes = Math.min(request.maxBytes, limits.maxBytes - bytes);
+    if (maxRows <= 0 || maxBytes <= 0)
+      throw new ActivationValidationProblem("Activation source budget exceeded");
+    const page = await reader.read({
+      ...request,
+      maxRows,
+      maxBytes,
+      ...(cursor ? { cursor } : {}),
+    });
     request.signal?.throwIfAborted();
     if (
       page.snapshotId !== request.snapshotId ||
