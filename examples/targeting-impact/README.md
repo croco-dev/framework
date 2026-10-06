@@ -16,4 +16,6 @@ Use `?state=partial`, `empty`, `unavailable`, `denied`, or `error` for determini
 
 `POST /compare`, `/save`, `/get`, and `/export` call the same server-side operations service. Compare uses the campaign adapter. Save uses the same immutable synthetic history input and re-read validates stored evidence; get/export are scope authorized. Bodies are limited to 4 KiB. Browser responses and exports contain aggregates, not subject rows.
 
+`/compare` and `/save` accept only `unknownPolicy`; neither accepts historical rows. `/save` rebuilds the trusted server fixture input rather than persisting the browser's comparison response. Both paths use the same fixed synthetic rows. This demonstrates consistency for this fixture, not source authentication for arbitrary campaign data. A production host must authenticate historical evidence and check subject membership before passing rows to `save`; the stored hashes verify consistency, not provenance.
+
 This is a local synthetic fixture, not authentication or durable production storage. Reports reset on server restart. No messages are sent. Observed revenue and crediting scenarios do not establish causal loss or incremental lift. No real growth outcomes or provider certification are claimed. The example adds no LLM dependency.

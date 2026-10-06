@@ -332,6 +332,14 @@ by recomputing its hashes and result. Save is immutable and checks the persisted
 report by reading it back. Exports omit subject rows, historical traits and predicate
 literals.
 
+`replay(input)` and `save(input)` accept historical rows from trusted server code,
+not a browser request body. The host must authenticate the evidence source and
+check subject membership before calling them. Scope authorization controls access;
+hashes and recomputation verify consistency, not the origin or truth of the rows.
+These methods do not check caller-supplied rows against `CampaignStore`.
+To persist a comparison, pass the same authenticated historical input used to
+compute it.
+
 `TargetingImpactReportStore` holds the complete private evidence needed for
 reproducibility. Restrict this server-only store to authorized operators and apply
 application retention and privacy policy. `InMemoryTargetingImpactReportStore` is
