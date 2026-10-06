@@ -346,7 +346,12 @@ decodeCursor("eyJ2IjoxLCJpZCI6InVzcl8wMVhYWS4uLiJ9");
 
 ## Zod 스키마
 
-모든 페이지네이션 파라미터 타입에 대한 Zod 스키마를 제공합니다.
+모든 페이지네이션 파라미터 타입에 대한 **Zod 4** 스키마를 제공합니다.
+
+현재 Croco REST의 `defineRouteContract`와 OpenAPI 계약 생성은 **Zod 3** 스키마를 요구합니다.
+이 패키지의 스키마는 REST 계약의 `params`, `query`, `body`, `response`에 직접 사용할 수 없습니다.
+타입 단언 등으로 전달해도 계약 수집 단계에서 `contract-schema-unsupported-zod-major` 진단으로 실패합니다.
+REST 계약에는 Zod 3으로 입력·응답 스키마를 선언하고, 페이지네이션 파싱은 `parsePaginationParams`로 수행하세요.
 
 ```typescript
 import {

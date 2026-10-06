@@ -21461,9 +21461,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#protocols-core-contract-graph-diagnostics",
       recovery: {
-        cause: "The request or generated contract failed schema or semantic validation.",
-        userAction: "Fix the invalid fields and retry with schema-conformant input.",
-        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        cause:
+          "The collected contract graph contains blocking diagnostics, including route-contract validation errors and unsupported Zod majors.",
+        userAction:
+          "Correct the target identified by each diagnostic before generating contracts or starting the application.",
+        operatorAction:
+          "Inspect diagnostic codes, route IDs, and source locations. For contract-schema-unsupported-zod-major, replace the identified schema with a Zod 3 route contract schema.",
         retryability: "not-retryable",
         redactionPolicy: "public",
         telemetry: {
@@ -21478,7 +21481,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-core/src/libs/ContractGraph.ts",
-          line: 162,
+          line: 163,
           column: 5,
           kind: "problem-constructor",
         },
@@ -26137,7 +26140,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 120,
+          line: 126,
           column: 15,
           kind: "problem-factory",
         },
@@ -26369,7 +26372,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 72,
+          line: 74,
           column: 11,
           kind: "problem-factory",
         },
@@ -26503,7 +26506,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 195,
+          line: 201,
           column: 17,
           kind: "problem-factory",
         },

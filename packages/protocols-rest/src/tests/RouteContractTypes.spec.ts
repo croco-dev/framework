@@ -1,6 +1,7 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, expectTypeOf, it } from "vitest";
 import { z } from "zod";
+import { z as z4 } from "zod/v4";
 import {
   All,
   Body,
@@ -1239,3 +1240,34 @@ function invalidRenamedPathBindings(): void {
   routeParam(renamedPathContract, "id");
 }
 void invalidRenamedPathBindings;
+
+describe("route contract Zod major type boundary", () => {
+  it("requires Zod 3 in every schema slot", () => {
+    const schema = z4.object({ id: z4.string() });
+    defineRouteContract({
+      method: HttpMethod.GET,
+      path: "/users/:id",
+      // @ts-expect-error Route contracts support Zod 3, not Zod 4 params.
+      params: schema,
+    });
+    defineRouteContract({
+      method: HttpMethod.GET,
+      path: "/users",
+      // @ts-expect-error Route contracts support Zod 3, not Zod 4 query.
+      query: schema,
+    });
+    defineRouteContract({
+      method: HttpMethod.POST,
+      path: "/users",
+      // @ts-expect-error Route contracts support Zod 3, not Zod 4 body.
+      body: schema,
+    });
+    defineRouteContract({
+      method: HttpMethod.GET,
+      path: "/users",
+      // @ts-expect-error Route contracts support Zod 3, not Zod 4 response.
+      response: schema,
+    });
+    expectTypeOf<typeof schema>().not.toExtend<NonNullable<RouteContractSpec["body"]>>();
+  });
+});

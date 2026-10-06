@@ -1229,3 +1229,25 @@ function compareCodeUnits(left: string, right: string): number {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
+
+export function getUnsupportedZodMajor(
+  schema: unknown,
+): { readonly major: number; readonly kind: string } | undefined {
+  if (typeof schema !== "object" || schema === null || !("_zod" in schema)) return undefined;
+  const internals = schema._zod;
+  if (typeof internals !== "object" || internals === null || !("version" in internals))
+    return undefined;
+  const version = internals.version;
+  if (typeof version !== "object" || version === null || !("major" in version)) return undefined;
+  const major = version.major;
+  if (typeof major !== "number" || major === 3) return undefined;
+  const definition = "def" in internals ? internals.def : undefined;
+  const kind =
+    typeof definition === "object" &&
+    definition !== null &&
+    "type" in definition &&
+    typeof definition.type === "string"
+      ? definition.type
+      : schema.constructor.name;
+  return { major, kind };
+}

@@ -13282,14 +13282,14 @@ Sources:
 - Retryability: `not-retryable`
 - Redaction policy: `public`
 - Lifecycle: `active`
-- Cause: The request or generated contract failed schema or semantic validation.
-- User action: Fix the invalid fields and retry with schema-conformant input.
-- Operator action: Inspect schema diagnostics, generated contracts, and validation metadata.
+- Cause: The collected contract graph contains blocking diagnostics, including route-contract validation errors and unsupported Zod majors.
+- User action: Correct the target identified by each diagnostic before generating contracts or starting the application.
+- Operator action: Inspect diagnostic codes, route IDs, and source locations. For contract-schema-unsupported-zod-major, replace the identified schema with a Zod 3 route contract schema.
 - Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
 
-- `packages/protocols-core/src/libs/ContractGraph.ts:162:5` (problem-constructor)
+- `packages/protocols-core/src/libs/ContractGraph.ts:163:5` (problem-constructor)
 
 <a id="protocols-graphql-auth-invalid-header-format"></a>
 
@@ -15917,7 +15917,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/RouteCompiler.ts:120:15` (problem-factory)
+- `packages/transports-http/src/libs/RouteCompiler.ts:126:15` (problem-factory)
 
 <a id="transports-http-graceful-shutdown-configuration"></a>
 
@@ -16043,7 +16043,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/RouteCompiler.ts:72:11` (problem-factory)
+- `packages/transports-http/src/libs/RouteCompiler.ts:74:11` (problem-factory)
 
 <a id="transports-http-request-body-read-failed"></a>
 
@@ -16115,7 +16115,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/RouteCompiler.ts:195:17` (problem-factory)
+- `packages/transports-http/src/libs/RouteCompiler.ts:201:17` (problem-factory)
 
 <a id="transports-http-runtime-capability-invalid"></a>
 

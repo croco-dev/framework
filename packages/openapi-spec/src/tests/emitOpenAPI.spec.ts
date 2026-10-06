@@ -33,10 +33,55 @@ import {
 } from "@croco/protocols-rest";
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
+import { z as z4 } from "zod/v4";
 import { emitOpenAPI, emitOpenAPIFromContractGraph } from "../libs/emitOpenAPI";
 
 describe("emitOpenAPI", () => {
   beforeEach(() => {});
+
+  it.each(["params", "query", "body", "response"] as const)(
+    "rejects a Zod 4 route-contract %s schema with its source diagnostic",
+    (schemaKind) => {
+      const supportedSchema = z.object({ id: z.string() });
+      const unsupportedSchema = z4.object({ id: z4.string() }) as unknown as typeof supportedSchema;
+      const contract = defineRouteContract({
+        method: HttpMethod.POST,
+        path: "/unsupported-zod/:id",
+        params: supportedSchema,
+        query: supportedSchema,
+        body: supportedSchema,
+        response: supportedSchema,
+        [schemaKind]: unsupportedSchema,
+      });
+
+      @Controller("/unsupported-zod")
+      class UnsupportedZodController {
+        @Post(contract)
+        handle(
+          @Param(contract, "id") _id: string,
+          @Query(contract, "id") _queryId: string,
+          @Body(contract) body: { id: string },
+        ): { id: string } {
+          return body;
+        }
+      }
+
+      expect(() => emitOpenAPI([UnsupportedZodController])).toThrowError(
+        expect.objectContaining({
+          diagnostics: [
+            expect.objectContaining({
+              code: "contract-schema-unsupported-zod-major",
+              routeId: "UnsupportedZodController.handle",
+              sourceLocation: expect.objectContaining({
+                path: expect.stringContaining("emitOpenAPI.spec.ts"),
+              }),
+              message: `Route contract ${schemaKind} uses unsupported Zod major 4 (schema kind: object); Croco route contracts require Zod 3.`,
+            }),
+          ],
+        }),
+      );
+    },
+  );
 
   it("does not expose auth injection parameters as client input", () => {
     @Controller("/identity")

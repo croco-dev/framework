@@ -20,6 +20,7 @@ import {
 } from "./ContractGraphMonetization";
 import {
   describeZodSchema,
+  getUnsupportedZodMajor,
   getSchemaDescriptorDiagnostics,
   getZodObjectShape,
   getZodInputObjectSchema,
@@ -428,11 +429,46 @@ function toProblemRegistryReference(
   };
 }
 
+export function getRouteContractSchemaDiagnostics(route: RouteIR): ContractDiagnostic[] {
+  const contract = route.routeContract;
+  if (!contract) return [];
+
+  const diagnostics: ContractDiagnostic[] = [];
+  const schemas: readonly [string, unknown][] = [
+    ["params", contract.inputSchemas.path],
+    ["query", contract.inputSchemas.query],
+    ["body", contract.inputSchemas.body],
+    ["response", contract.outputSchema],
+  ];
+
+  for (const [slot, schema] of schemas) {
+    const unsupported = getUnsupportedZodMajor(schema);
+    if (!unsupported) continue;
+    const { major, kind } = unsupported;
+
+    diagnostics.push({
+      ...createRouteDiagnostic(
+        route,
+        "contract-schema-unsupported-zod-major",
+        "error",
+        `Route contract ${slot} uses unsupported Zod major ${major} (schema kind: ${kind}); Croco route contracts require Zod 3.`,
+      ),
+      recoveryAction:
+        "Declare this route contract schema with Zod 3; Zod 4 schemas cannot be used in Croco route contracts.",
+    });
+  }
+
+  return diagnostics;
+}
+
 function validateRoute(
   route: ContractGraphRoute,
   options: BuildContractGraphOptions,
   problemRegistryIndex: ProblemRegistryIndex,
 ): ContractDiagnostic[] {
+  const unsupportedSchemas = getRouteContractSchemaDiagnostics(route);
+  if (unsupportedSchemas.length > 0) return unsupportedSchemas;
+
   const diagnostics: ContractDiagnostic[] = [];
 
   if (route.httpMethod.toUpperCase() === "ALL") {
@@ -1357,7 +1393,7 @@ function formatSchemaLocation(
 }
 
 function createRouteDiagnostic(
-  route: ContractGraphRoute,
+  route: RouteIR,
   code: string,
   severity: ContractDiagnosticSeverity,
   message: string,
@@ -1371,7 +1407,7 @@ function createRouteDiagnostic(
     severity,
     target: getDiagnosticTarget(code),
     message,
-    routeId: route.routeId,
+    routeId: `${route.controllerName}.${route.methodName}`,
     ...(route.routeContract?.id ? { contractId: route.routeContract.id } : {}),
     controllerName: route.controllerName,
     methodName: route.methodName,

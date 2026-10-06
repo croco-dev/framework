@@ -3422,6 +3422,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "safe-message",
     severity: "error",
   }),
+  "protocols-core/contract-graph-diagnostics": recovery({
+    cause:
+      "The collected contract graph contains blocking diagnostics, including route-contract validation errors and unsupported Zod majors.",
+    userAction:
+      "Correct the target identified by each diagnostic before generating contracts or starting the application.",
+    operatorAction:
+      "Inspect diagnostic codes, route IDs, and source locations. For contract-schema-unsupported-zod-major, replace the identified schema with a Zod 3 route contract schema.",
+    retryability: "not-retryable",
+    redactionPolicy: "public",
+    severity: "info",
+  }),
   "analytics-core/analysis-input-budget-exceeded": recovery({
     cause:
       "The serialized question, allowed definitions and choices exceeded the input byte budget.",
