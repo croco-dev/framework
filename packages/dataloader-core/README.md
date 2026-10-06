@@ -82,6 +82,13 @@ Create each loader once and reuse the returned object. Inside one request, a sec
 `IBatchLoaderFactory` whose `create()` runs per call, such as through `@BatchLoad`, should
 delegate to `BatchLoaderFactory`, which retrieves request loaders by name.
 
+`BatchLoaderFactory.create()` retrieves by name: within one request, same-name calls
+share one request loader, installed by whichever wrapper first uses it, and a
+different `batchFn` in another same-name call is then ignored. Direct callers must
+pass the same `batchFn` for a shared name or use a unique name per batch function.
+`@BatchLoad` is unaffected because it derives a unique effective loader name per
+decorated definition and scope.
+
 ### Transaction-Aware Scoping
 
 ```typescript

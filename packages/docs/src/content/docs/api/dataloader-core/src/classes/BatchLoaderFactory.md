@@ -118,6 +118,13 @@ const orderLoader = createBatchLoader<Order, string>({
 
 Create or retrieve a context-scoped batch loader.
 
+Within one request, same-name calls share one request loader, but
+installation timing and `batchFn` selection depend on the implementation.
+`BatchLoaderFactory` installs the loader when a wrapper first uses it and
+ignores a different `batchFn` from later same-name calls. Callers using
+`BatchLoaderFactory` must use the same `batchFn` for a shared name or a
+unique name per batch function.
+
 #### Type Parameters
 
 ##### K
