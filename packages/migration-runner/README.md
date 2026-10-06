@@ -232,6 +232,13 @@ const rollbackPlan = await runner.previewDown(undefined, 1);
 await runner.down(undefined, 1);
 ```
 
+`down(targetId?, count?)` and `previewDown(targetId?, count?)` accept either a target or a count.
+Supplying both rejects with `migration-runner/conflicting-rollback-options` before scanning files or accessing the
+database, including when the supplied count is invalid. Choose `runner.down(targetId)` for an inclusive target rollback
+or `runner.down(undefined, count)` for a bounded rollback. Calls that previously supplied both must remove one argument.
+This API rule does not change the CLI's existing target precedence: the CLI passes only the target to the runner when
+`--target` is supplied.
+
 `previewUp` and `previewDown` return planned ids without presenting them as executed results. They require transaction
 support for rollback-only checkpoint initialization. `up` and `down` also require transaction support so checkpoint changes
 and migration body side effects commit or roll back together. Concurrent runners reserve or claim checkpoint rows atomically

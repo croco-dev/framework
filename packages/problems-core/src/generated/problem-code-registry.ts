@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 908,
+  problemCount: 909,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -18341,6 +18341,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/metrics-core/src/libs/SnapshotScheduler.ts",
           line: 18,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "migration-runner/conflicting-rollback-options",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#migration-runner-conflicting-rollback-options",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/migration-runner/src/libs/problems/ConflictingRollbackOptionsProblem.ts",
+          line: 3,
           column: 1,
           kind: "problem-class",
         },
