@@ -47,6 +47,15 @@ jobs:
           --lane live --allow-live --owner @croco/admin-postgres
           --output ci-reports/package-quality/live-test-lanes/admin-postgres.json
 
+      - name: Run @croco/audit-drizzle live tests
+        continue-on-error: true
+        env:
+          AUDIT_POSTGRES_URL: ${{ secrets.MEMBERSHIP_POSTGRES_URL }}
+        run: >-
+          node --experimental-strip-types scripts/test-lane-runner.mts
+          --lane live --allow-live --owner @croco/audit-drizzle
+          --output ci-reports/package-quality/live-test-lanes/audit-drizzle.json
+
       - name: Run @croco/auth-drizzle live tests
         continue-on-error: true
         env:
@@ -221,6 +230,7 @@ jobs:
           node --experimental-strip-types scripts/test-evidence-reconcile.mts
           --profile scheduled-live
           --lane-report ci-reports/package-quality/live-test-lanes/admin-postgres.json
+          --lane-report ci-reports/package-quality/live-test-lanes/audit-drizzle.json
           --lane-report ci-reports/package-quality/live-test-lanes/auth-drizzle.json
           --lane-report ci-reports/package-quality/live-test-lanes/billing-polar.json
           --lane-report ci-reports/package-quality/live-test-lanes/cohort-drizzle.json
