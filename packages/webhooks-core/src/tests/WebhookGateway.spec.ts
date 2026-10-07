@@ -415,7 +415,22 @@ describe("WebhookGateway", () => {
     {
       name: "a plain Error",
       failure: new Error("database unavailable"),
-      extensions: {},
+      extensions: { retryable: true },
+    },
+    {
+      name: "an Error whose retryable flag overrides a 404 status",
+      failure: Object.assign(new Error("database unavailable"), { status: 404, retryable: true }),
+      extensions: { retryable: true },
+    },
+    {
+      name: "an Error with a 408 status",
+      failure: Object.assign(new Error("database unavailable"), { status: 408 }),
+      extensions: { retryable: true },
+    },
+    {
+      name: "an Error with a 429 status",
+      failure: Object.assign(new Error("database unavailable"), { status: 429 }),
+      extensions: { retryable: true },
     },
     {
       name: "a Problem marked retryable on a client-error category",
@@ -465,6 +480,20 @@ describe("WebhookGateway", () => {
 
   it.each([
     {
+      name: "an Error with a 404 status",
+      failure: Object.assign(new Error("resource unavailable"), { status: 404 }),
+    },
+    {
+      name: "an Error marked non-retryable",
+      failure: Object.assign(new Error("resource unavailable"), { retryable: false }),
+    },
+    {
+      name: "an Error with a non-retryable extension",
+      failure: Object.assign(new Error("resource unavailable"), {
+        extensions: { retryable: false },
+      }),
+    },
+    {
       name: "a Problem marked non-retryable on a server-error category",
       failure: new FixtureHandlerProblem(ProblemCategory.InternalServerError, { retryable: false }),
     },
@@ -489,7 +518,7 @@ describe("WebhookGateway", () => {
         provider: "fixture",
         eventId: "evt-1",
         eventType: "subscription.created",
-        causeCode: "webhooks-core/test-handler-problem",
+        ...(failure instanceof Problem ? { causeCode: failure.code } : {}),
         retryable: false,
       });
       expect((error as WebhookDispatchProblem).cause).toBe(failure);
@@ -518,7 +547,22 @@ describe("WebhookGateway", () => {
     {
       name: "a plain Error",
       failure: new Error("reporter unavailable"),
-      extensions: {},
+      extensions: { retryable: true },
+    },
+    {
+      name: "an Error whose retryable flag overrides a 404 status",
+      failure: Object.assign(new Error("reporter unavailable"), { status: 404, retryable: true }),
+      extensions: { retryable: true },
+    },
+    {
+      name: "an Error with a 408 status",
+      failure: Object.assign(new Error("reporter unavailable"), { status: 408 }),
+      extensions: { retryable: true },
+    },
+    {
+      name: "an Error with a 429 status",
+      failure: Object.assign(new Error("reporter unavailable"), { status: 429 }),
+      extensions: { retryable: true },
     },
     {
       name: "a Problem marked retryable on a client-error category",
@@ -570,6 +614,20 @@ describe("WebhookGateway", () => {
   );
 
   it.each([
+    {
+      name: "an Error with a 404 status",
+      failure: Object.assign(new Error("resource unavailable"), { status: 404 }),
+    },
+    {
+      name: "an Error marked non-retryable",
+      failure: Object.assign(new Error("resource unavailable"), { retryable: false }),
+    },
+    {
+      name: "an Error with a non-retryable extension",
+      failure: Object.assign(new Error("resource unavailable"), {
+        extensions: { retryable: false },
+      }),
+    },
     {
       name: "a Problem marked non-retryable on a server-error category",
       failure: new FixtureHandlerProblem(ProblemCategory.InternalServerError, { retryable: false }),
