@@ -158,8 +158,10 @@ safe-integer usage 또는 고정 소수점 quota를 사용하려면 `widenMeteri
 `InvalidMeterDefinitionProblem`(`metering-drizzle/invalid-meter-definition`)으로 실패합니다. 입력의 `aggregation: null`과
 `unit: null`은 생략한 것과 같게 저장되지만, `billing: null`은 과금 요구를 잃지 않도록 거부합니다.
 
-`meterTable`의 컬럼 property 이름은 `MeterTable` 키와 같아야 합니다. meter 정의를 읽고 쓸 때는 `meterSchema`
-매핑이 아니라 이 이름을 사용합니다.
+`meterTable`의 컬럼 property 이름은 자유롭게 정할 수 있습니다. meter 정의의 저장·조회·갱신은 `meterSchema`가
+가리키는 컬럼의 실제 테이블 property 이름을 사용합니다. 모든 매핑은 해당 `meterTable`의 컬럼을 가리켜야 하며,
+다른 테이블의 컬럼을 매핑하면 저장소 생성 시 `meter/invalid-column-mapping` Problem으로 실패합니다.
+Problem의 detail은 잘못된 `meterSchema` 필드를 알려줍니다.
 
 typed usage에 `eventId` 또는 `dimensions`가 있지만 해당 mapping이 없으면
 `UsageEnvelopeConfigurationProblem`으로 기록을 거부하며, billing field를 조용히 버리지 않습니다.

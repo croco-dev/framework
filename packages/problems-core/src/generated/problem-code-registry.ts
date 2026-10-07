@@ -17459,15 +17459,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       title: "Bad Request",
       cookbookPath: "/reference/problem-recovery-cookbook/#meter-invalid-column-mapping",
       recovery: {
-        cause: "The caller sent malformed input or unsupported request options.",
-        userAction: "Correct the request input and retry after validation passes.",
+        cause:
+          "A meterSchema field references a column that does not belong to the configured meterTable.",
+        userAction:
+          "Do not retry unchanged configuration; correct the meterSchema mapping before creating the repository.",
         operatorAction:
-          "Inspect validation details and request logs; do not retry unchanged input.",
+          "Read the meterSchema field named in detail and map it to the corresponding meterTable column. Table property names may differ from MeterTable keys.",
         retryability: "not-retryable",
-        redactionPolicy: "public",
+        redactionPolicy: "operator-only",
         telemetry: {
-          eventName: "croco.problem.info",
-          severity: "info",
+          eventName: "croco.problem.error",
+          severity: "error",
           attributes: ["problem.code", "problem.category", "problem.status"],
         },
       },
@@ -17530,7 +17532,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         userAction:
           "Do not retry with the same meter definition; register the meter with a supported billing, aggregation, and unit.",
         operatorAction:
-          "Use the tenantId, meterId, field, and receivedValue extensions to correct the registration or the stored row, and confirm that meterTable property names match the MeterTable keys.",
+          "Use the tenantId, meterId, field, and receivedValue extensions to correct the registration or the stored row.",
         retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {

@@ -572,7 +572,7 @@ This cookbook documents 926 public Croco Problem codes. The deterministic JSON r
 | [`meta-vite/server-action-validation-failed`](#meta-vite-server-action-validation-failed)                                             | ValidationError                                                     |           422 | not-retryable | public        | active    |       1 |
 | [`meta-vite/unsupported-render-capability`](#meta-vite-unsupported-render-capability)                                                 | NotImplemented                                                      |           501 | not-retryable | public        | active    |       1 |
 | [`meter/insert-failed`](#meter-insert-failed)                                                                                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
-| [`meter/invalid-column-mapping`](#meter-invalid-column-mapping)                                                                       | BadRequest                                                          |           400 | not-retryable | public        | active    |       1 |
+| [`meter/invalid-column-mapping`](#meter-invalid-column-mapping)                                                                       | BadRequest                                                          |           400 | not-retryable | operator-only | active    |       1 |
 | [`metering-drizzle/duplicate-meter-definitions`](#metering-drizzle-duplicate-meter-definitions)                                       | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
 | [`metering-drizzle/invalid-meter-definition`](#metering-drizzle-invalid-meter-definition)                                             | InternalServerError                                                 |           500 | not-retryable | operator-only | active    |       1 |
 | [`metering-drizzle/migration-query-result-unsupported`](#metering-drizzle-migration-query-result-unsupported)                         | InternalServerError                                                 |           500 | conditional   | operator-only | active    |       1 |
@@ -11011,12 +11011,12 @@ Sources:
 - Category: `BadRequest`
 - HTTP status: `400` Bad Request
 - Retryability: `not-retryable`
-- Redaction policy: `public`
+- Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: The caller sent malformed input or unsupported request options.
-- User action: Correct the request input and retry after validation passes.
-- Operator action: Inspect validation details and request logs; do not retry unchanged input.
-- Telemetry: `croco.problem.info` (info) with `problem.code`, `problem.category`, `problem.status`
+- Cause: A meterSchema field references a column that does not belong to the configured meterTable.
+- User action: Do not retry unchanged configuration; correct the meterSchema mapping before creating the repository.
+- Operator action: Read the meterSchema field named in detail and map it to the corresponding meterTable column. Table property names may differ from MeterTable keys.
+- Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
 
@@ -11051,7 +11051,7 @@ Sources:
 - Lifecycle: `active`
 - Cause: A meter definition passed to save, or a meter row read from the meters table, has a billing, aggregation, or unit value outside the meter contract.
 - User action: Do not retry with the same meter definition; register the meter with a supported billing, aggregation, and unit.
-- Operator action: Use the tenantId, meterId, field, and receivedValue extensions to correct the registration or the stored row, and confirm that meterTable property names match the MeterTable keys.
+- Operator action: Use the tenantId, meterId, field, and receivedValue extensions to correct the registration or the stored row.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:

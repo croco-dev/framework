@@ -3966,13 +3966,24 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "meter/invalid-column-mapping": recovery({
+    cause:
+      "A meterSchema field references a column that does not belong to the configured meterTable.",
+    userAction:
+      "Do not retry unchanged configuration; correct the meterSchema mapping before creating the repository.",
+    operatorAction:
+      "Read the meterSchema field named in detail and map it to the corresponding meterTable column. Table property names may differ from MeterTable keys.",
+    retryability: "not-retryable",
+    redactionPolicy: "operator-only",
+    severity: "error",
+  }),
   "metering-drizzle/invalid-meter-definition": recovery({
     cause:
       "A meter definition passed to save, or a meter row read from the meters table, has a billing, aggregation, or unit value outside the meter contract.",
     userAction:
       "Do not retry with the same meter definition; register the meter with a supported billing, aggregation, and unit.",
     operatorAction:
-      "Use the tenantId, meterId, field, and receivedValue extensions to correct the registration or the stored row, and confirm that meterTable property names match the MeterTable keys.",
+      "Use the tenantId, meterId, field, and receivedValue extensions to correct the registration or the stored row.",
     retryability: "not-retryable",
     redactionPolicy: "operator-only",
     severity: "error",
