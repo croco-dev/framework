@@ -881,4 +881,252 @@ describe("QStashScheduler", () => {
         }),
     ).toThrow("Unsupported QStash schedule sync mode: cleanup");
   });
+
+  it("enabled가 false인 트리거는 schedule을 생성하지 않아야 한다", async () => {
+    class DisabledReportJob {
+      async dailyReport(): Promise<void> {}
+    }
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "0 9 * * *",
+      methodName: "dailyReport",
+      target: DisabledReportJob.prototype,
+      options: {
+        enabled: false,
+        timezone: "Asia/Seoul",
+      },
+    });
+
+    const create = vi.fn().mockResolvedValue({});
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([]),
+        create,
+        delete: vi.fn(),
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+    });
+
+    const result = await scheduler.sync();
+
+    expect(create).not.toHaveBeenCalled();
+    expect(result.created).toBe(0);
+    expect(result.updated).toBe(0);
+    expect(result.failed).toBe(0);
+    expect(result.details).toEqual([]);
+  });
+
+  it("timezone이 설정된 트리거는 CRON_TZ 접두사로 schedule을 생성해야 한다", async () => {
+    class SeoulReportJob {
+      async dailyReport(): Promise<void> {}
+    }
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "0 9 * * *",
+      methodName: "dailyReport",
+      target: SeoulReportJob.prototype,
+      options: {
+        timezone: "Asia/Seoul",
+      },
+    });
+
+    const create = vi.fn().mockResolvedValue({});
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([]),
+        create,
+        delete: vi.fn(),
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+    });
+
+    const result = await scheduler.sync();
+
+    expect(result.created).toBe(1);
+    expect(create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scheduleId: "croco-trigger:SeoulReportJob:dailyReport:dailyReport",
+        cron: "CRON_TZ=Asia/Seoul 0 9 * * *",
+      }),
+    );
+  });
+
+  it("원격 cron이 timezone 반영 형태와 일치하면 갱신하지 않아야 한다", async () => {
+    class SeoulUnchangedJob {
+      async dailyReport(): Promise<void> {}
+    }
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "0 9 * * *",
+      methodName: "dailyReport",
+      target: SeoulUnchangedJob.prototype,
+      options: {
+        timezone: "Asia/Seoul",
+      },
+    });
+
+    const scheduleId = "croco-trigger:SeoulUnchangedJob:dailyReport:dailyReport";
+    const create = vi.fn();
+    const client = {
+      schedules: {
+        list: vi
+          .fn()
+          .mockResolvedValue([ownedSchedule(scheduleId, "CRON_TZ=Asia/Seoul 0 9 * * *")]),
+        create,
+        delete: vi.fn(),
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+    });
+
+    const result = await scheduler.sync();
+
+    expect(result.skipped).toBe(1);
+    expect(result.updated).toBe(0);
+    expect(create).not.toHaveBeenCalled();
+  });
+
+  it("비활성화된 트리거의 기존 schedule은 apply 모드에서도 삭제해야 한다", async () => {
+    class DisabledOrphanJob {
+      async dailyReport(): Promise<void> {}
+    }
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "0 9 * * *",
+      methodName: "dailyReport",
+      target: DisabledOrphanJob.prototype,
+      options: {
+        enabled: false,
+      },
+    });
+
+    const scheduleId = "croco-trigger:DisabledOrphanJob:dailyReport:dailyReport";
+    const deleteSchedule = vi.fn().mockResolvedValue({});
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([ownedSchedule(scheduleId, "0 9 * * *")]),
+        create: vi.fn(),
+        delete: deleteSchedule,
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+    });
+
+    const result = await scheduler.sync();
+
+    expect(deleteSchedule).toHaveBeenCalledWith(scheduleId);
+    expect(result.deleted).toBe(1);
+    expect(result.details).toEqual([
+      expect.objectContaining({
+        name: scheduleId,
+        action: "deleted",
+        applied: true,
+      }),
+    ]);
+  });
+
+  it("활성 트리거와 비활성 트리거가 같은 schedule ID이면 동기화가 실패해야 한다", async () => {
+    const FirstCollisionJob = class CollisionScheduleJob {
+      async run(): Promise<void> {}
+    };
+
+    const SecondCollisionJob = class CollisionScheduleJob {
+      async run(): Promise<void> {}
+    };
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "* * * * *",
+      methodName: "run",
+      target: FirstCollisionJob.prototype,
+      options: {
+        name: "shared",
+      },
+    });
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "*/5 * * * *",
+      methodName: "run",
+      target: SecondCollisionJob.prototype,
+      options: {
+        name: "shared",
+        enabled: false,
+      },
+    });
+
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([]),
+        create: vi.fn(),
+        delete: vi.fn(),
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+    });
+
+    await expect(scheduler.sync()).rejects.toThrow(
+      "Duplicate QStash schedule ID detected: croco-trigger:CollisionScheduleJob:shared:run",
+    );
+  });
+
+  it("timezone이 설정된 트리거는 동기화 결과에도 CRON_TZ 형태를 기록해야 한다", async () => {
+    class SeoulDetailJob {
+      async dailyReport(): Promise<void> {}
+    }
+
+    triggerRegistry.register({
+      type: "cron",
+      expression: "0 9 * * *",
+      methodName: "dailyReport",
+      target: SeoulDetailJob.prototype,
+      options: {
+        timezone: "Asia/Seoul",
+      },
+    });
+
+    const client = {
+      schedules: {
+        list: vi.fn().mockResolvedValue([]),
+        create: vi.fn().mockResolvedValue({}),
+        delete: vi.fn(),
+      },
+    } as unknown as Client;
+
+    const scheduler = new QStashScheduler({
+      client,
+      webhookUrl: "https://api.example.com/webhooks/qstash",
+    });
+
+    const result = await scheduler.sync({ mode: "dry-run" });
+
+    expect(result.details).toEqual([
+      expect.objectContaining({
+        name: "croco-trigger:SeoulDetailJob:dailyReport:dailyReport",
+        action: "created",
+        expression: "CRON_TZ=Asia/Seoul 0 9 * * *",
+      }),
+    ]);
+  });
 });
