@@ -605,9 +605,11 @@ callback to a server export operation that applies the same authorization and
 aggregate projection as report reads; the component does not enforce these protections.
 
 The comparison keeps historical populations, observed dispatch costs, temporal visit
-categories, and crediting assumptions separate. Missing costs and history remain
-unavailable. Changing unknown handling requires a new definition revision in the
-server request; the report retains the applied revision and hashes. The component
+categories, and crediting assumptions separate. Missing dispatch costs are unavailable
+or partial; missing decision-time traits remain unknown. Omitted touchpoint or outcome
+evidence differs from an observed empty list; coverage and scenario availability remain
+explicit. Changing unknown handling requires a new definition revision in the server
+request; the report retains the applied revision and hashes. The component
 does not execute browser code or SQL and does not expose individual historical rows.
 
 Run the synthetic HTTP example in `examples/targeting-impact` to exercise comparison,
