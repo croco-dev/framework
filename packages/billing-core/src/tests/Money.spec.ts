@@ -9,29 +9,23 @@ import {
 import type { MoneyRoundingMode } from "../libs/Money";
 
 function roundRational(
-  numerator: number,
-  denominator: number,
+  numerator: number | bigint,
+  denominator: number | bigint,
   roundingMode: MoneyRoundingMode,
 ): number {
-  const denominatorSign = denominator < 0 ? -1 : 1;
-  const normalizedNumerator = numerator * denominatorSign;
-  const normalizedDenominator = denominator * denominatorSign;
-  const quotient = Math.trunc(normalizedNumerator / normalizedDenominator);
-  const remainder = normalizedNumerator % normalizedDenominator;
-
-  if (remainder === 0 || roundingMode === "down") {
-    return quotient === 0 ? 0 : quotient;
-  }
-
-  const direction = remainder > 0 ? 1 : -1;
-
-  if (roundingMode === "up") {
-    return quotient + direction;
-  }
-
-  const absoluteRemainder = remainder < 0 ? -remainder : remainder;
-  const rounded = absoluteRemainder * 2 >= normalizedDenominator ? quotient + direction : quotient;
-  return rounded === 0 ? 0 : rounded;
+  const n = BigInt(numerator);
+  const d = BigInt(denominator);
+  const negative = n < 0n !== d < 0n;
+  const absoluteNumerator = n < 0n ? -n : n;
+  const absoluteDenominator = d < 0n ? -d : d;
+  const quotient = absoluteNumerator / absoluteDenominator;
+  const remainder = absoluteNumerator % absoluteDenominator;
+  const increment =
+    roundingMode === "up"
+      ? remainder > 0n
+      : roundingMode === "half_up" && remainder * 2n >= absoluteDenominator;
+  const magnitude = quotient + (increment ? 1n : 0n);
+  return Number(negative ? -magnitude : magnitude);
 }
 
 describe("Money", () => {
@@ -67,6 +61,13 @@ describe("Money", () => {
   it("should preserve division signs and rounding against an integer-rational oracle", () => {
     const roundingModes: MoneyRoundingMode[] = ["half_up", "down", "up"];
     const decimalDivisors = [
+      { value: 1 / 3, numerator: 3333333333333333n, denominator: 10000000000000000n },
+      { value: -1 / 3, numerator: -3333333333333333n, denominator: 10000000000000000n },
+      { value: 20 / 31, numerator: 6451612903225806n, denominator: 10000000000000000n },
+      { value: -20 / 31, numerator: -6451612903225806n, denominator: 10000000000000000n },
+      { value: 0.1 + 0.2, numerator: 30000000000000004n, denominator: 100000000000000000n },
+      { value: -0.1 - 0.2, numerator: -30000000000000004n, denominator: 100000000000000000n },
+      { value: 0.123456789, numerator: 123456789n, denominator: 1000000000n },
       { value: -2.5, numerator: -5, denominator: 2 },
       { value: -1.5, numerator: -3, denominator: 2 },
       { value: -0.5, numerator: -1, denominator: 2 },
@@ -92,7 +93,7 @@ describe("Money", () => {
       for (const divisor of decimalDivisors) {
         for (const roundingMode of roundingModes) {
           const expected = roundRational(
-            amount * divisor.denominator,
+            BigInt(amount) * BigInt(divisor.denominator),
             divisor.numerator,
             roundingMode,
           );
@@ -107,6 +108,13 @@ describe("Money", () => {
   it("should preserve multiplication signs and rounding against an integer-rational oracle", () => {
     const roundingModes: MoneyRoundingMode[] = ["half_up", "down", "up"];
     const multipliers = [
+      { value: 1 / 3, numerator: 3333333333333333n, denominator: 10000000000000000n },
+      { value: -1 / 3, numerator: -3333333333333333n, denominator: 10000000000000000n },
+      { value: 20 / 31, numerator: 6451612903225806n, denominator: 10000000000000000n },
+      { value: -20 / 31, numerator: -6451612903225806n, denominator: 10000000000000000n },
+      { value: 0.1 + 0.2, numerator: 30000000000000004n, denominator: 100000000000000000n },
+      { value: -0.1 - 0.2, numerator: -30000000000000004n, denominator: 100000000000000000n },
+      { value: 0.123456789, numerator: 123456789n, denominator: 1000000000n },
       { value: -2.5, numerator: -5, denominator: 2 },
       { value: -0.5, numerator: -1, denominator: 2 },
       { value: 0.5, numerator: 1, denominator: 2 },
@@ -118,7 +126,7 @@ describe("Money", () => {
       for (const multiplier of multipliers) {
         for (const roundingMode of roundingModes) {
           const expected = roundRational(
-            amount * multiplier.numerator,
+            BigInt(amount) * BigInt(multiplier.numerator),
             multiplier.denominator,
             roundingMode,
           );
@@ -128,6 +136,41 @@ describe("Money", () => {
         }
       }
     }
+  });
+
+  it.each([
+    { amount: 2900, rate: 20 / 31, multiplied: 1871, divided: 4495 },
+    { amount: 2900, rate: 1 / 3, multiplied: 967, divided: 8700 },
+    { amount: 2900, rate: 0.1 + 0.2, multiplied: 870, divided: 9667 },
+    { amount: 123_456_789, rate: 0.123456789, multiplied: 15_241_579, divided: 1_000_000_000 },
+  ])(
+    "should round long decimal ratios without rejecting intermediates: $rate",
+    ({ amount, rate, multiplied, divided }) => {
+      expect(new Money(amount, "USD").multiply(rate).amount).toBe(multiplied);
+      expect(new Money(amount, "USD").divide(rate).amount).toBe(divided);
+    },
+  );
+
+  it.each(["half_up", "down", "up"] as const)(
+    "should validate only the final amount with %s rounding",
+    (mode) => {
+      const maximum = new Money(Number.MAX_SAFE_INTEGER, "USD");
+      expect(maximum.multiply(1, mode).amount).toBe(Number.MAX_SAFE_INTEGER);
+      expect(maximum.divide(1, mode).amount).toBe(Number.MAX_SAFE_INTEGER);
+      expect(() => maximum.multiply(2, mode)).toThrow(InvalidMoneyAmountProblem);
+      expect(() => maximum.divide(0.5, mode)).toThrow(InvalidMoneyAmountProblem);
+      expect(new Money(1, "USD").divide(Number.MAX_VALUE, mode).amount).toBe(mode === "up" ? 1 : 0);
+      expect(new Money(1, "USD").multiply(Number.MIN_VALUE, mode).amount).toBe(
+        mode === "up" ? 1 : 0,
+      );
+      expect(new Money(0, "USD").multiply(Number.MAX_VALUE, mode).amount).toBe(0);
+      expect(new Money(0, "USD").divide(Number.MIN_VALUE, mode).amount).toBe(0);
+    },
+  );
+
+  it.each([Number.NaN, Infinity, -Infinity])("should reject non-finite rates: %s", (rate) => {
+    expect(() => new Money(1, "USD").multiply(rate)).toThrow(InvalidMoneyAmountProblem);
+    expect(() => new Money(1, "USD").divide(rate)).toThrow(InvalidMoneyAmountProblem);
   });
 
   it("should compare amounts in the same currency", () => {
