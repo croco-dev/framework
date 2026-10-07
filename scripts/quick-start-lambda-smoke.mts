@@ -51,6 +51,7 @@ try {
   ]);
   await runPhase("build", "pnpm", ["--filter", `${packageName}...`, "build"]);
   assertGeneratedGraph();
+  await runControllerMeteringSmoke();
   await runMeteringReplaySmoke();
   await runApplicationLifecycleSmoke();
   await runRuntimeSmoke();
@@ -272,6 +273,49 @@ async function assertServerOutput(
   throw new Error(
     `quick-start-lambda-smoke: ${label} failed: server output did not include ${JSON.stringify(expectedText)}`,
   );
+}
+
+async function runControllerMeteringSmoke(): Promise<void> {
+  const exampleDir = join(smokeRoot, "examples", "quick-start-lambda");
+  const probe = `
+    import "reflect-metadata";
+    import { runWithMeteringService } from "@croco/metering-core";
+    import { UserService } from "./src/domain/UserService.ts";
+    import { createMeteringService } from "./src/integrations/inMemoryMetering.ts";
+    import { UserController } from "./src/protocols/UserController.ts";
+
+    void (async () => {
+      const service = createMeteringService();
+      const users = new UserService();
+      const controller = new UserController(users);
+      const created = await runWithMeteringService(service, () =>
+        controller.create({ name: "Metering smoke" }),
+      );
+      if (
+        created.name !== "Metering smoke" ||
+        users.list().length !== 3 ||
+        !users.list().some((user) => user.id === created.id && user.name === created.name)
+      ) {
+        throw new Error("metered controller did not create the user");
+      }
+
+      for (const [tenantId, expectedUsage] of [["test", 1], ["default", 0]] as const) {
+        const usage = await service.getUsage({
+          tenantId,
+          meterId: "api_user_create",
+          period: "billing_cycle",
+        });
+        if (usage !== expectedUsage) {
+          throw new Error("unexpected usage for tenant " + tenantId + ": " + usage);
+        }
+      }
+    })().catch((error: unknown) => {
+      console.error("quick-start-lambda-smoke: controller metering probe failed", error);
+      process.exitCode = 1;
+    });
+  `;
+
+  await runPhase("controller metering", "pnpm", ["--dir", exampleDir, "exec", "tsx", "-e", probe]);
 }
 
 async function runMeteringReplaySmoke(): Promise<void> {
