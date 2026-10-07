@@ -192,6 +192,11 @@ Error if execution not found
 
 Reconcile persisted running executions whose configured deadline has elapsed.
 
+When the store supports attempt fencing, the timeout write also compares the
+attempt observed in the running page, so a newly started attempt is skipped
+instead of being recorded as an indeterminate timeout. Stores without
+attempt fencing keep the status-only comparison and do not block that race.
+
 #### Parameters
 
 ##### options?
