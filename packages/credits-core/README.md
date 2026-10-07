@@ -102,18 +102,22 @@ immediately ineligible for reserve or consume allocation.
 
 `expireCredits()` handles at most 100 eligible lots per call and returns an opaque `nextCursor` when
 more work remains. Each page needs a new idempotency key; replaying a page returns the same page
-result.
+result. Derive one cutoff from the run identifier and reuse it across pages and job retries.
+When `asOf` is omitted, the first execution uses the command timestamp; retrying the same key
+returns that original result even after the clock advances.
 
 ```ts
+const runId = "2026-07-26";
+const asOf = new Date(`${runId}T00:00:00.000Z`);
 let cursor;
 do {
   const page = await credits.expireCredits({
     accountId,
-    asOf: new Date(),
+    asOf,
     limit: 50,
     cursor,
-    idempotencyKey: `expiry:2026-07-26:${cursor ?? "first"}`,
-    reference: { type: "expiry-run", id: "2026-07-26" },
+    idempotencyKey: `expiry:${runId}:${cursor ?? "first"}`,
+    reference: { type: "expiry-run", id: runId },
   });
   cursor = page.nextCursor;
 } while (cursor);

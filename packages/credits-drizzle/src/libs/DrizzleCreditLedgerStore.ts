@@ -1117,7 +1117,7 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
         and(
           eq(creditGrantLots.accountId, account.id),
           isNotNull(creditGrantLots.expiresAt),
-          lte(creditGrantLots.expiresAt, command.asOf),
+          lte(creditGrantLots.expiresAt, command.asOf ?? command.occurredAt),
           gt(creditGrantLots.available, "0"),
           cursorCondition,
         ),
@@ -1525,7 +1525,7 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
       if (!Number.isInteger(command.limit) || command.limit < 1 || command.limit > 100) {
         throw new InvalidCreditCommandProblem("expiry limit must be an integer between 1 and 100");
       }
-      if (Number.isNaN(command.asOf.getTime())) {
+      if (command.asOf !== undefined && Number.isNaN(command.asOf.getTime())) {
         throw new InvalidCreditCommandProblem("expiry asOf must be a valid date");
       }
     }

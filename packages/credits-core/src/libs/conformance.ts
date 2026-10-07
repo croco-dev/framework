@@ -7,8 +7,9 @@ import {
   CreditReservationMismatchProblem,
   ExpiredGrantProblem,
   InsufficientCreditsProblem,
+  InvalidCreditCommandProblem,
 } from "./problems";
-import type { CreditExpiryCursor } from "./types";
+import type { CreditCommandResult, CreditExpiryCursor } from "./types";
 
 export type CreditLedgerStoreConformanceCase = {
   readonly name: string;
@@ -32,12 +33,14 @@ export function createCreditLedgerStoreConformanceSuite(
   options: CreditLedgerStoreConformanceOptions,
 ): CreditLedgerStoreConformanceSuite {
   let sequence = 0;
-  const createService = async (): Promise<CreditLedgerService> => {
+  const createService = async (
+    clock = () => new Date("2026-07-26T00:00:00.000Z"),
+  ): Promise<CreditLedgerService> => {
     const store = await options.createStore();
     return new CreditLedgerService({
       store,
       eventDelivery: store.eventIntentDurability === "persistent" ? "durable" : "development",
-      clock: () => new Date("2026-07-26T00:00:00.000Z"),
+      clock,
       idGenerator: () => `${options.storeName}-${++sequence}`,
     });
   };
@@ -394,6 +397,127 @@ export function createCreditLedgerStoreConformanceSuite(
             lifetimeGranted: "0",
             netAdjusted: "5",
           });
+        },
+      },
+      {
+        name: "default asOf expiry replays after the clock advances",
+        run: async () => {
+          let now = new Date("2026-07-26T00:00:00.000Z");
+          const service = await createService(() => now);
+          const opened = await service.openAccount({
+            tenantId: "tenant-default-expiry",
+            idempotencyKey: "open",
+            reference: reference("open"),
+          });
+          for (const [id, expiresAt] of [
+            ["expired", "2026-07-25T00:00:00.000Z"],
+            ["future", "2026-07-26T00:00:01.000Z"],
+          ] as const) {
+            await service.grantCredits({
+              accountId: opened.account.id,
+              amount: creditAmount("5"),
+              expiresAt: new Date(expiresAt),
+              idempotencyKey: id,
+              reference: reference(id),
+            });
+          }
+          const input = {
+            accountId: opened.account.id,
+            idempotencyKey: "expiry-default",
+            reference: reference("expiry-default"),
+          };
+          const first = await service.expireCredits(input);
+          assert.equal(first.transactions.length, 1);
+          now = new Date("2026-07-26T00:00:02.000Z");
+          const replay = await service.expireCredits(input);
+          assert.equal(replay.replayed, true);
+          assert.deepEqual(replay.transactions, first.transactions);
+          assert.equal(replay.nextCursor, first.nextCursor);
+          assert.equal(replay.account.id, first.account.id);
+          assert.equal(replay.account.position, first.account.position);
+          assert.equal((await service.getBalance(opened.account.id)).available, "5");
+          await assert.rejects(
+            () => service.expireCredits({ ...input, asOf: new Date("2026-07-26T00:00:00.000Z") }),
+            CreditDuplicateConflictProblem,
+          );
+          await assert.rejects(
+            () =>
+              service.expireCredits({ ...input, idempotencyKey: "invalid", asOf: new Date(NaN) }),
+            InvalidCreditCommandProblem,
+          );
+          const next = await service.expireCredits({ ...input, idempotencyKey: "next-expiry" });
+          assert.equal(next.transactions.length, 1);
+          assert.equal((await service.getBalance(opened.account.id)).expired, "10");
+        },
+      },
+      {
+        name: "replays deterministic expiry run pages and rejects a changed explicit cutoff",
+        run: async () => {
+          let now = new Date("2026-07-26T00:00:00.000Z");
+          const credits = await createService(() => now);
+          const opened = await credits.openAccount({
+            tenantId: "tenant-expiry-run",
+            idempotencyKey: "open",
+            reference: reference("open"),
+          });
+          const accountId = opened.account.id;
+          for (let index = 0; index < 51; index++) {
+            await credits.grantCredits({
+              accountId,
+              amount: creditAmount("1"),
+              expiresAt: new Date("2026-07-25T00:00:00.000Z"),
+              idempotencyKey: `grant-${index}`,
+              reference: reference(`grant-${index}`),
+            });
+          }
+          const run = async () => {
+            const pages: CreditCommandResult[] = [];
+            const runId = "2026-07-26";
+            const asOf = new Date(`${runId}T00:00:00.000Z`);
+            let cursor: CreditExpiryCursor | undefined;
+            do {
+              const page = await credits.expireCredits({
+                accountId,
+                asOf,
+                limit: 50,
+                cursor,
+                idempotencyKey: `expiry:${runId}:${cursor ?? "first"}`,
+                reference: { type: "expiry-run", id: runId },
+              });
+              pages.push(page);
+              cursor = page.nextCursor;
+            } while (cursor);
+            return pages;
+          };
+          const first = await run();
+          assert.deepEqual(
+            first.map((page) => page.transactions.length),
+            [50, 1],
+          );
+          now = new Date("2026-07-26T00:00:01.000Z");
+          const replayed = await run();
+          assert.equal(replayed.length, first.length);
+          for (const [index, page] of replayed.entries()) {
+            const original = first[index];
+            assert.ok(original);
+            assert.equal(page.replayed, true);
+            assert.deepEqual(page.transactions, original.transactions);
+            assert.equal(page.nextCursor, original.nextCursor);
+            assert.equal(page.account.id, original.account.id);
+            assert.equal(page.account.position, original.account.position);
+          }
+          await assert.rejects(
+            () =>
+              credits.expireCredits({
+                accountId,
+                asOf: now,
+                limit: 50,
+                idempotencyKey: "expiry:2026-07-26:first",
+                reference: { type: "expiry-run", id: "2026-07-26" },
+              }),
+            CreditDuplicateConflictProblem,
+          );
+          assert.equal((await credits.getBalance(accountId)).expired, "51");
         },
       },
       {
