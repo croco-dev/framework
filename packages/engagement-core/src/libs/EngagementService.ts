@@ -5,7 +5,7 @@ import {
   type NotificationDispatchPreparationOptions,
   type NotificationPayload,
 } from "@croco/notifications-core";
-import { Problem, ProblemCategory } from "@croco/problems-core";
+import { Problem, ProblemCategory, readExplicitRetryability } from "@croco/problems-core";
 import {
   ContactPolicyConflictProblem,
   ContactPolicyAcceptanceUnknownProblem,
@@ -1059,7 +1059,11 @@ export class RecipientDirectoryLookupProblem extends Problem {
       `Recipient directory lookup failed for tenant ${ref.tenantId}`,
       {
         cause,
-        extensions: { tenantId: ref.tenantId, userId: ref.userId, retryable: true },
+        extensions: {
+          tenantId: ref.tenantId,
+          userId: ref.userId,
+          retryable: readExplicitRetryability(cause) ?? true,
+        },
       },
     );
   }
@@ -1121,7 +1125,7 @@ export class EngagementSuppressionEvaluationProblem extends Problem {
           tenantId: ref.tenantId,
           userId: ref.userId,
           channel,
-          retryable: true,
+          retryable: readExplicitRetryability(cause) ?? true,
         },
       },
     );
@@ -1150,7 +1154,7 @@ export class EngagementDispatchFailedProblem extends Problem {
           channel,
           channelResults,
           causeCode: cause instanceof Problem ? cause.code : "unknown",
-          retryable: cause instanceof Problem && cause.extensions?.retryable === true,
+          retryable: readExplicitRetryability(cause) ?? !(cause instanceof Problem),
         },
       },
     );

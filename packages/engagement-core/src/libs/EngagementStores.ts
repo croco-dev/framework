@@ -1,4 +1,4 @@
-import { Problem, ProblemCategory } from "@croco/problems-core";
+import { Problem, ProblemCategory, readExplicitRetryability } from "@croco/problems-core";
 import type { MessageChannel } from "./MessageContracts";
 import type { RecipientRef } from "./RecipientContracts";
 
@@ -353,7 +353,7 @@ export class EngagementPersistenceProblem extends Problem {
       `Engagement persistence operation ${operation} failed for tenant ${tenantId}`,
       {
         cause,
-        extensions: { operation, tenantId, retryable: true },
+        extensions: { operation, tenantId, retryable: readExplicitRetryability(cause) ?? true },
       },
     );
   }

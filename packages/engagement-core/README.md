@@ -103,6 +103,18 @@ const result = await engagement.send(TrialEnding, {
 
 The default `first-reachable` policy follows the message's declared channel order and dispatches every eligible endpoint in the first reachable channel. Later channels are skipped after that channel queues a send. Use `policy: "all-reachable"` to dispatch every eligible endpoint across all declared channels. Endpoint dispatch is sequential; a provider failure stops the send and preserves evidence for earlier accepted endpoints. Preference denial, suppression, and missing endpoints return explicit non-provider outcomes; recipient lookup, rendering, and provider failures remain typed Problems. `InMemoryRecipientDirectory` is intended for tests and single-process examples. Durable endpoints, preferences, and suppressions belong in storage-backed implementations.
 
+Recipient directory, suppression evaluation, and persistence wrappers preserve the cause's explicit
+retryability via `readExplicitRetryability`: a top-level boolean takes precedence over
+`extensions.retryable`. Without an explicit boolean, these wrappers remain retryable. Dispatch
+wrappers use the same explicit classification; an unclassified Problem remains non-retryable,
+while an unclassified ordinary Error is retryable, matching campaign member failure classification.
+
+Rendering failures remain non-retryable even when their cause requests retry: rendering is treated
+as a message/template correction boundary, so repeating campaign delivery does not repair it.
+A recorded failed dispatch also remains non-retryable on replay, independently of its provider's
+retryability evidence, to avoid automatically resending a logical delivery with durable failure
+or partial acceptance. Recover that dispatch through the owning notification/task workflow.
+
 ## Push endpoint lifecycle and delivery evidence
 
 Keep raw device tokens in an application-owned vault. `tokenReference` must be an opaque identifier

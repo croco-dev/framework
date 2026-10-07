@@ -48,6 +48,87 @@ import {
   type ResolvedRecipient,
 } from "../index";
 
+class RetryabilityCauseProblem extends Problem {
+  constructor(retryable?: boolean) {
+    super("test/provider-failed", ProblemCategory.InternalServerError, "provider failed", {
+      extensions: retryable === undefined ? {} : { retryable },
+    });
+  }
+}
+
+describe("engagement failure wrapper retryability", () => {
+  const ref = { tenantId: "tenant-1", userId: "user-1" };
+  const causes = [
+    { name: "plain Error", cause: new Error("unclassified"), expected: true, dispatch: true },
+    {
+      name: "unclassified Problem",
+      cause: new RetryabilityCauseProblem(),
+      expected: true,
+      dispatch: false,
+    },
+    {
+      name: "Problem extension true",
+      cause: new RetryabilityCauseProblem(true),
+      expected: true,
+      dispatch: true,
+    },
+    {
+      name: "Problem extension false",
+      cause: new RetryabilityCauseProblem(false),
+      expected: false,
+      dispatch: false,
+    },
+    {
+      name: "Error extension true",
+      cause: Object.assign(new Error("provider"), { extensions: { retryable: true } }),
+      expected: true,
+      dispatch: true,
+    },
+    {
+      name: "Error extension false",
+      cause: Object.assign(new Error("provider"), { extensions: { retryable: false } }),
+      expected: false,
+      dispatch: false,
+    },
+    {
+      name: "top-level true overrides extension false",
+      cause: Object.assign(new RetryabilityCauseProblem(false), { retryable: true }),
+      expected: true,
+      dispatch: true,
+    },
+    {
+      name: "top-level false overrides extension true",
+      cause: Object.assign(new RetryabilityCauseProblem(true), { retryable: false }),
+      expected: false,
+      dispatch: false,
+    },
+  ];
+
+  it.each(causes)("preserves directory cause classification: $name", ({ cause, expected }) => {
+    const problem = new RecipientDirectoryLookupProblem(ref, cause);
+    expect(problem.cause).toBe(cause);
+    expect(problem.extensions?.retryable).toBe(expected);
+  });
+
+  it.each(causes)("preserves suppression cause classification: $name", ({ cause, expected }) => {
+    const problem = new EngagementSuppressionEvaluationProblem("message", ref, "email", cause);
+    expect(problem.cause).toBe(cause);
+    expect(problem.extensions?.retryable).toBe(expected);
+  });
+
+  it.each(causes)("preserves dispatch cause classification: $name", ({ cause, dispatch }) => {
+    const problem = new EngagementDispatchFailedProblem("message", ref, "email", [], cause);
+    expect(problem.cause).toBe(cause);
+    expect(problem.extensions?.retryable).toBe(dispatch);
+  });
+
+  it.each(causes)("keeps renderer failures terminal: $name", ({ cause }) => {
+    const problem = new EngagementRenderFailedProblem("message", ref, "email", cause);
+    expect(problem.cause).toBe(cause);
+    expect(problem.extensions?.retryable).toBe(false);
+  });
+});
+
 const TrialEnding = defineMessage({
   id: "billing.trial-ending",
   topic: "billing",
