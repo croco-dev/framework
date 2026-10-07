@@ -173,7 +173,7 @@ function createPageRouteEntry(route: PageRouteIR, index: number): MetaVitePageRo
     path: route.path,
     mode: route.mode,
     componentRef: route.componentRef,
-    runtimeCapabilities: getPageRuntimeCapabilities(route.mode),
+    runtimeCapabilities: getPageRuntimeCapabilities(route),
     runtimeRequirements: getPageRuntimeRequirements(route),
     ...(route.revalidateMs !== undefined ? { revalidateMs: route.revalidateMs } : {}),
   };
@@ -234,10 +234,15 @@ function createServerActionEntry(
   };
 }
 
-function getPageRuntimeCapabilities(mode: RenderMode): readonly MetaViteRuntimeCapability[] {
-  switch (mode) {
+function getPageRuntimeCapabilities(route: PageRouteIR): readonly MetaViteRuntimeCapability[] {
+  switch (route.mode) {
     case "ssr":
-      return ["fetch", "react-ssr"];
+      // SSR pages with declared deferred regions render through the shell-first
+      // streaming path (React Suspense + pull-based host adapter delivery).
+      // Plain SSR pages without regions stay on the buffered render path.
+      return route.regions && route.regions.length > 0
+        ? ["fetch", "react-ssr", "streaming-response"]
+        : ["fetch", "react-ssr"];
     case "ssg":
       return ["static-prerender", "react-ssr"];
     case "isr":

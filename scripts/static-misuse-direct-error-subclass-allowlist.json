@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baselineEntryCount": 29,
+  "baselineEntryCount": 35,
   "description": "Reviewed direct built-in Error subclass baseline for #2926. Preserve existing diagnostic, client, internal aggregate, and Problem root boundaries; new subclasses require explicit review.",
   "entries": [
     {
@@ -263,6 +263,60 @@
       "reason": "Internal saga signal preserves the persistence cause and completed-step record for failure handling.",
       "owner": "framework-error-handling",
       "expiresOn": "2027-01-11"
+    },
+    {
+      "package": "@croco/meta-vite",
+      "file": "packages/meta-vite/src/libs/routes/routeRegistry.ts",
+      "line": 20,
+      "excerpt": "export class ShellRouteDefinitionError extends Error {",
+      "reason": "SSR shell route definition boundary exposes the meta-vite/shell-route-ssr-only diagnostic code; definition-time rejection before header commit.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-18"
+    },
+    {
+      "package": "@croco/meta-vite",
+      "file": "packages/meta-vite/src/libs/render/deferredRegions.ts",
+      "line": 72,
+      "excerpt": "export class DeferredRegionUnknownError extends Error {",
+      "reason": "SSR deferred-region settlement boundary exposes meta-vite/deferred-region-unknown diagnostic code; request-scoped loader failure accounting.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-18"
+    },
+    {
+      "package": "@croco/meta-vite",
+      "file": "packages/meta-vite/src/libs/render/deferredRegions.ts",
+      "line": 81,
+      "excerpt": "export class DeferredRegionTimeoutError extends Error {",
+      "reason": "SSR deferred-region timeout boundary exposes meta-vite/deferred-region-timeout diagnostic code; region-timeout accounting instead of stack leak.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-18"
+    },
+    {
+      "package": "@croco/meta-vite",
+      "file": "packages/meta-vite/src/libs/render/deferredRegions.ts",
+      "line": 90,
+      "excerpt": "export class DeferredRegionCancelledError extends Error {",
+      "reason": "SSR deferred-region cancellation boundary exposes meta-vite/deferred-region-cancelled diagnostic code; client-abort propagation without mixing tenant state.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-18"
+    },
+    {
+      "package": "@croco/meta-vite",
+      "file": "packages/meta-vite/src/libs/render/shellStream.ts",
+      "line": 15,
+      "excerpt": "export class ShellStreamAbortedError extends Error {",
+      "reason": "SSR shell stream abort boundary exposes meta-vite/shell-stream-aborted diagnostic code; client-abort/deadline classification after header commit.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-18"
+    },
+    {
+      "package": "@croco/meta-vite",
+      "file": "packages/meta-vite/src/libs/render/shellStream.ts",
+      "line": 27,
+      "excerpt": "export class ShellStreamMaxBufferedBytesError extends Error {",
+      "reason": "SSR buffered Lambda delivery boundary exposes meta-vite/shell-stream-max-buffered-bytes diagnostic code; total-response cap enforcement.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-18"
     }
   ]
 }

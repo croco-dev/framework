@@ -122,6 +122,48 @@ const handler = createMetaFetchHandler({
 const response = await handler(new Request("https://example.com/api/hello"));
 ```
 
+### Shell-First Streaming SSR
+
+Critical shells stream first; deferred regions resolve later through React Suspense:
+
+```typescript no-check
+import { defineRoute, RenderServer, RouteRegistry } from "@croco/meta-vite";
+
+const registry = new RouteRegistry();
+registry.register(
+  defineRoute({
+    path: "/pdp",
+    component: ProductPage,
+    mode: "ssr",
+    // Decided before headers commit: 404/redirect/critical 5xx.
+    resolveShell: async ({ request }) => {
+      const product = await lookupProduct(request);
+      if (!product) {
+        return { kind: "notFound" };
+      }
+      return { kind: "render" };
+    },
+    // Non-critical regions render behind Suspense after the shell flushes.
+    // Loaders receive the per-request `{ request, context, signal }` input so
+    // parallel fetches and cancellation never mix tenant/auth data.
+    regions: [{ id: "recommendations", loader: ({ signal }) => fetchRecommendations(signal) }],
+    stream: { deadlineMs: 10_000, regionTimeoutMs: 5_000, maxBufferedBytes: 65_536 },
+  }),
+);
+
+const server = new RenderServer(registry.compile());
+```
+
+Delivery is host-driven: Node and Cloudflare pipe the shell-first stream;
+Lambda buffers the complete HTML before returning (`x-croco-delivery` reports
+`stream` or `buffered`). After headers commit, region errors keep a safe
+fallback and are observed through `console.error`; status is never rewritten
+and stacks never leak. Shell streams carry only safe aggregates in
+`Server-Timing: shell;dur=0, regions`.
+
+`streaming-response` is reported in the route manifest only for SSR pages with
+declared regions. Plain SSR pages remain on the buffered render path.
+
 ## Route Manifest
 
 Use the route manifest build helper when CI, docs, deployment tooling, or admin surfaces need a
@@ -205,7 +247,7 @@ For example, `requiredCapabilities: ["react-server-components", "streaming-respo
 fails before manifest emission with `MetaViteUnsupportedCapabilityProblem`
 (`meta-vite/unsupported-render-capability`, status 501, route path and capability extensions).
 Omitting requirements preserves the legacy buffered payload; it does not certify Flight or streaming.
-Actual Flight and shell-to-host streaming are tracked in #2835 and #2836.
+Actual Flight streaming remains tracked in #2835; SSR shell-first streaming shipped in #2836.
 Adapter preservation of externally supplied streams is a separate capability from page rendering.
 
 ## Provider Adapters
