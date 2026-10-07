@@ -59,6 +59,7 @@
     "@croco/entitlements-core": "workspace:*",
     "@croco/experience-core": "workspace:*",
     "@croco/frontend-react": "workspace:*",
+    "@croco/gamification-core": "workspace:*",
     "@croco/impersonation-core": "workspace:*",
     "@croco/lifecycle-core": "workspace:*",
     "@croco/metering-core": "workspace:*",

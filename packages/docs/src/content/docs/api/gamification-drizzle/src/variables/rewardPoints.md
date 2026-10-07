@@ -1,0 +1,8 @@
+---
+editUrl: false
+next: false
+prev: false
+title: "rewardPoints"
+---
+
+> `const` **rewardPoints**: `PgTableWithColumns`\<\{ `columns`: \{ `accountId`: `PgColumn`\<\{ `baseColumn`: `never`; `columnType`: `"PgText"`; `data`: `string`; `dataType`: `"string"`; `driverParam`: `string`; `enumValues`: \[`string`, `...string[]`\]; `generated`: `undefined`; `hasDefault`: `false`; `hasRuntimeDefault`: `false`; `identity`: `undefined`; `isAutoincrement`: `false`; `isPrimaryKey`: `false`; `name`: `"account_id"`; `notNull`: `true`; `tableName`: `"reward_points"`; \}, \{ \}, \{ \}\>; `entry`: `PgColumn`\<\{ `baseColumn`: `never`; `columnType`: `"PgJsonb"`; `data`: [`PointEntry`](/api/gamification-core/src/type-aliases/pointentry/); `dataType`: `"json"`; `driverParam`: `unknown`; `enumValues`: `undefined`; `generated`: `undefined`; `hasDefault`: `false`; `hasRuntimeDefault`: `false`; `identity`: `undefined`; `isAutoincrement`: `false`; `isPrimaryKey`: `false`; `name`: `"entry"`; `notNull`: `true`; `tableName`: `"reward_points"`; \}, \{ \}, \{ `$type`: [`PointEntry`](/api/gamification-core/src/type-aliases/pointentry/); \}\>; `grantId`: `PgColumn`\<\{ `baseColumn`: `never`; `columnType`: `"PgText"`; `data`: `string`; `dataType`: `"string"`; `driverParam`: `string`; `enumValues`: \[`string`, `...string[]`\]; `generated`: `undefined`; `hasDefault`: `false`; `hasRuntimeDefault`: `false`; `identity`: `undefined`; `isAutoincrement`: `false`; `isPrimaryKey`: `true`; `name`: `"grant_id"`; `notNull`: `true`; `tableName`: `"reward_points"`; \}, \{ \}, \{ \}\>; \}; `dialect`: `"pg"`; `name`: `"reward_points"`; `schema`: `undefined`; \}\>

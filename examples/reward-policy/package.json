@@ -1,0 +1,34 @@
+{
+  "name": "@croco-example/reward-policy",
+  "version": "0.0.0",
+  "private": true,
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
+    "build:browser": "tsup",
+    "dev": "pnpm build:browser && tsx src/server.ts",
+    "setup": "tsx src/setup.ts"
+  },
+  "dependencies": {
+    "@croco/admin-core": "workspace:*",
+    "@croco/admin-react": "workspace:*",
+    "@croco/frontend-react": "workspace:*",
+    "@croco/gamification-core": "workspace:*",
+    "@croco/gamification-drizzle": "workspace:*",
+    "drizzle-orm": "catalog:",
+    "pg": "8.22.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "@types/pg": "8.20.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "reflect-metadata": "^0.2.2",
+    "tsup": "^8.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^6.0.3"
+  }
+}

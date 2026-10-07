@@ -140,3 +140,5 @@ export type {
   JoinChallengeRequest,
   JoinChallengeSource,
 } from "./libs/JoinChallenge";
+export { BadgeShelf, RewardReceipt } from "./libs/Rewards";
+export type { RewardViewState } from "./libs/Rewards";
