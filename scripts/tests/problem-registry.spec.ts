@@ -862,6 +862,32 @@ class Missing extends Base { constructor() { super("literal"); } }`,
     expect(checkResult.status).toBe("pass");
   });
 
+  it("discovers generated RPC Problems from generator metadata exactly once", () => {
+    const repo = createTempRepo();
+    const sourcePath = "packages/rpc-codegen/src/libs/generate.ts";
+    writeFile(repo, sourcePath, readFileSync(join(process.cwd(), sourcePath), "utf-8"));
+
+    const registry = createProblemCodeRegistry(discoverProblemCodes(repo));
+    for (const [code, category, status] of [
+      ["rpc-codegen/status-mismatch", "InternalServerError", 500],
+      ["rpc-codegen/query-key-input-unsupported", "ValidationError", 422],
+      ["rpc-codegen/path-param-input-unsupported", "ValidationError", 422],
+    ] as const) {
+      expect(registry.problems.find((problem) => problem.code === code)).toMatchObject({
+        category,
+        status,
+        sources: [
+          {
+            file: sourcePath,
+            kind: "problem-metadata",
+            line: expect.any(Number),
+            column: expect.any(Number),
+          },
+        ],
+      });
+    }
+  });
+
   it("publishes profile-selection recovery for SaaS profile mismatches", () => {
     const repo = createTempRepo();
     writeFile(

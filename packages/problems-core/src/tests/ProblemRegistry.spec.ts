@@ -14,6 +14,25 @@ import {
 } from "../index";
 
 describe("Problem code registry", () => {
+  it("registers generated RPC runtime Problem codes with recovery metadata", () => {
+    for (const [code, category, status] of [
+      ["rpc-codegen/status-mismatch", ProblemCategory.InternalServerError, 500],
+      ["rpc-codegen/query-key-input-unsupported", ProblemCategory.ValidationError, 422],
+    ] as const) {
+      expect(
+        CROCO_PROBLEM_CODE_REGISTRY.problems.find((problem) => problem.code === code),
+      ).toMatchObject({
+        category,
+        status,
+        recovery: {
+          cause: expect.any(String),
+          userAction: expect.any(String),
+          operatorAction: expect.any(String),
+        },
+      });
+    }
+  });
+
   it("creates deterministic registry entries with recovery metadata", () => {
     const registry = createProblemCodeRegistry([
       discovery("storage/file-not-found", ProblemCategory.NotFound, "packages/storage/src/a.ts", 8),
