@@ -2963,6 +2963,15 @@ importers:
         specifier: workspace:*
         version: link:../problems-core
     devDependencies:
+      '@croco/batch-core':
+        specifier: workspace:*
+        version: link:../batch-core
+      '@croco/execution-core':
+        specifier: workspace:*
+        version: link:../execution-core
+      '@croco/warehouse-core':
+        specifier: workspace:*
+        version: link:../warehouse-core
       tsup:
         specifier: ^8.0.0
         version: 8.5.1(patch_hash=ce9dbc714c187cea78868f1e68c1a0e5097ddbceb7e976a564d94f2291b5bcb9)(@swc/core@1.15.43)(jiti@2.6.1)(postcss@8.5.18)(supports-color@10.2.2)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.9.0)
@@ -5394,12 +5403,24 @@ importers:
         specifier: workspace:*
         version: link:../warehouse-core
     devDependencies:
+      '@croco/etl-core':
+        specifier: workspace:*
+        version: link:../etl-core
+      '@croco/execution-core':
+        specifier: workspace:*
+        version: link:../execution-core
+      '@croco/execution-drizzle':
+        specifier: workspace:*
+        version: link:../execution-drizzle
       '@croco/testing-resources':
         specifier: workspace:*
         version: link:../testing-resources
       '@types/pg':
         specifier: 8.20.0
         version: 8.20.0
+      drizzle-orm:
+        specifier: 'catalog:'
+        version: 0.45.2(@cloudflare/workers-types@4.20260316.1)(@opentelemetry/api@1.9.0)(@types/better-sqlite3@7.6.13)(@types/pg@8.20.0)(@upstash/redis@1.36.1)(better-sqlite3@12.11.1)(kysely@0.28.17)(pg@8.22.0)
       pg:
         specifier: 8.22.0
         version: 8.22.0

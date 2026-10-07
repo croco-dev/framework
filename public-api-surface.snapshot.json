@@ -13845,28 +13845,28 @@
           "sourceEntrypoint": "packages/etl-core/src/index.ts",
           "runtimeExports": [
             {
-              "name": "decodeSource",
-              "exportKind": "named",
-              "source": "./source/decodeSource",
-              "declarationKind": "function"
-            },
-            {
               "name": "EventSourceEnvelopeProblem",
               "exportKind": "named",
               "source": "./source/EventSourceEnvelope",
               "declarationKind": "class"
             },
             {
-              "name": "parseEventSourceEnvelope",
-              "exportKind": "named",
-              "source": "./source/EventSourceEnvelope",
-              "declarationKind": "function"
-            },
-            {
               "name": "SourceDecodeProblem",
               "exportKind": "named",
               "source": "./source/SourceDecodeProblem",
               "declarationKind": "class"
+            },
+            {
+              "name": "decodeSource",
+              "exportKind": "named",
+              "source": "./source/decodeSource",
+              "declarationKind": "function"
+            },
+            {
+              "name": "parseEventSourceEnvelope",
+              "exportKind": "named",
+              "source": "./source/EventSourceEnvelope",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -13908,6 +13908,156 @@
           ]
         },
         {
+          "exportPath": "./pipeline",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/pipeline.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/pipeline.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/pipeline.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/etl-core/src/pipeline.ts",
+          "runtimeExports": [
+            {
+              "name": "FileSourceProblem",
+              "exportKind": "named",
+              "source": "./pipeline/fileSource",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PipelineProblem",
+              "exportKind": "named",
+              "source": "./pipeline/PipelineProblem",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ProjectionProblem",
+              "exportKind": "named",
+              "source": "./pipeline/projection",
+              "declarationKind": "class"
+            },
+            {
+              "name": "createPipelineOperations",
+              "exportKind": "named",
+              "source": "./pipeline/definePipeline",
+              "declarationKind": "function"
+            },
+            {
+              "name": "definePipeline",
+              "exportKind": "named",
+              "source": "./pipeline/definePipeline",
+              "declarationKind": "function"
+            },
+            {
+              "name": "defineProjection",
+              "exportKind": "named",
+              "source": "./pipeline/projection",
+              "declarationKind": "function"
+            },
+            {
+              "name": "openFileSource",
+              "exportKind": "named",
+              "source": "./pipeline/fileSource",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "FileSource",
+              "exportKind": "named",
+              "source": "./pipeline/fileSource"
+            },
+            {
+              "name": "FileSourceCheckpoint",
+              "exportKind": "named",
+              "source": "./pipeline/fileSource"
+            },
+            {
+              "name": "FileSourceReader",
+              "exportKind": "named",
+              "source": "./pipeline/fileSource"
+            },
+            {
+              "name": "FileSourceRecord",
+              "exportKind": "named",
+              "source": "./pipeline/fileSource"
+            },
+            {
+              "name": "PipelineDefinition",
+              "exportKind": "named",
+              "source": "./pipeline/definePipeline"
+            },
+            {
+              "name": "PipelineProcessor",
+              "exportKind": "named",
+              "source": "./pipeline/definePipeline"
+            },
+            {
+              "name": "PipelinePublication",
+              "exportKind": "named",
+              "source": "./pipeline/definePipeline"
+            },
+            {
+              "name": "PipelineReason",
+              "exportKind": "named",
+              "source": "./pipeline/PipelineProblem"
+            },
+            {
+              "name": "PipelineRejection",
+              "exportKind": "named",
+              "source": "./pipeline/definePipeline"
+            },
+            {
+              "name": "PipelineResult",
+              "exportKind": "named",
+              "source": "./pipeline/definePipeline"
+            },
+            {
+              "name": "PipelineRuntime",
+              "exportKind": "named",
+              "source": "./pipeline/definePipeline"
+            },
+            {
+              "name": "Projection",
+              "exportKind": "named",
+              "source": "./pipeline/projection"
+            },
+            {
+              "name": "ProjectionColumns",
+              "exportKind": "named",
+              "source": "./pipeline/projection"
+            },
+            {
+              "name": "ProjectionExpression",
+              "exportKind": "named",
+              "source": "./pipeline/projection"
+            },
+            {
+              "name": "ProjectionReason",
+              "exportKind": "named",
+              "source": "./pipeline/projection"
+            },
+            {
+              "name": "ProjectionValue",
+              "exportKind": "named",
+              "source": "./pipeline/projection"
+            },
+            {
+              "name": "RunBinding",
+              "exportKind": "named",
+              "source": "./pipeline/definePipeline"
+            }
+          ]
+        },
+        {
           "exportPath": "./source",
           "kind": "code",
           "targets": [
@@ -13927,28 +14077,28 @@
           "sourceEntrypoint": "packages/etl-core/src/source.ts",
           "runtimeExports": [
             {
-              "name": "decodeSource",
-              "exportKind": "named",
-              "source": "./source/decodeSource",
-              "declarationKind": "function"
-            },
-            {
               "name": "EventSourceEnvelopeProblem",
               "exportKind": "named",
               "source": "./source/EventSourceEnvelope",
               "declarationKind": "class"
             },
             {
-              "name": "parseEventSourceEnvelope",
-              "exportKind": "named",
-              "source": "./source/EventSourceEnvelope",
-              "declarationKind": "function"
-            },
-            {
               "name": "SourceDecodeProblem",
               "exportKind": "named",
               "source": "./source/SourceDecodeProblem",
               "declarationKind": "class"
+            },
+            {
+              "name": "decodeSource",
+              "exportKind": "named",
+              "source": "./source/decodeSource",
+              "declarationKind": "function"
+            },
+            {
+              "name": "parseEventSourceEnvelope",
+              "exportKind": "named",
+              "source": "./source/EventSourceEnvelope",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -40585,18 +40735,6 @@
           "sourceEntrypoint": "packages/warehouse-postgres/src/facts.ts",
           "runtimeExports": [
             {
-              "name": "installPostgresFactSchema",
-              "exportKind": "named",
-              "source": "./facts/schema",
-              "declarationKind": "function"
-            },
-            {
-              "name": "installPostgresWarehouseSchema",
-              "exportKind": "named",
-              "source": "./facts/schema",
-              "declarationKind": "function"
-            },
-            {
               "name": "PostgresWarehouseCatalog",
               "exportKind": "named",
               "source": "./facts/PostgresWarehouseCatalog",
@@ -40613,6 +40751,18 @@
               "exportKind": "named",
               "source": "./facts/PostgresWarehouseWriter",
               "declarationKind": "class"
+            },
+            {
+              "name": "installPostgresFactSchema",
+              "exportKind": "named",
+              "source": "./facts/schema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "installPostgresWarehouseSchema",
+              "exportKind": "named",
+              "source": "./facts/schema",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -40653,6 +40803,12 @@
           "sourceEntrypoint": "packages/warehouse-postgres/src/metrics.ts",
           "runtimeExports": [
             {
+              "name": "PostgresMetricsStore",
+              "exportKind": "named",
+              "source": "./metrics/PostgresMetricsStore",
+              "declarationKind": "class"
+            },
+            {
               "name": "installPostgresMetricsSchema",
               "exportKind": "named",
               "source": "./metrics/schema",
@@ -40669,12 +40825,6 @@
               "exportKind": "named",
               "source": "./metrics/schema",
               "declarationKind": "function"
-            },
-            {
-              "name": "PostgresMetricsStore",
-              "exportKind": "named",
-              "source": "./metrics/PostgresMetricsStore",
-              "declarationKind": "class"
             }
           ],
           "typeExports": [
@@ -40684,6 +40834,34 @@
               "source": "./metrics/MetricsPostgresClient"
             }
           ]
+        },
+        {
+          "exportPath": "./pipeline",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/pipeline.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/pipeline.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/pipeline.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/warehouse-postgres/src/pipeline.ts",
+          "runtimeExports": [
+            {
+              "name": "PostgresPipelinePublication",
+              "exportKind": "named",
+              "source": "./pipeline/PostgresPipelinePublication",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": []
         }
       ]
     },

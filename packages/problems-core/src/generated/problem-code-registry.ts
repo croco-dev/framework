@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 926,
+  problemCount: 930,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -644,6 +644,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/cli/src/libs/ops.ts",
           line: 55,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "CROCO_CLI_PIPELINE_INVALID_CONFIG",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#croco-cli-pipeline-invalid-config",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cli/src/commands/pipeline.ts",
+          line: 19,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11915,6 +11946,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "etl-core/file-source-failed",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#etl-core-file-source-failed",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/etl-core/src/pipeline/fileSource.ts",
+          line: 33,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "etl-core/invalid-event-envelope",
       category: "ValidationError",
       status: 422,
@@ -11939,6 +12000,66 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/etl-core/src/source/EventSourceEnvelope.ts",
           line: 14,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "etl-core/pipeline-failed",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#etl-core-pipeline-failed",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/etl-core/src/pipeline/PipelineProblem.ts",
+          line: 12,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "etl-core/projection-failed",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#etl-core-projection-failed",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/etl-core/src/pipeline/projection.ts",
+          line: 37,
           column: 1,
           kind: "problem-class",
         },

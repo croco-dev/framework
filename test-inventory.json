@@ -1112,6 +1112,12 @@
       "owner": "@croco/cli"
     },
     {
+      "path": "packages/cli/src/tests/Pipeline.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/cli"
+    },
+    {
       "path": "packages/cli/src/tests/TestPlan.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -2145,6 +2151,24 @@
     },
     {
       "path": "packages/etl-core/src/tests/EventSourceEnvelope.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/etl-core"
+    },
+    {
+      "path": "packages/etl-core/src/tests/FileSource.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/etl-core"
+    },
+    {
+      "path": "packages/etl-core/src/tests/Pipeline.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/etl-core"
+    },
+    {
+      "path": "packages/etl-core/src/tests/Projection.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/etl-core"
@@ -5352,6 +5376,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/warehouse-core"
+    },
+    {
+      "path": "packages/warehouse-postgres/src/tests/Pipeline.integration.spec.ts",
+      "lane": "integration",
+      "qualifiers": [],
+      "owner": "@croco/warehouse-postgres"
     },
     {
       "path": "packages/warehouse-postgres/src/tests/PostgresMetricsStore.integration.spec.ts",

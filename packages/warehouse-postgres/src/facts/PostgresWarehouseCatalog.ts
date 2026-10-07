@@ -33,6 +33,10 @@ export class PostgresWarehouseCatalog implements CatalogStore {
     private readonly pool: WarehousePostgresPool,
     private readonly descriptor: FactDescriptor,
     private readonly resolveAccess: () => WarehouseAccess,
+    private readonly publicationParticipant?: (
+      connection: WarehousePostgresConnection,
+      snapshot: WarehouseSnapshot,
+    ) => Promise<void>,
   ) {}
 
   private access(role: WarehouseAccess["roles"][number]): WarehouseAccess {
@@ -387,6 +391,7 @@ export class PostgresWarehouseCatalog implements CatalogStore {
         "published",
         { ...candidate, state: "published" },
       ]);
+      await this.publicationParticipant?.(db, snapshot);
       return snapshot;
     });
   }

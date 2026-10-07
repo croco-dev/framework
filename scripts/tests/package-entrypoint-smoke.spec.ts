@@ -49,6 +49,47 @@ describe("package-entrypoint-smoke.mts", () => {
     expect(result.stdout).toContain("summary checked=1 exempt=0 skippedPrivate=1");
   });
 
+  it.each([
+    ["etl-core", ["@croco/batch-core", "@croco/execution-core", "@croco/warehouse-core"]],
+    [
+      "warehouse-postgres",
+      ["@croco/etl-core", "@croco/execution-core", "@croco/execution-drizzle", "drizzle-orm", "pg"],
+    ],
+  ] as const)("installs selected optional pipeline peers for %s entrypoints", (name, peers) => {
+    const root = createTempRoot();
+    for (const peer of peers.filter((peer) => peer.startsWith("@croco/"))) {
+      writeImportablePackage(root, peer.slice("@croco/".length));
+    }
+    writeImportablePackage(root, name, {
+      peerDependencies: Object.fromEntries(
+        peers.map((peer) => [
+          peer,
+          peer === "drizzle-orm" ? "^0.45.2" : peer === "pg" ? "8.22.0" : "0.0.0",
+        ]),
+      ),
+      peerDependenciesMeta: Object.fromEntries(peers.map((peer) => [peer, { optional: true }])),
+      cjsContent:
+        peers.map((peer) => `require(${JSON.stringify(peer)});`).join("\n") +
+        '\nexports.value = "ok";\n',
+      esmContent:
+        peers.map((peer) => `import ${JSON.stringify(peer)};`).join("\n") +
+        '\nexport const value = "ok";\n',
+      exportsValue: {
+        ...defaultPublishExports(),
+        "./pipeline": {
+          types: "./dist/index.d.ts",
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+        },
+      },
+    });
+
+    const result = runScript(root);
+
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(result.stdout).toContain(`✓ @croco/${name}: esm 2, cjs 2, types 2`);
+  });
+
   it("preserves packed overrides when pnpm edits the generated consumer workspace", () => {
     const repositoryRoot = resolve(__dirname, "../..");
     const { packageManager } = JSON.parse(
@@ -755,6 +796,7 @@ function writeImportablePackage(
     readonly importTarget?: string;
     readonly packageName?: string;
     readonly peerDependencies?: Record<string, string>;
+    readonly peerDependenciesMeta?: Record<string, { readonly optional: boolean }>;
     readonly publishConfig?: Record<string, unknown>;
     readonly sideEffects?: boolean | readonly string[];
     readonly sourceExports?: unknown;
@@ -791,6 +833,7 @@ function writeImportablePackage(
       {
         name: packageName,
         peerDependencies: options.peerDependencies,
+        peerDependenciesMeta: options.peerDependenciesMeta,
         sideEffects: options.sideEffects,
         exports: options.sourceExports,
         version: "0.0.0",
