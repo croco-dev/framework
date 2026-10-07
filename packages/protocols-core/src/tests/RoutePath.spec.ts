@@ -16,6 +16,7 @@ describe("toRuntimeRoutePath", () => {
 describe("toRouteMatchKey", () => {
   it.each([
     ["/users/:id", "/users/:userId", "/users/:"],
+    ["/users/:id?", "/users/:userId?", "/users/:?"],
     ["/users/:id/posts/:postId", "/users/:userId/posts/:slug", "/users/:/posts/:"],
     ["/assets/:...path", "/assets/:...file", "/assets/:{.+}"],
     ["/assets/:...path", "/assets/:file{.+}", "/assets/:{.+}"],
@@ -28,8 +29,11 @@ describe("toRouteMatchKey", () => {
   it("preserves static segments and distinct matcher constraints", () => {
     expect(toRouteMatchKey("/users/:id")).not.toBe(toRouteMatchKey("/teams/:id"));
     expect(toRouteMatchKey("/users/:id")).not.toBe(toRouteMatchKey("/users/:...id"));
+    expect(toRouteMatchKey("/users/:id")).not.toBe(toRouteMatchKey("/users/:id?"));
     expect(toRouteMatchKey("/users/:id{[0-9]+}")).not.toBe(toRouteMatchKey("/users/:id{[a-z]+}"));
     expect(toRouteMatchKey("/users/current")).toBe("/users/current");
+    expect(toRouteMatchKey("/actions:read")).toBe("/actions:read");
+    expect(toRouteMatchKey("/actions:write")).toBe("/actions:write");
     expect(toRouteMatchKey("/assets/:...")).toBe("/assets/:...");
   });
 });

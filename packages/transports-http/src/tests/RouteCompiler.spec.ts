@@ -98,6 +98,7 @@ describe("RouteCompiler", () => {
 
   it.each([
     ["/:id", "/:userId"],
+    ["/:id?", "/:userId?"],
     ["/:...path", "/:...rest"],
   ])("rejects renamed parameters across controllers: %s and %s", (firstPath, secondPath) => {
     @Controller("/users")
@@ -155,12 +156,24 @@ describe("RouteCompiler", () => {
       third() {
         return {};
       }
+      @Get("/actions:read")
+      readAction() {
+        return {};
+      }
+      @Get("/actions:write")
+      writeAction() {
+        return {};
+      }
+      @Get("/:userId?")
+      optional() {
+        return {};
+      }
       @Get("/:...rest")
       fourth() {
         return {};
       }
     }
-    expect(createCompiler().compile([UsersController])).toHaveLength(4);
+    expect(createCompiler().compile([UsersController])).toHaveLength(7);
   });
 
   it("should compile routes from controller", () => {

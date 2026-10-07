@@ -61,6 +61,7 @@ describe("buildContractGraph", () => {
 
   it.each([
     ["/:id", "/:userId"],
+    ["/:id?", "/:userId?"],
     ["/:...path", "/:...file"],
     ["/:id", "/:id"],
   ])(
@@ -117,6 +118,25 @@ describe("buildContractGraph", () => {
     expect(buildContractGraph([UsersController, LegacyUsersController]).diagnostics).toContainEqual(
       expect.objectContaining({ code: "contract-route-duplicate-path", severity: "error" }),
     );
+  });
+
+  it("allows required and optional parameter matchers", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      required() {}
+      @Get("/actions:read")
+      readAction() {}
+      @Get("/actions:write")
+      writeAction() {}
+      @Get("/:userId?")
+      optional() {}
+    }
+    expect(
+      buildContractGraph([UsersController]).diagnostics.filter(
+        ({ code }) => code === "contract-route-duplicate-path",
+      ),
+    ).toEqual([]);
   });
 
   it("allows distinct methods, static segments, and parameter matchers", () => {

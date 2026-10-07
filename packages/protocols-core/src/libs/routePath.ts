@@ -14,10 +14,14 @@ export function toRuntimeRoutePath(path: string): string {
 
 /** Returns a matcher comparison key without changing authored route metadata. */
 export function toRouteMatchKey(path: string): string {
-  return toRuntimeRoutePath(path).replace(ROUTE_PARAMETER_TOKEN, (token, paramToken: string) => {
-    if (paramToken === "...") return token;
+  return toRuntimeRoutePath(path).replace(
+    ROUTE_PARAMETER_TOKEN,
+    (token, paramToken: string, offset: number, runtimePath: string) => {
+      if ((offset > 0 && runtimePath[offset - 1] !== "/") || paramToken === "...") return token;
 
-    const constraintStart = paramToken.indexOf("{");
-    return constraintStart === -1 ? ":" : `:${paramToken.slice(constraintStart)}`;
-  });
+      const constraintStart = paramToken.indexOf("{");
+      if (constraintStart !== -1) return `:${paramToken.slice(constraintStart)}`;
+      return paramToken.endsWith("?") ? ":?" : ":";
+    },
+  );
 }
