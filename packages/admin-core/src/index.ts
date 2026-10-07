@@ -490,3 +490,6 @@ export type {
 } from "./libs/ChallengeOperations";
 export { RewardOperations } from "./libs/RewardOperations";
 export type { RewardAdminAccess } from "./libs/RewardOperations";
+
+export { assertMissionPublication, MissionConsoleInvalidProblem } from "./libs/MissionConsole";
+export type { MissionConsoleAccess, MissionConsoleState } from "./libs/MissionConsole";

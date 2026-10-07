@@ -510,6 +510,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "MissionConsoleInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/MissionConsole",
+              "declarationKind": "class"
+            },
+            {
               "name": "OFFER_CONSOLE_PII_PERMISSION",
               "exportKind": "named",
               "source": "./libs/OfferConsole",
@@ -663,6 +669,12 @@
               "name": "assertEndpointReactivateValid",
               "exportKind": "named",
               "source": "./libs/EngagementOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertMissionPublication",
+              "exportKind": "named",
+              "source": "./libs/MissionConsole",
               "declarationKind": "function"
             },
             {
@@ -2026,6 +2038,16 @@
               "name": "LoadTenantWorkspaceInput",
               "exportKind": "named",
               "source": "./libs/TenantWorkspace"
+            },
+            {
+              "name": "MissionConsoleAccess",
+              "exportKind": "named",
+              "source": "./libs/MissionConsole"
+            },
+            {
+              "name": "MissionConsoleState",
+              "exportKind": "named",
+              "source": "./libs/MissionConsole"
             },
             {
               "name": "NonEmptyArray",
@@ -3464,6 +3486,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "MissionConsole",
+              "exportKind": "named",
+              "source": "./libs/MissionConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "OfferConsole",
               "exportKind": "named",
               "source": "./libs/OfferConsole",
@@ -4570,6 +4598,11 @@
               "name": "MetricInspectorResult",
               "exportKind": "named",
               "source": "./libs/MetricInspector"
+            },
+            {
+              "name": "MissionConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/MissionConsole"
             },
             {
               "name": "NonEmptyArray",
@@ -20238,6 +20271,12 @@
           "sourceEntrypoint": "packages/frontend-react/src/index.ts",
           "runtimeExports": [
             {
+              "name": "AchievementToast",
+              "exportKind": "named",
+              "source": "./libs/MissionProgress",
+              "declarationKind": "function"
+            },
+            {
               "name": "AuthBridgeContext",
               "exportKind": "named",
               "source": "./libs/authBridge",
@@ -20364,6 +20403,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "ProgressCard",
+              "exportKind": "named",
+              "source": "./libs/MissionProgress",
+              "declarationKind": "function"
+            },
+            {
               "name": "ReminderSettingsForm",
               "exportKind": "named",
               "source": "./libs/ReminderSettingsForm",
@@ -20403,6 +20448,12 @@
               "name": "SnoozeControl",
               "exportKind": "named",
               "source": "./libs/ReminderSettingsForm",
+              "declarationKind": "function"
+            },
+            {
+              "name": "StreakCalendar",
+              "exportKind": "named",
+              "source": "./libs/MissionProgress",
               "declarationKind": "function"
             },
             {
@@ -20739,6 +20790,11 @@
               "source": "./libs/createCrocoPages"
             },
             {
+              "name": "MissionProgressState",
+              "exportKind": "named",
+              "source": "./libs/MissionProgress"
+            },
+            {
               "name": "MyBenefitsEntry",
               "exportKind": "named",
               "source": "./libs/OfferCard"
@@ -20812,6 +20868,11 @@
               "name": "ProblemToastPayload",
               "exportKind": "named",
               "source": "./libs/problemUiTypes"
+            },
+            {
+              "name": "ProgressCardProps",
+              "exportKind": "named",
+              "source": "./libs/MissionProgress"
             },
             {
               "name": "ReminderSettingsFormProps",
@@ -21066,9 +21127,45 @@
               "declarationKind": "class"
             },
             {
+              "name": "InMemoryMissionStore",
+              "exportKind": "named",
+              "source": "./libs/InMemoryMissionStore",
+              "declarationKind": "class"
+            },
+            {
               "name": "InvalidRewardPolicyProblem",
               "exportKind": "named",
               "source": "@croco/gamification-core/reward-contracts"
+            },
+            {
+              "name": "MissionAccessDeniedProblem",
+              "exportKind": "named",
+              "source": "./libs/MissionContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MissionConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/MissionContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MissionInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/MissionContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MissionNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/MissionContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MissionService",
+              "exportKind": "named",
+              "source": "./libs/MissionService",
+              "declarationKind": "class"
             },
             {
               "name": "RewardAccessDeniedProblem",
@@ -21103,6 +21200,12 @@
               "source": "@croco/gamification-core/reward-contracts"
             },
             {
+              "name": "ServerActionVerifier",
+              "exportKind": "named",
+              "source": "./libs/ServerActionVerifier",
+              "declarationKind": "class"
+            },
+            {
               "name": "assertChallengeDefinition",
               "exportKind": "named",
               "source": "./libs/ChallengeContracts",
@@ -21112,6 +21215,12 @@
               "name": "assertChallengeScope",
               "exportKind": "named",
               "source": "./libs/ChallengeContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertMissionScope",
+              "exportKind": "named",
+              "source": "./libs/MissionContracts",
               "declarationKind": "function"
             },
             {
@@ -21125,9 +21234,39 @@
               "source": "@croco/gamification-core/reward-contracts"
             },
             {
+              "name": "missionDate",
+              "exportKind": "named",
+              "source": "./libs/MissionContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "missionDateStart",
+              "exportKind": "named",
+              "source": "./libs/MissionContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "missionLocalDate",
+              "exportKind": "named",
+              "source": "./libs/MissionContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "missionPeriod",
+              "exportKind": "named",
+              "source": "./libs/MissionContracts",
+              "declarationKind": "function"
+            },
+            {
               "name": "selectReward",
               "exportKind": "named",
               "source": "@croco/gamification-core/reward-contracts"
+            },
+            {
+              "name": "validateMissionDefinition",
+              "exportKind": "named",
+              "source": "./libs/MissionContracts",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -21220,6 +21359,106 @@
               "name": "ChallengeView",
               "exportKind": "named",
               "source": "./libs/ChallengeContracts"
+            },
+            {
+              "name": "MissionAccessRequest",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MissionActor",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MissionAggregate",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MissionAggregateKey",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MissionAuthorization",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MissionCommand",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MissionCompletion",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MissionDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MissionEvidence",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MissionEvidenceReceipt",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MissionEvidenceVerifier",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MissionIngestResult",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MissionInstance",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MissionProgress",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MissionPublication",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MissionScope",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MissionServerActionLedger",
+              "exportKind": "named",
+              "source": "./libs/ServerActionVerifier"
+            },
+            {
+              "name": "MissionServerActionReceipt",
+              "exportKind": "named",
+              "source": "./libs/ServerActionVerifier"
+            },
+            {
+              "name": "MissionServiceOptions",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "MissionStore",
+              "exportKind": "named",
+              "source": "./libs/types"
             },
             {
               "name": "PointEntry",
@@ -21438,6 +21677,30 @@
               "declarationKind": "const"
             },
             {
+              "name": "missionCompletions",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "missionDefinitions",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "missionEvidence",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "missionInstances",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
               "name": "ChallengePersistenceProblem",
               "exportKind": "named",
               "source": "./libs/ChallengePersistenceProblem",
@@ -21450,9 +21713,21 @@
               "declarationKind": "class"
             },
             {
+              "name": "DrizzleMissionStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleMissionStore",
+              "declarationKind": "class"
+            },
+            {
               "name": "DrizzleRewardStore",
               "exportKind": "named",
               "source": "./libs/DrizzleRewardStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MissionCompletedDomainEvent",
+              "exportKind": "named",
+              "source": "./libs/MissionCompletedDomainEvent",
               "declarationKind": "class"
             },
             {
@@ -21460,6 +21735,12 @@
               "exportKind": "named",
               "source": "./libs/problems",
               "declarationKind": "class"
+            },
+            {
+              "name": "addGamificationMissions",
+              "exportKind": "named",
+              "source": "./migrations/addGamificationMissions",
+              "declarationKind": "function"
             },
             {
               "name": "createChallengeSchema",
@@ -21477,6 +21758,12 @@
               "name": "dropChallengeSchema",
               "exportKind": "named",
               "source": "./migrations/gamificationSchema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "removeGamificationMissions",
+              "exportKind": "named",
+              "source": "./migrations/addGamificationMissions",
               "declarationKind": "function"
             },
             {
@@ -21528,6 +21815,11 @@
               "source": "./libs/DrizzleChallengeStore"
             },
             {
+              "name": "DrizzleMissionClient",
+              "exportKind": "named",
+              "source": "./libs/DrizzleMissionStore"
+            },
+            {
               "name": "DrizzleRewardClient",
               "exportKind": "named",
               "source": "./libs/DrizzleRewardStore"
@@ -21536,6 +21828,11 @@
               "name": "GamificationMigrationClient",
               "exportKind": "named",
               "source": "./migrations/gamificationSchema"
+            },
+            {
+              "name": "MissionMigrationClient",
+              "exportKind": "named",
+              "source": "./migrations/addGamificationMissions"
             }
           ]
         }

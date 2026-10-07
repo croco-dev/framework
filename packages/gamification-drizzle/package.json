@@ -11,7 +11,10 @@
     "dist"
   ],
   "type": "commonjs",
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/index.js",
+    "./dist/index.mjs"
+  ],
   "main": "./dist/index.js",
   "module": "./dist/index.mjs",
   "types": "./dist/index.d.ts",
@@ -37,21 +40,28 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "lint": "oxlint .",
-    "test": "vitest run src/tests/DrizzleChallengeStore.spec.ts src/tests/DrizzleRewardStore.spec.ts",
+    "test": "vitest run --exclude 'src/tests/*.postgres.spec.ts'",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
     "test:live": "vitest run src/tests/*.postgres.spec.ts --no-file-parallelism",
     "test:postgres": "vitest run src/tests/*.postgres.spec.ts --no-file-parallelism",
     "typecheck": "tsc --noEmit",
-    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
+    "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch"
   },
   "dependencies": {
+    "@croco/events-core": "workspace:*",
+    "@croco/events-tx": "workspace:*",
     "@croco/gamification-core": "workspace:*",
     "@croco/problems-core": "workspace:*",
+    "@croco/tx-core": "workspace:*",
+    "@croco/tx-drizzle": "workspace:*",
     "drizzle-orm": "catalog:"
   },
   "devDependencies": {
+    "@croco/testing": "workspace:*",
     "@types/pg": "8.20.0",
     "pg": "8.22.0",
+    "reflect-metadata": "^0.2.2",
     "tsup": "^8.4.0",
     "typescript": "^5.7.2",
     "vitest": "4.1.8"

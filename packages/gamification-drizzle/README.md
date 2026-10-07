@@ -1,6 +1,6 @@
 # @croco/gamification-drizzle
 
-PostgreSQL persistence for cooperative challenges and server-verified achievement rewards.
+PostgreSQL persistence for cooperative challenges, server-verified achievement rewards, and recurring missions. Each provider has an explicit migration owned by the application.
 
 ## Cooperative challenges
 
@@ -53,7 +53,7 @@ Validation:
 
 ```sh
 pnpm --filter @croco/gamification-drizzle test
-GAMIFICATION_POSTGRES_URL=postgresql://... REWARDS_POSTGRES_URL=postgresql://... pnpm --filter @croco/gamification-drizzle test:postgres
+GAMIFICATION_POSTGRES_URL=postgresql://... REWARDS_POSTGRES_URL=postgresql://... MISSIONS_POSTGRES_URL=postgresql://... pnpm --filter @croco/gamification-drizzle test:postgres
 ```
 
 The PostgreSQL suite requires a dedicated disposable database: it drops and truncates
@@ -61,7 +61,8 @@ these tables. It covers two independent connections, concurrent initial creation
 final contributions, duplicate completion, a fresh pool, rollback, scope isolation,
 erasure and migration reapplication. Challenge tests are skipped without `GAMIFICATION_POSTGRES_URL`.
 The combined live command also runs reward tests, which require `REWARDS_POSTGRES_URL` and fail
-explicitly when it is missing. Set both variables to dedicated disposable test databases.
+explicitly when it is missing. Mission tests are skipped without `MISSIONS_POSTGRES_URL`. Set all
+three variables to dedicated disposable test databases to run every provider suite.
 
 ## Achievement rewards
 
@@ -76,3 +77,57 @@ After process restart, retry `grantForEvidence` with the original identity to re
 The store is an infrastructure primitive; application authorization and evidence ownership must be supplied through `RewardService` verifiers. All identifiers include app, environment, and tenant. Tests and operator test grants require isolated scopes.
 
 Run package `test`, `typecheck`, `build`, and `lint`. For the two-connection, restart, migration and concurrency suite, set `REWARDS_POSTGRES_URL` to a disposable database and run `pnpm --filter @croco/gamification-drizzle test:postgres`. The suite owns a temporary schema and removes it afterward. A missing database URL fails the live command explicitly. Passing local tests do not establish provider certification or npm release.
+
+## Recurring missions
+
+PostgreSQL persistence for `@croco/gamification-core`. Construct `DrizzleMissionStore(db, txManager)` with a PostgreSQL Drizzle client and its shared `TxManager`, then pass the store to `MissionService` alongside authorization and evidence verification ports.
+
+Run `addGamificationMissions(db)` through the application's migration owner before use. The store performs no boot DDL. `removeGamificationMissions(db)` removes the four tables and their history; use it only for intentional teardown.
+
+Definitions preserve actor, reason, revision, idempotency key and publication time. Versions are immutable, revisions increase by one, and matching idempotent publication returns the original audit record. Instance scope includes app, environment, tenant, subject, mission, version, episode and period. A transaction lock serializes creation, and a row lock protects existing progress. Evidence and unique completions commit with progress through the caller's ambient transaction. Configure `TxManager` with `createDrizzleTxAdapter(db)` and savepoint support enabled; nested store operations use its savepoint queue to serialize concurrent `Promise.all` evidence within the same ambient transaction.
+
+Evidence identity is unique across versions and episodes within the same app/environment/tenant/subject/mission. Reusing an event in a changed timezone therefore cannot earn a second count. Evidence stores the minimized service receipt rather than a domain payload. Corrections retain original receipts and historical completion; this package does not grant or revoke rewards or send notifications.
+
+`read` restores the pinned definition, instances, evidence and completion history after restart. Use `MissionService` for authorized reads and mutations; the store is an internal persistence port, not an access-control boundary.
+
+### Completion subscriptions
+
+To deliver logical completions, explicitly supply an existing `TransactionalOutbox` as the third constructor argument. Its event store, mission store and caller must use the same `TxManager` and database. Configure the shared `croco_outbox_messages` table through the application's existing event migration owner; the mission migration does not create it.
+
+```ts
+import {
+  TransactionalOutbox,
+  TransactionalOutboxRelay,
+  createEventBusOutboxPublisher,
+} from "@croco/events-tx";
+import { DrizzleMissionStore, MissionCompletedDomainEvent } from "@croco/gamification-drizzle";
+
+const outbox = new TransactionalOutbox({ store: eventStore, txManager });
+const missionStore = new DrizzleMissionStore(db, txManager, outbox);
+
+// The application supplies the EventBus and its subscriber instance.
+eventBus.subscribe({
+  eventName: MissionCompletedDomainEvent.eventName,
+  handlerClass: CompletionObserver,
+  handler: completionObserver,
+  handlerId: "mission-completion-observer",
+});
+const relay = new TransactionalOutboxRelay({
+  store: eventStore,
+  publish: createEventBusOutboxPublisher(eventBus),
+});
+await relay.publishBatch();
+```
+
+`gamification.mission.completed` contains `{ key, completion }`, preserving the subject scope, mission version, episode, period, original completion receipt and achievement time. A scoped SHA-256 identity fits the existing outbox's identifier limits. Progress, completion and outbox append commit atomically; an append failure aborts that mutation. Retries use the same event identity. Consumers must deduplicate delivery using the event ID or the existing transactional inbox. The relay lifecycle and delivery policy belong to the application. No reward, reminder or notification subscriber is installed by this package.
+
+Without an explicitly supplied outbox, the store persists completion history and `MissionService.ingestEvidence` returns `completionCreated`; it does not schedule delivery. Selecting an outbox adds durable delivery intent without requiring rewards or reminders.
+
+### Verification
+
+```sh
+pnpm --filter @croco/gamification-drizzle test
+GAMIFICATION_POSTGRES_URL=postgresql://... REWARDS_POSTGRES_URL=postgresql://... MISSIONS_POSTGRES_URL=postgresql://... pnpm --filter @croco/gamification-drizzle test:live
+```
+
+The live suite creates and drops the package tables and requires a dedicated test database. It exercises migrations, two independent connection pools, simultaneous final evidence, rollback, restart/correction history, publication conflicts and scope isolation. The default test command excludes this destructive database suite.
