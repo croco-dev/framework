@@ -28,7 +28,13 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { getTableConfig as getSqliteTableConfig, SQLiteSyncDialect } from "drizzle-orm/sqlite-core";
+import {
+  getTableConfig as getSqliteTableConfig,
+  integer as sqliteInteger,
+  sqliteTable,
+  text as sqliteText,
+  SQLiteSyncDialect,
+} from "drizzle-orm/sqlite-core";
 import { beforeEach, describe, expect, expectTypeOf, it, vi } from "vitest";
 import {
   type DrizzleMeterDatabase,
@@ -491,6 +497,155 @@ describe("DrizzleMeterRepository", () => {
       }).cases,
     )("$name", async ({ run }) => {
       await run();
+    });
+  });
+
+  describe("custom meter column mappings", () => {
+    const customMeters = sqliteTable("meters", {
+      rowId: sqliteInteger("id").primaryKey({ autoIncrement: true }),
+      tenant: sqliteText("tenant_id").notNull(),
+      meter: sqliteText("meter_id").notNull(),
+      kind: sqliteText("type").notNull(),
+      billingIntent: sqliteText("billing").notNull().default("local"),
+      aggregationMode: sqliteText("aggregation"),
+      measurementUnit: sqliteText("unit"),
+      quotaLimit: sqliteInteger("quota"),
+      overQuota: sqliteInteger("allow_over_quota").notNull().default(0),
+      attributes: sqliteText("metadata").notNull().default("{}"),
+      created: sqliteInteger("created_at").notNull(),
+      updated: sqliteInteger("updated_at").notNull(),
+    });
+    const meterSchema = {
+      id: customMeters.rowId,
+      tenantId: customMeters.tenant,
+      meterId: customMeters.meter,
+      type: customMeters.kind,
+      billing: customMeters.billingIntent,
+      aggregation: customMeters.aggregationMode,
+      unit: customMeters.measurementUnit,
+      quota: customMeters.quotaLimit,
+      allowOverQuota: customMeters.overQuota,
+      metadata: customMeters.attributes,
+      createdAt: customMeters.created,
+      updatedAt: customMeters.updated,
+    };
+
+    it("should preserve quota when only its property name differs", async () => {
+      const quotaMeters = sqliteTable("meters", {
+        id: sqliteInteger("id").primaryKey({ autoIncrement: true }),
+        tenantId: sqliteText("tenant_id").notNull(),
+        meterId: sqliteText("meter_id").notNull(),
+        type: sqliteText("type").notNull(),
+        billing: sqliteText("billing").notNull().default("local"),
+        aggregation: sqliteText("aggregation"),
+        unit: sqliteText("unit"),
+        quotaLimit: sqliteInteger("quota"),
+        allowOverQuota: sqliteInteger("allow_over_quota").notNull().default(0),
+        metadata: sqliteText("metadata").notNull().default("{}"),
+        createdAt: sqliteInteger("created_at").notNull(),
+        updatedAt: sqliteInteger("updated_at").notNull(),
+      });
+      const quotaRepository = new DrizzleMeterRepository(db, txManager, {
+        ...createRepositoryConfig(),
+        meterTable: quotaMeters,
+        meterSchema: { ...quotaMeters, quota: quotaMeters.quotaLimit },
+      });
+      const saved = await quotaRepository.save({
+        tenantId: "t1",
+        meterId: "m",
+        type: "COUNT",
+        quota: 1000,
+      });
+      expect(sqlite.prepare("SELECT quota FROM meters").get()).toEqual({ quota: 1000 });
+      expect(saved.quota).toBe(1000);
+      expect((await quotaRepository.findByMeterIdAndTenant("m", "t1"))?.quota).toBe(1000);
+    });
+
+    it("should reject a meter mapping from a different table before writing", () => {
+      expect(
+        () =>
+          new DrizzleMeterRepository(db, txManager, {
+            ...createRepositoryConfig(),
+            meterTable: customMeters,
+            meterSchema: { ...meterSchema, quota: metersSqlite.quota },
+          }),
+      ).toThrow(
+        expect.objectContaining({
+          code: "meter/invalid-column-mapping",
+          detail: "meterSchema.quota must reference a column of meterTable",
+        }),
+      );
+      expect(sqlite.prepare("SELECT * FROM meters").all()).toEqual([]);
+    });
+
+    it("should persist and query every mapped meter field", async () => {
+      const customRepository = new DrizzleMeterRepository(db, txManager, {
+        ...createRepositoryConfig(),
+        meterTable: customMeters,
+        meterSchema,
+      });
+      const registration = {
+        tenantId: "tenant-custom",
+        meterId: "tokens",
+        type: "SUM",
+        billing: "required",
+        aggregation: "SUM",
+        unit: "tokens",
+        quota: 1000,
+        allowOverQuota: true,
+        metadata: { source: "custom" },
+      } as const;
+      const saved = await customRepository.save(registration);
+      expect(saved).toEqual({
+        ...registration,
+        id: "1",
+        createdAt: expect.any(Date),
+        updatedAt: expect.any(Date),
+      });
+      expect(sqlite.prepare("SELECT quota FROM meters").get()).toEqual({ quota: 1000 });
+      expect(await customRepository.findByMeterIdAndTenant("tokens", "tenant-custom")).toEqual(
+        saved,
+      );
+      expect(await customRepository.findByTenant("tenant-custom")).toEqual([saved]);
+      expect(await customRepository.findByTenant("other-tenant")).toEqual([]);
+      expect(await customRepository.findAll()).toEqual([saved]);
+
+      const updated = await customRepository.save({
+        ...registration,
+        quota: 5000,
+        unit: "credits",
+      });
+      expect(updated).toEqual({
+        ...saved,
+        quota: 5000,
+        unit: "credits",
+        updatedAt: expect.any(Date),
+      });
+      expect(await customRepository.findAll()).toEqual([updated]);
+      expect(sqlite.prepare("SELECT quota, unit FROM meters").all()).toEqual([
+        { quota: 5000, unit: "credits" },
+      ]);
+
+      const cleared = await customRepository.save({
+        tenantId: registration.tenantId,
+        meterId: registration.meterId,
+        type: "COUNT",
+      });
+      expect(cleared).toEqual({
+        id: saved.id,
+        tenantId: registration.tenantId,
+        meterId: registration.meterId,
+        type: "COUNT",
+        billing: "local",
+        aggregation: undefined,
+        unit: undefined,
+        quota: undefined,
+        allowOverQuota: false,
+        metadata: undefined,
+        createdAt: saved.createdAt,
+        updatedAt: expect.any(Date),
+      });
+      expect(await customRepository.findAll()).toEqual([cleared]);
     });
   });
 

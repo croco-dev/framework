@@ -145,6 +145,7 @@ export class DrizzleMeterRepository extends MeterRepository {
 
   private readonly meterTable: Table;
   private readonly meterSchema: MeterTable;
+  private readonly meterColumnKeys: Record<keyof MeterTable, string>;
   private readonly usageRecordTable: Table;
   private readonly usageRecordSchema: UsageRecordTable;
   private readonly serializeJson: (value: unknown) => string;
@@ -162,6 +163,33 @@ export class DrizzleMeterRepository extends MeterRepository {
     super();
     this.meterTable = config.meterTable;
     this.meterSchema = config.meterSchema;
+    const columns = Object.entries(getTableColumns(this.meterTable));
+    const schemaKeys = [
+      "id",
+      "tenantId",
+      "meterId",
+      "type",
+      "billing",
+      "aggregation",
+      "unit",
+      "quota",
+      "allowOverQuota",
+      "metadata",
+      "createdAt",
+      "updatedAt",
+    ] as const satisfies readonly (keyof MeterTable)[];
+    this.meterColumnKeys = Object.fromEntries(
+      schemaKeys.map((schemaKey) => {
+        const columnKey = columns.find(([, column]) => column === this.meterSchema[schemaKey])?.[0];
+        if (columnKey === undefined) {
+          throw ProblemFactory.invalidArgument(
+            "meter/invalid-column-mapping",
+            `meterSchema.${schemaKey} must reference a column of meterTable`,
+          );
+        }
+        return [schemaKey, columnKey];
+      }),
+    ) as Record<keyof MeterTable, string>;
     this.usageRecordTable = config.usageRecordTable;
     this.usageRecordSchema = config.usageRecordSchema;
     this.serializeJson = config.serializeJson ?? JSON.stringify;
@@ -210,22 +238,25 @@ export class DrizzleMeterRepository extends MeterRepository {
     };
     this.assertStoredBillingContract(meter, billingContract);
 
+    const keys = this.meterColumnKeys;
     const definition = {
-      type: meter.type,
-      ...billingContract,
-      quota: meter.quota ?? null,
-      allowOverQuota: meter.allowOverQuota ? 1 : 0,
-      metadata: this.encodeJsonColumn(meter.metadata ?? {}, this.meterSchema.metadata),
-      updatedAt: this.encodeDateColumn(now, this.meterSchema.updatedAt),
+      [keys.type]: meter.type,
+      [keys.billing]: billingContract.billing,
+      [keys.aggregation]: billingContract.aggregation,
+      [keys.unit]: billingContract.unit,
+      [keys.quota]: meter.quota ?? null,
+      [keys.allowOverQuota]: meter.allowOverQuota ? 1 : 0,
+      [keys.metadata]: this.encodeJsonColumn(meter.metadata ?? {}, this.meterSchema.metadata),
+      [keys.updatedAt]: this.encodeDateColumn(now, this.meterSchema.updatedAt),
     };
 
     const [saved] = await client
       .insert(this.meterTable)
       .values({
-        tenantId: meter.tenantId,
-        meterId: meter.meterId,
+        [keys.tenantId]: meter.tenantId,
+        [keys.meterId]: meter.meterId,
         ...definition,
-        createdAt: this.encodeDateColumn(now, this.meterSchema.createdAt),
+        [keys.createdAt]: this.encodeDateColumn(now, this.meterSchema.createdAt),
       })
       .onConflictDoUpdate({
         target: [this.meterSchema.tenantId, this.meterSchema.meterId],
@@ -390,26 +421,34 @@ export class DrizzleMeterRepository extends MeterRepository {
   }
 
   private mapToMeterDefinition(raw: Record<string, unknown>): MeterDefinition {
-    const quota = raw.quota === null || raw.quota === undefined ? undefined : Number(raw.quota);
+    const keys = this.meterColumnKeys;
+    const quota =
+      raw[keys.quota] === null || raw[keys.quota] === undefined
+        ? undefined
+        : Number(raw[keys.quota]);
     this.validateQuota(quota);
-    const tenantId = String(raw.tenantId);
-    const meterId = String(raw.meterId);
-    const billingContract = { billing: raw.billing, aggregation: raw.aggregation, unit: raw.unit };
+    const tenantId = String(raw[keys.tenantId]);
+    const meterId = String(raw[keys.meterId]);
+    const billingContract = {
+      billing: raw[keys.billing],
+      aggregation: raw[keys.aggregation],
+      unit: raw[keys.unit],
+    };
     this.assertStoredBillingContract({ tenantId, meterId }, billingContract);
 
     return {
-      id: String(raw.id),
+      id: String(raw[keys.id]),
       tenantId,
       meterId,
-      type: String(raw.type) as MeterDefinition["type"],
+      type: String(raw[keys.type]) as MeterDefinition["type"],
       billing: billingContract.billing,
       aggregation: billingContract.aggregation ?? undefined,
       unit: billingContract.unit ?? undefined,
       quota,
-      allowOverQuota: Boolean(raw.allowOverQuota),
-      metadata: this.deserializeMetadata(raw.metadata),
-      createdAt: this.parseDate(raw.createdAt),
-      updatedAt: this.parseDate(raw.updatedAt),
+      allowOverQuota: Boolean(raw[keys.allowOverQuota]),
+      metadata: this.deserializeMetadata(raw[keys.metadata]),
+      createdAt: this.parseDate(raw[keys.createdAt]),
+      updatedAt: this.parseDate(raw[keys.updatedAt]),
     };
   }
 
