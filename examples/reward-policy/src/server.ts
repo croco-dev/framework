@@ -11,6 +11,7 @@ import {
 } from "@croco/gamification-core";
 import { DrizzleRewardStore } from "@croco/gamification-drizzle";
 import { RewardOperations } from "@croco/admin-core";
+import { Problem } from "@croco/problems-core";
 import type { RewardAdminAccess } from "@croco/admin-core";
 import type { RewardPublication } from "@croco/gamification-core";
 
@@ -129,12 +130,25 @@ async function main() {
         json(403, { error: "Origin denied" });
         return;
       }
-      let text = "";
-      for await (const chunk of request) {
-        text += String(chunk);
-        if (text.length > 32768) throw new InvalidRewardPolicyProblem("Request too large");
+      const chunks: Buffer[] = [];
+      let byteLength = 0;
+      for await (const chunk of request.iterator({ destroyOnReturn: false })) {
+        byteLength += chunk.length;
+        if (byteLength > 32768) {
+          response.setHeader("connection", "close");
+          json(413, { error: "Request too large" });
+          return;
+        }
+        chunks.push(chunk);
       }
-      const input: unknown = JSON.parse(text);
+      let input: unknown;
+      try {
+        input = JSON.parse(Buffer.concat(chunks, byteLength).toString("utf8"));
+      } catch (cause) {
+        if (!(cause instanceof SyntaxError)) throw cause;
+        json(400, { error: "Invalid JSON" });
+        return;
+      }
       if (!input || typeof input !== "object" || Array.isArray(input))
         throw new InvalidRewardPolicyProblem("Expected object");
       if (request.url === "/api/publish") {
@@ -170,7 +184,11 @@ async function main() {
       }
       json(404, { error: "Not found" });
     } catch (cause) {
-      json(400, { error: cause instanceof Error ? cause.message : "Request failed" });
+      if (cause instanceof Problem) {
+        json(cause.status, { error: cause.message, code: cause.code });
+      } else {
+        json(500, { error: "Request failed" });
+      }
     }
   });
   server.listen(4321, "127.0.0.1", () => console.log("Reward example http://127.0.0.1:4321"));

@@ -16,6 +16,7 @@
     "@croco/frontend-react": "workspace:*",
     "@croco/gamification-core": "workspace:*",
     "@croco/gamification-drizzle": "workspace:*",
+    "@croco/problems-core": "workspace:*",
     "drizzle-orm": "catalog:",
     "pg": "8.22.0",
     "react": "^19.0.0",
