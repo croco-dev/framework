@@ -39,7 +39,9 @@ fencing, warehouse catalog/writer, a publication coordinator, and a current trus
 pipeline state database is created. Importing declarations does not execute a pipeline.
 
 Pipeline consumers install the optional peers `@croco/batch-core`, `@croco/execution-core`, and
-`@croco/warehouse-core`, plus their chosen provider. Source-only consumers do not need those packages.
+`@croco/warehouse-core`, plus their chosen provider. The PostgreSQL publication coordinator also
+requires `@croco/execution-drizzle` and `drizzle-orm` alongside `@croco/warehouse-postgres`.
+Source-only consumers do not need those packages.
 
 The following application config uses the PostgreSQL fact provider. Before running it, apply the
 warehouse and fact schema installers in the deployment migration, as described in the
@@ -52,6 +54,7 @@ SHA-256 revision, and verified coverage dates. It must not start jobs or apply m
 // pipelines.ts — compile to pipelines.mjs for the CLI configuration module.
 import { c, compileFact, defineFact } from "@croco/warehouse-core";
 import { PostgresWarehouseCatalog, PostgresWarehouseWriter } from "@croco/warehouse-postgres/facts";
+import { PostgresPipelinePublication } from "@croco/warehouse-postgres/pipeline";
 import {
   createPipelineOperations,
   definePipeline,

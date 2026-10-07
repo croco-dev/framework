@@ -380,6 +380,39 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
       },
     );
 
+    it("rolls publication back when aborted during execution completion", async () => {
+      const store = services();
+      const prior = await createPipelineOperations(definition, store.runtime).run();
+      const controller = new AbortController();
+      const complete = ExecutionManagerImpl.prototype.completeAttempt;
+      let executionId = "";
+      const interception = vi
+        .spyOn(ExecutionManagerImpl.prototype, "completeAttempt")
+        .mockImplementationOnce(async function (this: ExecutionManagerImpl, token, result) {
+          executionId = token.executionId;
+          const completed = await complete.call(this, token, result);
+          controller.abort();
+          return completed;
+        });
+      try {
+        await expect(
+          createPipelineOperations(definition, {
+            ...store.runtime,
+            signal: controller.signal,
+          }).run(),
+        ).rejects.toThrow("interrupted");
+      } finally {
+        interception.mockRestore();
+      }
+      expect(await store.manager().get(executionId)).toMatchObject({ status: "failed" });
+      const dataset = await store.runtime.catalog.describeDataset({
+        access: store.resolveAccess(),
+      });
+      expect(dataset.head?.id).toBe(prior.snapshotId);
+      expect(dataset.revision).toBe(1);
+      expect((await store.read(prior.snapshotId as string)).rows).toEqual(rows);
+    });
+
     it("rolls publication back when execution completion fails", async () => {
       const store = services();
       const interception = vi

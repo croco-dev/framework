@@ -112,7 +112,7 @@ const canonical = (value: unknown): unknown => {
   if (value !== null && typeof value === "object")
     return Object.fromEntries(
       Object.entries(value)
-        .sort(([a], [b]) => a.localeCompare(b))
+        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
         .map(([key, child]) => [key, canonical(child)]),
     );
   return value;
@@ -410,6 +410,16 @@ export function createPipelineOperations(input: PipelineDefinition, runtime: Pip
             throw new PipelineProblem("invalid-checkpoint");
           assertCursor(saved.cursor, readers);
           cursor = structuredClone(saved.cursor);
+          while (
+            cursor.partition < readers.length &&
+            cursor.record === readers[cursor.partition].recordCount
+          ) {
+            cursor.partition++;
+            cursor.record = 0;
+            cursor.partitionStart = { ...cursor.counts };
+            cursor.partitionStartBatchCount = cursor.batchIds.length;
+            cursor.partitionStartRejectionCount = cursor.rejections.length;
+          }
           if (cursor.partition < readers.length) {
             const source = definition.source.partitions[cursor.partition];
             if (source.replayability === "mutable" || definition.resume === "restart-partition") {

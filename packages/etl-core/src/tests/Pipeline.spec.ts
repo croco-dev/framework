@@ -290,6 +290,31 @@ describe("pipeline operations", () => {
     expect(f.catalog.publishCandidate).not.toHaveBeenCalled();
   });
 
+  it("restores durable bindings when locale collation changes between attempts", async () => {
+    const f = await fixture();
+    let fail = true;
+    f.store.beforeCheckpoint = () => {
+      if (fail) {
+        fail = false;
+        throw new PipelineProblem("invalid-checkpoint");
+      }
+    };
+    await expect(f.operations.run()).rejects.toMatchObject({ reason: "invalid-checkpoint" });
+    const collation = vi
+      .spyOn(String.prototype, "localeCompare")
+      .mockImplementation(function (this: string, other) {
+        const value = String(this);
+        return value < other ? 1 : value > other ? -1 : 0;
+      });
+    try {
+      const result = await f.operations.retry("execution-1");
+      expect(result).toMatchObject({ state: "published", inputCount: 2, outputCount: 2 });
+      expect(f.rows.size).toBe(2);
+    } finally {
+      collation.mockRestore();
+    }
+  });
+
   it("advances input checkpoints for fully filtered chunks and distinguishes zero output", async () => {
     const f = await fixture();
     const operations = createPipelineOperations(
@@ -363,6 +388,48 @@ describe("pipeline operations", () => {
     expect(result).toMatchObject({ inputCount: 3, outputCount: 3 });
     expect(f.rows.size).toBe(3);
   });
+
+  it.each(["mutable", "snapshot-stable"] as const)(
+    "preserves a completed %s partition when the next partition fails before checkpointing",
+    async (replayability) => {
+      const f = await fixture([[raw("a")], [], [], [raw("b"), raw("c")]]);
+      const calls: string[] = [];
+      let fail = true;
+      const operations = createPipelineOperations(
+        {
+          ...f.definition,
+          source: {
+            ...f.definition.source,
+            partitions: f.sources.map((source) => ({ ...source, replayability })),
+          },
+          resume: "restart-partition",
+          processor: {
+            artifactHash: "d".repeat(64),
+            dependencies: [],
+            process(row) {
+              calls.push(String(row.id));
+              if (row.id === "b" && fail) {
+                fail = false;
+                throw new PipelineProblem("interrupted");
+              }
+              return row;
+            },
+          },
+        },
+        f.runtime,
+      );
+      await expect(operations.run()).rejects.toMatchObject({ reason: "interrupted" });
+      expect((await f.executions.get("execution-1")).checkpoints).toMatchObject({
+        "pipeline.cursor": { cursor: { partition: 0, record: 1, counts: { input: 1, output: 1 } } },
+      });
+      calls.length = 0;
+      const result = await operations.retry("execution-1");
+      expect(calls).toEqual(["b", "c"]);
+      expect(result).toMatchObject({ state: "published", inputCount: 3, outputCount: 3 });
+      expect(f.writer.write).toHaveBeenCalledTimes(3);
+      expect(f.rows.size).toBe(3);
+    },
+  );
 
   it.each(["source", "transform", "model"] as const)(
     "rejects %s binding drift on retry",

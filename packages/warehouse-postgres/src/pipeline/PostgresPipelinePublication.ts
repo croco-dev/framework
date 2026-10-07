@@ -20,7 +20,7 @@ function canonical(value: unknown): unknown {
   if (value !== null && typeof value === "object")
     return Object.fromEntries(
       Object.entries(value)
-        .sort(([a], [b]) => a.localeCompare(b))
+        .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
         .map(([key, child]) => [key, canonical(child)]),
     );
   return value;
@@ -110,6 +110,7 @@ export class PostgresPipelinePublication implements PipelinePublication {
         attemptedSnapshot = snapshot;
         attemptedExecution = execution;
         await manager.completeAttempt(token, { ...result, snapshotId: snapshot.id });
+        if (input.signal?.aborted) throw new PipelineProblem("interrupted");
       },
     );
     try {
