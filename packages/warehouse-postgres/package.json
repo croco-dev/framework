@@ -97,7 +97,8 @@
     "@croco/etl-core": "workspace:*",
     "@croco/execution-core": "workspace:*",
     "@croco/execution-drizzle": "workspace:*",
-    "drizzle-orm": "catalog:"
+    "drizzle-orm": "catalog:",
+    "pg": "8.22.0"
   },
   "peerDependenciesMeta": {
     "@croco/etl-core": {
@@ -110,6 +111,9 @@
       "optional": true
     },
     "drizzle-orm": {
+      "optional": true
+    },
+    "pg": {
       "optional": true
     }
   }

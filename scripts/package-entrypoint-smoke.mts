@@ -562,9 +562,26 @@ function runPackageSmoke(
     (packageInfo) => packageInfo.tarballPath,
   );
 
+  const externalPeerSpecifiers = Array.from(
+    new Set(
+      graphPackages.flatMap((dependency) =>
+        smokeAdditionalDependencyNames(dependency.packedManifest)
+          .filter((name) => !name.startsWith("@croco/"))
+          .map((name) => `${name}@${dependency.packedManifest.peerDependencies?.[name]}`),
+      ),
+    ),
+  );
+
   run(
     "pnpm",
-    ["add", "--prod", packageInfo.tarballPath, ...internalPeerTarballs, "--ignore-scripts"],
+    [
+      "add",
+      "--prod",
+      packageInfo.tarballPath,
+      ...internalPeerTarballs,
+      ...externalPeerSpecifiers,
+      "--ignore-scripts",
+    ],
     packageSmokeRoot,
     {
       label: `${packageInfo.packageName}: install packed tarball`,
@@ -862,6 +879,23 @@ function collectInternalRuntimeGraph(
   );
 }
 
+function smokeAdditionalDependencyNames(pkg: PackageJson): string[] {
+  const selectedPeers =
+    pkg.name === "@croco/etl-core"
+      ? ["@croco/batch-core", "@croco/execution-core", "@croco/warehouse-core"]
+      : pkg.name === "@croco/warehouse-postgres"
+        ? [
+            "@croco/etl-core",
+            "@croco/execution-core",
+            "@croco/execution-drizzle",
+            "drizzle-orm",
+            "pg",
+          ]
+        : [];
+
+  return selectedPeers.filter((name) => pkg.peerDependencies?.[name] !== undefined);
+}
+
 function internalRuntimeDependencyNames(pkg: PackageJson): string[] {
   const optionalPeers = optionalPeerDependencyNames(pkg.peerDependenciesMeta);
 
@@ -869,6 +903,7 @@ function internalRuntimeDependencyNames(pkg: PackageJson): string[] {
     new Set([
       ...dependencyNames(pkg.dependencies),
       ...dependencyNames(pkg.optionalDependencies),
+      ...smokeAdditionalDependencyNames(pkg),
       ...dependencyNames(pkg.peerDependencies).filter((name) => !optionalPeers.has(name)),
     ]),
   ).sort();
@@ -1044,8 +1079,11 @@ function directInternalPeerDependencyNames(packageInfo: PackageInfo): string[] {
     packageInfo.sourceManifest.peerDependenciesMeta,
   );
 
+  const selectedPeers = new Set(smokeAdditionalDependencyNames(packageInfo.sourceManifest));
   return dependencyNames(packageInfo.sourceManifest.peerDependencies).filter(
-    (dependencyName) => !optionalPeers.has(dependencyName) && dependencyName.startsWith("@croco/"),
+    (dependencyName) =>
+      (!optionalPeers.has(dependencyName) || selectedPeers.has(dependencyName)) &&
+      dependencyName.startsWith("@croco/"),
   );
 }
 

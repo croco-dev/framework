@@ -40,7 +40,7 @@ pipeline state database is created. Importing declarations does not execute a pi
 
 Pipeline consumers install the optional peers `@croco/batch-core`, `@croco/execution-core`, and
 `@croco/warehouse-core`, plus their chosen provider. The PostgreSQL publication coordinator also
-requires `@croco/execution-drizzle` and `drizzle-orm` alongside `@croco/warehouse-postgres`.
+requires `@croco/execution-drizzle`, `drizzle-orm`, and `pg` alongside `@croco/warehouse-postgres`.
 Source-only consumers do not need those packages.
 
 The following application config uses the PostgreSQL fact provider. Before running it, apply the
