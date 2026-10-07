@@ -104,6 +104,12 @@ class ProjectController {
 - `ApiKeyRotationConflictProblem`, `ApiKeyRotationProtectionProblem`
 - `InvalidPermissionFormatProblem`, `InvalidPermissionActionProblem`
 
+## API 키 형식
+
+API 키는 `<prefix>_<shortToken>_<longToken>` 형식입니다. `shortToken`과 `longToken`에는 밑줄(`_`)이
+들어가지 않으므로, `prefix`에는 밑줄을 포함할 수 있습니다(예: `sk_live`). `verify()`는 마지막 두 조각을
+토큰으로 해석하고 그 앞부분 전체를 `prefix`로 해석합니다.
+
 ## AuthGuard conformance
 
 `AuthGuard`와 `UnifiedAuthGuard`는 protected route에서 `AuthProvider` 또는 `ApiKeyProvider`를 호출하고,

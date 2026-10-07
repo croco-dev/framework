@@ -59,7 +59,13 @@ describe("ApiKeyGenerator", () => {
 
     it("should return null for invalid format - missing parts", () => {
       expect(generator.parse("sk_token")).toBeNull();
-      expect(generator.parse("sk_token_value_extra")).toBeNull();
+      expect(generator.parse("sk")).toBeNull();
+    });
+
+    it("should parse a key whose prefix contains underscores", () => {
+      const parsed = generator.parse("a_b_c_d");
+
+      expect(parsed).toEqual({ prefix: "a_b", shortToken: "c", longToken: "d" });
     });
 
     it("should return null for empty string", () => {
@@ -70,6 +76,7 @@ describe("ApiKeyGenerator", () => {
       expect(generator.parse("sk__longtoken")).toBeNull();
       expect(generator.parse("sk_short_")).toBeNull();
       expect(generator.parse("_short_long")).toBeNull();
+      expect(generator.parse("sk__long")).toBeNull();
     });
 
     it("should return null for key without separators", () => {
@@ -84,6 +91,17 @@ describe("ApiKeyGenerator", () => {
 
       expect(parsed).toEqual({
         prefix: "test",
+        shortToken: generated.shortToken,
+        longToken: generated.longToken,
+      });
+    });
+
+    it("should successfully parse a generated key with an underscore prefix", () => {
+      const generated = generator.generate("sk_live");
+      const parsed = generator.parse(generated.fullKey);
+
+      expect(parsed).toEqual({
+        prefix: "sk_live",
         shortToken: generated.shortToken,
         longToken: generated.longToken,
       });
