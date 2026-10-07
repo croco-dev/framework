@@ -111,7 +111,7 @@ export function decomposeHangul(char: string): DecomposedHangul | null {
 }
 
 export function extractChosung(text: string): string {
-  return [...text]
+  return [...text.normalize("NFC")]
     .map((char) => {
       const decomposed = decomposeHangul(char);
       if (!decomposed) {
@@ -124,7 +124,7 @@ export function extractChosung(text: string): string {
 }
 
 export function extractJamo(text: string): string {
-  return [...text]
+  return [...text.normalize("NFC")]
     .map((char) => {
       const decomposed = decomposeHangul(char);
       if (!decomposed) {

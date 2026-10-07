@@ -6,9 +6,49 @@ import {
   extractJamo,
   isHangulSyllable,
   jamo,
+  KoreanChosungAdapter,
+  KoreanJamoAdapter,
 } from "../ko";
 
 describe("Korean Hangul utilities", () => {
+  describe("Unicode normalization", () => {
+    const nfc = "한국 보고서";
+    const nfd = nfc.normalize("NFD");
+
+    it("extracts the same compatibility initials from NFC and NFD Hangul", () => {
+      expect(extractChosung(nfc)).toBe("ㅎㄱ ㅂㄱㅅ");
+      expect(extractChosung(nfd)).toBe(extractChosung(nfc));
+    });
+
+    it("extracts the same compatibility jamo from NFC and NFD Hangul", () => {
+      expect(extractJamo(nfc)).toBe("ㅎㅏㄴㄱㅜㄱ ㅂㅗㄱㅗㅅㅓ");
+      expect(extractJamo(nfd)).toBe(extractJamo(nfc));
+    });
+
+    it.each([{}, { locale: "ko" }])(
+      "normalizes Korean adapter input with options %j",
+      (options) => {
+        const initials = new KoreanChosungAdapter();
+        const decomposed = new KoreanJamoAdapter();
+        expect(initials.transform(nfd, options)).toBe("ㅎㄱ ㅂㄱㅅ");
+        expect(initials.transform(nfd, options)).toBe(initials.transform(nfc, options));
+        expect(decomposed.transform(nfd, options)).toBe("ㅎㅏㄴㄱㅜㄱ ㅂㅗㄱㅗㅅㅓ");
+        expect(decomposed.transform(nfd, options)).toBe(decomposed.transform(nfc, options));
+      },
+    );
+
+    it("normalizes non-Hangul combining characters alongside Hangul", () => {
+      expect(extractChosung("e\u0301 한😀")).toBe("é ㅎ😀");
+      expect(extractJamo("e\u0301 한😀")).toBe("é ㅎㅏㄴ😀");
+    });
+
+    it("preserves compatibility and uncomposable archaic jamo", () => {
+      const text = "ㄱㅏ \u1113\u1176";
+      expect(extractChosung(text)).toBe(text);
+      expect(extractJamo(text)).toBe(text);
+    });
+  });
+
   describe("isHangulSyllable", () => {
     it("returns true only for Hangul syllables block", () => {
       expect(isHangulSyllable("가")).toBe(true);
