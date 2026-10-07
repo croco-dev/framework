@@ -30,6 +30,11 @@
       "types": "./dist/facts.d.ts",
       "import": "./dist/facts.mjs",
       "require": "./dist/facts.js"
+    },
+    "./pipeline": {
+      "types": "./src/pipeline.ts",
+      "import": "./src/pipeline.ts",
+      "require": "./src/pipeline.ts"
     }
   },
   "publishConfig": {
@@ -50,16 +55,21 @@
         "types": "./dist/facts.d.ts",
         "import": "./dist/facts.mjs",
         "require": "./dist/facts.js"
+      },
+      "./pipeline": {
+        "types": "./dist/pipeline.d.ts",
+        "import": "./dist/pipeline.mjs",
+        "require": "./dist/pipeline.js"
       }
     },
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts src/metrics.ts src/facts.ts --format esm,cjs --minify --clean --dts",
+    "build": "tsup src/index.ts src/metrics.ts src/facts.ts src/pipeline.ts --format esm,cjs --minify --clean --dts",
     "dev": "tsup src/index.ts src/metrics.ts src/facts.ts --format esm,cjs --dts --watch",
     "test": "vitest run src/tests/PostgresMetricsStore.spec.ts src/tests/PostgresWarehouseCatalog.spec.ts src/tests/PostgresWarehouseReader.spec.ts src/tests/PostgresWarehouseWriter.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
-    "test:integration": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/PostgresWarehouseFacts.integration.spec.ts src/tests/PostgresWarehouseReader.integration.spec.ts",
+    "test:integration": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/PostgresWarehouseFacts.integration.spec.ts src/tests/PostgresWarehouseReader.integration.spec.ts src/tests/Pipeline.integration.spec.ts",
     "test:live": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/PostgresMetricsStore.integration.spec.ts",
     "test:real": "CROCO_TEST_REAL_RESOURCES=1 vitest run src/tests/*.integration.spec.ts",
     "typecheck": "tsc --noEmit",
@@ -72,11 +82,35 @@
     "@croco/warehouse-core": "workspace:*"
   },
   "devDependencies": {
+    "@croco/etl-core": "workspace:*",
+    "@croco/execution-core": "workspace:*",
+    "@croco/execution-drizzle": "workspace:*",
     "@croco/testing-resources": "workspace:*",
     "@types/pg": "8.20.0",
+    "drizzle-orm": "catalog:",
     "pg": "8.22.0",
     "tsup": "^8.4.0",
     "typescript": "^5.7.2",
     "vitest": "4.1.8"
+  },
+  "peerDependencies": {
+    "@croco/etl-core": "workspace:*",
+    "@croco/execution-core": "workspace:*",
+    "@croco/execution-drizzle": "workspace:*",
+    "drizzle-orm": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "@croco/etl-core": {
+      "optional": true
+    },
+    "@croco/execution-core": {
+      "optional": true
+    },
+    "@croco/execution-drizzle": {
+      "optional": true
+    },
+    "drizzle-orm": {
+      "optional": true
+    }
   }
 }
