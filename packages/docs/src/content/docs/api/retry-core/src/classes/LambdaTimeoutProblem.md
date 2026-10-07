@@ -15,13 +15,19 @@ Lambda 남은 실행 시간이 부족해 재시도를 중단할 때 발생하는
 
 ### Constructor
 
-> **new LambdaTimeoutProblem**(`detail`): `LambdaTimeoutProblem`
+> **new LambdaTimeoutProblem**(`detail`, `options?`): `LambdaTimeoutProblem`
 
 #### Parameters
 
 ##### detail
 
 `string`
+
+##### options?
+
+###### cause?
+
+`Error`
 
 #### Returns
 

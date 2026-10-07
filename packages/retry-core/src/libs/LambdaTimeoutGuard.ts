@@ -122,7 +122,7 @@ export class LambdaTimeoutGuard {
    * @param nextDelayMs Expected delay for next attempt
    * @throws Error if not enough time
    */
-  checkTimeout(nextDelayMs: number): void {
+  checkTimeout(nextDelayMs: number, cause?: Error): void {
     if (
       !hasTimeForRetry(nextDelayMs, {
         reserveTimeMs: this.reserveTimeMs,
@@ -132,6 +132,7 @@ export class LambdaTimeoutGuard {
       const remaining = this.getRemainingTime();
       throw new LambdaTimeoutProblem(
         `Lambda timeout guard: ${remaining}ms remaining, need ${nextDelayMs + this.reserveTimeMs}ms`,
+        { cause },
       );
     }
   }

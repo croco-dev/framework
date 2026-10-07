@@ -7,6 +7,7 @@ import {
   InMemoryCircuitBreakerStateStore,
 } from "./CircuitBreakerState";
 import { CircuitBreakerOpenProblem } from "./errors/CircuitBreakerOpenProblem";
+import { LambdaTimeoutProblem } from "./errors/RetryInfrastructureProblem";
 import { RetryExhaustedProblem } from "./errors/RetryExhaustedProblem";
 import { LambdaTimeoutGuard } from "./LambdaTimeoutGuard";
 import { assertValidRetryNumber } from "./numericValidation";
@@ -377,16 +378,28 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
               "retry.final_error": context.lastError?.name,
             });
           },
-          beforeWait: async (delay: number): Promise<boolean> => {
+          beforeWait: async (delay: number, context: RetryContext): Promise<boolean> => {
             if (circuitBreaker) {
               const circuitState = await circuitBreaker.getState();
               if (circuitState === CircuitState.OPEN) {
-                throw new CircuitBreakerOpenProblem(circuitId);
+                if (hasRecover) {
+                  context.setExhausted();
+                }
+                throw new CircuitBreakerOpenProblem(circuitId, {
+                  cause: context.lastError ?? undefined,
+                });
               }
             }
 
             if (timeoutGuard) {
-              timeoutGuard.checkTimeout(delay);
+              try {
+                timeoutGuard.checkTimeout(delay, context.lastError ?? undefined);
+              } catch (error) {
+                if (hasRecover && error instanceof LambdaTimeoutProblem) {
+                  context.setExhausted();
+                }
+                throw error;
+              }
             }
 
             return true;
