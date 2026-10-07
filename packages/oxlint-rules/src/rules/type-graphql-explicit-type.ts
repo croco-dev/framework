@@ -1,24 +1,19 @@
 import type { Rule } from "eslint";
-import type { CallExpression, Expression, Identifier, Node } from "estree";
+import type { CallExpression, Expression, Node } from "estree";
+import { resolveDecoratorBinding } from "./decorator-binding.ts";
 
+const TYPE_GRAPHQL_MODULE = "type-graphql";
+const TYPE_GRAPHQL_FACADE_MODULE = "@croco/protocols-graphql";
 const TARGET_DECORATORS = new Set(["Field", "Query", "Mutation"]);
 
 type DecoratorNode = Node & {
   readonly expression: Expression;
 };
 
-const isTargetDecoratorCall = (
+const isDecoratorCall = (
   expression: Expression,
-): expression is CallExpression & { callee: Identifier } => {
-  if (expression.type !== "CallExpression") {
-    return false;
-  }
-
-  if (expression.callee.type !== "Identifier") {
-    return false;
-  }
-
-  return TARGET_DECORATORS.has(expression.callee.name);
+): expression is CallExpression & { callee: { readonly type: string } } => {
+  return expression.type === "CallExpression";
 };
 
 const rule: Rule.RuleModule = {
@@ -36,7 +31,16 @@ const rule: Rule.RuleModule = {
   create(context) {
     return {
       Decorator(node: DecoratorNode) {
-        if (!isTargetDecoratorCall(node.expression)) {
+        const binding = resolveDecoratorBinding(
+          context,
+          node as unknown as Record<string, unknown>,
+          {
+            moduleSpecifier: [TYPE_GRAPHQL_MODULE, TYPE_GRAPHQL_FACADE_MODULE],
+            targetNames: TARGET_DECORATORS,
+          },
+        );
+
+        if (!binding || !isDecoratorCall(node.expression)) {
           return;
         }
 
@@ -49,7 +53,7 @@ const rule: Rule.RuleModule = {
           node,
           messageId: "missingTypeArg",
           data: {
-            decoratorName: `@${node.expression.callee.name}`,
+            decoratorName: `@${binding.importedName}`,
           },
         });
       },
