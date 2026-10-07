@@ -116,7 +116,13 @@ export class DefaultEventSerializer implements EventSerializer {
   ): T {
     const eventClassWithFromPayload = EventClass as EventClassWithOptionalFromPayload<T>;
     if (eventClassWithFromPayload.fromPayload) {
-      return eventClassWithFromPayload.fromPayload(data.payload) as T;
+      const event = eventClassWithFromPayload.fromPayload(data.payload) as T;
+      this.restoreEnvelopeAggregateId(
+        event,
+        getEventFields(EventClass as new (...args: unknown[]) => unknown) ?? [],
+        data,
+      );
+      return event;
     }
 
     const fields = getEventFields(EventClass as new (...args: unknown[]) => unknown);
@@ -128,6 +134,7 @@ export class DefaultEventSerializer implements EventSerializer {
       for (const { propertyKey, serializedKey } of fields) {
         obj[propertyKey] = data.payload[serializedKey];
       }
+      this.restoreEnvelopeAggregateId(instance, fields, data);
       return instance;
     }
 
@@ -136,6 +143,21 @@ export class DefaultEventSerializer implements EventSerializer {
       "EventSerializer requires @EventField decorator or static fromPayload() method for deserialization. " +
         "Constructor parameter name inference via toString() has been removed for minification safety.",
     );
+  }
+
+  private restoreEnvelopeAggregateId<T extends DomainEvent>(
+    event: T,
+    fields: { propertyKey: string }[],
+    data: SerializedEvent,
+  ): void {
+    const aggregateIdKey = "aggregateId";
+    if (fields.some((field) => field.propertyKey === aggregateIdKey)) {
+      return;
+    }
+    if (!(aggregateIdKey in event) || typeof data.aggregateId !== "string") {
+      return;
+    }
+    (event as unknown as Record<string, unknown>)[aggregateIdKey] = data.aggregateId;
   }
 
   private createInstance<T extends DomainEvent>(
