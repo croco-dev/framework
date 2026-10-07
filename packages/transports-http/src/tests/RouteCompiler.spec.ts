@@ -96,6 +96,73 @@ describe("RouteCompiler", () => {
     Container.set(ErrorHandler, new ErrorHandler(logger));
   });
 
+  it.each([
+    ["/:id", "/:userId"],
+    ["/:...path", "/:...rest"],
+  ])("rejects renamed parameters across controllers: %s and %s", (firstPath, secondPath) => {
+    @Controller("/users")
+    class UsersController {
+      @Get(firstPath)
+      first() {
+        return {};
+      }
+    }
+    @Controller("/users")
+    class LegacyController {
+      @Get(secondPath)
+      second() {
+        return {};
+      }
+    }
+    let failure: unknown;
+    try {
+      createCompiler().compile([UsersController, LegacyController]);
+    } catch (error) {
+      failure = error;
+    }
+    const problem = expectDuplicateRouteProblem(failure);
+    expect(problem.message).toContain(`/users${firstPath}`);
+    expect(problem.message).toContain(`/users${secondPath}`);
+  });
+
+  it("rejects renamed parameters within one controller", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      first() {
+        return {};
+      }
+      @Get("/:userId")
+      second() {
+        return {};
+      }
+    }
+    expect(() => createCompiler().compile([UsersController])).toThrow(/Duplicate route/);
+  });
+
+  it("allows different methods, static segments and matcher kinds", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      first() {
+        return {};
+      }
+      @Post("/:userId")
+      second() {
+        return {};
+      }
+      @Get("/teams/:id")
+      third() {
+        return {};
+      }
+      @Get("/:...rest")
+      fourth() {
+        return {};
+      }
+    }
+    expect(createCompiler().compile([UsersController])).toHaveLength(4);
+  });
+
   it("should compile routes from controller", () => {
     @Controller("/users")
     class UserController {

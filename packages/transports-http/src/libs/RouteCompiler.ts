@@ -5,6 +5,7 @@ import {
   ContractGraphDiagnosticError,
   getRouteContractSchemaDiagnostics,
   toRuntimeRoutePath,
+  toRouteMatchKey,
   type RouteContractSourceLocation,
   type RouteIR,
 } from "@croco/protocols-core";
@@ -119,13 +120,17 @@ export class RouteCompiler {
 
     for (const entry of routeEntries) {
       const route = entry.route;
-      const routeKey = `${route.method.toUpperCase()} ${route.path}`;
+      const routeKey = `${route.method.toUpperCase()} ${toRouteMatchKey(route.path)}`;
       const existingRoute = seenRoutes.get(routeKey);
 
       if (existingRoute) {
         throw ProblemFactory.internalServerError(
           "transports-http/duplicate-route-definition",
-          this.formatDuplicateRouteDetail(routeKey, existingRoute, entry),
+          this.formatDuplicateRouteDetail(
+            `${route.method.toUpperCase()} ${route.path}`,
+            existingRoute,
+            entry,
+          ),
         );
       }
 
@@ -253,7 +258,7 @@ export class RouteCompiler {
         controllerName: routeIR.controllerName,
         methodName: routeIR.methodName,
         httpMethod: routeIR.httpMethod.toUpperCase(),
-        path: fullPath,
+        path: routeIR.path,
         ...(routeIR.sourceLocation ? { sourceLocation: routeIR.sourceLocation } : {}),
       },
     };

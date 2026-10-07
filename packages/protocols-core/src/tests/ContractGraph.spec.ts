@@ -59,6 +59,90 @@ describe("buildContractGraph", () => {
     vi.restoreAllMocks();
   });
 
+  it.each([
+    ["/:id", "/:userId"],
+    ["/:...path", "/:...file"],
+    ["/:id", "/:id"],
+  ])(
+    "rejects same-controller route match collisions between %s and %s",
+    (firstPath, secondPath) => {
+      @Controller("/users")
+      class UsersController {
+        @Get(firstPath)
+        first(@Param(firstPath.slice(2).replace(/^\.\.\./, "")) value: string): string {
+          return value;
+        }
+
+        @Get(secondPath)
+        second(@Param(secondPath.slice(2).replace(/^\.\.\./, "")) value: string): string {
+          return value;
+        }
+      }
+
+      const graph = buildContractGraph([UsersController]);
+      expect(graph.diagnostics).toContainEqual(
+        expect.objectContaining({
+          code: "contract-route-duplicate-path",
+          severity: "error",
+          routeId: "UsersController.second",
+          path: `/users${secondPath}`,
+        }),
+      );
+      const diagnostic = graph.diagnostics.find(
+        ({ code }) => code === "contract-route-duplicate-path",
+      );
+      expect(diagnostic?.message).toContain(`/users${firstPath}`);
+      expect(diagnostic?.message).toContain(`/users${secondPath}`);
+      expect(diagnostic?.message).toContain("UsersController.first");
+      expect(() => assertContractGraphHasNoErrors(graph)).toThrow(ContractGraphDiagnosticError);
+    },
+  );
+
+  it("rejects route match collisions across controllers", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      first(@Param("id") id: string): string {
+        return id;
+      }
+    }
+    @Controller("/users")
+    class LegacyUsersController {
+      @Get("/:userId")
+      second(@Param("userId") userId: string): string {
+        return userId;
+      }
+    }
+
+    expect(buildContractGraph([UsersController, LegacyUsersController]).diagnostics).toContainEqual(
+      expect.objectContaining({ code: "contract-route-duplicate-path", severity: "error" }),
+    );
+  });
+
+  it("allows distinct methods, static segments, and parameter matchers", () => {
+    @Controller("/users")
+    class UsersController {
+      @Get("/:id")
+      first(@Param("id") id: string): string {
+        return id;
+      }
+      @Post("/:userId")
+      second(@Param("userId") userId: string): string {
+        return userId;
+      }
+      @Get("/teams/:id")
+      third(@Param("id") id: string): string {
+        return id;
+      }
+      @Get("/:...path")
+      fourth(@Param("path") path: string): string {
+        return path;
+      }
+    }
+
+    expect(buildContractGraph([UsersController]).diagnostics).toEqual([]);
+  });
+
   it.each([204, 205])("rejects response schemas for bodyless success status %i", (status) => {
     @Controller("/orders")
     class OrdersController {
