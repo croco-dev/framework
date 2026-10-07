@@ -6,7 +6,7 @@ export type DecoratorBinding = {
 };
 
 type ResolveOptions = {
-  readonly moduleSpecifier: string;
+  readonly moduleSpecifier: string | readonly string[];
   readonly targetNames: ReadonlySet<string>;
 };
 
@@ -69,6 +69,18 @@ const readModuleSpecifier = (parent: Record<string, unknown>): string | null => 
   return typeof parent.source.value === "string" ? parent.source.value : null;
 };
 
+const matchesModuleSpecifier = (
+  parent: Record<string, unknown>,
+  specifiers: string | readonly string[],
+): boolean => {
+  const actual = readModuleSpecifier(parent);
+
+  return (
+    typeof actual === "string" &&
+    (typeof specifiers === "string" ? actual === specifiers : specifiers.includes(actual))
+  );
+};
+
 const readImportSpecifierName = (node: Record<string, unknown>): string | null => {
   if (!isObject(node.imported)) {
     return null;
@@ -105,14 +117,16 @@ const getCalleeReference = (expression: Record<string, unknown>): CalleeReferenc
       return null;
     }
 
+    const isComputed = calleeType === "ComputedMemberExpression" || callee.computed === true;
+
+    if (isComputed && typeof callee.property.value !== "string") {
+      return null;
+    }
+
     const objectName = readName(callee.object);
     const propertyName = readName(callee.property);
 
     if (!objectName || !propertyName) {
-      return null;
-    }
-
-    if (calleeType === "ComputedMemberExpression" && typeof callee.property.value !== "string") {
       return null;
     }
 
@@ -209,7 +223,7 @@ export const resolveDecoratorBinding = (
       return null;
     }
 
-    if (readModuleSpecifier(definition.node.parent) !== options.moduleSpecifier) {
+    if (!matchesModuleSpecifier(definition.node.parent, options.moduleSpecifier)) {
       return null;
     }
 
@@ -219,7 +233,13 @@ export const resolveDecoratorBinding = (
       return null;
     }
 
-    return { importedName, moduleSpecifier: options.moduleSpecifier };
+    const moduleSpecifier = readModuleSpecifier(definition.node.parent);
+
+    if (!moduleSpecifier) {
+      return null;
+    }
+
+    return { importedName, moduleSpecifier };
   }
 
   const variable = findVariable(scope, callee.objectName);
@@ -238,7 +258,7 @@ export const resolveDecoratorBinding = (
     return null;
   }
 
-  if (readModuleSpecifier(definition.node.parent) !== options.moduleSpecifier) {
+  if (!matchesModuleSpecifier(definition.node.parent, options.moduleSpecifier)) {
     return null;
   }
 
@@ -246,5 +266,11 @@ export const resolveDecoratorBinding = (
     return null;
   }
 
-  return { importedName: callee.propertyName, moduleSpecifier: options.moduleSpecifier };
+  const moduleSpecifier = readModuleSpecifier(definition.node.parent);
+
+  if (!moduleSpecifier) {
+    return null;
+  }
+
+  return { importedName: callee.propertyName, moduleSpecifier };
 };

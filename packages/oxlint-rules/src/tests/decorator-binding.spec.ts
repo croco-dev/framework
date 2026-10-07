@@ -55,6 +55,24 @@ describe("decorator import binding", () => {
     expect(
       runTypeGraphql("Field", [], scope(typeNamespaceImport("G")), "G", computedProperty(0)),
     ).toEqual([]);
+    expect(
+      runTypeGraphql("Field", [], scope(typeNamespaceImport("G")), "G", undefined, {
+        type: "MemberExpression",
+        object: { type: "Identifier", name: "G" },
+        property: { type: "Identifier", name: "Field" },
+        computed: true,
+      }),
+    ).toEqual([]);
+  });
+
+  it("reports TypeGraphQL decorators imported from the public facade", () => {
+    expect(runTypeGraphql("Field", [], scope(typeFacadeImport("Field")))).toHaveLength(1);
+    expect(runTypeGraphql("F", [], scope(typeFacadeImport("Field", "F")))).toEqual([
+      { messageId: "missingTypeArg", decoratorName: "@Field" },
+    ]);
+    expect(runTypeGraphql("Field", [], scope(typeFacadeNamespaceImport("G")), "G")).toEqual([
+      { messageId: "missingTypeArg", decoratorName: "@Field" },
+    ]);
   });
 
   it("ignores local and other-module decorators with the same name", () => {
@@ -121,6 +139,7 @@ function runTypeGraphql(
   fixture: ScopeFixture = scope([]),
   objectName?: string,
   propertyOverride?: Record<string, unknown>,
+  calleeOverride?: Record<string, unknown>,
 ): readonly { messageId: string; decoratorName: unknown }[] {
   const reports: { messageId: string; decoratorName: unknown }[] = [];
   const context = {
@@ -139,7 +158,7 @@ function runTypeGraphql(
     return reports;
   }
 
-  listener(decoratorNode(calleeName, args, objectName, propertyOverride) as never);
+  listener(decoratorNode(calleeName, args, objectName, propertyOverride, calleeOverride) as never);
 
   return reports;
 }
@@ -338,24 +357,72 @@ function computedProperty(value: string | number): Record<string, unknown> {
   return { type: "Literal", value };
 }
 
+function typeFacadeImport(imported: string, local: string = imported): readonly ScopeEntry[] {
+  return [
+    {
+      name: local,
+      value: {
+        defs: [
+          {
+            type: "ImportBinding",
+            node: {
+              type: "ImportSpecifier",
+              imported: { type: "Identifier", name: imported },
+              parent: {
+                type: "ImportDeclaration",
+                source: { type: "Literal", value: "@croco/protocols-graphql" },
+              },
+            },
+          },
+        ],
+      },
+    },
+  ];
+}
+
+function typeFacadeNamespaceImport(local: string): readonly ScopeEntry[] {
+  return [
+    {
+      name: local,
+      value: {
+        defs: [
+          {
+            type: "ImportBinding",
+            node: {
+              type: "ImportNamespaceSpecifier",
+              parent: {
+                type: "ImportDeclaration",
+                source: { type: "Literal", value: "@croco/protocols-graphql" },
+              },
+            },
+          },
+        ],
+      },
+    },
+  ];
+}
+
 function decoratorNode(
   calleeName: string,
   args: readonly object[],
   objectName?: string,
   propertyOverride?: Record<string, unknown>,
+  calleeOverride?: Record<string, unknown>,
 ): object {
   return {
     type: "Decorator",
     expression: {
       type: "CallExpression",
-      callee: objectName
-        ? {
-            type: propertyOverride ? "ComputedMemberExpression" : "MemberExpression",
-            object: { type: "Identifier", name: objectName },
-            property: propertyOverride ?? { type: "Identifier", name: calleeName },
-            computed: Boolean(propertyOverride),
-          }
-        : { type: "Identifier", name: calleeName },
+      callee:
+        calleeOverride ??
+        (objectName
+          ? {
+              type: propertyOverride ? "ComputedMemberExpression" : "MemberExpression",
+              object: { type: "Identifier", name: objectName },
+              property: propertyOverride ?? { type: "Identifier", name: calleeName },
+              computed: Boolean(propertyOverride),
+            }
+          : { type: "Identifier", name: calleeName }),
       arguments: args,
       optional: false,
     },
