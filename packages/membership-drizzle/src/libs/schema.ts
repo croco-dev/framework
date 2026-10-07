@@ -33,8 +33,12 @@ export const memberships = pgTable(
     seatOrdinal: bigint("seat_ordinal", { mode: "bigint" })
       .default(sql`-nextval('membership_seat_ordinal_seq')`)
       .notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at")
+      .default(sql`(now() at time zone 'utc')`)
+      .notNull(),
+    updatedAt: timestamp("updated_at")
+      .default(sql`(now() at time zone 'utc')`)
+      .notNull(),
   },
   (table) => [
     unique("memberships_tenant_id_user_id_unique").on(table.tenantId, table.userId),
