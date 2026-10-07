@@ -91,16 +91,18 @@ ignored, or reported result through `@croco/idempotency-core`; same event id wit
 fingerprint fails with `IdempotencyConflictProblem`.
 
 Handler failures surface as `WebhookDispatchProblem` and unknown-event reporter failures as
-`WebhookReporterProblem`, both with the `InternalServerError` category. When the original error is a
-`Problem`, the wrapper records its retry classification from `isRetryableHandlerFailure()` in
-`extensions.retryable`. A non-retryable failure is stored once, and redeliveries of the same event
-return `outcome: "failed"` without running the handler again. Retryable Problems and other errors
-leave the event open, so the next delivery runs the handler again.
+`WebhookReporterProblem`, both with the `InternalServerError` category and status 500. For every
+supplied `Error` cause, including SDK errors and Problems, the wrapper records the result of
+`isRetryableHandlerFailure()` in `extensions.retryable`. A non-retryable failure is stored once,
+and redeliveries of the same event return `outcome: "failed"` without running the handler or reporter
+again. Retryable failures allow the next delivery to run the handler or reporter again.
 
-A Problem without an explicit boolean `retryable` or `extensions.retryable` flag is non-retryable
-when its HTTP `status` is a 4xx other than 408 or 429; with the default category mapping, that is
-every 4xx category except `TooManyRequests`. The stored failure then lasts for `idempotencyTtlMs`
-(24 hours by default). Mark a transient client error such as an out-of-order event with
+An explicit boolean `retryable` or `extensions.retryable` flag takes precedence over HTTP `status`
+for both ordinary `Error` and `Problem` causes. Without an explicit flag, a 4xx `status` other than 408
+or 429 is non-retryable; with the default Problem category mapping, that is every 4xx category except
+`TooManyRequests`. Errors without a recognized retry flag or status remain retryable.
+
+A non-retryable failure remains stored for `idempotencyTtlMs` (24 hours by default). Mark a transient client error such as an out-of-order event with
 `extensions.retryable: true` to keep redeliveries running. `replay()` uses the same idempotency key
 and returns the stored failure until the record expires. To run the handler again sooner, keep a
 reference to the store passed as `idempotencyStore` and call
