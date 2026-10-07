@@ -94,7 +94,7 @@ Evidence identity is unique across versions and episodes within the same app/env
 
 To deliver logical completions, explicitly supply an existing `TransactionalOutbox` as the third constructor argument. Its event store, mission store and caller must use the same `TxManager` and database. Configure the shared `croco_outbox_messages` table through the application's existing event migration owner; the mission migration does not create it.
 
-```ts
+```ts no-check
 import {
   TransactionalOutbox,
   TransactionalOutboxRelay,

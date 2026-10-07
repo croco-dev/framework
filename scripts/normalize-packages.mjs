@@ -63,6 +63,7 @@ const FRAMEWORK_CONTEXT_PACKAGE = "@croco/framework-context";
 const COMPONENT_DECORATOR_EXPORT = "Component";
 const TYPESCRIPT_SOURCE_EXTENSIONS = new Set([".cts", ".mts", ".ts", ".tsx"]);
 const ROOT_SIDE_EFFECT_SOURCE_PATHS = new Map([
+  ["@croco/gamification-drizzle", ["./src/libs/MissionCompletedDomainEvent.ts"]],
   ["@croco/openapi-spec", ["./src/libs/emitOpenAPI.ts"]],
 ]);
 const ADDITIONAL_SIDE_EFFECT_PATHS = new Map([
