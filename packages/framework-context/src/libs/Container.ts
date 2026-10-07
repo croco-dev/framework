@@ -717,7 +717,9 @@ export class Container {
     Container.destroyGeneratedTransients(Container.generatedTransients, disposedValues);
     Container.destroyGeneratedSingletons(Container.generatedSingletons, disposedValues);
     // reset은 요청 처리가 없는 idle 시점에만 호출한다.
-    MetadataStorage.clear();
+    for (const { target } of MetadataStorage.getAll(COMPONENT_METADATA_KEY)) {
+      MetadataStorage.delete(COMPONENT_METADATA_KEY, target);
+    }
     Container.lazyProviders.clear();
     Container.symbolTokens.clear();
     Container.componentSourceLocations.clear();
