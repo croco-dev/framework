@@ -151,6 +151,24 @@ describe("Container", () => {
       expect(beforeReset).not.toBe(afterReset);
     });
 
+    it("should preserve metadata owned by other packages across repeated resets", () => {
+      @Component()
+      class RegisteredService {}
+
+      const key = Symbol("external-decorator");
+      const metadata = { registered: true };
+      MetadataStorage.define(key, RegisteredService, metadata);
+      MetadataStorage.define(key, RegisteredService, "member metadata", "handle");
+
+      Container.reset();
+      Container.reset();
+
+      expect(Container.getComponentMetadata(RegisteredService)).toBeUndefined();
+      expect(MetadataStorage.get(key, RegisteredService)).toBe(metadata);
+      expect(MetadataStorage.get(key, RegisteredService, "handle")).toBe("member metadata");
+      expect(MetadataStorage.getAll(key)).toHaveLength(2);
+    });
+
     it("should clear component metadata on reset", () => {
       @Component()
       class ResettableService {}

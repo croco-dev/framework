@@ -2234,6 +2234,12 @@
       "owner": "@croco/events-core"
     },
     {
+      "path": "packages/events-core/src/tests/EventMetadataReset.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/events-core"
+    },
+    {
       "path": "packages/events-core/src/tests/EventPublisher.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -4863,6 +4869,12 @@
     },
     {
       "path": "packages/testing/src/tests/ContractTesting.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/testing"
+    },
+    {
+      "path": "packages/testing/src/tests/EventTestingHarness.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/testing"

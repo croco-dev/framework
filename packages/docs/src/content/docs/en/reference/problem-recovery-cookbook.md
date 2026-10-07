@@ -9512,7 +9512,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:845:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:847:13` (problem-factory)
 
 <a id="framework-context-generated-di-graph-version-mismatch"></a>
 
@@ -9530,7 +9530,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:839:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:841:13` (problem-factory)
 
 <a id="framework-context-generated-di-provider-conflict"></a>
 
@@ -9548,7 +9548,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:1463:15` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:1465:15` (problem-factory)
 
 <a id="framework-context-generated-di-token-identity-conflict"></a>
 
@@ -9566,7 +9566,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:1531:13` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:1533:13` (problem-factory)
 
 <a id="framework-context-on-shutdown-decorator-invalid"></a>
 
@@ -9710,7 +9710,7 @@ Sources:
 
 Sources:
 
-- `packages/framework-context/src/libs/Container.ts:2653:12` (problem-factory)
+- `packages/framework-context/src/libs/Container.ts:2655:12` (problem-factory)
 
 <a id="framework-context-runtime-inspector-invalid-configuration"></a>
 
