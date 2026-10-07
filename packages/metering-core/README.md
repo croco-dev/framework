@@ -124,6 +124,8 @@ const apiCalls = defineMeter({
 
 @Meter({ meterId: "api.calls", type: "COUNT", quota: 10000 })
 class ApiController {
+  constructor(readonly tenantId: string) {}
+
   @Metered({ meter: apiCalls })
   async listUsers(): Promise<void> {}
 }
@@ -148,6 +150,11 @@ class ApiController {
 - `@Meter`, 클래스에 meter 정의를 선언합니다.
 - `@Metered`, 메서드 호출 시 사용량을 자동 기록합니다.
 - `setMeteringService`, 데코레이터가 사용할 전역 서비스를 등록합니다.
+
+`MeteringService`가 설정되어 있으면 `@Metered`는 인스턴스의 비어 있지 않은 `tenantId`를
+사용합니다. `tenantId`가 없거나 빈 문자열(공백만 있는 문자열 포함)이면 meter 조회와 원본
+메서드 실행 전에 `InvalidUsageEnvelopeProblem`으로 실패합니다. 공유 `"default"` 테넌트로
+대체하지 않습니다.
 
 `@Metered({ meter, logger })`의 logger는 명시적으로 전달합니다. 전역 DI 컨테이너에서
 logger를 조회하지 않습니다. local meter 기록 실패는 logger가 있을 때 보고 후 원본 결과를

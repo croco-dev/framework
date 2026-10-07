@@ -26,9 +26,44 @@ describe("@Metered decorator", () => {
     setMeteringService(mockService);
   });
 
+  describe("tenant identity", () => {
+    it.each([undefined, null, "", "   "])(
+      "should reject tenantId %j before lookup, execution, or recording",
+      async (tenantId) => {
+        const originalMethod = vi.fn().mockResolvedValue("result");
+        const resolveRequirement = vi.fn().mockResolvedValue("local");
+        mockService.resolveBillableUsageRequirement = resolveRequirement;
+        vi.mocked(mockService.getBillableUsageRequirement).mockReturnValue("unknown");
+        const meter = defineMeter({ key: "api.calls", aggregation: "COUNT", unit: "request" });
+
+        class TestService {
+          @Metered({ meter })
+          async doSomething(): Promise<string> {
+            return originalMethod();
+          }
+        }
+
+        const service =
+          tenantId === undefined
+            ? new TestService()
+            : Object.assign(new TestService(), { tenantId });
+        await expect(service.doSomething()).rejects.toMatchObject({
+          code: "metering/invalid-usage-envelope",
+          extensions: { reason: "@Metered requires a non-empty tenantId on the instance" },
+        });
+        expect(originalMethod).not.toHaveBeenCalled();
+        expect(mockService.getBillableUsageRequirement).not.toHaveBeenCalled();
+        expect(resolveRequirement).not.toHaveBeenCalled();
+        expect(mockService.record).not.toHaveBeenCalled();
+      },
+    );
+  });
+
   describe("basic usage", () => {
     it("should call original method and return result", async () => {
       class TestService {
+        tenantId = "tenant-1";
+
         @Metered({ meterId: "api_calls" })
         async doSomething(): Promise<string> {
           return "result";
@@ -364,6 +399,8 @@ describe("@Metered decorator", () => {
       });
 
       class TestService {
+        tenantId = "tenant-1";
+
         @Metered({
           meter,
           logger: mockLogger,
@@ -391,6 +428,8 @@ describe("@Metered decorator", () => {
       });
 
       class TestService {
+        tenantId = "tenant-1";
+
         @Metered({
           meter,
           logger: mockLogger,
@@ -435,6 +474,8 @@ describe("@Metered decorator", () => {
         throw new Error("Logger error");
       });
       class TestService {
+        tenantId = "tenant-1";
+
         @Metered({ meterId: "api_calls", logger: mockLogger })
         async doSomething(): Promise<string> {
           return "success";
@@ -453,6 +494,8 @@ describe("@Metered decorator", () => {
       });
 
       class TestService {
+        tenantId = "tenant-1";
+
         @Metered({ meter, eventIdExtractor: () => "request-1" })
         async doSomething(): Promise<string> {
           return "success";
@@ -472,6 +515,8 @@ describe("@Metered decorator", () => {
       });
 
       class TestService {
+        tenantId = "tenant-1";
+
         @Metered({ meter, eventIdExtractor: () => " " })
         async doSomething(): Promise<string> {
           return originalMethod();
