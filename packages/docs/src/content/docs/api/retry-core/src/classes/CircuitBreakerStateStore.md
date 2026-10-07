@@ -293,7 +293,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 설정합니다.
 
 ### setLastFailureTime()
 
-> `abstract` **setLastFailureTime**(`circuitId`, `time`): `Promise`\<`void`\>
+> `abstract` **setLastFailureTime**(`circuitId`, `time`, `options?`): `Promise`\<`void`\>
 
 마지막 실패 시간을 설정합니다.
 
@@ -311,6 +311,14 @@ HALF_OPEN 상태에서 성공한 요청 수를 설정합니다.
 
 타임스탬프 (ms)
 
+##### options?
+
+만료 가능한 저장소의 최소 보존 기간 (ms)
+
+###### minRetentionMs?
+
+`number`
+
 #### Returns
 
 `Promise`\<`void`\>
@@ -319,7 +327,7 @@ HALF_OPEN 상태에서 성공한 요청 수를 설정합니다.
 
 ### setState()
 
-> `abstract` **setState**(`circuitId`, `state`): `Promise`\<`void`\>
+> `abstract` **setState**(`circuitId`, `state`, `options?`): `Promise`\<`void`\>
 
 회로 상태를 설정합니다.
 
@@ -336,6 +344,14 @@ HALF_OPEN 상태에서 성공한 요청 수를 설정합니다.
 [`CircuitState`](/api/retry-core/src/enumerations/circuitstate/)
 
 설정할 상태
+
+##### options?
+
+만료 가능한 저장소의 최소 보존 기간 (ms)
+
+###### minRetentionMs?
+
+`number`
 
 #### Returns
 
