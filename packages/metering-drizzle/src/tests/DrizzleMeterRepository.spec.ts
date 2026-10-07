@@ -587,14 +587,14 @@ describe("DrizzleMeterRepository", () => {
       const registration = {
         tenantId: "tenant-custom",
         meterId: "tokens",
-        type: "SUM",
+        type: "CUSTOM_EVENT",
         billing: "required",
         aggregation: "SUM",
         unit: "tokens",
         quota: 1000,
         allowOverQuota: true,
         metadata: { source: "custom" },
-      } as const;
+      } as const satisfies MeterRegistrationOptions;
       const saved = await customRepository.save(registration);
       expect(saved).toEqual({
         ...registration,
