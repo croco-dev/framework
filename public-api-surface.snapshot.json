@@ -23937,13 +23937,13 @@
               "declarationKind": "const"
             },
             {
-              "name": "memberships",
+              "name": "membershipSeatOrdinalSequence",
               "exportKind": "declaration",
               "source": "./libs/schema",
               "declarationKind": "const"
             },
             {
-              "name": "membershipSeatOrdinalSequence",
+              "name": "memberships",
               "exportKind": "declaration",
               "source": "./libs/schema",
               "declarationKind": "const"
@@ -23958,6 +23958,12 @@
               "name": "addMembershipSeatOrdinals",
               "exportKind": "named",
               "source": "./migrations/addMembershipSeatOrdinals",
+              "declarationKind": "function"
+            },
+            {
+              "name": "setMembershipTimestampDefaults",
+              "exportKind": "named",
+              "source": "./migrations/setMembershipTimestampDefaults",
               "declarationKind": "function"
             }
           ],
