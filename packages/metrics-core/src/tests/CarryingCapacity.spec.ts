@@ -330,6 +330,38 @@ describe("CarryingCapacityCalculator", () => {
       expect(result.simulated.dailyChurnRate).toBeCloseTo((-Math.log(0.98) / 30) * 0.8, 3);
     });
 
+    it.each([0, 10000])(
+      "should report zero capacity when inflow decreases by 100% and current=%s",
+      async (current) => {
+        vi.spyOn(mockUserProvider, "getDailyActiveUsers").mockResolvedValue(current);
+
+        const result = await calculator.simulate({ tenantId: TENANT_ID, inflowChange: -100 });
+
+        expect(result.simulated.capacity).toBe(0);
+        expect(result.simulated.headroom).toBe(0);
+        expect(result.simulated.headroomPercent).toBe(0);
+        expect(result.simulated.current).toBe(current);
+        expect(result.capacityDelta).toBe(-result.baseline.capacity);
+        expect(result.headroomDelta).toBe(-result.baseline.headroom);
+        expect(result.headroomPercentDelta).toBe(-result.baseline.headroomPercent);
+        expect(Object.values(result.simulated).every(Number.isFinite)).toBe(true);
+      },
+    );
+
+    it("should keep zero-inflow baseline and simulation finite", async () => {
+      vi.spyOn(mockUserProvider, "getNewUsersCount").mockResolvedValue(0);
+
+      const result = await calculator.simulate({ tenantId: TENANT_ID, inflowChange: 50 });
+
+      expect(result.baseline.headroomPercent).toBe(0);
+      expect(result.simulated.headroomPercent).toBe(0);
+      expect(result.capacityDelta).toBe(0);
+      expect(result.headroomDelta).toBe(0);
+      expect(result.headroomPercentDelta).toBe(0);
+      expect(Object.values(result.baseline).every(Number.isFinite)).toBe(true);
+      expect(Object.values(result.simulated).every(Number.isFinite)).toBe(true);
+    });
+
     it("should simulate inflow increase by 50%", async () => {
       const result = await calculator.simulate({ tenantId: TENANT_ID, inflowChange: 50 });
 
@@ -417,25 +449,31 @@ describe("CarryingCapacityCalculator", () => {
   });
 
   describe("Edge Cases", () => {
-    it("should handle zero new users", async () => {
-      vi.spyOn(mockUserProvider, "getNewUsersCount").mockResolvedValue(0);
-      vi.spyOn(mockUserProvider, "getDailyActiveUsers").mockResolvedValue(1000);
+    it.each([0, 1000])(
+      "should report zero headroom percent with zero new users and current=%s",
+      async (current) => {
+        vi.spyOn(mockUserProvider, "getNewUsersCount").mockResolvedValue(0);
+        vi.spyOn(mockUserProvider, "getDailyActiveUsers").mockResolvedValue(current);
 
-      vi.spyOn(mockMetricsRepository, "getRetentionMetrics").mockResolvedValue({
-        logoChurn: 2,
-        revenueChurn: 2,
-        grr: 98,
-        nrr: 98,
-      });
+        vi.spyOn(mockMetricsRepository, "getRetentionMetrics").mockResolvedValue({
+          logoChurn: 2,
+          revenueChurn: 2,
+          grr: 98,
+          nrr: 98,
+        });
 
-      const result = await calculator.calculateUserCC({ lookbackDays: 30, tenantId: TENANT_ID });
+        const result = await calculator.calculateUserCC({ lookbackDays: 30, tenantId: TENANT_ID });
 
-      expect(result).not.toBeNull();
-      if (!result) return;
+        expect(result).not.toBeNull();
+        if (!result) return;
 
-      expect(result.capacity).toBe(0);
-      expect(result.headroom).toBe(0);
-    });
+        expect(result.capacity).toBe(0);
+        expect(result.headroom).toBe(0);
+        expect(result.headroomPercent).toBe(0);
+        expect(result.current).toBe(current);
+        expect(Object.values(result).every(Number.isFinite)).toBe(true);
+      },
+    );
 
     it("should handle empty movements array for Revenue CC", async () => {
       vi.spyOn(mockMetricsRepository, "getMRRHistory").mockResolvedValue([]);
@@ -455,6 +493,9 @@ describe("CarryingCapacityCalculator", () => {
       if (!result) return;
 
       expect(result.capacity).toBe(0);
+      expect(result.headroom).toBe(0);
+      expect(result.headroomPercent).toBe(0);
+      expect(Object.values(result).every(Number.isFinite)).toBe(true);
     });
 
     it("should handle negative churn change that would result in negative churn", async () => {
