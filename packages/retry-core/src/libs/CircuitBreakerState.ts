@@ -55,8 +55,13 @@ export abstract class CircuitBreakerStateStore {
    *
    * @param circuitId 회로 식별자
    * @param state 설정할 상태
+   * @param options 만료 가능한 저장소의 최소 보존 기간 (ms)
    */
-  abstract setState(circuitId: string, state: CircuitState): Promise<void>;
+  abstract setState(
+    circuitId: string,
+    state: CircuitState,
+    options?: { minRetentionMs?: number },
+  ): Promise<void>;
 
   /**
    * 현재 실패 카운트를 가져옵니다.
@@ -94,8 +99,13 @@ export abstract class CircuitBreakerStateStore {
    *
    * @param circuitId 회로 식별자
    * @param time 타임스탬프 (ms)
+   * @param options 만료 가능한 저장소의 최소 보존 기간 (ms)
    */
-  abstract setLastFailureTime(circuitId: string, time: number): Promise<void>;
+  abstract setLastFailureTime(
+    circuitId: string,
+    time: number,
+    options?: { minRetentionMs?: number },
+  ): Promise<void>;
 
   /**
    * 분산 락을 사용하여 회로별 작업을 원자적으로 실행합니다.

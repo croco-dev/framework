@@ -1,10 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProblemFactory } from "@croco/problems-core";
 
+import { Retryable } from "../libs/Retryable";
 import { CircuitBreaker } from "../libs/CircuitBreaker";
 import { CircuitState } from "../libs/CircuitBreakerState";
 import { CircuitBreakerOpenProblem } from "../libs/errors/CircuitBreakerOpenProblem";
-import { CircuitBreakerLockProblem } from "../libs/errors/RetryInfrastructureProblem";
+import {
+  CircuitBreakerLockProblem,
+  InvalidRetryConfigurationProblem,
+} from "../libs/errors/RetryInfrastructureProblem";
 import { RedisCircuitBreakerStore } from "../libs/stores/RedisCircuitBreakerStore";
 
 type MockUpstashRedis = {
@@ -62,6 +66,57 @@ function createSharedMockRedis(): { redis: MockUpstashRedis; data: Map<string, s
   };
 
   return { redis, data };
+}
+
+function createExpiringRedis(now: () => number): MockUpstashRedis {
+  const data = new Map<string, { value: string; expiresAt: number | null }>();
+  const read = (key: string) => {
+    const entry = data.get(key);
+    if (entry && entry.expiresAt !== null && entry.expiresAt <= now()) {
+      data.delete(key);
+      return undefined;
+    }
+    return entry;
+  };
+  return {
+    get: async (key) => read(key)?.value ?? null,
+    set: async (key, value, options) => {
+      if (options?.nx && read(key)) return null;
+      data.set(key, {
+        value,
+        expiresAt: options?.ex === undefined ? null : now() + options.ex * 1000,
+      });
+      return "OK";
+    },
+    incr: async (key) => {
+      const entry = read(key);
+      const next = Number(entry?.value ?? "0") + 1;
+      data.set(key, { value: String(next), expiresAt: entry?.expiresAt ?? null });
+      return next;
+    },
+    del: async (...keys) => {
+      let deleted = 0;
+      for (const key of keys) {
+        if (read(key) && data.delete(key)) deleted += 1;
+      }
+      return deleted;
+    },
+    expire: async (key, seconds) => {
+      const entry = read(key);
+      if (!entry) return 0;
+      entry.expiresAt = now() + seconds * 1000;
+      return 1;
+    },
+    eval: async (_script, keys, args) => {
+      const [key] = keys;
+      if (key && read(key)?.value === args[0]) {
+        data.delete(key);
+        return 1;
+      }
+      return 0;
+    },
+    scan: async () => ["0", [...data.keys()].filter((key) => read(key) !== undefined)],
+  };
 }
 
 function createFailingMockRedis(): MockUpstashRedis {
@@ -489,5 +544,160 @@ describe("RedisCircuitBreakerStore", () => {
     expect(vi.mocked(redis.set).mock.calls.length).toBeGreaterThan(2);
     await expect(storeA.getState("concurrent-recording")).resolves.toBe(CircuitState.CLOSED);
     await expect(storeA.getFailureCount("concurrent-recording")).resolves.toBe(0);
+  });
+});
+
+describe("Redis circuit retention", () => {
+  it("keeps a long-duration circuit OPEN until the HALF_OPEN boundary", async () => {
+    let now = 1_700_000_000_000;
+    const startedAt = now;
+    const redis = createExpiringRedis(() => now);
+    const store = new RedisCircuitBreakerStore({ redis });
+    const breaker = new CircuitBreaker({
+      circuitId: "long-open",
+      failureThreshold: 1,
+      openDuration: 300_000,
+      now: () => now,
+      stateStore: store,
+    });
+    const upstream = vi.fn(async (): Promise<void> => {
+      throw new Error("upstream down");
+    });
+    await expect(breaker.execute(upstream)).rejects.toThrow("upstream down");
+    now = startedAt + 120_000;
+    await expect(breaker.getState()).resolves.toBe(CircuitState.OPEN);
+    await expect(breaker.execute(upstream)).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    now = startedAt + 299_999;
+    await expect(breaker.execute(upstream)).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    expect(upstream).toHaveBeenCalledTimes(1);
+    now = startedAt + 300_000;
+    await expect(
+      breaker.execute(async () => {
+        expect(await breaker.getState()).toBe(CircuitState.HALF_OPEN);
+        return "healthy";
+      }),
+    ).resolves.toBe("healthy");
+    await expect(breaker.getState()).resolves.toBe(CircuitState.CLOSED);
+  });
+
+  it("keeps Retryable timeout OPEN across Redis expiry and probes at its boundary", async () => {
+    let now = 1_700_000_000_000;
+    const redis = createExpiringRedis(() => now);
+    const store = new RedisCircuitBreakerStore({ redis });
+    const upstream = vi.fn(async (): Promise<void> => {
+      throw new Error("upstream down");
+    });
+    class Service {
+      @Retryable({
+        maxAttempts: 1,
+        trace: false,
+        now: () => now,
+        circuitIdResolver: () => "retryable-long-open",
+        circuitBreaker: { failureThreshold: 1, timeout: 300_000, stateStore: store },
+      })
+      async request(): Promise<void> {
+        return upstream();
+      }
+    }
+    const service = new Service();
+    await expect(service.request()).rejects.toThrow("upstream down");
+    now += 120_000;
+    await expect(service.request()).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    expect(upstream).toHaveBeenCalledTimes(1);
+    now += 180_000;
+    upstream.mockImplementationOnce(async () => {
+      expect(await store.getState("retryable-long-open")).toBe(CircuitState.HALF_OPEN);
+    });
+    await expect(service.request()).resolves.toBeUndefined();
+    expect(upstream).toHaveBeenCalledTimes(2);
+    await expect(store.getState("retryable-long-open")).resolves.toBe(CircuitState.CLOSED);
+  });
+
+  it("retains forceOpen and failed HALF_OPEN reopening for each full open duration", async () => {
+    let now = 1_700_000_000_000;
+    const redis = createExpiringRedis(() => now);
+    const breaker = new CircuitBreaker({
+      circuitId: "reopening",
+      openDuration: 300_000,
+      now: () => now,
+      stateStore: new RedisCircuitBreakerStore({ redis }),
+    });
+    const upstream = vi.fn(async () => {
+      expect(await breaker.getState()).toBe(CircuitState.HALF_OPEN);
+      throw new Error("still down");
+    });
+    await breaker.forceOpen();
+    now += 120_000;
+    await expect(breaker.execute(upstream)).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    expect(upstream).not.toHaveBeenCalled();
+    now += 180_000;
+    await expect(breaker.execute(upstream)).rejects.toThrow("still down");
+    now += 299_999;
+    await expect(breaker.getState()).resolves.toBe(CircuitState.OPEN);
+    await expect(breaker.execute(upstream)).rejects.toBeInstanceOf(CircuitBreakerOpenProblem);
+    expect(upstream).toHaveBeenCalledTimes(1);
+    now += 1;
+    await expect(breaker.execute(upstream)).rejects.toThrow("still down");
+    expect(upstream).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([undefined, {}, { minRetentionMs: 0 }])(
+    "preserves the configured TTL without extra retention: %j",
+    async (options) => {
+      let now = 0;
+      const redis = createExpiringRedis(() => now);
+      const store = new RedisCircuitBreakerStore({ redis, ttlSeconds: 2 });
+      await store.setLastFailureTime("legacy", now, options);
+      await store.setState("legacy", CircuitState.OPEN, options);
+      now = 1_999;
+      await expect(store.getState("legacy")).resolves.toBe(CircuitState.OPEN);
+      now = 2_000;
+      await expect(store.getState("legacy")).resolves.toBe(CircuitState.CLOSED);
+      await expect(store.getLastFailureTime("legacy")).resolves.toBeNull();
+    },
+  );
+
+  it("rounds retention upward and adds it to every transition key's base TTL", async () => {
+    let now = 0;
+    const redis = createExpiringRedis(() => now);
+    const store = new RedisCircuitBreakerStore({ redis, ttlSeconds: 2 });
+    await store.setLastFailureTime("retained", now, { minRetentionMs: 1_001 });
+    await store.setState("retained", CircuitState.OPEN, { minRetentionMs: 1_001 });
+    now = 3_999;
+    await expect(store.getState("retained")).resolves.toBe(CircuitState.OPEN);
+    await expect(redis.get("croco:cb:retained:halfOpenActive")).resolves.toBe("0");
+    await expect(redis.get("croco:cb:retained:halfOpenSuccess")).resolves.toBe("0");
+    now = 4_000;
+    await expect(store.getState("retained")).resolves.toBe(CircuitState.CLOSED);
+    await expect(store.getLastFailureTime("retained")).resolves.toBeNull();
+    await expect(redis.get("croco:cb:retained:halfOpenActive")).resolves.toBeNull();
+    await expect(redis.get("croco:cb:retained:halfOpenSuccess")).resolves.toBeNull();
+  });
+
+  it.each([-1, 0.5, Number.NaN, Number.POSITIVE_INFINITY, 2_147_483_648])(
+    "rejects invalid retention %s before Redis I/O",
+    async (minRetentionMs) => {
+      const { redis } = createSharedMockRedis();
+      const store = new RedisCircuitBreakerStore({ redis });
+      await expect(
+        store.setState("invalid", CircuitState.OPEN, { minRetentionMs }),
+      ).rejects.toBeInstanceOf(InvalidRetryConfigurationProblem);
+      await expect(
+        store.setLastFailureTime("invalid", 0, { minRetentionMs }),
+      ).rejects.toBeInstanceOf(InvalidRetryConfigurationProblem);
+      expect(redis.set).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects unsafe combined retention before Redis I/O", async () => {
+    const { redis } = createSharedMockRedis();
+    const store = new RedisCircuitBreakerStore({ redis, ttlSeconds: Number.MAX_SAFE_INTEGER });
+    await expect(
+      store.setState("invalid", CircuitState.OPEN, { minRetentionMs: 1 }),
+    ).rejects.toBeInstanceOf(InvalidRetryConfigurationProblem);
+    await expect(
+      store.setLastFailureTime("invalid", 0, { minRetentionMs: 1 }),
+    ).rejects.toBeInstanceOf(InvalidRetryConfigurationProblem);
+    expect(redis.set).not.toHaveBeenCalled();
   });
 });
