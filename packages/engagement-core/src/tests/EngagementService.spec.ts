@@ -811,6 +811,74 @@ describe("EngagementService", () => {
     expect(dispatcher.dispatch).toHaveBeenCalledTimes(1);
   });
 
+  it.each([
+    {
+      name: "Error with top-level true",
+      cause: Object.assign(new Error("provider"), { retryable: true }),
+      retryable: true,
+    },
+    {
+      name: "Error with top-level false",
+      cause: Object.assign(new Error("provider"), { retryable: false }),
+      retryable: false,
+    },
+    {
+      name: "Problem top-level true overrides extension false",
+      cause: Object.assign(new RetryabilityCauseProblem(false), { retryable: true }),
+      retryable: true,
+    },
+    {
+      name: "Problem top-level false overrides extension true",
+      cause: Object.assign(new RetryabilityCauseProblem(true), { retryable: false }),
+      retryable: false,
+    },
+    { name: "unclassified Error", cause: new Error("provider"), retryable: true },
+    { name: "unclassified Problem", cause: new RetryabilityCauseProblem(), retryable: false },
+  ])("preserves durable dispatch retryability for $name", async ({ cause, retryable }) => {
+    const dispatcher = createDispatcher();
+    dispatcher.dispatch.mockRejectedValue(cause);
+    const store = new InMemoryEngagementStore();
+    const engagement = new EngagementService(
+      directory,
+      createRenderer(),
+      dispatcher.service,
+      undefined,
+      store,
+    );
+    const command = {
+      recipient: recipient.recipient,
+      data: { tenantName: "Croco", secret: "payload-secret" },
+      key: "durable-retryability-1",
+    } as const;
+
+    await expect(engagement.send(TrialEnding, command)).rejects.toMatchObject({
+      code: "engagement-core/dispatch-failed",
+      cause,
+      extensions: { retryable },
+    });
+    await expect(
+      store.findByIdentity({
+        tenantId: recipient.recipient.tenantId,
+        messageId: TrialEnding.id,
+        recipientId: recipient.recipient.userId,
+        channel: "email",
+        semanticKey: command.key,
+      }),
+    ).resolves.toMatchObject({
+      outcome: { kind: "failed", stage: "provider", retryable, executionIds: [] },
+    });
+
+    await expect(engagement.send(TrialEnding, command)).rejects.toMatchObject({
+      code: "engagement-core/dispatch-failed",
+      extensions: { retryable: false },
+      cause: {
+        code: "engagement-core/recorded-dispatch-failed",
+        extensions: { providerRetryable: retryable, retryable: false },
+      },
+    });
+    expect(dispatcher.dispatch).toHaveBeenCalledTimes(1);
+  });
+
   it("preserves successful target evidence when a later endpoint fails", async () => {
     const dispatcher = createDispatcher();
     dispatcher.dispatch

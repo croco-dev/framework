@@ -108,6 +108,7 @@ retryability via `readExplicitRetryability`: a top-level boolean takes precedenc
 `extensions.retryable`. Without an explicit boolean, these wrappers remain retryable. Dispatch
 wrappers use the same explicit classification; an unclassified Problem remains non-retryable,
 while an unclassified ordinary Error is retryable, matching campaign member failure classification.
+Durable failed outcomes store the same cause classification, which replay exposes as `providerRetryable`.
 
 Rendering failures remain non-retryable even when their cause requests retry: rendering is treated
 as a message/template correction boundary, so repeating campaign delivery does not repair it.
