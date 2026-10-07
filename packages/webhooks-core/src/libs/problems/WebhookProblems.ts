@@ -123,10 +123,10 @@ export class WebhookDispatchProblem extends WebhookProblem {
         provider: options.provider,
         eventId: options.eventId,
         eventType: options.eventType,
-        ...(cause instanceof Problem
-          ? { causeCode: cause.code, retryable: isRetryableHandlerFailure(cause) }
-          : {}),
+        ...(cause instanceof Problem ? { causeCode: cause.code } : {}),
+        ...(cause === undefined ? {} : { retryable: isRetryableHandlerFailure(cause) }),
       },
+
       ...(cause === undefined ? {} : { cause }),
     });
   }
@@ -170,7 +170,7 @@ export class WebhookReporterProblem extends WebhookProblem {
         provider: options.provider,
         eventId: options.eventId,
         eventType: options.eventType,
-        ...(cause instanceof Problem ? { retryable: isRetryableHandlerFailure(cause) } : {}),
+        ...(cause === undefined ? {} : { retryable: isRetryableHandlerFailure(cause) }),
       },
       ...(cause === undefined ? {} : { cause }),
     });
