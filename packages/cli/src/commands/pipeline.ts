@@ -42,11 +42,11 @@ function createPipelineAction(action: PipelineAction) {
       const cwd = typeof args.cwd === "string" ? resolve(runtime.cwd, args.cwd) : runtime.cwd;
       const config = requiredString(args.config, "--config");
       const pipelineId = requiredString(args.pipeline, "--pipeline");
-      if (requiresRun) requiredString(args.run, "--run");
+      if (requiresRun) requiredString(args["run"], "--run");
       const module: unknown = await import(pathToFileURL(resolve(cwd, config)).href);
       const operations = readPipelineOperations(module, pipelineId);
       const result = await (action === "retry" || action === "status"
-        ? operations[action](requiredString(args.run, "--run"))
+        ? operations[action](requiredString(args["run"], "--run"))
         : operations[action]());
       const output = JSON.stringify(result, null, 2);
       if (output === undefined) {
@@ -103,13 +103,13 @@ function requiredString(value: unknown, flag: string): string {
 }
 
 function readPipelineOperations(module: unknown, pipelineId: string): PipelineOperations {
-  if (!isRecord(module) || !isRecord(module.pipelines)) {
+  if (!isRecord(module) || !isRecord(module["pipelines"])) {
     throw new InvalidPipelineCommandProblem("Config module must export a pipelines registry");
   }
-  if (!Object.hasOwn(module.pipelines, pipelineId)) {
+  if (!Object.hasOwn(module["pipelines"], pipelineId)) {
     throw new InvalidPipelineCommandProblem(`Unknown pipeline: ${pipelineId}`);
   }
-  const operations = module.pipelines[pipelineId];
+  const operations = module["pipelines"][pipelineId];
   if (
     !isRecord(operations) ||
     !["validate", "preview", "run", "retry", "status"].every(

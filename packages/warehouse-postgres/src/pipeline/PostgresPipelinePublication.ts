@@ -143,7 +143,7 @@ export class PostgresPipelinePublication implements PipelinePublication {
           )
             return expected;
         } catch {
-          // An unavailable inspection cannot establish whether COMMIT succeeded.
+          throw error;
         }
       }
       throw error;
