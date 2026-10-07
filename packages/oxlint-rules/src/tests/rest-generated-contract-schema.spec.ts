@@ -6,6 +6,18 @@ type ReportDescriptor = {
   readonly messageId?: string;
 };
 
+type ScopeValue = {
+  readonly defs: readonly {
+    readonly type: string;
+    readonly node: Record<string, unknown>;
+  }[];
+};
+
+type ScopeEntry = {
+  readonly name: string;
+  readonly value: ScopeValue;
+};
+
 describe("rest-generated-contract-schema", () => {
   it("reports generated route decorators that cannot produce concrete contracts", () => {
     expect(runDecorator("All")).toEqual(["allRoute"]);
@@ -47,32 +59,9 @@ function runDecorator(
     report(descriptor: ReportDescriptor) {
       reports.push(descriptor.messageId ?? "");
     },
+    sourceCode: { getScope: () => scopeOf(entries(name, options)) },
   } as unknown as Rule.RuleContext;
-  const listeners = restGeneratedContractSchema.create(context);
-  const importListener = listeners.ImportDeclaration;
-  const listener = listeners.Decorator;
-
-  if (options.imported !== false) {
-    if (typeof importListener !== "function") {
-      expect(importListener).toBeTypeOf("function");
-      return reports;
-    }
-
-    importListener({
-      type: "ImportDeclaration",
-      source: {
-        type: "Literal",
-        value: "@croco/protocols-rest",
-      },
-      specifiers: [
-        {
-          type: "ImportSpecifier",
-          imported: identifier(options.importedName ?? name),
-          local: identifier(name),
-        },
-      ],
-    } as never);
-  }
+  const listener = restGeneratedContractSchema.create(context).Decorator;
 
   if (typeof listener !== "function") {
     expect(listener).toBeTypeOf("function");
@@ -90,6 +79,48 @@ function runDecorator(
   } as never);
 
   return reports;
+}
+
+function entries(
+  name: string,
+  options: { readonly imported?: boolean; readonly importedName?: string },
+): readonly ScopeEntry[] {
+  if (options.imported === false) {
+    return [];
+  }
+
+  const importedName = options.importedName ?? name;
+
+  return [
+    {
+      name,
+      value: {
+        defs: [
+          {
+            type: "ImportBinding",
+            node: {
+              type: "ImportSpecifier",
+              imported: identifier(importedName),
+              parent: {
+                type: "ImportDeclaration",
+                source: { type: "Literal", value: "@croco/protocols-rest" },
+              },
+            },
+          },
+        ],
+      },
+    },
+  ];
+}
+
+function scopeOf(variables: readonly ScopeEntry[]): {
+  readonly upper: null;
+  readonly set: Map<string, ScopeValue>;
+} {
+  return {
+    upper: null,
+    set: new Map(variables.map((variable) => [variable.name, variable.value])),
+  };
 }
 
 function identifier(name: string): object {
