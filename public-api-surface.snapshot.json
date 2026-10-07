@@ -23854,6 +23854,168 @@
           "sourceEntrypoint": "packages/meta-vite/src/index.ts",
           "runtimeExports": [
             {
+              "name": "DeferredRegionCancelledError",
+              "exportKind": "named",
+              "source": "./libs/render/deferredRegions",
+              "declarationKind": "class"
+            },
+            {
+              "name": "DeferredRegionTimeoutError",
+              "exportKind": "named",
+              "source": "./libs/render/deferredRegions",
+              "declarationKind": "class"
+            },
+            {
+              "name": "DeferredRegionUnknownError",
+              "exportKind": "named",
+              "source": "./libs/render/deferredRegions",
+              "declarationKind": "class"
+            },
+            {
+              "name": "META_VITE_ROUTE_MANIFEST_COMPONENT_REF_REQUIRED",
+              "exportKind": "named",
+              "source": "./libs/build/routeManifest",
+              "declarationKind": "const"
+            },
+            {
+              "name": "META_VITE_ROUTE_MANIFEST_SCHEMA_VERSION",
+              "exportKind": "named",
+              "source": "./libs/build/routeManifest",
+              "declarationKind": "const"
+            },
+            {
+              "name": "MetaViteRouteManifestError",
+              "exportKind": "named",
+              "source": "./libs/build/routeManifest",
+              "declarationKind": "class"
+            },
+            {
+              "name": "MetaViteUnsupportedCapabilityProblem",
+              "exportKind": "named",
+              "source": "./libs/build/routeManifest",
+              "declarationKind": "class"
+            },
+            {
+              "name": "RenderServer",
+              "exportKind": "named",
+              "source": "./libs/render/renderServer",
+              "declarationKind": "class"
+            },
+            {
+              "name": "RouteConflictError",
+              "exportKind": "named",
+              "source": "./libs/routes/routeRegistry",
+              "declarationKind": "class"
+            },
+            {
+              "name": "RouteRegistry",
+              "exportKind": "named",
+              "source": "./libs/routes/routeRegistry",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SHELL_STREAM_DEFAULT_DEADLINE_MS",
+              "exportKind": "named",
+              "source": "./libs/render/shellStream",
+              "declarationKind": "const"
+            },
+            {
+              "name": "SHELL_STREAM_DEFAULT_MAX_BUFFERED_BYTES",
+              "exportKind": "named",
+              "source": "./libs/render/shellStream",
+              "declarationKind": "const"
+            },
+            {
+              "name": "SHELL_STREAM_DEFAULT_REGION_TIMEOUT_MS",
+              "exportKind": "named",
+              "source": "./libs/render/shellStream",
+              "declarationKind": "const"
+            },
+            {
+              "name": "SHELL_STREAM_DELIVERY_HEADER",
+              "exportKind": "named",
+              "source": "./libs/render/shellStream",
+              "declarationKind": "const"
+            },
+            {
+              "name": "SHELL_STREAM_MAX_BUFFERED_BYTES_CODE",
+              "exportKind": "named",
+              "source": "./libs/render/shellStream",
+              "declarationKind": "const"
+            },
+            {
+              "name": "SHELL_STREAM_RENDER_ABORTED_CODE",
+              "exportKind": "named",
+              "source": "./libs/render/shellStream",
+              "declarationKind": "const"
+            },
+            {
+              "name": "SHELL_STREAM_SERVER_TIMING",
+              "exportKind": "named",
+              "source": "./libs/render/shellStream",
+              "declarationKind": "const"
+            },
+            {
+              "name": "ServerActionInvalidContentTypeProblem",
+              "exportKind": "named",
+              "source": "./libs/actions/serverActions",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ServerActionInvalidPathProblem",
+              "exportKind": "named",
+              "source": "./libs/actions/serverActions",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ServerActionMalformedBodyProblem",
+              "exportKind": "named",
+              "source": "./libs/actions/serverActions",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ServerActionNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/actions/serverActions",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ServerActionRegistry",
+              "exportKind": "named",
+              "source": "./libs/actions/serverActions",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ServerActionValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/actions/serverActions",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ShellRouteDefinitionError",
+              "exportKind": "named",
+              "source": "./libs/routes/routeRegistry",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ShellStreamAbortedError",
+              "exportKind": "named",
+              "source": "./libs/render/shellStream",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ShellStreamMaxBufferedBytesError",
+              "exportKind": "named",
+              "source": "./libs/render/shellStream",
+              "declarationKind": "class"
+            },
+            {
+              "name": "applyShellStreamHeaders",
+              "exportKind": "named",
+              "source": "./libs/render/shellStream",
+              "declarationKind": "function"
+            },
+            {
               "name": "checkMetaViteFrontendActionManifestFile",
               "exportKind": "named",
               "source": "./libs/build/frontendActionManifest",
@@ -23869,6 +24031,12 @@
               "name": "createCloudflareHandler",
               "exportKind": "named",
               "source": "./libs/providers/cloudflare",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createDeferredRegionStore",
+              "exportKind": "named",
+              "source": "./libs/render/deferredRegions",
               "declarationKind": "function"
             },
             {
@@ -24022,30 +24190,6 @@
               "declarationKind": "function"
             },
             {
-              "name": "META_VITE_ROUTE_MANIFEST_COMPONENT_REF_REQUIRED",
-              "exportKind": "named",
-              "source": "./libs/build/routeManifest",
-              "declarationKind": "const"
-            },
-            {
-              "name": "META_VITE_ROUTE_MANIFEST_SCHEMA_VERSION",
-              "exportKind": "named",
-              "source": "./libs/build/routeManifest",
-              "declarationKind": "const"
-            },
-            {
-              "name": "MetaViteRouteManifestError",
-              "exportKind": "named",
-              "source": "./libs/build/routeManifest",
-              "declarationKind": "class"
-            },
-            {
-              "name": "MetaViteUnsupportedCapabilityProblem",
-              "exportKind": "named",
-              "source": "./libs/build/routeManifest",
-              "declarationKind": "class"
-            },
-            {
               "name": "prerenderSsgRoutes",
               "exportKind": "named",
               "source": "./libs/build/ssgPrerender",
@@ -24058,28 +24202,16 @@
               "declarationKind": "function"
             },
             {
-              "name": "RenderServer",
-              "exportKind": "named",
-              "source": "./libs/render/renderServer",
-              "declarationKind": "class"
-            },
-            {
               "name": "resetServerActions",
               "exportKind": "named",
               "source": "./libs/actions/serverActions",
               "declarationKind": "function"
             },
             {
-              "name": "RouteConflictError",
+              "name": "resolveShellStreamPolicy",
               "exportKind": "named",
-              "source": "./libs/routes/routeRegistry",
-              "declarationKind": "class"
-            },
-            {
-              "name": "RouteRegistry",
-              "exportKind": "named",
-              "source": "./libs/routes/routeRegistry",
-              "declarationKind": "class"
+              "source": "./libs/render/shellStream",
+              "declarationKind": "function"
             },
             {
               "name": "serializeMetaViteFrontendActionManifest",
@@ -24092,42 +24224,6 @@
               "exportKind": "named",
               "source": "./libs/build/routeManifest",
               "declarationKind": "function"
-            },
-            {
-              "name": "ServerActionInvalidContentTypeProblem",
-              "exportKind": "named",
-              "source": "./libs/actions/serverActions",
-              "declarationKind": "class"
-            },
-            {
-              "name": "ServerActionInvalidPathProblem",
-              "exportKind": "named",
-              "source": "./libs/actions/serverActions",
-              "declarationKind": "class"
-            },
-            {
-              "name": "ServerActionMalformedBodyProblem",
-              "exportKind": "named",
-              "source": "./libs/actions/serverActions",
-              "declarationKind": "class"
-            },
-            {
-              "name": "ServerActionNotFoundProblem",
-              "exportKind": "named",
-              "source": "./libs/actions/serverActions",
-              "declarationKind": "class"
-            },
-            {
-              "name": "ServerActionRegistry",
-              "exportKind": "named",
-              "source": "./libs/actions/serverActions",
-              "declarationKind": "class"
-            },
-            {
-              "name": "ServerActionValidationProblem",
-              "exportKind": "named",
-              "source": "./libs/actions/serverActions",
-              "declarationKind": "class"
             },
             {
               "name": "unregisterServerAction",
@@ -24178,6 +24274,26 @@
               "name": "CrocoFetchHandler",
               "exportKind": "named",
               "source": "./libs/render/types"
+            },
+            {
+              "name": "DeferredRegionDefinition",
+              "exportKind": "named",
+              "source": "./libs/routes/shell"
+            },
+            {
+              "name": "DeferredRegionLoader",
+              "exportKind": "named",
+              "source": "./libs/routes/shell"
+            },
+            {
+              "name": "DeferredRegionLoaderInput",
+              "exportKind": "named",
+              "source": "./libs/routes/shell"
+            },
+            {
+              "name": "DeferredRegionReader",
+              "exportKind": "named",
+              "source": "./libs/render/deferredRegions"
             },
             {
               "name": "DurableIsrCacheStoreProfileOptions",
@@ -24345,6 +24461,11 @@
               "source": "./libs/routes/types"
             },
             {
+              "name": "PageRouteStreamDefinition",
+              "exportKind": "named",
+              "source": "./libs/routes/shell"
+            },
+            {
               "name": "RenderMode",
               "exportKind": "named",
               "source": "./libs/routes/types"
@@ -24415,12 +24536,57 @@
               "source": "./libs/actions/serverActions"
             },
             {
-              "name": "SsgRenderedArtifact",
+              "name": "ShellDecision",
+              "exportKind": "named",
+              "source": "./libs/routes/shell"
+            },
+            {
+              "name": "ShellDecisionInput",
+              "exportKind": "named",
+              "source": "./libs/routes/shell"
+            },
+            {
+              "name": "ShellRenderOptions",
+              "exportKind": "named",
+              "source": "./libs/routes/shell"
+            },
+            {
+              "name": "ShellRuntimeContext",
+              "exportKind": "named",
+              "source": "./libs/routes/shell"
+            },
+            {
+              "name": "ShellRuntimePlatform",
+              "exportKind": "named",
+              "source": "./libs/routes/shell"
+            },
+            {
+              "name": "ShellSettleSummary",
+              "exportKind": "named",
+              "source": "./libs/routes/shell"
+            },
+            {
+              "name": "ShellStreamDelivery",
+              "exportKind": "named",
+              "source": "./libs/render/shellStream"
+            },
+            {
+              "name": "ShellStreamPolicy",
+              "exportKind": "named",
+              "source": "./libs/render/shellStream"
+            },
+            {
+              "name": "ShellStreamRequest",
+              "exportKind": "named",
+              "source": "./libs/render/shellStream"
+            },
+            {
+              "name": "SsgRenderFunction",
               "exportKind": "named",
               "source": "./libs/build/ssgPrerender"
             },
             {
-              "name": "SsgRenderFunction",
+              "name": "SsgRenderedArtifact",
               "exportKind": "named",
               "source": "./libs/build/ssgPrerender"
             }
