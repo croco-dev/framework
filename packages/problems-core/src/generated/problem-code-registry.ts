@@ -20539,7 +20539,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/openapi-spec/src/libs/emitOpenAPI.ts",
-          line: 107,
+          line: 108,
           column: 5,
           kind: "problem-constructor",
         },

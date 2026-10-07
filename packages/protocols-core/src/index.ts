@@ -146,6 +146,7 @@ export {
   getZodObjectShape,
   getZodInputObjectSchema,
   getZodQueryInputSchema,
+  getContractFieldSchema,
   getZodObjectUnsupportedDynamicKeyMode,
   getZodSchemaTypeName,
   isZodArraySchema,

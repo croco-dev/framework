@@ -697,14 +697,19 @@ function validateContractNamedParams(
   }
 
   const schemaBoundParams = params.filter((param) => param.contractSchema);
-  const hasContractBinding = schemaBoundParams.some(
-    (param) => param.contractSchema === contractSchema,
-  );
+  const hasWholeSchemaBinding =
+    schemaBoundParams.length > 0 &&
+    (contractNames.size === 0 ||
+      schemaBoundParams.some(
+        (param) =>
+          param.contractSchema === contractSchema &&
+          !Object.prototype.hasOwnProperty.call(contractShape, param.name),
+      ));
 
   for (const name of contractNames) {
     const param = params.find((candidate) => candidate.name === name);
 
-    if (!param && hasContractBinding) {
+    if (!param && hasWholeSchemaBinding) {
       continue;
     }
     if (!param) {

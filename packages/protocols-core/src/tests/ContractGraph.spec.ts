@@ -2829,6 +2829,40 @@ function createController(
   return UsersController;
 }
 
+function createPerFieldBindingController(
+  schema: z.ZodType,
+  boundNames: readonly string[],
+  kind: "path" | "query" = "query",
+) {
+  @Controller("/users")
+  class UsersController {
+    @Get(kind === "path" ? "/:id/:page" : "/")
+    getUser(_id: unknown, _page: unknown): void {}
+  }
+  const routes = Reflect.getMetadata(REST_ROUTES_KEY, UsersController) as RouteMetadata[];
+  Reflect.defineMetadata(
+    REST_ROUTES_KEY,
+    routes.map((route) => ({
+      ...route,
+      contract: {
+        method: "GET",
+        response: z.string(),
+        path: kind === "path" ? "/users/:id/:page" : "/users",
+        [kind === "path" ? "params" : "query"]: schema,
+      },
+    })),
+    UsersController,
+  );
+  const params: ParamMetadata[] = boundNames.map((name, index) => ({
+    type: kind === "path" ? ParamType.PARAM : ParamType.QUERY,
+    index,
+    name,
+    contractSchema: schema,
+  }));
+  Reflect.defineMetadata(REST_PARAMS_KEY, new Map([["getUser", params]]), UsersController);
+  return UsersController;
+}
+
 describe("wrapped object contract bindings", () => {
   const input = z.object({ id: z.string(), filter: z.string().optional() });
   const schemas = [
@@ -3050,4 +3084,48 @@ describe("wrapped object contract bindings", () => {
       ),
     ).toHaveLength(2);
   });
+
+  it.each(["query", "path"] as const)(
+    "requires every input field when wrapped %s bindings are per-field",
+    (kind) => {
+      const inputShape = { id: z.string(), page: z.coerce.number().int().min(1) };
+      const base = z.object(inputShape);
+      const queries = [
+        base.refine(({ id }) => id.length > 0),
+        base.pipe(z.object({ id: z.string(), page: z.number().int().min(1) })),
+      ];
+      for (const query of queries) {
+        const ControllerClass = createPerFieldBindingController(query, ["id"], kind);
+        const graph = buildContractGraph([ControllerClass]);
+
+        expect(
+          graph.diagnostics.filter(
+            (diagnostic) =>
+              diagnostic.code === `contract-route-missing-${kind}-param-binding` &&
+              diagnostic.message.includes('"page"'),
+          ),
+        ).toHaveLength(1);
+      }
+    },
+  );
+
+  it.each(["query", "path"] as const)(
+    "accepts complete per-field bindings for wrapped %s contracts",
+    (kind) => {
+      const inputShape = { id: z.string(), page: z.coerce.number().int().min(1) };
+      const query = z.object(inputShape).refine(({ id }) => id.length > 0);
+      const graph = buildContractGraph([
+        createPerFieldBindingController(query, ["id", "page"], kind),
+      ]);
+
+      expect(
+        graph.diagnostics.filter(
+          (diagnostic) =>
+            diagnostic.severity === "error" &&
+            (diagnostic.code === `contract-route-missing-${kind}-param-binding` ||
+              diagnostic.code === `contract-route-uncontracted-${kind}-param`),
+        ),
+      ).toEqual([]);
+    },
+  );
 });
