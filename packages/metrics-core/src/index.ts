@@ -192,3 +192,21 @@ export type {
   ActivationCandidateResult,
   ActivationReport,
 } from "./libs/activation/ActivationCandidates";
+
+export {
+  PolicyReplayProblem,
+  validatePolicyReplayInput,
+  replayPolicy,
+  createPolicyReplayReport,
+  serializePolicyReplayReport,
+  importPolicyReplayReport,
+} from "./libs/replay/PolicyReplay";
+export type {
+  ReplayPredicate,
+  ReplayScope,
+  ReplayScenario,
+  ReplayRow,
+  PolicyReplayInput,
+  PolicyDiffResult,
+  PolicyReplayReport,
+} from "./libs/replay/PolicyReplay";

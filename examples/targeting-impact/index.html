@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Targeting impact · Croco</title>
+    <style>
+      :root {
+        font-family: system-ui, sans-serif;
+        color: #18312c;
+        background: #f3f5f0;
+        font-size: 16px;
+      }
+      body {
+        margin: 0;
+      }
+      main {
+        max-width: 1000px;
+        margin: auto;
+        padding: 36px 24px;
+      }
+      header {
+        border-bottom: 2px solid #276d52;
+        padding-bottom: 24px;
+        margin-bottom: 28px;
+      }
+      h1 {
+        font-size: 38px;
+        letter-spacing: -1px;
+        margin: 12px 0;
+      }
+      h2 {
+        font-size: 26px;
+      }
+      h3 {
+        margin-top: 32px;
+      }
+      .eyebrow {
+        font-size: 12px;
+        letter-spacing: 2px;
+        color: #276d52;
+      }
+      section {
+        background: white;
+        border: 1px solid #d8e1d7;
+        border-radius: 12px;
+        padding: 24px;
+      }
+      dl {
+        display: grid;
+        grid-template-columns: minmax(180px, 1fr) minmax(120px, 1fr);
+        gap: 12px;
+      }
+      dt {
+        color: #496057;
+      }
+      dd {
+        margin: 0;
+        font-weight: 600;
+      }
+      button,
+      select {
+        font: inherit;
+        padding: 10px 14px;
+        border-radius: 6px;
+        border: 1px solid #849b8f;
+        margin: 8px 0;
+      }
+      button {
+        background: #205d45;
+        color: white;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.5;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        text-align: left;
+      }
+      th,
+      td {
+        padding: 12px;
+        border-bottom: 1px solid #d8e1d7;
+      }
+      caption {
+        text-align: left;
+        color: #496057;
+        padding: 12px 0;
+      }
+      li {
+        margin: 10px 0;
+        line-height: 1.5;
+      }
+      footer {
+        margin-top: 24px;
+        color: #496057;
+      }
+      select {
+        max-width: 100%;
+      }
+      @media (max-width: 600px) {
+        main {
+          padding: 20px 12px;
+        }
+        section {
+          padding: 16px;
+        }
+        h1 {
+          font-size: 30px;
+        }
+        dl {
+          grid-template-columns: 1fr;
+          gap: 6px;
+        }
+        dd {
+          margin-bottom: 12px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="/dist/browser.global.js"></script>
+  </body>
+</html>

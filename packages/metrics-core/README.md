@@ -143,3 +143,77 @@ permission/privacy checks and mapping native quality to the metric-read contract
 See [the runnable standalone/import/native example](../../examples/activation-candidates/README.md).
 The admin service preserves candidate definition and source hashes in existing host persistence;
 the React explorer displays these same results and saves only the viewed source evidence.
+
+## Historical policy replay
+
+`validatePolicyReplayInput(unknown)` imports a detached, recursively frozen JSON input.
+Explicit `undefined` values and sparse arrays are not JSON and fail with `PolicyReplayProblem`;
+omit optional properties when the source has no evidence.
+`replayPolicy(input)` performs the same pure calculation used by the admin inspector.
+`createPolicyReplayReport(input)` adds SHA-256 definition/input hashes using Web Crypto;
+`serializePolicyReplayReport(report)` and `importPolicyReplayReport(json)` round-trip the
+snapshot, with import recomputing the result and rejecting tampering.
+
+```ts typecheck
+import { createPolicyReplayReport, validatePolicyReplayInput } from "@croco/metrics-core";
+
+const input = validatePolicyReplayInput({
+  scope: { appId: "shop", environment: "test", tenantId: "tenant-1", subjectKind: "user" },
+  snapshotRef: "campaign:reviewed-snapshot",
+  currency: "KRW",
+  unit: "won",
+  observationWindow: {
+    start: "2026-01-01T00:00:00.000Z",
+    end: "2026-01-02T00:00:00.000Z",
+    completed: true,
+  },
+  attributionWindowMs: 3600000,
+  definition: {
+    revision: "filter-v1",
+    existingPredicate: { op: "all" },
+    newPredicate: { op: "eq", trait: "eligible", value: true },
+    unknownPolicy: "preserve",
+    scenarios: ["click-only", "post-send-inclusive"],
+    changes: ["filter"],
+  },
+  rows: [
+    {
+      subjectId: "synthetic-1",
+      atDecision: "2026-01-01T01:00:00.000Z",
+      traitsAtDecision: { eligible: false },
+      dispatch: { dispatchId: "message-1", at: "2026-01-01T02:00:00.000Z" },
+      touchpoints: [],
+      outcomes: [],
+      cost: { amount: 10, currency: "KRW" },
+    },
+  ],
+});
+const report = await createPolicyReplayReport(input);
+// report.result.excludedN === 1; observedCostSaved.amount === 10
+```
+
+The restricted predicate DSL supports `all`, scalar `eq`/`neq`, numeric `gte`/`lte`,
+`and`, `or`, and `not`. Missing decision-time traits remain unknown; current profile
+fields are rejected. `unknownPolicy` changes effective populations while preserving
+`unknownN` and changes the definition hash. V1 requires one consistent historical
+decision/trait snapshot per subject; multiple dispatches can share that decision.
+Separate replays are required for different decisions of the same subject.
+
+All dates use canonical ISO UTC timestamps. Observation windows include the start
+and exclude the end; attribution includes dispatch and the configured end boundary.
+Actual dispatch timestamps must follow the decision, and clicks must follow dispatch.
+A financial event carries a unique `eventId`, timestamp, amount and matching currency.
+Repeated identical events across messages receive single credit in each scenario;
+conflicting event identities fail with `metrics-core/invalid-policy-replay`.
+Visits count distinct subjects per category. An event referenced by several messages
+is classified post-click first, then post-send non-click, then pre-send. A subject can
+appear in several visit categories when it has different events.
+
+Omit `touchpoints` or `outcomes` when the source lacks that evidence; an empty array
+means the source observed no such events. Coverage counts and scenario availability
+remain explicit. Missing dispatch costs are unavailable or partial, never imputed.
+Cost savings assume unchanged unit prices. Incomplete windows remain partial.
+Content/frequency/timing changes carry a limitation against simple filter-removal
+interpretation. No output identifies causal uplift, lost revenue, or individual
+counterfactuals. Full report JSON contains source rows: hosts must authorize storage
+and must project/redact exports according to their field permissions.

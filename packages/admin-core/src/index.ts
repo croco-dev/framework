@@ -458,3 +458,18 @@ export type {
   SavedIntentInspection,
   SavedIntentAdminState,
 } from "./libs/SavedIntentOperations";
+
+export type {
+  TargetingImpactAction,
+  TargetingImpactReport,
+  TargetingImpactReportStore,
+  TargetingImpactOperationsOptions,
+  CampaignReplayRequest,
+  CampaignReplayResult,
+} from "./libs/TargetingImpactOperations";
+export type {
+  PolicyReplayInput,
+  PolicyReplayReport,
+  PolicyDiffResult,
+  ReplayScope,
+} from "@croco/metrics-core";

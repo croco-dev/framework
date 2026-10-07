@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 922,
+  problemCount: 923,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -18407,6 +18407,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "metrics-core/invalid-policy-replay",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#metrics-core-invalid-policy-replay",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/metrics-core/src/libs/replay/PolicyReplay.ts",
+          line: 101,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "metrics-core/invalid-retention-movement",
       category: "ValidationError",
       status: 422,
@@ -28977,6 +29007,17 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       source: {
         file: "packages/admin-core/src/libs/CustomerExplorer.ts",
         line: 145,
+        column: 1,
+        kind: "problem-class",
+      },
+      reason:
+        "The constructor derives its code from a runtime parameter; existing factory call-site discovery remains unchanged.",
+    },
+    {
+      className: "TargetingImpactProblem",
+      source: {
+        file: "packages/admin-core/src/libs/TargetingImpactOperations.ts",
+        line: 31,
         column: 1,
         kind: "problem-class",
       },

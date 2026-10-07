@@ -20,3 +20,5 @@ Use a compatible first-party plugin when one satisfies the contract and runtime.
 Never select duplicate providers by import or registration order. Use `providerReplacements` with the exact owner set when replacement is intentional. Do not introduce direct `Container.set()` composition, package-specific global setters, raw transport arrays, or direct telemetry singleton initialization when a canonical plugin/module exists.
 
 For data and measurement work, follow the [data recipe](references/recipes.md#data-and-measurement). Reuse the existing parser, provider reader, metric runner, and quality contracts. Distinguish source-verified implementation, target design, local test evidence, provider certification, and release evidence; an issue or merged PR alone does not establish all five.
+
+For historical targeting comparisons, follow the [targeting replay recipe](references/recipes.md#historical-targeting-replay) for pure calculation, authorized campaign history reads, private report storage, and the aggregate Inspector.

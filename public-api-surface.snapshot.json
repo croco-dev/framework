@@ -1189,6 +1189,16 @@
               "source": "./libs/types"
             },
             {
+              "name": "CampaignReplayRequest",
+              "exportKind": "named",
+              "source": "./libs/TargetingImpactOperations"
+            },
+            {
+              "name": "CampaignReplayResult",
+              "exportKind": "named",
+              "source": "./libs/TargetingImpactOperations"
+            },
+            {
               "name": "CohortAdminAccess",
               "exportKind": "named",
               "source": "./libs/CohortOperations"
@@ -2029,6 +2039,11 @@
               "source": "./libs/OfferConsole"
             },
             {
+              "name": "PolicyDiffResult",
+              "exportKind": "named",
+              "source": "@croco/metrics-core"
+            },
+            {
               "name": "PolicyReleaseAccess",
               "exportKind": "named",
               "source": "./libs/PolicyReleaseOperations"
@@ -2054,6 +2069,16 @@
               "source": "./libs/PolicyReleaseOperations"
             },
             {
+              "name": "PolicyReplayInput",
+              "exportKind": "named",
+              "source": "@croco/metrics-core"
+            },
+            {
+              "name": "PolicyReplayReport",
+              "exportKind": "named",
+              "source": "@croco/metrics-core"
+            },
+            {
               "name": "RecipientRef",
               "exportKind": "named",
               "source": "./libs/EngagementOperations"
@@ -2077,6 +2102,11 @@
               "name": "ReminderOperatorCancel",
               "exportKind": "named",
               "source": "./libs/ReminderOperations"
+            },
+            {
+              "name": "ReplayScope",
+              "exportKind": "named",
+              "source": "@croco/metrics-core"
             },
             {
               "name": "Sample",
@@ -2107,6 +2137,26 @@
               "name": "SavedIntentInspection",
               "exportKind": "named",
               "source": "./libs/SavedIntentOperations"
+            },
+            {
+              "name": "TargetingImpactAction",
+              "exportKind": "named",
+              "source": "./libs/TargetingImpactOperations"
+            },
+            {
+              "name": "TargetingImpactOperationsOptions",
+              "exportKind": "named",
+              "source": "./libs/TargetingImpactOperations"
+            },
+            {
+              "name": "TargetingImpactReport",
+              "exportKind": "named",
+              "source": "./libs/TargetingImpactOperations"
+            },
+            {
+              "name": "TargetingImpactReportStore",
+              "exportKind": "named",
+              "source": "./libs/TargetingImpactOperations"
             },
             {
               "name": "TenantBusinessSource",
@@ -2397,6 +2447,77 @@
             }
           ],
           "typeExports": []
+        },
+        {
+          "exportPath": "./targeting-impact-operations",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/targeting-impact-operations.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/targeting-impact-operations.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/targeting-impact-operations.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/admin-core/src/targeting-impact-operations.ts",
+          "runtimeExports": [
+            {
+              "name": "InMemoryTargetingImpactReportStore",
+              "exportKind": "named",
+              "source": "./libs/TargetingImpactOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TargetingImpactOperations",
+              "exportKind": "named",
+              "source": "./libs/TargetingImpactOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "TargetingImpactProblem",
+              "exportKind": "named",
+              "source": "./libs/TargetingImpactOperations",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "CampaignReplayRequest",
+              "exportKind": "named",
+              "source": "./libs/TargetingImpactOperations"
+            },
+            {
+              "name": "CampaignReplayResult",
+              "exportKind": "named",
+              "source": "./libs/TargetingImpactOperations"
+            },
+            {
+              "name": "TargetingImpactAction",
+              "exportKind": "named",
+              "source": "./libs/TargetingImpactOperations"
+            },
+            {
+              "name": "TargetingImpactOperationsOptions",
+              "exportKind": "named",
+              "source": "./libs/TargetingImpactOperations"
+            },
+            {
+              "name": "TargetingImpactReport",
+              "exportKind": "named",
+              "source": "./libs/TargetingImpactOperations"
+            },
+            {
+              "name": "TargetingImpactReportStore",
+              "exportKind": "named",
+              "source": "./libs/TargetingImpactOperations"
+            }
+          ]
         }
       ]
     },
@@ -3318,6 +3439,12 @@
               "name": "SavedIntentConsole",
               "exportKind": "named",
               "source": "./libs/SavedIntentConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "TargetingImpactInspector",
+              "exportKind": "named",
+              "source": "./libs/TargetingImpactInspector",
               "declarationKind": "function"
             },
             {
@@ -4582,6 +4709,16 @@
               "name": "SavedIntentConsoleProps",
               "exportKind": "named",
               "source": "./libs/SavedIntentConsole"
+            },
+            {
+              "name": "TargetingImpactInspectorProps",
+              "exportKind": "named",
+              "source": "./libs/TargetingImpactInspector"
+            },
+            {
+              "name": "TargetingImpactInspectorState",
+              "exportKind": "named",
+              "source": "./libs/TargetingImpactInspector"
             },
             {
               "name": "TenantBusinessWorkspaceProps",
@@ -25225,6 +25362,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "PolicyReplayProblem",
+              "exportKind": "named",
+              "source": "./libs/replay/PolicyReplay",
+              "declarationKind": "class"
+            },
+            {
               "name": "RetentionCalculator",
               "exportKind": "named",
               "source": "./libs/RetentionCalculator",
@@ -25291,6 +25434,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createPolicyReplayReport",
+              "exportKind": "named",
+              "source": "./libs/replay/PolicyReplay",
+              "declarationKind": "function"
+            },
+            {
               "name": "dateBucket",
               "exportKind": "named",
               "source": "./libs/metric/MetricExpression",
@@ -25327,6 +25476,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "importPolicyReplayReport",
+              "exportKind": "named",
+              "source": "./libs/replay/PolicyReplay",
+              "declarationKind": "function"
+            },
+            {
               "name": "max",
               "exportKind": "named",
               "source": "./libs/metric/MetricExpression",
@@ -25351,6 +25506,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "replayPolicy",
+              "exportKind": "named",
+              "source": "./libs/replay/PolicyReplay",
+              "declarationKind": "function"
+            },
+            {
+              "name": "serializePolicyReplayReport",
+              "exportKind": "named",
+              "source": "./libs/replay/PolicyReplay",
+              "declarationKind": "function"
+            },
+            {
               "name": "standardizedMeanDifference",
               "exportKind": "named",
               "source": "./libs/experiment/ExperimentReview",
@@ -25366,6 +25533,12 @@
               "name": "summarizeExperiment",
               "exportKind": "named",
               "source": "./libs/experiment/ExperimentReview",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validatePolicyReplayInput",
+              "exportKind": "named",
+              "source": "./libs/replay/PolicyReplay",
               "declarationKind": "function"
             }
           ],
@@ -25676,6 +25849,21 @@
               "source": "./types"
             },
             {
+              "name": "PolicyDiffResult",
+              "exportKind": "named",
+              "source": "./libs/replay/PolicyReplay"
+            },
+            {
+              "name": "PolicyReplayInput",
+              "exportKind": "named",
+              "source": "./libs/replay/PolicyReplay"
+            },
+            {
+              "name": "PolicyReplayReport",
+              "exportKind": "named",
+              "source": "./libs/replay/PolicyReplay"
+            },
+            {
               "name": "QualityCheck",
               "exportKind": "named",
               "source": "./libs/experiment/ExperimentReview"
@@ -25684,6 +25872,26 @@
               "name": "QualityResult",
               "exportKind": "named",
               "source": "./libs/experiment/ExperimentReview"
+            },
+            {
+              "name": "ReplayPredicate",
+              "exportKind": "named",
+              "source": "./libs/replay/PolicyReplay"
+            },
+            {
+              "name": "ReplayRow",
+              "exportKind": "named",
+              "source": "./libs/replay/PolicyReplay"
+            },
+            {
+              "name": "ReplayScenario",
+              "exportKind": "named",
+              "source": "./libs/replay/PolicyReplay"
+            },
+            {
+              "name": "ReplayScope",
+              "exportKind": "named",
+              "source": "./libs/replay/PolicyReplay"
             },
             {
               "name": "RetentionMetrics",

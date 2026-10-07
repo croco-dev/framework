@@ -31,6 +31,11 @@
       "types": "./dist/fact-history-operations.d.ts",
       "import": "./dist/fact-history-operations.mjs",
       "require": "./dist/fact-history-operations.js"
+    },
+    "./targeting-impact-operations": {
+      "types": "./dist/targeting-impact-operations.d.ts",
+      "import": "./dist/targeting-impact-operations.mjs",
+      "require": "./dist/targeting-impact-operations.js"
     }
   },
   "publishConfig": {
@@ -51,12 +56,17 @@
         "types": "./dist/fact-history-operations.d.ts",
         "import": "./dist/fact-history-operations.mjs",
         "require": "./dist/fact-history-operations.js"
+      },
+      "./targeting-impact-operations": {
+        "types": "./dist/targeting-impact-operations.d.ts",
+        "import": "./dist/targeting-impact-operations.mjs",
+        "require": "./dist/targeting-impact-operations.js"
       }
     },
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts src/fact-history-validation.ts src/fact-history-operations.ts --format esm,cjs --minify --clean --dts --external @croco/admin-core/fact-history-validation",
+    "build": "tsup src/index.ts src/fact-history-validation.ts src/fact-history-operations.ts src/targeting-impact-operations.ts --format esm,cjs --minify --clean --dts --external @croco/admin-core/fact-history-validation",
     "lint": "oxlint .",
     "test": "vitest run",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
