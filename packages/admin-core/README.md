@@ -292,3 +292,16 @@ A `TimelineSource` reads one subject and one bounded window at a time. Pages def
 Notes distinguish `fact` and `hypothesis`, preserve server actor/revision audit records, and use repository compare-and-set for edits. New evidence references must exist inside the selected subject's window. Existing references survive source deletion as `unavailable`; source payloads are never cached in a note. Samples and notes have explicit expiry bounded by service policy. `deleteSample` removes its notes and audit records through the selected repository; use its explicit retention purge for expired storage.
 
 `exportDraft` requires a separate export permission and returns an `ExplorerQueryDraft` containing typed source/kind/anchor conditions, the population snapshot and definition revision. It does not export raw records. Integrations without Cohort Builder can download this definition directly. The React workspace uses the same service callbacks. See [the standalone PostgreSQL example](../../examples/customer-explorer/README.md).
+
+## Activation candidate reports
+
+`ActivationCandidateOperations` loads and calculates activation evidence through a trusted
+`authenticate` / `loadInput` composition. It requires app, environment, tenant and subject kind,
+`activation.read` for load/read/export and additionally `activation.report-write` for save.
+Pass the viewed `ActivationReport` to `save(id, candidateId, cohort, expectedReport, signal?)`;
+the service pins its source run and rejects changed evidence before writing. Read/export recompute
+against that immutable run and verify input, definition and saved-report hashes. No subject rows
+are persisted or exported. Existing host storage supplies scoped `read`/`write`; it must enforce
+current access and retain the referenced source run. SHA-256 digests detect inconsistency, not
+malicious replacement by a fully privileged storage operator. Cancellation and permission changes
+remain explicit failures.

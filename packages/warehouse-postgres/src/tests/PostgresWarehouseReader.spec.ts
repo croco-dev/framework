@@ -53,10 +53,13 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
-function fixture(block?: string) {
+function fixture(
+  block?: string,
+  pages: { _has_more: boolean; _rows: Record<string, string>[] }[] = [],
+) {
   const entered = deferred<void>();
   const release = vi.fn();
-  const query = vi.fn(async (sql: string) => {
+  const query = vi.fn(async (sql: string, _params?: unknown[]) => {
     if (sql.includes(block ?? "\0")) {
       entered.resolve();
       return await new Promise<{ rows: unknown[] }>(() => undefined);
@@ -74,18 +77,74 @@ function fixture(block?: string) {
         ],
       };
     if (sql.startsWith("WITH picked"))
-      return { rows: [{ _bytes_exceeded: false, _has_more: false, _rows: [] }] };
+      return {
+        rows: [{ _bytes_exceeded: false, ...(pages.shift() ?? { _has_more: false, _rows: [] }) }],
+      };
     return { rows: [] };
   });
   const connection: WarehousePostgresConnection = {
     release,
-    query: async <T>(sql: string) => ({ rows: (await query(sql)).rows as T[] }),
+    query: async <T>(sql: string, params?: unknown[]) => ({
+      rows: (await query(sql, params)).rows as T[],
+    }),
   };
   const pool: WarehousePostgresPool = { query: connection.query, connect: async () => connection };
   return { pool, connection, release, query, entered };
 }
 
 describe("warehouse reader bounded lifetime", () => {
+  it("continues a pinned cursor with a smaller remaining row budget", async () => {
+    const test = fixture(undefined, [
+      {
+        _has_more: true,
+        _rows: [
+          { _identity: "one", v_0: "first", v_1: "id-1" },
+          { _identity: "two", v_0: "second", v_1: "id-2" },
+        ],
+      },
+      { _has_more: false, _rows: [{ _identity: "three", v_0: "third", v_1: "id-3" }] },
+    ]);
+    const warehouse = reader(test.pool);
+    const first = await warehouse.read({ ...request(), maxRows: 2 });
+    expect(first.nextCursor).toEqual(expect.any(String));
+    const second = await warehouse.read({ ...request(), cursor: first.nextCursor ?? undefined });
+    expect(first.rows).toEqual([{ note: "first" }, { note: "second" }]);
+    expect(second.rows).toEqual([{ note: "third" }]);
+    expect(second.nextCursor).toBeNull();
+    const pageCalls = test.query.mock.calls.filter(([sql]) => sql.startsWith("WITH picked"));
+    expect(pageCalls).toHaveLength(2);
+    expect(pageCalls[1][1]).toEqual([
+      ...(pageCalls[0][1]?.slice(0, 3) ?? []),
+      "id-2",
+      "id-2",
+      "two",
+      1,
+      1024,
+      2,
+    ]);
+  });
+  it.each([
+    { projection: ["id"] },
+    { filters: [{ column: "note", operator: "eq" as const, value: "changed" }] },
+    { order: [{ column: "id", direction: "desc" as const }] },
+    { snapshotId: "other-snapshot" },
+  ])("rejects a cursor when query identity changes: %j", async (change) => {
+    const test = fixture(undefined, [
+      { _has_more: true, _rows: [{ _identity: "one", v_0: "first", v_1: "id-1" }] },
+    ]);
+    const warehouse = reader(test.pool);
+    const first = await warehouse.read(request());
+    expect(first.nextCursor).toEqual(expect.any(String));
+    test.query.mockClear();
+    await expect(
+      warehouse.read({
+        ...request(),
+        ...change,
+        cursor: first.nextCursor ?? undefined,
+      }),
+    ).rejects.toThrow("WAREHOUSE_CURSOR_STALE");
+    expect(test.query).not.toHaveBeenCalled();
+  });
   it("times out pool acquisition and destroys a later acquired connection without issuing SQL", async () => {
     const test = fixture();
     const pending = deferred<WarehousePostgresConnection>();

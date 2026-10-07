@@ -438,3 +438,15 @@ export type {
   ReminderOperatorCancel,
   ReminderOperationsSource,
 } from "./libs/ReminderOperations";
+
+export {
+  ActivationCandidateOperations,
+  ActivationAdminProblem,
+} from "./libs/ActivationCandidateOperations";
+export type {
+  ActivationAdminScope,
+  ActivationAdminAccess,
+  ActivationSavedReport,
+  ActivationExplorerState,
+  ActivationCandidateOperationsOptions,
+} from "./libs/ActivationCandidateOperations";

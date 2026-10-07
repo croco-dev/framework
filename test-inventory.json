@@ -116,6 +116,12 @@
       "owner": "@croco/access-drizzle"
     },
     {
+      "path": "packages/admin-core/src/tests/ActivationCandidateOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/ActivationGuide.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -282,6 +288,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-postgres"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ActivationCandidateExplorer.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
     },
     {
       "path": "packages/admin-react/src/tests/ActivationGuideConsole.spec.ts",
@@ -3252,6 +3264,18 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/metrics-billing"
+    },
+    {
+      "path": "packages/metrics-core/src/tests/ActivationCandidates.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
+      "path": "packages/metrics-core/src/tests/ActivationSources.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
     },
     {
       "path": "packages/metrics-core/src/tests/CarryingCapacity.spec.ts",

@@ -345,3 +345,6 @@ export type {
 
 export { ReminderOperationsPanel } from "./libs/ReminderOperationsPanel";
 export type { ReminderOperationsPanelProps } from "./libs/ReminderOperationsPanel";
+
+export { ActivationCandidateExplorer } from "./libs/ActivationCandidateExplorer";
+export type { ActivationCandidateExplorerProps } from "./libs/ActivationCandidateExplorer";

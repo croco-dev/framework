@@ -568,3 +568,15 @@ The workspace provides source/kind filters, explicit fact/hypothesis notes with 
 See the [standalone example](../../examples/customer-explorer/README.md) for PostgreSQL-backed callbacks. Loading, empty, partial, denied, error and ready states are exercised by the mounted browser regression in `src/tests/CustomerExplorer.mounted.ts`.
 
 Run the committed browser regression with `node packages/admin-react/scripts/verify-customer-explorer-browser.mjs` from the repository root. It uses the repository's existing Playwright/tsup tooling and requires installed Chrome; its fixture stays outside published artifacts.
+
+## Activation candidate explorer
+
+`ActivationCandidateExplorer` consumes server-calculated ready/partial reports and explicit
+loading, empty, denied and error states. It compares thresholds/windows, support, retention precision,
+coverage, NOREDO, cohort exclusions and supported achievement times. Native controls allow keyboard
+selection, support filtering, saving and export. Server callbacks receive the viewed report, and
+returned saved evidence must match it. Loading/save/export failures retain a retry action;
+results do not automatically name a best candidate or claim causation.
+
+See [activation-candidates](../../examples/activation-candidates/README.md) for executable callbacks
+backed by `ActivationCandidateOperations`, common file decoding and a real PostgreSQL smoke.
