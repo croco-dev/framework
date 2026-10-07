@@ -656,6 +656,12 @@
       "owner": "@croco/audit-core"
     },
     {
+      "path": "packages/audit-drizzle/src/tests/DrizzleAuditLogRepository.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/audit-drizzle"
+    },
+    {
       "path": "packages/audit-drizzle/src/tests/DrizzleAuditLogRepository.spec.ts",
       "lane": "fast",
       "qualifiers": [],
