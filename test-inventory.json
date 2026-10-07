@@ -86,6 +86,12 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/targeting-impact/src/tests/TargetingImpact.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "packages/access-core/src/tests/Access.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -243,6 +249,12 @@
     },
     {
       "path": "packages/admin-core/src/tests/SavedIntentOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/TargetingImpactOperations.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-core"
@@ -495,6 +507,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/SavedIntentConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/TargetingImpactInspector.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -3381,6 +3399,12 @@
     },
     {
       "path": "packages/metrics-core/src/tests/MrrCalculator.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/metrics-core"
+    },
+    {
+      "path": "packages/metrics-core/src/tests/PolicyReplay.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/metrics-core"
