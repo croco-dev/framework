@@ -727,7 +727,11 @@ export class TransactionalOutboxRelay<TClient = unknown> {
           try {
             await this.releaseClaim(unstarted);
           } catch (releaseError) {
-            recordError(releaseError);
+            try {
+              recordError(releaseError);
+            } catch {
+              continue;
+            }
           }
         }
         throw error;
