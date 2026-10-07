@@ -73,10 +73,7 @@ export class InMemoryInvitationStore extends InvitationStore {
       if (existing.invitation.expiresAt.getTime() > Date.now()) {
         return structuredClone(existing);
       }
-      this.storage.set(existing.invitation.id, {
-        ...existing.invitation,
-        status: "expired",
-      });
+      this.expireInvitationIfPending(existing.invitation.id);
       this.emailCreations.delete(scope);
     }
 
@@ -213,10 +210,7 @@ export class InMemoryInvitationStore extends InvitationStore {
     let deleted = 0;
     for (const [scope, creation] of this.emailCreations) {
       if (creation.invitation.expiresAt.getTime() <= now.getTime()) {
-        this.storage.set(creation.invitation.id, {
-          ...creation.invitation,
-          status: "expired",
-        });
+        this.expireInvitationIfPending(creation.invitation.id);
         this.emailCreations.delete(scope);
         deleted += 1;
       }
@@ -388,5 +382,14 @@ export class InMemoryInvitationStore extends InvitationStore {
 
   private creationScope(tenantId: string, idempotencyKey: string): string {
     return `${encodeURIComponent(tenantId)}:${encodeURIComponent(idempotencyKey)}`;
+  }
+
+  private expireInvitationIfPending(invitationId: string): void {
+    const current = this.storage.get(invitationId);
+    if (!current || (current.status !== "creating" && current.status !== "pending")) {
+      return;
+    }
+
+    this.storage.set(invitationId, snapshotInvitation({ ...current, status: "expired" }));
   }
 }
