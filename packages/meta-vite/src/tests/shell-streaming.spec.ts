@@ -600,35 +600,40 @@ describe("RenderServer shell streaming", () => {
   });
 
   it("does not hang cancel when a region loader ignores abort and the region timeout is disabled", async () => {
-    const summaries: ShellSettleSummary[] = [];
-    const server = new RenderServer([
-      {
-        path: "/stubborn-cancel",
-        mode: "ssr",
-        componentLoader: async () => ({
-          default: () => createElement("main", null, "SHELL"),
-        }),
-        // Loader ignores its abort signal and never resolves.
-        regions: [{ id: "stubborn", loader: () => new Promise<string>(() => {}) }],
-        stream: {
-          // Disabled region timeout: teardown must still bound cancel at
-          // the default budget instead of waiting indefinitely.
-          regionTimeoutMs: 0,
-          onSettle: (summary) => {
-            summaries.push(summary);
+    vi.useFakeTimers();
+    try {
+      const summaries: ShellSettleSummary[] = [];
+      const server = new RenderServer([
+        {
+          path: "/stubborn-cancel",
+          mode: "ssr",
+          componentLoader: async () => ({
+            default: () => createElement("main", null, "SHELL"),
+          }),
+          // Loader ignores its abort signal and never resolves.
+          regions: [{ id: "stubborn", loader: () => new Promise<string>(() => {}) }],
+          stream: {
+            // Disabled region timeout: teardown must still bound cancel at
+            // the default budget instead of waiting indefinitely.
+            regionTimeoutMs: 0,
+            onSettle: (summary) => {
+              summaries.push(summary);
+            },
           },
         },
-      },
-    ]);
+      ]);
 
-    const response = await server.handle(new Request("https://example.com/stubborn-cancel"), {
-      platform: "node",
-    });
-    const startedAt = Date.now();
-    await response.body?.cancel().catch(() => {});
-    expect(Date.now() - startedAt).toBeLessThan(SHELL_STREAM_DEFAULT_REGION_TIMEOUT_MS + 5000);
-    expect(summaries).toHaveLength(1);
-    expect(summaries[0]).toMatchObject({ abortReason: "client-abort" });
+      const response = await server.handle(new Request("https://example.com/stubborn-cancel"), {
+        platform: "node",
+      });
+      const cancelPromise = response.body?.cancel().catch(() => {});
+      await vi.advanceTimersByTimeAsync(SHELL_STREAM_DEFAULT_REGION_TIMEOUT_MS);
+      await cancelPromise;
+      expect(summaries).toHaveLength(1);
+      expect(summaries[0]).toMatchObject({ abortReason: "client-abort" });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("returns 503 when the client aborts a buffered render mid-flight", async () => {
