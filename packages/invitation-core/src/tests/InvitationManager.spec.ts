@@ -42,6 +42,29 @@ class NonRetryablePersistenceProblem extends Problem {
   }
 }
 
+class GatedLookupStore extends InMemoryInvitationStore {
+  private gate: Promise<void> | null = null;
+  private readonly readReached: Array<() => void> = [];
+
+  holdNextTokenLookup(gate: Promise<void>): Promise<void> {
+    this.gate = gate;
+    return new Promise((resolve) => {
+      this.readReached.push(resolve);
+    });
+  }
+
+  override async findByTokenHash(tokenHash: string): Promise<Invitation | null> {
+    const snapshot = await super.findByTokenHash(tokenHash);
+    const gate = this.gate;
+    if (gate) {
+      this.gate = null;
+      this.readReached.shift()?.();
+      await gate;
+    }
+    return snapshot;
+  }
+}
+
 describe("InvitationManager", () => {
   const invalidExpiryDurations = [
     ["NaN", Number.NaN],
@@ -884,6 +907,72 @@ describe("InvitationManager", () => {
 
     expect((await store.findById(invitation.id))?.status).toBe("expired");
     expect(addMember).not.toHaveBeenCalled();
+  });
+
+  it("does not overwrite an invitation accepted concurrently just before expiry", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date("2026-01-01T00:00:00.000Z"));
+      const gatedStore = new GatedLookupStore();
+      const gateTxManager = new TxManager<unknown>({
+        async transaction<T>(fn: (client: unknown) => Promise<T>): Promise<T> {
+          return fn({});
+        },
+        async savepoint<T>(_client: unknown, fn: (client: unknown) => Promise<T>): Promise<T> {
+          return fn({});
+        },
+        supportsSavepoint: () => false,
+      });
+      const gatedManager = new InvitationManager(
+        gatedStore,
+        { addMember } as unknown as MembershipManager,
+        { send } as unknown as NotificationService,
+        {
+          publishNow,
+          publishMany: vi.fn(),
+        } as unknown as EventPublisher,
+        gateTxManager,
+      );
+      const token = await gatedManager.createEmailInvitation({
+        idempotencyKey: "invite-1",
+        tenantId: "tenant-1",
+        inviterId: "inviter-1",
+        email: "user@example.com",
+        role: "member",
+        expiresInDays: 1,
+      });
+      vi.setSystemTime(new Date("2026-01-01T23:59:59.990Z"));
+
+      let releaseLateRequest!: () => void;
+      const lateRequestLookup = gatedStore.holdNextTokenLookup(
+        new Promise<void>((resolve) => {
+          releaseLateRequest = resolve;
+        }),
+      );
+      const lateRequest = gatedManager
+        .acceptInvitation({ token, userId: "user-1", email: "user@example.com" })
+        .then(
+          () => "accepted",
+          (error: unknown) => (error as Error).constructor.name,
+        );
+      await lateRequestLookup;
+
+      await gatedManager.acceptInvitation({ token, userId: "user-1", email: "user@example.com" });
+      const accepted = await gatedStore.findByTokenHash(hashToken(token));
+      expect(accepted?.status).toBe("accepted");
+
+      vi.setSystemTime(new Date("2026-01-02T00:00:00.001Z"));
+      releaseLateRequest();
+      await expect(lateRequest).resolves.not.toBe("accepted");
+
+      const final = await gatedStore.findByTokenHash(hashToken(token));
+      expect(addMember).toHaveBeenCalledTimes(1);
+      expect(publishNow).toHaveBeenCalledWith(expect.any(InvitationAcceptedEvent));
+      expect(final?.status).toBe("accepted");
+      expect(final?.acceptedAt).not.toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it.each(["accepted", "revoked", "declined"] as const)(

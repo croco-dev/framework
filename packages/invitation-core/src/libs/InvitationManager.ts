@@ -28,12 +28,7 @@ import {
   InvitationNotFoundProblem,
 } from "./problems/InvitationProblems";
 import { generateToken, hashToken } from "./token";
-import type {
-  EmailInvitationCreation,
-  Invitation,
-  InvitationStatus,
-  InvitationType,
-} from "./types";
+import type { EmailInvitationCreation, Invitation, InvitationType } from "./types";
 
 const DEFAULT_EMAIL_EXPIRES_IN_DAYS = 7;
 const DEFAULT_LINK_EXPIRES_IN_DAYS = 30;
@@ -249,10 +244,27 @@ export class InvitationManager {
     this.ensureAcceptableStatus(invitation, "accept");
 
     if (this.isExpired(invitation)) {
-      const expiredInvitation = await this.updateInvitation(invitation, {
-        status: "expired",
-      });
-      throw new InvitationExpiredProblem(expiredInvitation.id);
+      const expired = await this.store.compareAndSetStatus(
+        invitation.tenantId,
+        invitation.id,
+        "pending",
+        "expired",
+      );
+      if (expired) {
+        throw new InvitationExpiredProblem(expired.id);
+      }
+      const current = await this.store.findById(invitation.id);
+      if (!current) {
+        throw new InvitationNotFoundProblem("");
+      }
+      if (
+        current.status === "expired" ||
+        (current.status === "pending" && this.isExpired(current))
+      ) {
+        throw new InvitationExpiredProblem(current.id);
+      }
+      this.ensureAcceptableStatus(current, "accept");
+      throw new InvitationInvalidStatusProblem(current.id, current.status, "accept");
     }
 
     if (invitation.type === "email") {
@@ -584,25 +596,6 @@ export class InvitationManager {
       type: invitation.type,
       expiresAt: invitation.expiresAt,
     });
-  }
-
-  private async updateInvitation(
-    invitation: Invitation,
-    patch: {
-      status?: InvitationStatus;
-      acceptedAt?: Date | null;
-      revokedAt?: Date | null;
-    },
-  ): Promise<Invitation> {
-    const updated: Invitation = {
-      ...invitation,
-      status: patch.status ?? invitation.status,
-      acceptedAt: patch.acceptedAt ?? invitation.acceptedAt,
-      revokedAt: patch.revokedAt ?? invitation.revokedAt,
-    };
-
-    await this.store.save(updated);
-    return updated;
   }
 
   private async publishSafely(
