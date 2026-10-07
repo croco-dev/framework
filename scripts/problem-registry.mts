@@ -3968,11 +3968,11 @@ const recoveryMetadataByCode = {
   }),
   "meter/invalid-column-mapping": recovery({
     cause:
-      "A meterSchema field references a column that does not belong to the configured meterTable.",
+      "A meterSchema field references a column outside the configured meterTable or shares its target with another field.",
     userAction:
       "Do not retry unchanged configuration; correct the meterSchema mapping before creating the repository.",
     operatorAction:
-      "Read the meterSchema field named in detail and map it to the corresponding meterTable column. Table property names may differ from MeterTable keys.",
+      "Read the meterSchema field named in detail and map it to a distinct corresponding meterTable column. Table property names may differ from MeterTable keys.",
     retryability: "not-retryable",
     redactionPolicy: "operator-only",
     severity: "error",

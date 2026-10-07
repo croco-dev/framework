@@ -178,15 +178,19 @@ export class DrizzleMeterRepository extends MeterRepository {
       "createdAt",
       "updatedAt",
     ] as const satisfies readonly (keyof MeterTable)[];
+    const mappedColumnKeys = new Set<string>();
     this.meterColumnKeys = Object.fromEntries(
       schemaKeys.map((schemaKey) => {
         const columnKey = columns.find(([, column]) => column === this.meterSchema[schemaKey])?.[0];
-        if (columnKey === undefined) {
+        if (columnKey === undefined || mappedColumnKeys.has(columnKey)) {
           throw ProblemFactory.invalidArgument(
             "meter/invalid-column-mapping",
-            `meterSchema.${schemaKey} must reference a column of meterTable`,
+            columnKey === undefined
+              ? `meterSchema.${schemaKey} must reference a column of meterTable`
+              : `meterSchema.${schemaKey} must reference a distinct column of meterTable`,
           );
         }
+        mappedColumnKeys.add(columnKey);
         return [schemaKey, columnKey];
       }),
     ) as Record<keyof MeterTable, string>;

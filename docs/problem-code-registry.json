@@ -16771,7 +16771,7 @@
       "sources": [
         {
           "file": "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts",
-          "line": 268,
+          "line": 272,
           "column": 13,
           "kind": "problem-factory"
         }
@@ -16784,9 +16784,9 @@
       "title": "Bad Request",
       "cookbookPath": "/reference/problem-recovery-cookbook/#meter-invalid-column-mapping",
       "recovery": {
-        "cause": "A meterSchema field references a column that does not belong to the configured meterTable.",
+        "cause": "A meterSchema field references a column outside the configured meterTable or shares its target with another field.",
         "userAction": "Do not retry unchanged configuration; correct the meterSchema mapping before creating the repository.",
-        "operatorAction": "Read the meterSchema field named in detail and map it to the corresponding meterTable column. Table property names may differ from MeterTable keys.",
+        "operatorAction": "Read the meterSchema field named in detail and map it to a distinct corresponding meterTable column. Table property names may differ from MeterTable keys.",
         "retryability": "not-retryable",
         "redactionPolicy": "operator-only",
         "telemetry": {
@@ -16801,7 +16801,7 @@
       "sources": [
         {
           "file": "packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts",
-          "line": 185,
+          "line": 186,
           "column": 17,
           "kind": "problem-factory"
         }

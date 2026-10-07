@@ -11002,7 +11002,7 @@ Sources:
 
 Sources:
 
-- `packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts:268:13` (problem-factory)
+- `packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts:272:13` (problem-factory)
 
 <a id="meter-invalid-column-mapping"></a>
 
@@ -11013,14 +11013,14 @@ Sources:
 - Retryability: `not-retryable`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: A meterSchema field references a column that does not belong to the configured meterTable.
+- Cause: A meterSchema field references a column outside the configured meterTable or shares its target with another field.
 - User action: Do not retry unchanged configuration; correct the meterSchema mapping before creating the repository.
-- Operator action: Read the meterSchema field named in detail and map it to the corresponding meterTable column. Table property names may differ from MeterTable keys.
+- Operator action: Read the meterSchema field named in detail and map it to a distinct corresponding meterTable column. Table property names may differ from MeterTable keys.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
 
-- `packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts:185:17` (problem-factory)
+- `packages/metering-drizzle/src/libs/DrizzleMeterRepository.ts:186:17` (problem-factory)
 
 <a id="metering-drizzle-duplicate-meter-definitions"></a>
 

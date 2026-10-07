@@ -578,6 +578,23 @@ describe("DrizzleMeterRepository", () => {
       expect(sqlite.prepare("SELECT * FROM meters").all()).toEqual([]);
     });
 
+    it("should reject duplicate meter column targets before writing", () => {
+      expect(
+        () =>
+          new DrizzleMeterRepository(db, txManager, {
+            ...createRepositoryConfig(),
+            meterTable: customMeters,
+            meterSchema: { ...meterSchema, allowOverQuota: customMeters.quotaLimit },
+          }),
+      ).toThrow(
+        expect.objectContaining({
+          code: "meter/invalid-column-mapping",
+          detail: "meterSchema.allowOverQuota must reference a distinct column of meterTable",
+        }),
+      );
+      expect(sqlite.prepare("SELECT * FROM meters").all()).toEqual([]);
+    });
+
     it("should persist and query every mapped meter field", async () => {
       const customRepository = new DrizzleMeterRepository(db, txManager, {
         ...createRepositoryConfig(),
