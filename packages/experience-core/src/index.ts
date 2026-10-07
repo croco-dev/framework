@@ -35,3 +35,11 @@ export type {
   PlacementDefinition,
   StoredExperienceDecision,
 } from "./libs/contracts";
+export {
+  createSavedIntentService,
+  validateSavedIntentUrl,
+  SavedIntentInvalidProblem,
+  SavedIntentConflictProblem,
+  SavedIntentDeniedProblem,
+} from "./libs/savedIntent";
+export type * from "./libs/savedIntentContracts";

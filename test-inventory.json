@@ -68,6 +68,24 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/saved-intents/src/tests/Database.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/saved-intents/src/tests/Request.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/saved-intents/src/tests/Server.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "packages/access-core/src/tests/Access.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -219,6 +237,12 @@
     },
     {
       "path": "packages/admin-core/src/tests/ReminderOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/SavedIntentOperations.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-core"
@@ -465,6 +489,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/ReminderOperationsPanel.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/SavedIntentConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -2306,6 +2336,12 @@
       "owner": "@croco/experience-core"
     },
     {
+      "path": "packages/experience-core/src/tests/SavedIntent.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/experience-core"
+    },
+    {
       "path": "packages/experience-drizzle/src/tests/PostgresExperienceStore.postgres.spec.ts",
       "lane": "live",
       "qualifiers": [],
@@ -2313,6 +2349,18 @@
     },
     {
       "path": "packages/experience-drizzle/src/tests/PostgresExperienceStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/experience-drizzle"
+    },
+    {
+      "path": "packages/experience-drizzle/src/tests/PostgresSavedIntentStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/experience-drizzle"
+    },
+    {
+      "path": "packages/experience-drizzle/src/tests/PostgresSavedIntentStore.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/experience-drizzle"
@@ -2661,6 +2709,12 @@
     },
     {
       "path": "packages/frontend-react/src/tests/ReminderSettingsForm.spec.tsx",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
+      "path": "packages/frontend-react/src/tests/SavedItems.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/frontend-react"

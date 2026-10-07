@@ -1,0 +1,4 @@
+DROP TABLE croco_saved_intent_policy_revisions;
+DROP TABLE croco_saved_intent_receipts;
+DROP TABLE croco_saved_intent_suppression;
+DROP TABLE croco_saved_intents;

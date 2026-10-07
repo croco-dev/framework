@@ -552,6 +552,18 @@
               "declarationKind": "class"
             },
             {
+              "name": "SavedIntentAdminDeniedProblem",
+              "exportKind": "named",
+              "source": "./libs/SavedIntentOperations",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SavedIntentOperations",
+              "exportKind": "named",
+              "source": "./libs/SavedIntentOperations",
+              "declarationKind": "class"
+            },
+            {
               "name": "WebhookOperationsActionValidationProblem",
               "exportKind": "named",
               "source": "./libs/WebhookOperations",
@@ -2077,6 +2089,26 @@
               "source": "./libs/CustomerExplorer"
             },
             {
+              "name": "SavedIntentAdminAccess",
+              "exportKind": "named",
+              "source": "./libs/SavedIntentOperations"
+            },
+            {
+              "name": "SavedIntentAdminPermission",
+              "exportKind": "named",
+              "source": "./libs/SavedIntentOperations"
+            },
+            {
+              "name": "SavedIntentAdminState",
+              "exportKind": "named",
+              "source": "./libs/SavedIntentOperations"
+            },
+            {
+              "name": "SavedIntentInspection",
+              "exportKind": "named",
+              "source": "./libs/SavedIntentOperations"
+            },
+            {
               "name": "TenantBusinessSource",
               "exportKind": "named",
               "source": "./libs/TenantWorkspace"
@@ -3280,6 +3312,12 @@
               "name": "ReminderOperationsPanel",
               "exportKind": "named",
               "source": "./libs/ReminderOperationsPanel",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SavedIntentConsole",
+              "exportKind": "named",
+              "source": "./libs/SavedIntentConsole",
               "declarationKind": "function"
             },
             {
@@ -4539,6 +4577,11 @@
               "name": "ReminderOperationsPanelProps",
               "exportKind": "named",
               "source": "./libs/ReminderOperationsPanel"
+            },
+            {
+              "name": "SavedIntentConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/SavedIntentConsole"
             },
             {
               "name": "TenantBusinessWorkspaceProps",
@@ -15294,6 +15337,42 @@
           "sourceEntrypoint": "packages/experience-core/src/index.ts",
           "runtimeExports": [
             {
+              "name": "ExperienceInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/experience",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ExperienceUnavailableProblem",
+              "exportKind": "named",
+              "source": "./libs/experience",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SavedIntentConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/savedIntent",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SavedIntentDeniedProblem",
+              "exportKind": "named",
+              "source": "./libs/savedIntent",
+              "declarationKind": "class"
+            },
+            {
+              "name": "SavedIntentInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/savedIntent",
+              "declarationKind": "class"
+            },
+            {
+              "name": "createSavedIntentService",
+              "exportKind": "named",
+              "source": "./libs/savedIntent",
+              "declarationKind": "function"
+            },
+            {
               "name": "definePlacement",
               "exportKind": "named",
               "source": "./libs/experience",
@@ -15310,18 +15389,6 @@
               "exportKind": "named",
               "source": "./libs/experience",
               "declarationKind": "function"
-            },
-            {
-              "name": "ExperienceInvalidProblem",
-              "exportKind": "named",
-              "source": "./libs/experience",
-              "declarationKind": "class"
-            },
-            {
-              "name": "ExperienceUnavailableProblem",
-              "exportKind": "named",
-              "source": "./libs/experience",
-              "declarationKind": "class"
             },
             {
               "name": "previewPlacement",
@@ -15352,9 +15419,123 @@
               "exportKind": "named",
               "source": "./libs/experience",
               "declarationKind": "function"
+            },
+            {
+              "name": "validateSavedIntentUrl",
+              "exportKind": "named",
+              "source": "./libs/savedIntent",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
+            {
+              "name": "MutateSavedIntentInput",
+              "exportKind": "declaration",
+              "source": "./libs/savedIntentContracts",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ResolvedCandidate",
+              "exportKind": "declaration",
+              "source": "./libs/savedIntentContracts",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ResourceResolver",
+              "exportKind": "declaration",
+              "source": "./libs/savedIntentContracts",
+              "declarationKind": "type"
+            },
+            {
+              "name": "SaveIntentInput",
+              "exportKind": "declaration",
+              "source": "./libs/savedIntentContracts",
+              "declarationKind": "type"
+            },
+            {
+              "name": "SavedIntent",
+              "exportKind": "declaration",
+              "source": "./libs/savedIntentContracts",
+              "declarationKind": "type"
+            },
+            {
+              "name": "SavedIntentAccess",
+              "exportKind": "declaration",
+              "source": "./libs/savedIntentContracts",
+              "declarationKind": "type"
+            },
+            {
+              "name": "SavedIntentAuthorization",
+              "exportKind": "declaration",
+              "source": "./libs/savedIntentContracts",
+              "declarationKind": "type"
+            },
+            {
+              "name": "SavedIntentExclusion",
+              "exportKind": "declaration",
+              "source": "./libs/savedIntentContracts",
+              "declarationKind": "type"
+            },
+            {
+              "name": "SavedIntentMutation",
+              "exportKind": "declaration",
+              "source": "./libs/savedIntentContracts",
+              "declarationKind": "type"
+            },
+            {
+              "name": "SavedIntentPage",
+              "exportKind": "declaration",
+              "source": "./libs/savedIntentContracts",
+              "declarationKind": "type"
+            },
+            {
+              "name": "SavedIntentPolicy",
+              "exportKind": "declaration",
+              "source": "./libs/savedIntentContracts",
+              "declarationKind": "type"
+            },
+            {
+              "name": "SavedIntentPolicyInput",
+              "exportKind": "declaration",
+              "source": "./libs/savedIntentContracts",
+              "declarationKind": "type"
+            },
+            {
+              "name": "SavedIntentPolicyMutation",
+              "exportKind": "declaration",
+              "source": "./libs/savedIntentContracts",
+              "declarationKind": "type"
+            },
+            {
+              "name": "SavedIntentResourceResolution",
+              "exportKind": "declaration",
+              "source": "./libs/savedIntentContracts",
+              "declarationKind": "type"
+            },
+            {
+              "name": "SavedIntentResourceType",
+              "exportKind": "declaration",
+              "source": "./libs/savedIntentContracts",
+              "declarationKind": "type"
+            },
+            {
+              "name": "SavedIntentService",
+              "exportKind": "declaration",
+              "source": "./libs/savedIntentContracts",
+              "declarationKind": "interface"
+            },
+            {
+              "name": "SavedIntentSourceKind",
+              "exportKind": "declaration",
+              "source": "./libs/savedIntentContracts",
+              "declarationKind": "type"
+            },
+            {
+              "name": "SavedIntentStore",
+              "exportKind": "declaration",
+              "source": "./libs/savedIntentContracts",
+              "declarationKind": "interface"
+            },
             {
               "name": "EvaluatePlacementInput",
               "exportKind": "named",
@@ -15491,6 +15672,12 @@
               "name": "PostgresExperienceStore",
               "exportKind": "named",
               "source": "./libs/PostgresExperienceStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "PostgresSavedIntentStore",
+              "exportKind": "named",
+              "source": "./libs/PostgresSavedIntentStore",
               "declarationKind": "class"
             }
           ],
@@ -19702,6 +19889,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "ContinueCard",
+              "exportKind": "named",
+              "source": "./libs/SavedItems",
+              "declarationKind": "function"
+            },
+            {
               "name": "CrocoAuthBridgeProvider",
               "exportKind": "named",
               "source": "./libs/authBridge",
@@ -19801,6 +19994,12 @@
               "name": "RequireSession",
               "exportKind": "named",
               "source": "./libs/authBridge",
+              "declarationKind": "function"
+            },
+            {
+              "name": "SavedItems",
+              "exportKind": "named",
+              "source": "./libs/SavedItems",
               "declarationKind": "function"
             },
             {
@@ -19946,6 +20145,11 @@
               "name": "CanonicalCrocoPageOptions",
               "exportKind": "named",
               "source": "./libs/createCrocoPages"
+            },
+            {
+              "name": "ContinueCardProps",
+              "exportKind": "named",
+              "source": "./libs/SavedItems"
             },
             {
               "name": "CrocoAuthBridgeProviderProps",
@@ -20231,6 +20435,16 @@
               "name": "RequireSessionProps",
               "exportKind": "named",
               "source": "./libs/authBridgeTypes"
+            },
+            {
+              "name": "SavedItemsProps",
+              "exportKind": "named",
+              "source": "./libs/SavedItems"
+            },
+            {
+              "name": "SavedItemsState",
+              "exportKind": "named",
+              "source": "./libs/SavedItems"
             },
             {
               "name": "SnoozeControlProps",
