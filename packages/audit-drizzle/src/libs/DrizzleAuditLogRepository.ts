@@ -24,7 +24,7 @@ type InsertValuesQuery = {
 };
 
 type SelectOrderQuery = {
-  orderBy(order: SQL<unknown>): Promise<unknown[]>;
+  orderBy(...order: SQL<unknown>[]): Promise<unknown[]>;
 };
 
 type SelectOffsetQuery = {
@@ -166,7 +166,7 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
       .where(whereClause)
       .limit(query.limit ?? 50)
       .offset(query.offset ?? 0)
-      .orderBy(desc(this.schema.createdAt));
+      .orderBy(...this.getDescendingOrder());
 
     return (results as Record<string, unknown>[]).map((r) => this.mapToEntry(r));
   }
@@ -190,7 +190,7 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
       )
       .limit(options?.limit ?? 50)
       .offset(options?.offset ?? 0)
-      .orderBy(desc(this.schema.createdAt));
+      .orderBy(...this.getDescendingOrder());
 
     return (results as Record<string, unknown>[]).map((r) => this.mapToEntry(r));
   }
@@ -225,7 +225,7 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
       .where(whereClause)
       .limit(options?.limit ?? 50)
       .offset(options?.offset ?? 0)
-      .orderBy(desc(this.schema.createdAt));
+      .orderBy(...this.getDescendingOrder());
 
     return (results as Record<string, unknown>[]).map((r) => this.mapToEntry(r));
   }
@@ -253,9 +253,13 @@ export class DrizzleAuditLogRepository extends AuditLogRepository {
       )
       .limit(options?.limit ?? 50)
       .offset(options?.offset ?? 0)
-      .orderBy(desc(this.schema.createdAt));
+      .orderBy(...this.getDescendingOrder());
 
     return (results as Record<string, unknown>[]).map((r) => this.mapToEntry(r));
+  }
+
+  private getDescendingOrder(): SQL<unknown>[] {
+    return [desc(this.schema.createdAt), desc(this.schema.id)];
   }
 
   private encodeJsonColumn(value: unknown, column: AnyColumn): unknown {
