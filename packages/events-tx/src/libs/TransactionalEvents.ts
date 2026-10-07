@@ -720,7 +720,22 @@ export class TransactionalOutboxRelay<TClient = unknown> {
         }
         break;
       }
-      results.push(await this.publishOne(message, signal));
+      try {
+        results.push(await this.publishOne(message, signal));
+      } catch (error) {
+        for (const unstarted of claimed.slice(index + 1)) {
+          try {
+            await this.releaseClaim(unstarted);
+          } catch (releaseError) {
+            try {
+              recordError(releaseError);
+            } catch {
+              continue;
+            }
+          }
+        }
+        throw error;
+      }
     }
 
     return this.createBatchResult(signal.aborted ? "cancelled" : "completed", claimed, results);
@@ -776,22 +791,6 @@ export class TransactionalOutboxRelay<TClient = unknown> {
       async () => {
         try {
           await this.config.publish(message, signal);
-          const published = await this.config.store.markOutboxPublished(
-            {
-              id: message.id,
-              expectedAttempts: message.attempts,
-              now: this.now(),
-            },
-            this.context(),
-          );
-          if (!published) {
-            return this.createStaleClaimResult(message, "events-tx/outbox-publish-stale-claim");
-          }
-          recordEvent("events-tx.outbox.published", {
-            "events-tx.message_id": message.id,
-            "events-tx.event_type": message.eventType,
-          });
-          return { status: "published", message: published };
         } catch (error) {
           if (error instanceof InboxProcessingInProgressProblem) {
             return this.releaseInboxBlockedClaim(message, error);
@@ -800,6 +799,22 @@ export class TransactionalOutboxRelay<TClient = unknown> {
           recordError(error);
           return this.handlePublishFailure(message, normalized);
         }
+        const published = await this.config.store.markOutboxPublished(
+          {
+            id: message.id,
+            expectedAttempts: message.attempts,
+            now: this.now(),
+          },
+          this.context(),
+        );
+        if (!published) {
+          return this.createStaleClaimResult(message, "events-tx/outbox-publish-stale-claim");
+        }
+        recordEvent("events-tx.outbox.published", {
+          "events-tx.message_id": message.id,
+          "events-tx.event_type": message.eventType,
+        });
+        return { status: "published", message: published };
       },
       {
         name: "events-tx.outbox.publish",

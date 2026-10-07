@@ -380,7 +380,10 @@ describe.skipIf(!live)("outbox payment facts on PostgreSQL", () => {
     const app = setup();
     const staged = await app.candidate();
     const consumer = app.consumer(staged.id, staged.fence);
-    await app.append(new PaymentRecorded("provider-a", "capture-1", "capture", "capture-1", "100"));
+    const message = await app.append(
+      new PaymentRecorded("provider-a", "capture-1", "capture", "capture-1", "100"),
+    );
+    const acknowledgementError = new Error("relay acknowledgement lost");
     let loseAck = true;
     const relayStore = new Proxy(app.store, {
       get(target, key) {
@@ -388,7 +391,7 @@ describe.skipIf(!live)("outbox payment facts on PostgreSQL", () => {
           return async (...args: Parameters<typeof target.markOutboxPublished>) => {
             if (loseAck) {
               loseAck = false;
-              throw new Error("relay acknowledgement lost");
+              throw acknowledgementError;
             }
             return target.markOutboxPublished(...args);
           };
@@ -403,21 +406,29 @@ describe.skipIf(!live)("outbox payment facts on PostgreSQL", () => {
         await consumer.handle(message);
       },
       now: app.now,
+      visibilityTimeoutMs: 1_000,
       retry: { baseDelayMs: 1, multiplier: 1, maxDelayMs: 1 },
     });
-    expect((await relay.publishBatch({ limit: 1 })).scheduledRetry).toBe(1);
+    await expect(relay.publishBatch({ limit: 1 })).rejects.toBe(acknowledgementError);
+    expect(await app.store.findOutboxById(message.id)).toMatchObject({
+      status: "publishing",
+      attempts: 1,
+    });
     const inbox = await connection.pool.query<{ status: string }>(
       "SELECT status FROM croco_inbox_records WHERE consumer_id='payment-analytics-v1'",
     );
     expect(inbox.rows[0]?.status).toBe("processed");
-    app.advance(2_000);
+    app.advance(999);
     const restarted = new TransactionalOutboxRelay({
       store: app.store,
       publish: async (message) => {
         expect((await consumer.handle(message)).status).toBe("duplicate");
       },
       now: app.now,
+      visibilityTimeoutMs: 1_000,
     });
+    expect((await restarted.publishBatch({ limit: 1 })).claimed).toBe(0);
+    app.advance(1);
     expect((await restarted.publishBatch({ limit: 1 })).published).toBe(1);
     expect((await factTotals())?.count).toBe("1");
   });

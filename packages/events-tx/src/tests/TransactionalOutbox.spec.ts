@@ -598,6 +598,163 @@ describe("TransactionalOutbox", () => {
 });
 
 describe("TransactionalOutboxRelay", () => {
+  describe("publication acknowledgement failure", () => {
+    it.each([1, 3])(
+      "preserves the publishing claim when acknowledgement rejects with maxAttempts %s",
+      async (maxAttempts) => {
+        const fixture = createOutboxFixture();
+        await appendMessage(fixture, { maxAttempts });
+        const acknowledgementError = new OutboxStorageProblem(
+          "publication acknowledgement unavailable",
+        );
+        vi.spyOn(fixture.store, "markOutboxPublished").mockRejectedValueOnce(acknowledgementError);
+        const markFailed = vi.spyOn(fixture.store, "markOutboxFailed");
+        const publish = vi.fn(async () => {});
+        const deadLetter = vi.fn(async () => {});
+        const relay = new TransactionalOutboxRelay({
+          store: fixture.store,
+          publish,
+          deadLetter,
+          now: fixture.clock.now,
+        });
+
+        await expect(relay.publishBatch()).rejects.toBe(acknowledgementError);
+        expect(acknowledgementError.code).toBe("events-tx/storage-error");
+
+        expect(publish).toHaveBeenCalledTimes(1);
+        expect(markFailed).not.toHaveBeenCalled();
+        expect(deadLetter).not.toHaveBeenCalled();
+        await expect(fixture.store.listOutboxMessages()).resolves.toMatchObject([
+          { status: "publishing", attempts: 1, maxAttempts },
+        ]);
+      },
+    );
+
+    it("releases every unstarted claim without consuming attempts when acknowledgement rejects", async () => {
+      const fixture = createOutboxFixture();
+      for (let index = 1; index <= 3; index++) {
+        await appendMessage(fixture, {
+          aggregateId: `acct-${index}`,
+          idempotencyKey: `credit-${index}`,
+        });
+      }
+      const acknowledgementError = new OutboxStorageProblem(
+        "publication acknowledgement unavailable",
+      );
+      vi.spyOn(fixture.store, "markOutboxPublished").mockRejectedValueOnce(acknowledgementError);
+      const publish = vi.fn(async () => {});
+      const relay = new TransactionalOutboxRelay({
+        store: fixture.store,
+        publish,
+        now: fixture.clock.now,
+      });
+
+      await expect(relay.publishBatch()).rejects.toBe(acknowledgementError);
+
+      expect(publish).toHaveBeenCalledTimes(1);
+      await expect(fixture.store.listOutboxMessages()).resolves.toMatchObject([
+        { id: "message-1", status: "publishing", attempts: 1 },
+        { id: "message-2", status: "retrying", attempts: 0, visibleAt: fixture.clock.now() },
+        { id: "message-3", status: "retrying", attempts: 0, visibleAt: fixture.clock.now() },
+      ]);
+    });
+
+    it.each([false, true])(
+      "continues releasing unstarted claims after a release failure when telemetry throws: %s",
+      async (telemetryThrows) => {
+        const fixture = createOutboxFixture();
+        for (let index = 1; index <= 3; index++) {
+          await appendMessage(fixture, {
+            aggregateId: `acct-${index}`,
+            idempotencyKey: `credit-${index}`,
+          });
+        }
+        const acknowledgementError = new OutboxStorageProblem(
+          "publication acknowledgement unavailable",
+        );
+        vi.spyOn(fixture.store, "markOutboxPublished").mockRejectedValueOnce(acknowledgementError);
+        const releaseError = new OutboxStorageProblem("claim release unavailable");
+        const release = vi
+          .spyOn(fixture.store, "releaseOutboxClaim")
+          .mockRejectedValueOnce(releaseError);
+        const recordError = vi.spyOn(telemetry, "recordError").mockImplementation(() => {
+          if (telemetryThrows) {
+            throw new Error("telemetry unavailable");
+          }
+        });
+        const publish = vi.fn(async () => {});
+        const relay = new TransactionalOutboxRelay({
+          store: fixture.store,
+          publish,
+          now: fixture.clock.now,
+        });
+
+        await expect(relay.publishBatch()).rejects.toBe(acknowledgementError);
+
+        expect(recordError).toHaveBeenCalledWith(releaseError);
+        expect(release.mock.calls.map(([options]) => options.id)).toEqual([
+          "message-2",
+          "message-3",
+        ]);
+        expect(publish).toHaveBeenCalledTimes(1);
+        await expect(fixture.store.listOutboxMessages()).resolves.toMatchObject([
+          { id: "message-1", status: "publishing", attempts: 1 },
+          { id: "message-2", status: "publishing", attempts: 1 },
+          { id: "message-3", status: "retrying", attempts: 0 },
+        ]);
+      },
+    );
+
+    it("removes a rejected acknowledgement batch from drain bookkeeping", async () => {
+      const fixture = createOutboxFixture();
+      await appendMessage(fixture);
+      const acknowledgementError = new OutboxStorageProblem(
+        "publication acknowledgement unavailable",
+      );
+      vi.spyOn(fixture.store, "markOutboxPublished").mockRejectedValueOnce(acknowledgementError);
+      const relay = new TransactionalOutboxRelay({
+        store: fixture.store,
+        publish: async () => {},
+        now: fixture.clock.now,
+      });
+
+      await expect(relay.publishBatch()).rejects.toBe(acknowledgementError);
+
+      await expect(relay.drain()).resolves.toEqual({
+        status: "drained",
+        activeBatches: 0,
+        pendingBatches: 0,
+      });
+    });
+
+    it("retries publication after an unacknowledged claim expires with attempts remaining", async () => {
+      const fixture = createOutboxFixture();
+      await appendMessage(fixture, { maxAttempts: 3 });
+      const acknowledgementError = new OutboxStorageProblem(
+        "publication acknowledgement unavailable",
+      );
+      vi.spyOn(fixture.store, "markOutboxPublished").mockRejectedValueOnce(acknowledgementError);
+      const publish = vi.fn(async () => {});
+      const relay = new TransactionalOutboxRelay({
+        store: fixture.store,
+        publish,
+        visibilityTimeoutMs: 1_000,
+        now: fixture.clock.now,
+      });
+
+      await expect(relay.publishBatch()).rejects.toBe(acknowledgementError);
+      fixture.clock.advance(999);
+      await expect(relay.publishBatch()).resolves.toMatchObject({ claimed: 0 });
+      fixture.clock.advance(1);
+
+      await expect(relay.publishBatch()).resolves.toMatchObject({ published: 1 });
+      expect(publish).toHaveBeenCalledTimes(2);
+      await expect(fixture.store.listOutboxMessages()).resolves.toMatchObject([
+        { status: "published", attempts: 2 },
+      ]);
+    });
+  });
+
   it("defers a legacy inbox claim without a lease by the relay visibility timeout", async () => {
     const fixture = createOutboxFixture();
     const message = await appendMessage(fixture, { maxAttempts: 1 });
