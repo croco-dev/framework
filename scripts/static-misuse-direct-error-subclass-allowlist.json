@@ -123,7 +123,7 @@
     {
       "package": "@croco/framework-routes",
       "file": "packages/framework-routes/src/intent-map.ts",
-      "line": 841,
+      "line": 1350,
       "excerpt": "class IntentMapSourcePathError extends Error {",
       "reason": "Build-tool boundary already exposes the intent-map-source-path-not-found diagnostic code.",
       "owner": "framework-error-handling",

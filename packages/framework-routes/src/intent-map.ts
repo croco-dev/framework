@@ -139,6 +139,12 @@ export type CreateProjectIntentMapOptions = {
   readonly generatedArtifacts?: readonly IntentMapGeneratedArtifact[];
 };
 
+type RelativeImportTarget = {
+  readonly originalName: string;
+  readonly path: string;
+  readonly isDefault: boolean;
+};
+
 type SourceFileIntent = {
   readonly path: string;
   readonly filePath: string;
@@ -146,6 +152,7 @@ type SourceFileIntent = {
   readonly lineStarts: readonly number[];
   readonly publicSymbols: readonly IntentMapPublicSymbol[];
   readonly classes: readonly SourceClassIntent[];
+  readonly imports: ReadonlyMap<string, RelativeImportTarget>;
 };
 
 type SourceClassIntent = {
@@ -159,6 +166,7 @@ type SourceClassIntent = {
     readonly eventClassName: string;
   };
   readonly dependencies: readonly string[];
+  readonly imports: ReadonlyMap<string, RelativeImportTarget>;
 };
 
 type IntentMapRouteRegistrationEntry = {
@@ -231,9 +239,9 @@ export function createProjectIntentMap(options: CreateProjectIntentMapOptions): 
     classByName,
   );
   const routes = createRoutes(options.contractGraph, options.routeRegistrationTable, classByName);
-  const providers = createProviders(sourceFiles);
+  const { providers, dependencyEdges } = createProviders(sourceFiles);
   const eventHandlers = createEventHandlers(sourceFiles);
-  const relationships = createRelationships(routes, providers, eventHandlers);
+  const relationships = createRelationships(routes, providers, eventHandlers, dependencyEdges);
   const files = sourceFiles.map(createIntentFile);
   const publicSymbolCount = files.reduce((sum, file) => sum + file.publicSymbols.length, 0);
 
@@ -314,6 +322,7 @@ function readSourceFiles(projectRoot: string, sourcePaths: readonly string[]): S
       lineStarts,
       publicSymbols: extractPublicSymbols(content, lineStarts, stablePath),
       classes: extractClasses(content, lineStarts, stablePath),
+      imports: extractRelativeImports(content, stablePath),
     });
   }
 
@@ -419,24 +428,516 @@ function createRouteFromRegistrationEntry(
   };
 }
 
-function createProviders(sourceFiles: readonly SourceFileIntent[]): IntentMapProvider[] {
-  return sourceFiles
-    .flatMap((sourceFile) =>
-      sourceFile.classes
-        .filter((sourceClass) => sourceClass.roles.includes("di.provider"))
-        .map((sourceClass) => ({
-          id: sourceClass.name,
-          name: sourceClass.name,
-          scope: sourceClass.componentScope,
-          source: sourceClass.source,
-          dependencies: sourceClass.dependencies,
-          description: `DI component provider with ${sourceClass.componentScope} scope.`,
-        })),
-    )
-    .sort((left, right) => compareStrings(left.id, right.id));
+function createProviders(sourceFiles: readonly SourceFileIntent[]): {
+  readonly providers: IntentMapProvider[];
+  readonly dependencyEdges: ReadonlyMap<string, readonly string[]>;
+} {
+  const nameCounts = new Map<string, number>();
+  const providerClasses: SourceClassIntent[] = [];
+
+  for (const sourceFile of sourceFiles) {
+    for (const sourceClass of sourceFile.classes) {
+      if (sourceClass.roles.includes("di.provider")) {
+        nameCounts.set(sourceClass.name, (nameCounts.get(sourceClass.name) ?? 0) + 1);
+        providerClasses.push(sourceClass);
+      }
+    }
+  }
+
+  const idByClass = createProviderIdMap(providerClasses, nameCounts);
+  const dependencyEdges = new Map<string, readonly string[]>();
+  const providersByName = createProvidersByName(providerClasses);
+
+  const providers = providerClasses.map((sourceClass) => {
+    const resolution = resolveProviderDependencies(
+      sourceClass,
+      sourceFiles,
+      idByClass,
+      providersByName,
+    );
+    const id = idByClass.get(sourceClass) ?? sourceClass.name;
+    dependencyEdges.set(id, resolution.edges);
+
+    return {
+      id,
+      name: sourceClass.name,
+      scope: sourceClass.componentScope,
+      source: sourceClass.source,
+      dependencies: resolution.dependencies,
+      description: `DI component provider with ${sourceClass.componentScope} scope.`,
+    };
+  });
+
+  return {
+    providers: providers.sort((left, right) => compareStrings(left.id, right.id)),
+    dependencyEdges,
+  };
+}
+
+function createProviderIdMap(
+  providerClasses: readonly SourceClassIntent[],
+  nameCounts: ReadonlyMap<string, number>,
+): ReadonlyMap<SourceClassIntent, string> {
+  const initialIds = new Map<SourceClassIntent, string>();
+
+  for (const sourceClass of providerClasses) {
+    initialIds.set(
+      sourceClass,
+      createProviderId(sourceClass, nameCounts.get(sourceClass.name) ?? 1),
+    );
+  }
+
+  const idCounts = new Map<string, number>();
+
+  for (const id of initialIds.values()) {
+    idCounts.set(id, (idCounts.get(id) ?? 0) + 1);
+  }
+
+  const finalIds = new Map<SourceClassIntent, string>();
+
+  for (const [sourceClass, id] of initialIds) {
+    finalIds.set(
+      sourceClass,
+      (idCounts.get(id) ?? 1) > 1 ? `${sourceClass.source.path}#${sourceClass.name}` : id,
+    );
+  }
+
+  return finalIds;
+}
+
+function createProviderId(sourceClass: SourceClassIntent, nameCount: number): string {
+  if (nameCount <= 1) {
+    return sourceClass.name;
+  }
+
+  return `${withoutExtension(sourceClass.source.path)}#${sourceClass.name}`;
+}
+
+function createProvidersByName(
+  providerClasses: readonly SourceClassIntent[],
+): ReadonlyMap<string, readonly SourceClassIntent[]> {
+  const providersByName = new Map<string, SourceClassIntent[]>();
+
+  for (const provider of providerClasses) {
+    const existing = providersByName.get(provider.name) ?? [];
+    existing.push(provider);
+    providersByName.set(provider.name, existing);
+  }
+
+  return providersByName;
+}
+
+function resolveProviderDependencies(
+  sourceClass: SourceClassIntent,
+  sourceFiles: readonly SourceFileIntent[],
+  idByClass: ReadonlyMap<SourceClassIntent, string>,
+  providersByName: ReadonlyMap<string, readonly SourceClassIntent[]>,
+): { readonly dependencies: string[]; readonly edges: string[] } {
+  const dependencies: string[] = [];
+  const edges: string[] = [];
+
+  for (const dependency of sourceClass.dependencies) {
+    const importResolution = resolveImportedProviderName(
+      dependency,
+      sourceClass.imports,
+      sourceFiles,
+    );
+
+    if (importResolution.matched) {
+      if (importResolution.provider) {
+        const id = idByClass.get(importResolution.provider) ?? importResolution.provider.name;
+        dependencies.push(id);
+        edges.push(id);
+      } else {
+        dependencies.push(dependency);
+      }
+
+      continue;
+    }
+
+    const candidates = providersByName.get(dependency) ?? [];
+    const sameFile = candidates.find(
+      (candidate) => candidate.source.path === sourceClass.source.path,
+    );
+
+    if (sameFile) {
+      const id = idByClass.get(sameFile) ?? dependency;
+      dependencies.push(id);
+      edges.push(id);
+      continue;
+    }
+
+    if (candidates.length === 1) {
+      const candidate = candidates[0];
+
+      if (candidate) {
+        const id = idByClass.get(candidate) ?? dependency;
+        dependencies.push(id);
+        edges.push(id);
+      }
+
+      continue;
+    }
+
+    dependencies.push(dependency);
+  }
+
+  return {
+    dependencies: [...new Set(dependencies)].sort(compareStrings),
+    edges: [...new Set(edges)].sort(compareStrings),
+  };
+}
+
+type ImportResolution =
+  | { readonly matched: false }
+  | { readonly matched: true; readonly provider: SourceClassIntent | undefined };
+
+function resolveImportedProviderName(
+  dependency: string,
+  imports: ReadonlyMap<string, RelativeImportTarget>,
+  sourceFiles: readonly SourceFileIntent[],
+): ImportResolution {
+  const imported = imports.get(dependency);
+
+  if (!imported) {
+    return { matched: false };
+  }
+
+  for (const candidatePath of expandImportTarget(imported.path)) {
+    const provider = findImportedProvider(candidatePath, imported, sourceFiles, new Set());
+
+    if (
+      provider !== undefined ||
+      sourceFiles.some((sourceFile) => sourceFile.path === candidatePath)
+    ) {
+      return { matched: true, provider };
+    }
+  }
+
+  return { matched: false };
+}
+
+const MAX_REEXPORT_DEPTH = 8;
+
+function findImportedProvider(
+  candidatePath: string,
+  imported: RelativeImportTarget,
+  sourceFiles: readonly SourceFileIntent[],
+  visited: Set<string>,
+  depth = 0,
+): SourceClassIntent | undefined {
+  const visitKey = `${candidatePath}#${imported.isDefault ? "default" : imported.originalName}`;
+
+  if (visited.has(visitKey) || depth > MAX_REEXPORT_DEPTH) {
+    return undefined;
+  }
+
+  visited.add(visitKey);
+
+  const sourceFile = sourceFiles.find((candidate) => candidate.path === candidatePath);
+
+  if (!sourceFile) {
+    return undefined;
+  }
+
+  if (imported.isDefault) {
+    return (
+      sourceFile.classes.find(
+        (candidate) =>
+          candidate.roles.includes("di.provider") &&
+          isDefaultExportedClass(sourceFile.content, candidate.name),
+      ) ?? followReexport(sourceFile, "default", sourceFiles, visited, depth)
+    );
+  }
+
+  return (
+    sourceFile.classes.find(
+      (candidate) =>
+        candidate.roles.includes("di.provider") && candidate.name === imported.originalName,
+    ) ?? followReexport(sourceFile, imported.originalName, sourceFiles, visited, depth)
+  );
+}
+
+type ReexportTarget = {
+  readonly exportedName: string;
+  readonly originalName: string;
+  readonly path: string;
+  readonly isDefault: boolean;
+  readonly isStar: boolean;
+};
+
+function followReexport(
+  sourceFile: SourceFileIntent,
+  exportedName: string,
+  sourceFiles: readonly SourceFileIntent[],
+  visited: Set<string>,
+  depth: number,
+): SourceClassIntent | undefined {
+  for (const reexport of extractReexports(sourceFile.content, sourceFile.path)) {
+    if (!reexport.isStar && reexport.exportedName !== exportedName) {
+      continue;
+    }
+
+    const nextName = reexport.isStar ? exportedName : reexport.originalName;
+    const nextIsDefault = reexport.isStar
+      ? exportedName === "default"
+      : reexport.isDefault || reexport.originalName === "default";
+
+    for (const candidatePath of expandImportTarget(reexport.path)) {
+      const provider = findImportedProvider(
+        candidatePath,
+        {
+          originalName: nextName,
+          path: candidatePath,
+          isDefault: nextIsDefault,
+        },
+        sourceFiles,
+        visited,
+        depth + 1,
+      );
+
+      if (provider) {
+        return provider;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function extractReexports(content: string, importerPath: string): ReexportTarget[] {
+  const reexports: ReexportTarget[] = [];
+  const reexportPattern = /\bexport\s+(?:type\s+)?([^;]*?)\bfrom\s*["']([^"']+)["']/g;
+
+  for (const match of content.matchAll(reexportPattern)) {
+    const specifier = match[2];
+
+    if (!specifier || !specifier.startsWith(".")) {
+      continue;
+    }
+
+    const clause = (match[1] ?? "").replace(/\btype\s+/g, "").trim();
+
+    if (!clause) {
+      continue;
+    }
+
+    const namespaceMatch = clause.match(/\*\s*as\s+([A-Za-z_$][\w$]*)/);
+
+    if (namespaceMatch) {
+      continue;
+    }
+
+    const targetPath = resolveRelativeImport(importerPath, specifier);
+
+    if (clause === "*") {
+      reexports.push({
+        exportedName: "*",
+        originalName: "*",
+        path: targetPath,
+        isDefault: false,
+        isStar: true,
+      });
+
+      continue;
+    }
+
+    if (clause.startsWith("{")) {
+      for (const name of extractImportedNames(clause)) {
+        reexports.push({
+          exportedName: name.localName,
+          originalName: name.originalName,
+          path: targetPath,
+          isDefault: name.isDefault,
+          isStar: false,
+        });
+      }
+
+      continue;
+    }
+
+    const defaultMatch = clause.match(/^([A-Za-z_$][\w$]*)/);
+
+    if (defaultMatch?.[1]) {
+      reexports.push({
+        exportedName: defaultMatch[1],
+        originalName: "default",
+        path: targetPath,
+        isDefault: true,
+        isStar: false,
+      });
+    }
+  }
+
+  return reexports;
+}
+
+function expandImportTarget(importedPath: string): string[] {
+  if (/\.(?:c|m)?tsx?$/.test(importedPath)) {
+    return [importedPath];
+  }
+
+  return [
+    `${importedPath}.ts`,
+    `${importedPath}.tsx`,
+    `${importedPath}.mts`,
+    `${importedPath}.cts`,
+    `${importedPath}.mjs`,
+    `${importedPath}.cjs`,
+    `${importedPath}.js`,
+    `${importedPath}.jsx`,
+    `${importedPath}/index.ts`,
+    `${importedPath}/index.tsx`,
+    `${importedPath}/index.mts`,
+    `${importedPath}/index.cts`,
+    `${importedPath}/index.mjs`,
+    `${importedPath}/index.cjs`,
+    `${importedPath}/index.js`,
+  ];
+}
+
+function extractRelativeImports(
+  content: string,
+  importerPath: string,
+): Map<string, RelativeImportTarget> {
+  const imports = new Map<string, RelativeImportTarget>();
+  const importPattern = /\bimport\s+(?:type\s+)?([^;]*?)\bfrom\s*["']([^"']+)["']/g;
+
+  for (const match of content.matchAll(importPattern)) {
+    const specifier = match[2];
+
+    if (!specifier || !specifier.startsWith(".")) {
+      continue;
+    }
+
+    const names = extractImportedNames(match[1] ?? "");
+    const targetPath = resolveRelativeImport(importerPath, specifier);
+
+    for (const name of names) {
+      imports.set(name.localName, {
+        originalName: name.originalName,
+        path: targetPath,
+        isDefault: name.isDefault,
+      });
+    }
+  }
+
+  return imports;
+}
+
+type ImportedName = {
+  readonly localName: string;
+  readonly originalName: string;
+  readonly isDefault: boolean;
+};
+
+function extractImportedNames(clause: string): ImportedName[] {
+  const names = new Map<string, ImportedName>();
+  const withoutTypes = clause.replace(/\btype\s+/g, "").trim();
+  const namespaceMatch = withoutTypes.match(/\*\s*as\s+([A-Za-z_$][\w$]*)/);
+
+  if (namespaceMatch?.[1]) {
+    names.set(namespaceMatch[1], {
+      localName: namespaceMatch[1],
+      originalName: namespaceMatch[1],
+      isDefault: false,
+    });
+  }
+
+  const defaultMatch = withoutTypes.match(/^([A-Za-z_$][\w$]*)\s*(?:,|$)/);
+
+  if (defaultMatch?.[1]) {
+    names.set(defaultMatch[1], {
+      localName: defaultMatch[1],
+      originalName: defaultMatch[1],
+      isDefault: true,
+    });
+  }
+
+  const namedMatch = withoutTypes.match(/\{([^}]*)\}/);
+
+  if (namedMatch?.[1]) {
+    for (const part of namedMatch[1].split(",")) {
+      const trimmed = part.trim().replace(/^type\s+/, "");
+
+      if (!trimmed) {
+        continue;
+      }
+
+      const [original, alias] = trimmed.split(/\s+as\s+/).map((value) => value.trim());
+      const localName = alias || original;
+
+      if (original && localName && /^[A-Za-z_$][\w$]*$/.test(localName)) {
+        names.set(localName, { localName, originalName: original, isDefault: false });
+      }
+    }
+  }
+
+  return [...names.values()];
+}
+
+function resolveRelativeImport(importerPath: string, specifier: string): string {
+  const importerDir = importerPath.includes("/")
+    ? importerPath.slice(0, importerPath.lastIndexOf("/"))
+    : "";
+  const segments = [...(importerDir ? importerDir.split("/") : []), ...specifier.split("/")];
+  const resolved: string[] = [];
+
+  for (const segment of segments) {
+    if (segment === "" || segment === ".") {
+      continue;
+    }
+
+    if (segment === "..") {
+      resolved.pop();
+      continue;
+    }
+
+    resolved.push(segment);
+  }
+
+  const joined = resolved.join("/");
+
+  return stripJsExtension(joined);
+}
+
+function stripJsExtension(resolvedPath: string): string {
+  return resolvedPath.replace(/\.[cm]?jsx?$/, "");
+}
+
+function isDefaultExportedClass(content: string, className: string): boolean {
+  const directDefault = new RegExp(
+    `export\\s+default\\s+(?:abstract\\s+)?class\\s+${className}\\b`,
+  );
+
+  if (directDefault.test(content)) {
+    return true;
+  }
+
+  const namedClass = new RegExp(`(?:\\bexport\\s+)?(?:abstract\\s+)?class\\s+${className}\\b`);
+
+  if (!namedClass.test(content)) {
+    return false;
+  }
+
+  return new RegExp(`export\\s+default\\s+${className}\\b`).test(content);
+}
+
+function withoutExtension(sourcePath: string): string {
+  return sourcePath.replace(/\.(?:c|m)?tsx?$/, "");
 }
 
 function createEventHandlers(sourceFiles: readonly SourceFileIntent[]): IntentMapEventHandler[] {
+  const nameCounts = new Map<string, number>();
+
+  for (const sourceFile of sourceFiles) {
+    for (const sourceClass of sourceFile.classes) {
+      if (sourceClass.eventHandler) {
+        nameCounts.set(sourceClass.name, (nameCounts.get(sourceClass.name) ?? 0) + 1);
+      }
+    }
+  }
+
   return sourceFiles
     .flatMap((sourceFile) =>
       sourceFile.classes.flatMap((sourceClass) => {
@@ -444,9 +945,14 @@ function createEventHandlers(sourceFiles: readonly SourceFileIntent[]): IntentMa
           return [];
         }
 
+        const id =
+          (nameCounts.get(sourceClass.name) ?? 1) > 1
+            ? `${withoutExtension(sourceClass.source.path)}#${sourceClass.name}`
+            : sourceClass.name;
+
         return [
           {
-            id: sourceClass.name,
+            id,
             name: sourceClass.name,
             eventName: sourceClass.eventHandler.eventName,
             eventClassName: sourceClass.eventHandler.eventClassName,
@@ -463,6 +969,7 @@ function createRelationships(
   routes: readonly IntentMapRoute[],
   providers: readonly IntentMapProvider[],
   eventHandlers: readonly IntentMapEventHandler[],
+  dependencyEdges: ReadonlyMap<string, readonly string[]>,
 ): IntentMapRelationship[] {
   const providerIds = new Set(providers.map((provider) => provider.id));
   const routeRelationships = routes.map((route) => ({
@@ -478,7 +985,7 @@ function createRelationships(
     description: `${handler.id} handles ${handler.eventName}.`,
   }));
   const dependencyRelationships = providers.flatMap((provider) =>
-    provider.dependencies
+    (dependencyEdges.get(provider.id) ?? [])
       .filter((dependency) => providerIds.has(dependency))
       .map((dependency) => ({
         kind: "component.depends-on" as const,
@@ -570,6 +1077,7 @@ function extractClasses(
   filePath: string,
 ): SourceClassIntent[] {
   const classes: SourceClassIntent[] = [];
+  const imports = extractRelativeImports(content, filePath);
   const classPattern =
     /((?:\s*@[\s\S]*?)?)(?:\bexport\s+)?(?:default\s+)?(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)[^{]*\{/g;
 
@@ -592,6 +1100,7 @@ function extractClasses(
       componentScope: getComponentScope(decorators),
       eventHandler: getEventHandlerMetadata(decorators),
       dependencies: extractConstructorDependencies(body),
+      imports,
     });
   }
 
