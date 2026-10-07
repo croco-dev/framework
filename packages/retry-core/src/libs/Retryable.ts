@@ -385,9 +385,11 @@ export function Retryable(options: RetryableOptions = {}): MethodDecorator {
                 if (hasRecover) {
                   context.setExhausted();
                 }
-                throw new CircuitBreakerOpenProblem(circuitId, {
-                  cause: context.lastError ?? undefined,
-                });
+                const cause = context.lastError;
+                throw new CircuitBreakerOpenProblem(
+                  circuitId,
+                  cause === null ? undefined : { cause },
+                );
               }
             }
 

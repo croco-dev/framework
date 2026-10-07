@@ -132,7 +132,7 @@ export class LambdaTimeoutGuard {
       const remaining = this.getRemainingTime();
       throw new LambdaTimeoutProblem(
         `Lambda timeout guard: ${remaining}ms remaining, need ${nextDelayMs + this.reserveTimeMs}ms`,
-        { cause },
+        cause === undefined ? undefined : { cause },
       );
     }
   }
