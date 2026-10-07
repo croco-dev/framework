@@ -350,19 +350,19 @@ await jobs.replay("exec_456", { reason: "provider restored" });
 
 ### ExecutionManager
 
-| 메서드                         | 설명                                                                                   |
-| ------------------------------ | -------------------------------------------------------------------------------------- |
-| `create(params)`               | 새 실행 생성. idempotencyKey 제공 시 중복 방지                                         |
-| `start(id)`                    | 실행 시작 (`running` 상태 전이). attempts 증가                                         |
-| `complete(id, result?)`        | 실행 완료 (`completed` 상태 전이)                                                      |
-| `fail(id, error)`              | 실행 실패. `error.retryable`과 `maxAttempts`에 따라 `failed` 또는 `retrying` 상태 전이 |
-| `cancel(id, reason?)`          | 실행 취소 (`cancelled` 상태 전이)                                                      |
-| `retry(id)`                    | 재시도 상태 전이 (`retrying`). 최대 시도 횟수 초과 시 에러                             |
-| `updateProgress(id, progress)` | 진행률 업데이트. percent 자동 계산                                                     |
-| `checkpoint(id, key, value)`   | 체크포인트 저장                                                                        |
-| `timeout(id)`                  | 타임아웃 상태 전이 (`timed_out`)                                                       |
-| `get(id)`                      | 실행 ID로 단일 실행 조회                                                               |
-| `reconcileTimedOut(options?)`  | 저장된 deadline이 지난 `running` 실행을 안정적인 키셋 순회로 조정                      |
+| 메서드                         | 설명                                                                                                                                           |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create(params)`               | 새 실행 생성. idempotencyKey 제공 시 중복 방지                                                                                                 |
+| `start(id)`                    | 실행 시작 (`running` 상태 전이). attempts 증가                                                                                                 |
+| `complete(id, result?)`        | 실행 완료 (`completed` 상태 전이)                                                                                                              |
+| `fail(id, error)`              | 실행 실패. `error.retryable`과 `maxAttempts`에 따라 `failed` 또는 `retrying` 상태 전이                                                         |
+| `cancel(id, reason?)`          | 실행 취소 (`cancelled` 상태 전이)                                                                                                              |
+| `retry(id)`                    | 재시도 상태 전이 (`retrying`). 최대 시도 횟수 초과 시 에러                                                                                     |
+| `updateProgress(id, progress)` | 진행률 업데이트. percent 자동 계산                                                                                                             |
+| `checkpoint(id, key, value)`   | 체크포인트 저장                                                                                                                                |
+| `timeout(id)`                  | 타임아웃 상태 전이 (`timed_out`)                                                                                                               |
+| `get(id)`                      | 실행 ID로 단일 실행 조회                                                                                                                       |
+| `reconcileTimedOut(options?)`  | 저장된 deadline이 지난 `running` 실행을 안정적인 키셋 순회로 조정. attempt fencing 저장소에서만 목록 조회 뒤 시작된 새 attempt와의 경합을 차단 |
 
 ### ExecutionInspectionManager
 
