@@ -93,6 +93,7 @@
         "@croco/auth-clerk",
         "@croco/auth-drizzle",
         "@croco/batch-qstash",
+        "@croco/billing-drizzle",
         "@croco/billing-polar",
         "@croco/cohort-drizzle",
         "@croco/credits-drizzle",

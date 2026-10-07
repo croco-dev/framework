@@ -384,3 +384,9 @@ its own current authorization. Keep server responses uncached and bind scope/sub
 verified server session, never client request fields. See the executable
 [Saved reports example](../../examples/saved-intents/README.md), which uses the same service for
 customer components and operator policy editing.
+
+### Cancellation flow
+
+`CancellationFlow` renders an independent subscription cancellation surface. Supply a server-created `CancellationSession` in `state: { kind: "ready", session }`, route `onDecide` to authenticated `CancellationService.decide`, and use `onRefresh` to reconcile the existing command or load fresh authoritative terms. Wire `onDisplayed` to `markDisplayed` for display evidence. Client validation uses the same `@croco/billing-core/cancellation` validator as the server; server authorization and current-state admission remain required.
+
+The direct cancellation confirmation precedes optional reasons and retention choices. Skipping a reason and declining offers return keyboard focus to that button. Declined offers stay hidden across session refreshes in the mounted flow. Unsupported choices are disabled. Expired/conflicting terms require a refresh; an unknown submission outcome locks further decisions until refresh. Command acceptance, scheduled cancellation, ended access and refund confirmation are shown separately. The host must return the authoritative session after decisions and reconciliation and must never create a replacement command to recover an unknown result.

@@ -73,6 +73,7 @@ export const EXPECTED_FILES_BY_PACKAGE = new Map([
   ["@croco/lifecycle-drizzle", ["dist", "migrations/*.sql"]],
   ["@croco/promotions-drizzle", ["dist", "migrations/*.sql"]],
   ["@croco/referral-drizzle", ["dist", "migrations/*.sql"]],
+  ["@croco/billing-drizzle", ["dist", "migrations/*.sql"]],
   ["@croco/utils-next-font-pretendard", ["dist", "PretendardVariable.woff2"]],
 ]);
 

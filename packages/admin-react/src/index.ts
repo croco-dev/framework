@@ -367,3 +367,5 @@ export type { RewardConsoleProps } from "./libs/RewardConsole";
 
 export { MissionConsole } from "./libs/MissionConsole";
 export type { MissionConsoleProps } from "./libs/MissionConsole";
+export { RetentionOfferConsole } from "./libs/RetentionOfferConsole";
+export type { RetentionOfferConsoleProps } from "./libs/RetentionOfferConsole";

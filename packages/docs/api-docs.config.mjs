@@ -129,6 +129,12 @@ export const apiDocPackages = [
     moduleName: "billing-core/src",
   },
   {
+    packageName: "@croco/billing-drizzle",
+    directory: "billing-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "billing-drizzle/src",
+  },
+  {
     packageName: "@croco/billing-polar",
     directory: "billing-polar",
     entryPoint: "src/index.ts",

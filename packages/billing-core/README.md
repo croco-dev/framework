@@ -10,6 +10,24 @@ pnpm add @croco/billing-core @croco/idempotency-core
 
 ## 사용법
 
+### 독립 해지 세션
+
+`CancellationService`는 고객 UI 없이도 사용할 수 있습니다. 앱이 제공하는 `CancellationAuthority`는
+app/environment/tenant와 인증된 subject의 구독 소유권을 검증하고, 실제 구독 revision 및 환불 quote를
+읽습니다. `admit()`은 구독·quote 변경과 직렬화된 경계에서 고정된 snapshot을 다시 확인한 뒤 명령을
+접수해야 합니다. quote 금액은 source가 제공하는 통화의 decimal major unit이며 프레임워크가 계산하지 않습니다.
+
+`BillingCancellationAction`의 `cancel`/`resume`은 기존 `BillingService`의 동일 멱등 명령을 사용합니다.
+활성 구독의 유지는 명령 없이 완료되고, 취소 예약된 구독의 유지는 재개 명령이 확인되어야 완료됩니다.
+명령 응답을 잃었을 때 `reconcile()`은 기존 command ID를 조회합니다. 취소 예약, 실제 종료, 환불 확인은
+서로 다른 receipt이며 기본 action은 환불을 요청하지 않습니다.
+
+`@croco/billing-drizzle`은 session·policy audit와 기존 billing 저장 계약의 PostgreSQL adapter 및 검토 후
+적용하는 migration을 제공합니다. 실제 조합과 고객/운영자 UI는
+[cancellation-flow 예제](../../examples/cancellation-flow/README.md)를 따릅니다.
+브라우저에서 공유 validator를 사용할 때는 Node 전용 모듈을 포함하지 않는
+`@croco/billing-core/cancellation` entrypoint를 사용합니다.
+
 ```ts
 import type { BillingGateway } from "@croco/billing-core";
 import { BillingService, InMemoryBillingStore } from "@croco/billing-core";

@@ -47,6 +47,7 @@
     "@croco/batch-core": "workspace:*",
     "@croco/batch-qstash": "workspace:*",
     "@croco/billing-core": "workspace:*",
+    "@croco/billing-drizzle": "workspace:*",
     "@croco/billing-polar": "workspace:*",
     "@croco/cache-core": "workspace:*",
     "@croco/cli": "workspace:*",
