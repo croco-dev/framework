@@ -35,6 +35,8 @@ The CLI currently supports Postgres connections.
 ## Migration Files
 
 Migration files must be `.ts` or `.js` files named with a 14-digit timestamp and a descriptive suffix.
+TypeScript declaration files (`.d.ts`, `.d.mts`, `.d.cts`) are ignored, so compiled output directories
+containing declarations next to `.js` migrations do not trigger duplicate-id errors.
 The published CLI runs `.ts` files with Node's built-in type stripping (Node 24 or newer). TypeScript
 migrations must use erasable syntax, such as type annotations and `import type`. Enums, parameter
 properties, runtime namespaces, decorators, and `tsconfig.json` path aliases are unsupported. Rewrite
