@@ -102,6 +102,25 @@ describe("CancellationFlow", () => {
     expect(markup).toContain('<button type="button">Confirm cancellation</button>');
     expect(markup).toContain('aria-busy="false"');
   });
+  it("does not wait for display bookkeeping when no optional offers are rendered", () => {
+    const markup = renderToStaticMarkup(
+      h(CancellationFlow, {
+        state: {
+          kind: "ready",
+          session: {
+            ...session,
+            choices: session.choices.filter((choice) => choice.action === "cancel"),
+          },
+        },
+        onDecide: async () => {},
+        onRefresh: async () => {},
+        onDisplayed: async () => {},
+      }),
+    );
+    expect(markup).toContain('<button type="button">Confirm cancellation</button>');
+    expect(markup).toContain('aria-busy="false"');
+    expect(markup).not.toContain("Recording offer display");
+  });
   it("does not block standalone decisions without display bookkeeping", () => {
     expect(render(session)).toContain('<button type="button">Confirm cancellation</button>');
   });

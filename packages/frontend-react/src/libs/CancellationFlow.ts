@@ -17,14 +17,26 @@ export type CancellationFlowProps = Readonly<{
 
 export function CancellationFlow(props: CancellationFlowProps): ReactElement {
   const session = "session" in props.state ? props.state.session : undefined;
-  const [declined, setDeclined] = useState(false);
+  const sessionIdentity = session
+    ? JSON.stringify([
+        session.appId,
+        session.environment,
+        session.tenantId,
+        session.subject,
+        session.subscriptionRef,
+        session.id,
+      ])
+    : undefined;
+  const [declinedSessions, setDeclinedSessions] = useState<ReadonlySet<string>>(() => new Set());
   return h(CancellationFlowView, {
     ...props,
-    declined,
-    onDecline: () => setDeclined(true),
-    key: session
-      ? `${session.id}:${session.quoteRef}:${session.subscriptionRevision}`
-      : props.state.kind,
+    declined: sessionIdentity !== undefined && declinedSessions.has(sessionIdentity),
+    onDecline: () => {
+      if (sessionIdentity !== undefined) {
+        setDeclinedSessions((prior) => new Set([...prior, sessionIdentity]));
+      }
+    },
+    key: sessionIdentity ?? props.state.kind,
   });
 }
 
@@ -41,15 +53,21 @@ function CancellationFlowView({
   const shouldRecordDisplay =
     session?.state === "open" &&
     !session.displayedAt &&
+    !declined &&
     session.choices.some((choice) => choice.action !== "cancel") &&
     !!onDisplayed;
-  const [displayPending, setDisplayPending] = useState(shouldRecordDisplay);
+  const [displayState, setDisplayState] = useState<"idle" | "pending" | "failed" | "recorded">(
+    "idle",
+  );
+  const displayPending =
+    shouldRecordDisplay && (displayState === "idle" || displayState === "pending");
+  const displayFailed = shouldRecordDisplay && displayState === "failed";
   const [commandPending, setPending] = useState(false);
   const pending = commandPending || displayPending;
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const busy = useRef(false);
-  const displayed = useRef(false);
+  const displayInFlight = useRef(false);
   const cancel = useRef<HTMLButtonElement>(null);
   const status = useRef<HTMLParagraphElement>(null);
   const [now, setNow] = useState(() => new Date());
@@ -58,25 +76,26 @@ function CancellationFlowView({
     return () => clearInterval(timer);
   }, []);
   useEffect(() => {
-    if (shouldRecordDisplay && !displayed.current && onDisplayed) {
-      displayed.current = true;
-      setDisplayPending(true);
+    if (shouldRecordDisplay && displayState === "idle" && !displayInFlight.current && onDisplayed) {
+      displayInFlight.current = true;
+      setDisplayState("pending");
       void (async () => {
         try {
           await onDisplayed();
+          setDisplayState("recorded");
         } catch {
-          setError("Offer display could not be recorded. Refresh before continuing.");
+          setDisplayState("failed");
         } finally {
-          setDisplayPending(false);
+          displayInFlight.current = false;
         }
       })();
     }
-  }, [shouldRecordDisplay, onDisplayed]);
+  }, [shouldRecordDisplay, displayState, onDisplayed]);
   useEffect(() => {
-    if (error || submitted || state.kind === "conflict") status.current?.focus();
-  }, [error, submitted, state.kind]);
+    if (error || displayFailed || submitted || state.kind === "conflict") status.current?.focus();
+  }, [error, displayFailed, submitted, state.kind]);
   const run = async (operation: () => Promise<void>, deciding: boolean) => {
-    if (displayPending || busy.current || (deciding && submitted)) return;
+    if (displayPending || busy.current || (deciding && (submitted || displayFailed))) return;
     busy.current = true;
     setPending(true);
     setError("");
@@ -110,6 +129,7 @@ function CancellationFlowView({
     session?.state === "open" && Date.parse(session.snapshot.quote.expiresAt) <= now.getTime();
   const blocked =
     pending ||
+    displayFailed ||
     submitted ||
     !!error ||
     expired ||
@@ -251,7 +271,7 @@ function CancellationFlowView({
                   "button",
                   {
                     type: "button",
-                    disabled: pending,
+                    disabled: blocked,
                     onClick: () => {
                       onDecline();
                       cancel.current?.focus();
@@ -269,9 +289,10 @@ function CancellationFlowView({
       {
         ref: status,
         tabIndex: -1,
-        role: error || expired || state.kind === "conflict" ? "alert" : "status",
+        role: error || displayFailed || expired || state.kind === "conflict" ? "alert" : "status",
       },
       error ||
+        (displayFailed ? "Offer display could not be recorded. Refresh before continuing." : "") ||
         (state.kind === "conflict"
           ? "Subscription or quote changed. Review fresh state before choosing again."
           : expired
@@ -290,6 +311,7 @@ function CancellationFlowView({
         onClick: () =>
           void run(async () => {
             await onRefresh();
+            if (displayState === "failed") setDisplayState("idle");
             setSubmitted(false);
           }, false),
       },
