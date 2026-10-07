@@ -1092,6 +1092,19 @@ function addReleaseSignificantChange(
   );
 }
 
+function normalizeSnapshotExportOrder(record: Record<string, unknown>): Record<string, unknown> {
+  const normalized = { ...record };
+  for (const field of ["runtimeExports", "typeExports"]) {
+    const exports = record[field];
+    if (Array.isArray(exports)) {
+      normalized[field] = [...exports].sort((left, right) =>
+        compareStrings(JSON.stringify(left), JSON.stringify(right)),
+      );
+    }
+  }
+  return normalized;
+}
+
 function readPublicApiSnapshotPackages(
   options: CheckOptions,
   ref: string,
@@ -1128,7 +1141,7 @@ function readPublicApiSnapshotPackages(
         throw new Error(`${publicApiSnapshotPath} contains an invalid package name`);
       }
 
-      const packageRecord = pkg as Record<string, unknown>;
+      const packageRecord = normalizeSnapshotExportOrder(pkg as Record<string, unknown>);
       const entrypoints = new Map<string, string>();
       const metadataKey = JSON.stringify({
         compatibilityGroups: packageRecord.compatibilityGroups ?? null,
@@ -1141,7 +1154,7 @@ function readPublicApiSnapshotPackages(
           runtimeExports: packageRecord.runtimeExports ?? null,
           typeExports: packageRecord.typeExports ?? null,
         });
-        entrypoints.set(".", JSON.stringify(pkg));
+        entrypoints.set(".", JSON.stringify(packageRecord));
       } else if (schemaVersion === 2 && Array.isArray(packageRecord.entrypoints)) {
         for (const entrypoint of packageRecord.entrypoints) {
           if (
@@ -1154,9 +1167,11 @@ function readPublicApiSnapshotPackages(
             );
           }
           const exportPath = (entrypoint as { exportPath: string }).exportPath;
-          entrypoints.set(exportPath, JSON.stringify(entrypoint));
+          const entrypointRecord = normalizeSnapshotExportOrder(
+            entrypoint as Record<string, unknown>,
+          );
+          entrypoints.set(exportPath, JSON.stringify(entrypointRecord));
           if (exportPath === ".") {
-            const entrypointRecord = entrypoint as Record<string, unknown>;
             migrationRootKey = JSON.stringify({
               kind: entrypointRecord.kind ?? null,
               runtimeExports: entrypointRecord.runtimeExports ?? null,
