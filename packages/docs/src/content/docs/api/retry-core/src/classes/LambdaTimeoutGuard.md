@@ -28,7 +28,7 @@ Throws if not enough time remains.
 
 ### checkTimeout()
 
-> **checkTimeout**(`nextDelayMs`): `void`
+> **checkTimeout**(`nextDelayMs`, `cause?`): `void`
 
 Check if retry should continue.
 
@@ -39,6 +39,10 @@ Check if retry should continue.
 `number`
 
 Expected delay for next attempt
+
+##### cause?
+
+`Error`
 
 #### Returns
 
