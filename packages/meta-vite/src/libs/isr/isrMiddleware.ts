@@ -57,5 +57,26 @@ function isCacheableRequest(request: Request): boolean {
 }
 
 function isCacheableResponse(response: Response): boolean {
-  return response.status >= 200 && response.status < 300;
+  if (response.status < 200 || response.status >= 300) {
+    return false;
+  }
+
+  // Final personalized responses must never enter the shared cache:
+  // Set-Cookie, private/no-store directives, or Vary on identity headers
+  // mean the bytes are request-specific even when the status is 2xx.
+  if (response.headers.has("set-cookie")) {
+    return false;
+  }
+
+  const cacheControl = response.headers.get("cache-control")?.toLowerCase() ?? "";
+  if (cacheControl.includes("private") || cacheControl.includes("no-store")) {
+    return false;
+  }
+
+  const vary = response.headers.get("vary")?.toLowerCase() ?? "";
+  if (vary.includes("cookie") || vary.includes("authorization")) {
+    return false;
+  }
+
+  return true;
 }

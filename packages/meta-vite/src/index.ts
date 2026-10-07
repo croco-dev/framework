@@ -82,6 +82,24 @@ export type {
 export { createIsrHandler } from "./libs/isr/createIsrHandler";
 export { createIsrMiddleware } from "./libs/isr/isrMiddleware";
 export {
+  createPrivateInput,
+  formatPersonalizedInspectEvent,
+  hashPersonalizedCacheKey,
+  loadPersonalizedFragments,
+  renderPersonalizedResponse,
+} from "./libs/isr/personalizedFragments";
+export type {
+  PersonalizedFragmentCacheOptions,
+  PersonalizedFragmentInspectEvent,
+  PersonalizedFragmentLoader,
+  PersonalizedFragmentResult,
+  PersonalizedFragmentStore,
+  PersonalizedPrivateInput,
+  PersonalizedPrivateLoader,
+  PersonalizedPublicInput,
+  PersonalizedRenderInput,
+} from "./libs/isr/personalizedFragments";
+export {
   createDurableIsrCacheProfile,
   createLocalIsrCacheProfile,
   evaluateIsrRuntimeSupport,
