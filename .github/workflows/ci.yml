@@ -668,6 +668,8 @@ jobs:
               - 'packages/execution-drizzle/**'
               - 'packages/experience-drizzle/**'
               - 'packages/framework-context/**'
+              - 'packages/gamification-core/**'
+              - 'packages/gamification-drizzle/**'
               - 'packages/membership-core/**'
               - 'packages/membership-drizzle/**'
               - 'packages/metering-core/**'
@@ -744,6 +746,8 @@ jobs:
               - 'packages/frontend-problems/src/**'
               - 'packages/frontend-react/src/**'
               - 'packages/frontend-vite/src/**'
+              - 'packages/gamification-core/src/**'
+              - 'packages/gamification-drizzle/src/**'
               - 'packages/gid-core/src/**'
               - 'packages/governance-core/src/**'
               - 'packages/health-core/src/**'
@@ -1513,6 +1517,7 @@ jobs:
           EXECUTION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           EXPERIENCE_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           FEATURES_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+          GAMIFICATION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           METERING_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           ONBOARDING_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
@@ -1538,6 +1543,8 @@ jobs:
           pnpm --filter @croco/experience-drizzle test:live
           pnpm build --filter=@croco/features-drizzle...
           pnpm --filter @croco/features-drizzle test:postgres
+          pnpm build --filter=@croco/gamification-drizzle...
+          pnpm --filter @croco/gamification-drizzle test:postgres
           pnpm build --filter=@croco/promotions-drizzle...
           pnpm --filter @croco/promotions-drizzle test:live
           pnpm build --filter=@croco/metering-drizzle...
