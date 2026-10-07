@@ -90,6 +90,56 @@ async function main(): Promise<void> {
     progress.key.episodeId === episode && original.key.version === publication.definition.version,
     "Episode/version provenance changed unexpectedly",
   );
+  const nextPublication: MissionPublication = {
+    ...publication,
+    definition: { ...publication.definition, version: publication.definition.version + 1 },
+    revision: publication.revision + 1,
+    idempotencyKey: randomUUID(),
+    reason: "Verify replay across a later episode",
+    publishedAt: new Date().toISOString(),
+  };
+  assert((await request("/api/definition", nextPublication)).status === 200, "Next policy failed");
+  const later = await request("/api/episodes", {
+    version: nextPublication.definition.version,
+    commandId: randomUUID(),
+  });
+  assert(later.status === 200, "Later episode failed");
+  const laterEpisode = (later.body.progress as MissionProgress).key.episodeId;
+  const historicalReport = await request("/api/reports", {
+    commandId,
+    name: "Mission smoke report",
+  });
+  const historicalEpisode = await request("/api/episodes", episodeCommand);
+  process.stdout.write(
+    `Historical replay: report status ${historicalReport.status}; episode ${(historicalEpisode.body.progress as MissionProgress).key.episodeId}; expected ${episode}\n`,
+  );
+  assert(
+    historicalReport.status === 200 &&
+      (historicalReport.body as unknown as MissionIngestResult).duplicate &&
+      (historicalReport.body as unknown as MissionIngestResult).progress.key.episodeId ===
+        episode &&
+      (historicalReport.body as unknown as MissionIngestResult).progress.key.version ===
+        episodeCommand.version,
+    "Report replay must retain its recorded episode/version after a later transition",
+  );
+  assert(
+    historicalEpisode.status === 200 &&
+      (historicalEpisode.body.progress as MissionProgress).key.episodeId === episode &&
+      (historicalEpisode.body.progress as MissionProgress).key.version === episodeCommand.version &&
+      (historicalEpisode.body.publication as MissionPublication).definition.version ===
+        episodeCommand.version,
+    "Episode replay must return its recorded episode/version after a later transition",
+  );
+  const stillCurrent = (await request("/api/progress")).body as unknown as MissionProgress;
+  assert(
+    stillCurrent.key.episodeId === laterEpisode && stillCurrent.instance.progress === 0,
+    "Historical command replay changed the current episode",
+  );
+  assert(
+    (await request("/api/reports", { commandId, name: "Changed historical report" })).status ===
+      409,
+    "Historical command payload conflict accepted",
+  );
   process.stdout.write(
     "Recurring mission PostgreSQL HTTP smoke passed: dedupe, conflict, authorization, explicit episode, unique achievement\n",
   );

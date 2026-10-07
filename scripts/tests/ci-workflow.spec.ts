@@ -1042,6 +1042,27 @@ describe("CI verification profile contract", () => {
     );
   });
 
+  it("routes mission persistence changes to the real PostgreSQL concurrency suite", () => {
+    const filterStep = workflowJobSteps("changes").find((step) => step.id === "filter");
+    const filterEnv = filterStep?.env as Readonly<Record<string, string>>;
+    const filters = parseDocument(filterEnv.PATH_FILTERS).toJS() as {
+      readonly real_resources: readonly string[];
+    };
+    expect(filters.real_resources).toEqual(
+      expect.arrayContaining(["packages/gamification-core/**", "packages/gamification-drizzle/**"]),
+    );
+
+    const persistenceStep = workflowJobSteps("real-resource-tests").find(
+      (step) => step.name === "Verify persistence concurrency against PostgreSQL",
+    );
+    expect(persistenceStep?.env).toMatchObject({
+      MISSIONS_POSTGRES_URL: "postgresql://postgres:postgres@127.0.0.1:5432/croco_membership",
+    });
+    expect(persistenceStep?.run).toContain(
+      "pnpm build --filter=@croco/gamification-drizzle...\npnpm --filter @croco/gamification-drizzle test:postgres",
+    );
+  });
+
   it("routes entitlement persistence changes to the real PostgreSQL invariant suite", () => {
     expect(WORKFLOW).toContain("              - 'packages/entitlements-core/**'");
     expect(WORKFLOW).toContain("              - 'packages/entitlements-drizzle/**'");

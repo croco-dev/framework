@@ -107,12 +107,18 @@ async function main(): Promise<void> {
       },
     };
   }
-  async function bootstrap() {
+  async function bootstrap(version?: number, episodeId?: string) {
     const current = await session();
-    const publication = await store.getDefinition(scope, missionId, current.latestVersion);
+    const publication = await store.getDefinition(
+      scope,
+      missionId,
+      version ?? current.latestVersion,
+    );
     if (!publication) throw new MissionInvalidProblem("Published mission missing");
     return {
-      progress: await service.getProgress(await command()),
+      progress: await service.getProgress(
+        await command(version ?? current.activeVersion, episodeId ?? current.episodeId),
+      ),
       publication,
       access: { scope, actorId: "demo-operator", permissions: ["mission.publish"] },
       actions: ["report.saved"],
@@ -206,8 +212,9 @@ async function main(): Promise<void> {
             !report ||
             report.name !== name ||
             report.subjectId !== subjectId ||
-            report.version !== current.activeVersion ||
-            report.episodeId !== current.episodeId
+            report.tenantId !== scope.tenantId ||
+            report.appId !== scope.appId ||
+            report.environmentId !== scope.environmentId
           ) {
             throw new MissionConflictProblem("Report command identity conflict");
           }
@@ -267,7 +274,7 @@ async function main(): Promise<void> {
           if (existing[0]) {
             if (existing[0].version !== input.version)
               throw new MissionConflictProblem("Episode command payload changed");
-            return bootstrap();
+            return bootstrap(existing[0].version, existing[0].episodeId);
           }
           if (input.version !== current.latestVersion) {
             throw new MissionInvalidProblem(
@@ -282,7 +289,7 @@ async function main(): Promise<void> {
             .update(sessions)
             .set({ activeVersion: current.latestVersion, episodeId })
             .where(eq(sessions.id, subjectId));
-          return bootstrap();
+          return bootstrap(current.latestVersion, episodeId);
         });
         json(response, 200, committed);
         return;

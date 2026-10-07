@@ -93,15 +93,25 @@ function App() {
         version: data.publication.definition.version,
         commandId: crypto.randomUUID(),
       };
-      const result = await request<Bootstrap>("/api/episodes", episodeIntent.current);
+      await request<Bootstrap>("/api/episodes", episodeIntent.current);
+      const result = await request<Bootstrap>("/api/bootstrap");
       episodeIntent.current = undefined;
       command.current = undefined;
       setData(result);
       setState({ kind: "ready", progress: result.progress });
-      setMessage("New episode started. Earlier progress is preserved.");
+      setMessage("Episode confirmed. Current progress refreshed.");
     } catch (error) {
       setMessage(
         `${error instanceof Error ? error.message : "Could not start episode"}. Retry the pending episode before starting another.`,
+      );
+      setState((current) =>
+        current.kind === "ready" || current.kind === "partial"
+          ? {
+              kind: "partial",
+              progress: current.progress,
+              message: "Episode change could not be confirmed. Retry the pending episode.",
+            }
+          : current,
       );
     } finally {
       pending.current = false;
