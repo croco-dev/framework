@@ -391,9 +391,9 @@ describe("SubscriptionQuantityReconciler", () => {
 
   it.each([
     [ProblemCategory.BadRequest, true, 408],
-    [ProblemCategory.TooManyRequests, true],
-    [ProblemCategory.InternalServerError, true],
-    [ProblemCategory.Conflict, false],
+    [ProblemCategory.TooManyRequests, true, undefined],
+    [ProblemCategory.InternalServerError, true, undefined],
+    [ProblemCategory.Conflict, false, undefined],
   ])("preserves the default retry classification for %s", async (category, retryable, status) => {
     const { gateway, reconciler } = await createFixture();
     const problem = new ClassifiedProviderProblem(category);
