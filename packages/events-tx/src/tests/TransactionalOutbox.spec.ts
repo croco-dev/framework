@@ -2,6 +2,7 @@ import {
   DefaultEventSerializer,
   DomainEvent,
   type EventBus,
+  EventField,
   EventRegistry,
   type EventSubscription,
 } from "@croco/events-core";
@@ -1918,6 +1919,58 @@ describe("createEventBusOutboxPublisher", () => {
         spanId: "span-1",
       },
     });
+  });
+
+  it("delivers the outbox aggregateId to events that do not declare it as an EventField", async () => {
+    abstract class OrderEvent extends DomainEvent {
+      aggregateId = "";
+    }
+
+    class OrderShippedEvent extends OrderEvent {
+      static eventName = "order.shipped";
+
+      @EventField()
+      trackingNumber = "";
+    }
+
+    const serializer = new DefaultEventSerializer(new EventRegistry().register(OrderShippedEvent));
+    const event = new OrderShippedEvent();
+    event.aggregateId = "order-1";
+    event.trackingNumber = "TRK-1";
+    const serialized = serializer.serialize(event);
+    const published: DomainEvent[] = [];
+    const eventBus: EventBus = {
+      publish: async (publishedEvent) => {
+        published.push(publishedEvent);
+      },
+      subscribe: () => {},
+      unsubscribe: () => {},
+      clear: () => {},
+    };
+    const message: TransactionalOutboxMessage = {
+      id: "message-order-1",
+      eventId: serialized.eventId,
+      eventType: serialized.eventType,
+      aggregateId: "order-1",
+      idempotencyKey: serialized.eventId,
+      payload: serialized.payload,
+      metadata: {},
+      attempts: 0,
+      maxAttempts: 5,
+      status: "pending",
+      visibleAt: new Date("2026-01-01T00:00:00.000Z"),
+      occurredAt: new Date(serialized.occurredAt),
+      createdAt: new Date("2026-01-01T00:00:00.000Z"),
+      updatedAt: new Date("2026-01-01T00:00:00.000Z"),
+      diagnostics: [],
+    };
+
+    await createEventBusOutboxPublisher(eventBus, serializer)(message);
+
+    expect(published).toHaveLength(1);
+    expect(published[0]).toBeInstanceOf(OrderShippedEvent);
+    expect((published[0] as OrderShippedEvent).trackingNumber).toBe("TRK-1");
+    expect((published[0] as OrderShippedEvent).aggregateId).toBe("order-1");
   });
 });
 
