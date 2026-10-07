@@ -3062,6 +3062,12 @@
       "owner": "@croco/membership-drizzle"
     },
     {
+      "path": "packages/membership-drizzle/src/tests/MembershipSchema.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/membership-drizzle"
+    },
+    {
       "path": "packages/meta-vite/src/tests/ComposeHandler.spec.ts",
       "lane": "fast",
       "qualifiers": [],
