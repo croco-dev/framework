@@ -247,6 +247,20 @@ describe("ApiKeyManager", () => {
       expect(result.key).toMatch(/^sk_/);
     });
 
+    it("should authenticate a key created with a prefix that contains an underscore", async () => {
+      const created = await manager.create({
+        name: "Live key",
+        tenantId: "tenant_123",
+        permissions: ["orders:read"],
+        prefix: "sk_live",
+      });
+
+      const principal = await manager.verify(created.key);
+
+      expect(principal?.id).toBe(created.id);
+      expect(principal?.keyStart).toBe(created.keyStart);
+    });
+
     it("should handle null expiresAt when not provided", async () => {
       const options: CreateApiKeyOptions = {
         name: "Test Key",
@@ -550,6 +564,21 @@ describe("ApiKeyManager", () => {
         rateLimit: { limit: 1000, duration: 60 },
       };
       originalKey = await manager.create(options);
+    });
+
+    it("should authenticate a rotated key that keeps an underscore prefix", async () => {
+      const created = await manager.create({
+        name: "Live key",
+        tenantId: "tenant_123",
+        permissions: ["orders:read"],
+        prefix: "sk_live",
+      });
+
+      const rotated = await manager.rotate(created.id, { idempotencyKey: "rotation-underscore" });
+      const principal = await manager.verify(rotated.key);
+
+      expect(principal?.id).toBe(rotated.id);
+      expect(principal?.keyStart).toBe(rotated.keyStart);
     });
 
     it("should create a new key and revoke the old one", async () => {
