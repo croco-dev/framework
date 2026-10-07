@@ -15,16 +15,16 @@ function roundRational(
 ): number {
   const n = BigInt(numerator);
   const d = BigInt(denominator);
-  const negative = n < 0n !== d < 0n;
-  const absoluteNumerator = n < 0n ? -n : n;
-  const absoluteDenominator = d < 0n ? -d : d;
+  const negative = n < BigInt(0) !== d < BigInt(0);
+  const absoluteNumerator = n < BigInt(0) ? -n : n;
+  const absoluteDenominator = d < BigInt(0) ? -d : d;
   const quotient = absoluteNumerator / absoluteDenominator;
   const remainder = absoluteNumerator % absoluteDenominator;
   const increment =
     roundingMode === "up"
-      ? remainder > 0n
-      : roundingMode === "half_up" && remainder * 2n >= absoluteDenominator;
-  const magnitude = quotient + (increment ? 1n : 0n);
+      ? remainder > BigInt(0)
+      : roundingMode === "half_up" && remainder * BigInt(2) >= absoluteDenominator;
+  const magnitude = quotient + (increment ? BigInt(1) : BigInt(0));
   return Number(negative ? -magnitude : magnitude);
 }
 
@@ -61,13 +61,37 @@ describe("Money", () => {
   it("should preserve division signs and rounding against an integer-rational oracle", () => {
     const roundingModes: MoneyRoundingMode[] = ["half_up", "down", "up"];
     const decimalDivisors = [
-      { value: 1 / 3, numerator: 3333333333333333n, denominator: 10000000000000000n },
-      { value: -1 / 3, numerator: -3333333333333333n, denominator: 10000000000000000n },
-      { value: 20 / 31, numerator: 6451612903225806n, denominator: 10000000000000000n },
-      { value: -20 / 31, numerator: -6451612903225806n, denominator: 10000000000000000n },
-      { value: 0.1 + 0.2, numerator: 30000000000000004n, denominator: 100000000000000000n },
-      { value: -0.1 - 0.2, numerator: -30000000000000004n, denominator: 100000000000000000n },
-      { value: 0.123456789, numerator: 123456789n, denominator: 1000000000n },
+      {
+        value: 1 / 3,
+        numerator: BigInt("3333333333333333"),
+        denominator: BigInt("10000000000000000"),
+      },
+      {
+        value: -1 / 3,
+        numerator: -BigInt("3333333333333333"),
+        denominator: BigInt("10000000000000000"),
+      },
+      {
+        value: 20 / 31,
+        numerator: BigInt("6451612903225806"),
+        denominator: BigInt("10000000000000000"),
+      },
+      {
+        value: -20 / 31,
+        numerator: -BigInt("6451612903225806"),
+        denominator: BigInt("10000000000000000"),
+      },
+      {
+        value: 0.1 + 0.2,
+        numerator: BigInt("30000000000000004"),
+        denominator: BigInt("100000000000000000"),
+      },
+      {
+        value: -0.1 - 0.2,
+        numerator: -BigInt("30000000000000004"),
+        denominator: BigInt("100000000000000000"),
+      },
+      { value: 0.123456789, numerator: BigInt(123456789), denominator: BigInt(1000000000) },
       { value: -2.5, numerator: -5, denominator: 2 },
       { value: -1.5, numerator: -3, denominator: 2 },
       { value: -0.5, numerator: -1, denominator: 2 },
@@ -108,13 +132,37 @@ describe("Money", () => {
   it("should preserve multiplication signs and rounding against an integer-rational oracle", () => {
     const roundingModes: MoneyRoundingMode[] = ["half_up", "down", "up"];
     const multipliers = [
-      { value: 1 / 3, numerator: 3333333333333333n, denominator: 10000000000000000n },
-      { value: -1 / 3, numerator: -3333333333333333n, denominator: 10000000000000000n },
-      { value: 20 / 31, numerator: 6451612903225806n, denominator: 10000000000000000n },
-      { value: -20 / 31, numerator: -6451612903225806n, denominator: 10000000000000000n },
-      { value: 0.1 + 0.2, numerator: 30000000000000004n, denominator: 100000000000000000n },
-      { value: -0.1 - 0.2, numerator: -30000000000000004n, denominator: 100000000000000000n },
-      { value: 0.123456789, numerator: 123456789n, denominator: 1000000000n },
+      {
+        value: 1 / 3,
+        numerator: BigInt("3333333333333333"),
+        denominator: BigInt("10000000000000000"),
+      },
+      {
+        value: -1 / 3,
+        numerator: -BigInt("3333333333333333"),
+        denominator: BigInt("10000000000000000"),
+      },
+      {
+        value: 20 / 31,
+        numerator: BigInt("6451612903225806"),
+        denominator: BigInt("10000000000000000"),
+      },
+      {
+        value: -20 / 31,
+        numerator: -BigInt("6451612903225806"),
+        denominator: BigInt("10000000000000000"),
+      },
+      {
+        value: 0.1 + 0.2,
+        numerator: BigInt("30000000000000004"),
+        denominator: BigInt("100000000000000000"),
+      },
+      {
+        value: -0.1 - 0.2,
+        numerator: -BigInt("30000000000000004"),
+        denominator: BigInt("100000000000000000"),
+      },
+      { value: 0.123456789, numerator: BigInt(123456789), denominator: BigInt(1000000000) },
       { value: -2.5, numerator: -5, denominator: 2 },
       { value: -0.5, numerator: -1, denominator: 2 },
       { value: 0.5, numerator: 1, denominator: 2 },
