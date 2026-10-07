@@ -446,9 +446,15 @@ function createProviders(sourceFiles: readonly SourceFileIntent[]): {
 
   const idByClass = createProviderIdMap(providerClasses, nameCounts);
   const dependencyEdges = new Map<string, readonly string[]>();
+  const providersByName = createProvidersByName(providerClasses);
 
   const providers = providerClasses.map((sourceClass) => {
-    const resolution = resolveProviderDependencies(sourceClass, sourceFiles, idByClass);
+    const resolution = resolveProviderDependencies(
+      sourceClass,
+      sourceFiles,
+      idByClass,
+      providersByName,
+    );
     const id = idByClass.get(sourceClass) ?? sourceClass.name;
     dependencyEdges.set(id, resolution.edges);
 
@@ -507,24 +513,26 @@ function createProviderId(sourceClass: SourceClassIntent, nameCount: number): st
   return `${withoutExtension(sourceClass.source.path)}#${sourceClass.name}`;
 }
 
+function createProvidersByName(
+  providerClasses: readonly SourceClassIntent[],
+): ReadonlyMap<string, readonly SourceClassIntent[]> {
+  const providersByName = new Map<string, SourceClassIntent[]>();
+
+  for (const provider of providerClasses) {
+    const existing = providersByName.get(provider.name) ?? [];
+    existing.push(provider);
+    providersByName.set(provider.name, existing);
+  }
+
+  return providersByName;
+}
+
 function resolveProviderDependencies(
   sourceClass: SourceClassIntent,
   sourceFiles: readonly SourceFileIntent[],
   idByClass: ReadonlyMap<SourceClassIntent, string>,
+  providersByName: ReadonlyMap<string, readonly SourceClassIntent[]>,
 ): { readonly dependencies: string[]; readonly edges: string[] } {
-  const providersByName = new Map<string, SourceClassIntent[]>();
-
-  for (const sourceFile of sourceFiles) {
-    for (const candidate of sourceFile.classes) {
-      if (candidate.roles.includes("di.provider")) {
-        providersByName.set(candidate.name, [
-          ...(providersByName.get(candidate.name) ?? []),
-          candidate,
-        ]);
-      }
-    }
-  }
-
   const dependencies: string[] = [];
   const edges: string[] = [];
 
@@ -596,31 +604,172 @@ function resolveImportedProviderName(
   }
 
   for (const candidatePath of expandImportTarget(imported.path)) {
-    for (const sourceFile of sourceFiles) {
-      if (sourceFile.path !== candidatePath) {
-        continue;
-      }
+    const provider = findImportedProvider(candidatePath, imported, sourceFiles, new Set());
 
-      if (imported.isDefault) {
-        const defaultProvider = sourceFile.classes.find(
-          (candidate) =>
-            candidate.roles.includes("di.provider") &&
-            isDefaultExportedClass(sourceFile.content, candidate.name),
-        );
-
-        return { matched: true, provider: defaultProvider };
-      }
-
-      const provider = sourceFile.classes.find(
-        (candidate) =>
-          candidate.roles.includes("di.provider") && candidate.name === imported.originalName,
-      );
-
+    if (
+      provider !== undefined ||
+      sourceFiles.some((sourceFile) => sourceFile.path === candidatePath)
+    ) {
       return { matched: true, provider };
     }
   }
 
   return { matched: false };
+}
+
+const MAX_REEXPORT_DEPTH = 8;
+
+function findImportedProvider(
+  candidatePath: string,
+  imported: RelativeImportTarget,
+  sourceFiles: readonly SourceFileIntent[],
+  visited: Set<string>,
+  depth = 0,
+): SourceClassIntent | undefined {
+  const visitKey = `${candidatePath}#${imported.isDefault ? "default" : imported.originalName}`;
+
+  if (visited.has(visitKey) || depth > MAX_REEXPORT_DEPTH) {
+    return undefined;
+  }
+
+  visited.add(visitKey);
+
+  const sourceFile = sourceFiles.find((candidate) => candidate.path === candidatePath);
+
+  if (!sourceFile) {
+    return undefined;
+  }
+
+  if (imported.isDefault) {
+    return (
+      sourceFile.classes.find(
+        (candidate) =>
+          candidate.roles.includes("di.provider") &&
+          isDefaultExportedClass(sourceFile.content, candidate.name),
+      ) ?? followReexport(sourceFile, "default", sourceFiles, visited, depth)
+    );
+  }
+
+  return (
+    sourceFile.classes.find(
+      (candidate) =>
+        candidate.roles.includes("di.provider") && candidate.name === imported.originalName,
+    ) ?? followReexport(sourceFile, imported.originalName, sourceFiles, visited, depth)
+  );
+}
+
+type ReexportTarget = {
+  readonly exportedName: string;
+  readonly originalName: string;
+  readonly path: string;
+  readonly isDefault: boolean;
+  readonly isStar: boolean;
+};
+
+function followReexport(
+  sourceFile: SourceFileIntent,
+  exportedName: string,
+  sourceFiles: readonly SourceFileIntent[],
+  visited: Set<string>,
+  depth: number,
+): SourceClassIntent | undefined {
+  for (const reexport of extractReexports(sourceFile.content, sourceFile.path)) {
+    if (!reexport.isStar && reexport.exportedName !== exportedName) {
+      continue;
+    }
+
+    const nextName = reexport.isStar ? exportedName : reexport.originalName;
+    const nextIsDefault = reexport.isStar
+      ? exportedName === "default"
+      : reexport.isDefault || reexport.originalName === "default";
+
+    for (const candidatePath of expandImportTarget(reexport.path)) {
+      const provider = findImportedProvider(
+        candidatePath,
+        {
+          originalName: nextName,
+          path: candidatePath,
+          isDefault: nextIsDefault,
+        },
+        sourceFiles,
+        visited,
+        depth + 1,
+      );
+
+      if (provider) {
+        return provider;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function extractReexports(content: string, importerPath: string): ReexportTarget[] {
+  const reexports: ReexportTarget[] = [];
+  const reexportPattern = /\bexport\s+(?:type\s+)?([^;]*?)\bfrom\s*["']([^"']+)["']/g;
+
+  for (const match of content.matchAll(reexportPattern)) {
+    const specifier = match[2];
+
+    if (!specifier || !specifier.startsWith(".")) {
+      continue;
+    }
+
+    const clause = (match[1] ?? "").replace(/\btype\s+/g, "").trim();
+
+    if (!clause) {
+      continue;
+    }
+
+    const namespaceMatch = clause.match(/\*\s*as\s+([A-Za-z_$][\w$]*)/);
+
+    if (namespaceMatch) {
+      continue;
+    }
+
+    const targetPath = resolveRelativeImport(importerPath, specifier);
+
+    if (clause === "*") {
+      reexports.push({
+        exportedName: "*",
+        originalName: "*",
+        path: targetPath,
+        isDefault: false,
+        isStar: true,
+      });
+
+      continue;
+    }
+
+    if (clause.startsWith("{")) {
+      for (const name of extractImportedNames(clause)) {
+        reexports.push({
+          exportedName: name.localName,
+          originalName: name.originalName,
+          path: targetPath,
+          isDefault: name.isDefault,
+          isStar: false,
+        });
+      }
+
+      continue;
+    }
+
+    const defaultMatch = clause.match(/^([A-Za-z_$][\w$]*)/);
+
+    if (defaultMatch?.[1]) {
+      reexports.push({
+        exportedName: defaultMatch[1],
+        originalName: "default",
+        path: targetPath,
+        isDefault: true,
+        isStar: false,
+      });
+    }
+  }
+
+  return reexports;
 }
 
 function expandImportTarget(importedPath: string): string[] {
@@ -928,6 +1077,7 @@ function extractClasses(
   filePath: string,
 ): SourceClassIntent[] {
   const classes: SourceClassIntent[] = [];
+  const imports = extractRelativeImports(content, filePath);
   const classPattern =
     /((?:\s*@[\s\S]*?)?)(?:\bexport\s+)?(?:default\s+)?(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)[^{]*\{/g;
 
@@ -950,7 +1100,7 @@ function extractClasses(
       componentScope: getComponentScope(decorators),
       eventHandler: getEventHandlerMetadata(decorators),
       dependencies: extractConstructorDependencies(body),
-      imports: extractRelativeImports(content, toLocation(filePath, lineStarts, classOffset).path),
+      imports,
     });
   }
 

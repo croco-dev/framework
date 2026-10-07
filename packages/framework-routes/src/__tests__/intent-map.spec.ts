@@ -427,4 +427,72 @@ describe("project intent map", () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it("resolves a provider imported through a re-export barrel", async () => {
+    const { mkdirSync, mkdtempSync, rmSync, writeFileSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const root = mkdtempSync(join(tmpdir(), "croco-intent-provider-barrel-"));
+
+    try {
+      const component = "function Component() { return () => {}; }\n";
+      writeFileSync(join(root, "repo.ts"), `${component}@Component() export class Repository {}`);
+      mkdirSync(join(root, "repos"), { recursive: true });
+      writeFileSync(join(root, "repos", "index.ts"), "export { Repository } from '../repo';\n");
+      writeFileSync(
+        join(root, "service.ts"),
+        `${component}import { Repository } from "./repos";\n@Component() export class Service {\n  constructor(private readonly repository: Repository) {}\n}`,
+      );
+      const intentMap = createProjectIntentMap({
+        projectRoot: root,
+        sourcePaths: ["repo.ts", "repos/index.ts", "service.ts"],
+      });
+      const service = intentMap.providers.find((provider) => provider.name === "Service");
+
+      expect(service?.dependencies).toEqual(["Repository"]);
+      expect(intentMap.relationships).toContainEqual(
+        expect.objectContaining({
+          kind: "component.depends-on",
+          from: { kind: "provider", id: "Service" },
+          to: { kind: "provider", id: "Repository" },
+        }),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves a provider imported through a star re-export barrel", async () => {
+    const { mkdirSync, mkdtempSync, rmSync, writeFileSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const root = mkdtempSync(join(tmpdir(), "croco-intent-provider-star-"));
+
+    try {
+      const component = "function Component() { return () => {}; }\n";
+      writeFileSync(join(root, "repo.ts"), `${component}@Component() export class Repository {}`);
+      mkdirSync(join(root, "repos"), { recursive: true });
+      writeFileSync(join(root, "repos", "index.ts"), "export * from '../repo';\n");
+      writeFileSync(
+        join(root, "service.ts"),
+        `${component}import { Repository } from "./repos";\n@Component() export class Service {\n  constructor(private readonly repository: Repository) {}\n}`,
+      );
+      const intentMap = createProjectIntentMap({
+        projectRoot: root,
+        sourcePaths: ["repo.ts", "repos/index.ts", "service.ts"],
+      });
+      const service = intentMap.providers.find((provider) => provider.name === "Service");
+
+      expect(service?.dependencies).toEqual(["Repository"]);
+      expect(intentMap.relationships).toContainEqual(
+        expect.objectContaining({
+          kind: "component.depends-on",
+          from: { kind: "provider", id: "Service" },
+          to: { kind: "provider", id: "Repository" },
+        }),
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });
