@@ -1407,8 +1407,8 @@ export class RpcClientResponseError extends Error {
 }
 
 export class RpcClientStatusMismatchError extends Problem {
-  readonly code = 'rpc-codegen/status-mismatch';
-  readonly category = ProblemCategory.InternalServerError;
+  readonly code = ${literalValueToTypeScript(RPC_STATUS_MISMATCH_PROBLEM.code)};
+  readonly category = ProblemCategory.${RPC_STATUS_MISMATCH_PROBLEM.category};
   readonly response: Response;
   readonly httpStatus: number;
   readonly problemStatus: number;
@@ -1426,8 +1426,8 @@ export class RpcClientStatusMismatchError extends Problem {
 }
 
 export class RpcQueryKeyInputError extends Problem {
-  readonly code = 'rpc-codegen/query-key-input-unsupported';
-  readonly category = ProblemCategory.ValidationError;
+  readonly code = ${literalValueToTypeScript(RPC_QUERY_KEY_INPUT_PROBLEM.code)};
+  readonly category = ProblemCategory.${RPC_QUERY_KEY_INPUT_PROBLEM.category};
   readonly path: string;
 
   constructor(path: string, detail: string) {
@@ -1937,6 +1937,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
   `;
 }
+
+const RPC_STATUS_MISMATCH_PROBLEM = {
+  code: "rpc-codegen/status-mismatch",
+  category: ProblemCategory.InternalServerError,
+} as const;
+
+const RPC_QUERY_KEY_INPUT_PROBLEM = {
+  code: "rpc-codegen/query-key-input-unsupported",
+  category: ProblemCategory.ValidationError,
+} as const;
 
 const RPC_PATH_PARAM_INPUT_PROBLEM = {
   code: "rpc-codegen/path-param-input-unsupported",
@@ -2587,8 +2597,8 @@ function generateRpcQueryKeySupport(includeProblemImport = true): string {
   | { readonly [key: string]: RpcQueryKeyValue };
 
 export class RpcQueryKeyInputError extends Problem {
-  readonly code = 'rpc-codegen/query-key-input-unsupported';
-  readonly category = ProblemCategory.ValidationError;
+  readonly code = ${literalValueToTypeScript(RPC_QUERY_KEY_INPUT_PROBLEM.code)};
+  readonly category = ProblemCategory.${RPC_QUERY_KEY_INPUT_PROBLEM.category};
   readonly path: string;
 
   constructor(path: string, detail: string) {
