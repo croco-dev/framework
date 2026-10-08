@@ -418,7 +418,9 @@ async function resolveFragment<T>(input: {
       reason: freshness.reason,
     });
     if (freshness.reason.startsWith("stale-while-revalidate")) {
-      void revalidateFragment(input).catch(() => {});
+      // Background refresh must outlive the foreground request: the caller
+      // may abort after receiving the stale body, so detach its signal.
+      void revalidateFragment({ ...input, signal: undefined }).catch(() => {});
     }
     return { value: parseValue<T>(stored.bytes, stored.value), source: "cache" };
   }
@@ -487,6 +489,7 @@ async function revalidateFragment<T>(input: {
   readonly expectedRevision: string;
   readonly freshness: PersonalizedCacheFreshnessPolicy;
   readonly nowMs: number;
+  readonly signal?: AbortSignal;
 }): Promise<void> {
   try {
     const fresh = await fillFragment(input);
