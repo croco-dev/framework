@@ -22186,7 +22186,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-core/src/libs/ContractGraph.ts",
-          line: 163,
+          line: 164,
           column: 5,
           kind: "problem-constructor",
         },
@@ -27027,7 +27027,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 126,
+          line: 127,
           column: 15,
           kind: "problem-factory",
         },
@@ -27259,7 +27259,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 74,
+          line: 75,
           column: 11,
           kind: "problem-factory",
         },
@@ -27393,7 +27393,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 201,
+          line: 206,
           column: 17,
           kind: "problem-factory",
         },

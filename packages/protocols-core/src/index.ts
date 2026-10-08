@@ -160,7 +160,7 @@ export {
   isControllerConstructor,
 } from "./libs/controllerDiscovery";
 export { extractRouteIR } from "./libs/extractRouteIR";
-export { toRuntimeRoutePath } from "./libs/routePath";
+export { toRouteMatchKey, toRuntimeRoutePath } from "./libs/routePath";
 export { getHttpParamFallbackSchema } from "./libs/schemaBuilder";
 export type {
   ParamIR,

@@ -10,6 +10,7 @@ import {
 } from "@croco/problems-core";
 import type { z } from "zod";
 import { extractRouteIR } from "./extractRouteIR";
+import { toRouteMatchKey } from "./routePath";
 import type { ProblemRegistryReferenceIR, ProblemResponseIR, RouteIR } from "./RouteIR";
 import {
   buildContractMonetizationGraph,
@@ -217,6 +218,7 @@ export function buildContractGraph(
 
   diagnostics.push(...validateUniqueControllerNames(graphControllers));
   diagnostics.push(...validateUniqueRouteIds(graphRoutes));
+  diagnostics.push(...validateUniqueRoutePaths(graphRoutes));
   diagnostics.push(...validateUniqueOperationIds(graphRoutes));
   const monetization = buildContractMonetizationGraph(graphRoutes, options.monetization);
   diagnostics.push(...monetization.diagnostics);
@@ -1198,6 +1200,32 @@ function validateRouteSchemas(route: ContractGraphRoute): ContractDiagnostic[] {
         ),
       );
     }
+  }
+
+  return diagnostics;
+}
+
+function validateUniqueRoutePaths(routes: readonly ContractGraphRoute[]): ContractDiagnostic[] {
+  const diagnostics: ContractDiagnostic[] = [];
+  const routePaths = new Map<string, ContractGraphRoute>();
+
+  for (const route of routes) {
+    const key = `${route.httpMethod.toUpperCase()} ${toRouteMatchKey(route.path)}`;
+    const existingRoute = routePaths.get(key);
+
+    if (existingRoute) {
+      diagnostics.push(
+        createRouteDiagnostic(
+          route,
+          "contract-route-duplicate-path",
+          "error",
+          `Route '${route.httpMethod.toUpperCase()} ${route.path}' matches the same path as '${existingRoute.httpMethod.toUpperCase()} ${existingRoute.path}' declared by ${existingRoute.controllerName}.${existingRoute.methodName}.`,
+        ),
+      );
+      continue;
+    }
+
+    routePaths.set(key, route);
   }
 
   return diagnostics;

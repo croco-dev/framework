@@ -31091,6 +31091,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "toRouteMatchKey",
+              "exportKind": "named",
+              "source": "./libs/routePath",
+              "declarationKind": "function"
+            },
+            {
               "name": "toRuntimeRoutePath",
               "exportKind": "named",
               "source": "./libs/routePath",
