@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { Problem, ProblemCategory } from "@croco/problems-core";
-import { extractRouteIR } from "@croco/protocols-core";
+import { buildContractGraph, extractRouteIR } from "@croco/protocols-core";
 import {
   Body,
   Controller,
@@ -826,3 +826,38 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 function isString(value: unknown): value is string {
   return typeof value === "string";
 }
+
+describe("renamed path parameters", () => {
+  it.each([
+    ["/:id", "/:userId"],
+    ["/:...path", "/:...rest"],
+  ])(
+    "rejects matching route templates %s and %s before bootstrap or generation",
+    (firstPath, secondPath) => {
+      @Controller("/users")
+      class UsersController {
+        @Get(firstPath)
+        @ResponseSchema(z.object({ id: z.string() }))
+        first() {
+          return { id: "1" };
+        }
+      }
+      @Controller("/users")
+      class LegacyController {
+        @Get(secondPath)
+        @ResponseSchema(z.object({ id: z.string() }))
+        second() {
+          return { id: "2" };
+        }
+      }
+      const controllers = [UsersController, LegacyController];
+      expect(() => createApp({ controllers, securityValidation: "off" }).getHono()).toThrow(
+        /Duplicate route/,
+      );
+      expect(buildContractGraph(controllers).diagnostics).toContainEqual(
+        expect.objectContaining({ code: "contract-route-duplicate-path", severity: "error" }),
+      );
+      expect(() => emitOpenAPI(controllers)).toThrow(/contract-route-duplicate-path/);
+    },
+  );
+});

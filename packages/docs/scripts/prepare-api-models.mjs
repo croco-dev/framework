@@ -44,11 +44,11 @@ function withoutRemovedGroupChildren(groups, removedIds) {
     .filter((group) => !group || typeof group !== "object" || group.children?.length !== 0);
 }
 
-function rewriteRemovedReferenceTargets(value, removedIds, removedSymbols, packageName) {
+function rewriteRemovedReferenceTargets(value, removedIds, removedSymbols, packageName, parentKey) {
   if (!value || typeof value !== "object") return;
   if (Array.isArray(value)) {
     for (const item of value)
-      rewriteRemovedReferenceTargets(item, removedIds, removedSymbols, packageName);
+      rewriteRemovedReferenceTargets(item, removedIds, removedSymbols, packageName, parentKey);
     return;
   }
 
@@ -57,17 +57,31 @@ function rewriteRemovedReferenceTargets(value, removedIds, removedSymbols, packa
     typeof value.target === "number" &&
     removedIds.has(value.target)
   ) {
-    const symbol = removedSymbols.get(value.target);
-    if (!symbol) {
-      throw new Error(
-        `TypeDoc model for ${packageName} cannot remap removed reflection ${value.target}`,
-      );
+    // A pruned `inheritedFrom` / `overwrites` numeric target points at a member
+    // clone inside a pruned re-export alias of the direct parent (for example
+    // `259`, the `FeaturePolicyPersistenceProblem` alias of `PolicyProblem` in
+    // the features-drizzle model). Rewriting it to the shared declaration
+    // symbol (for example `Problem.cause`) would let the merge resolve it to
+    // whichever sibling clone registered that symbol first
+    // (`BadRequestProblem.cause` from access-core), making links
+    // catalog-order dependent (see #3417). Keep it broken so merge revive
+    // (`ImplementsPlugin.analyzeInheritance`) recomputes the direct parent's
+    // member link from the surviving `extendedTypes` instead.
+    if (parentKey === "inheritedFrom" || parentKey === "overwrites") {
+      value.target = -1;
+    } else {
+      const symbol = removedSymbols.get(value.target);
+      if (!symbol) {
+        throw new Error(
+          `TypeDoc model for ${packageName} cannot remap removed reflection ${value.target}`,
+        );
+      }
+      value.target = symbol;
     }
-    value.target = symbol;
   }
 
-  for (const child of Object.values(value)) {
-    rewriteRemovedReferenceTargets(child, removedIds, removedSymbols, packageName);
+  for (const [key, child] of Object.entries(value)) {
+    rewriteRemovedReferenceTargets(child, removedIds, removedSymbols, packageName, key);
   }
 }
 
