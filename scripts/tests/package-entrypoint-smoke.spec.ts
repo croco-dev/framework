@@ -437,6 +437,28 @@ childProcess.spawnSync = (command, args, options) => {
     expect(result.stdout).toContain("summary checked=3 exempt=0 skippedPrivate=0");
   });
 
+  it("preserves packed mission validation identities across root and subpath", () => {
+    const root = createTempRoot();
+    writeMissionValidationPackage(root);
+
+    const result = runScript(root);
+
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+    expect(result.stdout).toContain("mission validation cjs identity ok");
+    expect(result.stdout).toContain("mission validation esm identity ok");
+  });
+
+  it.each(["cjs", "esm"] as const)("rejects duplicated packed mission %s identities", (mode) => {
+    const root = createTempRoot();
+    writeMissionValidationPackage(root, mode);
+
+    const result = runScript(root);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(`${mode} mission validation identity`);
+    expect(result.stderr).toContain("mission Problem identity");
+  });
+
   it("constructs the packed framework logger in development and production", () => {
     const root = createTempRoot();
     writeImportablePackage(root, "framework-logger", {
@@ -861,6 +883,40 @@ function writeImportablePackage(
       2,
     )}\n`,
   );
+}
+
+function writeMissionValidationPackage(root: string, duplicatedMode?: "cjs" | "esm"): void {
+  const declarationContent =
+    "export declare class MissionInvalidProblem extends Error {}\nexport declare function validateMissionDefinition(value: unknown): void;\n";
+  writeImportablePackage(root, "gamification-core", {
+    cjsContent: 'module.exports = require("./shared.js");\n',
+    esmContent: 'export * from "./shared.mjs";\n',
+    declarationContent,
+    exportsValue: {
+      ...defaultPublishExports(),
+      "./mission-validation": {
+        types: "./dist/mission-validation.d.ts",
+        import: "./dist/mission-validation.mjs",
+        require: "./dist/mission-validation.js",
+      },
+    },
+  });
+  const dist = join(root, "packages/gamification-core/dist");
+  const cjs =
+    "class MissionInvalidProblem extends Error {}\nfunction validateMissionDefinition() { throw new MissionInvalidProblem(); }\nexports.MissionInvalidProblem = MissionInvalidProblem;\nexports.validateMissionDefinition = validateMissionDefinition;\n";
+  const esm =
+    "export class MissionInvalidProblem extends Error {}\nexport function validateMissionDefinition() { throw new MissionInvalidProblem(); }\n";
+  writeFileSync(join(dist, "shared.js"), cjs);
+  writeFileSync(join(dist, "shared.mjs"), esm);
+  writeFileSync(
+    join(dist, "mission-validation.js"),
+    duplicatedMode === "cjs" ? cjs : 'module.exports = require("./shared.js");\n',
+  );
+  writeFileSync(
+    join(dist, "mission-validation.mjs"),
+    duplicatedMode === "esm" ? esm : 'export * from "./shared.mjs";\n',
+  );
+  writeFileSync(join(dist, "mission-validation.d.ts"), declarationContent);
 }
 
 function defaultPublishExports(): Record<string, unknown> {

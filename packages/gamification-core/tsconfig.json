@@ -5,6 +5,7 @@
   "compilerOptions": {
     "paths": {
       "@croco/gamification-core/reward-contracts": ["./src/reward-contracts.ts"]
-    }
+    },
+    "outDir": "./dist"
   }
 }

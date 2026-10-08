@@ -133,6 +133,33 @@ describe("normalize-packages.mjs", () => {
     expect(pkg.sideEffects).toEqual(["./dist/index.js", "./dist/index.mjs"]);
   });
 
+  it.each([true, false])(
+    "preserves mission event registration only when its source exists: %s",
+    (registered) => {
+      const root = createTempRoot();
+      const packagePath = writePackage(
+        root,
+        "gamification-drizzle",
+        publishablePackage("@croco/gamification-drizzle", {
+          devDependencies: { "drizzle-orm": "catalog:" },
+          peerDependencies: { "drizzle-orm": "catalog:" },
+        }),
+      );
+      if (registered) {
+        const eventPath = join(dirname(packagePath), "src/libs/MissionCompletedDomainEvent.ts");
+        mkdirSync(dirname(eventPath), { recursive: true });
+        writeFileSync(eventPath, "RegisterEvent()(MissionCompletedDomainEvent);\n");
+      }
+
+      const result = runScript(root, "--write");
+      const pkg = JSON.parse(readFileSync(packagePath, "utf-8"));
+
+      expect(result.status).toBe(0);
+      expect(pkg.sideEffects).toEqual(registered ? ["./dist/index.js", "./dist/index.mjs"] : false);
+      expect(runScript(root, "--check").status).toBe(0);
+    },
+  );
+
   it("rejects over-broad side-effect declarations", () => {
     const root = createTempRoot();
     writePackage(root, "broad", publishablePackage("@croco/broad", { sideEffects: ["./dist/**"] }));

@@ -1,7 +1,17 @@
-import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { parseDocument } from "yaml";
 import { describe, expect, it } from "vitest";
 
@@ -46,6 +56,167 @@ function parsedWorkflow(): Workflow {
   if (document.errors.length > 0)
     throw new Error(document.errors.map(({ message }) => message).join("\n"));
   return document.toJS() as Workflow;
+}
+
+function runMetadataFixture(event: "pull_request" | "push" | "workflow_dispatch", forged = false) {
+  const workspace = mkdtempSync(join(tmpdir(), "croco-ci-observer-history-"));
+  const upstream = join(workspace, "upstream");
+  const checkout = join(workspace, "observer");
+  mkdirSync(upstream);
+  const git = (...args: string[]) =>
+    execFileSync("git", args, {
+      cwd: upstream,
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
+    }).trim();
+  try {
+    git("init", "-b", "trunk");
+    git("config", "user.name", "Observer fixture");
+    git("config", "user.email", "observer@example.test");
+    writeFileSync(join(upstream, "base.txt"), "original base\n");
+    git("add", ".");
+    git("commit", "-m", "base");
+    const baseSha = git("rev-parse", "HEAD");
+    git("checkout", "-b", "pull-request");
+    writeFileSync(join(upstream, "feature.txt"), "original PR head\n");
+    git("add", ".");
+    git("commit", "-m", "original PR head");
+    const headSha = git("rev-parse", "HEAD");
+    git("checkout", "trunk");
+    git("merge", "--no-ff", "pull-request", "-m", "original candidate");
+    let candidateSha = event === "pull_request" ? git("rev-parse", "HEAD") : headSha;
+    if (forged) {
+      candidateSha = git(
+        "commit-tree",
+        `${baseSha}^{tree}`,
+        "-p",
+        baseSha,
+        "-p",
+        headSha,
+        "-m",
+        "forged candidate tree",
+      );
+    }
+    git("branch", "recorded-candidate", candidateSha);
+    git("reset", "--hard", baseSha);
+    writeFileSync(join(upstream, "later-trunk.txt"), "trunk advanced after the source run\n");
+    git("add", ".");
+    git("commit", "-m", "later trunk");
+    const currentBaseSha = git("rev-parse", "HEAD");
+    git("checkout", "pull-request");
+    writeFileSync(join(upstream, "feature.txt"), "repushed PR head\n");
+    git("add", ".");
+    git("commit", "-m", "later PR head");
+    const currentHeadSha = git("rev-parse", "HEAD");
+    git("checkout", "trunk");
+    git(
+      "clone",
+      "--depth=1",
+      "--single-branch",
+      "--branch",
+      "trunk",
+      pathToFileURL(upstream).href,
+      checkout,
+    );
+    mkdirSync(join(checkout, "scripts"));
+    for (const script of ["ci-verification-identity.mts", "verification-problem.mts"]) {
+      copyFileSync(join(ROOT_DIR, "scripts", script), join(checkout, "scripts", script));
+    }
+    const inputDir = join(checkout, "ci-observer-input");
+    mkdirSync(join(inputDir, "verification"), { recursive: true });
+    const identity = {
+      schemaVersion: "croco.ci-verification-identity/v1",
+      eventName: event,
+      baseSha,
+      headSha: event === "pull_request" ? headSha : candidateSha,
+      candidateSha,
+    };
+    writeFileSync(
+      join(inputDir, "verification/spine-evidence.json"),
+      JSON.stringify({ provenance: { verificationIdentity: identity } }),
+    );
+    const run = {
+      event,
+      head_sha: identity.headSha,
+      pull_requests: [
+        { number: 3047, base: { sha: currentBaseSha }, head: { sha: currentHeadSha } },
+      ],
+    };
+    writeFileSync(join(workspace, "run.json"), JSON.stringify(run));
+    writeFileSync(
+      join(workspace, "source.txt"),
+      Buffer.from("trusted source artifact\n").toString("base64"),
+    );
+    const ghPath = join(workspace, "gh");
+    writeFileSync(
+      ghPath,
+      `#!/usr/bin/env bash
+set -eo pipefail
+printf '%s\\t' "$@" >> "$API_LOG"
+printf '\\n' >> "$API_LOG"
+[ "$1" = api ] || exit 91
+endpoint=
+matching_ref=false
+for arg in "$@"; do
+  case "$arg" in
+    /repos/*) endpoint="$arg" ;;
+    "ref=$EXPECTED_CANDIDATE") matching_ref=true ;;
+  esac
+done
+case "$endpoint" in
+  /repos/croco/framework/actions/runs/1)
+    cat "$RUN_FIXTURE" ;;
+  '/repos/croco/framework/actions/runs/1/jobs?filter=latest&per_page=100')
+    printf '%s\\n' '{"jobs":[]}' ;;
+  '/repos/croco/framework/actions/runs/1/artifacts?per_page=100')
+    printf '%s\\n' '{"total_count":0,"artifacts":[]}' ;;
+  /repos/croco/framework/contents/package.json | /repos/croco/framework/contents/test-inventory.json | /repos/croco/framework/contents/.github/workflows/ci.yml)
+    [ "$matching_ref" = true ] || exit 92
+    cat "$SOURCE_FIXTURE" ;;
+  *) exit 93 ;;
+esac
+`,
+    );
+    chmodSync(ghPath, 0o755);
+    const metadata = parsedWorkflow().jobs?.observe?.steps?.find(
+      ({ name }) => name === "Read source run metadata",
+    );
+    const result = spawnSync("bash", ["-eo", "pipefail", "-c", metadata?.run ?? ""], {
+      cwd: checkout,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        DEFAULT_BRANCH: "trunk",
+        GH_TOKEN: "test-token",
+        GITHUB_REPOSITORY: "croco/framework",
+        SOURCE_RUN_ID: "1",
+        PATH: `${workspace}:${process.env.PATH ?? ""}`,
+        RUN_FIXTURE: join(workspace, "run.json"),
+        SOURCE_FIXTURE: join(workspace, "source.txt"),
+        API_LOG: join(workspace, "api.log"),
+        EXPECTED_CANDIDATE: candidateSha,
+      },
+    });
+    const readOutput = (name: string) =>
+      existsSync(join(inputDir, name)) ? readFileSync(join(inputDir, name), "utf8") : null;
+    return {
+      status: result.status,
+      stderr: result.stderr,
+      identity,
+      currentBaseSha,
+      currentHeadSha,
+      executionSha: readOutput("execution-sha.txt")?.trim(),
+      baseSha: readOutput("base-sha.txt")?.trim(),
+      verifiedIdentity: readOutput("verification-identity.json"),
+      sourcePackage: readOutput("source-package.json"),
+      apiCalls: readFileSync(join(workspace, "api.log"), "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => line.trimEnd().split("\t")),
+    };
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
 }
 
 describe("CI performance observer workflow", () => {
@@ -304,6 +475,36 @@ describe("CI performance observer workflow", () => {
     }
   });
 
+  it.each(["pull_request", "workflow_dispatch", "push"] as const)(
+    "executes metadata verification for an old %s run after trunk advances and its open PR is repushed",
+    (event) => {
+      const result = runMetadataFixture(event);
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.identity.baseSha).not.toBe(result.currentBaseSha);
+      expect(result.identity.headSha).not.toBe(result.currentHeadSha);
+      expect(result.executionSha).toBe(result.identity.candidateSha);
+      expect(result.baseSha).toBe(result.identity.baseSha);
+      expect(JSON.parse(result.verifiedIdentity ?? "null")).toEqual(result.identity);
+      expect(result.sourcePackage).toBe("trusted source artifact\n");
+      expect(result.apiCalls).toHaveLength(6);
+      expect(
+        result.apiCalls
+          .flat()
+          .some((arg) => arg.includes("/pulls/") || arg.includes("git/ref/pull/")),
+      ).toBe(false);
+    },
+  );
+
+  it("rejects a forged recorded candidate tree before reading source artifacts", () => {
+    const result = runMetadataFixture("pull_request", true);
+    expect(result.status, result.stderr).toBe(1);
+    expect(result.stderr).toContain("VERIFICATION_CANDIDATE_TREE_MISMATCH");
+    expect(result.executionSha).toBeUndefined();
+    expect(result.verifiedIdentity).toBeNull();
+    expect(result.sourcePackage).toBeNull();
+    expect(result.apiCalls).toHaveLength(3);
+  });
+
   it("rejects a recorded verification identity that is not a full commit OID before fetching it", () => {
     const metadata = parsedWorkflow().jobs?.observe?.steps?.find(
       ({ name }) => name === "Read source run metadata",
@@ -458,47 +659,122 @@ describe("CI performance observer workflow", () => {
     }
   });
 
-  it("fails a non-cancelled run whose split artifact set is missing a lane", () => {
-    const splitDownload = parsedWorkflow().jobs?.observe?.steps?.find(
-      ({ name }) => name === "Download exact split evidence when present",
-    );
-    expect(splitDownload?.run).toContain(
-      "Expected an exact five-artifact Phase B split evidence set.",
+  describe("split evidence download selection", () => {
+    const lanes = [
+      "core-verification",
+      "generated-apps",
+      "package-artifacts",
+      "coverage-security",
+      "split-validation-shadow",
+    ];
+    const artifactSet = (attempt: number, run = 42) =>
+      lanes.map((lane) => ({ name: `ci-lane-${lane}-${run}-${attempt}`, expired: false }));
+
+    function runDownload(artifacts: readonly { name: string; expired: boolean }[]) {
+      const splitDownload = parsedWorkflow().jobs?.observe?.steps?.find(
+        ({ name }) => name === "Download exact split evidence when present",
+      );
+      expect(splitDownload?.run).toBeTruthy();
+      const workspace = mkdtempSync(join(tmpdir(), "croco-ci-observer-split-"));
+      try {
+        mkdirSync(join(workspace, "ci-observer-input"), { recursive: true });
+        writeFileSync(
+          join(workspace, "ci-observer-input/artifacts.json"),
+          JSON.stringify({ total_count: artifacts.length, artifacts }),
+        );
+        const logPath = join(workspace, "downloads.jsonl");
+        writeFileSync(logPath, "");
+        const ghPath = join(workspace, "gh");
+        writeFileSync(
+          ghPath,
+          '#!/usr/bin/env bash\njq -cn --args \'$ARGS.positional\' -- "$@" >> "$DOWNLOAD_LOG"\n',
+        );
+        chmodSync(ghPath, 0o755);
+        const result = spawnSync("bash", ["-eo", "pipefail", "-c", splitDownload?.run ?? ""], {
+          cwd: workspace,
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            DOWNLOAD_LOG: logPath,
+            GH_TOKEN: "test-token",
+            GITHUB_REPOSITORY: "croco-dev/framework",
+            PATH: `${workspace}:${process.env.PATH ?? ""}`,
+            SOURCE_RUN_ATTEMPT: "2",
+            SOURCE_RUN_ID: "42",
+          },
+        });
+        return {
+          status: result.status,
+          stderr: result.stderr,
+          downloads: readFileSync(logPath, "utf8")
+            .split("\n")
+            .filter(Boolean)
+            .map((line) => JSON.parse(line) as string[]),
+        };
+      } finally {
+        rmSync(workspace, { force: true, recursive: true });
+      }
+    }
+
+    const expectedDownloads = artifactSet(2).map(({ name }) => [
+      "run",
+      "download",
+      "42",
+      "--repo",
+      "croco-dev/framework",
+      "--name",
+      name,
+      "--dir",
+      `ci-observer-input/split/${name}`,
+    ]);
+
+    it("downloads only the current attempt when both attempts have complete sets", () => {
+      expect(runDownload([...artifactSet(1), ...artifactSet(2)])).toEqual({
+        status: 0,
+        stderr: "",
+        downloads: expectedDownloads,
+      });
+    });
+
+    it("does not download old-attempt evidence when the current attempt has none", () => {
+      expect(runDownload(artifactSet(1))).toEqual({ status: 0, stderr: "", downloads: [] });
+    });
+
+    it("ignores artifacts for another run even when its attempt matches", () => {
+      expect(runDownload([...artifactSet(2, 142), ...artifactSet(2)])).toEqual({
+        status: 0,
+        stderr: "",
+        downloads: expectedDownloads,
+      });
+    });
+
+    it.each([
+      ["incomplete", artifactSet(2).slice(0, 4)],
+      ["duplicate", [...artifactSet(2), artifactSet(2)[0]]],
+      ["unknown lane", [...artifactSet(2), { name: "ci-lane-unknown-42-2", expired: false }]],
+    ])(
+      "rejects a current-attempt %s set even when an old complete set exists",
+      (_kind, current) => {
+        const result = runDownload([...artifactSet(1), ...current]);
+        expect(result.status).toBe(1);
+        expect(result.stderr).toContain(
+          "Expected an exact five-artifact Phase B split evidence set.",
+        );
+        expect(result.downloads).toEqual([]);
+      },
     );
 
-    const workspace = mkdtempSync(join(tmpdir(), "croco-ci-observer-split-"));
-    try {
-      mkdirSync(join(workspace, "ci-observer-input"), { recursive: true });
-      const artifacts = {
-        total_count: 4,
-        artifacts: [
-          { name: "ci-lane-core-verification-1-1", expired: false },
-          { name: "ci-lane-generated-apps-1-1", expired: false },
-          { name: "ci-lane-package-artifacts-1-1", expired: false },
-          { name: "ci-lane-coverage-security-1-1", expired: false },
-        ],
-      };
-      writeFileSync(join(workspace, "ci-observer-input/artifacts.json"), JSON.stringify(artifacts));
-      const ghPath = join(workspace, "gh");
-      writeFileSync(ghPath, "#!/usr/bin/env bash\nexit 99\n");
-      chmodSync(ghPath, 0o755);
-      const result = spawnSync("bash", ["-eo", "pipefail", "-c", splitDownload?.run ?? ""], {
-        cwd: workspace,
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          GH_TOKEN: "test-token",
-          PATH: `${workspace}:${process.env.PATH ?? ""}`,
-          SOURCE_RUN_ATTEMPT: "1",
-          SOURCE_RUN_ID: "1",
-        },
-      });
+    it("rejects an expired current artifact even when the old attempt is complete", () => {
+      const current = artifactSet(2).map((artifact, index) => ({
+        ...artifact,
+        expired: index === 0,
+      }));
+      const result = runDownload([...artifactSet(1), ...current]);
       expect(result.status).toBe(1);
       expect(result.stderr).toContain(
-        "Expected an exact five-artifact Phase B split evidence set.",
+        "Expected one unexpired ci-lane-core-verification-42-2 artifact.",
       );
-    } finally {
-      rmSync(workspace, { force: true, recursive: true });
-    }
+      expect(result.downloads).toEqual([]);
+    });
   });
 });

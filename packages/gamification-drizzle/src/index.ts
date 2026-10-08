@@ -19,3 +19,18 @@ export {
   rewardPoints,
   rewardBadges,
 } from "./libs/rewardSchema";
+
+export {
+  missionDefinitions,
+  missionInstances,
+  missionEvidence,
+  missionCompletions,
+} from "./libs/missionSchema";
+export { DrizzleMissionStore } from "./libs/DrizzleMissionStore";
+export type { DrizzleMissionClient } from "./libs/DrizzleMissionStore";
+export {
+  addGamificationMissions,
+  removeGamificationMissions,
+} from "./migrations/addGamificationMissions";
+export type { MissionMigrationClient } from "./migrations/addGamificationMissions";
+export { MissionCompletedDomainEvent } from "./libs/MissionCompletedDomainEvent";

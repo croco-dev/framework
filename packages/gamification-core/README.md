@@ -1,6 +1,6 @@
 # @croco/gamification-core
 
-Cooperative challenges and server-verified achievement rewards.
+Contracts for cooperative challenges, server-verified achievement rewards, and recurring missions driven by trusted value actions.
 
 ## Cooperative challenges
 
@@ -40,3 +40,19 @@ Publication requires actor, reason, expected revision, and idempotency key. Vers
 Use `@croco/gamification-drizzle` for real PostgreSQL persistence. See [the standalone reward example](../../examples/reward-policy/README.md). No Mission, Promotion, Referral, paid participation, cash lottery, or physical reward is required or supported.
 
 Validation: `pnpm --filter @croco/gamification-core test`, `typecheck`, `build`, and `lint`. Weighted boundary and invalid-weight tests use synthetic evidence; they do not establish behavioral effectiveness or production certification.
+
+## Recurring missions
+
+Explicit recurring missions for verified value actions. `MissionService` publishes immutable definitions and exposes `ingestEvidence`, `getProgress`, and `closePeriod`. It requires a store, authorization port, and evidence verifier. No global registration, reward delivery, or notification is created.
+
+Define `events` (unit `event`), `distinct-days` (unit `day`), or `streak` (unit `day`). Streak is the longest consecutive local-calendar-day run **within one period**; it resets for each day/week period. A weekly mission uses seven calendar days from its explicit local `anchor`; timezone transitions do not change that calendar rule. Targets and caps are positive integers, target cannot exceed cap, and day-based caps cannot exceed the period's day count.
+
+Each key includes mandatory app/environment/tenant scope, subject, mission version, episode, and period start date. `getProgress` returns a zero active instance only after the requested publication is found; storage errors propagate. Empty reads do not write. Definitions and timezones are pinned by immutable version. A return episode uses a separate `episodeId` and published version; old instances and numbers remain intact. The trusted action ledger binds each event to its intended mission/version/episode, and stores reject event reuse across versions or episodes for the same subject and mission.
+
+`ServerActionVerifier` compares evidence with a server-owned durable domain-action ledger, including scope, subject, mission/version/episode, action, event, occurrence time and reversal identity. Implement `MissionAuthorization` from authenticated server identity; do not construct trusted actors or ledger records from arbitrary client fields. The verifier never accepts a client completion count. Event payloads contain identifiers and timestamps only.
+
+`lateAcceptanceMs` fixes the acceptance deadline relative to the next local period boundary. `closePeriod` is allowed only when that window expires, including on DST days. Uncompleted instances stay active until explicitly closed, never failed. Corrections refer to an original event in the same aggregate. While open, corrections recalculate progress. After close, the required `closedCorrection` policy rejects them, records them without changing progress, or recalculates progress while leaving the period closed. Corrections can arrive after the ordinary event deadline. They keep historical completion receipts and never revoke rewards. UI must inspect current progress against target separately from historical completion.
+
+A store transaction must serialize aggregate updates and atomically persist receipts and the unique completion. Duplicate event IDs with identical payload replay; changed payload conflicts. Each period accepts at most 10,000 original receipts and one reversal per original, preserving correction capacity at the original limit. Further original events fail explicitly. Completion is emitted once through `completionCreated` and persisted on the instance; external dispatchers must use the stable completion ID for idempotency. `InMemoryMissionStore` is a unit-test adapter; use `@croco/gamification-drizzle` for durable PostgreSQL storage.
+
+Publication requires matching authenticated actor, reason, consecutive revision and idempotency key. Versions are immutable, and an idempotency key replays only the exact publication payload, including its original timestamp. Scope omission grants no access.

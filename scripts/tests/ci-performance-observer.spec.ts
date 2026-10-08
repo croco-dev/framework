@@ -822,6 +822,40 @@ describe("CI performance observer", () => {
     });
   });
 
+  it.each([false, true])(
+    "records only the monolith with earlier attempt artifacts (expired: %s)",
+    (expired) => {
+      const artifacts = phaseBArtifacts().artifacts.map(({ name }) => ({
+        name: name.replace(/-2$/, "-1"),
+        expired,
+      }));
+      const observations = createCiPerformanceObservations(
+        createInput({ artifacts: { total_count: artifacts.length, artifacts } }),
+      );
+
+      expect(observations).toEqual([createCiPerformanceObservation(createInput())]);
+    },
+  );
+
+  it("uses only current attempt split evidence after a full re-run", () => {
+    const previous = phaseBArtifacts().artifacts.map(({ name }) => ({
+      name: name.replace(/-2$/, "-1"),
+      expired: true,
+    }));
+    expect(
+      createCiPerformanceObservations(phaseBInput({ artifacts: phaseBArtifacts(previous) })),
+    ).toEqual(createCiPerformanceObservations(phaseBInput()));
+  });
+
+  it.each([1, 2, 3, 4])("rejects %i current attempt lane artifacts", (count) => {
+    const artifacts = phaseBArtifacts().artifacts.slice(0, count);
+    expect(() =>
+      createCiPerformanceObservations(
+        createInput({ artifacts: { total_count: artifacts.length, artifacts } }),
+      ),
+    ).toThrow(/split evidence artifact names/);
+  });
+
   it("emits the monolith and an exact five-record Phase B split observation", () => {
     const observations = createCiPerformanceObservations(phaseBInput());
 

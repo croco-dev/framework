@@ -330,6 +330,77 @@ describe("immutable CI verification identity", () => {
       ).toThrow(expect.objectContaining({ code: "VERIFICATION_CANDIDATE_PARENT_COUNT_MISMATCH" }));
     });
 
+    it("rejects a recorded candidate with valid parents but a forged merge tree", () => {
+      const { root, baseSha, headSha, candidateSha } = createPullRequestCandidate();
+      const expectedTree = git(root, "rev-parse", `${candidateSha}^{tree}`);
+      commit(root, "injected.txt", "not in either parent\n", "injected content");
+      const forgedTree = git(root, "rev-parse", "HEAD^{tree}");
+      const forgedCandidate = git(
+        root,
+        "commit-tree",
+        forgedTree,
+        "-p",
+        baseSha,
+        "-p",
+        headSha,
+        "-m",
+        "forged merge",
+      );
+
+      expect(() =>
+        verifyRecordedRun({
+          root,
+          eventName: "pull_request",
+          runHeadSha: headSha,
+          recorded: { baseSha, headSha, candidateSha: forgedCandidate },
+        }),
+      ).toThrow(
+        expect.objectContaining({
+          code: "VERIFICATION_CANDIDATE_TREE_MISMATCH",
+          category: "contract",
+          message: expect.stringContaining(
+            `tree ${forgedTree} must equal merged parent tree ${expectedTree}`,
+          ),
+        }),
+      );
+    });
+
+    it("reports conflicting parent trees instead of accepting a manually resolved candidate", () => {
+      const root = createRepository();
+      commit(root, "shared.txt", "initial\n", "initial");
+      git(root, "switch", "--create", "pull-request");
+      const headSha = commit(root, "shared.txt", "head\n", "head");
+      git(root, "switch", "trunk");
+      const baseSha = commit(root, "shared.txt", "base\n", "base");
+      const tree = git(root, "rev-parse", `${headSha}^{tree}`);
+      const candidateSha = git(
+        root,
+        "commit-tree",
+        tree,
+        "-p",
+        baseSha,
+        "-p",
+        headSha,
+        "-m",
+        "resolved",
+      );
+
+      expect(() =>
+        verifyRecordedRun({
+          root,
+          eventName: "pull_request",
+          runHeadSha: headSha,
+          recorded: { baseSha, headSha, candidateSha },
+        }),
+      ).toThrow(
+        expect.objectContaining({
+          code: "VERIFICATION_CANDIDATE_MERGE_TREE_READ_FAILED",
+          category: "input",
+          message: expect.stringContaining(`base ${baseSha} and head ${headSha}`),
+        }),
+      );
+    });
+
     it("rejects a recorded candidate whose base parent is outside the default branch", () => {
       const { root, baseSha, headSha } = createPullRequestCandidate();
       git(root, "switch", "--create", "side", baseSha);
