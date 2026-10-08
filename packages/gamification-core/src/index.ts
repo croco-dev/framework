@@ -58,3 +58,43 @@ export type {
   RewardEvidenceVerifier,
   RewardAccessVerifier,
 } from "./libs/types";
+
+export { MissionService } from "./libs/MissionService";
+export { InMemoryMissionStore } from "./libs/InMemoryMissionStore";
+export { ServerActionVerifier } from "./libs/ServerActionVerifier";
+export type {
+  MissionServerActionLedger,
+  MissionServerActionReceipt,
+} from "./libs/ServerActionVerifier";
+export {
+  MissionInvalidProblem,
+  MissionConflictProblem,
+  MissionAccessDeniedProblem,
+  MissionNotFoundProblem,
+  assertMissionScope,
+  validateMissionDefinition,
+  missionLocalDate,
+  missionDateStart,
+  missionDate,
+  missionPeriod,
+} from "./libs/MissionContracts";
+export type {
+  MissionScope,
+  MissionDefinition,
+  MissionPublication,
+  MissionAggregateKey,
+  MissionEvidence,
+  MissionEvidenceReceipt,
+  MissionCompletion,
+  MissionInstance,
+  MissionAggregate,
+  MissionStore,
+  MissionActor,
+  MissionAccessRequest,
+  MissionAuthorization,
+  MissionEvidenceVerifier,
+  MissionCommand,
+  MissionProgress,
+  MissionIngestResult,
+  MissionServiceOptions,
+} from "./libs/types";

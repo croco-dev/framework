@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Recurring missions · Croco</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: #f2f4ef;
+        color: #203126;
+        font:
+          16px/1.6 system-ui,
+          sans-serif;
+      }
+      main {
+        max-width: 1120px;
+        margin: auto;
+        padding: 48px 24px;
+      }
+      header {
+        max-width: 780px;
+        margin-bottom: 32px;
+      }
+      h1 {
+        font-size: clamp(2rem, 5vw, 3.3rem);
+        line-height: 1.1;
+        letter-spacing: -0.04em;
+      }
+      h2 {
+        font-size: 1.2rem;
+        margin-top: 0;
+      }
+      .eyebrow {
+        font-size: 0.75rem;
+        letter-spacing: 0.18em;
+        color: #4e7258;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+      }
+      section {
+        min-width: 0;
+        padding: 24px;
+        background: white;
+        border: 1px solid #d7dfd6;
+        border-radius: 14px;
+      }
+      label {
+        display: grid;
+        gap: 6px;
+        margin: 12px 0;
+        font-size: 0.9rem;
+      }
+      input,
+      select,
+      button {
+        font: inherit;
+        max-width: 100%;
+      }
+      input,
+      select {
+        min-width: 0;
+        width: 100%;
+        padding: 9px;
+        border: 1px solid #829586;
+        border-radius: 6px;
+        background: white;
+      }
+      button {
+        padding: 10px 18px;
+        border: 0;
+        border-radius: 6px;
+        background: #205437;
+        color: white;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      :focus-visible {
+        outline: 3px solid #ce8d22;
+        outline-offset: 3px;
+      }
+      progress {
+        width: 100%;
+        accent-color: #287145;
+      }
+      fieldset {
+        min-width: 0;
+        border: 1px solid #d7dfd6;
+        border-radius: 8px;
+      }
+      .operations {
+        margin-top: 24px;
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 18px;
+      }
+      aside {
+        background: #d6edd7;
+        padding: 18px;
+        margin-top: 20px;
+        border-radius: 8px;
+      }
+      p {
+        overflow-wrap: anywhere;
+      }
+      [role="alert"] {
+        color: #9a2e23;
+      }
+      @media (max-width: 760px) {
+        main {
+          padding: 24px 16px;
+        }
+        .grid,
+        .operations {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script src="/browser.js"></script>
+  </body>
+</html>

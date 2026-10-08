@@ -93,3 +93,126 @@ export interface RewardAccessVerifier {
   authorizeSubject(scope: RewardScope, subject: string): Promise<boolean>;
   authorizePublication(publication: RewardPublication): Promise<boolean>;
 }
+
+export type MissionScope = { appId: string; environmentId: string; tenantId: string };
+export type MissionDefinition = {
+  id: string;
+  version: number;
+  actionId: string;
+  countMode: "events" | "distinct-days" | "streak";
+  unit: "event" | "day";
+  timezone: string;
+  period: "day" | "week";
+  /** Local calendar date YYYY-MM-DD; weekly periods repeat every seven calendar days. */
+  anchor: string;
+  target: number;
+  perPeriodCap: number;
+  lateAcceptanceMs: number;
+  closedCorrection: "reject" | "record-only" | "recalculate";
+};
+export type MissionPublication = {
+  scope: MissionScope;
+  definition: MissionDefinition;
+  actorId: string;
+  reason: string;
+  revision: number;
+  idempotencyKey: string;
+  publishedAt: string;
+};
+export type MissionAggregateKey = {
+  scope: MissionScope;
+  subjectId: string;
+  missionId: string;
+  version: number;
+  episodeId: string;
+  periodKey: string;
+};
+export type MissionEvidence = {
+  eventId: string;
+  actionId: string;
+  occurredAt: string;
+  reversalOf?: string;
+};
+export type MissionEvidenceReceipt = MissionEvidence & {
+  acceptedAt: string;
+  periodKey: string;
+  activityDate: string;
+  effect: "counted" | "record-only";
+};
+export type MissionCompletion = {
+  id: string;
+  periodKey: string;
+  achievedAt: string;
+  eventId: string;
+};
+export type MissionInstance = {
+  periodKey: string;
+  startDate: string;
+  endDate: string;
+  progress: number;
+  state: "active" | "achieved" | "closed";
+  activityDates: string[];
+  closedAt?: string;
+  completion?: MissionCompletion;
+};
+export type MissionAggregate = {
+  key: MissionAggregateKey;
+  definition: MissionDefinition;
+  instances: Record<string, MissionInstance>;
+  receipts: Record<string, MissionEvidenceReceipt>;
+  completions: Record<string, MissionCompletion>;
+};
+export interface MissionStore {
+  /** Serialize per key and atomically persist aggregate, receipts and unique completions. Roll back thrown operations. */
+  transaction<T>(
+    key: MissionAggregateKey,
+    operation: (current: MissionAggregate | undefined) => {
+      aggregate: MissionAggregate;
+      result: T;
+    },
+  ): Promise<T>;
+  read(key: MissionAggregateKey): Promise<MissionAggregate | undefined>;
+  /** Immutable versions; matching idempotency replays, conflicting payload/revision rejects. */
+  publish(publication: MissionPublication): Promise<MissionPublication>;
+  getDefinition(
+    scope: MissionScope,
+    missionId: string,
+    version: number,
+  ): Promise<MissionPublication | undefined>;
+}
+export type MissionActor = { id: string };
+export type MissionAccessRequest = {
+  actor: MissionActor;
+  scope: MissionScope;
+  subjectId?: string;
+  operation: "read" | "write" | "publish";
+};
+export interface MissionAuthorization {
+  authorize(request: MissionAccessRequest): Promise<boolean>;
+}
+export interface MissionEvidenceVerifier {
+  verify(input: {
+    key: MissionAggregateKey;
+    actor: MissionActor;
+    evidence: MissionEvidence;
+  }): Promise<boolean>;
+}
+export type MissionCommand = { actor: MissionActor; key: MissionAggregateKey };
+export type MissionProgress = {
+  key: MissionAggregateKey;
+  definition: MissionDefinition;
+  instance: MissionInstance;
+  remaining: number;
+};
+export type MissionIngestResult = {
+  progress: MissionProgress;
+  receipt: MissionEvidenceReceipt;
+  duplicate: boolean;
+  completionCreated: boolean;
+};
+export type MissionServiceOptions = {
+  store: MissionStore;
+  authorization: MissionAuthorization;
+  verifier: MissionEvidenceVerifier;
+  clock?: () => Date;
+};

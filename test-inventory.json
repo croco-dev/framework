@@ -236,6 +236,12 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/MissionConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/OfferConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -489,6 +495,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/MetricInspector.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/MissionConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -2786,6 +2798,12 @@
       "owner": "@croco/frontend-react"
     },
     {
+      "path": "packages/frontend-react/src/tests/MissionProgress.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
       "path": "packages/frontend-react/src/tests/OfferCard.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -2858,6 +2876,12 @@
       "owner": "@croco/gamification-core"
     },
     {
+      "path": "packages/gamification-core/src/tests/MissionService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/gamification-core"
+    },
+    {
       "path": "packages/gamification-core/src/tests/RewardPolicy.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -2882,6 +2906,12 @@
       "owner": "@croco/gamification-drizzle"
     },
     {
+      "path": "packages/gamification-drizzle/src/tests/DrizzleMissionStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/gamification-drizzle"
+    },
+    {
       "path": "packages/gamification-drizzle/src/tests/DrizzleRewardStore.postgres.spec.ts",
       "lane": "live",
       "qualifiers": [],
@@ -2889,6 +2919,18 @@
     },
     {
       "path": "packages/gamification-drizzle/src/tests/DrizzleRewardStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/gamification-drizzle"
+    },
+    {
+      "path": "packages/gamification-drizzle/src/tests/MissionCompletedDomainEvent.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/gamification-drizzle"
+    },
+    {
+      "path": "packages/gamification-drizzle/src/tests/MissionMigration.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/gamification-drizzle"
