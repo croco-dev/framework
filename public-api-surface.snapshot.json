@@ -21677,30 +21677,6 @@
               "declarationKind": "const"
             },
             {
-              "name": "missionCompletions",
-              "exportKind": "declaration",
-              "source": "./libs/schema",
-              "declarationKind": "const"
-            },
-            {
-              "name": "missionDefinitions",
-              "exportKind": "declaration",
-              "source": "./libs/schema",
-              "declarationKind": "const"
-            },
-            {
-              "name": "missionEvidence",
-              "exportKind": "declaration",
-              "source": "./libs/schema",
-              "declarationKind": "const"
-            },
-            {
-              "name": "missionInstances",
-              "exportKind": "declaration",
-              "source": "./libs/schema",
-              "declarationKind": "const"
-            },
-            {
               "name": "ChallengePersistenceProblem",
               "exportKind": "named",
               "source": "./libs/ChallengePersistenceProblem",
@@ -21759,6 +21735,30 @@
               "exportKind": "named",
               "source": "./migrations/gamificationSchema",
               "declarationKind": "function"
+            },
+            {
+              "name": "missionCompletions",
+              "exportKind": "named",
+              "source": "./libs/missionSchema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "missionDefinitions",
+              "exportKind": "named",
+              "source": "./libs/missionSchema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "missionEvidence",
+              "exportKind": "named",
+              "source": "./libs/missionSchema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "missionInstances",
+              "exportKind": "named",
+              "source": "./libs/missionSchema",
+              "declarationKind": "const"
             },
             {
               "name": "removeGamificationMissions",

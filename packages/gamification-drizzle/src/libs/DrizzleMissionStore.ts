@@ -18,7 +18,7 @@ import {
   missionDefinitions,
   missionEvidence,
   missionInstances,
-} from "./schema";
+} from "./missionSchema";
 
 export type DrizzleMissionClient = DrizzleDb & NodePgDatabase<Record<string, never>>;
 const keyValues = (key: MissionAggregateKey) => ({

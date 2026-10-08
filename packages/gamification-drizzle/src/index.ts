@@ -21,6 +21,12 @@ export {
 } from "./libs/rewardSchema";
 
 
+export {
+  missionDefinitions,
+  missionInstances,
+  missionEvidence,
+  missionCompletions,
+} from "./libs/missionSchema";
 export { DrizzleMissionStore } from "./libs/DrizzleMissionStore";
 export type { DrizzleMissionClient } from "./libs/DrizzleMissionStore";
 export {
