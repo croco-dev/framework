@@ -68,13 +68,23 @@ function isCacheableResponse(response: Response): boolean {
     return false;
   }
 
-  const cacheControl = response.headers.get("cache-control")?.toLowerCase() ?? "";
-  if (cacheControl.includes("private") || cacheControl.includes("no-store")) {
+  const directives = (response.headers.get("cache-control") ?? "")
+    .toLowerCase()
+    .split(",")
+    .map((part) => part.trim().split("=")[0]?.trim() ?? "");
+  if (directives.includes("private") || directives.includes("no-store")) {
     return false;
   }
 
-  const vary = response.headers.get("vary")?.toLowerCase() ?? "";
-  if (vary.includes("cookie") || vary.includes("authorization")) {
+  const varyTokens = (response.headers.get("vary") ?? "")
+    .toLowerCase()
+    .split(",")
+    .map((part) => part.trim());
+  if (
+    varyTokens.includes("*") ||
+    varyTokens.includes("cookie") ||
+    varyTokens.includes("authorization")
+  ) {
     return false;
   }
 

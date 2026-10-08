@@ -45,6 +45,11 @@ export function createPrivateInput<T>(value: T): PersonalizedPrivateInput<T> {
 export type PersonalizedFragmentLoader<T> = {
   readonly zone: Exclude<PersonalizedCacheZone, "private">;
   readonly domain?: string;
+  /**
+   * Fragment bytes must be the JSON serialization of `value`: cache hits
+   * rehydrate with `JSON.parse(bytes)`, so HTML or other non-JSON payloads
+   * are rejected with a registered Problem instead of parsed.
+   */
   readonly load: () => Promise<{ readonly value: T; readonly bytes: string }>;
 };
 
@@ -112,6 +117,7 @@ export type PersonalizedFragmentInspectEvent = {
 
 type StoredFragment = {
   readonly bytes: string;
+  readonly value: unknown;
   readonly valueHash: string;
   readonly cachedAtMs: number;
   readonly revision: string;
@@ -253,8 +259,11 @@ export async function loadPersonalizedFragments<TPublic, TVariant, TPrivate>(
 
 /**
  * Compose a personalized response from already-resolved fragment inputs.
- * Private input is branded so public values cannot flow into it by accident,
- * and the composed response is never stored in a shared cache.
+ * Private input is branded so public values cannot flow into it by accident.
+ * Callers must send the result with a non-cacheable response signal
+ * (`Cache-Control: private, no-store` or an identity `Vary`); composed
+ * bodies combine shared fragments with request-local values and this
+ * helper has no shared-cache handle, so it cannot enforce that marking.
  */
 export function renderPersonalizedResponse<TPublic, TVariant, TPrivate>(input: {
   readonly fragments: PersonalizedRenderInput<TPublic, TVariant, TPrivate>;
@@ -346,7 +355,7 @@ async function resolveFragment<T>(input: {
     input.inspect?.({ ...base, outcome: "bypass", reason: "unauthorized" });
     const fresh = await fillFragment({ ...input, signal: input.signal });
     input.signal?.throwIfAborted();
-    return { value: parseValue<T>(fresh.bytes), source: "render" };
+    return { value: parseValue<T>(fresh.bytes, fresh.value), source: "render" };
   }
 
   let filled = false;
@@ -371,7 +380,7 @@ async function resolveFragment<T>(input: {
     const stale = (await readStaleIfAllowed(input)) ?? (await readStaleDirect(input));
     if (stale !== undefined) {
       input.inspect?.({ ...base, outcome: "hit", reason: "stale-if-error" });
-      return { value: parseValue<T>(stale.bytes), source: "cache" };
+      return { value: parseValue<T>(stale.bytes, stale.value), source: "cache" };
     }
     throw error;
   }
@@ -381,11 +390,11 @@ async function resolveFragment<T>(input: {
     // request-local without treating it as a successful shared hit.
     input.inspect?.({ ...base, outcome: "bypass", reason: "cancelled" });
     const fresh = await fillFragment(input);
-    return { value: parseValue<T>(fresh.bytes), source: "render" };
+    return { value: parseValue<T>(fresh.bytes, fresh.value), source: "render" };
   }
   if (filled) {
     input.inspect?.({ ...base, outcome: "miss", reason: "miss" });
-    return { value: parseValue<T>(stored.bytes), source: "render" };
+    return { value: parseValue<T>(stored.bytes, stored.value), source: "render" };
   }
 
   const freshness = isPersonalizedCacheFresh(
@@ -411,7 +420,7 @@ async function resolveFragment<T>(input: {
     if (freshness.reason.startsWith("stale-while-revalidate")) {
       void revalidateFragment(input).catch(() => {});
     }
-    return { value: parseValue<T>(stored.bytes), source: "cache" };
+    return { value: parseValue<T>(stored.bytes, stored.value), source: "cache" };
   }
 
   input.inspect?.({ ...base, outcome: "miss", reason: freshness.reason });
@@ -421,14 +430,14 @@ async function resolveFragment<T>(input: {
     await input.store.getOrSet<StoredFragment>(input.key, async () => fresh, {
       ttlMs: retention,
     });
-    return { value: parseValue<T>(fresh.bytes), source: "render" };
+    return { value: parseValue<T>(fresh.bytes, fresh.value), source: "render" };
   } catch (error) {
     // Genuinely expired with no SWR: still allow one bounded stale-if-error
     // read of the previous full fragment when the domain permits it.
     const stale = (await readStaleIfAllowed(input)) ?? (await readStaleDirect(input));
     if (stale !== undefined) {
       input.inspect?.({ ...base, outcome: "hit", reason: "stale-if-error" });
-      return { value: parseValue<T>(stale.bytes), source: "cache" };
+      return { value: parseValue<T>(stale.bytes, stale.value), source: "cache" };
     }
     throw error;
   }
@@ -450,8 +459,19 @@ async function fillFragment<T>(input: {
       reason: "empty-fragment",
     });
   }
+  try {
+    JSON.parse(loaded.bytes);
+  } catch {
+    throw new PersonalizedFragmentProblem(
+      "Fragment bytes must be the JSON serialization of value.",
+      {
+        reason: "fragment-bytes-not-json",
+      },
+    );
+  }
   return {
     bytes: loaded.bytes,
+    value: loaded.value,
     valueHash: hashKey(loaded.bytes),
     cachedAtMs: input.nowMs,
     revision: input.expectedRevision,
@@ -472,7 +492,7 @@ async function revalidateFragment<T>(input: {
     const fresh = await fillFragment(input);
     await input.store.invalidate(input.key);
     await input.store.getOrSet<StoredFragment>(input.key, async () => fresh, {
-      ttlMs: input.freshness.ttlMs + (input.freshness.staleWhileRevalidateMs ?? 0),
+      ttlMs: retentionMs(input.freshness),
     });
   } catch (error) {
     void error;
@@ -609,8 +629,18 @@ function retentionMs(freshness: PersonalizedCacheFreshnessPolicy): number {
   );
 }
 
-function parseValue<T>(bytes: string): T {
-  return JSON.parse(bytes) as T;
+function parseValue<T>(bytes: string, value: unknown): T {
+  try {
+    return JSON.parse(bytes) as T;
+  } catch {
+    // fillFragment rejects non-JSON bytes at write time, so a parse failure
+    // here means the shared store was seeded outside this module; fail
+    // through the registered Problem instead of leaking a raw SyntaxError.
+    void value;
+    throw new PersonalizedFragmentProblem("Stored fragment bytes are not JSON-serialized.", {
+      reason: "fragment-bytes-not-json",
+    });
+  }
 }
 
 function assertTrustedVariant(

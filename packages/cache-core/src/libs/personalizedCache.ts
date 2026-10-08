@@ -75,7 +75,8 @@ export type ResolvedPersonalizedCacheZonePolicy = {
 export type PersonalizedCachePolicy = {
   readonly scope: PersonalizedCacheDimensionScope;
   readonly revision: string;
-  readonly zones: Readonly<Record<PersonalizedCacheZone, ResolvedPersonalizedCacheZonePolicy>>;
+  readonly zones: Readonly<Record<"public", ResolvedPersonalizedCacheZonePolicy>> &
+    Readonly<Partial<Record<"variant" | "private", ResolvedPersonalizedCacheZonePolicy>>>;
   readonly freshness: PersonalizedCacheFreshnessPolicy;
 };
 
@@ -161,7 +162,7 @@ export function definePersonalizedCachePolicy(
       public: publicZone,
       ...(variantZone === undefined ? {} : { variant: variantZone }),
       ...(privateZone === undefined ? {} : { private: privateZone }),
-    } as Readonly<Record<PersonalizedCacheZone, ResolvedPersonalizedCacheZonePolicy>>,
+    },
   };
 }
 
@@ -390,6 +391,11 @@ function assertDimension(name: string, value: string): void {
       `Unsupported cache dimension '${name}'. Only region-local dimensions influence cache identity.`,
     );
   }
+  if (name === "representation") {
+    throw new PersonalizedCachePolicyProblem(
+      "Reserved cache dimension 'representation'. Pass the representation argument instead.",
+    );
+  }
   assertSegment(value, `dimensions[${name}]`);
 }
 
@@ -433,7 +439,11 @@ function normalizeFreshness(
 }
 
 function stableSegment(value: string): string {
-  return value;
+  return encodeURIComponent(value);
+}
+
+function encodeDependencyPart(value: string): string {
+  return encodeURIComponent(value);
 }
 
 function encodeDimensions(dimensions: Readonly<Record<string, string>>): string {
@@ -450,6 +460,9 @@ function encodeDependencies(dependencies: readonly PersonalizedCacheDependency[]
   }
   return [...dependencies]
     .sort((left, right) => (left.name < right.name ? -1 : left.name > right.name ? 1 : 0))
-    .map((dependency) => `${dependency.name}@${dependency.revision}`)
+    .map(
+      (dependency) =>
+        `${encodeDependencyPart(dependency.name)}@${encodeDependencyPart(dependency.revision)}`,
+    )
     .join(",");
 }

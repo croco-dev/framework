@@ -67,6 +67,47 @@ describe("personalized cache policy", () => {
     );
   });
 
+  it("encodes delimiter-bearing segments so distinct scopes cannot collide", () => {
+    const colliding = definePersonalizedCachePolicy({
+      scope,
+      revision: "content.7-policy.3-deploy.9",
+      zones: [
+        {
+          zone: "public",
+          dimensions: { region: "kr:x", currency: "KRW", pricePolicy: "standard" },
+          dependencies: [{ name: "product:sku-42", revision: "content.7" }],
+        },
+        { zone: "private" },
+      ],
+    });
+    const baseline = definePersonalizedCachePolicy({
+      scope,
+      revision: "content.7-policy.3-deploy.9",
+      zones: [
+        {
+          zone: "public",
+          dimensions: { region: "kr", currency: "KRW:x", pricePolicy: "standard" },
+          dependencies: [{ name: "product:sku-42", revision: "content.7" }],
+        },
+        { zone: "private" },
+      ],
+    });
+    expect(createPersonalizedCacheKey(colliding, "public")).not.toBe(
+      createPersonalizedCacheKey(baseline, "public"),
+    );
+    expect(createPersonalizedCacheKey(colliding, "public")).toContain("%3A");
+  });
+
+  it("rejects caller-supplied representation dimensions", () => {
+    expect(() =>
+      definePersonalizedCachePolicy({
+        scope,
+        revision: "r1",
+        zones: [{ zone: "public", dimensions: { representation: "html" } }],
+      }),
+    ).toThrow(PersonalizedCachePolicyProblem);
+  });
+
   it("rejects identity-bearing dimensions and public variants", () => {
     expect(() =>
       definePersonalizedCachePolicy({
@@ -101,8 +142,8 @@ describe("personalized cache policy", () => {
       ],
     });
 
-    expect(overflow.zones["variant"].bypassSharedCache).toBe(true);
-    expect(overflow.zones["variant"].bypassReason).toContain("dimension-cardinality-exceeded");
+    expect(overflow.zones["variant"]?.bypassSharedCache).toBe(true);
+    expect(overflow.zones["variant"]?.bypassReason).toContain("dimension-cardinality-exceeded");
   });
 
   it("evaluates revision, dependency, and no-stale freshness", () => {
