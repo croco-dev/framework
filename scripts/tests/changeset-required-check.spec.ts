@@ -668,6 +668,63 @@ describe("changeset-required-check.mts", () => {
     expect(result.stdout).toContain("packages/public/templates/addons/AGENTS.md");
   });
 
+  describe("package build inputs", () => {
+    it.each([
+      "tsup.config.ts",
+      "tsconfig.json",
+      "LICENSE",
+      "schemas/event.schema.json",
+      "scripts/copy-schemas.mjs",
+      "scripts/generate-routes.js",
+      "migrations/0001.sql",
+      "styles.css",
+      "runtime-profiles.json",
+      "drizzle.ts",
+      "custom-build-input.json",
+      "templates/vitest.config.ts",
+    ])("requires release metadata for %s and accepts owning-package coverage", (relativeFile) => {
+      const repo = createTempRepo();
+      checkoutBranch(repo, "fix/build-input");
+      const file = `packages/public/${relativeFile}`;
+      commitFile(repo, file, "changed build input", "fix: change package build input");
+
+      const uncovered = runScript(repo);
+
+      expect(uncovered.status).toBe(1);
+      expect(uncovered.stdout).toContain("@croco/public");
+      expect(uncovered.stdout).toContain(file);
+
+      commitFile(
+        repo,
+        ".changeset/build-input.md",
+        "---\n'@croco/public': patch\n---\n\nUpdate published build inputs.\n",
+        "chore: add changeset",
+      );
+
+      const covered = runScript(repo);
+
+      expect(covered.status).toBe(0);
+      expect(covered.stdout).toContain(
+        "changed changesets cover all affected publishable packages",
+      );
+    });
+
+    it.each([
+      "vitest.config.ts",
+      "vitest.config.mts",
+      "vitest.setup.ts",
+      "vitest.setup.js",
+      "tsconfig.contract-strict.json",
+      "test-fixtures/app/input.json",
+    ])("passes for test-only configuration or fixtures in %s", (relativeFile) => {
+      const repo = createTempRepo();
+      checkoutBranch(repo, "test/configuration");
+      commitFile(repo, `packages/public/${relativeFile}`, "{}", "test: adjust test input");
+
+      expect(runScript(repo).status).toBe(0);
+    });
+  });
+
   it("passes for public package docs-only changes", () => {
     const repo = createTempRepo();
     checkoutBranch(repo, "docs/package-readme");
