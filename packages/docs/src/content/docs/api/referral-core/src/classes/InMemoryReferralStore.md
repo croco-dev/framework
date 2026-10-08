@@ -150,6 +150,26 @@ readonly [`ReferralBenefitIntentStatus`](/api/referral-core/src/type-aliases/ref
 
 ---
 
+### countClicksForProgram()
+
+> **countClicksForProgram**(`programId`): `Promise`\<`number`\>
+
+#### Parameters
+
+##### programId
+
+`string`
+
+#### Returns
+
+`Promise`\<`number`\>
+
+#### Implementation of
+
+[`ReferralTx`](/api/referral-core/src/interfaces/referraltx/).[`countClicksForProgram`](/api/referral-core/src/interfaces/referraltx/#countclicksforprogram)
+
+---
+
 ### countSubjectReceipts()
 
 > **countSubjectReceipts**(`familyId`, `benefitCycleId`, `subject`, `states`): `Promise`\<`number`\>
@@ -445,6 +465,26 @@ Test and console support: read-only audit trail in insertion order.
 #### Implementation of
 
 [`ReferralTx`](/api/referral-core/src/interfaces/referraltx/).[`listBenefitIntentsForAttribution`](/api/referral-core/src/interfaces/referraltx/#listbenefitintentsforattribution)
+
+---
+
+### listLinks()
+
+> **listLinks**(`filter`): `Promise`\<readonly [`ReferralLink`](/api/referral-core/src/type-aliases/referrallink/)[]\>
+
+#### Parameters
+
+##### filter
+
+[`ListReferralLinksFilter`](/api/referral-core/src/type-aliases/listreferrallinksfilter/)
+
+#### Returns
+
+`Promise`\<readonly [`ReferralLink`](/api/referral-core/src/type-aliases/referrallink/)[]\>
+
+#### Implementation of
+
+[`ReferralTx`](/api/referral-core/src/interfaces/referraltx/).[`listLinks`](/api/referral-core/src/interfaces/referraltx/#listlinks)
 
 ---
 

@@ -15,7 +15,7 @@ Reports a benefit attempt that failed without moving value.
 
 ### Constructor
 
-> **new ReferralBenefitFailedProblem**(`attributionId`, `side`, `reason`): `ReferralBenefitFailedProblem`
+> **new ReferralBenefitFailedProblem**(`attributionId`, `side`, `reason`, `options?`): `ReferralBenefitFailedProblem`
 
 #### Parameters
 
@@ -30,6 +30,12 @@ Reports a benefit attempt that failed without moving value.
 ##### reason
 
 `string`
+
+##### options?
+
+###### cause?
+
+`Error`
 
 #### Returns
 

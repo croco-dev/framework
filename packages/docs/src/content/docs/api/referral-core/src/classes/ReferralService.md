@@ -23,6 +23,48 @@ title: "ReferralService"
 
 ## Methods
 
+### cancelBenefitSide()
+
+> **cancelBenefitSide**(`input`): `Promise`\<[`ReferralAttribution`](/api/referral-core/src/type-aliases/referralattribution/)\>
+
+Cancels a pending benefit side before any grant completed. Granted or
+already terminal sides never cancel; an explicit policy reversal owns
+completed grants instead.
+
+#### Parameters
+
+##### input
+
+###### actorId
+
+`string`
+
+###### attributionId
+
+`string`
+
+###### now?
+
+`Date`
+
+###### policy
+
+`string`
+
+###### reason
+
+`string`
+
+###### side
+
+[`ReferralBenefitSide`](/api/referral-core/src/type-aliases/referralbenefitside/)
+
+#### Returns
+
+`Promise`\<[`ReferralAttribution`](/api/referral-core/src/type-aliases/referralattribution/)\>
+
+---
+
 ### claimAttribution()
 
 > **claimAttribution**(`input`): `Promise`\<[`ClaimReferralResult`](/api/referral-core/src/type-aliases/claimreferralresult/)\>
@@ -305,6 +347,54 @@ budget. Every decision preserves actor, reason, and an audit trail.
 ###### reason
 
 `string`
+
+#### Returns
+
+`Promise`\<[`ReferralAttribution`](/api/referral-core/src/type-aliases/referralattribution/)\>
+
+---
+
+### returnBenefitSide()
+
+> **returnBenefitSide**(`input`): `Promise`\<[`ReferralAttribution`](/api/referral-core/src/type-aliases/referralattribution/)\>
+
+Returns a completed benefit through an explicit compensating fulfillment
+reversal. The reversal posts a new ledger entry keyed by the return
+idempotency key; the original grant receipt stays on the intent while the
+policy and the return receipt record why value moved back. Other
+subjects' confirmed benefits are never touched implicitly.
+
+#### Parameters
+
+##### input
+
+###### actorId
+
+`string`
+
+###### attributionId
+
+`string`
+
+###### now?
+
+`Date`
+
+###### policy
+
+`string`
+
+###### reason
+
+`string`
+
+###### returnIdempotencyKey?
+
+`string`
+
+###### side
+
+[`ReferralBenefitSide`](/api/referral-core/src/type-aliases/referralbenefitside/)
 
 #### Returns
 

@@ -29,6 +29,22 @@ PostgreSQL adapter for a Drizzle node-postgres execute/transaction boundary.
 
 ## Methods
 
+### countClicksForProgram()
+
+> **countClicksForProgram**(`programId`): `Promise`\<`number`\>
+
+#### Parameters
+
+##### programId
+
+`string`
+
+#### Returns
+
+`Promise`\<`number`\>
+
+---
+
 ### getAttribution()
 
 > **getAttribution**(`attributionId`): `Promise`\<[`ReferralAttribution`](/api/referral-core/src/type-aliases/referralattribution/) \| `null`\>
@@ -190,6 +206,22 @@ PostgreSQL adapter for a Drizzle node-postgres execute/transaction boundary.
 #### Implementation of
 
 [`ReferralStore`](/api/referral-core/src/interfaces/referralstore/).[`listBenefitIntents`](/api/referral-core/src/interfaces/referralstore/#listbenefitintents)
+
+---
+
+### listLinks()
+
+> **listLinks**(`filter`): `Promise`\<readonly [`ReferralLink`](/api/referral-core/src/type-aliases/referrallink/)[]\>
+
+#### Parameters
+
+##### filter
+
+[`ListReferralLinksFilter`](/api/referral-core/src/type-aliases/listreferrallinksfilter/)
+
+#### Returns
+
+`Promise`\<readonly [`ReferralLink`](/api/referral-core/src/type-aliases/referrallink/)[]\>
 
 ---
 

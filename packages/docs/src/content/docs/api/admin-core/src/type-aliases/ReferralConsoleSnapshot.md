@@ -27,6 +27,12 @@ title: "ReferralConsoleSnapshot"
 
 ---
 
+### links
+
+> `readonly` **links**: readonly [`ReferralConsoleLinkView`](/api/admin-core/src/type-aliases/referralconsolelinkview/)[]
+
+---
+
 ### nextShareCycle
 
 > `readonly` **nextShareCycle**: `string`

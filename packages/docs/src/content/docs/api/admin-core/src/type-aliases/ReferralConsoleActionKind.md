@@ -5,4 +5,4 @@ prev: false
 title: "ReferralConsoleActionKind"
 ---
 
-> **ReferralConsoleActionKind** = `"register-program"` \| `"expire-attributions"` \| `"resolve-attribution"`
+> **ReferralConsoleActionKind** = `"register-program"` \| `"expire-attributions"` \| `"resolve-attribution"` \| `"cancel-benefit"` \| `"return-benefit"`

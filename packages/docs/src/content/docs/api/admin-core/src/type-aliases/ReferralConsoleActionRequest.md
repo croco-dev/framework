@@ -45,9 +45,21 @@ title: "ReferralConsoleActionRequest"
 
 ---
 
+### policy?
+
+> `readonly` `optional` **policy?**: `string`
+
+---
+
 ### reason
 
 > `readonly` **reason**: `string`
+
+---
+
+### returnIdempotencyKey?
+
+> `readonly` `optional` **returnIdempotencyKey?**: `string`
 
 ---
 
@@ -60,6 +72,12 @@ title: "ReferralConsoleActionRequest"
 ##### tenantId?
 
 > `readonly` `optional` **tenantId?**: `string`
+
+---
+
+### side?
+
+> `readonly` `optional` **side?**: [`ReferralBenefitSide`](/api/referral-core/src/type-aliases/referralbenefitside/)
 
 ---
 

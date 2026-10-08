@@ -121,6 +121,22 @@ readonly [`ReferralBenefitIntentStatus`](/api/referral-core/src/type-aliases/ref
 
 ---
 
+### countClicksForProgram()
+
+> **countClicksForProgram**(`programId`): `Promise`\<`number`\>
+
+#### Parameters
+
+##### programId
+
+`string`
+
+#### Returns
+
+`Promise`\<`number`\>
+
+---
+
 ### countSubjectReceipts()
 
 > **countSubjectReceipts**(`familyId`, `benefitCycleId`, `subject`, `states`): `Promise`\<`number`\>
@@ -352,6 +368,22 @@ First-valid lookup: the earliest claimed attribution for a recipient in a family
 #### Returns
 
 `Promise`\<readonly [`ReferralBenefitIntent`](/api/referral-core/src/type-aliases/referralbenefitintent/)[]\>
+
+---
+
+### listLinks()
+
+> **listLinks**(`filter`): `Promise`\<readonly [`ReferralLink`](/api/referral-core/src/type-aliases/referrallink/)[]\>
+
+#### Parameters
+
+##### filter
+
+[`ListReferralLinksFilter`](/api/referral-core/src/type-aliases/listreferrallinksfilter/)
+
+#### Returns
+
+`Promise`\<readonly [`ReferralLink`](/api/referral-core/src/type-aliases/referrallink/)[]\>
 
 ---
 
