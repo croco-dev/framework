@@ -1,5 +1,7 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
 
+import { validateApiRoute } from "../routes/validateApiRoute";
+
 import type { ServerActionContractIR } from "../actions/serverActions";
 import type { ApiMethod, ApiRouteIR, PageRouteIR, RenderMode } from "../routes/types";
 
@@ -207,6 +209,8 @@ function compareStrings(a: string, b: string): number {
 }
 
 function createApiRouteEntry(route: ApiRouteIR, index: number): MetaViteApiRouteManifestEntry {
+  validateApiRoute(route);
+
   return {
     kind: "api",
     order: index,

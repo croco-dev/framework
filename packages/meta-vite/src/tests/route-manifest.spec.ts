@@ -65,6 +65,46 @@ describe("buffered route capabilities", () => {
 });
 
 describe("createMetaViteRouteManifestFromRegistry", () => {
+  it.each(["/webhooks/stripe", "/healthz", "/apix", "/apiary", "/API/foo", "/", ""])(
+    "rejects API route outside the /api namespace: %j",
+    (path) => {
+      const create = () =>
+        createMetaViteRouteManifest({
+          pages: [],
+          apiRoutes: [{ path, method: "POST", handler: vi.fn() }],
+        });
+
+      expect(create).toThrow(
+        expect.objectContaining({
+          code: "CROCO_META_VITE_API_ROUTE_PREFIX_REQUIRED",
+          path,
+          method: "POST",
+        }),
+      );
+      expect(create).toThrow("POST");
+    },
+  );
+
+  it.each(["/api", "/api/", "/api/users"])(
+    "includes API namespace path %s in the manifest",
+    (path) => {
+      const manifest = createMetaViteRouteManifest({
+        pages: [],
+        apiRoutes: [{ path, handler: vi.fn() }],
+      });
+
+      expect(manifest.apiRoutes).toEqual([
+        {
+          kind: "api",
+          order: 0,
+          path,
+          method: "GET",
+          runtimeCapabilities: ["fetch", "api-dispatch"],
+        },
+      ]);
+    },
+  );
+
   it("emits a deterministic route manifest for pages, API routes, and server actions", () => {
     const routeRegistry = new RouteRegistry();
     routeRegistry.register(
