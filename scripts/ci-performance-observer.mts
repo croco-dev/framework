@@ -612,7 +612,10 @@ function assertSplitArtifactSet(
     return;
   }
   const artifacts = parseArtifacts(artifactsValue);
-  const relevant = artifacts.artifacts.filter(({ name }) => name.startsWith("ci-lane-"));
+  const attemptSuffix = `-${run.id}-${run.run_attempt}`;
+  const relevant = artifacts.artifacts.filter(
+    ({ name }) => name.startsWith("ci-lane-") && name.endsWith(attemptSuffix),
+  );
   const expected = SPLIT_JOB_IDENTITIES.map(
     (identity) => `ci-lane-${identity}-${run.id}-${run.run_attempt}`,
   );
