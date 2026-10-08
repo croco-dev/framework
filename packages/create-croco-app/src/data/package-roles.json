@@ -59,6 +59,8 @@
   "@croco/frontend-problems": "plugins",
   "@croco/frontend-react": "plugins",
   "@croco/frontend-vite": "tooling",
+  "@croco/gamification-core": "contracts",
+  "@croco/gamification-drizzle": "plugins",
   "@croco/gid-core": "contracts",
   "@croco/governance-core": "contracts",
   "@croco/health-core": "contracts",

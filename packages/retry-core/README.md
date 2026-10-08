@@ -104,6 +104,8 @@ class PaymentService {
 }
 ```
 
+Redis 저장소의 `ttlSeconds`(기본 60초)는 기본 키 보존 기간입니다. OPEN 전이에서는 상태, 마지막 실패 시각, HALF_OPEN 카운터 키를 `ttlSeconds + Math.ceil(openDuration / 1000)`초 동안 보존합니다. `@Retryable`은 `circuitBreaker.timeout`을 같은 보존 기간에 반영하므로 timeout이 기본 TTL보다 길어도 OPEN 기간 중 호출을 차단하며, OPEN 기간이 지난 뒤에도 키가 보존되어 있으면 첫 호출은 HALF_OPEN 시험 호출을 거칩니다. 전체 보존 기간이 지나 키가 만료된 비활성 회로는 CLOSED로 시작합니다. 보존 옵션 없이 저장소를 직접 호출하면 기존 `ttlSeconds`가 적용되며, 실패 카운터와 lock TTL은 바뀌지 않습니다.
+
 기본 저장소와 breaker registry는 decorated method가 로드된 동안 유지됩니다. 기본 저장소의 idle retention은 최소 5분이며, 명시적인 `timeout`에는 첫 HALF_OPEN 전환을 보장하기 위한 5분이 추가됩니다. 비활성 registry 항목은 5분 또는 1,000개 한도에서 제거되지만, 제거 과정은 상태 저장소를 reset하지 않습니다. 프로세스나 런타임 간 OPEN/HALF_OPEN 상태 공유가 필요하면 같은 분산 `stateStore`를 명시적으로 전달해야 합니다. 분산 저장소는 저장된 상태를 공유하며, breaker 인스턴스 내부의 CLOSED 동시 실행 카운터까지 프로세스 간 공유하지는 않습니다.
 
 ### 실패 분류

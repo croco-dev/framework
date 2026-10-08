@@ -1,0 +1,8 @@
+---
+editUrl: false
+next: false
+prev: false
+title: "gamificationChallengeErasedEvents"
+---
+
+> `const` **gamificationChallengeErasedEvents**: `PgTableWithColumns`\<\{ `columns`: \{ `challengeId`: `PgColumn`\<\{ `baseColumn`: `never`; `columnType`: `"PgText"`; `data`: `string`; `dataType`: `"string"`; `driverParam`: `string`; `enumValues`: \[`string`, `...string[]`\]; `generated`: `undefined`; `hasDefault`: `false`; `hasRuntimeDefault`: `false`; `identity`: `undefined`; `isAutoincrement`: `false`; `isPrimaryKey`: `false`; `name`: `"challenge_id"`; `notNull`: `true`; `tableName`: `"gamification_challenge_erased_events"`; \}, \{ \}, \{ \}\>; `eventId`: `PgColumn`\<\{ `baseColumn`: `never`; `columnType`: `"PgText"`; `data`: `string`; `dataType`: `"string"`; `driverParam`: `string`; `enumValues`: \[`string`, `...string[]`\]; `generated`: `undefined`; `hasDefault`: `false`; `hasRuntimeDefault`: `false`; `identity`: `undefined`; `isAutoincrement`: `false`; `isPrimaryKey`: `false`; `name`: `"event_id"`; `notNull`: `true`; `tableName`: `"gamification_challenge_erased_events"`; \}, \{ \}, \{ \}\>; `scopeKey`: `PgColumn`\<\{ `baseColumn`: `never`; `columnType`: `"PgText"`; `data`: `string`; `dataType`: `"string"`; `driverParam`: `string`; `enumValues`: \[`string`, `...string[]`\]; `generated`: `undefined`; `hasDefault`: `false`; `hasRuntimeDefault`: `false`; `identity`: `undefined`; `isAutoincrement`: `false`; `isPrimaryKey`: `false`; `name`: `"scope_key"`; `notNull`: `true`; `tableName`: `"gamification_challenge_erased_events"`; \}, \{ \}, \{ \}\>; \}; `dialect`: `"pg"`; `name`: `"gamification_challenge_erased_events"`; `schema`: `undefined`; \}\>

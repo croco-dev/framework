@@ -1557,6 +1557,95 @@ describe("changeset-required-check.mts", () => {
     );
   });
 
+  it.each(["legacy", "current", "migration"] as const)(
+    "ignores export-array ordering in %s snapshots alongside a covered source change",
+    (schema) => {
+      const repo = createTempRepo();
+      const writeBase =
+        schema === "current" ? writePublicApiSnapshot : writeLegacyPublicApiSnapshot;
+      writeBase(repo, ["Alpha", "zeta"]);
+      git(repo, ["add", "public-api-surface.snapshot.json"]);
+      git(repo, ["commit", "-m", "chore: seed export ordering"]);
+      checkoutBranch(repo, "feature/reordered-snapshot");
+      const writeNext = schema === "legacy" ? writeLegacyPublicApiSnapshot : writePublicApiSnapshot;
+      writeNext(repo, ["zeta", "Alpha"]);
+      writeFile(repo, "packages/other/src/index.ts", "export const value = 2;");
+      writeFile(
+        repo,
+        ".changeset/other.md",
+        "---\n'@croco/other': patch\n---\n\nUpdate other behavior.\n",
+      );
+      git(repo, ["add", "."]);
+      git(repo, ["commit", "-m", "feat: other change and snapshot reorder"]);
+      expect(runScript(repo).status).toBe(0);
+    },
+  );
+
+  it.each([
+    "type-order",
+    "duplicate",
+    "source",
+    "declaration",
+    "surface",
+    "target",
+    "conditions",
+  ] as const)("preserves %s semantics when comparing reordered export arrays", (change) => {
+    const repo = createTempRepo();
+    writePublicApiSnapshot(repo, ["Alpha", "zeta"]);
+    const snapshot = JSON.parse(
+      readFileSync(join(repo, "public-api-surface.snapshot.json"), "utf8"),
+    ) as {
+      packages: Array<{
+        entrypoints: Array<{
+          runtimeExports: Array<Record<string, unknown>>;
+          typeExports: Array<Record<string, unknown>>;
+          targets: Array<{ conditions: string[]; target: string }>;
+        }>;
+      }>;
+    };
+    const entrypoint = snapshot.packages[0].entrypoints[0];
+    entrypoint.typeExports = [
+      { name: "AlphaType", exportKind: "named", source: "./index.js", declarationKind: "type" },
+      { name: "ZetaType", exportKind: "named", source: "./index.js", declarationKind: "type" },
+    ];
+    entrypoint.targets[0].conditions = ["node", "import"];
+    writeFile(repo, "public-api-surface.snapshot.json", JSON.stringify(snapshot));
+    git(repo, ["add", "."]);
+    git(repo, ["commit", "-m", "chore: seed detailed snapshot"]);
+    checkoutBranch(repo, "fix/snapshot-semantic-comparison");
+    entrypoint.runtimeExports.reverse();
+    entrypoint.typeExports.reverse();
+    switch (change) {
+      case "type-order":
+        break;
+      case "duplicate":
+        entrypoint.runtimeExports.push({ ...entrypoint.runtimeExports[0] });
+        break;
+      case "source":
+        entrypoint.runtimeExports[0].source = "./other.js";
+        break;
+      case "declaration":
+        entrypoint.runtimeExports[0].declarationKind = "function";
+        break;
+      case "surface":
+        entrypoint.typeExports.push(entrypoint.runtimeExports.pop() as Record<string, unknown>);
+        break;
+      case "target":
+        entrypoint.targets[0].target = "./dist/other.js";
+        break;
+      case "conditions":
+        entrypoint.targets[0].conditions.reverse();
+        break;
+    }
+    writeFile(repo, "public-api-surface.snapshot.json", JSON.stringify(snapshot));
+    git(repo, ["add", "."]);
+    git(repo, ["commit", "-m", "fix: adjust snapshot"]);
+    const result = runScript(repo);
+    expect(result.status).toBe(change === "type-order" ? 0 : 1);
+    if (change !== "type-order")
+      expect(result.stdout).toContain("@croco/public (public API snapshot (.))");
+  });
+
   it("reads public API snapshots larger than the default subprocess buffer", () => {
     const repo = createTempRepo();
     checkoutBranch(repo, "fix/large-public-api-snapshot");

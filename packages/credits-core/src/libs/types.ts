@@ -167,7 +167,7 @@ export type ExpireCreditsCommand = CreditCommandBase & {
   readonly operation: "expire";
   readonly accountId: CreditAccountId;
   readonly transactionIds: readonly CreditTransactionId[];
-  readonly asOf: Date;
+  readonly asOf?: Date;
   readonly limit: number;
   readonly cursor?: CreditExpiryCursor;
 };

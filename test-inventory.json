@@ -164,6 +164,12 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/ChallengeOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/CohortOperations.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -369,6 +375,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/AdminPanel.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ChallengeConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -674,6 +686,12 @@
       "owner": "@croco/audit-core"
     },
     {
+      "path": "packages/audit-drizzle/src/tests/DrizzleAuditLogRepository.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/audit-drizzle"
+    },
+    {
       "path": "packages/audit-drizzle/src/tests/DrizzleAuditLogRepository.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -796,79 +814,105 @@
     {
       "path": "packages/auth-core/src/tests/AesGcmApiKeyRotationProtector.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/auth-core"
     },
     {
       "path": "packages/auth-core/src/tests/ApiKeyGenerator.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/auth-core"
     },
     {
       "path": "packages/auth-core/src/tests/ApiKeyGuard.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/auth-core"
     },
     {
       "path": "packages/auth-core/src/tests/ApiKeyHasher.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/auth-core"
     },
     {
       "path": "packages/auth-core/src/tests/ApiKeyManager.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/auth-core"
     },
     {
       "path": "packages/auth-core/src/tests/ApiKeySecurity.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/auth-core"
     },
     {
       "path": "packages/auth-core/src/tests/AuthGuard.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/auth-core"
     },
     {
       "path": "packages/auth-core/src/tests/AuthProblems.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/auth-core"
     },
     {
       "path": "packages/auth-core/src/tests/Permission.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/auth-core"
     },
     {
       "path": "packages/auth-core/src/tests/PermissionGuard.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/auth-core"
     },
     {
       "path": "packages/auth-core/src/tests/RbacEngine.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/auth-core"
     },
     {
       "path": "packages/auth-core/src/tests/Role.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/auth-core"
     },
     {
       "path": "packages/auth-core/src/tests/UnifiedAuthGuard.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/auth-core"
     },
     {
@@ -1090,151 +1134,201 @@
     {
       "path": "packages/cli/src/tests/AgentReadProcess.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/AgentReadTools.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/CliError.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/CliTestContract.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/CrocoRunner.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/DesktopRemoved.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/GenerateUsageDashboard.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/Pipeline.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/TestPlan.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/applicationIntentEvidence.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/architecturePolicyCheck.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/codegenBinResolution.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/codegenOpenapi.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/codegenRpc.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/codemods/registerController.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/contractsCheck.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/contractsDiff.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/createDomain.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/createPage.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/diCheck.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/diGraph.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/diagnosticCodes.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/doctor.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/fileWriter.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/generateScaffold.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
@@ -1258,85 +1352,113 @@
     {
       "path": "packages/cli/src/tests/jobs.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/makeController.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/makeEntity.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/makeEvent.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/makeListener.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/makeRepository.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/migrate.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/naming.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/opsStatus.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/projectMap.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/prompts.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/runtimePolicyCheck.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/upgrade.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
       "path": "packages/cli/src/tests/workspace.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/cli"
     },
     {
@@ -1360,67 +1482,89 @@
     {
       "path": "packages/create-croco-app/src/tests/E2E.spec.ts",
       "lane": "integration",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/EnvironmentTemplate.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/FreshScaffoldArtifacts.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/FrontendDockerDeploy.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/GenerationResult.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/GeneratorOptions.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/LambdaScaffold.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/LocalProductProfile.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/NextTemplateSecurity.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/NodeRuntime.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/ProgrammaticEntry.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
@@ -1432,91 +1576,121 @@
     {
       "path": "packages/create-croco-app/src/tests/SaasDiBuildOrder.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/StandaloneNextWebApp.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/TelemetryFlushTemplate.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/TemplatePath.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/WebAppNaming.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/cli-result.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/croco-ranges.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/e2e-advanced.spec.ts",
       "lane": "integration",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/e2e-vite-spa.spec.ts",
       "lane": "integration",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/generator-cleanup.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/generator-install.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/options.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/prompts.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/secret-placeholder-policy.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
       "path": "packages/create-croco-app/src/tests/templates-build.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "create-croco-app"
     },
     {
@@ -2212,91 +2386,129 @@
     {
       "path": "packages/events-core/src/tests/BehavioralEvidence.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-core"
     },
     {
       "path": "packages/events-core/src/tests/DomainEvents.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-core"
     },
     {
       "path": "packages/events-core/src/tests/EventBus.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-core"
     },
     {
       "path": "packages/events-core/src/tests/EventBusConfig.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-core"
     },
     {
       "path": "packages/events-core/src/tests/EventBusDiagnosticsProvider.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-core"
     },
     {
       "path": "packages/events-core/src/tests/EventBusLifecycle.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-core"
     },
     {
       "path": "packages/events-core/src/tests/EventBusStats.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
+      "owner": "@croco/events-core"
+    },
+    {
+      "path": "packages/events-core/src/tests/EventMetadataReset.spec.ts",
+      "lane": "fast",
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-core"
     },
     {
       "path": "packages/events-core/src/tests/EventPublisher.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-core"
     },
     {
       "path": "packages/events-core/src/tests/EventRegistry.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-core"
     },
     {
       "path": "packages/events-core/src/tests/EventSerializer.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-core"
     },
     {
       "path": "packages/events-core/src/tests/EventSubscriptionIndex.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-core"
     },
     {
       "path": "packages/events-core/src/tests/EventsProblems.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-core"
     },
     {
       "path": "packages/events-core/src/tests/HandlerResolver.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-core"
     },
     {
       "path": "packages/events-core/src/tests/PublicContracts.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-core"
     },
     {
       "path": "packages/events-core/src/tests/RegisterEventHandler.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-core"
     },
     {
@@ -2320,37 +2532,49 @@
     {
       "path": "packages/events-tx/src/tests/DrizzleTransactionalEventStore.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-tx"
     },
     {
       "path": "packages/events-tx/src/tests/EventsTxProblems.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-tx"
     },
     {
       "path": "packages/events-tx/src/tests/InMemoryTransactionalEventStore.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-tx"
     },
     {
       "path": "packages/events-tx/src/tests/OutboxIdempotencyConformance.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-tx"
     },
     {
       "path": "packages/events-tx/src/tests/TransactionalEventsConfiguration.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-tx"
     },
     {
       "path": "packages/events-tx/src/tests/TransactionalOutbox.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/events-tx"
     },
     {
@@ -2518,115 +2742,153 @@
     {
       "path": "packages/framework-context/src/tests/ApplicationIntentManifest.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
       "path": "packages/framework-context/src/tests/ApplicationLifecycle.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
       "path": "packages/framework-context/src/tests/CircularDependency.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
       "path": "packages/framework-context/src/tests/Container.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
       "path": "packages/framework-context/src/tests/ContainerResolutionDiagnostics.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
       "path": "packages/framework-context/src/tests/ContainerScope.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
       "path": "packages/framework-context/src/tests/DependencyGraphManifest.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
       "path": "packages/framework-context/src/tests/FrameworkContext.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
       "path": "packages/framework-context/src/tests/GeneratedDiGraph.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
       "path": "packages/framework-context/src/tests/ILogger.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
       "path": "packages/framework-context/src/tests/Middleware.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
       "path": "packages/framework-context/src/tests/MiddlewareChain.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
       "path": "packages/framework-context/src/tests/RequestPipelineGraph.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
       "path": "packages/framework-context/src/tests/RequestScoped.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
       "path": "packages/framework-context/src/tests/RuntimeCapabilities.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
       "path": "packages/framework-context/src/tests/RuntimeContainerProblems.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
       "path": "packages/framework-context/src/tests/RuntimeInspector.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
       "path": "packages/framework-context/src/tests/RuntimePolicy.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
       "path": "packages/framework-context/src/tests/ShutdownManager.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/framework-context"
     },
     {
@@ -2762,6 +3024,12 @@
       "owner": "@croco/frontend-react"
     },
     {
+      "path": "packages/frontend-react/src/tests/GroupProgress.spec.tsx",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
       "path": "packages/frontend-react/src/tests/OfferCard.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -2828,6 +3096,30 @@
       "owner": "@croco/frontend-vite"
     },
     {
+      "path": "packages/gamification-core/src/tests/ChallengeService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/gamification-core"
+    },
+    {
+      "path": "packages/gamification-drizzle/src/tests/ChallengeService.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/gamification-drizzle"
+    },
+    {
+      "path": "packages/gamification-drizzle/src/tests/DrizzleChallengeStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/gamification-drizzle"
+    },
+    {
+      "path": "packages/gamification-drizzle/src/tests/DrizzleChallengeStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/gamification-drizzle"
+    },
+    {
       "path": "packages/gid-core/src/tests/GidProblems.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -2860,25 +3152,33 @@
     {
       "path": "packages/idempotency-core/src/tests/IdempotencyConformance.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/idempotency-core"
     },
     {
       "path": "packages/idempotency-core/src/tests/IdempotencyCoordinator.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/idempotency-core"
     },
     {
       "path": "packages/idempotency-core/src/tests/InMemoryIdempotencyStore.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/idempotency-core"
     },
     {
       "path": "packages/idempotency-core/src/tests/KeyDerivation.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/idempotency-core"
     },
     {
@@ -3682,43 +3982,57 @@
     {
       "path": "packages/openapi-spec/src/tests/Cli.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/openapi-spec"
     },
     {
       "path": "packages/openapi-spec/src/tests/LocaleGeneration.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/openapi-spec"
     },
     {
       "path": "packages/openapi-spec/src/tests/OpenApiCliGeneration.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/openapi-spec"
     },
     {
       "path": "packages/openapi-spec/src/tests/Output.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/openapi-spec"
     },
     {
       "path": "packages/openapi-spec/src/tests/emitOpenAPI.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/openapi-spec"
     },
     {
       "path": "packages/openapi-spec/src/tests/loadControllers.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/openapi-spec"
     },
     {
       "path": "packages/openapi-spec/src/tests/round-trip.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/openapi-spec"
     },
     {
@@ -3850,37 +4164,49 @@
     {
       "path": "packages/problems-core/src/libs/Problem.test.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/problems-core"
     },
     {
       "path": "packages/problems-core/src/tests/Problem.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/problems-core"
     },
     {
       "path": "packages/problems-core/src/tests/ProblemRegistry.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/problems-core"
     },
     {
       "path": "packages/problems-core/src/tests/ProblemResponseRedaction.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/problems-core"
     },
     {
       "path": "packages/problems-core/src/tests/ProblemSerializer.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/problems-core"
     },
     {
       "path": "packages/problems-core/src/tests/readExplicitRetryability.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/problems-core"
     },
     {
@@ -3928,43 +4254,57 @@
     {
       "path": "packages/protocols-core/src/tests/ContractGraph.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-core"
     },
     {
       "path": "packages/protocols-core/src/tests/ContractGraphMonetization.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-core"
     },
     {
       "path": "packages/protocols-core/src/tests/RoutePath.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-core"
     },
     {
       "path": "packages/protocols-core/src/tests/SchemaDescriptor.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-core"
     },
     {
       "path": "packages/protocols-core/src/tests/UnsupportedZodMajor.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-core"
     },
     {
       "path": "packages/protocols-core/src/tests/controllerDiscovery.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-core"
     },
     {
       "path": "packages/protocols-core/src/tests/extractRouteIR.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-core"
     },
     {
@@ -4012,121 +4352,161 @@
     {
       "path": "packages/protocols-rest/src/tests/AuthGuard.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/BehavioralEvidence.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/Controller.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/HttpExceptionFilter.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/HttpMethod.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/InputValidation.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/Lifecycle.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/LoggingInterceptor.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/Params.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/RolesGuard.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/RouteContractGuard.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/RouteContractTypes.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/RouteSchema.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/SchemaValidator.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/StrictSchemaSourceLocation.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/ValidationPipe.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/decorators/Controller.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/decorators/Middleware.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/decorators/Parameter.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
       "path": "packages/protocols-rest/src/tests/decorators/Route.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/protocols-rest"
     },
     {
@@ -4258,103 +4638,137 @@
     {
       "path": "packages/retry-core/src/tests/BackoffPolicy.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/retry-core"
     },
     {
       "path": "packages/retry-core/src/tests/CircuitBreaker.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/retry-core"
     },
     {
       "path": "packages/retry-core/src/tests/CircuitBreakerState.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/retry-core"
     },
     {
       "path": "packages/retry-core/src/tests/ExponentialBackoff.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/retry-core"
     },
     {
       "path": "packages/retry-core/src/tests/FailureSemantics.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/retry-core"
     },
     {
       "path": "packages/retry-core/src/tests/LambdaTimeoutGuard.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/retry-core"
     },
     {
       "path": "packages/retry-core/src/tests/NumericConfiguration.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/retry-core"
     },
     {
       "path": "packages/retry-core/src/tests/RedisCircuitBreaker.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/retry-core"
     },
     {
       "path": "packages/retry-core/src/tests/RetryCoreExports.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/retry-core"
     },
     {
       "path": "packages/retry-core/src/tests/RetryEngine.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/retry-core"
     },
     {
       "path": "packages/retry-core/src/tests/RetryInfrastructureProblem.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/retry-core"
     },
     {
       "path": "packages/retry-core/src/tests/RetryTemplate.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/retry-core"
     },
     {
       "path": "packages/retry-core/src/tests/Retryable.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/retry-core"
     },
     {
       "path": "packages/rpc-codegen/src/tests/Cli.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/rpc-codegen"
     },
     {
       "path": "packages/rpc-codegen/src/tests/ContractArtifactParity.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/rpc-codegen"
     },
     {
       "path": "packages/rpc-codegen/src/tests/ContractCheckCli.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/rpc-codegen"
     },
     {
       "path": "packages/rpc-codegen/src/tests/LocaleGeneration.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/rpc-codegen"
     },
     {
@@ -4366,31 +4780,41 @@
     {
       "path": "packages/rpc-codegen/src/tests/codegen.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/rpc-codegen"
     },
     {
       "path": "packages/rpc-codegen/src/tests/e2e.spec.ts",
       "lane": "integration",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/rpc-codegen"
     },
     {
       "path": "packages/rpc-codegen/src/tests/loadRoutes.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/rpc-codegen"
     },
     {
       "path": "packages/rpc-codegen/src/tests/real-app.e2e.spec.ts",
       "lane": "integration",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/rpc-codegen"
     },
     {
       "path": "packages/rpc-codegen/src/tests/round-trip.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/rpc-codegen"
     },
     {
@@ -4720,61 +5144,81 @@
     {
       "path": "packages/telemetry-api/src/tests/BehavioralEvidence.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/telemetry-api"
     },
     {
       "path": "packages/telemetry-api/src/tests/Trace.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/telemetry-api"
     },
     {
       "path": "packages/telemetry-api/src/tests/frontendBridge.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/telemetry-api"
     },
     {
       "path": "packages/telemetry-sdk-node/src/tests/AutoInstrumentation.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/telemetry-sdk-node"
     },
     {
       "path": "packages/telemetry-sdk-node/src/tests/BehavioralEvidence.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/telemetry-sdk-node"
     },
     {
       "path": "packages/telemetry-sdk-node/src/tests/DeploymentEnvironment.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/telemetry-sdk-node"
     },
     {
       "path": "packages/telemetry-sdk-node/src/tests/LambdaPreset.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/telemetry-sdk-node"
     },
     {
       "path": "packages/telemetry-sdk-node/src/tests/NodeTelemetryPlugin.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/telemetry-sdk-node"
     },
     {
       "path": "packages/telemetry-sdk-node/src/tests/ProbabilitySampler.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/telemetry-sdk-node"
     },
     {
       "path": "packages/telemetry-sdk-node/src/tests/ProviderNoCredentialConformance.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/telemetry-sdk-node"
     },
     {
@@ -4786,19 +5230,25 @@
     {
       "path": "packages/telemetry-sdk-node/src/tests/TelemetryDiagnosticsProvider.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/telemetry-sdk-node"
     },
     {
       "path": "packages/telemetry-sdk-node/src/tests/TelemetryProblems.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/telemetry-sdk-node"
     },
     {
       "path": "packages/telemetry-sdk-node/src/tests/TelemetryRuntime.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/telemetry-sdk-node"
     },
     {
@@ -4888,85 +5338,121 @@
     {
       "path": "packages/testing/src/tests/BillingProviderCapabilityConformance.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/testing"
     },
     {
       "path": "packages/testing/src/tests/ChangedTestPlan.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/testing"
     },
     {
       "path": "packages/testing/src/tests/ConformanceContract.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/testing"
     },
     {
       "path": "packages/testing/src/tests/ContractRuntimeDifferentialIntegration.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/testing"
     },
     {
       "path": "packages/testing/src/tests/ContractTesting.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
+      "owner": "@croco/testing"
+    },
+    {
+      "path": "packages/testing/src/tests/EventTestingHarness.spec.ts",
+      "lane": "fast",
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/testing"
     },
     {
       "path": "packages/testing/src/tests/ExecutableAssuranceGraph.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/testing"
     },
     {
       "path": "packages/testing/src/tests/OperationalFailureDrill.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/testing"
     },
     {
       "path": "packages/testing/src/tests/PermissionGuardHttp.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/testing"
     },
     {
       "path": "packages/testing/src/tests/ProviderNoCredentialConformance.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/testing"
     },
     {
       "path": "packages/testing/src/tests/ScenarioRuntime.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/testing"
     },
     {
       "path": "packages/testing/src/tests/TestEvidence.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/testing"
     },
     {
       "path": "packages/testing/src/tests/TestKernel.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/testing"
     },
     {
       "path": "packages/testing/src/tests/TestRuntime.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/testing"
     },
     {
       "path": "packages/testing/src/tests/testing.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/testing"
     },
     {
@@ -5014,163 +5500,217 @@
     {
       "path": "packages/transports-http/src/tests/BehavioralEvidence.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/BodyLimitMiddleware.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/CompressionMiddleware.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/ContractRuntimeParity.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/CorsMiddleware.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/CrocoApp.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/CrocoLambdaAdapter.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/ErrorHandler.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/FormValidationProblem.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/FrameworkIntegration.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/GeneratedRouteModule.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/GracefulShutdownMiddleware.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/HealthCheck.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/HttpContext.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/HttpPipeExecution.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/HttpTransportIntegration.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/HttpTransportPlugin.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/LambdaAdapterConformance.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/MinimalProductionRestAppGoldenPath.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/NodeAbortSignal.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/NodeAdapterSmoke.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/NodeServeStaticSecurity.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/OperationalEndpoints.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/PackageManifest.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/ParamResolver.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/PipelineConformance.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/PipelineRunner.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
@@ -5182,55 +5722,73 @@
     {
       "path": "packages/transports-http/src/tests/RateLimitGuard.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/RateLimitMiddleware.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/RouteCompiler.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/RuntimeCapabilityConformance.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/RuntimeContext.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/SecurityHeadersMiddleware.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/SecurityMiddlewareMarker.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/StaticAssetConformance.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
       "path": "packages/transports-http/src/tests/TelemetryMiddleware.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/transports-http"
     },
     {
@@ -5290,109 +5848,145 @@
     {
       "path": "packages/tx-core/src/libs/TxManager.test.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/tx-core"
     },
     {
       "path": "packages/tx-core/src/tests/TransactionProblems.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/tx-core"
     },
     {
       "path": "packages/tx-core/src/tests/Transactional.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/tx-core"
     },
     {
       "path": "packages/tx-core/src/tests/TxManager.characterization.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/tx-core"
     },
     {
       "path": "packages/tx-core/src/tests/TxManager.concurrency.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/tx-core"
     },
     {
       "path": "packages/tx-core/src/tests/TxManager.savepointSiblings.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/tx-core"
     },
     {
       "path": "packages/tx-core/src/tests/TxManager.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/tx-core"
     },
     {
       "path": "packages/tx-drizzle/src/tests/DrizzleCapabilities.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/tx-drizzle"
     },
     {
       "path": "packages/tx-drizzle/src/tests/DrizzleHealthIndicator.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/tx-drizzle"
     },
     {
       "path": "packages/tx-drizzle/src/tests/DrizzleTransactionPlugin.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/tx-drizzle"
     },
     {
       "path": "packages/tx-drizzle/src/tests/DrizzleTxAdapter.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/tx-drizzle"
     },
     {
       "path": "packages/tx-drizzle/src/tests/ExplicitTransactionBoundary.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/tx-drizzle"
     },
     {
       "path": "packages/tx-drizzle/src/tests/RealDb.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/tx-drizzle"
     },
     {
       "path": "packages/tx-drizzle/src/tests/Repository.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/tx-drizzle"
     },
     {
       "path": "packages/tx-drizzle/src/tests/RepositoryIntegration.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/tx-drizzle"
     },
     {
       "path": "packages/tx-drizzle/src/tests/SavepointCapability.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/tx-drizzle"
     },
     {
       "path": "packages/tx-drizzle/src/tests/TxDrizzleProblems.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/tx-drizzle"
     },
     {
       "path": "packages/tx-drizzle/src/tests/createRlsPolicy.spec.ts",
       "lane": "fast",
-      "qualifiers": ["coverage"],
+      "qualifiers": [
+        "coverage"
+      ],
       "owner": "@croco/tx-drizzle"
     },
     {

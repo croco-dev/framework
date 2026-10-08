@@ -513,3 +513,18 @@ export type {
   PolicyDiffResult,
   ReplayScope,
 } from "@croco/metrics-core";
+
+export {
+  ChallengeOperationsProblem,
+  assertChallengeOperationsAudit,
+  loadChallengeOperations,
+} from "./libs/ChallengeOperations";
+export type {
+  ChallengeOperationsDefinition,
+  ChallengeOperationsView,
+  ChallengeOperationsState,
+  ChallengeOperationsAudit,
+  ChallengeOperationsSave,
+  ChallengeOperationsClose,
+  ChallengeOperationsSource,
+} from "./libs/ChallengeOperations";
