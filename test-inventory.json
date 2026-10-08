@@ -44,13 +44,13 @@
       "owner": "repo:examples"
     },
     {
-      "path": "examples/promotion-offers/src/tests/promotion-offers.spec.ts",
+      "path": "examples/promotion-offers/src/tests/personalized-pdp.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:examples"
     },
     {
-      "path": "examples/promotion-offers/src/tests/personalized-pdp.spec.ts",
+      "path": "examples/promotion-offers/src/tests/promotion-offers.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:examples"
@@ -3152,14 +3152,14 @@
       "owner": "@croco/meta-vite"
     },
     {
-      "path": "packages/meta-vite/src/tests/published-contract.spec.ts",
-      "lane": "published",
+      "path": "packages/meta-vite/src/tests/personalized-fragments.spec.ts",
+      "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/meta-vite"
     },
     {
-      "path": "packages/meta-vite/src/tests/personalized-fragments.spec.ts",
-      "lane": "fast",
+      "path": "packages/meta-vite/src/tests/published-contract.spec.ts",
+      "lane": "published",
       "qualifiers": [],
       "owner": "@croco/meta-vite"
     },

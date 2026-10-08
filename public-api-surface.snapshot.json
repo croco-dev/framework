@@ -24138,6 +24138,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "PersonalizedFragmentProblem",
+              "exportKind": "named",
+              "source": "./libs/isr/personalizedFragments",
+              "declarationKind": "class"
+            },
+            {
               "name": "RenderServer",
               "exportKind": "named",
               "source": "./libs/render/renderServer",

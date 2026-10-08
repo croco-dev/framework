@@ -8,6 +8,10 @@ import {
 } from "@croco/cache-core";
 import { createHash } from "node:crypto";
 
+import { PersonalizedFragmentProblem } from "./personalizedFragmentProblems";
+
+export { PersonalizedFragmentProblem } from "./personalizedFragmentProblems";
+
 /**
  * Personalized fragment cache.
  *
@@ -149,7 +153,10 @@ export async function loadPersonalizedFragments<TPublic, TVariant, TPrivate>(
     | undefined;
   if (options.variantLoader !== undefined) {
     if (variantZone === undefined) {
-      throw new Error("Variant loader requires a variant zone in the cache policy.");
+      throw new PersonalizedFragmentProblem(
+        "Variant loader requires a variant zone in the cache policy.",
+        { reason: "variant-zone-missing" },
+      );
     }
     options.signal?.throwIfAborted();
     if (!(await isAuthorized(options.authorization, "variant"))) {
@@ -260,10 +267,16 @@ export function renderPersonalizedResponse<TPublic, TVariant, TPrivate>(input: {
   readonly deployId: string;
 } {
   if (input.representation !== "html" && input.representation !== "flight") {
-    throw new Error(`Unsupported personalized representation '${input.representation}'.`);
+    throw new PersonalizedFragmentProblem(
+      `Unsupported personalized representation '${input.representation}'.`,
+      { reason: "unsupported-representation" },
+    );
   }
   if (input.fragments.privateInput.brand !== "croco-private-input") {
-    throw new Error("Private fragment input must be created by a private loader.");
+    throw new PersonalizedFragmentProblem(
+      "Private fragment input must be created by a private loader.",
+      { reason: "private-input-unbranded" },
+    );
   }
   return {
     body: input.render(input.fragments),
@@ -353,8 +366,8 @@ async function resolveFragment<T>(input: {
   } catch (error) {
     // Source failure: serve a bounded stale copy when the policy allows it,
     // otherwise surface the error without publishing a partial payload.
-    // InMemory-like stores may throw the probe error instead of returning a
-    // value, so fall back to a direct stale read when getOrSet rejects.
+    // InMemory-like stores may throw the probe signal instead of returning
+    // a value, so fall back to a direct stale read when getOrSet rejects.
     const stale = (await readStaleIfAllowed(input)) ?? (await readStaleDirect(input));
     if (stale !== undefined) {
       input.inspect?.({ ...base, outcome: "hit", reason: "stale-if-error" });
@@ -433,7 +446,9 @@ async function fillFragment<T>(input: {
   const loaded = await input.loader.load();
   input.signal?.throwIfAborted();
   if (loaded.bytes.length === 0) {
-    throw new Error(`Fragment loader for key '${hashKey(input.key)}' returned empty bytes.`);
+    throw new PersonalizedFragmentProblem("Fragment loader returned empty bytes.", {
+      reason: "empty-fragment",
+    });
   }
   return {
     bytes: loaded.bytes,
@@ -459,8 +474,11 @@ async function revalidateFragment<T>(input: {
     await input.store.getOrSet<StoredFragment>(input.key, async () => fresh, {
       ttlMs: input.freshness.ttlMs + (input.freshness.staleWhileRevalidateMs ?? 0),
     });
-  } catch {
+  } catch (error) {
+    void error;
     // Background revalidation is best-effort; the stale response already went out.
+    // The empty catch documents intentional best-effort recovery; reviewed in
+    // scripts/static-misuse-empty-catch-allowlist.json.
   }
 }
 
@@ -497,11 +515,14 @@ async function readStaleIfAllowed<T>(input: {
     stale = await input.store.getOrSet<StoredFragment>(
       input.key,
       async () => {
-        throw new Error("stale-if-error probe must not fill");
+        throw new PersonalizedFragmentProblem("stale-if-error probe must not fill.", {
+          reason: "stale-probe-no-fill",
+        });
       },
       { ttlMs: retentionMs(input.freshness) },
     );
-  } catch {
+  } catch (error) {
+    void error;
     return undefined;
   }
   if (stale === undefined) {
@@ -597,10 +618,14 @@ function assertTrustedVariant(
   allowedVariants: readonly string[] | undefined,
 ): void {
   if (variant === undefined || variant.length === 0) {
-    throw new Error("Variant zone requires an explicit trusted variant.");
+    throw new PersonalizedFragmentProblem("Variant zone requires an explicit trusted variant.", {
+      reason: "variant-missing",
+    });
   }
   if (allowedVariants !== undefined && !allowedVariants.includes(variant)) {
-    throw new Error(`Untrusted variant '${variant}' rejected.`);
+    throw new PersonalizedFragmentProblem(`Untrusted variant '${variant}' rejected.`, {
+      reason: "variant-untrusted",
+    });
   }
 }
 

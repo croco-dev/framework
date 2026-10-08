@@ -75,7 +75,8 @@ function memoryFragmentStore(): PersonalizedFragmentStore & {
       if (pending !== undefined) {
         return (await pending) as V;
       }
-      const load = (async () => {
+      let load!: Promise<unknown>;
+      load = (async () => {
         try {
           const value = await factory();
           sets += 1;

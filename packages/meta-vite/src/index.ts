@@ -86,6 +86,7 @@ export {
   formatPersonalizedInspectEvent,
   hashPersonalizedCacheKey,
   loadPersonalizedFragments,
+  PersonalizedFragmentProblem,
   renderPersonalizedResponse,
 } from "./libs/isr/personalizedFragments";
 export type {
