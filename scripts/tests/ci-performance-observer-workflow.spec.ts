@@ -1,7 +1,17 @@
-import { spawnSync } from "node:child_process";
-import { chmodSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync, spawnSync } from "node:child_process";
+import {
+  chmodSync,
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { parseDocument } from "yaml";
 import { describe, expect, it } from "vitest";
 
@@ -46,6 +56,167 @@ function parsedWorkflow(): Workflow {
   if (document.errors.length > 0)
     throw new Error(document.errors.map(({ message }) => message).join("\n"));
   return document.toJS() as Workflow;
+}
+
+function runMetadataFixture(event: "pull_request" | "push" | "workflow_dispatch", forged = false) {
+  const workspace = mkdtempSync(join(tmpdir(), "croco-ci-observer-history-"));
+  const upstream = join(workspace, "upstream");
+  const checkout = join(workspace, "observer");
+  mkdirSync(upstream);
+  const git = (...args: string[]) =>
+    execFileSync("git", args, {
+      cwd: upstream,
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
+    }).trim();
+  try {
+    git("init", "-b", "trunk");
+    git("config", "user.name", "Observer fixture");
+    git("config", "user.email", "observer@example.test");
+    writeFileSync(join(upstream, "base.txt"), "original base\n");
+    git("add", ".");
+    git("commit", "-m", "base");
+    const baseSha = git("rev-parse", "HEAD");
+    git("checkout", "-b", "pull-request");
+    writeFileSync(join(upstream, "feature.txt"), "original PR head\n");
+    git("add", ".");
+    git("commit", "-m", "original PR head");
+    const headSha = git("rev-parse", "HEAD");
+    git("checkout", "trunk");
+    git("merge", "--no-ff", "pull-request", "-m", "original candidate");
+    let candidateSha = event === "pull_request" ? git("rev-parse", "HEAD") : headSha;
+    if (forged) {
+      candidateSha = git(
+        "commit-tree",
+        `${baseSha}^{tree}`,
+        "-p",
+        baseSha,
+        "-p",
+        headSha,
+        "-m",
+        "forged candidate tree",
+      );
+    }
+    git("branch", "recorded-candidate", candidateSha);
+    git("reset", "--hard", baseSha);
+    writeFileSync(join(upstream, "later-trunk.txt"), "trunk advanced after the source run\n");
+    git("add", ".");
+    git("commit", "-m", "later trunk");
+    const currentBaseSha = git("rev-parse", "HEAD");
+    git("checkout", "pull-request");
+    writeFileSync(join(upstream, "feature.txt"), "repushed PR head\n");
+    git("add", ".");
+    git("commit", "-m", "later PR head");
+    const currentHeadSha = git("rev-parse", "HEAD");
+    git("checkout", "trunk");
+    git(
+      "clone",
+      "--depth=1",
+      "--single-branch",
+      "--branch",
+      "trunk",
+      pathToFileURL(upstream).href,
+      checkout,
+    );
+    mkdirSync(join(checkout, "scripts"));
+    for (const script of ["ci-verification-identity.mts", "verification-problem.mts"]) {
+      copyFileSync(join(ROOT_DIR, "scripts", script), join(checkout, "scripts", script));
+    }
+    const inputDir = join(checkout, "ci-observer-input");
+    mkdirSync(join(inputDir, "verification"), { recursive: true });
+    const identity = {
+      schemaVersion: "croco.ci-verification-identity/v1",
+      eventName: event,
+      baseSha,
+      headSha: event === "pull_request" ? headSha : candidateSha,
+      candidateSha,
+    };
+    writeFileSync(
+      join(inputDir, "verification/spine-evidence.json"),
+      JSON.stringify({ provenance: { verificationIdentity: identity } }),
+    );
+    const run = {
+      event,
+      head_sha: identity.headSha,
+      pull_requests: [
+        { number: 3047, base: { sha: currentBaseSha }, head: { sha: currentHeadSha } },
+      ],
+    };
+    writeFileSync(join(workspace, "run.json"), JSON.stringify(run));
+    writeFileSync(
+      join(workspace, "source.txt"),
+      Buffer.from("trusted source artifact\n").toString("base64"),
+    );
+    const ghPath = join(workspace, "gh");
+    writeFileSync(
+      ghPath,
+      `#!/usr/bin/env bash
+set -eo pipefail
+printf '%s\\t' "$@" >> "$API_LOG"
+printf '\\n' >> "$API_LOG"
+[ "$1" = api ] || exit 91
+endpoint=
+matching_ref=false
+for arg in "$@"; do
+  case "$arg" in
+    /repos/*) endpoint="$arg" ;;
+    "ref=$EXPECTED_CANDIDATE") matching_ref=true ;;
+  esac
+done
+case "$endpoint" in
+  /repos/croco/framework/actions/runs/1)
+    cat "$RUN_FIXTURE" ;;
+  '/repos/croco/framework/actions/runs/1/jobs?filter=latest&per_page=100')
+    printf '%s\\n' '{"jobs":[]}' ;;
+  '/repos/croco/framework/actions/runs/1/artifacts?per_page=100')
+    printf '%s\\n' '{"total_count":0,"artifacts":[]}' ;;
+  /repos/croco/framework/contents/package.json | /repos/croco/framework/contents/test-inventory.json | /repos/croco/framework/contents/.github/workflows/ci.yml)
+    [ "$matching_ref" = true ] || exit 92
+    cat "$SOURCE_FIXTURE" ;;
+  *) exit 93 ;;
+esac
+`,
+    );
+    chmodSync(ghPath, 0o755);
+    const metadata = parsedWorkflow().jobs?.observe?.steps?.find(
+      ({ name }) => name === "Read source run metadata",
+    );
+    const result = spawnSync("bash", ["-eo", "pipefail", "-c", metadata?.run ?? ""], {
+      cwd: checkout,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        DEFAULT_BRANCH: "trunk",
+        GH_TOKEN: "test-token",
+        GITHUB_REPOSITORY: "croco/framework",
+        SOURCE_RUN_ID: "1",
+        PATH: `${workspace}:${process.env.PATH ?? ""}`,
+        RUN_FIXTURE: join(workspace, "run.json"),
+        SOURCE_FIXTURE: join(workspace, "source.txt"),
+        API_LOG: join(workspace, "api.log"),
+        EXPECTED_CANDIDATE: candidateSha,
+      },
+    });
+    const readOutput = (name: string) =>
+      existsSync(join(inputDir, name)) ? readFileSync(join(inputDir, name), "utf8") : null;
+    return {
+      status: result.status,
+      stderr: result.stderr,
+      identity,
+      currentBaseSha,
+      currentHeadSha,
+      executionSha: readOutput("execution-sha.txt")?.trim(),
+      baseSha: readOutput("base-sha.txt")?.trim(),
+      verifiedIdentity: readOutput("verification-identity.json"),
+      sourcePackage: readOutput("source-package.json"),
+      apiCalls: readFileSync(join(workspace, "api.log"), "utf8")
+        .trim()
+        .split("\n")
+        .map((line) => line.trimEnd().split("\t")),
+    };
+  } finally {
+    rmSync(workspace, { recursive: true, force: true });
+  }
 }
 
 describe("CI performance observer workflow", () => {
@@ -302,6 +473,36 @@ describe("CI performance observer workflow", () => {
     ]) {
       expect(source, forbidden).not.toContain(forbidden);
     }
+  });
+
+  it.each(["pull_request", "workflow_dispatch", "push"] as const)(
+    "executes metadata verification for an old %s run after trunk advances and its open PR is repushed",
+    (event) => {
+      const result = runMetadataFixture(event);
+      expect(result.status, result.stderr).toBe(0);
+      expect(result.identity.baseSha).not.toBe(result.currentBaseSha);
+      expect(result.identity.headSha).not.toBe(result.currentHeadSha);
+      expect(result.executionSha).toBe(result.identity.candidateSha);
+      expect(result.baseSha).toBe(result.identity.baseSha);
+      expect(JSON.parse(result.verifiedIdentity ?? "null")).toEqual(result.identity);
+      expect(result.sourcePackage).toBe("trusted source artifact\n");
+      expect(result.apiCalls).toHaveLength(6);
+      expect(
+        result.apiCalls
+          .flat()
+          .some((arg) => arg.includes("/pulls/") || arg.includes("git/ref/pull/")),
+      ).toBe(false);
+    },
+  );
+
+  it("rejects a forged recorded candidate tree before reading source artifacts", () => {
+    const result = runMetadataFixture("pull_request", true);
+    expect(result.status, result.stderr).toBe(1);
+    expect(result.stderr).toContain("VERIFICATION_CANDIDATE_TREE_MISMATCH");
+    expect(result.executionSha).toBeUndefined();
+    expect(result.verifiedIdentity).toBeNull();
+    expect(result.sourcePackage).toBeNull();
+    expect(result.apiCalls).toHaveLength(3);
   });
 
   it("rejects a recorded verification identity that is not a full commit OID before fetching it", () => {

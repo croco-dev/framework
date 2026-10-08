@@ -338,6 +338,25 @@ export function verifyRecordedVerificationIdentity(
     );
   }
   assertDefaultBranchContains(options.rootDir, identity.baseSha, options.defaultBranchRef);
+  const expectedTree = gitOutput(
+    options.rootDir,
+    ["merge-tree", "--write-tree", identity.baseSha, identity.headSha],
+    "VERIFICATION_CANDIDATE_MERGE_TREE_READ_FAILED",
+    `Merging candidate parents base ${identity.baseSha} and head ${identity.headSha}`,
+  );
+  const candidateTree = gitOutput(
+    options.rootDir,
+    ["rev-parse", "--verify", `${identity.candidateSha}^{tree}`],
+    "VERIFICATION_CANDIDATE_TREE_READ_FAILED",
+    `Reading tree for candidate ${identity.candidateSha}`,
+  );
+  if (candidateTree !== expectedTree) {
+    throw new VerificationProblem(
+      "VERIFICATION_CANDIDATE_TREE_MISMATCH",
+      "contract",
+      `Pull-request candidate ${identity.candidateSha} tree ${candidateTree} must equal merged parent tree ${expectedTree} for base ${identity.baseSha} and head ${identity.headSha}`,
+    );
+  }
   return identity;
 }
 
