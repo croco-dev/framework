@@ -1,3 +1,5 @@
+import { validateApiRoute } from "./validateApiRoute";
+
 import type {
   ApiRouteDefinition,
   ApiRouteIR,
@@ -87,6 +89,7 @@ export class RouteRegistry {
   }
 
   registerApiRoute(definition: ApiRouteDefinition): void {
+    validateApiRoute(definition);
     const method = definition.method ?? "GET";
     if (this.hasRegisteredRoute(definition.path, method)) {
       throw new RouteConflictError(definition.path, method);
