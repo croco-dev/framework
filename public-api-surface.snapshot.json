@@ -355,6 +355,12 @@
               "declarationKind": "const"
             },
             {
+              "name": "ChallengeOperationsProblem",
+              "exportKind": "named",
+              "source": "./libs/ChallengeOperations",
+              "declarationKind": "class"
+            },
+            {
               "name": "CohortAdminProblem",
               "exportKind": "named",
               "source": "./libs/CohortOperations",
@@ -603,6 +609,12 @@
               "name": "assertCampaignRunValid",
               "exportKind": "named",
               "source": "./libs/EngagementOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertChallengeOperationsAudit",
+              "exportKind": "named",
+              "source": "./libs/ChallengeOperations",
               "declarationKind": "function"
             },
             {
@@ -885,6 +897,12 @@
               "name": "filterWebhookDeliveries",
               "exportKind": "named",
               "source": "./libs/WebhookOperations",
+              "declarationKind": "function"
+            },
+            {
+              "name": "loadChallengeOperations",
+              "exportKind": "named",
+              "source": "./libs/ChallengeOperations",
               "declarationKind": "function"
             },
             {
@@ -1197,6 +1215,41 @@
               "name": "CampaignReplayResult",
               "exportKind": "named",
               "source": "./libs/TargetingImpactOperations"
+            },
+            {
+              "name": "ChallengeOperationsAudit",
+              "exportKind": "named",
+              "source": "./libs/ChallengeOperations"
+            },
+            {
+              "name": "ChallengeOperationsClose",
+              "exportKind": "named",
+              "source": "./libs/ChallengeOperations"
+            },
+            {
+              "name": "ChallengeOperationsDefinition",
+              "exportKind": "named",
+              "source": "./libs/ChallengeOperations"
+            },
+            {
+              "name": "ChallengeOperationsSave",
+              "exportKind": "named",
+              "source": "./libs/ChallengeOperations"
+            },
+            {
+              "name": "ChallengeOperationsSource",
+              "exportKind": "named",
+              "source": "./libs/ChallengeOperations"
+            },
+            {
+              "name": "ChallengeOperationsState",
+              "exportKind": "named",
+              "source": "./libs/ChallengeOperations"
+            },
+            {
+              "name": "ChallengeOperationsView",
+              "exportKind": "named",
+              "source": "./libs/ChallengeOperations"
             },
             {
               "name": "CohortAdminAccess",
@@ -3256,6 +3309,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "ChallengeConsole",
+              "exportKind": "named",
+              "source": "./libs/ChallengeConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "CohortBuilder",
               "exportKind": "named",
               "source": "./libs/CohortBuilder",
@@ -4229,6 +4288,11 @@
               "name": "BillingProviderStatus",
               "exportKind": "named",
               "source": "./libs/types"
+            },
+            {
+              "name": "ChallengeConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/ChallengeConsole"
             },
             {
               "name": "CohortBuilderProps",
@@ -20286,6 +20350,18 @@
               "declarationKind": "function"
             },
             {
+              "name": "GroupProgress",
+              "exportKind": "named",
+              "source": "./libs/GroupProgress",
+              "declarationKind": "function"
+            },
+            {
+              "name": "JoinChallenge",
+              "exportKind": "named",
+              "source": "./libs/JoinChallenge",
+              "declarationKind": "function"
+            },
+            {
               "name": "MyBenefits",
               "exportKind": "named",
               "source": "./libs/OfferCard",
@@ -20680,6 +20756,36 @@
               "source": "./libs/GoalProgress"
             },
             {
+              "name": "GroupProgressProps",
+              "exportKind": "named",
+              "source": "./libs/GroupProgress"
+            },
+            {
+              "name": "GroupProgressState",
+              "exportKind": "named",
+              "source": "./libs/GroupProgress"
+            },
+            {
+              "name": "GroupProgressView",
+              "exportKind": "named",
+              "source": "./libs/GroupProgress"
+            },
+            {
+              "name": "JoinChallengeProps",
+              "exportKind": "named",
+              "source": "./libs/JoinChallenge"
+            },
+            {
+              "name": "JoinChallengeRequest",
+              "exportKind": "named",
+              "source": "./libs/JoinChallenge"
+            },
+            {
+              "name": "JoinChallengeSource",
+              "exportKind": "named",
+              "source": "./libs/JoinChallenge"
+            },
+            {
               "name": "LegacyCrocoPageOptions",
               "exportKind": "named",
               "source": "./libs/createCrocoPages"
@@ -20930,6 +21036,302 @@
               "name": "CrocoViteOptions",
               "exportKind": "named",
               "source": "./libs/types"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/gamification-core",
+      "relativeDir": "packages/gamification-core",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/gamification-core/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "ChallengeAccessDeniedProblem",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ChallengeConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ChallengeEvidenceProblem",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ChallengeEvidenceUnavailableProblem",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ChallengeInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ChallengeNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ChallengeService",
+              "exportKind": "named",
+              "source": "./libs/ChallengeService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InMemoryChallengeStore",
+              "exportKind": "named",
+              "source": "./libs/InMemoryChallengeStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "assertChallengeDefinition",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertChallengeScope",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "Challenge",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts"
+            },
+            {
+              "name": "ChallengeAccess",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts"
+            },
+            {
+              "name": "ChallengeAction",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts"
+            },
+            {
+              "name": "ChallengeCommand",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts"
+            },
+            {
+              "name": "ChallengeCompletion",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts"
+            },
+            {
+              "name": "ChallengeContribution",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts"
+            },
+            {
+              "name": "ChallengeDefinition",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts"
+            },
+            {
+              "name": "ChallengeEvidence",
+              "exportKind": "named",
+              "source": "./libs/ChallengeService"
+            },
+            {
+              "name": "ChallengeEvidenceAttempt",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts"
+            },
+            {
+              "name": "ChallengeMember",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts"
+            },
+            {
+              "name": "ChallengeReceipt",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts"
+            },
+            {
+              "name": "ChallengeScope",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts"
+            },
+            {
+              "name": "ChallengeServiceOptions",
+              "exportKind": "named",
+              "source": "./libs/ChallengeService"
+            },
+            {
+              "name": "ChallengeState",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts"
+            },
+            {
+              "name": "ChallengeStore",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts"
+            },
+            {
+              "name": "ChallengeTransaction",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts"
+            },
+            {
+              "name": "ChallengeView",
+              "exportKind": "named",
+              "source": "./libs/ChallengeContracts"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/gamification-drizzle",
+      "relativeDir": "packages/gamification-drizzle",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/gamification-drizzle/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "gamificationChallengeBuckets",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "gamificationChallengeCompletions",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "gamificationChallengeContributions",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "gamificationChallengeErasedEvents",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "gamificationChallengeErasedSubjects",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "gamificationChallengeEvidenceAttempts",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "gamificationChallengeMembers",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "gamificationChallengeReceipts",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "gamificationChallenges",
+              "exportKind": "declaration",
+              "source": "./libs/schema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "ChallengePersistenceProblem",
+              "exportKind": "named",
+              "source": "./libs/ChallengePersistenceProblem",
+              "declarationKind": "class"
+            },
+            {
+              "name": "DrizzleChallengeStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleChallengeStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "createChallengeSchema",
+              "exportKind": "named",
+              "source": "./migrations/gamificationSchema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "dropChallengeSchema",
+              "exportKind": "named",
+              "source": "./migrations/gamificationSchema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "challengeSchema",
+              "exportKind": "namespace",
+              "source": "./libs/schema"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "DrizzleChallengeClient",
+              "exportKind": "named",
+              "source": "./libs/DrizzleChallengeStore"
+            },
+            {
+              "name": "GamificationMigrationClient",
+              "exportKind": "named",
+              "source": "./migrations/gamificationSchema"
             }
           ]
         }

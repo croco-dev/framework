@@ -777,6 +777,18 @@
       "runtimes": [],
       "domain": "Framework Routes"
     },
+    "gamification-core": {
+      "role": "Contracts",
+      "subtype": "domain",
+      "runtimes": [],
+      "domain": "Gamification"
+    },
+    "gamification-drizzle": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Gamification"
+    },
     "frontend-cloudflare": {
       "role": "Plugins",
       "subtype": "presentation",
@@ -1283,6 +1295,7 @@
         "etl-core",
         "execution-core",
         "features-core",
+        "gamification-core",
         "governance-core",
         "impersonation-core",
         "invitation-core",
@@ -1324,6 +1337,7 @@
         "entitlements-drizzle",
         "execution-drizzle",
         "features-drizzle",
+        "gamification-drizzle",
         "invitation-drizzle",
         "membership-drizzle",
         "metering-drizzle",
@@ -1556,7 +1570,9 @@
         "triggers-qstash",
         "warehouse-core",
         "promotions-core",
-        "promotions-drizzle"
+        "promotions-drizzle",
+        "gamification-core",
+        "gamification-drizzle"
       ]
     },
     "deprecated": {
@@ -2244,6 +2260,18 @@
           "atomic audited note revisions",
           "explicit retention purge",
           "bounded live source keyset pagination"
+        ]
+      },
+      "gamification-drizzle": {
+        "domain": "Gamification",
+        "adapter": "PostgreSQL cooperative challenge store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "explicit participation intervals",
+          "transactional capped contributions",
+          "durable finalization receipt and completion intent",
+          "privacy erasure"
         ]
       }
     }

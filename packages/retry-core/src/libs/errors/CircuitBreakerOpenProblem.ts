@@ -7,11 +7,12 @@ export class CircuitBreakerOpenProblem extends Problem {
   readonly code = "CIRCUIT_BREAKER_OPEN";
   readonly category = ProblemCategory.TooManyRequests;
 
-  constructor(circuitId: string) {
+  constructor(circuitId: string, options?: { cause?: Error }) {
     super(
       "CIRCUIT_BREAKER_OPEN",
       ProblemCategory.TooManyRequests,
       `Circuit breaker '${circuitId}' is OPEN`,
+      options,
     );
   }
 }

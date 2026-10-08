@@ -73,6 +73,7 @@ describe("scheduled live test workflow", () => {
       for (const name of requiredNames) {
         const secretName =
           owner === "@croco/admin-postgres" ||
+          owner === "@croco/audit-drizzle" ||
           owner === "@croco/cohort-drizzle" ||
           owner === "@croco/onboarding-drizzle"
             ? "MEMBERSHIP_POSTGRES_URL"
@@ -96,6 +97,24 @@ describe("scheduled live test workflow", () => {
     });
     expect(reconciliation?.run).toContain(
       "--lane-report ci-reports/package-quality/live-test-lanes/admin-postgres.json",
+    );
+  });
+
+  it("runs audit PostgreSQL ordering through its declared resource and reconciles its report", () => {
+    const owner = "@croco/audit-drizzle";
+    const step = parsed.jobs.live.steps.find(({ run }) => run?.includes(`--owner ${owner}`));
+    const reconciliation = parsed.jobs.live.steps.find(
+      ({ name }) => name === "Enforce scheduled-live evidence",
+    );
+    expect(resources[owner]).toEqual(["AUDIT_POSTGRES_URL"]);
+    expect(step?.env).toEqual({
+      AUDIT_POSTGRES_URL: "${{ secrets.MEMBERSHIP_POSTGRES_URL }}",
+    });
+    expect(step?.run).toContain(
+      "--output ci-reports/package-quality/live-test-lanes/audit-drizzle.json",
+    );
+    expect(reconciliation?.run).toContain(
+      "--lane-report ci-reports/package-quality/live-test-lanes/audit-drizzle.json",
     );
   });
 

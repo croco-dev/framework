@@ -368,6 +368,18 @@ export const apiDocPackages = [
     moduleName: "frontend-vite/src",
   },
   {
+    packageName: "@croco/gamification-core",
+    directory: "gamification-core",
+    entryPoint: "src/index.ts",
+    moduleName: "gamification-core/src",
+  },
+  {
+    packageName: "@croco/gamification-drizzle",
+    directory: "gamification-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "gamification-drizzle/src",
+  },
+  {
     packageName: "@croco/gid-core",
     directory: "gid-core",
     entryPoint: "src/index.ts",

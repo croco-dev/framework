@@ -254,7 +254,7 @@ export class CreditLedgerService {
       operation: "expire",
       accountId: input.accountId,
       transactionIds: Array.from({ length: limit }, () => creditTransactionId(this.idGenerator())),
-      asOf: input.asOf ? new Date(input.asOf) : this.now(),
+      asOf: input.asOf ? new Date(input.asOf) : undefined,
       limit,
       cursor: input.cursor,
       ...this.metadata(input),

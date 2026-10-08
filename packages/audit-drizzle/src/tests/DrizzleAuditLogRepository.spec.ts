@@ -1,7 +1,7 @@
 import Database from "better-sqlite3";
 import { getTableColumns } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/better-sqlite3";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProblemFactory } from "@croco/problems-core";
 import { createDrizzleProviderConformanceSuite } from "@croco/testing/drizzle";
 import { TxManager } from "@croco/tx-core";
@@ -57,6 +57,95 @@ describe("DrizzleAuditLogRepository", () => {
     repository = new DrizzleAuditLogRepository(db, txManager, {
       table: auditLogsSqlite,
       schema,
+    });
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    sqlite.close();
+  });
+
+  describe("deterministic ordering", () => {
+    const startDate = new Date("2026-01-01T00:00:00.000Z");
+    const endDate = new Date("2026-01-01T00:00:02.000Z");
+    const queries = [
+      {
+        name: "find",
+        read: (options: { limit?: number; offset?: number }) =>
+          repository.find({ tenantId: "tenant-1", ...options }),
+      },
+      {
+        name: "findByDateRange",
+        read: (options: { limit?: number; offset?: number }) =>
+          repository.findByDateRange("tenant-1", startDate, endDate, options),
+      },
+      {
+        name: "findByActor",
+        read: (options: { limit?: number; offset?: number }) =>
+          repository.findByActor("tenant-1", "user-1", options),
+      },
+      {
+        name: "findByResource",
+        read: (options: { limit?: number; offset?: number }) =>
+          repository.findByResource("tenant-1", "User", "user-1", options),
+      },
+    ];
+
+    it.each(queries)(
+      "$name orders timestamp ties by descending id across pages",
+      async ({ read }) => {
+        vi.useFakeTimers({ toFake: ["Date"] });
+        const entries = [];
+        for (const at of ["00.100", "00.400", "00.900", "01.100", "00.950"]) {
+          vi.setSystemTime(new Date(`2026-01-01T00:00:${at}Z`));
+          entries.push(
+            await repository.create({
+              tenantId: "tenant-1",
+              actorId: "user-1",
+              action: `user.update.${entries.length}`,
+              resourceType: "User",
+              resourceId: "user-1",
+              payload: {},
+              diff: null,
+              metadata: {},
+            }),
+          );
+        }
+        const expectedIds = [entries[3], entries[4], entries[2], entries[1], entries[0]].map(
+          (entry) => entry.id,
+        );
+        const latest = await read({ limit: 1 });
+        const all = await read({});
+        const pages = [];
+        for (let offset = 0; offset < entries.length; offset += 2) {
+          pages.push(...(await read({ limit: 2, offset })));
+        }
+
+        expect(latest.map((entry) => entry.id)).toEqual(expectedIds.slice(0, 1));
+        expect(all.map((entry) => entry.id)).toEqual(expectedIds);
+        expect(pages.map((entry) => entry.id)).toEqual(expectedIds);
+        expect(new Set(pages.map((entry) => entry.id)).size).toBe(entries.length);
+        expect(await read({ limit: 2, offset: entries.length })).toEqual([]);
+      },
+    );
+
+    it("find returns the last entry written in the same second first", async () => {
+      vi.useFakeTimers({ toFake: ["Date"] });
+      for (const [index, at] of ["00.100", "00.400", "00.900"].entries()) {
+        vi.setSystemTime(new Date(`2026-01-01T00:00:${at}Z`));
+        await repository.create({
+          tenantId: "tenant-1",
+          actorId: "user-1",
+          action: `user.update.${index}`,
+          resourceType: "User",
+          resourceId: "user-1",
+          payload: {},
+          diff: null,
+          metadata: {},
+        });
+      }
+      const latest = await repository.find({ tenantId: "tenant-1", limit: 1 });
+      expect(latest[0]?.action).toBe("user.update.2");
     });
   });
 

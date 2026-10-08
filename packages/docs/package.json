@@ -85,6 +85,8 @@
     "@croco/frontend-problems": "workspace:*",
     "@croco/frontend-react": "workspace:*",
     "@croco/frontend-vite": "workspace:*",
+    "@croco/gamification-core": "workspace:*",
+    "@croco/gamification-drizzle": "workspace:*",
     "@croco/gid-core": "workspace:*",
     "@croco/governance-core": "workspace:*",
     "@croco/health-core": "workspace:*",

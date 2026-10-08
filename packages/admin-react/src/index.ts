@@ -357,3 +357,6 @@ export type {
   TargetingImpactInspectorProps,
   TargetingImpactInspectorState,
 } from "./libs/TargetingImpactInspector";
+
+export { ChallengeConsole } from "./libs/ChallengeConsole";
+export type { ChallengeConsoleProps } from "./libs/ChallengeConsole";

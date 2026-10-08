@@ -375,7 +375,7 @@ Follow-up work is tracked in GitHub Issues and in [Croco 1.0 Spine](docs/release
 
 > 이 섹션은 `pnpm docs:catalog:write`로 생성됩니다. 패키지 이름과 경로는 `packages/*/package.json`에서 읽고, 그룹/성숙도는 `docs/package-catalog.json`에서 관리합니다.
 
-현재 카탈로그는 **131개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
+현재 카탈로그는 **133개 public package**를 추적합니다. Private package 2개는 publish 카탈로그에서 제외됩니다. 문서 커버리지 상세는 [docs/package-docs-report.md](docs/package-docs-report.md)를 확인하세요.
 
 ### Croco 1.0 Spine
 
@@ -479,6 +479,8 @@ Current 1.0 spine status: 18 spine packages; 10 production-ready, 8 beta, 0 alph
 | `@croco/frontend-problems`             | Plugins        | presentation  | Frontend Problems       | browser, cloudflare-workers               |
 | `@croco/frontend-react`                | Plugins        | presentation  | Frontend React          | browser, node                             |
 | `@croco/frontend-vite`                 | Tooling        | build-target  | Frontend Vite           | node, browser, cloudflare-workers         |
+| `@croco/gamification-core`             | Contracts      | domain        | Gamification            | unclaimed                                 |
+| `@croco/gamification-drizzle`          | Plugins        | provider      | Gamification            | node, lambda                              |
 | `@croco/gid-core`                      | Contracts      | domain        | Gid                     | unclaimed                                 |
 | `@croco/governance-core`               | Contracts      | domain        | Governance              | unclaimed                                 |
 | `@croco/health-core`                   | Contracts      | domain        | Health                  | unclaimed                                 |
@@ -558,8 +560,8 @@ These historical inventory buckets retain certification scope and discovery meta
 | 그룹         | 설명                                                                                                   | 패키지 수 |
 | ------------ | ------------------------------------------------------------------------------------------------------ | --------: |
 | Core         | Framework primitives, context, reliability, transactions, and cross-cutting core utilities             |        23 |
-| Domain       | Business-domain APIs and package-level abstractions                                                    |        35 |
-| Provider     | Concrete datastore, SaaS provider, and external service adapters                                       |        36 |
+| Domain       | Business-domain APIs and package-level abstractions                                                    |        36 |
+| Provider     | Concrete datastore, SaaS provider, and external service adapters                                       |        37 |
 | Integration  | Analytics, feature-flag, and observability integrations                                                |         6 |
 | Protocol     | API protocol definitions and code generation                                                           |         8 |
 | Transport    | Protocol transports that execute application surfaces independently from deployment hosts              |         2 |
@@ -576,7 +578,7 @@ Adapter 경계와 공식 우선순위, compatibility certification checklist는 
 | ------------------- | ----------------------------------- | --------------------: |
 | 🟢 production-ready | 안정화, 적극 사용 권장              |                    23 |
 | 🟡 beta             | 기능 완성, 실사용 검증 중           |                    78 |
-| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |                    30 |
+| 🔴 alpha/WIP        | 개발 중, 사용 시 주의 필요          |                    32 |
 | ⚠️ deprecated       | 대체 패키지 존재, 마이그레이션 권장 |                     0 |
 
 ### Extension & Adapter Matrix
@@ -610,6 +612,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/execution-drizzle`       | Plugins / provider | Execution       | Drizzle execution store                                     | yes  | yes    | -       | -        | database connection supplied by app                                                                                    | drizzle-orm                                                                               | execution state persistence<br>retryable failure records                                                                                                                                                                                                                                                                         | 🟡 beta      | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
 | `@croco/experience-drizzle`      | Plugins / provider | Experiences     | PostgreSQL experience configuration and receipt store       | yes  | yes    | -       | -        | PostgreSQL connection supplied by app                                                                                  | drizzle-orm                                                                               | revisioned publication and audit<br>atomic exposure reservations<br>durable display and dismissal receipts                                                                                                                                                                                                                       | 🔴 alpha/WIP | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
 | `@croco/features-drizzle`        | Plugins / provider | Features        | PostgreSQL policy release store                             | yes  | yes    | -       | -        | PostgreSQL connection supplied by app                                                                                  | drizzle-orm                                                                               | revisioned policy publication<br>scoped activation and receipts                                                                                                                                                                                                                                                                  | 🔴 alpha/WIP | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
+| `@croco/gamification-drizzle`    | Plugins / provider | Gamification    | PostgreSQL cooperative challenge store                      | yes  | yes    | -       | -        | PostgreSQL connection supplied by app                                                                                  | drizzle-orm                                                                               | explicit participation intervals<br>transactional capped contributions<br>durable finalization receipt and completion intent<br>privacy erasure                                                                                                                                                                                  | 🔴 alpha/WIP | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
 | `@croco/invitation-drizzle`      | Plugins / provider | Invitation      | Drizzle repository                                          | yes  | yes    | -       | -        | database connection supplied by app                                                                                    | -                                                                                         | invitation persistence<br>transaction-aware repository                                                                                                                                                                                                                                                                           | 🟡 beta      | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
 | `@croco/lifecycle-drizzle`       | Plugins / provider | Lifecycle       | PostgreSQL Journey episode and action intent store          | yes  | yes    | -       | -        | PostgreSQL connection supplied by app                                                                                  | drizzle-orm                                                                               | tenant-scoped reentry uniqueness<br>atomic episode and action admission<br>leased durable wake claims<br>pinned definitions and audit receipts                                                                                                                                                                                   | 🔴 alpha/WIP | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
 | `@croco/membership-drizzle`      | Plugins / provider | Membership      | Drizzle repository                                          | yes  | yes    | -       | -        | database connection supplied by app                                                                                    | -                                                                                         | membership persistence<br>transaction-aware repository                                                                                                                                                                                                                                                                           | 🟡 beta      | has package tests | not-applicable<br>not required until production-ready or compatibility claim                       |
@@ -790,6 +793,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/credits-core`              | Domain       | `packages/credits-core`              | README, API, tests |
 | `@croco/etl-core`                  | Domain       | `packages/etl-core`                  | README, API, tests |
 | `@croco/experience-core`           | Domain       | `packages/experience-core`           | README, API, tests |
+| `@croco/gamification-core`         | Domain       | `packages/gamification-core`         | README, API, tests |
 | `@croco/promotions-core`           | Domain       | `packages/promotions-core`           | README, API, tests |
 | `@croco/warehouse-core`            | Domain       | `packages/warehouse-core`            | README, API, tests |
 | `@croco/etl-events-tx`             | Integration  | `packages/etl-events-tx`             | README, API, tests |
@@ -807,6 +811,7 @@ Runtime columns: Node는 장기 실행 서버/CLI, Lambda는 서버리스 함수
 | `@croco/engagement-drizzle`        | Provider     | `packages/engagement-drizzle`        | README, API, tests |
 | `@croco/experience-drizzle`        | Provider     | `packages/experience-drizzle`        | README, API, tests |
 | `@croco/features-drizzle`          | Provider     | `packages/features-drizzle`          | README, API, tests |
+| `@croco/gamification-drizzle`      | Provider     | `packages/gamification-drizzle`      | README, API, tests |
 | `@croco/lifecycle-drizzle`         | Provider     | `packages/lifecycle-drizzle`         | README, API, tests |
 | `@croco/metering-upstash`          | Provider     | `packages/metering-upstash`          | README, API, tests |
 | `@croco/notifications-fcm`         | Provider     | `packages/notifications-fcm`         | README, API, tests |

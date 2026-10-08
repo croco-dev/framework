@@ -164,6 +164,12 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/ChallengeOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/CohortOperations.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -363,6 +369,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/AdminPanel.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ChallengeConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -660,6 +672,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/audit-core"
+    },
+    {
+      "path": "packages/audit-drizzle/src/tests/DrizzleAuditLogRepository.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/audit-drizzle"
     },
     {
       "path": "packages/audit-drizzle/src/tests/DrizzleAuditLogRepository.spec.ts",
@@ -2246,6 +2264,12 @@
       "owner": "@croco/events-core"
     },
     {
+      "path": "packages/events-core/src/tests/EventMetadataReset.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/events-core"
+    },
+    {
       "path": "packages/events-core/src/tests/EventPublisher.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
@@ -2756,6 +2780,12 @@
       "owner": "@croco/frontend-react"
     },
     {
+      "path": "packages/frontend-react/src/tests/GroupProgress.spec.tsx",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
       "path": "packages/frontend-react/src/tests/OfferCard.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -2814,6 +2844,30 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/frontend-vite"
+    },
+    {
+      "path": "packages/gamification-core/src/tests/ChallengeService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/gamification-core"
+    },
+    {
+      "path": "packages/gamification-drizzle/src/tests/ChallengeService.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/gamification-drizzle"
+    },
+    {
+      "path": "packages/gamification-drizzle/src/tests/DrizzleChallengeStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/gamification-drizzle"
+    },
+    {
+      "path": "packages/gamification-drizzle/src/tests/DrizzleChallengeStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/gamification-drizzle"
     },
     {
       "path": "packages/gid-core/src/tests/GidProblems.spec.ts",
@@ -4887,6 +4941,12 @@
     },
     {
       "path": "packages/testing/src/tests/ContractTesting.spec.ts",
+      "lane": "fast",
+      "qualifiers": ["coverage"],
+      "owner": "@croco/testing"
+    },
+    {
+      "path": "packages/testing/src/tests/EventTestingHarness.spec.ts",
       "lane": "fast",
       "qualifiers": ["coverage"],
       "owner": "@croco/testing"

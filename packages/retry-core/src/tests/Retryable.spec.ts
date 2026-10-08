@@ -7,6 +7,7 @@ import { InMemoryCircuitBreakerStateStore } from "../libs/CircuitBreakerState";
 import {
   CircuitBreakerOpenProblem,
   DuplicateRecoverHandlerProblem,
+  LambdaTimeoutProblem,
   RetryAbortedProblem,
   RetryExhaustedProblem,
 } from "../libs/errors";
@@ -1009,6 +1010,182 @@ describe("@Retryable", () => {
 
     await expect(service.doWork(true)).resolves.toBe("recovered");
     await expect(service.doWork(false)).rejects.toBeInstanceOf(OtherError);
+  });
+
+  describe.each([
+    {
+      guard: "open circuit",
+      options: { circuitBreaker: { failureThreshold: 1 } },
+      lambdaContext: null,
+      stopProblem: CircuitBreakerOpenProblem,
+    },
+    {
+      guard: "Lambda timeout",
+      options: { lambdaTimeoutReserveMs: 50 },
+      lambdaContext: { getRemainingTimeInMillis: () => 40 },
+      stopProblem: LambdaTimeoutProblem,
+    },
+  ])("recovery when $guard stops retries", ({ options, lambdaContext, stopProblem }) => {
+    it.each([1, 3])(
+      "calls typed recovery with the upstream error at maxAttempts=%i",
+      async (maxAttempts) => {
+        class UpstreamError extends Error {
+          constructor(..._args: unknown[]) {
+            super("upstream failed");
+          }
+        }
+        const upstreamError = new UpstreamError("upstream failed");
+        const original = vi.fn();
+        const recover = vi.fn();
+        const payload = { id: "request" };
+
+        class TestService {
+          readonly prefix = "recovered";
+
+          @Retryable({ ...options, maxAttempts, backoffPolicy: new NoBackoff() })
+          async doWork(id: string, input: object): Promise<string> {
+            original(id, input);
+            throw upstreamError;
+          }
+
+          @Recover(UpstreamError)
+          async handleError(error: UpstreamError, id: string, input: object): Promise<string> {
+            recover(error, id, input);
+            return `${this.prefix}:${id}`;
+          }
+        }
+
+        await expect(
+          runWithLambdaContext(lambdaContext, () => new TestService().doWork("item", payload)),
+        ).resolves.toBe("recovered:item");
+        expect(original).toHaveBeenCalledExactlyOnceWith("item", payload);
+        expect(recover).toHaveBeenCalledExactlyOnceWith(upstreamError, "item", payload);
+      },
+    );
+
+    it("calls options.recover with the upstream error and original arguments", async () => {
+      const upstreamError = new Error("upstream failed");
+      const original = vi.fn();
+      const recover = vi.fn();
+      const payload = { id: "request" };
+
+      class TestService {
+        readonly prefix = "recovered";
+
+        @Retryable({
+          ...options,
+          maxAttempts: 3,
+          backoffPolicy: new NoBackoff(),
+          recover: "handleError",
+        })
+        async doWork(id: string, input: object): Promise<string> {
+          original(id, input);
+          throw upstreamError;
+        }
+
+        async handleError(error: Error, id: string, input: object): Promise<string> {
+          recover(error, id, input);
+          return `${this.prefix}:${id}`;
+        }
+      }
+
+      await expect(
+        runWithLambdaContext(lambdaContext, () => new TestService().doWork("item", payload)),
+      ).resolves.toBe("recovered:item");
+      expect(original).toHaveBeenCalledExactlyOnceWith("item", payload);
+      expect(recover).toHaveBeenCalledExactlyOnceWith(upstreamError, "item", payload);
+    });
+
+    it.each([false, true])(
+      "preserves the stop Problem and cause without recovery, wrapExhausted=%s",
+      async (wrapExhausted) => {
+        const upstreamError = new Error("upstream failed");
+        const original = vi.fn();
+
+        class TestService {
+          @Retryable({ ...options, maxAttempts: 3, backoffPolicy: new NoBackoff(), wrapExhausted })
+          async doWork(): Promise<void> {
+            original();
+            throw upstreamError;
+          }
+        }
+
+        const result = runWithLambdaContext(lambdaContext, () => new TestService().doWork());
+        await expect(result).rejects.toBeInstanceOf(stopProblem);
+        await expect(result).rejects.toHaveProperty("cause", upstreamError);
+        expect(original).toHaveBeenCalledTimes(1);
+      },
+    );
+
+    it.each([false, true])(
+      "uses exhaustion semantics for a typed recovery mismatch, wrapExhausted=%s",
+      async (wrapExhausted) => {
+        class OtherError extends Error {
+          constructor(..._args: unknown[]) {
+            super("other");
+          }
+        }
+        const upstreamError = new Error("upstream failed");
+        const original = vi.fn();
+        const recover = vi.fn();
+
+        class TestService {
+          @Retryable({ ...options, maxAttempts: 3, backoffPolicy: new NoBackoff(), wrapExhausted })
+          async doWork(): Promise<void> {
+            original();
+            throw upstreamError;
+          }
+
+          @Recover(OtherError)
+          async handleOther(error: OtherError): Promise<void> {
+            recover(error);
+          }
+        }
+
+        const result = runWithLambdaContext(lambdaContext, () => new TestService().doWork());
+        if (wrapExhausted) {
+          await expect(result).rejects.toBeInstanceOf(RetryExhaustedProblem);
+          await expect(result).rejects.toHaveProperty("cause", upstreamError);
+          await expect(result).rejects.toHaveProperty("lastError", upstreamError);
+        } else {
+          await expect(result).rejects.toBe(upstreamError);
+        }
+        expect(original).toHaveBeenCalledTimes(1);
+        expect(recover).not.toHaveBeenCalled();
+      },
+    );
+  });
+
+  it.each([1, 3])("recovers an initially open circuit with maxAttempts=%i", async (maxAttempts) => {
+    const upstreamError = new Error("upstream failed");
+    const original = vi.fn();
+    const recover = vi.fn();
+
+    class TestService {
+      @Retryable({
+        maxAttempts,
+        backoffPolicy: new NoBackoff(),
+        circuitBreaker: { failureThreshold: 1 },
+      })
+      async doWork(id: string): Promise<string> {
+        original(id);
+        throw upstreamError;
+      }
+
+      @Recover()
+      async handleError(error: Error, id: string): Promise<string> {
+        recover(error, id);
+        return `recovered:${id}`;
+      }
+    }
+
+    const service = new TestService();
+    await expect(service.doWork("first")).resolves.toBe("recovered:first");
+    await expect(service.doWork("second")).resolves.toBe("recovered:second");
+    expect(original).toHaveBeenCalledExactlyOnceWith("first");
+    expect(recover).toHaveBeenCalledTimes(2);
+    expect(recover).toHaveBeenNthCalledWith(1, upstreamError, "first");
+    expect(recover).toHaveBeenNthCalledWith(2, expect.any(CircuitBreakerOpenProblem), "second");
   });
 
   it("fails fast when duplicate typed recover handlers are registered", () => {

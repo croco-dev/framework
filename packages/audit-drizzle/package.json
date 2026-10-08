@@ -38,8 +38,9 @@
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
     "lint": "oxlint .",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run --passWithNoTests --exclude src/tests/DrizzleAuditLogRepository.postgres.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
+    "test:live": "vitest run src/tests/DrizzleAuditLogRepository.postgres.spec.ts",
     "typecheck": "tsc --noEmit",
     "docs:api:model": "node --experimental-strip-types ../docs/scripts/generate-package-api-model.mts"
   },
@@ -54,7 +55,9 @@
   "devDependencies": {
     "@croco/testing": "workspace:*",
     "@types/better-sqlite3": "7.6.13",
+    "@types/pg": "^8.15.6",
     "better-sqlite3": "^12.11.1",
+    "pg": "^8.20.0",
     "reflect-metadata": "^0.2.2",
     "tsup": "^8.4.0",
     "typescript": "^5.7.2",
