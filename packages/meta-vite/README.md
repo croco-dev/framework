@@ -70,6 +70,13 @@ const handler = createMetaFetchHandler({
 
 ### 4. SSR Page + API Route (combined)
 
+The `apiRoutes` option accepts `/api` and paths under `/api/`. Registration, route manifest
+creation, and fetch handler creation reject other paths with
+`CROCO_META_VITE_API_ROUTE_PREFIX_REQUIRED`, including the route path and HTTP method.
+A route registered at `/api` can handle `/api/*`; a request to exactly `/api` still follows
+the page handler flow. For paths outside this namespace, use the legacy `apiHandler` or
+provider adapter `apiHandlers.match`.
+
 ```typescript
 import {
   defineRoute,

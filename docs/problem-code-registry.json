@@ -1,6 +1,6 @@
 {
   "version": "croco.problem-code-registry.v1",
-  "problemCount": 949,
+  "problemCount": 950,
   "problems": [
     {
       "code": "ACCESS_DENIED",
@@ -869,6 +869,36 @@
           "line": 154,
           "column": 11,
           "kind": "problem-factory"
+        }
+      ]
+    },
+    {
+      "code": "CROCO_META_VITE_API_ROUTE_PREFIX_REQUIRED",
+      "category": "BadRequest",
+      "status": 400,
+      "title": "Bad Request",
+      "cookbookPath": "/reference/problem-recovery-cookbook/#croco-meta-vite-api-route-prefix-required",
+      "recovery": {
+        "cause": "The caller sent malformed input or unsupported request options.",
+        "userAction": "Correct the request input and retry after validation passes.",
+        "operatorAction": "Inspect validation details and request logs; do not retry unchanged input.",
+        "retryability": "not-retryable",
+        "redactionPolicy": "public",
+        "telemetry": {
+          "eventName": "croco.problem.info",
+          "severity": "info",
+          "attributes": ["problem.code", "problem.category", "problem.status"]
+        }
+      },
+      "lifecycle": {
+        "status": "active"
+      },
+      "sources": [
+        {
+          "file": "packages/meta-vite/src/libs/routes/validateApiRoute.ts",
+          "line": 5,
+          "column": 1,
+          "kind": "problem-class"
         }
       ]
     },
@@ -17431,7 +17461,7 @@
       "sources": [
         {
           "file": "packages/meta-vite/src/libs/build/routeManifest.ts",
-          "line": 20,
+          "line": 22,
           "column": 1,
           "kind": "problem-class"
         }

@@ -84,6 +84,32 @@ describe("RouteRegistry", () => {
 });
 
 describe("ApiRoute registration", () => {
+  it.each(["/webhooks/stripe", "/healthz", "/apix", "/apiary", "/API/foo", "/", ""])(
+    "rejects API route outside the /api namespace: %j",
+    (path) => {
+      const create = () =>
+        new RouteRegistry().registerApiRoute({ path, method: "POST", handler: vi.fn() });
+
+      expect(create).toThrow(
+        expect.objectContaining({
+          code: "CROCO_META_VITE_API_ROUTE_PREFIX_REQUIRED",
+          path,
+          method: "POST",
+        }),
+      );
+      expect(create).toThrow("POST");
+    },
+  );
+
+  it.each(["/api", "/api/", "/api/users"])("registers API namespace path %s", (path) => {
+    const registry = new RouteRegistry();
+    const handler = vi.fn<() => Promise<Response>>();
+
+    registry.registerApiRoute({ path, handler });
+
+    expect(registry.getApiRoutes()).toEqual([{ path, method: "GET", handler }]);
+  });
+
   it("registers a GET route by default", () => {
     const registry = new RouteRegistry();
     const handler = vi.fn<() => Promise<Response>>();
