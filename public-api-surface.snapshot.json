@@ -558,6 +558,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "RewardOperations",
+              "exportKind": "named",
+              "source": "./libs/RewardOperations",
+              "declarationKind": "class"
+            },
+            {
               "name": "SavedIntentAdminDeniedProblem",
               "exportKind": "named",
               "source": "./libs/SavedIntentOperations",
@@ -2162,6 +2168,11 @@
               "source": "@croco/metrics-core"
             },
             {
+              "name": "RewardAdminAccess",
+              "exportKind": "named",
+              "source": "./libs/RewardOperations"
+            },
+            {
               "name": "Sample",
               "exportKind": "named",
               "source": "./libs/CustomerExplorer"
@@ -3495,6 +3506,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "RewardConsole",
+              "exportKind": "named",
+              "source": "./libs/RewardConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "SavedIntentConsole",
               "exportKind": "named",
               "source": "./libs/SavedIntentConsole",
@@ -4768,6 +4785,11 @@
               "name": "ReminderOperationsPanelProps",
               "exportKind": "named",
               "source": "./libs/ReminderOperationsPanel"
+            },
+            {
+              "name": "RewardConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/RewardConsole"
             },
             {
               "name": "SavedIntentConsoleProps",
@@ -20326,6 +20348,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "BadgeShelf",
+              "exportKind": "named",
+              "source": "./libs/Rewards",
+              "declarationKind": "function"
+            },
+            {
               "name": "ContinueCard",
               "exportKind": "named",
               "source": "./libs/SavedItems",
@@ -20443,6 +20471,12 @@
               "name": "RequireSession",
               "exportKind": "named",
               "source": "./libs/authBridge",
+              "declarationKind": "function"
+            },
+            {
+              "name": "RewardReceipt",
+              "exportKind": "named",
+              "source": "./libs/Rewards",
               "declarationKind": "function"
             },
             {
@@ -20916,6 +20950,11 @@
               "source": "./libs/authBridgeTypes"
             },
             {
+              "name": "RewardViewState",
+              "exportKind": "named",
+              "source": "./libs/Rewards"
+            },
+            {
               "name": "SavedItemsProps",
               "exportKind": "named",
               "source": "./libs/SavedItems"
@@ -21113,6 +21152,43 @@
               "declarationKind": "class"
             },
             {
+              "name": "InvalidRewardPolicyProblem",
+              "exportKind": "named",
+              "source": "@croco/gamification-core/reward-contracts"
+            },
+            {
+              "name": "RewardAccessDeniedProblem",
+              "exportKind": "named",
+              "source": "@croco/gamification-core/reward-contracts"
+            },
+            {
+              "name": "RewardConflictProblem",
+              "exportKind": "named",
+              "source": "@croco/gamification-core/reward-contracts"
+            },
+            {
+              "name": "RewardEvidenceInvalidProblem",
+              "exportKind": "named",
+              "source": "@croco/gamification-core/reward-contracts"
+            },
+            {
+              "name": "RewardService",
+              "exportKind": "named",
+              "source": "./libs/RewardService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "RewardStore",
+              "exportKind": "named",
+              "source": "./libs/RewardStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "RewardUnavailableProblem",
+              "exportKind": "named",
+              "source": "@croco/gamification-core/reward-contracts"
+            },
+            {
               "name": "assertChallengeDefinition",
               "exportKind": "named",
               "source": "./libs/ChallengeContracts",
@@ -21123,9 +21199,29 @@
               "exportKind": "named",
               "source": "./libs/ChallengeContracts",
               "declarationKind": "function"
+            },
+            {
+              "name": "assertRewardPolicy",
+              "exportKind": "named",
+              "source": "@croco/gamification-core/reward-contracts"
+            },
+            {
+              "name": "assertRewardScope",
+              "exportKind": "named",
+              "source": "@croco/gamification-core/reward-contracts"
+            },
+            {
+              "name": "selectReward",
+              "exportKind": "named",
+              "source": "@croco/gamification-core/reward-contracts"
             }
           ],
           "typeExports": [
+            {
+              "name": "BadgeOwnership",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
             {
               "name": "Challenge",
               "exportKind": "named",
@@ -21210,8 +21306,143 @@
               "name": "ChallengeView",
               "exportKind": "named",
               "source": "./libs/ChallengeContracts"
+            },
+            {
+              "name": "PointEntry",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "PublishedRewardPolicy",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "RewardAccessVerifier",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "RewardAccount",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "RewardEntry",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "RewardEvidenceVerifier",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "RewardFallback",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "RewardGrant",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "RewardKey",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "RewardPolicy",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "RewardPublication",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "RewardScope",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "RewardSelection",
+              "exportKind": "named",
+              "source": "./libs/types"
             }
           ]
+        },
+        {
+          "exportPath": "./reward-contracts",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/reward-contracts.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/reward-contracts.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/reward-contracts.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/gamification-core/src/reward-contracts.ts",
+          "runtimeExports": [
+            {
+              "name": "InvalidRewardPolicyProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "RewardAccessDeniedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "RewardConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "RewardEvidenceInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "RewardUnavailableProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "assertRewardPolicy",
+              "exportKind": "named",
+              "source": "./libs/validation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertRewardScope",
+              "exportKind": "named",
+              "source": "./libs/validation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "selectReward",
+              "exportKind": "named",
+              "source": "./libs/validation",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": []
         }
       ]
     },
@@ -21305,9 +21536,27 @@
               "declarationKind": "class"
             },
             {
+              "name": "DrizzleRewardStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleRewardStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "RewardPersistenceProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
               "name": "createChallengeSchema",
               "exportKind": "named",
               "source": "./migrations/gamificationSchema",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createRewardSchema",
+              "exportKind": "named",
+              "source": "./libs/migration",
               "declarationKind": "function"
             },
             {
@@ -21315,6 +21564,42 @@
               "exportKind": "named",
               "source": "./migrations/gamificationSchema",
               "declarationKind": "function"
+            },
+            {
+              "name": "rewardBadges",
+              "exportKind": "named",
+              "source": "./libs/rewardSchema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "rewardFamilies",
+              "exportKind": "named",
+              "source": "./libs/rewardSchema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "rewardGrants",
+              "exportKind": "named",
+              "source": "./libs/rewardSchema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "rewardPoints",
+              "exportKind": "named",
+              "source": "./libs/rewardSchema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "rewardPublications",
+              "exportKind": "named",
+              "source": "./libs/rewardSchema",
+              "declarationKind": "const"
+            },
+            {
+              "name": "rewardSchema",
+              "exportKind": "named",
+              "source": "./libs/rewardSchema",
+              "declarationKind": "const"
             },
             {
               "name": "challengeSchema",
@@ -21327,6 +21612,11 @@
               "name": "DrizzleChallengeClient",
               "exportKind": "named",
               "source": "./libs/DrizzleChallengeStore"
+            },
+            {
+              "name": "DrizzleRewardClient",
+              "exportKind": "named",
+              "source": "./libs/DrizzleRewardStore"
             },
             {
               "name": "GamificationMigrationClient",

@@ -197,24 +197,19 @@ export class CarryingCapacityCalculator {
     }
 
     const simulatedCapacity = simulatedDailyInflow / simulatedDailyChurnRate;
-    const simulatedHeadroom = Math.max(0, simulatedCapacity - baseline.current);
-    const simulatedHeadroomPercent = (simulatedHeadroom / simulatedCapacity) * 100;
-
-    const simulated: CCResult = {
-      capacity: simulatedCapacity,
-      current: baseline.current,
-      headroom: simulatedHeadroom,
-      headroomPercent: simulatedHeadroomPercent,
-      dailyInflow: simulatedDailyInflow,
-      dailyChurnRate: simulatedDailyChurnRate,
-    };
+    const simulated = this.buildCCResult(
+      simulatedCapacity,
+      baseline.current,
+      simulatedDailyInflow,
+      simulatedDailyChurnRate,
+    );
 
     return {
       baseline,
       simulated,
       capacityDelta: simulatedCapacity - baseline.capacity,
-      headroomDelta: simulatedHeadroom - baseline.headroom,
-      headroomPercentDelta: simulatedHeadroomPercent - baseline.headroomPercent,
+      headroomDelta: simulated.headroom - baseline.headroom,
+      headroomPercentDelta: simulated.headroomPercent - baseline.headroomPercent,
     };
   }
 
@@ -228,7 +223,7 @@ export class CarryingCapacityCalculator {
     dailyChurnRate: number,
   ): CCResult {
     const headroom = Math.max(0, capacity - current);
-    const headroomPercent = (headroom / capacity) * 100;
+    const headroomPercent = capacity === 0 ? 0 : (headroom / capacity) * 100;
 
     return {
       capacity,

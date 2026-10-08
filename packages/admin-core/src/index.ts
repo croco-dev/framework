@@ -488,3 +488,5 @@ export type {
   ChallengeOperationsClose,
   ChallengeOperationsSource,
 } from "./libs/ChallengeOperations";
+export { RewardOperations } from "./libs/RewardOperations";
+export type { RewardAdminAccess } from "./libs/RewardOperations";

@@ -1518,6 +1518,7 @@ jobs:
           EXPERIENCE_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           FEATURES_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           GAMIFICATION_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
+          REWARDS_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           MEMBERSHIP_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           METERING_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership
           ONBOARDING_POSTGRES_URL: postgresql://postgres:postgres@127.0.0.1:5432/croco_membership

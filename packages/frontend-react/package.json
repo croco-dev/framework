@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "@croco/experience-core": "workspace:*",
+    "@croco/gamification-core": "workspace:*",
     "@croco/meta-vite": "workspace:*",
     "@croco/onboarding-core": "workspace:*",
     "@croco/problems-core": "workspace:*",

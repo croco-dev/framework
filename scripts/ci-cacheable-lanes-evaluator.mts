@@ -783,8 +783,10 @@ export function evaluateDataset(
       if ((pages.at(-1)?.itemCount ?? 100) >= 100)
         fail(`inventory query ${query} must terminate with a short page`);
     }
-    const sourceRunPages = queryPages.get("source-runs");
-    if (!sourceRunPages) fail("inventory.pages must include the source-runs query");
+    const sourceRunPages = inventory.pages.filter(
+      ({ query }) => query === "source-runs" || query.startsWith("source-runs:created="),
+    );
+    if (sourceRunPages.length === 0) fail("inventory.pages must include the source-runs query");
     const pagedRuns = sourceRunPages.flatMap(({ sourceRunIds }) => sourceRunIds);
     const pagedArtifacts = inventory.pages
       .filter(({ query }) => query.startsWith("observer-artifacts:"))
