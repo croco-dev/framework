@@ -29,4 +29,4 @@ title: "PersonalizedCachePolicy"
 
 ### zones
 
-> `readonly` **zones**: `Readonly`\<`Record`\<[`PersonalizedCacheZone`](/api/cache-core/src/type-aliases/personalizedcachezone/), [`ResolvedPersonalizedCacheZonePolicy`](/api/cache-core/src/type-aliases/resolvedpersonalizedcachezonepolicy/)\>\>
+> `readonly` **zones**: `Readonly`\<`Record`\<`"public"`, [`ResolvedPersonalizedCacheZonePolicy`](/api/cache-core/src/type-aliases/resolvedpersonalizedcachezonepolicy/)\>\> & `Readonly`\<`Partial`\<`Record`\<`"variant"` \| `"private"`, [`ResolvedPersonalizedCacheZonePolicy`](/api/cache-core/src/type-aliases/resolvedpersonalizedcachezonepolicy/)\>\>\>
