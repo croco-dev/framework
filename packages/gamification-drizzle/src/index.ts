@@ -20,7 +20,6 @@ export {
   rewardBadges,
 } from "./libs/rewardSchema";
 
-
 export {
   missionDefinitions,
   missionInstances,
