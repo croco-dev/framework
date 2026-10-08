@@ -426,13 +426,9 @@ async function resolveFragment<T>(input: {
   }
 
   input.inspect?.({ ...base, outcome: "miss", reason: freshness.reason });
+  let fresh: StoredFragment;
   try {
-    const fresh = await fillFragment(input);
-    await input.store.invalidate(input.key);
-    await input.store.getOrSet<StoredFragment>(input.key, async () => fresh, {
-      ttlMs: retention,
-    });
-    return { value: parseValue<T>(fresh.bytes, fresh.value), source: "render" };
+    fresh = await fillFragment(input);
   } catch (error) {
     // Genuinely expired with no SWR: still allow one bounded stale-if-error
     // read of the previous full fragment when the domain permits it.
@@ -443,6 +439,20 @@ async function resolveFragment<T>(input: {
     }
     throw error;
   }
+  try {
+    await input.store.invalidate(input.key);
+    await input.store.getOrSet<StoredFragment>(input.key, async () => fresh, {
+      ttlMs: retention,
+    });
+  } catch (error) {
+    // Cache persistence is best-effort: a concurrent fill may win the race,
+    // or the store may reject the write. Either way the freshly loaded value
+    // is already in hand, so report the write outcome and return it instead
+    // of falling back to a stale copy.
+    void error;
+    input.inspect?.({ ...base, outcome: "miss", reason: "cache-write-failed" });
+  }
+  return { value: parseValue<T>(fresh.bytes, fresh.value), source: "render" };
 }
 
 async function fillFragment<T>(input: {
