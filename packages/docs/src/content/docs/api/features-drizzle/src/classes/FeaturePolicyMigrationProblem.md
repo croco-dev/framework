@@ -33,7 +33,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 #### Overrides
 
-`PolicyProblem.constructor`
+[`PolicyProblem`](/api/features-core/src/classes/policyproblem/).[`constructor`](/api/features-core/src/classes/policyproblem/#constructor)
 
 ## Properties
 
@@ -53,7 +53,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 #### Inherited from
 
-[`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/).[`cause`](/api/access-core/src/classes/badrequestproblem/#cause)
+[`PolicyProblem`](/api/features-core/src/classes/policyproblem/).[`cause`](/api/features-core/src/classes/policyproblem/#cause)
 
 ---
 
@@ -73,7 +73,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 #### Inherited from
 
-[`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/).[`detail`](/api/access-core/src/classes/badrequestproblem/#detail)
+[`PolicyProblem`](/api/features-core/src/classes/policyproblem/).[`detail`](/api/features-core/src/classes/policyproblem/#detail)
 
 ---
 
@@ -83,7 +83,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 #### Inherited from
 
-[`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/).[`extensions`](/api/access-core/src/classes/badrequestproblem/#extensions)
+[`PolicyProblem`](/api/features-core/src/classes/policyproblem/).[`extensions`](/api/features-core/src/classes/policyproblem/#extensions)
 
 ---
 
@@ -93,7 +93,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 #### Inherited from
 
-[`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/).[`instance`](/api/access-core/src/classes/badrequestproblem/#instance)
+[`PolicyProblem`](/api/features-core/src/classes/policyproblem/).[`instance`](/api/features-core/src/classes/policyproblem/#instance)
 
 ---
 
@@ -103,7 +103,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 #### Inherited from
 
-[`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/).[`message`](/api/access-core/src/classes/badrequestproblem/#message)
+[`PolicyProblem`](/api/features-core/src/classes/policyproblem/).[`message`](/api/features-core/src/classes/policyproblem/#message)
 
 ---
 
@@ -113,7 +113,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 #### Inherited from
 
-[`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/).[`name`](/api/access-core/src/classes/badrequestproblem/#name)
+[`PolicyProblem`](/api/features-core/src/classes/policyproblem/).[`name`](/api/features-core/src/classes/policyproblem/#name)
 
 ---
 
@@ -123,7 +123,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 #### Inherited from
 
-[`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/).[`stack`](/api/access-core/src/classes/badrequestproblem/#stack)
+[`PolicyProblem`](/api/features-core/src/classes/policyproblem/).[`stack`](/api/features-core/src/classes/policyproblem/#stack)
 
 ---
 
@@ -133,7 +133,7 @@ RFC 7807 Problem Details를 표현하는 기본 추상 에러 클래스입니다
 
 #### Inherited from
 
-[`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/).[`type`](/api/access-core/src/classes/badrequestproblem/#type)
+[`PolicyProblem`](/api/features-core/src/classes/policyproblem/).[`type`](/api/features-core/src/classes/policyproblem/#type)
 
 ---
 
@@ -153,7 +153,7 @@ not capture any frames.
 
 #### Inherited from
 
-[`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/).[`stackTraceLimit`](/api/access-core/src/classes/badrequestproblem/#stacktracelimit)
+[`PolicyProblem`](/api/features-core/src/classes/policyproblem/).[`stackTraceLimit`](/api/features-core/src/classes/policyproblem/#stacktracelimit)
 
 ## Accessors
 
@@ -169,7 +169,7 @@ not capture any frames.
 
 #### Inherited from
 
-[`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/).[`status`](/api/access-core/src/classes/badrequestproblem/#status)
+[`PolicyProblem`](/api/features-core/src/classes/policyproblem/).[`status`](/api/features-core/src/classes/policyproblem/#status)
 
 ---
 
@@ -185,7 +185,7 @@ not capture any frames.
 
 #### Inherited from
 
-[`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/).[`title`](/api/access-core/src/classes/badrequestproblem/#title)
+[`PolicyProblem`](/api/features-core/src/classes/policyproblem/).[`title`](/api/features-core/src/classes/policyproblem/#title)
 
 ## Methods
 
@@ -199,7 +199,7 @@ not capture any frames.
 
 #### Inherited from
 
-[`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/).[`toJSON`](/api/access-core/src/classes/badrequestproblem/#tojson)
+[`PolicyProblem`](/api/features-core/src/classes/policyproblem/).[`toJSON`](/api/features-core/src/classes/policyproblem/#tojson)
 
 ---
 
@@ -267,7 +267,7 @@ a();
 
 #### Inherited from
 
-[`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/).[`captureStackTrace`](/api/access-core/src/classes/badrequestproblem/#capturestacktrace)
+[`PolicyProblem`](/api/features-core/src/classes/policyproblem/).[`captureStackTrace`](/api/features-core/src/classes/policyproblem/#capturestacktrace)
 
 ---
 
@@ -295,4 +295,4 @@ https://v8.dev/docs/stack-trace-api#customizing-stack-traces
 
 #### Inherited from
 
-[`BadRequestProblem`](/api/access-core/src/classes/badrequestproblem/).[`prepareStackTrace`](/api/access-core/src/classes/badrequestproblem/#preparestacktrace)
+[`PolicyProblem`](/api/features-core/src/classes/policyproblem/).[`prepareStackTrace`](/api/features-core/src/classes/policyproblem/#preparestacktrace)
