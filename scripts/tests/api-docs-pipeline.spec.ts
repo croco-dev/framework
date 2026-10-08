@@ -18,6 +18,7 @@ import { moveBuildOutput } from "../../packages/docs/scripts/move-build-output.m
 import { prunePreviouslyDocumentedExports } from "../../packages/docs/scripts/prepare-api-models.mjs";
 import {
   normalizeCliDiagnosticDefinitions,
+  normalizeDrizzleChallengeClient,
   sanitizeGeneratedTypeDocIndex,
 } from "../../packages/docs/scripts/sanitize-typedoc-index.mjs";
 
@@ -99,10 +100,10 @@ describe("API documentation pipeline", () => {
   });
 
   it("keeps one canonical, ordered package-model catalog", () => {
-    expect(apiDocPackages).toHaveLength(131);
-    expect(new Set(apiDocPackages.map(({ packageName }) => packageName)).size).toBe(131);
-    expect(new Set(apiDocPackages.map(({ directory }) => directory)).size).toBe(131);
-    expect(new Set(apiDocPackages.map(({ moduleName }) => moduleName)).size).toBe(131);
+    expect(apiDocPackages).toHaveLength(133);
+    expect(new Set(apiDocPackages.map(({ packageName }) => packageName)).size).toBe(133);
+    expect(new Set(apiDocPackages.map(({ directory }) => directory)).size).toBe(133);
+    expect(new Set(apiDocPackages.map(({ moduleName }) => moduleName)).size).toBe(133);
     expect(apiDocModelEntryPoints).toEqual(
       apiDocPackages.map(({ directory }) => `../${directory}/.turbo/docs-api/model.json`),
     );
@@ -242,6 +243,28 @@ describe("API documentation pipeline", () => {
       'Pass a job id other than an empty string, ".", or ".." before retrying the command.',
     );
     expect(normalizeCliDiagnosticDefinitions(normalized)).toBe(normalized);
+  });
+
+  it("removes only the absent challenge schema namespace link from the client type", () => {
+    const namespaceLink =
+      "[`challengeSchema`](/api/gamification-drizzle/src/namespaces/challengeschema/readme/)";
+    const validLink =
+      "[`DrizzleChallengeStore`](/api/gamification-drizzle/src/classes/drizzlechallengestore/)";
+    const input = `> **DrizzleChallengeClient** = \`NodePgDatabase\`\\<_typeof_ ${namespaceLink}\\>\n\n${validLink}\n`;
+    const normalized = normalizeDrizzleChallengeClient(input);
+
+    expect(normalized).toBe(input.replace(namespaceLink, "`challengeSchema`"));
+    expect(normalized).toContain(validLink);
+    expect(normalizeDrizzleChallengeClient(normalized)).toBe(normalized);
+  });
+
+  it("renders the challenge client without a link to an absent namespace page", () => {
+    const client = readFileSync(
+      join(API_DOCS_ROOT, "gamification-drizzle/src/type-aliases/DrizzleChallengeClient.md"),
+      "utf8",
+    );
+    expect(client).toContain("_typeof_ `challengeSchema`");
+    expect(client).not.toContain("/namespaces/challengeschema/readme/");
   });
 
   it("does not sanitize tracked API docs during Astro preview", async () => {

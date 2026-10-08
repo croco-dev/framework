@@ -306,6 +306,21 @@ export async function sanitizeTypeDocIndex() {
   await sanitizeRestRouteContractDocs();
   await sanitizeFrontendReactDocs();
   await sanitizeTasksCoreDocs();
+  await sanitizeDrizzleChallengeClient();
+}
+
+export function normalizeDrizzleChallengeClient(content) {
+  return content.replaceAll(
+    "[`challengeSchema`](/api/gamification-drizzle/src/namespaces/challengeschema/readme/)",
+    "`challengeSchema`",
+  );
+}
+
+async function sanitizeDrizzleChallengeClient() {
+  const path = apiDocsPath("gamification-drizzle/src/type-aliases/DrizzleChallengeClient.md");
+  const content = await readFile(path, "utf8");
+  const sanitized = normalizeDrizzleChallengeClient(content);
+  if (sanitized !== content) await writeFile(path, sanitized);
 }
 
 async function sanitizeApiIndex() {
