@@ -659,47 +659,122 @@ describe("CI performance observer workflow", () => {
     }
   });
 
-  it("fails a non-cancelled run whose split artifact set is missing a lane", () => {
-    const splitDownload = parsedWorkflow().jobs?.observe?.steps?.find(
-      ({ name }) => name === "Download exact split evidence when present",
-    );
-    expect(splitDownload?.run).toContain(
-      "Expected an exact five-artifact Phase B split evidence set.",
+  describe("split evidence download selection", () => {
+    const lanes = [
+      "core-verification",
+      "generated-apps",
+      "package-artifacts",
+      "coverage-security",
+      "split-validation-shadow",
+    ];
+    const artifactSet = (attempt: number, run = 42) =>
+      lanes.map((lane) => ({ name: `ci-lane-${lane}-${run}-${attempt}`, expired: false }));
+
+    function runDownload(artifacts: readonly { name: string; expired: boolean }[]) {
+      const splitDownload = parsedWorkflow().jobs?.observe?.steps?.find(
+        ({ name }) => name === "Download exact split evidence when present",
+      );
+      expect(splitDownload?.run).toBeTruthy();
+      const workspace = mkdtempSync(join(tmpdir(), "croco-ci-observer-split-"));
+      try {
+        mkdirSync(join(workspace, "ci-observer-input"), { recursive: true });
+        writeFileSync(
+          join(workspace, "ci-observer-input/artifacts.json"),
+          JSON.stringify({ total_count: artifacts.length, artifacts }),
+        );
+        const logPath = join(workspace, "downloads.jsonl");
+        writeFileSync(logPath, "");
+        const ghPath = join(workspace, "gh");
+        writeFileSync(
+          ghPath,
+          '#!/usr/bin/env bash\njq -cn --args \'$ARGS.positional\' -- "$@" >> "$DOWNLOAD_LOG"\n',
+        );
+        chmodSync(ghPath, 0o755);
+        const result = spawnSync("bash", ["-eo", "pipefail", "-c", splitDownload?.run ?? ""], {
+          cwd: workspace,
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            DOWNLOAD_LOG: logPath,
+            GH_TOKEN: "test-token",
+            GITHUB_REPOSITORY: "croco-dev/framework",
+            PATH: `${workspace}:${process.env.PATH ?? ""}`,
+            SOURCE_RUN_ATTEMPT: "2",
+            SOURCE_RUN_ID: "42",
+          },
+        });
+        return {
+          status: result.status,
+          stderr: result.stderr,
+          downloads: readFileSync(logPath, "utf8")
+            .split("\n")
+            .filter(Boolean)
+            .map((line) => JSON.parse(line) as string[]),
+        };
+      } finally {
+        rmSync(workspace, { force: true, recursive: true });
+      }
+    }
+
+    const expectedDownloads = artifactSet(2).map(({ name }) => [
+      "run",
+      "download",
+      "42",
+      "--repo",
+      "croco-dev/framework",
+      "--name",
+      name,
+      "--dir",
+      `ci-observer-input/split/${name}`,
+    ]);
+
+    it("downloads only the current attempt when both attempts have complete sets", () => {
+      expect(runDownload([...artifactSet(1), ...artifactSet(2)])).toEqual({
+        status: 0,
+        stderr: "",
+        downloads: expectedDownloads,
+      });
+    });
+
+    it("does not download old-attempt evidence when the current attempt has none", () => {
+      expect(runDownload(artifactSet(1))).toEqual({ status: 0, stderr: "", downloads: [] });
+    });
+
+    it("ignores artifacts for another run even when its attempt matches", () => {
+      expect(runDownload([...artifactSet(2, 142), ...artifactSet(2)])).toEqual({
+        status: 0,
+        stderr: "",
+        downloads: expectedDownloads,
+      });
+    });
+
+    it.each([
+      ["incomplete", artifactSet(2).slice(0, 4)],
+      ["duplicate", [...artifactSet(2), artifactSet(2)[0]]],
+      ["unknown lane", [...artifactSet(2), { name: "ci-lane-unknown-42-2", expired: false }]],
+    ])(
+      "rejects a current-attempt %s set even when an old complete set exists",
+      (_kind, current) => {
+        const result = runDownload([...artifactSet(1), ...current]);
+        expect(result.status).toBe(1);
+        expect(result.stderr).toContain(
+          "Expected an exact five-artifact Phase B split evidence set.",
+        );
+        expect(result.downloads).toEqual([]);
+      },
     );
 
-    const workspace = mkdtempSync(join(tmpdir(), "croco-ci-observer-split-"));
-    try {
-      mkdirSync(join(workspace, "ci-observer-input"), { recursive: true });
-      const artifacts = {
-        total_count: 4,
-        artifacts: [
-          { name: "ci-lane-core-verification-1-1", expired: false },
-          { name: "ci-lane-generated-apps-1-1", expired: false },
-          { name: "ci-lane-package-artifacts-1-1", expired: false },
-          { name: "ci-lane-coverage-security-1-1", expired: false },
-        ],
-      };
-      writeFileSync(join(workspace, "ci-observer-input/artifacts.json"), JSON.stringify(artifacts));
-      const ghPath = join(workspace, "gh");
-      writeFileSync(ghPath, "#!/usr/bin/env bash\nexit 99\n");
-      chmodSync(ghPath, 0o755);
-      const result = spawnSync("bash", ["-eo", "pipefail", "-c", splitDownload?.run ?? ""], {
-        cwd: workspace,
-        encoding: "utf8",
-        env: {
-          ...process.env,
-          GH_TOKEN: "test-token",
-          PATH: `${workspace}:${process.env.PATH ?? ""}`,
-          SOURCE_RUN_ATTEMPT: "1",
-          SOURCE_RUN_ID: "1",
-        },
-      });
+    it("rejects an expired current artifact even when the old attempt is complete", () => {
+      const current = artifactSet(2).map((artifact, index) => ({
+        ...artifact,
+        expired: index === 0,
+      }));
+      const result = runDownload([...artifactSet(1), ...current]);
       expect(result.status).toBe(1);
       expect(result.stderr).toContain(
-        "Expected an exact five-artifact Phase B split evidence set.",
+        "Expected one unexpired ci-lane-core-verification-42-2 artifact.",
       );
-    } finally {
-      rmSync(workspace, { force: true, recursive: true });
-    }
+      expect(result.downloads).toEqual([]);
+    });
   });
 });

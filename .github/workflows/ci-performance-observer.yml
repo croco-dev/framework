@@ -184,7 +184,7 @@ jobs:
             echo "Source artifact response is incomplete." >&2
             exit 1
           fi
-          split_artifact_count=$(jq -r '[.artifacts[] | select(.name | startswith("ci-lane-"))] | length' ci-observer-input/artifacts.json)
+          split_artifact_count=$(jq --arg suffix "-${SOURCE_RUN_ID}-${SOURCE_RUN_ATTEMPT}" '[.artifacts[] | select(.name | startswith("ci-lane-") and endswith($suffix))] | length' ci-observer-input/artifacts.json)
           if [ "$split_artifact_count" -eq 0 ]; then
             exit 0
           fi
