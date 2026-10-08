@@ -1,8 +1,23 @@
+import { createRequire } from "node:module";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { EnvironmentOptions, Plugin, UserConfig } from "vite";
 
 export type CrocoMetaVitePluginOptions = {
   rsc?: boolean;
 };
+
+export class MissingRscPeerProblem extends Problem {
+  readonly code = "meta-vite/rsc-peer-missing";
+  readonly category = ProblemCategory.NotImplemented;
+
+  constructor(reason: string) {
+    super(
+      "meta-vite/rsc-peer-missing",
+      ProblemCategory.NotImplemented,
+      `crocoMetaVitePlugin: the 'rsc' environment requires the optional peer '@vitejs/plugin-rsc': ${reason}`,
+    );
+  }
+}
 
 export type EnvironmentName = "client" | "ssr" | "rsc";
 
@@ -62,6 +77,12 @@ export function crocoMetaVitePlugin(options: CrocoMetaVitePluginOptions = {}): P
       }
 
       getState(name);
+      // The `rsc` environment is the React Flight path. Fail fast with an
+      // explicit diagnostic when the optional `@vitejs/plugin-rsc` peer is
+      // missing — never silently fall back to a non-Flight implementation.
+      if (name === "rsc") {
+        assertRscPeerAvailable();
+      }
       return { ...ENVIRONMENT_CONFIGS[name] };
     },
 
@@ -151,4 +172,17 @@ function isEnvironmentName(name: string | undefined): name is EnvironmentName {
 
 function isVirtualModuleKind(kind: string | undefined): kind is VirtualModuleKind {
   return kind === "routes" || kind === "entry";
+}
+
+function assertRscPeerAvailable(): void {
+  // `@vitejs/plugin-rsc` is an optional peer of `@croco/meta-vite`: it is
+  // required only for the `rsc` Vite environment. `createRequire` keeps the
+  // check synchronous (Vite's `configEnvironment` contract) and out of the
+  // SSR/client bundle, while the lockfile pins the supported version.
+  try {
+    createRequire(import.meta.url).resolve("@vitejs/plugin-rsc");
+  } catch (error: unknown) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new MissingRscPeerProblem(reason);
+  }
 }

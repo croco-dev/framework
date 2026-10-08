@@ -27,7 +27,7 @@ development environment support.
 | SSR pages         | Supported through `createNodeComposedHandler()` and `RenderServer`. Shell-first streaming for declared deferred regions.                                                                   | Supported through `createLambdaComposedHandler()` with API Gateway event conversion. Shell-first pages buffer before returning.                                  | Supported through `createCloudflareComposedHandler()` and `@croco/frontend-cloudflare`. Shell-first pages pipe the stream.                                                              |
 | SSG routes        | Supported at build time through `prerenderSsgRoutes()`.                                                                                                                                    | Supported as static build output before Lambda packaging.                                                                                                        | Supported as static build output before Worker asset upload.                                                                                                                            |
 | ISR routes        | Supported as v1 exact-key TTL caching. Durable ISR requires `RedisCacheStoreAdapter` or another durable `IsrCacheStore`.                                                                   | Supported as v1 exact-key TTL caching. In-memory cache is warm-container only; durable ISR requires `RedisCacheStoreAdapter` or another durable `IsrCacheStore`. | Supported as v1 exact-key TTL caching only when a Worker-safe `IsrCacheStore` is supplied. In-memory cache is isolate-local and not durable.                                            |
-| RSC routes        | Legacy buffered SSR with embedded JSON; React Flight and progressive rendering are unsupported.                                                                                            | Legacy buffered SSR with embedded JSON; React Flight and progressive rendering are unsupported.                                                                  | Legacy buffered SSR with embedded JSON; React Flight and progressive rendering are unsupported.                                                                                         |
+| RSC routes        | Real React Flight on Node (`@vitejs/plugin-rsc@0.5.26` + `react-server-dom-webpack@19.2.5`, React 19.2.5; HTML/Flight negotiated per request; proof: `examples/rsc-node-example`).         | Not verified on Lambda — declare only after a real host-contract check.                                                                                          | Not verified on Workers — declare only after a real host-contract check.                                                                                                                |
 | Server actions    | Supported through `createServerActionHandler()` in the API route pipeline.                                                                                                                 | Supported through the same handler after Lambda event conversion.                                                                                                | Supported through the same handler with Cloudflare `RuntimeContext` propagation.                                                                                                        |
 | API routes        | Supported through `defineApiRoute()` and API-first/page-fallback composition.                                                                                                              | Supported through API-first/page-fallback composition.                                                                                                           | Supported through API-first/page-fallback composition or Cloudflare service bindings.                                                                                                   |
 | Streaming         | Fetch `Response` streams are preserved by the fetch-compatible Node surface. Shell-first SSR pages with declared regions report `streaming-response` and stream with bounded backpressure. | Not supported by this adapter; Lambda responses are buffered. Shell-first SSR pages report `streaming-response` in the manifest but use buffered delivery.       | Supported for fetch `Response` bodies; tested as a Worker-style stream preservation claim. Shell-first SSR pages with declared regions report `streaming-response` and pipe the stream. |
@@ -60,18 +60,23 @@ Missing durable ISR configuration is not treated as a silent production success:
 | `CROCO_META_VITE_ISR_LOCAL_CACHE_ONLY`    | A deployment requires durable ISR while using a local process, warm-container, or isolate cache. | Use `RedisCacheStoreAdapter` on Node/Lambda, or a durable runtime-safe store for Workers.   |
 | `CROCO_META_VITE_ISR_WORKER_STORE_UNSAFE` | A Cloudflare Workers durable ISR claim uses a store profile that is not marked Worker-safe.      | Supply a Worker-safe `IsrCacheStore` backed by Worker-compatible bindings and mark it safe. |
 
-The legacy `rsc` mode is buffered SSR, even on hosts that preserve external response streams.
-Route manifests retain the requested mode and RSC requirement but report only `fetch` and
-`react-ssr` as implemented capabilities. SSR pages with declared deferred regions report
+The `rsc` mode is real React Flight on the Node production path
+(`examples/rsc-node-example`): the official `@vitejs/plugin-rsc` encoder runs in
+an isolated `react-server` child process, `RenderServer` decodes with the official
+client decoder and renders HTML with `react-dom/server`, and HTML vs Flight are
+negotiated on one path with distinct representations and manifest-version headers.
+Route manifests retain the requested mode and RSC requirement and report the Flight
+implementation as a capability. SSR pages with declared deferred regions report
 `streaming-response` and render through the shell-first streaming path; shell status decisions
 (`resolveShell`) commit before header flush, region errors stay on a safe fallback without
 status rewrites or stack exposure, and request cancellation propagates through the region signal.
 Profiles must pass their page requirements through
 `requiredCapabilities` when creating the route manifest; unsupported requirements fail with
-`meta-vite/unsupported-render-capability` (501). Actual Flight streaming remains
-tracked in #2835; SSR shell-first streaming shipped in #2836.
+`meta-vite/unsupported-render-capability` (501). Workers/Lambda RSC support stays
+undeclared until verified against a real host contract (#2835); SSR shell-first
+streaming shipped in #2836.
 
-Legacy `rsc` development recovery remains conservative: render failures return controlled diagnostics, and
+`rsc` development recovery remains conservative: render failures return controlled diagnostics, and
 development reload recovery is a full page reload rather than an HMR-based RSC recovery claim.
 
 ## Promotion Criteria

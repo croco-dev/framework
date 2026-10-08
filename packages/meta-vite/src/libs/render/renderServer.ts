@@ -1,6 +1,22 @@
 import { Suspense, createElement } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { renderToReadableStream, renderToString } from "react-dom/server";
+import {
+  RscClientManifestMismatchProblem,
+  RscClientReferenceMissingProblem,
+  RscFlightNotAcceptableProblem,
+  RscServerReferenceNotSupportedProblem,
+  assertRscClientManifestVersion,
+  assertRscServerReferenceUnsupported,
+  createRscFlightHeaders,
+  createRscHtmlShell,
+  parseRscFlightRequest,
+  resolveRscClientManifestVersion,
+} from "../rsc/flight";
+import { encodeRscFlightInIsolatedEncoder } from "../rsc/isolatedEncode";
+import type { RscFlightEncoder, RscRenderOptions } from "../rsc/flight";
+import type { RscSsrCodec } from "../rsc/ssrDecode";
+import { decodeFlightToHtmlStream } from "../rsc/ssrDecode";
 import type { HeadMetadata } from "../routes/head";
 import type { ShellDecision, ShellSettleSummary } from "../routes/shell";
 import type { RenderRouteComponentProps, RenderRouteIR } from "../routes/types";
@@ -36,7 +52,25 @@ const FALLBACK_HEAD_500: HeadMetadata = {
 };
 
 export class RenderServer {
-  constructor(private readonly routes: RenderRouteIR[]) {}
+  constructor(
+    private readonly routes: RenderRouteIR[],
+    private readonly rscOptions: RscRenderOptions = {},
+  ) {
+    this.rscEncoder = rscOptions.encodeFlight;
+    this.rscClientManifestVersion = resolveRscClientManifestVersion(rscOptions);
+  }
+
+  private readonly rscEncoder: RscFlightEncoder | undefined;
+  private readonly rscClientManifestVersion: string;
+  private rscSsrCodecPromise: Promise<RscSsrCodec> | undefined;
+
+  private loadRscSsrCodec(): Promise<RscSsrCodec> {
+    this.rscSsrCodecPromise ??= import("../rsc/ssrCodec").then((codec) =>
+      codec.createRscSsrCodec(),
+    );
+
+    return this.rscSsrCodecPromise;
+  }
 
   async handle(request: Request, context?: RuntimeContext): Promise<Response> {
     const route = this.findRoute(request);
@@ -779,21 +813,27 @@ export class RenderServer {
     context?: RuntimeContext,
   ): Promise<Response> {
     try {
-      const module = await route.componentLoader();
-      const props = this.createComponentProps(request, context);
-      const html = renderToString(createElement(module.default, props));
-      const flightPayload = JSON.stringify({
-        nodeType: "rsc-flight",
-        path: route.path,
-        content: html,
-      }).replace(/</g, "\\u003c");
+      const flightRequest = parseRscFlightRequest(request);
+      assertRscClientManifestVersion(route, flightRequest, this.rscClientManifestVersion);
+      assertRscServerReferenceUnsupported(route, flightRequest);
+
+      const encoder = this.rscEncoder ?? defaultRscFlightEncoder;
+      const flight = await encoder(route, request, context);
+
+      if (flightRequest.wantsFlight) {
+        return new Response(flight, {
+          status: 200,
+          headers: createRscFlightHeaders(this.rscClientManifestVersion),
+        });
+      }
+
+      const codec = await this.loadRscSsrCodec();
+      const { htmlStream } = await decodeFlightToHtmlStream(codec, flight, {
+        routePath: route.path,
+      });
       const headMetadata = route.head?.();
 
-      return this.createHtmlResponse(
-        `${html}<script type="text/x-component">${flightPayload}</script>`,
-        200,
-        headMetadata,
-      );
+      return this.createRscHtmlStreamResponse(route, headMetadata, htmlStream);
     } catch (error) {
       return this.createRscErrorResponse(error, route.path);
     }
@@ -801,8 +841,21 @@ export class RenderServer {
 
   private findRoute(request: Request): RenderRouteIR | undefined {
     const { pathname } = new URL(request.url);
+    const direct = this.routes.find((route) => route.path === pathname);
 
-    return this.routes.find((route) => route.path === pathname);
+    if (direct) {
+      return direct;
+    }
+
+    // Client navigation/refresh path: the same route serves both HTML and
+    // Flight (`/page.rsc`), so strip the suffix before matching.
+    if (pathname.endsWith(".rsc")) {
+      const base = pathname.slice(0, -".rsc".length) || "/";
+
+      return this.routes.find((route) => route.path === base);
+    }
+
+    return undefined;
   }
 
   private createComponentProps(
@@ -828,6 +881,37 @@ export class RenderServer {
   }
 
   private createRscErrorResponse(error: unknown, routePath: string): Response {
+    if (
+      error instanceof RscClientManifestMismatchProblem ||
+      error instanceof RscClientReferenceMissingProblem
+    ) {
+      return new Response(
+        JSON.stringify({
+          error:
+            error.code === "meta-vite/rsc-client-manifest-mismatch"
+              ? "RSC client manifest mismatch"
+              : "RSC client reference missing",
+          route: routePath,
+          code: error.code,
+        }),
+        { status: error.status, headers: JSON_HEADERS },
+      );
+    }
+
+    if (
+      error instanceof RscFlightNotAcceptableProblem ||
+      error instanceof RscServerReferenceNotSupportedProblem
+    ) {
+      return new Response(
+        JSON.stringify({
+          error: "RSC request not supported",
+          route: routePath,
+          code: error.code,
+        }),
+        { status: error.status, headers: JSON_HEADERS },
+      );
+    }
+
     const detail = error instanceof Error ? "An internal server error occurred" : String(error);
 
     return new Response(
@@ -837,6 +921,36 @@ export class RenderServer {
         headers: JSON_HEADERS,
       },
     );
+  }
+
+  private createRscHtmlStreamResponse(
+    route: RenderRouteIR,
+    headMetadata: HeadMetadata | undefined,
+    htmlStream: ReadableStream<Uint8Array>,
+  ): Response {
+    const encoder = new TextEncoder();
+    const { prefix, suffix } = splitRscHtmlShell(
+      createRscHtmlShell(headMetadata, "", this.rscClientManifestVersion),
+    );
+    void route;
+
+    const body = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        controller.enqueue(encoder.encode(prefix));
+        const reader = htmlStream.getReader();
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
+          }
+          controller.enqueue(value);
+        }
+        controller.enqueue(encoder.encode(suffix));
+        controller.close();
+      },
+    });
+
+    return new Response(body, { status: 200, headers: HTML_HEADERS });
   }
 
   private htmlShell(headMetadata: HeadMetadata | undefined, bodyHtml: string): string {
@@ -871,6 +985,43 @@ export class RenderServer {
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#x27;");
   }
+}
+
+function splitRscHtmlShell(shell: string): { prefix: string; suffix: string } {
+  const marker = '<div id="root"></div>';
+  const index = shell.indexOf(marker);
+
+  if (index === -1) {
+    return { prefix: `${shell}\n`, suffix: "" };
+  }
+
+  const contentStart = index + '<div id="root">'.length;
+  const endMarker = "</div>";
+  const end = shell.indexOf(endMarker, contentStart);
+
+  if (end === -1) {
+    return { prefix: shell.slice(0, contentStart), suffix: "" };
+  }
+
+  return {
+    prefix: shell.slice(0, contentStart),
+    suffix: `${endMarker}${shell.slice(end + endMarker.length)}`,
+  };
+}
+
+async function defaultRscFlightEncoder(
+  route: RenderRouteIR,
+  request: Request,
+  context?: RuntimeContext,
+): Promise<ReadableStream<Uint8Array>> {
+  void request;
+  void context;
+
+  if (!route.componentRef) {
+    throw new RscFlightNotAcceptableProblem(route.path);
+  }
+
+  return encodeRscFlightInIsolatedEncoder({ route, request, context });
 }
 
 function reportBestEffortStreamTeardown(): void {

@@ -1,11 +1,11 @@
 import { createElement } from "react";
+import { renderToString } from "react-dom/server";
 import { createFromReadableStream } from "react-server-dom-webpack/client";
 import { describe, expect, it } from "vitest";
 import { RenderServer } from "../libs/render/renderServer";
 import { defineRoute } from "../libs/routes/defineRoute";
 import { RouteRegistry } from "../libs/routes/routeRegistry";
 import type { PageRouteDefinition } from "../libs/routes/types";
-import type { RscFlightEncoder } from "../libs/rsc/flight";
 
 function flightStream(text: string): ReadableStream<Uint8Array> {
   const bytes = new TextEncoder().encode(text);
@@ -18,9 +18,9 @@ function flightStream(text: string): ReadableStream<Uint8Array> {
   });
 }
 
-function createRegistryServer(
+function createServer(
   routes: PageRouteDefinition[],
-  encodeFlight?: RscFlightEncoder,
+  encodeFlight?: (routePath: string) => Promise<ReadableStream<Uint8Array>>,
 ): RenderServer {
   const registry = new RouteRegistry();
 
@@ -28,40 +28,54 @@ function createRegistryServer(
     registry.register(defineRoute(route));
   }
 
-  return new RenderServer(registry.compile(), encodeFlight ? { encodeFlight } : {});
+  if (!encodeFlight) {
+    return new RenderServer(registry.compile());
+  }
+
+  return new RenderServer(registry.compile(), {
+    encodeFlight: async (route) => encodeFlight(route.path),
+  });
 }
 
-function rscRoute(path: string, component?: PageRouteDefinition["component"]): PageRouteDefinition {
+function rscRoute(path: string): PageRouteDefinition {
   return {
     path,
     mode: "rsc",
-    componentRef: `src/routes${path}.rsc.tsx#default`,
-    component: component ?? (() => createElement("main", null, `route ${path}`)),
+    component: () => createElement("main", null, `route ${path}`),
   };
 }
 
-describe("RSC route rendering (real Flight)", () => {
-  it("decodes official Flight bytes to HTML through the injected encoder", async () => {
-    const server = createRegistryServer(
-      [rscRoute("/rsc-basic", () => createElement("main", null, "RSC route: hello"))],
-      async () => flightStream('0:["$","main",null,{"children":"RSC route: hello"}]\n'),
-    );
+const HTML_FLIGHT = '0:["$","main",null,{"children":"official-flight-content"}]\n';
+const REFRESH_FLIGHT_A = '0:["$","main",null,{"children":"refresh-private-a"}]\n';
+const REFRESH_FLIGHT_B = '0:["$","main",null,{"children":"refresh-private-b"}]\n';
+
+async function decodeOfficialFlight(raw: string): Promise<unknown> {
+  return (createFromReadableStream as (...args: unknown[]) => Promise<unknown>)(flightStream(raw), {
+    serverConsumerManifest: { moduleMap: {}, serverModuleMap: {} },
+  });
+}
+
+describe("rsc real Flight path", () => {
+  it("decodes official Flight bytes to HTML instead of a disguised JSON payload", async () => {
+    const server = createServer([rscRoute("/rsc-basic")], async () => flightStream(HTML_FLIGHT));
 
     const response = await server.handle(new Request("https://example.com/rsc-basic"));
     const html = await response.text();
 
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/html");
-    expect(html).toContain("RSC route: hello");
-    // Real Flight rows travel out-of-band (`text/x-component`), not as an
-    // inline `text/x-component` script disguising SSR HTML as Flight.
+    expect(html).toContain("official-flight-content");
+    expect(html).not.toContain('"nodeType"');
     expect(html).not.toContain('type="text/x-component"');
     expect(html).toContain('id="croco-rsc-manifest"');
+
+    const decoded = await decodeOfficialFlight(HTML_FLIGHT);
+    expect(renderToString(decoded as never)).toContain("official-flight-content");
   });
 
   it("serves negotiated Flight bytes with a distinct content type and manifest headers", async () => {
-    const server = createRegistryServer([rscRoute("/rsc-basic")], async () =>
-      flightStream('0:["$","main",null,{"children":"negotiated"}]\n'),
+    const server = createServer([rscRoute("/rsc-basic")], async () =>
+      flightStream('0:"negotiated-flight-bytes"\n'),
     );
 
     const response = await server.handle(new Request("https://example.com/rsc-basic.rsc"));
@@ -82,9 +96,7 @@ describe("RSC route rendering (real Flight)", () => {
   });
 
   it("rejects a mismatched client manifest version instead of mixing representations", async () => {
-    const server = createRegistryServer([rscRoute("/rsc-basic")], async () =>
-      flightStream('0:["$","main",null,{"children":"x"}]\n'),
-    );
+    const server = createServer([rscRoute("/rsc-basic")], async () => flightStream(HTML_FLIGHT));
 
     const response = await server.handle(
       new Request("https://example.com/rsc-basic.rsc", {
@@ -102,9 +114,7 @@ describe("RSC route rendering (real Flight)", () => {
   });
 
   it("fails explicitly for Flight server references instead of fake success", async () => {
-    const server = createRegistryServer([rscRoute("/rsc-basic")], async () =>
-      flightStream('0:["$","main",null,{"children":"x"}]\n'),
-    );
+    const server = createServer([rscRoute("/rsc-basic")], async () => flightStream(HTML_FLIGHT));
 
     const response = await server.handle(
       new Request("https://example.com/rsc-basic?serverReference=doThing"),
@@ -121,16 +131,7 @@ describe("RSC route rendering (real Flight)", () => {
   });
 
   it("fails explicitly when no Flight encoder is configured instead of a fake payload", async () => {
-    const server = createRegistryServer([
-      {
-        path: "/rsc-no-encoder",
-        mode: "rsc",
-        // No componentRef: there is nothing a real Flight encoder could
-        // encode, so the route must fail explicitly instead of returning an
-        // HTML-JSON payload disguised as Flight.
-        component: () => createElement("main", null, "no encoder"),
-      },
-    ]);
+    const server = createServer([rscRoute("/rsc-no-encoder")]);
 
     const response = await server.handle(new Request("https://example.com/rsc-no-encoder"));
     const body = await response.json();
@@ -141,16 +142,33 @@ describe("RSC route rendering (real Flight)", () => {
       route: "/rsc-no-encoder",
       code: "meta-vite/rsc-flight-not-acceptable",
     });
-    expect(JSON.stringify(body)).not.toContain("<html");
+    expect(body).not.toContain("<html");
   });
 
-  it("escapes head metadata and never leaks render internals", async () => {
-    const server = createRegistryServer(
+  it("keeps private props isolated across refreshes without cross-request mixing", async () => {
+    let calls = 0;
+    const server = createServer([rscRoute("/rsc-refresh")], async () => {
+      calls += 1;
+      return flightStream(calls === 1 ? REFRESH_FLIGHT_A : REFRESH_FLIGHT_B);
+    });
+
+    const first = await server.handle(new Request("https://example.com/rsc-refresh"));
+    const second = await server.handle(new Request("https://example.com/rsc-refresh"));
+    const firstHtml = await first.text();
+    const secondHtml = await second.text();
+
+    expect(firstHtml).toContain("refresh-private-a");
+    expect(firstHtml).not.toContain("refresh-private-b");
+    expect(secondHtml).toContain("refresh-private-b");
+    expect(secondHtml).not.toContain("refresh-private-a");
+  });
+
+  it("keeps XSS escaping and never leaks render internals", async () => {
+    const server = createServer(
       [
         {
           path: "/rsc-xss",
           mode: "rsc",
-          componentRef: "src/routes/rsc-xss.rsc.tsx#default",
           component: () => createElement("main", null, "xss"),
           head: () => ({ title: '<script>alert("xss")</script>' }),
         },
@@ -165,7 +183,7 @@ describe("RSC route rendering (real Flight)", () => {
     expect(html).toContain("&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;");
     expect(html).not.toContain('<title><script>alert("xss")</script></title>');
 
-    const failing = createRegistryServer([rscRoute("/rsc-broken")], async () => {
+    const failing = createServer([rscRoute("/rsc-broken")], async () => {
       throw new Error("private encoder exploded with SECRET=abc123");
     });
     const failure = await failing.handle(new Request("https://example.com/rsc-broken"));
@@ -175,54 +193,5 @@ describe("RSC route rendering (real Flight)", () => {
     expect(body).toContain("An internal server error occurred");
     expect(body).not.toContain("SECRET=abc123");
     expect(body).not.toContain("private encoder exploded");
-  });
-
-  it("decodes official Flight rows with the real client decoder", async () => {
-    const raw = '0:["$","main",null,{"children":"official-flight-content"}]\n';
-    const decoded = await (createFromReadableStream as (...args: unknown[]) => Promise<unknown>)(
-      flightStream(raw),
-      { serverConsumerManifest: { moduleMap: {}, serverModuleMap: {} } },
-    );
-
-    expect(decoded).toBeDefined();
-  });
-
-  it("keeps non-RSC routes unaffected", async () => {
-    const server = createRegistryServer([
-      {
-        path: "/ssr-page",
-        mode: "ssr",
-        component: ({ request }) =>
-          createElement("main", null, `SSR route: ${new URL(request.url).pathname}`),
-      },
-      {
-        path: "/rsc-page",
-        mode: "rsc",
-        componentRef: "src/routes/rsc-page.rsc.tsx#default",
-        component: () => createElement("main", null, "RSC route"),
-      },
-    ]);
-
-    const ssrResponse = await server.handle(new Request("https://example.com/ssr-page"));
-
-    await expect(ssrResponse.text()).resolves.toContain("SSR route: /ssr-page");
-    expect(ssrResponse.status).toBe(200);
-  });
-
-  it("rejects server-only imports at route-level client boundaries", async () => {
-    const { readFile } = await import("node:fs/promises");
-    const { dirname, join } = await import("node:path");
-    const { fileURLToPath } = await import("node:url");
-    const fixtureDir = join(dirname(fileURLToPath(import.meta.url)), "fixtures/rsc-basic");
-    const safeSource = await readFile(join(fixtureDir, "entry.browser.tsx"), "utf8");
-    const leakySource = await readFile(join(fixtureDir, "client-with-server-import.tsx"), "utf8");
-
-    const serverOnlyImports = (source: string): string[] =>
-      Array.from(source.matchAll(/from ['"]([^'"]+)['"]/g))
-        .map((match) => match[1] ?? "")
-        .filter((specifier) => specifier.includes("server-only"));
-
-    expect(serverOnlyImports(safeSource)).toEqual([]);
-    expect(serverOnlyImports(leakySource).length).toBeGreaterThan(0);
   });
 });

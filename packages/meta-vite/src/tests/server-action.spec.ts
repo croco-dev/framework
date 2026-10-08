@@ -289,7 +289,7 @@ describe("Server Actions", () => {
         name: "unique-action",
         handler: async () => new Response("ok"),
       });
-    }).toThrow("ServerAction 'unique-action' already registered");
+    }).toThrow("Server action 'unique-action' is already registered");
   });
 
   it("keeps duplicate action names isolated between scoped registries", async () => {

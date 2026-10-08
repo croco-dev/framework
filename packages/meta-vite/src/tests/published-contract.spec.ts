@@ -70,6 +70,9 @@ const buildTargets: readonly BuildTarget[] = [
       join(packageDir, "dist", "libs", "isr", "adapters", "index.js"),
       join(packageDir, "dist", "libs", "isr", "adapters", "index.mjs"),
       join(packageDir, "dist", "libs", "isr", "adapters", "index.d.ts"),
+      join(packageDir, "dist", "libs", "rsc", "flightEncode.entry.js"),
+      join(packageDir, "dist", "libs", "rsc", "flightEncode.entry.mjs"),
+      join(packageDir, "dist", "libs", "rsc", "flightEncode.entry.d.ts"),
       join(packageDir, "dist", "libs", "isr", "adapters", "index.d.mts"),
     ],
   },
@@ -89,6 +92,7 @@ describe("published @croco/meta-vite contract", () => {
           tarballs.frameworkContext,
           "react@^19.0.0",
           "react-dom@^19.0.0",
+          "react-server-dom-webpack@19.2.5",
           "vite@6.4.3",
           "zod@^3.23.8",
         ]);
@@ -190,6 +194,14 @@ describe("published @croco/meta-vite contract", () => {
           },
           import: "./dist/libs/isr/adapters/index.mjs",
           require: "./dist/libs/isr/adapters/index.js",
+        });
+        expect(packedManifest.exports?.["./rsc/encoder"]).toEqual({
+          types: {
+            import: "./dist/libs/rsc/flightEncode.entry.d.mts",
+            require: "./dist/libs/rsc/flightEncode.entry.d.ts",
+          },
+          import: "./dist/libs/rsc/flightEncode.entry.mjs",
+          require: "./dist/libs/rsc/flightEncode.entry.js",
         });
         expect(packedDiagnosticsManifest.dependencies?.["@croco/health-core"]).toBeUndefined();
         expect(packedDiagnosticsManifest.peerDependencies?.["@croco/health-core"]).toBeUndefined();

@@ -1,0 +1,21 @@
+{
+  "name": "@croco-example/rsc-node",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build",
+    "serve": "node ./dist/serve.mjs"
+  },
+  "dependencies": {
+    "@croco/meta-vite": "workspace:*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-server-dom-webpack": "19.2.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-rsc": "^0.5.0",
+    "typescript": "^6.0.3",
+    "vite": "^6.4.3"
+  }
+}

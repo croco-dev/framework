@@ -63,6 +63,7 @@ export class RouteRegistry {
       path: pageRoute.path,
       mode: pageRoute.mode,
       componentLoader: async () => ({ default: definition.component }),
+      ...(pageRoute.componentRef ? { componentRef: pageRoute.componentRef } : {}),
       ...(pageRoute.head ? { head: pageRoute.head } : {}),
       ...(pageRoute.revalidateMs !== undefined ? { revalidateMs: pageRoute.revalidateMs } : {}),
       ...(pageRoute.resolveShell ? { resolveShell: pageRoute.resolveShell } : {}),

@@ -24,13 +24,13 @@ function Page({ request }: RenderRouteComponentProps) {
   return createElement("main", null, request.url);
 }
 
-describe("buffered route capabilities", () => {
-  const pages = [{ path: "/buffered", mode: "rsc" as const, componentRef: "src/Page.tsx#Page" }];
+describe("rsc route capabilities (real Flight)", () => {
+  const pages = [{ path: "/rsc", mode: "rsc" as const, componentRef: "src/Page.rsc.tsx#Page" }];
 
-  it("preserves requested mode while reporting only implemented capabilities", () => {
+  it("preserves requested mode while reporting the Flight implementation", () => {
     const [page] = createMetaViteRouteManifest({ pages }).pages;
     expect(page?.mode).toBe("rsc");
-    expect(page?.runtimeCapabilities).toEqual(["fetch", "react-ssr"]);
+    expect(page?.runtimeCapabilities).toEqual(["fetch", "react-server-components"]);
     expect(page?.runtimeRequirements).toEqual([
       {
         code: "CROCO_META_VITE_RSC_RUNTIME_REQUIRED",
@@ -39,27 +39,27 @@ describe("buffered route capabilities", () => {
       },
     ]);
   });
-  it.each(["react-server-components", "streaming-response"] as const)(
-    "rejects profiles requiring %s before certifying their manifest",
-    (capability) => {
-      expect(() =>
-        createMetaViteRouteManifest({ pages, requiredCapabilities: [capability] }),
-      ).toThrow(MetaViteUnsupportedCapabilityProblem);
-      try {
-        createMetaViteRouteManifest({ pages, requiredCapabilities: [capability] });
-      } catch (error) {
-        expect(error).toMatchObject({
-          code: "meta-vite/unsupported-render-capability",
-          status: 501,
-          extensions: { path: "/buffered", capability },
-        });
-      }
-    },
-  );
+  it("rejects profiles requiring streaming-response before certifying their manifest", () => {
+    expect(() =>
+      createMetaViteRouteManifest({ pages, requiredCapabilities: ["streaming-response"] }),
+    ).toThrow(MetaViteUnsupportedCapabilityProblem);
+    try {
+      createMetaViteRouteManifest({ pages, requiredCapabilities: ["streaming-response"] });
+    } catch (error) {
+      expect(error).toMatchObject({
+        code: "meta-vite/unsupported-render-capability",
+        status: 501,
+        extensions: { path: "/rsc", capability: "streaming-response" },
+      });
+    }
+  });
 
-  it("accepts buffered SSR requirements and enforces registry profile requirements", () => {
+  it("accepts Flight requirements and enforces registry profile requirements", () => {
     expect(
-      createMetaViteRouteManifest({ pages, requiredCapabilities: ["fetch", "react-ssr"] }).pages,
+      createMetaViteRouteManifest({
+        pages,
+        requiredCapabilities: ["fetch", "react-server-components"],
+      }).pages,
     ).toHaveLength(1);
   });
 });
@@ -280,7 +280,7 @@ describe("createMetaViteRouteManifestFromRegistry", () => {
             "componentRef": "src/pages/Feed.server.tsx#FeedPage",
             "runtimeCapabilities": [
               "fetch",
-              "react-ssr"
+              "react-server-components"
             ],
             "runtimeRequirements": [
               {

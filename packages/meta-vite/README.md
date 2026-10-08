@@ -19,7 +19,18 @@ pnpm add ioredis
 ## Features
 
 - **SSR**: Server-side rendering with React 19, head metadata injection, XSS-safe HTML shell
-- **Legacy `rsc` mode**: Buffered SSR HTML with an embedded JSON marker; React Flight and progressive streaming are unsupported
+- **`rsc` mode (real React Flight)**: official `@vitejs/plugin-rsc` encoder
+  (`react-server-dom-webpack/server.node` in an isolated `react-server`
+  child process) → `RenderServer.handleRsc()` decodes with the official
+  `react-server-dom-webpack/client` decoder and renders HTML with
+  `react-dom/server`. HTML (`/page`) and Flight (`/page.rsc` or
+  `Accept: text/x-component`) are negotiated on one path with distinct
+  representations (`text/html` vs `text/x-component`) and manifest-version
+  headers; mismatched client manifests fail with
+  `RscClientManifestMismatchProblem` (400) instead of mixing
+  representations. Unsupported Flight server references fail with
+  `RscServerReferenceNotSupportedProblem` (501). See
+  `examples/rsc-node-example` for the Node production-build proof.
 - **SSG**: Static site generation at build time (`prerenderSsgRoutes`)
 - **ISR**: TTL-only incremental static regeneration via CacheStore. `InMemoryCacheStore` for local/single-process, `RedisCacheStoreAdapter` for production durable caching (extends `AbstractCacheStoreAdapter`), and runtime support diagnostics for durable production claims
 - **API Co-location**: Define API routes alongside page routes with `defineApiRoute()`. Compose pages and APIs under a single fetch handler using `createMetaFetchHandler`'s `apiRoutes` option
@@ -236,25 +247,31 @@ current server-action registry without rewriting the file.
 
 ## Route Modes
 
-| Mode | Description                            | Revalidate             |
-| ---- | -------------------------------------- | ---------------------- |
-| ssr  | Server-side render every request       | N/A                    |
-| ssg  | Static pre-render at build time        | N/A                    |
-| isr  | TTL-based revalidation with CacheStore | `revalidate` (seconds) |
-| rsc  | Buffered SSR with embedded JSON marker | N/A                    |
+| Mode | Description                                                                                                         | Revalidate             |
+| ---- | ------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| ssr  | Server-side render every request                                                                                    | N/A                    |
+| ssg  | Static pre-render at build time                                                                                     | N/A                    |
+| isr  | TTL-based revalidation with CacheStore                                                                              | `revalidate` (seconds) |
+| rsc  | Real React Flight encode → SSR decode → HTML stream; negotiated Flight bytes on `.rsc` / `Accept: text/x-component` | N/A                    |
 
 `mode` records the requested route mode. `runtimeCapabilities` records the implementation's
-capabilities; the legacy `rsc` mode reports `fetch` and `react-ssr`. Its
+capabilities; `rsc` routes report Flight-backed rendering (`react-server-components`
+through the official encoder/decoder pair). Its
 `runtimeRequirements` retains the requested React Server Components requirement, which the
-buffered implementation does not satisfy. A `Response` body alone does not prove progressive rendering.
+Flight implementation satisfies via the supported `@vitejs/plugin-rsc@0.5.26` +
+`react-server-dom-webpack@19.2.5` stack (React/ReactDOM 19.2.5; see the pinned
+lockfile entries and `examples/rsc-node-example/scripts/check-versions.mjs`).
+A `Response` body alone does not prove progressive rendering.
 
 Profiles requiring page capabilities must pass `requiredCapabilities` to
 `createMetaViteRouteManifest()` or `createMetaViteRouteManifestFromRegistry()`.
 For example, `requiredCapabilities: ["react-server-components", "streaming-response"]`
 fails before manifest emission with `MetaViteUnsupportedCapabilityProblem`
 (`meta-vite/unsupported-render-capability`, status 501, route path and capability extensions).
-Omitting requirements preserves the legacy buffered payload; it does not certify Flight or streaming.
-Actual Flight streaming remains tracked in #2835; SSR shell-first streaming shipped in #2836.
+Omitting requirements keeps the declared Flight implementation; it does not certify
+streaming beyond the Flight→SSR decode path in `RenderServer`. The Node
+production-build proof lives in `examples/rsc-node-example` (#2835); SSR
+shell-first streaming shipped in #2836.
 Adapter preservation of externally supplied streams is a separate capability from page rendering.
 
 ## Provider Adapters
@@ -267,16 +284,16 @@ Adapter preservation of externally supplied streams is a separate capability fro
 
 Detailed promotion gates live in [Presentation Runtime Support](../docs/src/content/docs/en/reference/presentation-runtime-support.md). The package-level support contract is:
 
-| Capability        | Node                                                                                                          | Lambda                                                                                                    | Cloudflare Workers                                                                                      |
-| ----------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| SSR pages         | Supported through `createNodeComposedHandler()` and `RenderServer`.                                           | Supported through `createLambdaComposedHandler()` with API Gateway event conversion.                      | Supported through `createCloudflareComposedHandler()` and `@croco/frontend-cloudflare`.                 |
-| SSG routes        | Supported at build time through `prerenderSsgRoutes()`.                                                       | Supported before Lambda packaging as static output.                                                       | Supported before Worker asset upload as static output.                                                  |
-| ISR routes        | v1 exact-key TTL. Use `RedisCacheStoreAdapter` or another durable `IsrCacheStore` for production persistence. | v1 exact-key TTL. In-memory cache is warm-container only; use durable storage for production persistence. | v1 exact-key TTL only when a Worker-safe `IsrCacheStore` is supplied. In-memory cache is isolate-local. |
-| RSC routes        | Buffered SSR with legacy JSON marker; no React Flight support.                                                | Buffered SSR with legacy JSON marker; no React Flight or streaming support.                               | Buffered SSR with legacy JSON marker; no React Flight or progressive rendering.                         |
-| Server actions    | Supported through `createServerActionHandler()`.                                                              | Supported after Lambda request conversion.                                                                | Supported with Cloudflare `RuntimeContext` propagation.                                                 |
-| API routes        | API-first/page-fallback composition.                                                                          | API-first/page-fallback composition.                                                                      | API-first/page-fallback composition or Worker service bindings.                                         |
-| Streaming         | Fetch `Response` streams are preserved by the fetch surface.                                                  | Not supported by this adapter; responses are buffered.                                                    | Supported for streaming `Response` bodies.                                                              |
-| Cache persistence | In-memory is local/single-process only; Redis is the shipped durable adapter.                                 | In-memory is warm-container only; Redis is the shipped durable adapter.                                   | No shipped durable Worker cache adapter. Supply a Worker-safe store before claiming durable ISR.        |
+| Capability        | Node                                                                                                                                                                                 | Lambda                                                                                                    | Cloudflare Workers                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| SSR pages         | Supported through `createNodeComposedHandler()` and `RenderServer`.                                                                                                                  | Supported through `createLambdaComposedHandler()` with API Gateway event conversion.                      | Supported through `createCloudflareComposedHandler()` and `@croco/frontend-cloudflare`.                 |
+| SSG routes        | Supported at build time through `prerenderSsgRoutes()`.                                                                                                                              | Supported before Lambda packaging as static output.                                                       | Supported before Worker asset upload as static output.                                                  |
+| ISR routes        | v1 exact-key TTL. Use `RedisCacheStoreAdapter` or another durable `IsrCacheStore` for production persistence.                                                                        | v1 exact-key TTL. In-memory cache is warm-container only; use durable storage for production persistence. | v1 exact-key TTL only when a Worker-safe `IsrCacheStore` is supplied. In-memory cache is isolate-local. |
+| RSC routes        | Real React Flight (`@vitejs/plugin-rsc@0.5.26` + `react-server-dom-webpack@19.2.5`, React 19.2.5) on Node; HTML/Flight negotiated per request. Example: `examples/rsc-node-example`. | Buffered RSC path not verified on Lambda — declare only after a real host-contract check.                 | Buffered RSC path not verified on Workers — declare only after a real host-contract check.              |
+| Server actions    | Supported through `createServerActionHandler()`.                                                                                                                                     | Supported after Lambda request conversion.                                                                | Supported with Cloudflare `RuntimeContext` propagation.                                                 |
+| API routes        | API-first/page-fallback composition.                                                                                                                                                 | API-first/page-fallback composition.                                                                      | API-first/page-fallback composition or Worker service bindings.                                         |
+| Streaming         | Fetch `Response` streams are preserved by the fetch surface.                                                                                                                         | Not supported by this adapter; responses are buffered.                                                    | Supported for streaming `Response` bodies.                                                              |
+| Cache persistence | In-memory is local/single-process only; Redis is the shipped durable adapter.                                                                                                        | In-memory is warm-container only; Redis is the shipped durable adapter.                                   | No shipped durable Worker cache adapter. Supply a Worker-safe store before claiming durable ISR.        |
 
 Smoke evidence: `pnpm --filter @croco/meta-vite test` covers durable Node and Lambda ISR through
 `RedisCacheStoreAdapter`, Workers durable-claim boundaries, in-memory local-only behavior, cacheable
@@ -331,6 +348,10 @@ Recovery diagnostics:
 - **Vite >=6.4.3 <7**: Requires the Vite 6 Environment API and the patched Windows filesystem deny behavior.
 - **ISR non-durable by default**: InMemoryCacheStore is local/dev/single-process. Production Redis ISR uses the optional `ioredis` peer and the `@croco/meta-vite/isr/adapters` entrypoint.
 - **Cloudflare streaming**: Cloudflare Workers support streaming Response bodies, but InMemory ISR is not durable across Worker isolates.
+- **RSC scope**: Node production-build path is proven by `examples/rsc-node-example`
+  (server-only data + interactive client island + async Suspense boundary; secret-leak
+  check in its README). Workers/Lambda RSC support stays undeclared until verified
+  against a real host contract.
 - **RSC dev mode**: RSC routes require full reload during development. HMR-based RSC updates are deferred.
 
 ## Diagnostics
@@ -341,7 +362,7 @@ Common errors and their diagnostics:
 - **Invalid route**: Registration rejects a missing or invalid `component` with `CROCO_META_VITE_ROUTE_COMPONENT_REQUIRED` and an unsupported mode with `CROCO_META_VITE_ROUTE_MODE_UNSUPPORTED`. Components must be functions or non-null objects (including React `memo` and `forwardRef` components). Both errors include the route path. Direct manifest creation also rejects unsupported modes.
 - **Invalid ISR revalidate**: Registration rejects NaN, ±Infinity, negative `revalidate`, and values that overflow when converted to milliseconds with `CROCO_META_VITE_ROUTE_REVALIDATE_INVALID` and the route path. Zero and finite positive fractions are allowed. Direct manifest creation rejects non-finite or negative `revalidateMs`. `revalidate` without `mode: 'isr'` remains silently ignored by rendering.
 - **Missing durable ISR configuration**: `evaluateIsrRuntimeSupport({ requireDurable: true })` reports `CROCO_META_VITE_ISR_LOCAL_CACHE_ONLY` for local-only stores and `CROCO_META_VITE_ISR_WORKER_STORE_UNSAFE` for Workers stores that are not explicitly Worker-safe.
-- **RSC rendering failure**: Returns a JSON diagnostic `{ error: 'RSC rendering failed', route: string, detail: string }` with status 500. For `Error` values, `detail` is redacted to `An internal server error occurred`.
+- **RSC rendering failure**: Returns a JSON diagnostic `{ error: 'RSC rendering failed', route: string, detail: string }` with status 500. For `Error` values, `detail` is redacted to `An internal server error occurred`. Distinct non-500 cases: missing encoder → 501 `RSC request not supported` (`meta-vite/rsc-flight-not-acceptable`); client-manifest mismatch → 400 `RSC client manifest mismatch` (`meta-vite/rsc-client-manifest-mismatch`); missing client reference → 400 `RSC client reference missing` (`meta-vite/rsc-client-reference-missing`); unsupported server reference → 501 `RSC request not supported` (`meta-vite/rsc-server-reference-unsupported`).
 - **Render error (SSR)**: SSR rendering errors fall back to a generic `500 Internal Server Error` HTML response. Error details are not included in the HTML to prevent server-side information leakage.
 - **Route not found**: Unmatched routes return a `404 Not Found` HTML response.
 
@@ -397,27 +418,31 @@ import { RedisCacheStoreAdapter } from "@croco/meta-vite/isr/adapters";
 
 ### Server Actions
 
-| Export                              | Type     | Description                                                                                                                                     |
-| ----------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ServerActionRegistry`              | class    | Isolated action registry with `register`, `unregister`, `clear`, and `dispatch` methods for app, test, or HMR lifecycle scoping.                |
-| `createServerActionRegistry`        | function | Create an isolated `ServerActionRegistry` instance.                                                                                             |
-| `createServerAction`                | function | Register a server action with name, optional Zod schema, and handler. Defaults to the global registry and throws on duplicate name.             |
-| `createServerActionHandler`         | function | Returns an `{ path, method, handler }` object for `POST /api/action/:name`. Accepts a registry instance and integrates with `apiRoutes`.        |
-| `createServerActionSuccess`         | function | Build a typed success result body, `{ ok: true, data }`, for handlers that want the action result contract instead of a custom `Response`.      |
-| `createServerActionSuccessResponse` | function | Build an `application/json` response containing a typed success result.                                                                         |
-| `dispatchServerAction`              | function | Low-level dispatch by action name. Accepts `FormData` or plain object, validates against registered schema. Failures return Problem JSON.       |
-| `resetServerActions`                | function | Clear all actions from the global registry by default, or from a supplied registry.                                                             |
-| `unregisterServerAction`            | function | Remove one action from the global registry by default, or from a supplied registry.                                                             |
-| `ServerActionConfig`                | type     | `{ name: string; schema?: ZodSchema<TInput>; output?: ServerActionOutputContract<TOutput>; problems?: ServerActionProblemContract[]; handler }` |
-| `ServerActionContractIR`            | type     | Serializable server action contract used by the route manifest builder.                                                                         |
-| `ServerActionResult`                | type     | Typed action result union: `{ ok: true, data }` or RFC 7807 Problem details with `{ ok: false, kind }`.                                         |
+| Export                              | Type     | Description                                                                                                                                                                                                                                 |
+| ----------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ServerActionRegistry`              | class    | Isolated action registry with `register`, `unregister`, `clear`, and `dispatch` methods for app, test, or HMR lifecycle scoping.                                                                                                            |
+| `createServerActionRegistry`        | function | Create an isolated `ServerActionRegistry` instance.                                                                                                                                                                                         |
+| `createServerAction`                | function | Register a server action with name, optional Zod schema, and handler. Defaults to the global registry and throws on duplicate name.                                                                                                         |
+| `createServerActionHandler`         | function | Returns an `{ path, method, handler }` object for `POST /api/action/:name`. Accepts a registry instance, optional `allowedOrigins` (mismatched `Origin` → 403 `meta-vite/server-action-forbidden-origin`), and integrates with `apiRoutes`. |
+| `createServerActionSuccess`         | function | Build a typed success result body, `{ ok: true, data }`, for handlers that want the action result contract instead of a custom `Response`.                                                                                                  |
+| `createServerActionSuccessResponse` | function | Build an `application/json` response containing a typed success result.                                                                                                                                                                     |
+| `dispatchServerAction`              | function | Low-level dispatch by action name. Accepts `FormData` or plain object, validates against registered schema. Failures return Problem JSON.                                                                                                   |
+| `resetServerActions`                | function | Clear all actions from the global registry by default, or from a supplied registry.                                                                                                                                                         |
+| `unregisterServerAction`            | function | Remove one action from the global registry by default, or from a supplied registry.                                                                                                                                                         |
+| `ServerActionConfig`                | type     | `{ name: string; schema?: ZodSchema<TInput>; output?: ServerActionOutputContract<TOutput>; problems?: ServerActionProblemContract[]; handler }`                                                                                             |
+| `ServerActionContractIR`            | type     | Serializable server action contract used by the route manifest builder.                                                                                                                                                                     |
+| `ServerActionResult`                | type     | Typed action result union: `{ ok: true, data }` or RFC 7807 Problem details with `{ ok: false, kind }`.                                                                                                                                     |
 
 Server action failures use a stable action result contract. Missing actions, invalid paths, invalid
-content types, validation failures, and thrown Croco `Problem` instances return
+content types, validation failures, disallowed origins, and thrown Croco `Problem` instances return
 `application/problem+json` with top-level RFC 7807 fields plus `ok: false` and `kind`. Server action
 calls are multipart: send `FormData` (`multipart/form-data` or
 `application/x-www-form-urlencoded`). JSON POST bodies are rejected with
-`meta-vite/server-action-invalid-content-type` (415).
+`meta-vite/server-action-invalid-content-type` (415). Pass
+`createServerActionHandler(registry, { allowedOrigins: ["https://app.example"] })` to enforce
+per-call origin checks; mismatched origins fail with
+`meta-vite/server-action-forbidden-origin` (403, `kind: "forbidden_origin"`) instead of
+dispatching the registered action.
 
 ```typescript
 import { createServerAction, createServerActionSuccess } from "@croco/meta-vite";
