@@ -143,25 +143,38 @@ function runMetadataFixture(event: "pull_request" | "push" | "workflow_dispatch"
       ],
     };
     writeFileSync(join(workspace, "run.json"), JSON.stringify(run));
+    writeFileSync(
+      join(workspace, "source.txt"),
+      Buffer.from("trusted source artifact\n").toString("base64"),
+    );
     const ghPath = join(workspace, "gh");
     writeFileSync(
       ghPath,
-      `#!/usr/bin/env node
-const fs = require('node:fs');
-const args = process.argv.slice(2);
-fs.appendFileSync(process.env.API_LOG, JSON.stringify(args) + '\\n');
-const endpoint = args.find(value => value.startsWith('/repos/'));
-if (args[0] !== 'api' || !endpoint) process.exit(91);
-if (endpoint === '/repos/croco/framework/actions/runs/1') {
-  process.stdout.write(fs.readFileSync(process.env.RUN_FIXTURE));
-} else if (endpoint === '/repos/croco/framework/actions/runs/1/jobs?filter=latest&per_page=100') {
-  console.log('{"jobs":[]}');
-} else if (endpoint === '/repos/croco/framework/actions/runs/1/artifacts?per_page=100') {
-  console.log('{"total_count":0,"artifacts":[]}');
-} else if (['package.json', 'test-inventory.json', '.github/workflows/ci.yml'].some(path => endpoint === '/repos/croco/framework/contents/' + path)) {
-  if (!args.includes('ref=' + process.env.EXPECTED_CANDIDATE)) process.exit(92);
-  console.log(Buffer.from('trusted source artifact\\n').toString('base64'));
-} else process.exit(93);
+      `#!/usr/bin/env bash
+set -eo pipefail
+printf '%s\\t' "$@" >> "$API_LOG"
+printf '\\n' >> "$API_LOG"
+[ "$1" = api ] || exit 91
+endpoint=
+matching_ref=false
+for arg in "$@"; do
+  case "$arg" in
+    /repos/*) endpoint="$arg" ;;
+    "ref=$EXPECTED_CANDIDATE") matching_ref=true ;;
+  esac
+done
+case "$endpoint" in
+  /repos/croco/framework/actions/runs/1)
+    cat "$RUN_FIXTURE" ;;
+  '/repos/croco/framework/actions/runs/1/jobs?filter=latest&per_page=100')
+    printf '%s\\n' '{"jobs":[]}' ;;
+  '/repos/croco/framework/actions/runs/1/artifacts?per_page=100')
+    printf '%s\\n' '{"total_count":0,"artifacts":[]}' ;;
+  /repos/croco/framework/contents/package.json | /repos/croco/framework/contents/test-inventory.json | /repos/croco/framework/contents/.github/workflows/ci.yml)
+    [ "$matching_ref" = true ] || exit 92
+    cat "$SOURCE_FIXTURE" ;;
+  *) exit 93 ;;
+esac
 `,
     );
     chmodSync(ghPath, 0o755);
@@ -179,6 +192,7 @@ if (endpoint === '/repos/croco/framework/actions/runs/1') {
         SOURCE_RUN_ID: "1",
         PATH: `${workspace}:${process.env.PATH ?? ""}`,
         RUN_FIXTURE: join(workspace, "run.json"),
+        SOURCE_FIXTURE: join(workspace, "source.txt"),
         API_LOG: join(workspace, "api.log"),
         EXPECTED_CANDIDATE: candidateSha,
       },
@@ -198,7 +212,7 @@ if (endpoint === '/repos/croco/framework/actions/runs/1') {
       apiCalls: readFileSync(join(workspace, "api.log"), "utf8")
         .trim()
         .split("\n")
-        .map((line) => JSON.parse(line) as string[]),
+        .map((line) => line.trimEnd().split("\t")),
     };
   } finally {
     rmSync(workspace, { recursive: true, force: true });
