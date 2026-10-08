@@ -1449,7 +1449,7 @@
   },
   "maturity": {
     "production": {
-      "label": "\ud83d\udfe2 production-ready",
+      "label": "🟢 production-ready",
       "packages": [
         "audit-core",
         "auth-core",
@@ -1477,7 +1477,7 @@
       ]
     },
     "beta": {
-      "label": "\ud83d\udfe1 beta",
+      "label": "🟡 beta",
       "packages": [
         "access-core",
         "access-drizzle",
@@ -1560,7 +1560,7 @@
       ]
     },
     "alpha": {
-      "label": "\ud83d\udd34 alpha/WIP",
+      "label": "🔴 alpha/WIP",
       "packages": [
         "admin-generated",
         "admin-postgres",
@@ -1600,7 +1600,7 @@
       ]
     },
     "deprecated": {
-      "label": "\u26a0\ufe0f deprecated",
+      "label": "⚠️ deprecated",
       "packages": []
     }
   },
