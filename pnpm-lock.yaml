@@ -2825,6 +2825,12 @@ importers:
       '@croco/ratelimit-upstash':
         specifier: workspace:*
         version: link:../ratelimit-upstash
+      '@croco/referral-core':
+        specifier: workspace:*
+        version: link:../referral-core
+      '@croco/referral-drizzle':
+        specifier: workspace:*
+        version: link:../referral-drizzle
       '@croco/repository-core':
         specifier: workspace:*
         version: link:../repository-core

@@ -552,6 +552,36 @@
               "declarationKind": "class"
             },
             {
+              "name": "REFERRAL_CONSOLE_PII_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
+              "declarationKind": "const"
+            },
+            {
+              "name": "REFERRAL_CONSOLE_READ_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
+              "declarationKind": "const"
+            },
+            {
+              "name": "REFERRAL_CONSOLE_RESOLVE_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
+              "declarationKind": "const"
+            },
+            {
+              "name": "REFERRAL_CONSOLE_WRITE_PERMISSION",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
+              "declarationKind": "const"
+            },
+            {
+              "name": "ReferralConsoleValidationProblem",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
+              "declarationKind": "class"
+            },
+            {
               "name": "ReminderOperationsProblem",
               "exportKind": "named",
               "source": "./libs/ReminderOperations",
@@ -676,6 +706,24 @@
               "exportKind": "named",
               "source": "./libs/EngagementOperations",
               "declarationKind": "const"
+            },
+            {
+              "name": "assertReferralConsoleActionRequest",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertReferralConsoleCancelBenefitRequest",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertReferralConsoleReturnBenefitRequest",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
+              "declarationKind": "function"
             },
             {
               "name": "assertReminderOperatorCancel",
@@ -822,6 +870,42 @@
               "declarationKind": "function"
             },
             {
+              "name": "createReferralConsoleActions",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createReferralConsoleAttributionView",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createReferralConsoleLinkView",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createReferralConsoleLoadingState",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createReferralConsoleProgramView",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "createReferralConsoleReadyState",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "createTenantWorkspaceLoadingSnapshot",
               "exportKind": "named",
               "source": "./libs/TenantWorkspace",
@@ -936,6 +1020,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "loadReferralConsole",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "loadReminderOperations",
               "exportKind": "named",
               "source": "./libs/ReminderOperations",
@@ -972,6 +1062,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "maskReferralSubjectId",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "maskWebhookEndpointUrl",
               "exportKind": "named",
               "source": "./libs/WebhookOperations",
@@ -996,9 +1092,21 @@
               "declarationKind": "function"
             },
             {
+              "name": "resolveReferralConsoleSubject",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "resolveTenantWorkspaceField",
               "exportKind": "named",
               "source": "./libs/TenantWorkspace",
+              "declarationKind": "function"
+            },
+            {
+              "name": "summarizeReferralConsoleQualifiedRecipients",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
               "declarationKind": "function"
             },
             {
@@ -1027,6 +1135,12 @@
               "name": "validateOfferPolicyEditor",
               "exportKind": "named",
               "source": "./libs/OfferConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateReferralProgramEditor",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole",
               "declarationKind": "function"
             }
           ],
@@ -2135,6 +2249,91 @@
               "name": "RecipientRef",
               "exportKind": "named",
               "source": "./libs/EngagementOperations"
+            },
+            {
+              "name": "ReferralConsoleAction",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole"
+            },
+            {
+              "name": "ReferralConsoleActionKind",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole"
+            },
+            {
+              "name": "ReferralConsoleActionRequest",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole"
+            },
+            {
+              "name": "ReferralConsoleAttributionView",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole"
+            },
+            {
+              "name": "ReferralConsoleCancelBenefitRequest",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole"
+            },
+            {
+              "name": "ReferralConsoleLinkView",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole"
+            },
+            {
+              "name": "ReferralConsoleProgramView",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole"
+            },
+            {
+              "name": "ReferralConsoleQualifiedRecipient",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole"
+            },
+            {
+              "name": "ReferralConsoleReadyState",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole"
+            },
+            {
+              "name": "ReferralConsoleReturnBenefitRequest",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole"
+            },
+            {
+              "name": "ReferralConsoleSnapshot",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole"
+            },
+            {
+              "name": "ReferralConsoleSource",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole"
+            },
+            {
+              "name": "ReferralConsoleSourceResult",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole"
+            },
+            {
+              "name": "ReferralConsoleState",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole"
+            },
+            {
+              "name": "ReferralConsoleSubjectView",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole"
+            },
+            {
+              "name": "ReferralProgramEditorDraft",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole"
+            },
+            {
+              "name": "ReferralProgramEditorResult",
+              "exportKind": "named",
+              "source": "./libs/ReferralConsole"
             },
             {
               "name": "ReminderOperationsRow",
@@ -3489,6 +3688,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "ReferralProgramConsole",
+              "exportKind": "named",
+              "source": "./libs/ReferralProgramConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "ReminderOperationsPanel",
               "exportKind": "named",
               "source": "./libs/ReminderOperationsPanel",
@@ -4763,6 +4968,11 @@
               "name": "PolicyReleaseConsoleState",
               "exportKind": "named",
               "source": "./libs/PolicyReleaseConsole"
+            },
+            {
+              "name": "ReferralProgramConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/ReferralProgramConsole"
             },
             {
               "name": "ReminderOperationsPanelProps",
@@ -20336,6 +20546,24 @@
               "declarationKind": "function"
             },
             {
+              "name": "ReferralClaimLanding",
+              "exportKind": "named",
+              "source": "./libs/ReferralCards",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ReferralProgress",
+              "exportKind": "named",
+              "source": "./libs/ReferralCards",
+              "declarationKind": "function"
+            },
+            {
+              "name": "ReferralShareCard",
+              "exportKind": "named",
+              "source": "./libs/ReferralCards",
+              "declarationKind": "function"
+            },
+            {
               "name": "ReminderSettingsForm",
               "exportKind": "named",
               "source": "./libs/ReminderSettingsForm",
@@ -20778,6 +21006,36 @@
               "name": "ProblemToastPayload",
               "exportKind": "named",
               "source": "./libs/problemUiTypes"
+            },
+            {
+              "name": "ReferralClaimLandingProps",
+              "exportKind": "named",
+              "source": "./libs/ReferralCards"
+            },
+            {
+              "name": "ReferralClaimLandingState",
+              "exportKind": "named",
+              "source": "./libs/ReferralCards"
+            },
+            {
+              "name": "ReferralProgressProps",
+              "exportKind": "named",
+              "source": "./libs/ReferralCards"
+            },
+            {
+              "name": "ReferralProgressState",
+              "exportKind": "named",
+              "source": "./libs/ReferralCards"
+            },
+            {
+              "name": "ReferralShareCardProps",
+              "exportKind": "named",
+              "source": "./libs/ReferralCards"
+            },
+            {
+              "name": "ReferralShareState",
+              "exportKind": "named",
+              "source": "./libs/ReferralCards"
             },
             {
               "name": "ReminderSettingsFormProps",
@@ -33336,6 +33594,538 @@
               "name": "UpstashRateLimitStoreOptions",
               "exportKind": "named",
               "source": "./libs/UpstashRateLimitStore"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/referral-core",
+      "relativeDir": "packages/referral-core",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/referral-core/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "DEFAULT_LINK_TTL_MS",
+              "exportKind": "named",
+              "source": "./libs/ReferralService",
+              "declarationKind": "const"
+            },
+            {
+              "name": "InMemoryReferralStore",
+              "exportKind": "named",
+              "source": "./libs/InMemoryReferralStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "InvalidReferralProgramProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReferralAttributionNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReferralAttributionStateConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReferralBenefitFailedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReferralBudgetExhaustedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReferralDuplicateClaimProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReferralExistingCustomerProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReferralLinkExpiredProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReferralLinkNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReferralLinkRevokedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReferralNoveltyUnknownProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReferralProgramConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReferralProgramNotFoundProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReferralQualificationRejectedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReferralSelfReferralProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReferralService",
+              "exportKind": "named",
+              "source": "./libs/ReferralService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReferralSubjectLimitReachedProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReferralTenantMismatchProblem",
+              "exportKind": "named",
+              "source": "./libs/problems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ZERO_REFERRAL_AMOUNT",
+              "exportKind": "named",
+              "source": "./libs/amounts",
+              "declarationKind": "const"
+            },
+            {
+              "name": "addReferralAmounts",
+              "exportKind": "named",
+              "source": "./libs/amounts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertReferralLimit",
+              "exportKind": "named",
+              "source": "./libs/ReferralStore",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertReferralScope",
+              "exportKind": "named",
+              "source": "./libs/ReferralProgram",
+              "declarationKind": "function"
+            },
+            {
+              "name": "assertReferralSubject",
+              "exportKind": "named",
+              "source": "./libs/ReferralProgram",
+              "declarationKind": "function"
+            },
+            {
+              "name": "attributionFingerprint",
+              "exportKind": "named",
+              "source": "./libs/ReferralStore",
+              "declarationKind": "function"
+            },
+            {
+              "name": "canonicalReferralAmount",
+              "exportKind": "named",
+              "source": "./libs/amounts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "compareReferralAmounts",
+              "exportKind": "named",
+              "source": "./libs/amounts",
+              "declarationKind": "function"
+            },
+            {
+              "name": "referralBenefitIdempotencyKey",
+              "exportKind": "named",
+              "source": "./libs/ReferralService",
+              "declarationKind": "function"
+            },
+            {
+              "name": "registerReferralProgram",
+              "exportKind": "named",
+              "source": "./libs/ReferralProgram",
+              "declarationKind": "function"
+            },
+            {
+              "name": "sameReferralScope",
+              "exportKind": "named",
+              "source": "./libs/ReferralProgram",
+              "declarationKind": "function"
+            },
+            {
+              "name": "sameReferralSubject",
+              "exportKind": "named",
+              "source": "./libs/ReferralProgram",
+              "declarationKind": "function"
+            },
+            {
+              "name": "stableReferralFingerprint",
+              "exportKind": "named",
+              "source": "./libs/ReferralStore",
+              "declarationKind": "function"
+            },
+            {
+              "name": "subtractReferralAmounts",
+              "exportKind": "named",
+              "source": "./libs/amounts",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "ClaimReferralAttributionInput",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ClaimReferralResult",
+              "exportKind": "named",
+              "source": "./libs/ReferralService"
+            },
+            {
+              "name": "CreateReferralLinkInput",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "CreateReferralLinkResult",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "FulfillReferralBenefitsInput",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ListAttributionsFilter",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ListBenefitIntentsFilter",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ListReferralLinksFilter",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "QualifyReferralAttributionInput",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralAttribution",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralAttributionHoldReason",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralAttributionRejectReason",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralAttributionState",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralAuditEntry",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralBenefit",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralBenefitIntent",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralBenefitIntentStatus",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralBenefitSide",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralCreditBenefit",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralFulfillmentPort",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralFulfillmentResult",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralFunnelCounts",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralLink",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralNoBenefit",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralNoveltyHook",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralNoveltyVerdict",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralProgramDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralQualificationHook",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralQualificationVerdict",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralScope",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralServiceOptions",
+              "exportKind": "named",
+              "source": "./libs/ReferralService"
+            },
+            {
+              "name": "ReferralStore",
+              "exportKind": "named",
+              "source": "./libs/ReferralStore"
+            },
+            {
+              "name": "ReferralSubject",
+              "exportKind": "named",
+              "source": "./libs/types"
+            },
+            {
+              "name": "ReferralTokenHooks",
+              "exportKind": "named",
+              "source": "./libs/ReferralService"
+            },
+            {
+              "name": "ReferralTx",
+              "exportKind": "named",
+              "source": "./libs/ReferralStore"
+            },
+            {
+              "name": "RegisterReferralProgramInput",
+              "exportKind": "named",
+              "source": "./libs/types"
+            }
+          ]
+        },
+        {
+          "exportPath": "./credit-grant",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/credit-grant.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/credit-grant.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/credit-grant.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/referral-core/src/credit-grant.ts",
+          "runtimeExports": [
+            {
+              "name": "FirstPartyReferralCreditGrantAdapter",
+              "exportKind": "named",
+              "source": "./libs/ReferralCreditGrantAdapter",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "ReferralCreditAccountResolver",
+              "exportKind": "named",
+              "source": "./libs/ReferralCreditGrantAdapter"
+            }
+          ]
+        },
+        {
+          "exportPath": "./link-token",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/link-token.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/link-token.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/link-token.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/referral-core/src/link-token.ts",
+          "runtimeExports": [
+            {
+              "name": "generateReferralToken",
+              "exportKind": "named",
+              "source": "./libs/linkToken",
+              "declarationKind": "function"
+            },
+            {
+              "name": "hashReferralToken",
+              "exportKind": "named",
+              "source": "./libs/linkToken",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": []
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/referral-drizzle",
+      "relativeDir": "packages/referral-drizzle",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/referral-drizzle/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "PostgresReferralStore",
+              "exportKind": "named",
+              "source": "./libs/PostgresReferralStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "ReferralPersistenceProblem",
+              "exportKind": "named",
+              "source": "./libs/PostgresReferralStore",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "ReferralPgDatabase",
+              "exportKind": "named",
+              "source": "./libs/PostgresReferralStore"
+            },
+            {
+              "name": "ReferralPgExecutor",
+              "exportKind": "named",
+              "source": "./libs/PostgresReferralStore"
             }
           ]
         }
