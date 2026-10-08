@@ -50,6 +50,12 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/referral-program/src/tests/referral-program.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/saas-billing-golden-path/src/tests/golden-path.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -237,6 +243,12 @@
     },
     {
       "path": "packages/admin-core/src/tests/PolicyReleaseOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/ReferralConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-core"
@@ -495,6 +507,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/PolicyReleaseConsoleInteraction.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/ReferralProgramConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -2750,6 +2768,12 @@
       "owner": "@croco/frontend-react"
     },
     {
+      "path": "packages/frontend-react/src/tests/ReferralCards.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
       "path": "packages/frontend-react/src/tests/ReminderSettingsForm.spec.tsx",
       "lane": "fast",
       "qualifiers": [],
@@ -4200,6 +4224,24 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/ratelimit-upstash"
+    },
+    {
+      "path": "packages/referral-core/src/tests/ReferralService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/referral-core"
+    },
+    {
+      "path": "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/referral-drizzle"
+    },
+    {
+      "path": "packages/referral-drizzle/src/tests/PostgresReferralStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/referral-drizzle"
     },
     {
       "path": "packages/repository-core/src/tests/BatchLoadProblems.spec.ts",

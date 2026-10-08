@@ -97,6 +97,8 @@ export {
 } from "./libs/snapshot";
 export type { CreditOperationsConsoleProps } from "./libs/CreditOperationsConsole";
 export type { OfferConsoleProps } from "./libs/OfferConsole";
+export { ReferralProgramConsole } from "./libs/ReferralProgramConsole";
+export type { ReferralProgramConsoleProps } from "./libs/ReferralProgramConsole";
 export type { PlanReleaseConsoleProps } from "./libs/PlanReleaseConsoleView";
 export type {
   PlanReleaseActionDenialReason,
