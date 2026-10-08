@@ -15,8 +15,8 @@ import {
 export type MoneyRoundingMode = "half_up" | "down" | "up";
 
 type DecimalRatio = {
-  numerator: number;
-  denominator: number;
+  numerator: bigint;
+  denominator: bigint;
 };
 
 export class Money {
@@ -63,7 +63,7 @@ export class Money {
   divide(divisor: number, roundingMode: MoneyRoundingMode = "half_up"): Money {
     const ratio = Money.toDecimalRatio(divisor);
 
-    if (ratio.numerator === 0) {
+    if (ratio.numerator === BigInt(0)) {
       throw new MoneyDivisionByZeroProblem();
     }
 
@@ -167,12 +167,12 @@ export class Money {
     }
 
     const valueText = Money.normalizeDecimalText(value);
-    const sign = valueText.startsWith("-") ? -1 : 1;
+    const sign = valueText.startsWith("-") ? BigInt(-1) : BigInt(1);
     const unsignedText = valueText.replace(/^[+-]/, "");
     const [integerPart, fractionalPart = ""] = unsignedText.split(".");
     const digits = `${integerPart}${fractionalPart}`.replace(/^0+(?=\d)/, "") || "0";
-    const numerator = Money.toSafeInteger(Number(digits) * sign);
-    const denominator = Money.toSafeInteger(10 ** fractionalPart.length);
+    const numerator = BigInt(digits) * sign;
+    const denominator = BigInt(10) ** BigInt(fractionalPart.length);
 
     return Money.simplifyRatio({ numerator, denominator });
   }
@@ -229,7 +229,7 @@ export class Money {
   }
 
   private static simplifyRatio(ratio: DecimalRatio): DecimalRatio {
-    const denominatorSign = ratio.denominator < 0 ? -1 : 1;
+    const denominatorSign = ratio.denominator < BigInt(0) ? BigInt(-1) : BigInt(1);
     const numerator = ratio.numerator * denominatorSign;
     const denominator = ratio.denominator * denominatorSign;
     const divisor = Money.gcd(Money.absInteger(numerator), denominator);
@@ -246,37 +246,13 @@ export class Money {
     roundingMode: MoneyRoundingMode,
   ): number {
     const normalizedRatio = Money.simplifyRatio(ratio);
-    const numerator = Money.toSafeInteger(amount * normalizedRatio.numerator);
+    const numerator = BigInt(amount) * normalizedRatio.numerator;
     const denominator = normalizedRatio.denominator;
-    const quotient = Math.trunc(numerator / denominator);
+    const quotient = numerator / denominator;
     const remainder = numerator % denominator;
-    const rounded = Money.roundQuotient(quotient, remainder, denominator, roundingMode);
+    const rounded = Money.roundBigQuotient(quotient, remainder, denominator, roundingMode);
 
-    return Money.toSafeInteger(rounded);
-  }
-
-  private static roundQuotient(
-    quotient: number,
-    remainder: number,
-    denominator: number,
-    roundingMode: MoneyRoundingMode,
-  ): number {
-    if (remainder === 0) {
-      return quotient;
-    }
-
-    const remainderSign = remainder > 0 ? 1 : -1;
-    const absoluteRemainder = Money.absInteger(remainder);
-
-    if (roundingMode === "down") {
-      return quotient;
-    }
-
-    if (roundingMode === "up") {
-      return quotient + remainderSign;
-    }
-
-    return absoluteRemainder * 2 >= denominator ? quotient + remainderSign : quotient;
+    return Money.toSafeInteger(Number(rounded));
   }
 
   private static roundBigQuotient(
@@ -313,15 +289,15 @@ export class Money {
     return value;
   }
 
-  private static gcd(a: number, b: number): number {
-    if (b === 0) {
+  private static gcd(a: bigint, b: bigint): bigint {
+    if (b === BigInt(0)) {
       return a;
     }
 
     return Money.gcd(b, a % b);
   }
 
-  private static absInteger(value: number): number {
-    return value < 0 ? -value : value;
+  private static absInteger(value: bigint): bigint {
+    return value < BigInt(0) ? -value : value;
   }
 }
