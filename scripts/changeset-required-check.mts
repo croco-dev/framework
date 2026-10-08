@@ -4,10 +4,13 @@ import { compareStrings } from "../tooling/compareStrings.mjs";
 
 /**
  * Enforce release metadata for publishable package behavior changes.
- * Generated package source remains release-significant for its owning package.
+ * Package files are release-significant by default, including build configuration,
+ * schemas, dist-generation scripts, and generated source for their owning package.
  *
  * Narrow exemptions:
- * - package docs and tests do not require a changeset;
+ * - package README.md, CHANGELOG.md, docs/, and test files do not require a changeset;
+ * - root vitest.config.*, vitest.setup.*, tsconfig.contract-strict.json, and
+ *   test-fixtures/ are test/check-only inputs and do not require a changeset;
  * - adding the canonical CI-only API model script does not change published behavior;
  * - private packages do not require a changeset;
  * - root-only lockfile/package-manager changes do not require a changeset here;
@@ -1006,31 +1009,22 @@ function isPackageTestFile(packageRelativeFile: string): boolean {
 }
 
 function isReleaseSignificantPackageFile(packageRelativeFile: string): boolean {
-  if (packageRelativeFile === "package.json") {
-    return true;
-  }
-
   if (isPackageTestFile(packageRelativeFile)) {
     return false;
   }
 
   if (
-    packageRelativeFile.startsWith("src/") ||
-    packageRelativeFile.startsWith("templates/") ||
-    packageRelativeFile.startsWith("bin/")
-  ) {
-    return true;
-  }
-
-  if (
     packageRelativeFile === "README.md" ||
     packageRelativeFile === "CHANGELOG.md" ||
-    packageRelativeFile.startsWith("docs/")
+    packageRelativeFile.startsWith("docs/") ||
+    /^vitest\.(config|setup)\.[^/]+$/.test(packageRelativeFile) ||
+    packageRelativeFile === "tsconfig.contract-strict.json" ||
+    packageRelativeFile.startsWith("test-fixtures/")
   ) {
     return false;
   }
 
-  return false;
+  return true;
 }
 
 function getReleaseSignificantChanges(
