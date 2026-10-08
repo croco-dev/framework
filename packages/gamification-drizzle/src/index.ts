@@ -7,3 +7,15 @@ export {
   dropChallengeSchema,
   type GamificationMigrationClient,
 } from "./migrations/gamificationSchema";
+export { DrizzleRewardStore } from "./libs/DrizzleRewardStore";
+export type { DrizzleRewardClient } from "./libs/DrizzleRewardStore";
+export { RewardPersistenceProblem } from "./libs/problems";
+export { createRewardSchema } from "./libs/migration";
+export {
+  rewardSchema,
+  rewardFamilies,
+  rewardPublications,
+  rewardGrants,
+  rewardPoints,
+  rewardBadges,
+} from "./libs/rewardSchema";
