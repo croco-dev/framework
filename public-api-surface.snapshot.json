@@ -21528,6 +21528,46 @@
           ]
         },
         {
+          "exportPath": "./mission-validation",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/mission-validation.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/mission-validation.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/mission-validation.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/gamification-core/src/mission-validation.ts",
+          "runtimeExports": [
+            {
+              "name": "MissionInvalidProblem",
+              "exportKind": "named",
+              "source": "./libs/MissionContracts",
+              "declarationKind": "class"
+            },
+            {
+              "name": "validateMissionDefinition",
+              "exportKind": "named",
+              "source": "./libs/MissionContracts",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "MissionDefinition",
+              "exportKind": "named",
+              "source": "./libs/types"
+            }
+          ]
+        },
+        {
           "exportPath": "./reward-contracts",
           "kind": "code",
           "targets": [

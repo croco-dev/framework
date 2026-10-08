@@ -1,4 +1,4 @@
-import { validateMissionDefinition } from "@croco/gamification-core";
+import { validateMissionDefinition } from "@croco/gamification-core/mission-validation";
 import type { MissionPublication, MissionScope } from "@croco/gamification-core";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 

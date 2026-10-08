@@ -628,12 +628,48 @@ function runPackageSmoke(
     runFrameworkLoggerStartupSmoke(packageSmokeRoot);
   }
 
+  if (packageInfo.packageName === "@croco/gamification-core") {
+    runMissionValidationIdentitySmoke(packageSmokeRoot);
+  }
+
   const decoratorMetadataContract = decoratorMetadataContractFor(packageInfo.packageName);
   if (decoratorMetadataContract) {
     runDecoratorMetadataSmoke(packageSmokeRoot, graphPackages, decoratorMetadataContract);
   }
 
   runPublishedBundleSmoke(packageSmokeRoot, packageInfo.packageName);
+}
+
+function runMissionValidationIdentitySmoke(smokeRoot: string): void {
+  for (const mode of ["cjs", "esm"] as const) {
+    const smokePath = join(
+      smokeRoot,
+      `mission-validation-identity.${mode === "cjs" ? "cjs" : "mjs"}`,
+    );
+    const load = (specifier: string): string =>
+      mode === "cjs"
+        ? `require(${JSON.stringify(specifier)})`
+        : `await import(${JSON.stringify(specifier)})`;
+    writeFileSync(
+      smokePath,
+      [
+        `const assert = ${load("node:assert/strict")};`,
+        `const root = ${load("@croco/gamification-core")};`,
+        `const validation = ${load("@croco/gamification-core/mission-validation")};`,
+        'assert.equal(typeof root.MissionInvalidProblem, "function");',
+        'assert.equal(typeof root.validateMissionDefinition, "function");',
+        'assert.equal(validation.MissionInvalidProblem, root.MissionInvalidProblem, "mission Problem identity");',
+        'assert.equal(validation.validateMissionDefinition, root.validateMissionDefinition, "mission validator identity");',
+        "assert.throws(() => validation.validateMissionDefinition({}), root.MissionInvalidProblem);",
+        `console.log("mission validation ${mode} identity ok");`,
+        "",
+      ].join("\n"),
+    );
+    run("node", [smokePath], smokeRoot, {
+      label: `@croco/gamification-core: ${mode} mission validation identity`,
+    });
+    console.log(`mission validation ${mode} identity ok`);
+  }
 }
 
 function runPublishedBundleSmoke(smokeRoot: string, packageName: string): void {
