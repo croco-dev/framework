@@ -1547,7 +1547,7 @@ function validateContribution(
   if (!Number.isSafeInteger(order)) {
     throw new InvalidModuleDefinitionProblem(
       `Module '${moduleName}' contribution '${contribution.kind}:${contribution.id}' order must be a safe integer.`,
-      { moduleName, kind: contribution.kind, id: contribution.id, order },
+      { moduleName, kind: contribution.kind, id: contribution.id, receivedOrder: String(order) },
     );
   }
 }
