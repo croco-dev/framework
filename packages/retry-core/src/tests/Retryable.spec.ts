@@ -1253,3 +1253,145 @@ describe("@Retryable", () => {
     );
   });
 });
+
+describe("@Recover inheritance", () => {
+  class UpstreamProblem extends Problem {
+    constructor() {
+      super("UPSTREAM_TIMEOUT", ProblemCategory.InternalServerError, "upstream timed out");
+    }
+  }
+
+  class TimeoutProblem extends UpstreamProblem {}
+
+  class QuotaProblem extends Problem {
+    constructor() {
+      super("UPSTREAM_QUOTA", ProblemCategory.InternalServerError, "upstream quota exhausted");
+    }
+  }
+
+  it("isolates sibling handlers and retains inherited typed recovery", async () => {
+    class BaseGateway {
+      @Retryable({ maxAttempts: 1, trace: false })
+      async call(error: Problem): Promise<string> {
+        throw error;
+      }
+
+      @Recover(TimeoutProblem)
+      async recoverTimeout(): Promise<string> {
+        return "base-timeout";
+      }
+    }
+
+    class PaymentsGateway extends BaseGateway {
+      @Recover(QuotaProblem)
+      async recoverPaymentsQuota(): Promise<string> {
+        return "payments-quota";
+      }
+    }
+
+    class RefundsGateway extends BaseGateway {
+      @Recover(QuotaProblem)
+      async recoverRefundsQuota(): Promise<string> {
+        return "refunds-quota";
+      }
+    }
+
+    await expect(new PaymentsGateway().call(new QuotaProblem())).resolves.toBe("payments-quota");
+    await expect(new RefundsGateway().call(new QuotaProblem())).resolves.toBe("refunds-quota");
+    await expect(new PaymentsGateway().call(new TimeoutProblem())).resolves.toBe("base-timeout");
+    await expect(new RefundsGateway().call(new TimeoutProblem())).resolves.toBe("base-timeout");
+    const quota = new QuotaProblem();
+    await expect(new BaseGateway().call(quota)).rejects.toBe(quota);
+  });
+
+  it("preserves parent and inherited catch-all recovery after a child adds a typed handler", async () => {
+    class BaseGateway {
+      @Retryable({ maxAttempts: 1, trace: false })
+      async call(error: Problem): Promise<string> {
+        throw error;
+      }
+
+      @Recover()
+      async recoverAll(): Promise<string> {
+        return "base-fallback";
+      }
+    }
+
+    class PaymentsGateway extends BaseGateway {
+      @Recover(QuotaProblem)
+      async recoverQuota(): Promise<string> {
+        return "payments-quota";
+      }
+    }
+
+    await expect(new PaymentsGateway().call(new QuotaProblem())).resolves.toBe("payments-quota");
+    await expect(new BaseGateway().call(new QuotaProblem())).resolves.toBe("base-fallback");
+    await expect(new PaymentsGateway().call(new TimeoutProblem())).resolves.toBe("base-fallback");
+  });
+
+  it.each([TimeoutProblem, undefined])(
+    "prefers the nearest declaration for %s through multiple levels",
+    async (exceptionType) => {
+      class BaseGateway {
+        @Retryable({ maxAttempts: 1, trace: false })
+        async call(): Promise<string> {
+          throw new TimeoutProblem();
+        }
+
+        @Recover(exceptionType)
+        async recoverBase(): Promise<string> {
+          return "base";
+        }
+      }
+
+      class ChildGateway extends BaseGateway {
+        @Recover(exceptionType)
+        async recoverChild(): Promise<string> {
+          return "child";
+        }
+      }
+
+      class UndecoratedGateway extends ChildGateway {}
+
+      class GrandchildGateway extends UndecoratedGateway {
+        @Recover(exceptionType)
+        async recoverGrandchild(): Promise<string> {
+          return "grandchild";
+        }
+      }
+
+      await expect(new BaseGateway().call()).resolves.toBe("base");
+      await expect(new ChildGateway().call()).resolves.toBe("child");
+      await expect(new UndecoratedGateway().call()).resolves.toBe("child");
+      await expect(new GrandchildGateway().call()).resolves.toBe("grandchild");
+    },
+  );
+
+  it("prefers an inherited specific error type over a child catch-all or broader type", async () => {
+    class BaseGateway {
+      @Retryable({ maxAttempts: 1, trace: false })
+      async call(): Promise<string> {
+        throw new TimeoutProblem();
+      }
+
+      @Recover(TimeoutProblem)
+      async recoverTimeout(): Promise<string> {
+        return "specific";
+      }
+    }
+
+    class ChildGateway extends BaseGateway {
+      @Recover(UpstreamProblem)
+      async recoverProblem(): Promise<string> {
+        return "broad";
+      }
+
+      @Recover()
+      async recoverAll(): Promise<string> {
+        return "catch-all";
+      }
+    }
+
+    await expect(new ChildGateway().call()).resolves.toBe("specific");
+  });
+});
