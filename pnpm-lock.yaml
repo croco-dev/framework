@@ -1011,12 +1011,18 @@ importers:
       '@croco/admin-react':
         specifier: workspace:*
         version: link:../../packages/admin-react
+      '@croco/cache-core':
+        specifier: workspace:*
+        version: link:../../packages/cache-core
       '@croco/credits-core':
         specifier: workspace:*
         version: link:../../packages/credits-core
       '@croco/frontend-react':
         specifier: workspace:*
         version: link:../../packages/frontend-react
+      '@croco/meta-vite':
+        specifier: workspace:*
+        version: link:../../packages/meta-vite
       '@croco/problems-core':
         specifier: workspace:*
         version: link:../../packages/problems-core
