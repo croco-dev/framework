@@ -266,7 +266,8 @@ export class InMemoryEngagementStore implements EngagementPersistence {
       .filter((dispatch) => dispatch.tenantId === tenantId && dispatch.recipientId === recipientId)
       .sort(
         (left, right) =>
-          right.updatedAt.getTime() - left.updatedAt.getTime() || right.id.localeCompare(left.id),
+          right.updatedAt.getTime() - left.updatedAt.getTime() ||
+          (right.id < left.id ? -1 : right.id > left.id ? 1 : 0),
       )
       .filter((dispatch) => {
         if (options.after === undefined) return true;
