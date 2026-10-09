@@ -621,8 +621,23 @@ function normalizeExportTypes(exportsValue, packageType) {
       value.types.endsWith(".d.ts")
     ) {
       value.types = modeSpecificTypesFor(value.types, packageType);
+    } else if (
+      flatExportDeclarationExtension(value, packageType) === ".d.mts" &&
+      isDistPath(value.types) &&
+      value.types.endsWith(".d.ts")
+    ) {
+      value.types = `${value.types.slice(0, -".d.ts".length)}.d.mts`;
     }
   }
+}
+
+function flatExportDeclarationExtension(exportValue, packageType) {
+  return packageType !== "module" &&
+    isDistPath(exportValue.import) &&
+    exportValue.import.endsWith(".mjs") &&
+    !Object.hasOwn(exportValue, "require")
+    ? ".d.mts"
+    : ".d.ts";
 }
 
 function modeSpecificTypesFor(typesTarget, packageType) {
@@ -981,7 +996,9 @@ function validatePackage(pkg, pkgPath, rootDir, context = {}) {
   if (!DIRECT_DIST_ENTRYPOINT_PACKAGES.has(pkg.name)) {
     const distExports = Object.fromEntries(
       Object.entries(pkg.exports ?? {}).filter(
-        ([, target]) => isDistPath(target?.import) && isDistPath(target?.require),
+        ([, target]) =>
+          isDistPath(target?.import) &&
+          (!Object.hasOwn(target, "require") || isDistPath(target.require)),
       ),
     );
     validateExportMap(distExports, "exports", violations, pkg.type);
@@ -1619,7 +1636,10 @@ function validateExportMap(exportsValue, fieldName, violations, packageType) {
         continue;
       }
       validateDistPath(target, `${fieldName}["${exportPath}"].${condition}`, violations, {
-        mustEndWith: condition === "types" ? ".d.ts" : undefined,
+        mustEndWith:
+          condition === "types"
+            ? flatExportDeclarationExtension(exportValue, packageType)
+            : undefined,
       });
     }
   }

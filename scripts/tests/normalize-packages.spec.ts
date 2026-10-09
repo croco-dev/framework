@@ -178,6 +178,47 @@ describe("normalize-packages.mjs", () => {
     },
   );
 
+  it("normalizes ESM-only declarations in a CommonJS package and rejects flat CJS regressions", () => {
+    const root = createTempRoot();
+    const exports = {
+      ".": { types: "./dist/index.d.ts", import: "./dist/index.mjs" },
+      "./fetch": { types: "./dist/fetch.d.ts", import: "./dist/fetch.mjs" },
+    };
+    const packagePath = writePackage(
+      root,
+      "esm-import",
+      publishablePackage("@croco/esm-import", {
+        exports,
+        publishConfig: {
+          access: "public",
+          main: "./dist/index.mjs",
+          types: "./dist/index.d.ts",
+          exports: structuredClone(exports),
+        },
+      }),
+    );
+    const before = runScript(root, "--check");
+    expect(before.status).toBe(1);
+    expect(before.stdout).toContain('publishConfig.exports["./fetch"].types must end with .d.mts');
+    expect(runScript(root, "--write").status).toBe(0);
+    const pkg = JSON.parse(readFileSync(packagePath, "utf-8"));
+    for (const map of [pkg.exports, pkg.publishConfig.exports]) {
+      expect(map["."]).toEqual({ types: "./dist/index.d.mts", import: "./dist/index.mjs" });
+      expect(map["./fetch"]).toEqual({ types: "./dist/fetch.d.mts", import: "./dist/fetch.mjs" });
+    }
+    expect(pkg.types).toBe("./src/index.ts");
+    expect(pkg.publishConfig.types).toBe("./dist/index.d.ts");
+    expect(runScript(root, "--check").status).toBe(0);
+    const normalized = readFileSync(packagePath, "utf-8");
+    expect(runScript(root, "--write").status).toBe(0);
+    expect(readFileSync(packagePath, "utf-8")).toBe(normalized);
+    pkg.exports["./fetch"].types = "./dist/fetch.d.ts";
+    writeFileSync(packagePath, JSON.stringify(pkg));
+    const regression = runScript(root, "--check");
+    expect(regression.status).toBe(1);
+    expect(regression.stdout).toContain('exports["./fetch"].types must end with .d.mts');
+  });
+
   it("preserves source workspace and single-format export declarations", () => {
     const root = createTempRoot();
     const exports = {

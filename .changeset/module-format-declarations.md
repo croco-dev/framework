@@ -86,6 +86,7 @@
 "@croco/outbox-core": patch
 "@croco/pagination-core": patch
 "@croco/presentation-preset": patch
+"@croco/preset-cloudflare": patch
 "@croco/preset-lambda": patch
 "@croco/preset-node": patch
 "@croco/problems-core": patch
