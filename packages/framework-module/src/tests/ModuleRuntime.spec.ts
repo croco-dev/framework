@@ -28,6 +28,55 @@ describe("ModuleRuntime", () => {
     Container.reset();
   });
 
+  describe("contribution order validation", () => {
+    const invalidOrders = [Infinity, -Infinity, NaN, 1.5, Number.MAX_SAFE_INTEGER + 1];
+
+    it.each(invalidOrders)("reports invalid order %s during initialization", async (order) => {
+      const runtime = createModuleRuntime();
+      runtime.use({
+        name: "billing",
+        contributions: [{ kind: "admin.nav", id: "billing", order, value: {} }],
+      });
+
+      try {
+        const initialization = runtime.initialize();
+        await expect(initialization).rejects.toBeInstanceOf(InvalidModuleDefinitionProblem);
+        await expect(initialization).rejects.toMatchObject({
+          code: "framework-module/invalid-module-definition",
+          extensions: {
+            moduleName: "billing",
+            kind: "admin.nav",
+            id: "billing",
+            receivedOrder: String(order),
+          },
+        });
+      } finally {
+        await runtime.dispose();
+      }
+    });
+
+    it.each(invalidOrders)("reports invalid order %s during graph inspection", (order) => {
+      const runtime = createModuleRuntime();
+      runtime.use({
+        name: "billing",
+        contributions: [{ kind: "admin.nav", id: "billing", order, value: {} }],
+      });
+
+      expect(() => runtime.createGraphManifest()).toThrow(InvalidModuleDefinitionProblem);
+      expect(() => runtime.createGraphManifest()).toThrow(
+        expect.objectContaining({
+          code: "framework-module/invalid-module-definition",
+          extensions: {
+            moduleName: "billing",
+            kind: "admin.nav",
+            id: "billing",
+            receivedOrder: String(order),
+          },
+        }),
+      );
+    });
+  });
+
   it("isolates identical module names and provider tokens across concurrent runtimes", async () => {
     const configToken = new Token<string>("config");
     const firstRuntime = createModuleRuntime();
