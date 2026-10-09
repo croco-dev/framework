@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 984,
+  problemCount: 985,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -15376,8 +15376,42 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Context.ts",
-          line: 106,
+          line: 121,
           column: 28,
+          kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "framework-context/request-scope-disposed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#framework-context-request-scope-disposed",
+      recovery: {
+        cause:
+          "A request provider was resolved or an instance was tracked after its request scope began cleanup.",
+        userAction:
+          "Capture the values needed by background work while the request scope is active and pass them explicitly.",
+        operatorAction:
+          "Inspect waitUntil and other asynchronous continuations for request provider access after Context.run() settles; do not reuse disposed provider instances.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/framework-context/src/libs/Context.ts",
+          line: 46,
+          column: 11,
           kind: "problem-factory",
         },
       ],
@@ -15408,7 +15442,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/framework-context/src/libs/Context.ts",
-          line: 28,
+          line: 33,
           column: 11,
           kind: "problem-factory",
         },
