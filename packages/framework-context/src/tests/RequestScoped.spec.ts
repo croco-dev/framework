@@ -1,5 +1,13 @@
-import { beforeEach, describe, expect, it } from "vitest";
-import { Container, Context } from "../index";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { Problem } from "@croco/problems-core";
+import {
+  Container,
+  Context,
+  GENERATED_DI_GRAPH_VERSION,
+  Token,
+  defineGeneratedDiGraph,
+} from "../index";
+import type { ILogger, RequestContext, RuntimeContext } from "../index";
 import { Component } from "./registerTestComponent";
 
 describe("request scoped container behavior", () => {
@@ -58,5 +66,200 @@ describe("request scoped container behavior", () => {
 
       expect(first).toBe(second);
     });
+  });
+});
+
+function installRequestDisposables(disposals: readonly (() => void)[]): () => void {
+  const tokens = disposals.map((_, index) => new Token<object>(`request.disposable.${index}`));
+  Container.installGeneratedGraph(
+    defineGeneratedDiGraph({
+      version: GENERATED_DI_GRAPH_VERSION,
+      graphId: "test.request-cleanup-failure",
+      compilerVersion: "test",
+      inputHash: "input",
+      roots: tokens,
+      providers: tokens.map((token, index) => ({
+        token,
+        tokenId: `app:RequestDisposable${index}`,
+        debugName: `RequestDisposable${index}`,
+        scope: "request",
+        dependencies: [],
+        factory: () => ({ [Symbol.dispose]: disposals[index] }),
+        sourceLocation: { file: "src/services.ts", line: 1, column: 1 },
+      })),
+    }),
+  );
+  return () => {
+    for (const token of tokens) Container.get(token);
+  };
+}
+
+function createLoggingRuntime(logger: ILogger): RuntimeContext {
+  return {
+    platform: "node",
+    requestId: "cleanup-failure",
+    logger,
+    capabilities: {
+      env: false,
+      filesystem: false,
+      logger: true,
+      nodeApi: true,
+      requestLifecycle: true,
+      trace: false,
+      waitUntil: false,
+      flush: false,
+      streamingResponse: false,
+      deadline: false,
+      abortSignal: false,
+      shutdown: false,
+    },
+    waitUntil: () => undefined,
+    flush: async () => undefined,
+    shutdown: async () => undefined,
+  };
+}
+
+function expectCleanupProblem(error: unknown, messages: readonly string[], cause?: Error): void {
+  expect(error).toBeInstanceOf(Problem);
+  if (!(error instanceof Problem)) throw new Error("Expected a cleanup Problem");
+  expect(error.code).toBe("framework-context/request-scope-disposal-failed");
+  expect(error.status).toBe(500);
+  expect(error.cause).toBe(cause);
+  const serialized = JSON.parse(JSON.stringify(error));
+  expect(serialized.cleanupFailures).toEqual(
+    messages.map((message) => expect.objectContaining({ message })),
+  );
+}
+
+describe("request scope cleanup failure", () => {
+  beforeEach(() => Container.reset());
+  afterEach(() => {
+    Container.reset();
+    vi.restoreAllMocks();
+  });
+
+  for (const mode of ["sync", "async"] as const) {
+    const run = (context: RequestContext, callback: () => string) =>
+      Context.run(context, mode === "async" ? async () => callback() : callback);
+
+    it(`reports a 500 cleanup Problem after a successful ${mode} callback`, async () => {
+      const cleanupError = new Error("connection release failed");
+      const dispose = vi.fn(() => {
+        throw cleanupError;
+      });
+      const resolveProviders = installRequestDisposables([dispose]);
+      let failure: unknown;
+      try {
+        await run({ requestId: "success" }, () => {
+          resolveProviders();
+          return "ok";
+        });
+      } catch (error) {
+        failure = error;
+      }
+      expectCleanupProblem(failure, [cleanupError.message], cleanupError);
+      expect(dispose).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(["inspector", "logger", "console"] as const)(
+      `preserves a ${mode} primary failure and reports cleanup once through %s`,
+      async (reporter) => {
+        const cleanupError = new Error("connection release failed");
+        const resolveProviders = installRequestDisposables([
+          () => {
+            throw cleanupError;
+          },
+        ]);
+        const primary = new Error("handler failed");
+        const recordEvent = vi.fn();
+        const logger: ILogger = {
+          debug: vi.fn(),
+          info: vi.fn(),
+          warn: vi.fn(),
+          error: vi.fn(),
+          fatal: vi.fn(),
+          child: () => logger,
+        };
+        const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+        const context: RequestContext = {
+          requestId: "failure",
+          ...(reporter === "inspector" ? { runtimeInspector: { recordEvent } } : {}),
+          ...(reporter !== "console" ? { runtime: createLoggingRuntime(logger) } : {}),
+        };
+        let failure: unknown;
+        try {
+          await run(context, () => {
+            resolveProviders();
+            throw primary;
+          });
+        } catch (error) {
+          failure = error;
+        }
+        expect(failure).toBe(primary);
+        expect(recordEvent).toHaveBeenCalledTimes(reporter === "inspector" ? 1 : 0);
+        expect(logger.error).toHaveBeenCalledTimes(reporter === "logger" ? 1 : 0);
+        expect(consoleError).toHaveBeenCalledTimes(reporter === "console" ? 1 : 0);
+        const details =
+          reporter === "inspector"
+            ? recordEvent.mock.calls[0][0].details
+            : reporter === "logger"
+              ? vi.mocked(logger.error).mock.calls[0][1]
+              : consoleError.mock.calls[0][1];
+        expect(details.primaryError).toBe(primary);
+        expectCleanupProblem(details.cleanupFailure, [cleanupError.message], cleanupError);
+        if (reporter === "inspector") {
+          expect(recordEvent).toHaveBeenCalledWith(
+            expect.objectContaining({
+              requestId: "failure",
+              kind: "error",
+              outcome: "failed",
+              name: "request.cleanup",
+            }),
+          );
+        }
+      },
+    );
+  }
+
+  it("disposes every provider in reverse order and retains the first Error as cause", () => {
+    const firstError = new Error("first Error disposed");
+    const laterError = new Error("later Error disposed");
+    const order: number[] = [];
+    const thrown = [laterError, firstError, "string cleanup failure", undefined];
+    const disposals = thrown.map((value, index) =>
+      vi.fn(() => {
+        order.push(index);
+        throw value;
+      }),
+    );
+    const resolveProviders = installRequestDisposables(disposals);
+    let failure: unknown;
+    try {
+      Context.run({ requestId: "multiple" }, resolveProviders);
+    } catch (error) {
+      failure = error;
+    }
+    expect(order).toEqual([3, 2, 1, 0]);
+    for (const dispose of disposals) expect(dispose).toHaveBeenCalledTimes(1);
+    expectCleanupProblem(
+      failure,
+      ["undefined", "string cleanup failure", firstError.message, laterError.message],
+      firstError,
+    );
+  });
+
+  it("serializes non-Error cleanup failures without manufacturing a cause", () => {
+    const resolveProviders = installRequestDisposables([
+      () => {
+        throw "string cleanup failure";
+      },
+    ]);
+    let failure: unknown;
+    try {
+      Context.run({ requestId: "non-error" }, resolveProviders);
+    } catch (error) {
+      failure = error;
+    }
+    expectCleanupProblem(failure, ["string cleanup failure"]);
   });
 });

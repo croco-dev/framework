@@ -106,7 +106,14 @@ export class Context {
     const cleanupFailure = ProblemFactory.internalServerError(
       "framework-context/request-scope-disposal-failed",
       "Request-scoped provider cleanup failed.",
-      { extensions: { cleanupFailures: failures } },
+      {
+        cause: failures.find((error): error is Error => error instanceof Error),
+        extensions: {
+          cleanupFailures: failures.map((error) => ({
+            message: error instanceof Error ? error.message : String(error),
+          })),
+        },
+      },
     );
     if (!failure) throw cleanupFailure;
     Context.reportRequestCleanupFailure(data.context, failure.error, cleanupFailure);
