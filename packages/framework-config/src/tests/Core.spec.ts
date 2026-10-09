@@ -64,7 +64,9 @@ describe("framework-config core skipValidation parser", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 
     try {
-      expect(() => core.fullEnv.NODE_ENV).toThrow("Invalid environment variables");
+      expect(() => core.fullEnv.NODE_ENV).toThrow(
+        expect.objectContaining({ code: "framework-config/config-validation-failed" }),
+      );
     } finally {
       consoleError.mockRestore();
     }
@@ -81,7 +83,9 @@ describe("framework-config core skipValidation parser", () => {
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
 
     try {
-      expect(() => core.fullEnv.NODE_ENV).toThrow("Invalid environment variables");
+      expect(() => core.fullEnv.NODE_ENV).toThrow(
+        expect.objectContaining({ code: "framework-config/config-validation-failed" }),
+      );
     } finally {
       consoleError.mockRestore();
     }
@@ -172,15 +176,64 @@ describe("framework-config runtime env preset composition", () => {
     try {
       expect(() =>
         core.defineRuntimeEnv({ presets: [core.appConfig, core.databaseConfig] }),
-      ).toThrow("Invalid environment variables");
-      expect(consoleError).toHaveBeenCalledWith(
-        "❌ Invalid environment variables:",
-        expect.arrayContaining([expect.objectContaining({ path: ["DATABASE_URL"] })]),
-      );
+      ).toThrow(expect.objectContaining({ code: "framework-config/config-validation-failed" }));
+      expect(consoleError).not.toHaveBeenCalled();
     } finally {
       consoleError.mockRestore();
     }
   });
+
+  it.each([undefined, ""])(
+    "reports a missing preset value %s without console output",
+    async (value) => {
+      const core = await importCoreWithEnv(undefined, { omitRequiredServices: true });
+      if (value !== undefined) process.env.DATABASE_URL = value;
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      try {
+        expect(() => core.defineRuntimeEnv({ presets: [core.databaseConfig] })).toThrow(
+          expect.objectContaining({
+            code: "framework-config/config-validation-failed",
+            detail: "Config validation failed: DATABASE_URL: Missing required",
+          }),
+        );
+        expect(consoleError).not.toHaveBeenCalled();
+      } finally {
+        consoleError.mockRestore();
+      }
+    },
+  );
+
+  it.each(["PORT", "NODE_ENV"])(
+    "reports invalid %s safely through direct and lazy paths",
+    async (key) => {
+      const core = await importCoreWithEnv(undefined);
+      process.env[key] = "not-a-port";
+      const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+      try {
+        for (const run of [
+          () => core.defineRuntimeEnv({ presets: [core.appConfig] }),
+          () => core.env.NODE_ENV,
+          () => core.fullEnv.NODE_ENV,
+        ]) {
+          let failure: unknown;
+          try {
+            run();
+          } catch (error) {
+            failure = error;
+          }
+          expect(failure).toBeInstanceOf(core.ConfigValidationProblem);
+          expect(failure).toMatchObject({
+            code: "framework-config/config-validation-failed",
+            detail: expect.stringContaining(`${key}: invalid_`),
+          });
+          expect((failure as { detail: string }).detail).not.toMatch(/Missing required|not-a-port/);
+        }
+        expect(consoleError).not.toHaveBeenCalled();
+      } finally {
+        consoleError.mockRestore();
+      }
+    },
+  );
 
   it("narrows the result type to the selected presets", async () => {
     const core = await importCoreWithEnv(undefined, { omitRequiredServices: true });

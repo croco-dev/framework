@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { configDiagnostic } from "./libs/configDiagnostics";
 import { ConfigValidationProblem } from "./libs/problems/ConfigProblems";
 
 function isMissingAtPath(data: unknown, path: PropertyKey[]): boolean {
@@ -81,27 +82,6 @@ function safeIssuePath(schema: z.ZodType, path: PropertyKey[]): string {
   return typeof field === "string" && objectFieldNames(schema).includes(field) ? field : "<root>";
 }
 
-function safeIssueMessage(issue: z.core.$ZodRawIssue): string {
-  switch (issue.code) {
-    case "invalid_type":
-      return /^(string|number|boolean|object|array|null|undefined|bigint|date|symbol|function)$/.test(
-        issue.expected,
-      )
-        ? `Expected ${issue.expected}`
-        : "Invalid type";
-    case "invalid_format":
-      return issue.format === "url" ? "Invalid URL" : "Invalid format";
-    case "invalid_value":
-      return "Invalid option";
-    case "too_small":
-      return "Value is too small";
-    case "too_big":
-      return "Value is too large";
-    default:
-      return "Invalid value";
-  }
-}
-
 export function validateConfig<T>(
   schema: z.ZodType<T>,
   env?: Record<string, string | undefined>,
@@ -115,15 +95,12 @@ export function validateConfig<T>(
     const diagnostics = result.issues.map((issue) => {
       const issuePath = issue.path ?? [];
       const path = safeIssuePath(schema, issuePath);
-      if (
+      const missing =
         issuePath.length > 0 &&
         (issue.code === "invalid_type" || issue.code === "invalid_value") &&
         isRawInputIssue(schema, issuePath, issue.inst, data) &&
-        isMissingAtPath(data, issuePath)
-      ) {
-        return `${path}: Missing required`;
-      }
-      return `${path}: ${issue.code}: ${safeIssueMessage(issue)}`;
+        isMissingAtPath(data, issuePath);
+      return configDiagnostic(path, issue, missing);
     });
     throw new ConfigValidationProblem(diagnostics);
   }
