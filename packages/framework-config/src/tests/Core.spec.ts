@@ -235,6 +235,36 @@ describe("framework-config runtime env preset composition", () => {
     },
   );
 
+  it("redacts code-less Standard Schema messages and nested paths", async () => {
+    const core = await importCoreWithEnv(undefined);
+    process.env.SECRET = "sensitive-value";
+    expect(() =>
+      core.defineRuntimeEnv({
+        presets: [
+          {
+            server: {
+              SECRET: {
+                "~standard": {
+                  version: 1,
+                  vendor: "test",
+                  validate: () => ({
+                    issues: [{ message: "sensitive-value", path: [{ key: "sensitive-value" }] }],
+                  }),
+                },
+              },
+            },
+            client: {},
+            shared: {},
+          },
+        ],
+      }),
+    ).toThrow(
+      expect.objectContaining({
+        detail: "Config validation failed: SECRET: invalid_value: Invalid value",
+      }),
+    );
+  });
+
   it("narrows the result type to the selected presets", async () => {
     const core = await importCoreWithEnv(undefined, { omitRequiredServices: true });
     process.env.DATABASE_URL = "https://database.example.com";

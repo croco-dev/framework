@@ -36,6 +36,7 @@ export function configDiagnostic(path: string, issue: ValidationIssue, missing: 
       "invalid_value",
       "too_small",
       "too_big",
+      "not_multiple_of",
       "invalid_union",
       "invalid_key",
       "invalid_element",
