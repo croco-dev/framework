@@ -375,13 +375,13 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
   protected async getTimestamps(key: string, since: number): Promise<number[]> {
     const entry = this.windows.get(key);
     if (!entry) return [];
-    return entry.entries.filter((item) => item.timestamp >= since).map((item) => item.timestamp);
+    return entry.entries.filter((item) => item.timestamp > since).map((item) => item.timestamp);
   }
 
   protected async removeTimestamps(key: string, before: number): Promise<void> {
     const entry = this.windows.get(key);
     if (!entry) return;
-    entry.entries = entry.entries.filter((item) => item.timestamp >= before);
+    entry.entries = entry.entries.filter((item) => item.timestamp > before);
     if (entry.entries.length === 0) {
       this.windows.delete(key);
     } else {
@@ -418,7 +418,7 @@ export class SlidingWindowInMemoryStore extends SlidingWindowStore {
     for (const [key, entry] of this.windows.entries()) {
       const windowStart = now - entry.windowMs;
       const originalLength = entry.entries.length;
-      entry.entries = entry.entries.filter((item) => item.timestamp >= windowStart);
+      entry.entries = entry.entries.filter((item) => item.timestamp > windowStart);
 
       if (entry.entries.length === 0) {
         this.windows.delete(key);
