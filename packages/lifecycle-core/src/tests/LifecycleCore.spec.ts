@@ -670,6 +670,118 @@ describe("lifecycle-core", () => {
     });
   });
 
+  it("still evaluates later rules when an earlier rule condition throws", async () => {
+    const { evaluator, registry, sink, store } = createEvaluator();
+    registry.register({
+      id: "expansion-offer",
+      description: "Offer an upgrade when usage grows",
+      severity: "low",
+      triggers: [{ type: "health.status.changed" }],
+      when: (context) => (context.metadata?.seats as { used: number }).used > 10,
+      actions: [{ id: "send-offer", type: "email", title: "Upgrade offer" }],
+    });
+    registry.register({
+      id: "risk-follow-up",
+      description: "Create a CS follow-up when health drops",
+      severity: "high",
+      triggers: [{ type: "health.status.changed" }],
+      when: (context) => context.health?.status === "at_risk",
+      actions: [{ id: "create-cs-follow-up", type: "cs.follow_up", title: "Contact tenant" }],
+    });
+    const now = new Date("2026-09-01T00:00:00.000Z");
+    const context = createLifecycleContext({
+      now,
+      signal: createHealthStatusChangedSignal({
+        signalId: "health-1",
+        tenantId: "tenant-1",
+        oldStatus: "healthy",
+        newStatus: "at_risk",
+        score: 40,
+        occurredAt: now,
+      }),
+      health: { status: "at_risk", score: 40 },
+    });
+
+    await expect(evaluator.evaluate(context)).rejects.toThrow(TypeError);
+
+    expect(sink.getEmissions()).toEqual([
+      expect.objectContaining({ action: expect.objectContaining({ id: "create-cs-follow-up" }) }),
+    ]);
+    expect(await store.list()).toMatchObject([
+      {
+        ruleId: "risk-follow-up",
+        status: "succeeded",
+      },
+    ]);
+  });
+
+  it("re-evaluates only the failed rule when the same signal is redelivered", async () => {
+    const { evaluator, registry, sink, store } = createEvaluator();
+    let failExpansionOffer = true;
+    registry.register({
+      id: "expansion-offer",
+      description: "Offer an upgrade when usage grows",
+      severity: "low",
+      triggers: [{ type: "health.status.changed" }],
+      when: (context) => {
+        if (failExpansionOffer) {
+          throw new TypeError("Cannot read properties of undefined (reading 'used')");
+        }
+        return (context.metadata?.seats as { used: number }).used > 10;
+      },
+      actions: [{ id: "send-offer", type: "email", title: "Upgrade offer" }],
+    });
+    registry.register({
+      id: "risk-follow-up",
+      description: "Create a CS follow-up when health drops",
+      severity: "high",
+      triggers: [{ type: "health.status.changed" }],
+      when: (context) => context.health?.status === "at_risk",
+      actions: [{ id: "create-cs-follow-up", type: "cs.follow_up", title: "Contact tenant" }],
+    });
+    const now = new Date("2026-09-01T00:00:00.000Z");
+    const createContext = () =>
+      createLifecycleContext({
+        now,
+        signal: createHealthStatusChangedSignal({
+          signalId: "health-1",
+          tenantId: "tenant-1",
+          oldStatus: "healthy",
+          newStatus: "at_risk",
+          score: 40,
+          occurredAt: now,
+        }),
+        health: { status: "at_risk", score: 40 },
+        metadata: { seats: { used: 12 } },
+      });
+
+    await expect(evaluator.evaluate(createContext())).rejects.toThrow(TypeError);
+    failExpansionOffer = false;
+    const redelivered = await evaluator.evaluate(createContext());
+
+    expect(sink.getEmissions()).toHaveLength(2);
+    expect(redelivered.runs).toMatchObject([
+      { ruleId: "expansion-offer", status: "succeeded" },
+      { ruleId: "risk-follow-up", status: "skipped", skipReason: "idempotency_key_reused" },
+    ]);
+    const storedRuns = await store.list();
+    expect(
+      storedRuns.filter((run) => run.ruleId === "expansion-offer" && run.status === "succeeded"),
+    ).toHaveLength(1);
+    expect(
+      storedRuns.filter((run) => run.ruleId === "risk-follow-up" && run.status === "succeeded"),
+    ).toHaveLength(1);
+    expect(
+      storedRuns.filter(
+        (run) =>
+          run.ruleId === "risk-follow-up" &&
+          run.status === "skipped" &&
+          run.skipReason === "idempotency_key_reused",
+      ),
+    ).toHaveLength(1);
+    expect(storedRuns.some((run) => run.ruleId === "expansion-offer")).toBe(true);
+  });
+
   it("reports failed lifecycle runs through diagnostics", async () => {
     const sink = new InMemoryLifecycleActionSink({ failActionIds: ["billing-recovery"] });
     const store = new InMemoryLifecycleRunStore();
