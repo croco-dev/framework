@@ -18271,7 +18271,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flightEncode.entry.ts",
-          line: 27,
+          line: 28,
           column: 1,
           kind: "problem-class",
         },

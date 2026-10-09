@@ -11546,7 +11546,7 @@ Sources:
 
 Sources:
 
-- `packages/meta-vite/src/libs/rsc/flightEncode.entry.ts:27:1` (problem-class)
+- `packages/meta-vite/src/libs/rsc/flightEncode.entry.ts:28:1` (problem-class)
 
 <a id="meta-vite-rsc-flight-encode-failed"></a>
 
