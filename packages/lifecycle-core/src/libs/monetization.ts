@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { PlanVersionRef } from "@croco/billing-core";
 import {
   MonetizationRecipeCapabilityProblem,
@@ -980,20 +980,7 @@ export class InMemoryMonetizationThresholdStore implements MonetizationThreshold
     }
     this.states.set(key, current);
     this.suppressedDuplicateCount += suppressedDuplicateCount;
-    const claimId =
-      crossedThresholds.length === 0
-        ? undefined
-        : createHash("sha256")
-            .update(
-              JSON.stringify(
-                canonicalize({
-                  scopeKey: key,
-                  sourceAt: claim.sourceAt,
-                  thresholds: crossedThresholds,
-                }),
-              ),
-            )
-            .digest("hex");
+    const claimId = crossedThresholds.length === 0 ? undefined : randomUUID();
     if (claimId) {
       const now = (this.options.now ?? (() => new Date()))().getTime();
       this.reservations.set(claimId, {
