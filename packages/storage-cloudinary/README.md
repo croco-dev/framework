@@ -182,6 +182,10 @@ pnpm --filter @croco/storage-cloudinary test:live
 - `cover`, `contain`, `fill`, `inside`, `outside`를 Cloudinary crop 값으로 변환합니다.
 - 일시적 네트워크 오류와 5xx 응답은 최대 3회 재시도합니다.
 - 업로드 인텐트는 직접 업로드 엔드포인트, 공개 URL, `public_id`, `timestamp`, `api_key`, `signature` multipart 필드를 반환합니다. API secret은 반환하지 않으며 Cloudinary의 서명 유효 시간에 맞춰 TTL은 최대 1시간입니다.
+- [Cloudinary 서명은 `timestamp`부터 1시간 동안 유효](https://cloudinary.com/documentation/authentication_signatures)하므로,
+  짧은 TTL에서는 서명 시각을 과거로 당겨 업로드 가능 시간이 `expiresAt`을 넘지 않게 합니다.
+  초 단위 timestamp 때문에 실제 만료가 `expiresAt`보다 최대 1초 미만 빠를 수 있습니다.
+  짧은 TTL일수록 시계 차이를 흡수할 여유가 줄어들며, 서버 시계가 Cloudinary보다 늦으면 업로드가 즉시 거부될 수 있습니다.
 - `getSignedUrl()`은 먼저 저장된 리소스의 실제 포맷을 조회한 뒤, 해당 포맷과 만료 시각을 서명한 인증 download API URL을 반환합니다. 일반 CDN `sign_url`은 만료 접근 제어로 사용하지 않습니다.
 - 이미지 직접 업로드 인텐트의 키는 기존처럼 확장자를 생략하며, raw 파일은 전체 키를 `public_id`로 사용합니다.
 - 영상·오디오 키는 `-`를 `--`로, `.`을 `-d`로 순서대로 이스케이프한 `public_id`를 사용합니다.
