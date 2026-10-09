@@ -1,3 +1,4 @@
+import { validatePageRoute } from "./validatePageRoute";
 import { validateApiRoute } from "./validateApiRoute";
 
 import type {
@@ -38,6 +39,7 @@ export class RouteRegistry {
     if (this.hasRegisteredRoute(definition.path)) {
       throw new RouteConflictError(definition.path);
     }
+    validatePageRoute(definition);
     if (definition.mode !== undefined && definition.mode !== "ssr") {
       if (definition.resolveShell ?? definition.regions ?? definition.stream) {
         throw new ShellRouteDefinitionError(definition.path, definition.mode);
