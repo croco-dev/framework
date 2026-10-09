@@ -8,6 +8,7 @@ import {
   defineGeneratedDiGraph,
 } from "../index";
 import type { ILogger, RequestContext, RuntimeContext } from "../index";
+import { trackRequestInstance } from "../libs/Context";
 import { Component } from "./registerTestComponent";
 
 describe("request scoped container behavior", () => {
@@ -327,4 +328,223 @@ describe("request scope cleanup failure", () => {
       },
     );
   }
+});
+
+describe("disposed request scopes", () => {
+  let created: number;
+  let disposed: number;
+
+  class RequestService {
+    constructor() {
+      created += 1;
+    }
+
+    [Symbol.dispose](): void {
+      disposed += 1;
+    }
+  }
+
+  class TransientService extends RequestService {}
+
+  function createGate(): { promise: Promise<void>; resolve: () => void } {
+    let resolve!: () => void;
+    const promise = new Promise<void>((done) => {
+      resolve = done;
+    });
+    return { promise, resolve };
+  }
+
+  function expectDisposed(action: () => unknown): void {
+    expect(action).toThrow(
+      expect.objectContaining({ code: "framework-context/request-scope-disposed" }),
+    );
+  }
+
+  beforeEach(() => {
+    Container.reset();
+    created = 0;
+    disposed = 0;
+    Container.installGeneratedGraph(
+      defineGeneratedDiGraph({
+        version: GENERATED_DI_GRAPH_VERSION,
+        graphId: "test.disposed-request-scope",
+        compilerVersion: "test",
+        inputHash: "input",
+        roots: [RequestService, TransientService],
+        providers: [
+          {
+            token: RequestService,
+            tokenId: "test:RequestService",
+            debugName: "RequestService",
+            scope: "request",
+            dependencies: [],
+            factory: () => new RequestService(),
+            sourceLocation: { file: "RequestScoped.spec.ts", line: 1, column: 1 },
+          },
+          {
+            token: TransientService,
+            tokenId: "test:TransientService",
+            debugName: "TransientService",
+            scope: "transient",
+            dependencies: [],
+            factory: () => new TransientService(),
+            sourceLocation: { file: "RequestScoped.spec.ts", line: 1, column: 1 },
+          },
+        ],
+      }),
+    );
+  });
+
+  afterEach(() => Container.reset());
+
+  it.each([true, false])(
+    "rejects waitUntil resolution after disposal (previously resolved: %s)",
+    async (resolveDuringRequest) => {
+      const pending: Promise<unknown>[] = [];
+      const gate = createGate();
+      const runtime: RuntimeContext = {
+        platform: "lambda",
+        requestId: "req-wait-until",
+        capabilities: {
+          env: true,
+          filesystem: true,
+          logger: false,
+          trace: false,
+          waitUntil: true,
+          flush: true,
+          nodeApi: true,
+          requestLifecycle: true,
+          streamingResponse: false,
+          deadline: true,
+          abortSignal: false,
+          shutdown: false,
+        },
+        waitUntil: (promise) => {
+          pending.push(promise);
+        },
+        flush: async () => undefined,
+        shutdown: async () => undefined,
+      };
+
+      await Context.run({ requestId: runtime.requestId, runtime }, async () => {
+        if (resolveDuringRequest) {
+          expect(Container.get(RequestService)).toBe(Container.get(RequestService));
+        }
+        runtime.waitUntil(
+          gate.promise.then(() => {
+            expectDisposed(() => Container.get(RequestService));
+            expect(Context.getRequestId()).toBe(runtime.requestId);
+          }),
+        );
+      });
+
+      gate.resolve();
+      await Promise.all(pending);
+      expect({ created, disposed }).toEqual({
+        created: resolveDuringRequest ? 1 : 0,
+        disposed: resolveDuringRequest ? 1 : 0,
+      });
+    },
+  );
+
+  it("rejects legacy request resolution from a timer after synchronous completion", async () => {
+    class LegacyService {
+      constructor() {
+        created += 1;
+      }
+    }
+    Component({ scope: "request" })(LegacyService);
+    let continuation!: Promise<void>;
+    Context.run({ requestId: "req-timer" }, () => {
+      Container.get(LegacyService);
+      continuation = new Promise<void>((resolve, reject) => {
+        setTimeout(() => {
+          try {
+            expectDisposed(() => Container.get(LegacyService));
+            resolve();
+          } catch (error) {
+            reject(error);
+          }
+        }, 0);
+      });
+    });
+    await continuation;
+    expect(created).toBe(1);
+  });
+
+  it("rejects transient resolution before invoking its factory after disposal", async () => {
+    const gate = createGate();
+    let continuation!: Promise<void>;
+    Context.run({ requestId: "req-transient" }, () => {
+      continuation = gate.promise.then(() => expectDisposed(() => Container.get(TransientService)));
+    });
+    gate.resolve();
+    await continuation;
+    expect({ created, disposed }).toEqual({ created: 0, disposed: 0 });
+  });
+
+  it("rejects direct instance tracking after disposal", async () => {
+    const gate = createGate();
+    let continuation!: Promise<void>;
+    Context.run({ requestId: "req-track" }, () => {
+      continuation = gate.promise.then(() => {
+        expectDisposed(() =>
+          trackRequestInstance({}, () => {
+            disposed += 1;
+          }),
+        );
+      });
+    });
+    gate.resolve();
+    await continuation;
+    expect(disposed).toBe(0);
+  });
+
+  it("shares the parent's disposal state with an inherited child", async () => {
+    const gate = createGate();
+    let child!: Promise<void> | void;
+    await Context.run({ requestId: "req-parent" }, async () => {
+      const parentInstance = Container.get(RequestService);
+      child = Context.run(
+        { requestId: "req-child" },
+        async () => {
+          expect(Container.get(RequestService)).toBe(parentInstance);
+          await gate.promise;
+          expectDisposed(() => Container.get(RequestService));
+          expectDisposed(() => trackRequestInstance({}, () => undefined));
+        },
+        { inheritScope: true },
+      );
+      expect(disposed).toBe(0);
+    });
+    gate.resolve();
+    await child;
+    expect({ created, disposed }).toEqual({ created: 1, disposed: 1 });
+  });
+
+  it("closes the scope when the request rejects", async () => {
+    const gate = createGate();
+    const failure = new Error("request failed");
+    let continuation!: Promise<void>;
+    await expect(
+      Context.run({ requestId: "req-failed" }, async () => {
+        Container.get(RequestService);
+        continuation = gate.promise.then(() => expectDisposed(() => Container.get(RequestService)));
+        throw failure;
+      }),
+    ).rejects.toBe(failure);
+    gate.resolve();
+    await continuation;
+    expect({ created, disposed }).toEqual({ created: 1, disposed: 1 });
+  });
+
+  it("rejects new resolutions and registrations during disposal", () => {
+    Context.run({ requestId: "req-disposing" }, () => {
+      trackRequestInstance({}, () => {
+        expectDisposed(() => Container.get(RequestService));
+        expectDisposed(() => trackRequestInstance({}, () => undefined));
+      });
+    });
+    expect(created).toBe(0);
+  });
 });
