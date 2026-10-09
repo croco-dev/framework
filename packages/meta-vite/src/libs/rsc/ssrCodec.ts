@@ -11,26 +11,38 @@
 // `flightEncode.ts` and the isolated encoder entry used by
 // `encodeRscFlightInIsolatedEncoder`.
 //
-// NOTE: the static imports below intentionally resolve at module load. They
-// are the price of the real Flight path: keeping `react-server-dom-webpack`
-// a direct dependency (not dev-only) is what makes the published tarball
-// consumer resolve `dist/index.mjs`.
+// NOTE: the static react-dom/server imports below intentionally resolve at
+// module load. `react-server-dom-webpack` stays an optional peer plus dev
+// dependency (lazy `import()` only on the RSC path): non-RSC consumers never
+// install or load the Flight codec, while the published tarball consumer
+// resolves `dist/index.mjs` without it unless an `rsc` route is handled.
 import { renderToReadableStream, renderToString } from "react-dom/server";
-import { createFromReadableStream } from "react-server-dom-webpack/client";
 import type { RscClientManifestLike, RscSsrCodec, RscSsrDecodeOptions } from "./ssrDecode";
 
-type ClientModule = {
+type FlightClientModule = {
   readonly createFromReadableStream: (
     stream: ReadableStream<Uint8Array>,
     options?: unknown,
   ) => Promise<unknown>;
 };
 
-const client = createFromReadableStream as unknown as ClientModule["createFromReadableStream"];
+// Lazily resolved per decode via a variable specifier so `tsc` does not try
+// to resolve the untyped Flight client entry to `client.browser.js` (which
+// has no types). Types come from `src/rsc-flight-codec.d.ts`.
+async function loadFlightClient(): Promise<
+  (stream: ReadableStream<Uint8Array>, options?: unknown) => Promise<unknown>
+> {
+  const specifier = "react-server-dom-webpack/client" as string;
+  const client = (await import(/* @vite-ignore */ specifier)) as unknown as FlightClientModule;
+  return client.createFromReadableStream;
+}
 
 export function createRscSsrCodec(): RscSsrCodec {
   return {
-    decodeFlight: async (flight, manifest) => client(flight, { serverConsumerManifest: manifest }),
+    decodeFlight: async (flight, manifest) => {
+      const decode = await loadFlightClient();
+      return decode(flight, { serverConsumerManifest: manifest });
+    },
     renderHtmlStream: async (node, _options?: RscSsrDecodeOptions) =>
       renderToReadableStream(
         node as never,

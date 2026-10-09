@@ -12,8 +12,17 @@
 // bytes in this process with the official client decoder.
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import { createElement } from "react";
-import { renderToReadableStream } from "react-server-dom-webpack/server.node";
 import type { RenderRouteComponentProps, RenderRouteIR } from "../routes/types";
+
+// Lazily resolved inside main() so the SSR/HTML runtime never loads the
+// `react-server` encoder module in-process; the encoder runs isolated.
+async function loadFlightEncoder(): Promise<{
+  renderToReadableStream: (element: unknown, options?: unknown) => ReadableStream<Uint8Array>;
+}> {
+  return (await import("react-server-dom-webpack/server.node")) as unknown as {
+    renderToReadableStream: (element: unknown, options?: unknown) => ReadableStream<Uint8Array>;
+  };
+}
 
 export class RscEncoderEntryInputProblem extends Problem {
   readonly code = "meta-vite/rsc-encoder-entry-invalid-input";
@@ -66,6 +75,7 @@ async function main(): Promise<void> {
   const module = (await import(loaderPath)) as RouteModule;
   const request = new Request(`https://rsc-encode.local${routePath}`);
   const element = createElement(module.default, { request });
+  const { renderToReadableStream } = await loadFlightEncoder();
   const stream = renderToReadableStream(element) as ReadableStream<Uint8Array>;
   const reader = stream.getReader();
 

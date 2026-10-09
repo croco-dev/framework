@@ -1,5 +1,6 @@
 ---
 "@croco/meta-vite": minor
+"@croco/problems-core": patch
 ---
 
 Implement real React Flight RSC path (#2835): official `@vitejs/plugin-rsc`

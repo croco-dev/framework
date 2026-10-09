@@ -57,8 +57,7 @@
   "dependencies": {
     "@croco/cache-core": "workspace:*",
     "@croco/presentation-preset": "workspace:*",
-    "@croco/problems-core": "workspace:*",
-    "react-server-dom-webpack": "19.2.5"
+    "@croco/problems-core": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
@@ -67,6 +66,7 @@
     "ioredis": "5.10.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-server-dom-webpack": "19.2.5",
     "vite": "^6.4.3",
     "vitest": "4.1.8",
     "zod": "^3.23.8"
@@ -76,6 +76,7 @@
     "ioredis": "5.10.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-server-dom-webpack": "19.2.5",
     "vite": "^6.4.3",
     "zod": "^3.23.8"
   },
@@ -84,6 +85,9 @@
       "optional": true
     },
     "ioredis": {
+      "optional": true
+    },
+    "react-server-dom-webpack": {
       "optional": true
     }
   },
