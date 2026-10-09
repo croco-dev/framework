@@ -28179,11 +28179,12 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       cookbookPath:
         "/reference/problem-recovery-cookbook/#transports-http-duplicate-route-definition",
       recovery: {
-        cause: "Two REST controller methods compile to the same HTTP method and runtime path.",
+        cause:
+          "REST controller routes collide with each other or with an enabled built-in operational GET endpoint.",
         userAction:
           "Use an application build where every route decorator has a unique HTTP method and path combination.",
         operatorAction:
-          "Inspect the duplicate-route diagnostic for the existing and conflicting controller methods and their route decorator source locations, then rename one route path or change one HTTP method.",
+          "Inspect the duplicate-route diagnostic for the conflicting controller method and the existing controller route or built-in operational endpoint, then rename the controller path or change its HTTP method.",
         retryability: "not-retryable",
         redactionPolicy: "operator-only",
         telemetry: {

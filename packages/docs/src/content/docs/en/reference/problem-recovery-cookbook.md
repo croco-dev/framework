@@ -17183,9 +17183,9 @@ Sources:
 - Retryability: `not-retryable`
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
-- Cause: Two REST controller methods compile to the same HTTP method and runtime path.
+- Cause: REST controller routes collide with each other or with an enabled built-in operational GET endpoint.
 - User action: Use an application build where every route decorator has a unique HTTP method and path combination.
-- Operator action: Inspect the duplicate-route diagnostic for the existing and conflicting controller methods and their route decorator source locations, then rename one route path or change one HTTP method.
+- Operator action: Inspect the duplicate-route diagnostic for the conflicting controller method and the existing controller route or built-in operational endpoint, then rename the controller path or change its HTTP method.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
 Sources:
