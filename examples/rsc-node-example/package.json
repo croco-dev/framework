@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "serve": "node ./dist/serve.mjs"
+    "serve": "node ./serve.mjs"
   },
   "dependencies": {
     "@croco/meta-vite": "workspace:*",

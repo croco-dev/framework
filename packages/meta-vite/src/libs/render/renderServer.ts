@@ -936,17 +936,36 @@ export class RenderServer {
 
     const body = new ReadableStream<Uint8Array>({
       async start(controller) {
-        controller.enqueue(encoder.encode(prefix));
-        const reader = htmlStream.getReader();
-        for (;;) {
-          const { done, value } = await reader.read();
-          if (done) {
-            break;
+        try {
+          controller.enqueue(encoder.encode(prefix));
+          const reader = htmlStream.getReader();
+          try {
+            for (;;) {
+              const { done, value } = await reader.read();
+              if (done) {
+                break;
+              }
+              controller.enqueue(value);
+            }
+          } catch (error) {
+            await reader.cancel(error).catch(() => {});
+            controller.error(error);
+            return;
+          } finally {
+            reader.releaseLock();
           }
-          controller.enqueue(value);
+          controller.enqueue(encoder.encode(suffix));
+          controller.close();
+        } catch (error) {
+          try {
+            controller.error(error);
+          } catch {
+            // Controller already closed/errored; the error is already terminal.
+          }
         }
-        controller.enqueue(encoder.encode(suffix));
-        controller.close();
+      },
+      cancel: async (reason) => {
+        await htmlStream.cancel(reason).catch(() => {});
       },
     });
 

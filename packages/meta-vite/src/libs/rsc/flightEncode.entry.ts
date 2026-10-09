@@ -11,6 +11,7 @@
 // `encodeRscFlightInIsolatedEncoder()` and decodes the resulting Flight
 // bytes in this process with the official client decoder.
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import { isAbsolute, join } from "node:path";
 import { createElement } from "react";
 import type { RenderRouteComponentProps, RenderRouteIR } from "../routes/types";
 
@@ -34,8 +35,33 @@ export class RscEncoderEntryInputProblem extends Problem {
 }
 
 type RouteModule = {
-  readonly default: React.ComponentType<RenderRouteComponentProps>;
+  readonly [exportName: string]: React.ComponentType<RenderRouteComponentProps> | undefined;
 };
+
+// `componentRef` is the source-level `path/to/Module.tsx#Export` reference the
+// route registry/manifest preserves. Node `import()` cannot resolve the
+// `#Export` suffix (or a workspace-relative path), so split the suffix and
+// resolve the module path here, then select the named export (falling back to
+// `default` only when the ref omits the suffix) instead of passing the raw
+// ref to `import()`.
+export function resolveRscComponentRef(ref: string): { path: string; exportName: string } {
+  const separator = ref.indexOf("#");
+  const rawPath = separator === -1 ? ref : ref.slice(0, separator);
+  const exportName = separator === -1 ? "default" : ref.slice(separator + 1);
+
+  if (rawPath.length === 0 || exportName.length === 0) {
+    throw new RscEncoderEntryInputProblem(
+      `invalid componentRef '${ref}': expected '<module-path>#<exportName>'`,
+    );
+  }
+
+  // Source-level refs are relative to the app root (cwd): `import()` needs an
+  // absolute path or an anchored specifier, not a bare workspace-relative one.
+  const path =
+    isAbsolute(rawPath) || rawPath.startsWith("file:") ? rawPath : join(process.cwd(), rawPath);
+
+  return { path, exportName };
+}
 
 async function readRequestBody(signal: AbortSignal): Promise<string> {
   const chunks: Buffer[] = [];
@@ -71,10 +97,19 @@ async function main(): Promise<void> {
   if (!loaderPath) {
     throw new RscEncoderEntryInputProblem("CROCO_RSC_COMPONENT_PATH is not set");
   }
+  const { path: modulePath, exportName } = resolveRscComponentRef(body.componentRef ?? loaderPath);
 
-  const module = (await import(loaderPath)) as RouteModule;
+  const module = (await import(modulePath)) as RouteModule;
   const request = new Request(`https://rsc-encode.local${routePath}`);
-  const element = createElement(module.default, { request });
+  const component = module[exportName];
+
+  if (typeof component !== "function") {
+    throw new RscEncoderEntryInputProblem(
+      `componentRef export '${exportName}' not found in '${modulePath}'`,
+    );
+  }
+
+  const element = createElement(component, { request });
   const { renderToReadableStream } = await loadFlightEncoder();
   const stream = renderToReadableStream(element) as ReadableStream<Uint8Array>;
   const reader = stream.getReader();

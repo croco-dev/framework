@@ -9,7 +9,7 @@
 // one path; the HTML shell is always decoded from the same Flight bytes the
 // browser would fetch, so refresh/hydration cannot mix representations.
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -19,7 +19,14 @@ const port = Number(process.env["PORT"] ?? 4317);
 const rsc = await import("./dist/rsc/index.js");
 const ssr = await import("./dist/ssr/index.js");
 
-const clientEntry = "index-ecU4Vq3C.js";
+// Never hardcode a hashed client entry: plugin-rsc emits hashed bundles
+// (`index-<hash>.js`) without a `.vite/manifest.json`. Resolve the browser
+// entry by scanning `dist/client/assets` so rebuilds keep working.
+const assetFiles = await readdir(join(here, "dist", "client", "assets"));
+const clientEntry = assetFiles.find((name) => /^index-[A-Za-z0-9_-]+\.js$/.test(name));
+if (!clientEntry) {
+  throw new Error("client bundle index-*.js not found in dist/client/assets");
+}
 
 const httpServer = createServer(async (nodeRequest, nodeResponse) => {
   try {

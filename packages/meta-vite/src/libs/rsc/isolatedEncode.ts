@@ -21,6 +21,19 @@ export class RscFlightEncodeFailedProblem extends Problem {
 
 const ENCODE_TIMEOUT_MS = 30_000;
 
+// Unbounded stdout/stderr buffering lets a large Flight payload pin memory per
+// request. Fail the encode explicitly past this cap instead of growing the
+// host buffer; concurrency/pooling stays out of scope for this change.
+const ENCODE_MAX_OUTPUT_BYTES = 8 * 1024 * 1024;
+
+function stderrBytes(stderr: readonly Uint8Array[]): number {
+  let total = 0;
+  for (const chunk of stderr) {
+    total += chunk.byteLength;
+  }
+  return total;
+}
+
 function resolveEncoderModule(): string {
   // NOTE: this module must not use `import.meta.url`. tsup bundles it into an
   // empty shim object (`var It={}`), so `fileURLToPath(import.meta.url)`
@@ -79,7 +92,10 @@ export async function encodeRscFlightInIsolatedEncoder(
   input: IsolatedRscEncodeInput,
 ): Promise<ReadableStream<Uint8Array>> {
   const encoderModule = resolveEncoderModule();
-  const payload = JSON.stringify({ routePath: input.route.path });
+  const payload = JSON.stringify({
+    routePath: input.route.path,
+    componentRef: input.route.componentRef,
+  });
   const child = spawn(process.execPath, ["--conditions=react-server", encoderModule], {
     env: {
       ...process.env,
@@ -94,6 +110,8 @@ export async function encodeRscFlightInIsolatedEncoder(
 
   const chunks: Uint8Array[] = [];
   const stderr: Uint8Array[] = [];
+  let stdoutBytes = 0;
+  let outputLimitError: Error | undefined;
   const exit = new Promise<number>((resolve, reject) => {
     const timer = setTimeout(() => {
       child.kill("SIGKILL");
@@ -101,10 +119,20 @@ export async function encodeRscFlightInIsolatedEncoder(
     }, ENCODE_TIMEOUT_MS);
 
     child.stdout.on("data", (chunk: Uint8Array) => {
+      stdoutBytes += chunk.byteLength;
+      if (stdoutBytes > ENCODE_MAX_OUTPUT_BYTES) {
+        outputLimitError ??= new Error(
+          `RSC Flight encoder output exceeded ${ENCODE_MAX_OUTPUT_BYTES} bytes for route '${input.route.path}'`,
+        );
+        child.kill("SIGKILL");
+        return;
+      }
       chunks.push(chunk);
     });
     child.stderr.on("data", (chunk: Uint8Array) => {
-      stderr.push(chunk);
+      if (stderrBytes(stderr) < ENCODE_MAX_OUTPUT_BYTES) {
+        stderr.push(chunk);
+      }
     });
     child.on("error", (error) => {
       clearTimeout(timer);
@@ -112,6 +140,10 @@ export async function encodeRscFlightInIsolatedEncoder(
     });
     child.on("close", (code) => {
       clearTimeout(timer);
+      if (outputLimitError) {
+        reject(outputLimitError);
+        return;
+      }
       resolve(code ?? 1);
     });
   });

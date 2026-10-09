@@ -2,6 +2,8 @@ import { createElement } from "react";
 import { createFromReadableStream } from "react-server-dom-webpack/client";
 import { describe, expect, it } from "vitest";
 import { RenderServer } from "../libs/render/renderServer";
+import { RscClientReferenceMissingProblem } from "../libs/rsc/flight";
+import { decodeFlightToHtmlStream } from "../libs/rsc/ssrDecode";
 import { defineRoute } from "../libs/routes/defineRoute";
 import { RouteRegistry } from "../libs/routes/routeRegistry";
 import type { PageRouteDefinition } from "../libs/routes/types";
@@ -207,6 +209,33 @@ describe("RSC route rendering (real Flight)", () => {
 
     await expect(ssrResponse.text()).resolves.toContain("SSR route: /ssr-page");
     expect(ssrResponse.status).toBe(200);
+  });
+
+  it("rejects unresolved client references with a 400 instead of broken hydration", async () => {
+    const stream = flightStream('0:["$","main",null,{"children":"unresolved"}]\n');
+    const lazyNode = {
+      ["$$typeof"]: Symbol.for("react.lazy"),
+      ["_payload"]: { id: "missing-client-island" },
+      ["_init"]: () => {
+        throw new Error("unresolved");
+      },
+    };
+    const renderHtmlStream = async (): Promise<ReadableStream<Uint8Array>> => {
+      throw new Error("must not render with an unresolved client reference");
+    };
+
+    await expect(
+      decodeFlightToHtmlStream(
+        {
+          decodeFlight: async () => ({ props: { children: lazyNode } }),
+          renderHtmlStream,
+          renderHtmlString: () => "",
+          emptyManifest: () => ({ moduleMap: {}, serverModuleMap: {} }),
+        },
+        stream,
+        { routePath: "/rsc-unresolved" },
+      ),
+    ).rejects.toThrow(RscClientReferenceMissingProblem);
   });
 
   it("rejects server-only imports at route-level client boundaries", async () => {
