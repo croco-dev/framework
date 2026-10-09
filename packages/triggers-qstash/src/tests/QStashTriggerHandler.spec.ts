@@ -1789,6 +1789,62 @@ describe("QStashTriggerHandler", () => {
     expect(manager.timeoutAttempt).not.toHaveBeenCalled();
   });
 
+  it("제한 시간 타이머가 발화하기 전에 정착한 성공은 결과를 저장하고 200 성공으로 응답해야 한다", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "Date"] });
+    vi.setSystemTime(new Date("2026-09-01T00:00:00.000Z"));
+    try {
+      let finish: ((value: string) => void) | undefined;
+      class NightlyReport {
+        run(): Promise<string> {
+          return new Promise((resolve) => {
+            finish = resolve;
+          });
+        }
+      }
+      triggerRegistry.register({
+        type: "cron",
+        expression: "0 3 * * *",
+        methodName: "run",
+        target: NightlyReport.prototype,
+        options: {},
+      });
+
+      const { manager } = createIdempotentExecutionManager();
+      const handler = new QStashTriggerHandlerBase({
+        receiver: { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver,
+        deliveryIdentityVerifier: vi.fn().mockResolvedValue(true),
+        executionManager: manager,
+        executionTimeout: 1_000,
+        serviceResolver: () => new NightlyReport(),
+      });
+      const body = JSON.stringify({
+        scheduleId: "schedule-late-success",
+        className: "NightlyReport",
+        methodName: "run",
+        cronExpression: "0 3 * * *",
+        timestamp: "2026-09-01T00:00:00.000Z",
+      });
+
+      const pending = handler.handle(body, "valid-signature", { messageId: "msg-late-success" });
+      while (finish === undefined) await new Promise((resolve) => setImmediate(resolve));
+
+      vi.setSystemTime(new Date("2026-09-01T00:00:01.001Z"));
+      finish("report-sent");
+
+      await expect(pending).resolves.toMatchObject({
+        success: true,
+        statusCode: 200,
+        body: { result: "report-sent" },
+      });
+      await expect(manager.get("exec-1")).resolves.toMatchObject({
+        status: "completed",
+        result: "report-sent",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it.each(["resolve", "reject"] as const)(
     "executionTimeout 초과 시 signal을 abort하고 늦은 target %s보다 timed_out을 유지해야 한다",
     async (lateSettlement) => {
@@ -1867,73 +1923,135 @@ describe("QStashTriggerHandler", () => {
     },
   );
 
-  it.each(["return", "throw"] as const)(
-    "동기 target이 deadline 이후 %s해도 timed_out을 유지해야 한다",
-    async (lateSettlement) => {
-      vi.useFakeTimers();
-      vi.setSystemTime(new Date("2026-08-13T00:00:00.000Z"));
-      try {
-        let receivedContext: QStashTriggerExecutionContext | undefined;
-        const execute = vi.fn((_payload: unknown, context: QStashTriggerExecutionContext) => {
-          receivedContext = context;
-          vi.setSystemTime(new Date("2026-08-13T00:00:01.001Z"));
-          if (lateSettlement === "throw") throw new Error("late synchronous failure");
-          return "late";
-        });
-        class BlockingHandler {
-          execute = execute;
-        }
-
-        triggerRegistry.register({
-          type: "cron",
-          expression: "* * * * *",
-          methodName: "execute",
-          target: BlockingHandler.prototype,
-          options: {},
-        });
-
-        const receiver = { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver;
-        const { manager } = createIdempotentExecutionManager();
-        const attemptManager = vi.mocked(manager);
-        const handler = new QStashTriggerHandlerBase({
-          receiver,
-          deliveryIdentityVerifier: vi.fn().mockResolvedValue(true),
-          executionManager: manager,
-          executionTimeout: 1_000,
-          serviceResolver: () => new BlockingHandler(),
-        });
-
-        const result = await handler.handle(
-          JSON.stringify({
-            scheduleId: "schedule-blocking-timeout",
-            className: "BlockingHandler",
-            methodName: "execute",
-            cronExpression: "* * * * *",
-            timestamp: "2026-08-13T00:00:00.000Z",
-          }),
-          "valid-signature",
-          { messageId: `msg-blocking-timeout-${lateSettlement}` },
-        );
-
-        expect(result).toMatchObject({
-          success: false,
-          executionId: "exec-1",
-          statusCode: 200,
-          body: { executionId: "exec-1", status: "timed_out" },
-        });
-        expect(receivedContext?.signal.aborted).toBe(true);
-        expect(manager.timeoutAttempt).toHaveBeenCalledWith(
-          { executionId: "exec-1", attempt: 1 },
-          { retryable: false },
-        );
-        expect(attemptManager.completeAttempt).not.toHaveBeenCalled();
-        expect(attemptManager.failAttempt).not.toHaveBeenCalled();
-        await expect(manager.get("exec-1")).resolves.toMatchObject({ status: "timed_out" });
-      } finally {
-        vi.useRealTimers();
+  it("동기 target이 deadline 이후 값을 반환해도 타이머가 발화하지 않았으면 completed로 저장해야 한다", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-13T00:00:00.000Z"));
+    try {
+      let receivedContext: QStashTriggerExecutionContext | undefined;
+      const execute = vi.fn((_payload: unknown, context: QStashTriggerExecutionContext) => {
+        receivedContext = context;
+        vi.setSystemTime(new Date("2026-08-13T00:00:01.001Z"));
+        return "late";
+      });
+      class BlockingHandler {
+        execute = execute;
       }
-    },
-  );
+
+      triggerRegistry.register({
+        type: "cron",
+        expression: "* * * * *",
+        methodName: "execute",
+        target: BlockingHandler.prototype,
+        options: {},
+      });
+
+      const receiver = { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver;
+      const { manager } = createIdempotentExecutionManager();
+      const attemptManager = vi.mocked(manager);
+      const handler = new QStashTriggerHandlerBase({
+        receiver,
+        deliveryIdentityVerifier: vi.fn().mockResolvedValue(true),
+        executionManager: manager,
+        executionTimeout: 1_000,
+        serviceResolver: () => new BlockingHandler(),
+      });
+
+      const result = await handler.handle(
+        JSON.stringify({
+          scheduleId: "schedule-blocking-timeout",
+          className: "BlockingHandler",
+          methodName: "execute",
+          cronExpression: "* * * * *",
+          timestamp: "2026-08-13T00:00:00.000Z",
+        }),
+        "valid-signature",
+        { messageId: "msg-blocking-timeout-return" },
+      );
+
+      expect(result).toMatchObject({
+        success: true,
+        executionId: "exec-1",
+        statusCode: 200,
+        body: { executionId: "exec-1", result: "late" },
+      });
+      expect(receivedContext?.signal.aborted).toBe(false);
+      expect(manager.timeoutAttempt).not.toHaveBeenCalled();
+      expect(attemptManager.completeAttempt).toHaveBeenCalledWith(
+        { executionId: "exec-1", attempt: 1 },
+        "late",
+      );
+      await expect(manager.get("exec-1")).resolves.toMatchObject({
+        status: "completed",
+        result: "late",
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("동기 target이 deadline 이후 throw해도 timed_out을 유지해야 한다", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-08-13T00:00:00.000Z"));
+    try {
+      let receivedContext: QStashTriggerExecutionContext | undefined;
+      const execute = vi.fn((_payload: unknown, context: QStashTriggerExecutionContext) => {
+        receivedContext = context;
+        vi.setSystemTime(new Date("2026-08-13T00:00:01.001Z"));
+        throw new Error("late synchronous failure");
+      });
+      class BlockingHandler {
+        execute = execute;
+      }
+
+      triggerRegistry.register({
+        type: "cron",
+        expression: "* * * * *",
+        methodName: "execute",
+        target: BlockingHandler.prototype,
+        options: {},
+      });
+
+      const receiver = { verify: vi.fn().mockResolvedValue(true) } as unknown as Receiver;
+      const { manager } = createIdempotentExecutionManager();
+      const attemptManager = vi.mocked(manager);
+      const handler = new QStashTriggerHandlerBase({
+        receiver,
+        deliveryIdentityVerifier: vi.fn().mockResolvedValue(true),
+        executionManager: manager,
+        executionTimeout: 1_000,
+        serviceResolver: () => new BlockingHandler(),
+      });
+
+      const result = await handler.handle(
+        JSON.stringify({
+          scheduleId: "schedule-blocking-timeout",
+          className: "BlockingHandler",
+          methodName: "execute",
+          cronExpression: "* * * * *",
+          timestamp: "2026-08-13T00:00:00.000Z",
+        }),
+        "valid-signature",
+        { messageId: "msg-blocking-timeout-throw" },
+      );
+
+      expect(result).toMatchObject({
+        success: false,
+        executionId: "exec-1",
+        statusCode: 200,
+        body: { executionId: "exec-1", status: "timed_out" },
+      });
+      expect(receivedContext?.signal.aborted).toBe(true);
+      expect(manager.timeoutAttempt).toHaveBeenCalledWith(
+        { executionId: "exec-1", attempt: 1 },
+        { retryable: false },
+      );
+      expect(attemptManager.completeAttempt).not.toHaveBeenCalled();
+      expect(attemptManager.failAttempt).not.toHaveBeenCalled();
+      await expect(manager.get("exec-1")).resolves.toMatchObject({ status: "timed_out" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
   it("이전 attempt의 지연된 timeout은 교체 attempt를 변경하지 않아야 한다", async () => {
     vi.useFakeTimers();
