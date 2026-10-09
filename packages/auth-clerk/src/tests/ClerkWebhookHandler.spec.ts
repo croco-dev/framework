@@ -54,6 +54,74 @@ describe("ClerkWebhookHandler", () => {
       body: JSON.stringify({ type: "test" }),
     });
 
+  describe("organizationMembership.updated", () => {
+    const data = {
+      id: "orgmem_123",
+      role: "org:admin",
+      permissions: ["org:members:manage"],
+      organization: { id: "org_123", name: "Acme" },
+      public_user_data: { user_id: "user_123" },
+      updated_at: 1_767_225_600_000,
+    };
+
+    it("delivers membership updates once and stores the handled outcome", async () => {
+      const handler = vi.fn<NonNullable<WebhookEventHandler["organizationMembership.updated"]>>();
+      const handlers: WebhookEventHandler = { "organizationMembership.updated": handler };
+      webhookHandler = new ClerkWebhookHandler({ signingSecret, idempotencyStore }, handlers);
+      vi.mocked(verifyWebhook).mockResolvedValue({
+        type: "organizationMembership.updated",
+        data,
+      } as unknown as VerifiedWebhook);
+
+      const outcome = await webhookHandler.handleWebhook(createRequest("msg_membership_updated"));
+      const replay = await webhookHandler.handleWebhook(createRequest("msg_membership_updated"));
+
+      expect(outcome).toEqual({
+        deliveryId: "msg_membership_updated",
+        eventType: "organizationMembership.updated",
+        outcome: "handled",
+      });
+      expect(replay).toEqual(outcome);
+      expect(handler).toHaveBeenCalledExactlyOnceWith(data);
+    });
+
+    it("records a valid update as handled when no handler is registered", async () => {
+      vi.mocked(verifyWebhook).mockResolvedValue({
+        type: "organizationMembership.updated",
+        data,
+      } as unknown as VerifiedWebhook);
+
+      const outcome = await webhookHandler.handleWebhook(createRequest("msg_unregistered_update"));
+      expect(outcome.outcome).toBe("handled");
+      await expect(
+        webhookHandler.handleWebhook(createRequest("msg_unregistered_update")),
+      ).resolves.toEqual(outcome);
+    });
+
+    it.each([
+      ["role", { ...data, role: undefined }],
+      ["organization.id", { ...data, organization: {} }],
+      ["public_user_data.user_id", { ...data, public_user_data: {} }],
+    ])("rejects a missing %s with and without a handler", async (_field, invalidData) => {
+      for (const registered of [true, false]) {
+        const handler = vi.fn();
+        const handlers: WebhookEventHandler = registered
+          ? { "organizationMembership.updated": handler }
+          : {};
+        webhookHandler = new ClerkWebhookHandler({ signingSecret, idempotencyStore }, handlers);
+        vi.mocked(verifyWebhook).mockResolvedValue({
+          type: "organizationMembership.updated",
+          data: invalidData,
+        } as unknown as VerifiedWebhook);
+
+        await expect(
+          webhookHandler.handleWebhook(createRequest(`msg_invalid_update_${registered}`)),
+        ).rejects.toBeInstanceOf(InvalidWebhookPayloadProblem);
+        expect(handler).not.toHaveBeenCalled();
+      }
+    });
+  });
+
   it("should verify webhook signature", async () => {
     const request = createRequest();
     vi.mocked(verifyWebhook).mockResolvedValue({
