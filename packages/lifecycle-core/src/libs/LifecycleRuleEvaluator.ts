@@ -292,18 +292,31 @@ export class LifecycleRuleEvaluator {
 
   async evaluate(context: LifecycleContext): Promise<LifecycleEvaluationResult> {
     const runs: LifecycleRun[] = [];
+    let firstError: unknown;
+    let hasError = false;
 
     for (const registration of await this.registry.matchRegistrations(context.signal)) {
-      const evaluation = await this.evaluateRule(registration, context);
-      if (!evaluation.persisted) {
-        try {
-          await this.runStore.save(evaluation.run);
-        } catch (error) {
-          await this.runStore.abortClaim(evaluation.run.id, evaluation.run.idempotencyKey);
-          throw error;
+      try {
+        const evaluation = await this.evaluateRule(registration, context);
+        if (!evaluation.persisted) {
+          try {
+            await this.runStore.save(evaluation.run);
+          } catch (error) {
+            await this.runStore.abortClaim(evaluation.run.id, evaluation.run.idempotencyKey);
+            throw error;
+          }
+        }
+        runs.push(evaluation.run);
+      } catch (error) {
+        if (!hasError) {
+          firstError = error;
+          hasError = true;
         }
       }
-      runs.push(evaluation.run);
+    }
+
+    if (hasError) {
+      throw firstError;
     }
 
     return {
