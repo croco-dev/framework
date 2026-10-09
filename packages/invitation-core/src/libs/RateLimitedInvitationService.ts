@@ -8,7 +8,7 @@ import {
   DuplicateInvitationProblem,
   InvitationRateLimitExceededProblem,
 } from "./problems/RateLimitProblems";
-import type { BatchInviteOptions, BatchInviteResult, RateLimitConfig } from "./types";
+import type { BatchInviteOptions, BatchInviteResult, Invitation, RateLimitConfig } from "./types";
 
 type CreateEmailInvitationInput = {
   idempotencyKey: string;
@@ -72,7 +72,7 @@ export class RateLimitedInvitationService {
     const normalizedEmail = input.email.trim().toLowerCase();
     const existing = await this.store.findByTenantAndEmail(input.tenantId, normalizedEmail);
 
-    if (existing && existing.status === "pending" && existing.expiresAt.getTime() > Date.now()) {
+    if (this.isActivePendingInvitation(existing)) {
       throw new DuplicateInvitationProblem(input.tenantId, normalizedEmail);
     }
 
@@ -133,7 +133,7 @@ export class RateLimitedInvitationService {
         }
         const existing = await this.store.findByTenantAndEmail(tenantId, normalizedEmail);
 
-        if (existing && existing.status === "pending") {
+        if (this.isActivePendingInvitation(existing)) {
           result.failed.push({
             email: normalizedEmail,
             error: "Invitation already pending",
@@ -163,5 +163,13 @@ export class RateLimitedInvitationService {
     }
 
     return result;
+  }
+
+  private isActivePendingInvitation(invitation: Invitation | null): boolean {
+    return (
+      invitation !== null &&
+      invitation.status === "pending" &&
+      invitation.expiresAt.getTime() > Date.now()
+    );
   }
 }
