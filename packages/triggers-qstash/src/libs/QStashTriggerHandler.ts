@@ -741,7 +741,7 @@ export class QStashTriggerHandler {
         handlerPromise.then((value) => ({ kind: "completed" as const, value })),
         timeoutPromise.then((timedOut) => ({ kind: "timed_out" as const, timedOut })),
       ]);
-      if (claimExpiredTimeout()) {
+      if (timeoutClaimed) {
         return this.createTimeoutResult(await timeoutPromise);
       }
       if (outcome.kind === "timed_out") {
