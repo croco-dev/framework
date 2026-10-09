@@ -25,6 +25,178 @@ describe("architecture policy engine", () => {
     }
   });
 
+  it("flags a relative import that reaches into a forbidden provider package", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/billing-core", "@croco/billing-core");
+    writePackage(repo, "packages/billing-polar", "@croco/billing-polar");
+    writeFile(
+      repo,
+      "packages/billing-core/src/index.ts",
+      'import { value as polar } from "../../billing-polar/src/index";\nexport const value = polar;\n',
+    );
+
+    const report = checkArchitecturePolicy({
+      rootDir: repo,
+      manifest: {
+        schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+        packageRoots: ["packages"],
+        include: ["packages/*/src/**/*.ts"],
+        packageGroups: {
+          contracts: { packages: ["@croco/billing-core"] },
+          plugins: { packages: ["@croco/billing-polar"] },
+        },
+        rules: {
+          forbiddenImports: [
+            {
+              id: "framework-provider-package-boundary",
+              from: { groups: ["contracts"] },
+              to: { groups: ["plugins"] },
+            },
+          ],
+        },
+      },
+    });
+
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "architecture-policy/forbidden-import",
+        importSpecifier: "../../billing-polar/src/index",
+        sourcePackage: "@croco/billing-core",
+        targetPackage: "@croco/billing-polar",
+        targetGroup: "plugins",
+      }),
+    ]);
+  });
+
+  it("flags a generated provider package that imports an app file through a relative path", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "apps/api-server", "@test/api-server");
+    writePackage(repo, "libs/shared/provider-database", "@test/provider-database");
+    writeFile(
+      repo,
+      "libs/shared/provider-database/src/index.ts",
+      'import { value as app } from "../../../../apps/api-server/src/index";\nexport const value = app;\n',
+    );
+
+    const report = checkArchitecturePolicy({
+      rootDir: repo,
+      manifest: {
+        schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+        packageRoots: ["apps", "libs"],
+        include: ["apps/*/src/**/*.ts", "libs/shared/*/src/**/*.ts"],
+        packageGroups: {
+          application: { paths: ["apps/*"] },
+          plugins: { paths: ["libs/shared/provider-*"] },
+        },
+        rules: {
+          allowedGroupImports: [
+            {
+              id: "generated-provider-layer-edges",
+              fromGroups: ["plugins", "contracts"],
+              allowGroups: ["kernel", "contracts", "plugins", "tooling"],
+              allowExternal: true,
+            },
+          ],
+        },
+      },
+    });
+
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "architecture-policy/disallowed-dependency-edge",
+        ruleId: "generated-provider-layer-edges",
+        sourceGroup: "plugins",
+        targetPackage: "@test/api-server",
+        targetGroup: "application",
+      }),
+    ]);
+  });
+
+  it("keeps relative imports inside the same package out of cross-package rules", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/billing-core", "@croco/billing-core");
+    writeFile(repo, "packages/billing-core/src/internal.ts", "export const internal = 1;\n");
+    writeFile(
+      repo,
+      "packages/billing-core/src/index.ts",
+      'import { internal } from "./internal";\nexport const value = internal;\n',
+    );
+
+    const report = checkArchitecturePolicy({
+      rootDir: repo,
+      manifest: {
+        schemaVersion: ARCHITECTURE_POLICY_SCHEMA_VERSION,
+        packageRoots: ["packages"],
+        include: ["packages/*/src/**/*.ts"],
+        packageGroups: { contracts: { packages: ["@croco/billing-core"] } },
+        rules: {
+          allowedGroupImports: [
+            { id: "contracts-edges", fromGroups: ["contracts"], allowGroups: [] },
+          ],
+        },
+      },
+    });
+
+    expect(report.diagnostics).toEqual([]);
+  });
+
+  it("flags relative imports into private workspace entrypoints", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/repository-core", "@croco/repository-core");
+    writePackage(repo, "packages/tx-drizzle", "@croco/tx-drizzle");
+    writeFile(
+      repo,
+      "packages/repository-core/src/index.ts",
+      'export { value } from "../../tx-drizzle/src/index.js";\n',
+    );
+
+    const report = checkArchitecturePolicy({
+      rootDir: repo,
+      manifest: {
+        ...crocoManifest(),
+        rules: { publicEntrypoints: { id: "public-entrypoints", includePackages: ["@croco/*"] } },
+      },
+    });
+
+    expect(report.diagnostics).toEqual([
+      expect.objectContaining({
+        code: "architecture-policy/private-entrypoint-import",
+        importSpecifier: "../../tx-drizzle/src/index.js",
+        targetPackage: "@croco/tx-drizzle",
+        targetGroup: "provider",
+      }),
+    ]);
+  });
+
+  it("keeps relative imports outside workspace packages out of package rules", () => {
+    const repo = createTempRepo();
+    writePackage(repo, "packages/repository-core", "@croco/repository-core");
+    writePackage(repo, "packages/repository-core-extra", "@croco/repository-core-extra");
+    writeFile(
+      repo,
+      "packages/repository-core/src/index.ts",
+      [
+        'import "../../../shared/value";',
+        'import "../../repository-core-extra-unowned/value";',
+      ].join("\n"),
+    );
+
+    const report = checkArchitecturePolicy({
+      rootDir: repo,
+      manifest: {
+        ...crocoManifest(),
+        rules: {
+          allowedGroupImports: [
+            { id: "no-edges", fromGroups: ["framework"], allowGroups: [], allowSameGroup: false },
+          ],
+          publicEntrypoints: { id: "public-entrypoints", includePackages: ["@croco/*"] },
+        },
+      },
+    });
+
+    expect(report.diagnostics).toEqual([]);
+  });
+
   it("flags forbidden source imports with deterministic source locations", () => {
     const repo = createTempRepo();
     writePackage(repo, "packages/repository-core", "@croco/repository-core");
