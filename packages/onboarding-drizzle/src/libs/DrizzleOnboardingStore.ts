@@ -184,7 +184,7 @@ export class DrizzleOnboardingStore extends OnboardingStore {
           steps: patchedSteps,
           isCompleted: sql`${onboardingStates.isCompleted} or (${requiredStepsCompleted})`,
           completedAt: sql`case
-            when not ${onboardingStates.isCompleted} and (${requiredStepsCompleted}) then ${input.completedAt}
+            when not ${onboardingStates.isCompleted} and (${requiredStepsCompleted}) then ${sql.param(input.completedAt, onboardingStates.completedAt)}
             else ${onboardingStates.completedAt}
           end`,
           completionStepId: sql`case

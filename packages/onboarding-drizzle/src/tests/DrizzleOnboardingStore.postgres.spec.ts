@@ -134,4 +134,51 @@ describe.skipIf(!connectionString)("DrizzleOnboardingStore PostgreSQL", () => {
       status: "already_completed",
     });
   });
+
+  const completedAt = new Date("2026-01-01T00:05:00.123Z");
+
+  it.each(["insert", "update"] as const)(
+    "preserves the input instant on %s completion",
+    async (path) => {
+      const requiredStepIds = path === "insert" ? ["invite"] : ["profile", "invite"];
+      if (path === "update") {
+        const first = await store.completeStep("tenant-1", "user-1", "setup", {
+          stepId: "profile",
+          completedAt: new Date("2026-01-01T00:00:00.000Z"),
+          requiredStepIds,
+        });
+        expect(first).toMatchObject({ status: "completed", state: { isCompleted: false } });
+        expect((await store.getState("tenant-1", "user-1", "setup"))?.completedAt).toBeUndefined();
+      }
+
+      const result = await store.completeStep("tenant-1", "user-1", "setup", {
+        stepId: "invite",
+        completedAt,
+        requiredStepIds,
+      });
+      expect(result).toMatchObject({
+        status: "completed",
+        state: { isCompleted: true, completedAt },
+      });
+      const state = await store.getState("tenant-1", "user-1", "setup");
+      expect(state?.completedAt).toEqual(completedAt);
+      expect(state?.steps.invite?.completedAt).toEqual(completedAt);
+
+      await expect(
+        store.completeStep("tenant-1", "user-1", "setup", {
+          stepId: "invite",
+          completedAt: new Date("2026-01-02T00:00:00.000Z"),
+          requiredStepIds,
+        }),
+      ).resolves.toEqual({ status: "already_completed" });
+      await store.completeStep("tenant-1", "user-1", "setup", {
+        stepId: "optional",
+        completedAt: new Date("2026-01-03T00:00:00.000Z"),
+        requiredStepIds,
+      });
+      expect((await store.getState("tenant-1", "user-1", "setup"))?.completedAt).toEqual(
+        completedAt,
+      );
+    },
+  );
 });
