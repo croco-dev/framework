@@ -556,7 +556,17 @@ function collectSourceImports(
       const imports = extractImportSpecifiers(stripped.source);
 
       return imports.map((entry) => {
-        const imported = splitPackageSpecifier(entry.specifier);
+        const targetFile = entry.specifier.startsWith(".")
+          ? toPosixPath(relative(policy.rootDir, resolve(dirname(filePath), entry.specifier)))
+          : null;
+        const targetPackage = targetFile === null ? null : findSourcePackage(packages, targetFile);
+        const imported =
+          targetPackage && targetPackage !== sourcePackage && targetFile !== null
+            ? {
+                packageName: targetPackage.name,
+                subpath: toPosixPath(relative(targetPackage.relativeDir, targetFile)),
+              }
+            : splitPackageSpecifier(entry.specifier);
 
         return {
           sourceKind: "source",
