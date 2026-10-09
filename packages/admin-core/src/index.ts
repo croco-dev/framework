@@ -533,3 +533,13 @@ export type { RewardAdminAccess } from "./libs/RewardOperations";
 
 export { assertMissionPublication, MissionConsoleInvalidProblem } from "./libs/MissionConsole";
 export type { MissionConsoleAccess, MissionConsoleState } from "./libs/MissionConsole";
+export {
+  RetentionOfferOperations,
+  summarizeRetentionOffers,
+} from "./libs/RetentionOfferOperations";
+export type {
+  RetentionOfferEdit,
+  RetentionOfferReport,
+  RetentionOfferView,
+  RetentionOfferConsoleState,
+} from "./libs/RetentionOfferOperations";

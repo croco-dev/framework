@@ -594,6 +594,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "RetentionOfferOperations",
+              "exportKind": "named",
+              "source": "./libs/RetentionOfferOperations",
+              "declarationKind": "class"
+            },
+            {
               "name": "RewardOperations",
               "exportKind": "named",
               "source": "./libs/RewardOperations",
@@ -1125,6 +1131,12 @@
               "name": "summarizeReferralConsoleQualifiedRecipients",
               "exportKind": "named",
               "source": "./libs/ReferralConsole",
+              "declarationKind": "function"
+            },
+            {
+              "name": "summarizeRetentionOffers",
+              "exportKind": "named",
+              "source": "./libs/RetentionOfferOperations",
               "declarationKind": "function"
             },
             {
@@ -2387,6 +2399,26 @@
               "name": "ReplayScope",
               "exportKind": "named",
               "source": "@croco/metrics-core"
+            },
+            {
+              "name": "RetentionOfferConsoleState",
+              "exportKind": "named",
+              "source": "./libs/RetentionOfferOperations"
+            },
+            {
+              "name": "RetentionOfferEdit",
+              "exportKind": "named",
+              "source": "./libs/RetentionOfferOperations"
+            },
+            {
+              "name": "RetentionOfferReport",
+              "exportKind": "named",
+              "source": "./libs/RetentionOfferOperations"
+            },
+            {
+              "name": "RetentionOfferView",
+              "exportKind": "named",
+              "source": "./libs/RetentionOfferOperations"
             },
             {
               "name": "RewardAdminAccess",
@@ -3739,6 +3771,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "RetentionOfferConsole",
+              "exportKind": "named",
+              "source": "./libs/RetentionOfferConsole",
+              "declarationKind": "function"
+            },
+            {
               "name": "RewardConsole",
               "exportKind": "named",
               "source": "./libs/RewardConsole",
@@ -5028,6 +5066,11 @@
               "name": "ReminderOperationsPanelProps",
               "exportKind": "named",
               "source": "./libs/ReminderOperationsPanel"
+            },
+            {
+              "name": "RetentionOfferConsoleProps",
+              "exportKind": "named",
+              "source": "./libs/RetentionOfferConsole"
             },
             {
               "name": "RewardConsoleProps",
@@ -7825,6 +7868,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "BillingCancellationAction",
+              "exportKind": "named",
+              "source": "./libs/BillingCancellationAction",
+              "declarationKind": "class"
+            },
+            {
               "name": "BillingCheckoutCreationProblem",
               "exportKind": "named",
               "source": "./libs/problems/BillingProblems",
@@ -7870,6 +7919,36 @@
               "name": "BillingStore",
               "exportKind": "named",
               "source": "./libs/BillingStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CancellationAuthorizationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/CancellationProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CancellationConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/CancellationProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CancellationInputProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/CancellationProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CancellationService",
+              "exportKind": "named",
+              "source": "./libs/CancellationService",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CancellationUnavailableProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/CancellationProblems",
               "declarationKind": "class"
             },
             {
@@ -8225,6 +8304,24 @@
               "exportKind": "named",
               "source": "./libs/BillingService",
               "declarationKind": "function"
+            },
+            {
+              "name": "validateCancellationDecision",
+              "exportKind": "named",
+              "source": "./libs/CancellationService",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateCancellationScope",
+              "exportKind": "named",
+              "source": "./libs/CancellationService",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateCancellationSnapshot",
+              "exportKind": "named",
+              "source": "./libs/CancellationService",
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
@@ -8329,9 +8426,94 @@
               "source": "./libs/BillingService"
             },
             {
+              "name": "CancellationAction",
+              "exportKind": "named",
+              "source": "./libs/Cancellation"
+            },
+            {
+              "name": "CancellationActionKind",
+              "exportKind": "named",
+              "source": "./libs/Cancellation"
+            },
+            {
+              "name": "CancellationAuthority",
+              "exportKind": "named",
+              "source": "./libs/Cancellation"
+            },
+            {
+              "name": "CancellationChoice",
+              "exportKind": "named",
+              "source": "./libs/Cancellation"
+            },
+            {
+              "name": "CancellationCommandReceipt",
+              "exportKind": "named",
+              "source": "./libs/Cancellation"
+            },
+            {
+              "name": "CancellationDecision",
+              "exportKind": "named",
+              "source": "./libs/Cancellation"
+            },
+            {
+              "name": "CancellationEvidence",
+              "exportKind": "named",
+              "source": "./libs/Cancellation"
+            },
+            {
+              "name": "CancellationIdentity",
+              "exportKind": "named",
+              "source": "./libs/Cancellation"
+            },
+            {
+              "name": "CancellationQuote",
+              "exportKind": "named",
+              "source": "./libs/Cancellation"
+            },
+            {
+              "name": "CancellationScope",
+              "exportKind": "named",
+              "source": "./libs/Cancellation"
+            },
+            {
+              "name": "CancellationServiceDependencies",
+              "exportKind": "named",
+              "source": "./libs/CancellationService"
+            },
+            {
+              "name": "CancellationSession",
+              "exportKind": "named",
+              "source": "./libs/Cancellation"
+            },
+            {
+              "name": "CancellationSnapshot",
+              "exportKind": "named",
+              "source": "./libs/Cancellation"
+            },
+            {
+              "name": "CancellationStore",
+              "exportKind": "named",
+              "source": "./libs/Cancellation"
+            },
+            {
               "name": "CheckoutResult",
               "exportKind": "named",
               "source": "./libs/BillingGateway"
+            },
+            {
+              "name": "ChoicePolicy",
+              "exportKind": "named",
+              "source": "./libs/Cancellation"
+            },
+            {
+              "name": "ChoicePolicyAudit",
+              "exportKind": "named",
+              "source": "./libs/Cancellation"
+            },
+            {
+              "name": "ChoicePolicyEntry",
+              "exportKind": "named",
+              "source": "./libs/Cancellation"
             },
             {
               "name": "CommitBillingSubscriptionWebhookInput",
@@ -8679,6 +8861,11 @@
               "source": "./libs/SubscriptionQuantity"
             },
             {
+              "name": "RegisteredCancellationChoice",
+              "exportKind": "named",
+              "source": "./libs/Cancellation"
+            },
+            {
               "name": "ResumeSubscriptionParams",
               "exportKind": "named",
               "source": "./libs/BillingService"
@@ -8802,6 +8989,219 @@
               "name": "UsageBillingGateway",
               "exportKind": "named",
               "source": "./libs/UsageBillingGateway"
+            }
+          ]
+        },
+        {
+          "exportPath": "./cancellation",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/cancellation.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/cancellation.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/cancellation.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/billing-core/src/cancellation.ts",
+          "runtimeExports": [
+            {
+              "name": "CancellationAuthorizationProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/CancellationProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CancellationConflictProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/CancellationProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CancellationInputProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/CancellationProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "CancellationUnavailableProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/CancellationProblems",
+              "declarationKind": "class"
+            },
+            {
+              "name": "validateCancellationDecision",
+              "exportKind": "named",
+              "source": "./libs/cancellationValidation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateCancellationScope",
+              "exportKind": "named",
+              "source": "./libs/cancellationValidation",
+              "declarationKind": "function"
+            },
+            {
+              "name": "validateCancellationSnapshot",
+              "exportKind": "named",
+              "source": "./libs/cancellationValidation",
+              "declarationKind": "function"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "CancellationAction",
+              "exportKind": "declaration",
+              "source": "./libs/Cancellation",
+              "declarationKind": "interface"
+            },
+            {
+              "name": "CancellationActionKind",
+              "exportKind": "declaration",
+              "source": "./libs/Cancellation",
+              "declarationKind": "type"
+            },
+            {
+              "name": "CancellationAuthority",
+              "exportKind": "declaration",
+              "source": "./libs/Cancellation",
+              "declarationKind": "interface"
+            },
+            {
+              "name": "CancellationChoice",
+              "exportKind": "declaration",
+              "source": "./libs/Cancellation",
+              "declarationKind": "type"
+            },
+            {
+              "name": "CancellationCommandReceipt",
+              "exportKind": "declaration",
+              "source": "./libs/Cancellation",
+              "declarationKind": "type"
+            },
+            {
+              "name": "CancellationDecision",
+              "exportKind": "declaration",
+              "source": "./libs/Cancellation",
+              "declarationKind": "type"
+            },
+            {
+              "name": "CancellationEvidence",
+              "exportKind": "declaration",
+              "source": "./libs/Cancellation",
+              "declarationKind": "type"
+            },
+            {
+              "name": "CancellationIdentity",
+              "exportKind": "declaration",
+              "source": "./libs/Cancellation",
+              "declarationKind": "type"
+            },
+            {
+              "name": "CancellationQuote",
+              "exportKind": "declaration",
+              "source": "./libs/Cancellation",
+              "declarationKind": "type"
+            },
+            {
+              "name": "CancellationScope",
+              "exportKind": "declaration",
+              "source": "./libs/Cancellation",
+              "declarationKind": "type"
+            },
+            {
+              "name": "CancellationSession",
+              "exportKind": "declaration",
+              "source": "./libs/Cancellation",
+              "declarationKind": "type"
+            },
+            {
+              "name": "CancellationSnapshot",
+              "exportKind": "declaration",
+              "source": "./libs/Cancellation",
+              "declarationKind": "type"
+            },
+            {
+              "name": "CancellationStore",
+              "exportKind": "declaration",
+              "source": "./libs/Cancellation",
+              "declarationKind": "interface"
+            },
+            {
+              "name": "ChoicePolicy",
+              "exportKind": "declaration",
+              "source": "./libs/Cancellation",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ChoicePolicyAudit",
+              "exportKind": "declaration",
+              "source": "./libs/Cancellation",
+              "declarationKind": "type"
+            },
+            {
+              "name": "ChoicePolicyEntry",
+              "exportKind": "declaration",
+              "source": "./libs/Cancellation",
+              "declarationKind": "type"
+            },
+            {
+              "name": "RegisteredCancellationChoice",
+              "exportKind": "declaration",
+              "source": "./libs/Cancellation",
+              "declarationKind": "type"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "packageName": "@croco/billing-drizzle",
+      "relativeDir": "packages/billing-drizzle",
+      "entrypoints": [
+        {
+          "exportPath": ".",
+          "kind": "code",
+          "targets": [
+            {
+              "conditions": ["types"],
+              "target": "./dist/index.d.ts"
+            },
+            {
+              "conditions": ["import"],
+              "target": "./dist/index.mjs"
+            },
+            {
+              "conditions": ["require"],
+              "target": "./dist/index.js"
+            }
+          ],
+          "sourceEntrypoint": "packages/billing-drizzle/src/index.ts",
+          "runtimeExports": [
+            {
+              "name": "DrizzleBillingStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleBillingStore",
+              "declarationKind": "class"
+            },
+            {
+              "name": "DrizzleCancellationStore",
+              "exportKind": "named",
+              "source": "./libs/DrizzleCancellationStore",
+              "declarationKind": "class"
+            }
+          ],
+          "typeExports": [
+            {
+              "name": "BillingPersistenceScope",
+              "exportKind": "named",
+              "source": "./libs/DrizzleBillingStore"
             }
           ]
         }
@@ -20603,6 +21003,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "CancellationFlow",
+              "exportKind": "named",
+              "source": "./libs/CancellationFlow",
+              "declarationKind": "function"
+            },
+            {
               "name": "ContinueCard",
               "exportKind": "named",
               "source": "./libs/SavedItems",
@@ -20902,6 +21308,16 @@
               "name": "AuthBridgeGateStatusProps",
               "exportKind": "named",
               "source": "./libs/authBridgeTypes"
+            },
+            {
+              "name": "CancellationFlowProps",
+              "exportKind": "named",
+              "source": "./libs/CancellationFlow"
+            },
+            {
+              "name": "CancellationFlowState",
+              "exportKind": "named",
+              "source": "./libs/CancellationFlow"
             },
             {
               "name": "CanonicalCrocoPageOptions",

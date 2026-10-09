@@ -2,6 +2,12 @@
   "version": 1,
   "tests": [
     {
+      "path": "examples/cancellation-flow/src/tests/RequestValidation.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/experiment-runtime/src/tests/CohortEligibility.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -273,6 +279,12 @@
     },
     {
       "path": "packages/admin-core/src/tests/ReminderOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/RetentionOfferOperations.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-core"
@@ -555,6 +567,12 @@
     },
     {
       "path": "packages/admin-react/src/tests/ReminderOperationsPanel.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/RetentionOfferConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -980,6 +998,12 @@
       "owner": "@croco/batch-qstash"
     },
     {
+      "path": "packages/billing-core/src/tests/BillingCancellationAction.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/billing-core"
+    },
+    {
       "path": "packages/billing-core/src/tests/BillingProblems.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -993,6 +1017,12 @@
     },
     {
       "path": "packages/billing-core/src/tests/BillingService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/billing-core"
+    },
+    {
+      "path": "packages/billing-core/src/tests/CancellationService.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/billing-core"
@@ -1044,6 +1074,18 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/billing-core"
+    },
+    {
+      "path": "packages/billing-drizzle/src/tests/DrizzleBillingStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/billing-drizzle"
+    },
+    {
+      "path": "packages/billing-drizzle/src/tests/DrizzleCancellationStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/billing-drizzle"
     },
     {
       "path": "packages/billing-polar/src/tests/PolarBillingDiagnosticsProvider.spec.ts",
@@ -2808,6 +2850,12 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/frontend-problems"
+    },
+    {
+      "path": "packages/frontend-react/src/tests/CancellationFlow.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
     },
     {
       "path": "packages/frontend-react/src/tests/ExperienceSlot.spec.tsx",

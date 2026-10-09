@@ -1841,6 +1841,205 @@ describe("changeset-required-check.mts", () => {
     expect(removedResult.stdout).toContain("@croco/public (public API snapshot (.))");
   });
 
+  describe("export record multiset comparison", () => {
+    type ExportRecord = {
+      name: string;
+      exportKind: string;
+      source: string;
+      declarationKind: string;
+    };
+    type Surface = {
+      kind?: string;
+      runtimeExports: ExportRecord[];
+      typeExports: ExportRecord[];
+      targets?: Array<{ conditions: string[]; target: string }>;
+    };
+    function writeSurface(repo: string, version: number, change: (surface: Surface) => void): void {
+      if (version === 1) writeLegacyPublicApiSnapshot(repo, ["lower", "Upper", "Upper"]);
+      else writePublicApiSnapshot(repo, ["lower", "Upper", "Upper"]);
+      const snapshot = JSON.parse(
+        readFileSync(join(repo, "public-api-surface.snapshot.json"), "utf-8"),
+      ) as {
+        packages: Array<Surface & { entrypoints: Surface[] }>;
+      };
+      const surface = version === 1 ? snapshot.packages[0] : snapshot.packages[0].entrypoints[0];
+      surface.typeExports = ["lowerType", "UpperType"].map((name) => ({
+        name,
+        exportKind: "named",
+        source: "./types.js",
+        declarationKind: "interface",
+      }));
+      if (version === 2)
+        surface.targets = [
+          { conditions: ["node", "import"], target: "./dist/index.js" },
+          { conditions: ["require"], target: "./dist/index.cjs" },
+        ];
+      change(surface);
+      writeFile(repo, "public-api-surface.snapshot.json", `${JSON.stringify(snapshot, null, 2)}\n`);
+      git(repo, ["add", "public-api-surface.snapshot.json"]);
+      git(repo, ["commit", "-m", "test: update export record fixture"]);
+    }
+    function reverseExports(surface: Surface): void {
+      surface.runtimeExports.reverse();
+      surface.typeExports.reverse();
+    }
+
+    it.each([
+      [1, 1],
+      [2, 2],
+      [1, 2],
+    ])(
+      "ignores only runtime/type export ordering for schema %s to %s",
+      (baseVersion, headVersion) => {
+        const repo = createTempRepo();
+        writeSurface(repo, baseVersion, () => {});
+        checkoutBranch(repo, "fix/export-order");
+        writeSurface(repo, headVersion, reverseExports);
+        const result = runScript(repo);
+        expect(result.status, result.stdout).toBe(0);
+        expect(result.stdout).toContain("no publishable package behavior changes detected");
+      },
+    );
+
+    const changes: Array<[string, (surface: Surface) => void]> = [
+      [
+        "runtime name",
+        (surface) => {
+          surface.runtimeExports[0].name = "changed";
+        },
+      ],
+      [
+        "export kind",
+        (surface) => {
+          surface.runtimeExports[0].exportKind = "default";
+        },
+      ],
+      [
+        "declaration kind",
+        (surface) => {
+          surface.typeExports[0].declarationKind = "type";
+        },
+      ],
+      [
+        "source",
+        (surface) => {
+          surface.runtimeExports[0].source = "./changed.js";
+        },
+      ],
+      [
+        "type source",
+        (surface) => {
+          surface.typeExports[0].source = "./changed-types.js";
+        },
+      ],
+      [
+        "runtime deletion",
+        (surface) => {
+          surface.runtimeExports.shift();
+        },
+      ],
+      [
+        "duplicate deletion",
+        (surface) => {
+          surface.runtimeExports.pop();
+        },
+      ],
+      [
+        "type deletion",
+        (surface) => {
+          surface.typeExports.pop();
+        },
+      ],
+    ];
+    describe.each([
+      [1, 1],
+      [2, 2],
+      [1, 2],
+    ])("schema %s to %s", (baseVersion, headVersion) => {
+      it.each(changes)(
+        "retains release significance of %s alongside reordered exports",
+        (_name, change) => {
+          const repo = createTempRepo();
+          writeSurface(repo, baseVersion, () => {});
+          checkoutBranch(repo, "fix/export-change");
+          writeSurface(repo, headVersion, (surface) => {
+            change(surface);
+            reverseExports(surface);
+          });
+          const result = runScript(repo);
+          expect(result.status, result.stdout).toBe(1);
+          expect(result.stdout).toContain("@croco/public (public API snapshot (.))");
+        },
+      );
+    });
+
+    it.each<Array<[string, (surface: Surface) => void]>[number]>([
+      [
+        "condition order",
+        (surface) => {
+          surface.targets![0].conditions.reverse();
+        },
+      ],
+      [
+        "condition value",
+        (surface) => {
+          surface.targets![0].conditions[0] = "browser";
+        },
+      ],
+      [
+        "target order",
+        (surface) => {
+          surface.targets!.reverse();
+        },
+      ],
+      [
+        "target value",
+        (surface) => {
+          surface.targets![0].target = "./dist/changed.js";
+        },
+      ],
+      [
+        "entrypoint kind",
+        (surface) => {
+          surface.kind = "asset";
+        },
+      ],
+    ])("preserves %s significance", (_name, change) => {
+      const repo = createTempRepo();
+      writeSurface(repo, 2, () => {});
+      checkoutBranch(repo, "fix/target-change");
+      writeSurface(repo, 2, (surface) => {
+        change(surface);
+        reverseExports(surface);
+      });
+      const result = runScript(repo);
+      expect(result.status, result.stdout).toBe(1);
+      expect(result.stdout).toContain("@croco/public (public API snapshot (.))");
+    });
+
+    it("requires no extra release for reordered exports beside a covered genuine package change", () => {
+      const repo = createTempRepo();
+      writeSurface(repo, 2, () => {});
+      checkoutBranch(repo, "fix/covered-change-and-export-order");
+      writeSurface(repo, 2, reverseExports);
+      commitFile(
+        repo,
+        "packages/other/src/index.ts",
+        "export const value = 2;",
+        "fix: change other package",
+      );
+      commitFile(
+        repo,
+        ".changeset/other.md",
+        "---\n'@croco/other': patch\n---\n\nFix other package behavior.\n",
+        "chore: cover changed package",
+      );
+      const result = runScript(repo);
+      expect(result.status, result.stdout).toBe(0);
+      expect(result.stdout).toContain("changed changesets cover all affected publishable packages");
+    });
+  });
+
   it("treats a root-only schema v1 to v2 conversion as migration metadata", () => {
     const repo = createTempRepo();
     writeLegacyPublicApiSnapshot(repo, ["value"]);

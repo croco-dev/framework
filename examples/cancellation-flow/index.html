@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Subscription cancellation</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        color: #242820;
+        background: #f6f5f0;
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+      }
+      main {
+        max-width: 900px;
+        padding: 32px 20px;
+        margin: auto;
+      }
+      section {
+        padding: 24px;
+        background: white;
+        border: 1px solid #d7d8cf;
+        border-radius: 8px;
+        margin: 16px 0;
+      }
+      button,
+      input,
+      select {
+        font: inherit;
+        padding: 10px 12px;
+        max-width: 100%;
+      }
+      button {
+        cursor: pointer;
+        margin: 6px 8px 6px 0;
+        border: 1px solid #45553f;
+        border-radius: 4px;
+        background: white;
+        color: #25361f;
+      }
+      button:focus-visible,
+      input:focus-visible,
+      select:focus-visible {
+        outline: 3px solid #67813b;
+        outline-offset: 3px;
+      }
+      button:disabled {
+        cursor: default;
+        color: #5e6258;
+        border-color: #c6c8bf;
+      }
+      label {
+        display: block;
+        margin: 12px 0;
+      }
+      [role="alert"] {
+        border-left: 4px solid #9a3328;
+        padding: 12px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px;
+        overflow-wrap: anywhere;
+      }
+      fieldset {
+        min-width: 0;
+      }
+      .sandbox {
+        color: #565b50;
+      }
+      @media (max-width: 500px) {
+        main {
+          padding: 20px 12px;
+        }
+        section {
+          padding: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main id="root"></main>
+    <script src="/dist/browser.global.js"></script>
+  </body>
+</html>

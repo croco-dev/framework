@@ -20,6 +20,7 @@
   "@croco/batch-core": "contracts",
   "@croco/batch-qstash": "plugins",
   "@croco/billing-core": "contracts",
+  "@croco/billing-drizzle": "plugins",
   "@croco/billing-polar": "plugins",
   "@croco/cache-core": "contracts",
   "@croco/cli": "tooling",

@@ -1256,6 +1256,12 @@
       "subtype": "provider",
       "runtimes": ["node", "lambda"],
       "domain": "Referrals"
+    },
+    "billing-drizzle": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Billing"
     }
   },
   "groups": {
@@ -1369,7 +1375,8 @@
         "triggers-qstash",
         "warehouse-postgres",
         "promotions-drizzle",
-        "referral-drizzle"
+        "referral-drizzle",
+        "billing-drizzle"
       ]
     },
     "Integration": {
@@ -1588,7 +1595,8 @@
         "referral-core",
         "referral-drizzle",
         "gamification-core",
-        "gamification-drizzle"
+        "gamification-drizzle",
+        "billing-drizzle"
       ]
     },
     "deprecated": {
@@ -2309,6 +2317,18 @@
           "immutable mission definitions",
           "recurring period progress",
           "atomic evidence and completion receipts"
+        ]
+      },
+      "billing-drizzle": {
+        "domain": "Billing",
+        "adapter": "PostgreSQL billing lifecycle and cancellation session store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "revision compare-and-set",
+          "durable lifecycle commands",
+          "scoped cancellation sessions",
+          "audited choice policy revisions"
         ]
       }
     }
