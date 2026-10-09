@@ -75,6 +75,8 @@ if (reservation.reservation) {
 A partial commit appends a `commit` transaction for actual usage and a `release` transaction for the
 remainder in one atomic command. Direct consumption, full release, linked refunds, compensating
 credit/debit adjustments, and bounded expiry batches use the same command contract.
+Compensating debit adjustments ignore meter restrictions and debit unexpired available lots in the
+same allocation order. Meter restrictions still apply to reservations and usage.
 
 ## Ledger invariants
 

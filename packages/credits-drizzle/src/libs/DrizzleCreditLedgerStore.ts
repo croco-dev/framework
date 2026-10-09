@@ -773,13 +773,9 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
         `reservation ID '${command.reservationId}' already exists`,
       );
     }
-    const allocations = await this.allocate(
-      tx,
-      account,
-      command.amount,
-      command.occurredAt,
-      command.meterKey,
-    );
+    const allocations = await this.allocate(tx, account, command.amount, command.occurredAt, {
+      meterKey: command.meterKey,
+    });
     const reservation: CreditReservation = {
       id: command.reservationId,
       accountId: account.id,
@@ -927,13 +923,9 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
     account: MutableAccount,
     command: Extract<CreditLedgerCommand, { operation: "consume" }>,
   ): Promise<CreditCommandResult> {
-    const allocations = await this.allocate(
-      tx,
-      account,
-      command.amount,
-      command.occurredAt,
-      command.meterKey,
-    );
+    const allocations = await this.allocate(tx, account, command.amount, command.occurredAt, {
+      meterKey: command.meterKey,
+    });
     const transaction = await this.appendTransaction(tx, account, {
       id: command.transactionId,
       kind: "consume",
@@ -1060,7 +1052,9 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
   ): Promise<CreditCommandResult> {
     const allocations =
       command.direction === "debit"
-        ? await this.allocate(tx, account, command.amount, command.occurredAt)
+        ? await this.allocate(tx, account, command.amount, command.occurredAt, {
+            ignoreMeterRestrictions: true,
+          })
         : [];
     const grant = command.direction === "credit" ? (command.grant ?? {}) : undefined;
     const transaction = await this.appendTransaction(tx, account, {
@@ -1167,12 +1161,13 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
     account: MutableAccount,
     requested: CreditAmount,
     asOf: Date,
-    meterKey?: string,
+    options: { readonly meterKey?: string; readonly ignoreMeterRestrictions?: boolean },
   ): Promise<CreditAllocation[]> {
     let remaining = requested;
     const allocations: CreditAllocation[] = [];
-    const meterCondition =
-      meterKey === undefined
+    const meterCondition = options.ignoreMeterRestrictions
+      ? undefined
+      : options.meterKey === undefined
         ? or(
             isNull(creditGrantLots.meterKeys),
             sql`jsonb_array_length(${creditGrantLots.meterKeys}) = 0`,
@@ -1180,7 +1175,7 @@ export class DrizzleCreditLedgerStore extends CreditLedgerStore {
         : or(
             isNull(creditGrantLots.meterKeys),
             sql`jsonb_array_length(${creditGrantLots.meterKeys}) = 0`,
-            sql`${creditGrantLots.meterKeys} ? ${meterKey}`,
+            sql`${creditGrantLots.meterKeys} ? ${options.meterKey}`,
           );
     const eligibleCondition = and(
       eq(creditGrantLots.accountId, account.id),
