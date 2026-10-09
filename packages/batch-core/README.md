@@ -122,14 +122,16 @@ await chunkExecutor.execute(executionId, loadStep, { startExecution: false });
 실행 ID로 다시 실행할 수 있습니다.
 
 - `chunkSize`는 성공적으로 처리한 입력 수를 기준으로 하며, processor가 `null`을 반환한 항목도 포함합니다.
-  각 청크와 마지막 남은 입력의 처리가 끝나면 `step.name.cursor` 체크포인트를 갱신합니다. 출력이 있는
+  각 청크와 마지막 남은 입력의 처리가 끝나면 `step.name.cursor` 체크포인트를 갱신한 뒤
+  `step.name.processedCount` 체크포인트에 누적 입력 건수를 저장합니다. 출력이 있는
   청크는 writer가 완료된 뒤에만 갱신하고, 모두 필터링된 청크는 writer 호출 없이 갱신합니다.
 - `progress.current`와 완료 결과의 `processedCount`도 필터링된 입력을 포함합니다. 진행률 갱신은 유효한
   `progress.total`이 설정된 실행에만 적용됩니다.
 - 재시도 가능한 실패는 `execution-core`가 실행을 `retrying` 상태로 남기며, 다음 `execute()` 호출은 마지막
   체크포인트를 reader에 복원합니다.
-- 재시도 중 진행률은 기존 `progress.current`에서 이어집니다. 체크포인트 이후 남은 청크만 처리해도 완료
-  결과의 `processedCount`는 전체 실행 기준으로 유지됩니다.
+- 재시도 중 진행률은 `progress.total` 설정과 무관하게 `step.name.processedCount` 체크포인트에서
+  이어집니다. 이 키가 없는 기존 실행은 `progress.current`에서 복원합니다. 체크포인트 이후 남은 청크만
+  처리해도 완료 결과의 `processedCount`는 전체 실행 기준으로 유지됩니다.
 - writer가 실패한 청크는 체크포인트를 갱신하지 않습니다. 같은 청크가 재전달될 수 있으므로 writer는
   실행 ID, 스텝 이름, 입력 키, 또는 애플리케이션 idempotency key로 중복 쓰기를 흡수해야 합니다.
 - `classifyFailure`가 실패하면 원래 오류 메시지는 유지하되 `batch-core/failure-classification-failed` 코드로

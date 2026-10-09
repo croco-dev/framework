@@ -71,6 +71,7 @@ export class ChunkExecutor {
 
     // 2. Restore checkpoint if available
     const checkpointKey = `${step.name}.cursor`;
+    const processedCountKey = `${step.name}.processedCount`;
     let restoredCheckpoint = false;
     if (this.hasCheckpoint(execution, checkpointKey) && isCheckpointable(step.reader)) {
       step.reader.restoreCheckpoint(execution.checkpoints[checkpointKey]);
@@ -79,7 +80,11 @@ export class ChunkExecutor {
 
     let items: O[] = [];
     let chunkInputCount = 0;
-    let processedCount = this.resolveProcessedCount(execution, restoredCheckpoint);
+    let processedCount = this.resolveProcessedCount(
+      execution,
+      restoredCheckpoint,
+      processedCountKey,
+    );
     const totalCount = execution.progress?.total;
 
     // 3. Read - Process - Write loop
@@ -116,6 +121,7 @@ export class ChunkExecutor {
             step,
             items,
             checkpointKey,
+            processedCountKey,
             processedCount + chunkInputCount,
             totalCount,
           );
@@ -132,6 +138,7 @@ export class ChunkExecutor {
           step,
           items,
           checkpointKey,
+          processedCountKey,
           processedCount + chunkInputCount,
           totalCount,
         );
@@ -161,6 +168,7 @@ export class ChunkExecutor {
     step: Step<I, O>,
     items: O[],
     checkpointKey: string,
+    processedCountKey: string,
     currentProcessedCount: number,
     totalCount?: number,
   ): Promise<void> {
@@ -172,6 +180,7 @@ export class ChunkExecutor {
     if (isCheckpointable(step.reader)) {
       const checkpoint = step.reader.getCheckpoint();
       await this.executionManager.checkpoint(executionId, checkpointKey, checkpoint);
+      await this.executionManager.checkpoint(executionId, processedCountKey, currentProcessedCount);
     }
 
     if (this.hasValidTotal(totalCount)) {
@@ -193,9 +202,18 @@ export class ChunkExecutor {
     return Object.prototype.hasOwnProperty.call(execution.checkpoints ?? {}, checkpointKey);
   }
 
-  private resolveProcessedCount(execution: Execution, restoredCheckpoint: boolean): number {
+  private resolveProcessedCount(
+    execution: Execution,
+    restoredCheckpoint: boolean,
+    processedCountKey: string,
+  ): number {
     if (!restoredCheckpoint) {
       return 0;
+    }
+
+    const checkpointed = execution.checkpoints?.[processedCountKey];
+    if (typeof checkpointed === "number" && Number.isFinite(checkpointed) && checkpointed > 0) {
+      return checkpointed;
     }
 
     const current = execution.progress?.current;
