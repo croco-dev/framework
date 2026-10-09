@@ -1,5 +1,4 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
-
 import { PageRouteValidationError, validatePageRevalidate } from "../routes/validatePageRoute";
 import { validateApiRoute } from "../routes/validateApiRoute";
 

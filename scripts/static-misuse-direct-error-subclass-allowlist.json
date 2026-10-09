@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baselineEntryCount": 35,
+  "baselineEntryCount": 36,
   "description": "Reviewed direct built-in Error subclass baseline for #2926. Preserve existing diagnostic, client, internal aggregate, and Problem root boundaries; new subclasses require explicit review.",
   "entries": [
     {
@@ -177,7 +177,7 @@
     {
       "package": "@croco/meta-vite",
       "file": "packages/meta-vite/src/libs/routes/routeRegistry.ts",
-      "line": 12,
+      "line": 13,
       "excerpt": "export class RouteConflictError extends Error {",
       "reason": "Existing route-registration conflict boundary is retained; migration is outside the DI failure scope of #2926.",
       "owner": "framework-error-handling",
@@ -191,6 +191,15 @@
       "reason": "Canonical Problem root must inherit Error to provide the shared code, category, cause, and serialization contract.",
       "owner": "framework-error-handling",
       "expiresOn": "2027-01-28"
+    },
+    {
+      "package": "@croco/meta-vite",
+      "file": "packages/meta-vite/src/libs/routes/validatePageRoute.ts",
+      "line": 8,
+      "excerpt": "export class PageRouteValidationError extends Error {",
+      "reason": "Issue #3043 explicitly requires route definition-time diagnostics following MetaViteRouteManifestError; internal validation errors report stable codes and paths before registration or manifest creation, outside request Problem responses.",
+      "owner": "framework-error-handling",
+      "expiresOn": "2027-01-18"
     },
     {
       "package": "@croco/tasks-core",
@@ -267,7 +276,7 @@
     {
       "package": "@croco/meta-vite",
       "file": "packages/meta-vite/src/libs/routes/routeRegistry.ts",
-      "line": 22,
+      "line": 23,
       "excerpt": "export class ShellRouteDefinitionError extends Error {",
       "reason": "SSR shell route definition boundary exposes the meta-vite/shell-route-ssr-only diagnostic code; definition-time rejection before header commit.",
       "owner": "framework-error-handling",
