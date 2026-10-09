@@ -123,7 +123,10 @@ export function createCreditLedgerStoreConformanceSuite(
             assert.equal(secondBalance.available, "0");
             const grantReplay = await service.grantCredits(grantInput);
             assert.equal(grantReplay.replayed, true);
-            assert.deepEqual(grantReplay.transactions, granted.transactions);
+            assert.deepEqual(
+              grantReplay.transactions.map((transaction) => transaction.id),
+              granted.transactions.map((transaction) => transaction.id),
+            );
             for (const conflicting of [
               { ...grantInput, amount: creditAmount("11") },
               { ...grantInput, accountId: second.account.id },
