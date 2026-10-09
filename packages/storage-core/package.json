@@ -17,12 +17,18 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": {
+        "import": "./dist/index.d.mts",
+        "require": "./dist/index.d.ts"
+      },
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
     "./node": {
-      "types": "./dist/node.d.ts",
+      "types": {
+        "import": "./dist/node.d.mts",
+        "require": "./dist/node.d.ts"
+      },
       "import": "./dist/node.mjs",
       "require": "./dist/node.js"
     }
@@ -32,12 +38,18 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
       },
       "./node": {
-        "types": "./dist/node.d.ts",
+        "types": {
+          "import": "./dist/node.d.mts",
+          "require": "./dist/node.d.ts"
+        },
         "import": "./dist/node.mjs",
         "require": "./dist/node.js"
       }

@@ -23,12 +23,18 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
       },
       "./experience-slot": {
-        "types": "./dist/experience-slot.d.ts",
+        "types": {
+          "import": "./dist/experience-slot.d.mts",
+          "require": "./dist/experience-slot.d.ts"
+        },
         "import": "./dist/experience-slot.mjs",
         "require": "./dist/experience-slot.js"
       }

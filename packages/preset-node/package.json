@@ -19,12 +19,18 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
       },
       "./entry": {
-        "types": "./dist/entry.d.ts",
+        "types": {
+          "import": "./dist/entry.d.mts",
+          "require": "./dist/entry.d.ts"
+        },
         "import": "./dist/entry.mjs",
         "require": "./dist/entry.js"
       }

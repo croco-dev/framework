@@ -17,17 +17,26 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": {
+        "import": "./dist/index.d.mts",
+        "require": "./dist/index.d.ts"
+      },
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
     "./reward-contracts": {
-      "types": "./dist/reward-contracts.d.ts",
+      "types": {
+        "import": "./dist/reward-contracts.d.mts",
+        "require": "./dist/reward-contracts.d.ts"
+      },
       "import": "./dist/reward-contracts.mjs",
       "require": "./dist/reward-contracts.js"
     },
     "./mission-validation": {
-      "types": "./dist/mission-validation.d.ts",
+      "types": {
+        "import": "./dist/mission-validation.d.mts",
+        "require": "./dist/mission-validation.d.ts"
+      },
       "import": "./dist/mission-validation.mjs",
       "require": "./dist/mission-validation.js"
     }
@@ -37,17 +46,26 @@
     "types": "./dist/index.d.ts",
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
+        "types": {
+          "import": "./dist/index.d.mts",
+          "require": "./dist/index.d.ts"
+        },
         "import": "./dist/index.mjs",
         "require": "./dist/index.js"
       },
       "./reward-contracts": {
-        "types": "./dist/reward-contracts.d.ts",
+        "types": {
+          "import": "./dist/reward-contracts.d.mts",
+          "require": "./dist/reward-contracts.d.ts"
+        },
         "import": "./dist/reward-contracts.mjs",
         "require": "./dist/reward-contracts.js"
       },
       "./mission-validation": {
-        "types": "./dist/mission-validation.d.ts",
+        "types": {
+          "import": "./dist/mission-validation.d.mts",
+          "require": "./dist/mission-validation.d.ts"
+        },
         "import": "./dist/mission-validation.mjs",
         "require": "./dist/mission-validation.js"
       }

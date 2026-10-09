@@ -1,3 +1,4 @@
+import ts from "typescript";
 import { compareStrings } from "../tooling/compareStrings.mjs";
 import { spawnSync } from "node:child_process";
 import {
@@ -233,7 +234,7 @@ function main(): void {
         cjsCount: plan.cjs.length,
         esmCount: plan.esm.length,
         packageName: packageInfo.packageName,
-        typesCount: plan.types.length,
+        typesCount: new Set(plan.types.map((target) => target.specifier)).size,
       });
     }
 
@@ -593,7 +594,7 @@ function runPackageSmoke(
 
   writeEsmConsumer(packageSmokeRoot, plan.esm);
   writeCjsConsumer(packageSmokeRoot, plan.cjs);
-  writeTypesConsumer(packageSmokeRoot, plan.types);
+  writeTypesConsumer(packageSmokeRoot, plan, packageInfo);
 
   if (plan.cjs.length > 0) {
     run("node", [join(packageSmokeRoot, "cjs.cjs")], packageSmokeRoot, {
@@ -605,13 +606,16 @@ function runPackageSmoke(
       label: `${packageInfo.packageName}: esm entrypoints`,
     });
   }
-  if (plan.types.length > 0) {
+  for (const consumerMode of ["esm", "cjs"] as const) {
+    if (plan.types.length === 0 || (consumerMode === "cjs" && plan.cjs.length === 0)) {
+      continue;
+    }
     run(
       process.execPath,
-      [tscPath(), "-p", join(packageSmokeRoot, "tsconfig.json")],
+      [tscPath(), "-p", join(packageSmokeRoot, `tsconfig.${consumerMode}.json`)],
       packageSmokeRoot,
       {
-        label: `${packageInfo.packageName}: types entrypoints`,
+        label: `${packageInfo.packageName}: ${consumerMode} types entrypoints`,
       },
     );
   }
@@ -1491,15 +1495,16 @@ function pushConditionalTarget(
     return;
   }
   if (condition === "types" && target && typeof target === "object" && !Array.isArray(target)) {
-    const importTarget = (target as Record<string, unknown>).import;
-    pushStringTarget(
-      specifier,
-      importTarget,
-      `${fieldName}.import`,
-      packageInfo,
-      diagnostics,
-      targets,
-    );
+    for (const resolutionMode of ["import", "require"] as const) {
+      pushStringTarget(
+        specifier,
+        (target as Record<string, unknown>)[resolutionMode],
+        `${fieldName}.${resolutionMode}`,
+        packageInfo,
+        diagnostics,
+        targets,
+      );
+    }
     return;
   }
   if (typeof target === "string" && isStaticAssetTargetPath(target)) {
@@ -1619,36 +1624,82 @@ function writeCjsConsumer(smokeRoot: string, targets: readonly SmokeTarget[]): v
   );
 }
 
-function writeTypesConsumer(smokeRoot: string, targets: readonly SmokeTarget[]): void {
-  writeFileSync(
-    join(smokeRoot, "types.ts"),
-    targets
-      .flatMap((target, index) => [
-        `import type * as Package${index} from ${JSON.stringify(target.specifier)};`,
-        `type Package${index}Entrypoint = typeof Package${index};`,
-        `declare const package${index}: Package${index}Entrypoint | undefined;`,
-        `void package${index};`,
-        "",
-      ])
-      .join("\n"),
-  );
-  writeFileSync(
-    join(smokeRoot, "tsconfig.json"),
-    `${JSON.stringify(
-      {
-        compilerOptions: {
-          module: "NodeNext",
-          moduleResolution: "NodeNext",
-          noEmit: true,
-          skipLibCheck: true,
-          strict: true,
-          target: "ES2022",
+function writeTypesConsumer(
+  smokeRoot: string,
+  plan: PackageSmokePlan,
+  packageInfo: PackedPackageInfo,
+): void {
+  const cjsSpecifiers = new Set(plan.cjs.map((target) => target.specifier));
+  for (const consumerMode of ["esm", "cjs"] as const) {
+    const targets = plan.types.filter((target) =>
+      consumerMode === "esm"
+        ? !target.fieldName.endsWith(".require")
+        : cjsSpecifiers.has(target.specifier) && !target.fieldName.endsWith(".import"),
+    );
+    const fileName = consumerMode === "esm" ? "types.mts" : "types.cts";
+    writeFileSync(
+      join(smokeRoot, fileName),
+      targets
+        .flatMap((target, index) => {
+          const specifier = JSON.stringify(target.specifier);
+          const lines = [
+            `import * as Package${index} from ${specifier};`,
+            `type Package${index}Entrypoint = typeof Package${index};`,
+            `declare const package${index}: Package${index}Entrypoint | undefined;`,
+            `void package${index};`,
+          ];
+          if (consumerMode === "esm" && declarationHasDefaultExport(packageInfo, target)) {
+            lines.push(
+              `import Package${index}Default from ${specifier};`,
+              `type Package${index}DefaultExport = typeof import(${specifier}) extends { default: infer T } ? T : never;`,
+              `export const package${index}Default: Package${index}DefaultExport = Package${index}Default;`,
+            );
+          }
+          return [...lines, ""];
+        })
+        .join("\n"),
+    );
+    writeFileSync(
+      join(smokeRoot, `tsconfig.${consumerMode}.json`),
+      `${JSON.stringify(
+        {
+          compilerOptions: {
+            module: consumerMode === "esm" ? "NodeNext" : "Node16",
+            moduleResolution: consumerMode === "esm" ? "NodeNext" : "Node16",
+            noEmit: true,
+            skipLibCheck: true,
+            strict: true,
+            target: "ES2022",
+          },
+          files: [fileName],
         },
-        include: ["types.ts"],
-      },
-      null,
-      2,
-    )}\n`,
+        null,
+        2,
+      )}\n`,
+    );
+  }
+}
+
+function declarationHasDefaultExport(packageInfo: PackedPackageInfo, target: SmokeTarget): boolean {
+  const content = readPackedFile(
+    packageInfo.tarballPath,
+    `package/${target.target.slice(2)}`,
+    packageInfo.packageDir,
+  );
+  const source = ts.createSourceFile(target.target, content, ts.ScriptTarget.Latest);
+  return source.statements.some(
+    (statement) =>
+      (ts.isExportAssignment(statement) && !statement.isExportEquals) ||
+      (ts.canHaveModifiers(statement) &&
+        ts
+          .getModifiers(statement)
+          ?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword)) ||
+      (ts.isExportDeclaration(statement) &&
+        statement.exportClause !== undefined &&
+        ts.isNamedExports(statement.exportClause) &&
+        statement.exportClause.elements.some(
+          (element) => element.name.text === "default" && !element.isTypeOnly,
+        )),
   );
 }
 
