@@ -313,7 +313,7 @@ export class CrocoRouteRegistrar {
         if (downstreamResponse && middlewareResponse !== downstreamResponse) {
           ctx.clearBufferedResponseBody();
         }
-
+        ctx.res.status = middlewareResponse.status;
         response = middlewareResponse;
         return middlewareResponse;
       }
