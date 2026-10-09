@@ -3788,6 +3788,12 @@
       "owner": "@croco/onboarding-drizzle"
     },
     {
+      "path": "packages/onboarding-drizzle/src/tests/DrizzleOnboardingStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/onboarding-drizzle"
+    },
+    {
       "path": "packages/onboarding-drizzle/src/tests/DrizzleOnboardingStore.spec.ts",
       "lane": "fast",
       "qualifiers": [],

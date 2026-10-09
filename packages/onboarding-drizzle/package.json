@@ -40,8 +40,8 @@
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --minify --clean --dts",
     "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
-    "test": "vitest run --exclude src/tests/DrizzleGoalStore.postgres.spec.ts",
-    "test:live": "vitest run src/tests/DrizzleGoalStore.postgres.spec.ts",
+    "test": "vitest run --exclude 'src/tests/*.postgres.spec.ts'",
+    "test:live": "vitest run src/tests/DrizzleGoalStore.postgres.spec.ts src/tests/DrizzleOnboardingStore.postgres.spec.ts",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
     "typecheck": "tsc --noEmit",
     "lint": "oxlint .",
