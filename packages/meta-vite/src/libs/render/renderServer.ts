@@ -957,10 +957,11 @@ export class RenderServer {
           controller.enqueue(encoder.encode(suffix));
           controller.close();
         } catch (error) {
-          try {
+          // controller.error() throws when the controller is already
+          // closed/errored. desiredSize is null exactly in that terminal
+          // state, so guard explicitly instead of swallowing the signal.
+          if (controller.desiredSize !== null) {
             controller.error(error);
-          } catch {
-            // Controller already closed/errored; the error is already terminal.
           }
         }
       },

@@ -26843,6 +26843,12 @@
               "exportKind": "declaration",
               "source": null,
               "declarationKind": "class"
+            },
+            {
+              "name": "resolveRscComponentRef",
+              "exportKind": "declaration",
+              "source": null,
+              "declarationKind": "function"
             }
           ],
           "typeExports": [
