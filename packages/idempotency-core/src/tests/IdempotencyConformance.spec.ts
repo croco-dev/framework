@@ -29,3 +29,61 @@ describe("idempotency store conformance", () => {
     }
   }, 15_000);
 });
+
+type HttpResponseSnapshot = {
+  readonly status: number;
+  readonly body: { readonly orderId: string };
+};
+
+describe("idempotency store conformance with structured responses", () => {
+  const suite = createIdempotencyStoreConformanceSuite<HttpResponseSnapshot>({
+    createStore: () => new InMemoryIdempotencyStore<HttpResponseSnapshot>(),
+    createResponse: () => ({ status: 201, body: { orderId: "order-1" } }),
+  });
+
+  for (const testCase of suite.cases) {
+    it(testCase.name, testCase.run, 15_000);
+  }
+
+  it.each([
+    [
+      "replays a completed result for the same key and fingerprint",
+      "replay must return the committed response",
+    ],
+    [
+      "preserves a completed result when fail uses the completed reservation",
+      "fail must preserve the committed response",
+    ],
+    [
+      "separates reservation lease from completed retention",
+      "replay must preserve the completed response",
+    ],
+  ])(
+    "rejects changed response contents: %s",
+    async (name, message) => {
+      const failingSuite = createIdempotencyStoreConformanceSuite<HttpResponseSnapshot>({
+        createStore: () => {
+          const store = new InMemoryIdempotencyStore<HttpResponseSnapshot>();
+          const reserve = store.reserve.bind(store);
+          store.reserve = async (...args) => {
+            const result = await reserve(...args);
+            return result.outcome === "replay"
+              ? { ...result, response: { status: 201, body: { orderId: "wrong-order" } } }
+              : result;
+          };
+          return store;
+        },
+        createResponse: () => ({ status: 201, body: { orderId: "order-1" } }),
+      });
+      const testCase = failingSuite.cases.find((candidate) => candidate.name === name);
+      if (!testCase) {
+        throw new Error(`Missing conformance case: ${name}`);
+      }
+      const failure = testCase.run();
+      await expect(failure).rejects.toThrow(message);
+      await expect(failure).rejects.toThrow("order-1");
+      await expect(failure).rejects.toThrow("wrong-order");
+    },
+    15_000,
+  );
+});

@@ -1,3 +1,4 @@
+import * as assert from "node:assert/strict";
 import { deriveIdempotencyKey } from "./deriveIdempotencyKey";
 import {
   IdempotencyConflictProblem,
@@ -64,7 +65,11 @@ export function createIdempotencyStoreConformanceSuite<TResult = string>(
           const replay = await store.reserve(key);
           assertEqual(replay.outcome, "replay", "completed records must replay");
           if (replay.outcome === "replay") {
-            assertEqual(replay.response, response, "replay must return the committed response");
+            assert.deepStrictEqual(
+              replay.response,
+              response,
+              "replay must return the committed response",
+            );
           }
         },
       },
@@ -100,7 +105,11 @@ export function createIdempotencyStoreConformanceSuite<TResult = string>(
           const replay = await store.reserve(key);
           assertEqual(replay.outcome, "replay", "fail must not replace a completed record");
           if (replay.outcome === "replay") {
-            assertEqual(replay.response, response, "fail must preserve the committed response");
+            assert.deepStrictEqual(
+              replay.response,
+              response,
+              "fail must preserve the committed response",
+            );
           }
         },
       },
@@ -313,7 +322,11 @@ export function createIdempotencyStoreConformanceSuite<TResult = string>(
           const replay = await store.reserve(key, reserveOptions);
           assertEqual(replay.outcome, "replay", "completed retention must outlast the lease");
           if (replay.outcome === "replay") {
-            assertEqual(replay.response, response, "replay must preserve the completed response");
+            assert.deepStrictEqual(
+              replay.response,
+              response,
+              "replay must preserve the completed response",
+            );
           }
         },
       },
