@@ -240,6 +240,11 @@ export class ClerkWebhookHandler {
           this.parseMembershipEvent(webhookEvent.data, webhookEvent.type),
         );
         break;
+      case "organizationMembership.updated": {
+        const event = this.parseMembershipEvent(webhookEvent.data, webhookEvent.type);
+        await this.handlers["organizationMembership.updated"]?.(event);
+        break;
+      }
       default:
         return "ignored";
     }
