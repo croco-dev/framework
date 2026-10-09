@@ -143,7 +143,7 @@ export type ScheduleSyncDetail = {
  * This scheduler reads @Cron metadata from triggerRegistry and syncs
  * the schedules with QStash. It handles:
  * - Creating new schedules for @Cron decorated methods
- * - Updating existing schedules when cron expressions change
+ * - Updating existing schedules when cron expressions or destinations change
  * - Deleting schedules that are no longer in code
  * - Generating unique schedule IDs based on target class and method name
  */
@@ -391,7 +391,7 @@ export class QStashScheduler {
         continue;
       }
 
-      const existing = { cron: schedule.cron ?? "" };
+      const existing = { cron: schedule.cron ?? "", destination: schedule.destination };
       if (!isCanonicalScheduleId(scheduleId, this.scheduleNamespace)) {
         malformed.push(
           createPreservedScheduleDetail(
@@ -418,7 +418,7 @@ export class QStashScheduler {
   private async syncSchedule(
     scheduleId: string,
     metadata: CronTriggerMetadata,
-    existing?: { cron: string },
+    existing?: ExistingSchedule,
     mode: ScheduleSyncMode = "apply",
   ): Promise<ScheduleSyncDetail> {
     const methodName = String(metadata.methodName);
@@ -459,7 +459,7 @@ export class QStashScheduler {
         return { ...baseDetail, action: "created", applied: true };
       }
 
-      if (existing.cron !== effectiveCron) {
+      if (existing.cron !== effectiveCron || existing.destination !== this.webhookUrl) {
         if (mode === "dry-run") {
           return { ...baseDetail, action: "updated" };
         }
@@ -599,6 +599,7 @@ export class QStashScheduler {
 
 type ExistingSchedule = {
   readonly cron: string;
+  readonly destination: string;
 };
 
 type ScheduleDiscovery = {

@@ -15,6 +15,7 @@ function ownedSchedule(
   return {
     scheduleId,
     cron,
+    destination: "https://api.example.com/webhooks/qstash",
     label: ownershipMarker,
   };
 }
@@ -60,6 +61,67 @@ describe("QStashScheduler", () => {
     expect(create).not.toHaveBeenCalled();
     expect(deleteSchedule).not.toHaveBeenCalled();
   });
+
+  it.each(["apply", "dry-run"] as const)(
+    "%s에서 destination만 바뀐 schedule을 updated로 보고하고 URL을 노출하지 않아야 한다",
+    async (mode) => {
+      class DestinationChangeJob {
+        async run(): Promise<void> {}
+      }
+      triggerRegistry.register({
+        type: "cron",
+        expression: "0 3 * * *",
+        methodName: "run",
+        target: DestinationChangeJob.prototype,
+        options: {},
+      });
+
+      const scheduleId = "croco-trigger:DestinationChangeJob:run:run";
+      const oldDestination = "https://old-api.example.com/webhooks/qstash?token=old-secret";
+      const webhookUrl = "https://api.example.com/webhooks/qstash?token=new-secret";
+      const create = vi.fn().mockResolvedValue({ scheduleId });
+      const deleteSchedule = vi.fn();
+      const client = {
+        schedules: {
+          list: vi
+            .fn()
+            .mockResolvedValue([
+              { ...ownedSchedule(scheduleId, "0 3 * * *"), destination: oldDestination },
+            ]),
+          create,
+          delete: deleteSchedule,
+        },
+      } as unknown as Client;
+      const scheduler = new QStashScheduler({ client, webhookUrl });
+
+      const result = await scheduler.sync({ mode });
+
+      expect(result.updated).toBe(1);
+      expect(result.skipped).toBe(0);
+      expect(result.details).toEqual([
+        {
+          name: scheduleId,
+          action: "updated",
+          applied: mode === "apply",
+          expression: "0 3 * * *",
+          currentExpression: "0 3 * * *",
+          target: "run",
+          method: "run",
+        },
+      ]);
+      expect(JSON.stringify(result)).not.toContain(oldDestination);
+      expect(JSON.stringify(result)).not.toContain(webhookUrl);
+      if (mode === "apply") {
+        expect(create).toHaveBeenCalledOnce();
+        expect(create).toHaveBeenCalledWith(
+          expect.objectContaining({ scheduleId, cron: "0 3 * * *", destination: webhookUrl }),
+        );
+      } else {
+        expect(create).not.toHaveBeenCalled();
+      }
+      expect(deleteSchedule).not.toHaveBeenCalled();
+    },
+  );
 
   it("목록 조회 성공 시 신규 스케줄을 생성해야 한다", async () => {
     class NewScheduleJob {
@@ -577,7 +639,13 @@ describe("QStashScheduler", () => {
     const legacyScheduleId = "croco-trigger:LegacyJob:run:run";
     const client = {
       schedules: {
-        list: vi.fn().mockResolvedValue([{ scheduleId: legacyScheduleId, cron: "* * * * *" }]),
+        list: vi.fn().mockResolvedValue([
+          {
+            scheduleId: legacyScheduleId,
+            cron: "* * * * *",
+            destination: "https://api.example.com/webhooks/qstash",
+          },
+        ]),
         create: vi.fn(),
         delete: deleteSchedule,
       },
@@ -650,7 +718,13 @@ describe("QStashScheduler", () => {
     const create = vi.fn().mockResolvedValue({});
     const client = {
       schedules: {
-        list: vi.fn().mockResolvedValue([{ scheduleId, cron: "*/5 * * * *" }]),
+        list: vi.fn().mockResolvedValue([
+          {
+            scheduleId,
+            cron: "*/5 * * * *",
+            destination: "https://api.example.com/webhooks/qstash",
+          },
+        ]),
         create,
         delete: vi.fn(),
       },
@@ -689,7 +763,13 @@ describe("QStashScheduler", () => {
     const scheduleId = "croco-trigger:LegacyUnchangedScheduleJob:run:run";
     const client = {
       schedules: {
-        list: vi.fn().mockResolvedValue([{ scheduleId, cron: "*/5 * * * *" }]),
+        list: vi.fn().mockResolvedValue([
+          {
+            scheduleId,
+            cron: "*/5 * * * *",
+            destination: "https://api.example.com/webhooks/qstash",
+          },
+        ]),
         create: vi.fn(),
         delete: vi.fn(),
       },
@@ -728,7 +808,13 @@ describe("QStashScheduler", () => {
     const deleteSchedule = vi.fn();
     const client = {
       schedules: {
-        list: vi.fn().mockResolvedValue([{ scheduleId, cron: "*/5 * * * *" }]),
+        list: vi.fn().mockResolvedValue([
+          {
+            scheduleId,
+            cron: "*/5 * * * *",
+            destination: "https://api.example.com/webhooks/qstash",
+          },
+        ]),
         create,
         delete: deleteSchedule,
       },
@@ -761,6 +847,7 @@ describe("QStashScheduler", () => {
           {
             scheduleId,
             cron: "* * * * *",
+            destination: "https://api.example.com/webhooks/qstash",
             labels: ["unrelated", DEFAULT_OWNERSHIP_MARKER],
           },
         ]),
@@ -788,6 +875,7 @@ describe("QStashScheduler", () => {
           {
             scheduleId: malformedScheduleId,
             cron: "* * * * *",
+            destination: "https://api.example.com/webhooks/qstash",
             labels: [DEFAULT_OWNERSHIP_MARKER],
           },
         ]),
