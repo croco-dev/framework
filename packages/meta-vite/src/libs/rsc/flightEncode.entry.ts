@@ -105,3 +105,5 @@ if (invokedDirectly) {
     process.exitCode = 1;
   });
 }
+
+export type { RenderRouteIR };
