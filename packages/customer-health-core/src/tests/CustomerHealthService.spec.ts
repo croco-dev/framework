@@ -1,6 +1,6 @@
 import { Container, RuntimeContainer } from "@croco/framework-context";
 import { Problem, ProblemCategory } from "@croco/problems-core";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CustomerHealthService } from "../libs/CustomerHealthService";
 import { HealthScoreDroppedEvent, HealthStatusChangedEvent } from "../libs/events";
 import { HealthScoreCalculator } from "../libs/HealthScoreCalculator";
@@ -12,7 +12,12 @@ import {
   HealthSignalRegistry,
 } from "../libs/interfaces";
 import type { HealthTransitionCommitResult } from "../libs/interfaces";
-import type { HealthScoreProfile, HealthSignal, SignalCategory } from "../libs/types";
+import type {
+  HealthScoreProfile,
+  HealthSignal,
+  SignalCategory,
+  TenantHealthScore,
+} from "../libs/types";
 
 class MockSignalProvider implements HealthSignalRegistry {
   private providers: {
@@ -851,3 +856,128 @@ function healthSignal(value: number, collectedAt: string): HealthSignal {
     collectedAt: new Date(collectedAt),
   };
 }
+
+describe("CustomerHealthService.getTrend day window", () => {
+  const NOW = new Date("2026-03-31T00:00:00.000Z");
+  const HOUR = 60 * 60 * 1000;
+  const DAY = 24 * HOUR;
+  let store: InMemoryHealthScoreStore;
+  let service: CustomerHealthService;
+
+  beforeEach(() => {
+    Container.reset();
+    vi.useFakeTimers({ now: NOW, toFake: ["Date"] });
+    store = new InMemoryHealthScoreStore();
+    service = new CustomerHealthService(
+      new MockSignalProvider(),
+      store,
+      new HealthScoreCalculator(),
+    );
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  async function commitScores(entries: readonly (readonly [number, number])[]): Promise<void> {
+    let previous: TenantHealthScore | null = null;
+    for (const [overallScore, millisecondsAgo] of entries) {
+      const current: TenantHealthScore = {
+        tenantId: "tenant-1",
+        overallScore,
+        status: overallScore >= 80 ? "healthy" : "critical",
+        categoryScores: { usage: overallScore, business: 0, engagement: 0 },
+        signals: [],
+        trend: "stable",
+        calculatedAt: new Date(NOW.getTime() - millisecondsAgo),
+      };
+      await store.saveTransition(current, previous, []);
+      previous = current;
+    }
+  }
+
+  it("compares scores across the requested days for hourly scoring", async () => {
+    await commitScores([
+      [90, 20 * DAY],
+      ...Array.from({ length: 48 }, (_, index): [number, number] => [45, (47 - index) * HOUR]),
+    ]);
+    expect(await service.getTrend("tenant-1", 30)).toEqual({
+      trend: "declining",
+      changePercentage: -50,
+    });
+  });
+
+  it("ignores older scores for weekly scoring", async () => {
+    await commitScores(
+      Array.from({ length: 40 }, (_, index): [number, number] => {
+        const weeksAgo = 39 - index;
+        return [weeksAgo > 5 ? 20 : 80, weeksAgo * 7 * DAY];
+      }),
+    );
+    expect(await service.getTrend("tenant-1", 30)).toEqual({
+      trend: "stable",
+      changePercentage: 0,
+    });
+  });
+
+  it("includes the exact start and end boundaries for daily scoring", async () => {
+    await commitScores([
+      [10, 30 * DAY + 1],
+      ...Array.from({ length: 31 }, (_, index): [number, number] => [
+        40 + index,
+        (30 - index) * DAY,
+      ]),
+      [100, -1],
+    ]);
+    expect(await service.getTrend("tenant-1", 30)).toEqual({
+      trend: "improving",
+      changePercentage: 75,
+    });
+  });
+
+  it.each([0, 1])("returns null with %i scores inside the window", async (count) => {
+    await commitScores([
+      [90, 31 * DAY],
+      [80, 30 * DAY + 1],
+      ...(count ? [[45, DAY] as const] : []),
+    ]);
+    expect(await service.getTrend("tenant-1", 30)).toBeNull();
+  });
+
+  it("sorts descending period results before comparing endpoints", async () => {
+    await commitScores([
+      [90, 20 * DAY],
+      [70, DAY],
+      [45, 0],
+    ]);
+    const findByPeriod = store.findHistoryByPeriod.bind(store);
+    vi.spyOn(store, "findHistoryByPeriod").mockImplementation(async (...args) =>
+      (await findByPeriod(...args)).reverse(),
+    );
+    expect(await service.getTrend("tenant-1", 30)).toEqual({
+      trend: "declining",
+      changePercentage: -50,
+    });
+    expect(store.findHistoryByPeriod).toHaveBeenCalledWith(
+      "tenant-1",
+      "day",
+      new Date(NOW.getTime() - 30 * DAY),
+      NOW,
+    );
+  });
+
+  it.each([
+    [0, 2, "improving", 200],
+    [100, 105, "improving", 5],
+    [100, 95, "declining", -5],
+    [100, 104, "stable", 4],
+    [100, 96, "stable", -4],
+  ])("preserves the formula for %i to %i", async (oldest, newest, trend, changePercentage) => {
+    await commitScores([
+      [oldest, DAY],
+      [newest, 0],
+    ]);
+    expect(await service.getTrend("tenant-1", 30)).toEqual({ trend, changePercentage });
+  });
+});
