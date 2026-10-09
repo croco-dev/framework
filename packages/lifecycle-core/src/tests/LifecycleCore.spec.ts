@@ -715,6 +715,146 @@ describe("lifecycle-core", () => {
     ]);
   });
 
+  it("still evaluates later rules when an earlier rule actions function throws", async () => {
+    const firstError = new TypeError("Cannot read actions of undefined");
+    const { evaluator, registry, sink, store } = createEvaluator();
+    registry.register({
+      id: "expansion-offer",
+      description: "Offer an upgrade when usage grows",
+      severity: "low",
+      triggers: [{ type: "health.status.changed" }],
+      when: (context) => context.health?.status === "at_risk",
+      actions: () => {
+        throw firstError;
+      },
+    });
+    registry.register({
+      id: "risk-follow-up",
+      description: "Create a CS follow-up when health drops",
+      severity: "high",
+      triggers: [{ type: "health.status.changed" }],
+      when: (context) => context.health?.status === "at_risk",
+      actions: [{ id: "create-cs-follow-up", type: "cs.follow_up", title: "Contact tenant" }],
+    });
+    const now = new Date("2026-09-01T00:00:00.000Z");
+    const context = createLifecycleContext({
+      now,
+      signal: createHealthStatusChangedSignal({
+        signalId: "health-2",
+        tenantId: "tenant-1",
+        oldStatus: "healthy",
+        newStatus: "at_risk",
+        score: 40,
+        occurredAt: now,
+      }),
+      health: { status: "at_risk", score: 40 },
+    });
+
+    await expect(evaluator.evaluate(context)).rejects.toBe(firstError);
+
+    expect(sink.getEmissions()).toEqual([
+      expect.objectContaining({ action: expect.objectContaining({ id: "create-cs-follow-up" }) }),
+    ]);
+    const storedRuns = await store.list();
+    expect(storedRuns.some((run) => run.ruleId === "expansion-offer")).toBe(false);
+    expect(storedRuns).toMatchObject([{ ruleId: "risk-follow-up", status: "succeeded" }]);
+  });
+
+  it("rejects with the first rule error when multiple rules fail", async () => {
+    const firstError = new TypeError("first rule condition failed");
+    const secondError = new RangeError("second rule condition failed");
+    const { evaluator, registry, sink } = createEvaluator();
+    registry.register({
+      id: "first-failing-rule",
+      description: "First rule that always throws",
+      severity: "low",
+      triggers: [{ type: "health.status.changed" }],
+      when: () => {
+        throw firstError;
+      },
+      actions: [{ id: "first-action", type: "email", title: "First" }],
+    });
+    registry.register({
+      id: "second-failing-rule",
+      description: "Second rule that always throws",
+      severity: "high",
+      triggers: [{ type: "health.status.changed" }],
+      when: () => {
+        throw secondError;
+      },
+      actions: [{ id: "second-action", type: "cs.follow_up", title: "Second" }],
+    });
+    const now = new Date("2026-09-01T00:00:00.000Z");
+    const context = createLifecycleContext({
+      now,
+      signal: createHealthStatusChangedSignal({
+        signalId: "health-3",
+        tenantId: "tenant-1",
+        oldStatus: "healthy",
+        newStatus: "at_risk",
+        score: 40,
+        occurredAt: now,
+      }),
+      health: { status: "at_risk", score: 40 },
+    });
+
+    await expect(evaluator.evaluate(context)).rejects.toBe(firstError);
+    expect(sink.getEmissions()).toHaveLength(0);
+  });
+
+  it("still evaluates later rules when an earlier rule run save fails", async () => {
+    const store = new InMemoryLifecycleRunStore();
+    const delegate = store.save.bind(store);
+    let failRemainingSaves = 1;
+    vi.spyOn(store, "save").mockImplementation(async (run) => {
+      if (run.ruleId === "expansion-offer" && failRemainingSaves > 0) {
+        failRemainingSaves -= 1;
+        throw new Error("temporary run store outage");
+      }
+      return delegate(run);
+    });
+    const { evaluator, registry, sink } = createEvaluator({ store });
+    registry.register({
+      id: "expansion-offer",
+      description: "First rule whose run save fails once",
+      severity: "low",
+      triggers: [{ type: "health.status.changed" }],
+      when: () => false,
+      actions: [{ id: "send-offer", type: "email", title: "Upgrade offer" }],
+    });
+    registry.register({
+      id: "risk-follow-up",
+      description: "Create a CS follow-up when health drops",
+      severity: "high",
+      triggers: [{ type: "health.status.changed" }],
+      when: (context) => context.health?.status === "at_risk",
+      actions: [{ id: "create-cs-follow-up", type: "cs.follow_up", title: "Contact tenant" }],
+    });
+    const now = new Date("2026-09-01T00:00:00.000Z");
+    const context = createLifecycleContext({
+      now,
+      signal: createHealthStatusChangedSignal({
+        signalId: "health-4",
+        tenantId: "tenant-1",
+        oldStatus: "healthy",
+        newStatus: "at_risk",
+        score: 40,
+        occurredAt: now,
+      }),
+      health: { status: "at_risk", score: 40 },
+      metadata: { seats: { used: 12 } },
+    });
+
+    await expect(evaluator.evaluate(context)).rejects.toThrow("temporary run store outage");
+
+    expect(sink.getEmissions()).toEqual([
+      expect.objectContaining({ action: expect.objectContaining({ id: "create-cs-follow-up" }) }),
+    ]);
+    const storedRuns = await store.list();
+    expect(storedRuns).toMatchObject([{ ruleId: "risk-follow-up", status: "succeeded" }]);
+    expect(storedRuns.some((run) => run.ruleId === "expansion-offer")).toBe(false);
+  });
+
   it("re-evaluates only the failed rule when the same signal is redelivered", async () => {
     const { evaluator, registry, sink, store } = createEvaluator();
     let failExpansionOffer = true;

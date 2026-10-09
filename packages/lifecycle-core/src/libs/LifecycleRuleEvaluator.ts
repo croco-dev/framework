@@ -293,6 +293,7 @@ export class LifecycleRuleEvaluator {
   async evaluate(context: LifecycleContext): Promise<LifecycleEvaluationResult> {
     const runs: LifecycleRun[] = [];
     let firstError: unknown;
+    let hasError = false;
 
     for (const registration of await this.registry.matchRegistrations(context.signal)) {
       try {
@@ -307,13 +308,14 @@ export class LifecycleRuleEvaluator {
         }
         runs.push(evaluation.run);
       } catch (error) {
-        if (firstError === undefined) {
+        if (!hasError) {
           firstError = error;
+          hasError = true;
         }
       }
     }
 
-    if (firstError !== undefined) {
+    if (hasError) {
       throw firstError;
     }
 
