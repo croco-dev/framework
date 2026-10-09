@@ -2292,14 +2292,23 @@
       },
       "gamification-drizzle": {
         "domain": "Gamification",
-        "adapter": "PostgreSQL cooperative challenge store",
+        "adapter": "PostgreSQL recurring mission, cooperative challenge, and achievement reward stores",
         "runtimes": ["node", "lambda"],
         "requiredEnv": ["PostgreSQL connection supplied by app"],
         "features": [
           "explicit participation intervals",
           "transactional capped contributions",
           "durable finalization receipt and completion intent",
-          "privacy erasure"
+          "privacy erasure",
+          "immutable audited policy versions",
+          "durable selection and family cap reservation",
+          "separate bounded fallback",
+          "append-only achievement points",
+          "unique badge ownership",
+          "same-identity recovery",
+          "immutable mission definitions",
+          "recurring period progress",
+          "atomic evidence and completion receipts"
         ]
       }
     }

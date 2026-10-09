@@ -296,6 +296,93 @@ describe("API documentation pipeline", () => {
     );
   });
 
+  it("keeps pruned inheritance links broken so merge revive binds the direct parent", () => {
+    // A pruned `inheritedFrom` numeric target points at a member clone inside
+    // a pruned re-export alias of the direct parent (for example `4`, the alias
+    // member of `Parent`). Rewriting it to the shared declaration symbol would
+    // let the merge resolve it to whichever sibling clone registered that
+    // symbol first, making links catalog-order dependent (see #3417).
+    const parentSymbol = {
+      packageName: "@croco/owner",
+      packagePath: "src/index.ts",
+      qualifiedName: "Parent",
+    };
+    const problemCauseSymbol = {
+      packageName: "@croco/problems-core",
+      packagePath: "src/libs/Problem.ts",
+      qualifiedName: "Problem.cause",
+    };
+    const ownerModel = {
+      children: [
+        {
+          id: 1,
+          name: "Parent",
+          children: [{ id: 2, name: "cause" }],
+        },
+      ],
+      symbolIdMap: { 1: parentSymbol, 2: problemCauseSymbol },
+    };
+    const childModel = {
+      children: [
+        {
+          // Re-export alias of Parent, pruned when the owner model ran first.
+          id: 3,
+          name: "Parent",
+          children: [{ id: 4, name: "cause" }],
+        },
+        {
+          id: 5,
+          name: "ChildProblem",
+          extendedTypes: [{ type: "reference", name: "Parent", target: 3 }],
+          children: [
+            {
+              id: 6,
+              name: "cause",
+              inheritedFrom: { type: "reference", name: "Parent.cause", target: 4 },
+            },
+          ],
+        },
+      ],
+      groups: [{ title: "Problems", children: [3, 5] }],
+      symbolIdMap: {
+        3: parentSymbol,
+        4: problemCauseSymbol,
+        5: {
+          packageName: "@croco/child",
+          packagePath: "src/index.ts",
+          qualifiedName: "ChildProblem",
+        },
+        6: problemCauseSymbol,
+      },
+    };
+
+    const seenSymbols = new Set<string>();
+    prunePreviouslyDocumentedExports(structuredClone(ownerModel), seenSymbols, "@croco/owner");
+    const prepared = prunePreviouslyDocumentedExports(
+      structuredClone(childModel),
+      seenSymbols,
+      "@croco/child",
+    );
+
+    const childClass = prepared.children.find(
+      (reflection: { name: string }) => reflection.name === "ChildProblem",
+    );
+    // The alias member is pruned but the surviving class and its member stay.
+    expect(prepared.children.map((reflection: { name: string }) => reflection.name)).toEqual([
+      "ChildProblem",
+    ]);
+    expect(childClass.children[0].inheritedFrom).toEqual({
+      type: "reference",
+      name: "Parent.cause",
+      target: -1,
+    });
+    // The direct-parent link itself is preserved as a symbol reference so
+    // merge revive can recompute the member link from it.
+    expect(childClass.extendedTypes).toEqual([
+      { type: "reference", name: "Parent", target: parentSymbol },
+    ]);
+  });
+
   it("deduplicates re-exports while preserving references to the canonical symbol", () => {
     const seenSymbols = new Set<string>();
     const sharedRootSymbol = {

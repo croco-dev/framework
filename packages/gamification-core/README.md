@@ -1,5 +1,9 @@
 # @croco/gamification-core
 
+Contracts for cooperative challenges, server-verified achievement rewards, and recurring missions driven by trusted value actions.
+
+## Cooperative challenges
+
 Cooperative challenges with explicit policy consent, trusted activity receipts, atomic progress and durable completion intents. The service requires a server authorization callback, a current tenant-membership source and explicitly registered activity verifiers. Client-provided progress is never accepted.
 
 A challenge is scoped by application, environment, tenant and challenge ID. Create its versioned definition before the start, then join with the exact policy version and leave policy. Definitions cannot change once any participant has consented or the start has arrived. `memberCap` limits each member's credited progress; `minMembers` counts currently joined members at settlement. Participants may join before the end; only activity occurring within both the challenge interval and one of their consented membership intervals counts.
@@ -15,3 +19,40 @@ The `retain` leave policy retains prior earned progress; `remove` excludes all e
 `eraseSubject` deletes membership intervals and raw activity and scrubs matching audit identities. Retain-policy earned progress becomes an anonymous aggregate; remove-policy progress is removed. Already-finalized outcomes remain immutable. Minimal pseudonymous subject suppression and hashed event/request tombstones remain for the lifetime of the scoped challenge to prevent replay and repeated erasure from resetting the per-member cap. An erased subject cannot join or contribute again to that challenge. These tombstones are privacy-relevant retained data and must be included in the application's retention policy; this is not a claim that all stored data is anonymous. Retries never return saved personal snapshots. Every read and retry checks current authorization and current tenant membership. Privacy erasure also requires server authorization, but deliberately permits a former tenant member as the target: the authorization callback must verify the actor's privilege to erase that subject in the requested scope. It does not require the target to retain tenant membership. Audit receipts retain the operation and definition version, including after their identifying fields are scrubbed.
 
 `ChallengeStore.transact` must serialize the entire scoped challenge, including concurrent creation, and atomically persist its challenge, membership, activity, receipts, tombstones and completion intent. Any error must roll back all writes. `InMemoryChallengeStore` implements this contract for tests/development; production requires a durable adapter such as `@croco/gamification-drizzle` and an explicitly applied migration. No schema is created at application startup.
+
+## Achievement rewards
+
+Browser consumers of reward validation and Problems use `@croco/gamification-core/reward-contracts`.
+Services and stores remain on the package root. Both entrypoints share the same Problem constructors.
+
+Alpha achievement rewards: server-verified evidence grants non-transferable points or unique badges. The service requires an evidence verifier and an access verifier; a client's completion claim is never sufficient.
+
+`RewardService.publish(publication)` validates and authorizes an audited immutable policy version. `grantForEvidence(key)` verifies scope and subject ownership, reserves the first selection durably, then settles that selection. `getAccount(scope, subject)` returns the append-only point ledger, badge ownership, and receipts. `getPolicy(scope, policyId, subject)` requires subject authorization too.
+
+Fixed policies have one entry. Weighted policies require explicit activation and non-negative safe integer weights with a positive safe integer total. The server chooses the bucket; callers do not submit a draw. RNG injection is a server constructor seam for deterministic tests. Zero-weight entries are never selected. Depletion uses the published fallback without renormalizing weights.
+
+`achievement-point` is a separate unit from usage or money credits. Points cannot be redeemed, transferred, or automatically converted. `achievement-grant` caps count primary reservations, including a later duplicate-badge rejection. Fixed fallbacks have a separate cap; after it is exhausted, the receipt records no reward. Primary and fallback counters belong to the policy family and survive version changes.
+
+Logical identity is `(appId, environmentId, tenantId, policyId, subject, evidenceRef)`. Version is deliberately excluded: revisions cannot pay the same evidence again. A new family explicitly creates a new opportunity. Every retry reauthorizes and revalidates evidence, reuses the persisted selection, and settles the same grant. A reservation survives a settlement failure; retry its identity after recovery. Reserved or indeterminate outcomes must never be presented as successful or rerollable.
+
+Publication requires actor, reason, expected revision, and idempotency key. Versions cannot be overwritten. New evidence uses the latest published version within its effective window; existing identities retain their original receipt even after policy expiry or revision. Applications must authorize their own tenant/environment boundaries and isolate test grants in a separate scope.
+
+Use `@croco/gamification-drizzle` for real PostgreSQL persistence. See [the standalone reward example](../../examples/reward-policy/README.md). No Mission, Promotion, Referral, paid participation, cash lottery, or physical reward is required or supported.
+
+Validation: `pnpm --filter @croco/gamification-core test`, `typecheck`, `build`, and `lint`. Weighted boundary and invalid-weight tests use synthetic evidence; they do not establish behavioral effectiveness or production certification.
+
+## Recurring missions
+
+Explicit recurring missions for verified value actions. `MissionService` publishes immutable definitions and exposes `ingestEvidence`, `getProgress`, and `closePeriod`. It requires a store, authorization port, and evidence verifier. No global registration, reward delivery, or notification is created.
+
+Define `events` (unit `event`), `distinct-days` (unit `day`), or `streak` (unit `day`). Streak is the longest consecutive local-calendar-day run **within one period**; it resets for each day/week period. A weekly mission uses seven calendar days from its explicit local `anchor`; timezone transitions do not change that calendar rule. Targets and caps are positive integers, target cannot exceed cap, and day-based caps cannot exceed the period's day count.
+
+Each key includes mandatory app/environment/tenant scope, subject, mission version, episode, and period start date. `getProgress` returns a zero active instance only after the requested publication is found; storage errors propagate. Empty reads do not write. Definitions and timezones are pinned by immutable version. A return episode uses a separate `episodeId` and published version; old instances and numbers remain intact. The trusted action ledger binds each event to its intended mission/version/episode, and stores reject event reuse across versions or episodes for the same subject and mission.
+
+`ServerActionVerifier` compares evidence with a server-owned durable domain-action ledger, including scope, subject, mission/version/episode, action, event, occurrence time and reversal identity. Implement `MissionAuthorization` from authenticated server identity; do not construct trusted actors or ledger records from arbitrary client fields. The verifier never accepts a client completion count. Event payloads contain identifiers and timestamps only.
+
+`lateAcceptanceMs` fixes the acceptance deadline relative to the next local period boundary. `closePeriod` is allowed only when that window expires, including on DST days. Uncompleted instances stay active until explicitly closed, never failed. Corrections refer to an original event in the same aggregate. While open, corrections recalculate progress. After close, the required `closedCorrection` policy rejects them, records them without changing progress, or recalculates progress while leaving the period closed. Corrections can arrive after the ordinary event deadline. They keep historical completion receipts and never revoke rewards. UI must inspect current progress against target separately from historical completion.
+
+A store transaction must serialize aggregate updates and atomically persist receipts and the unique completion. Duplicate event IDs with identical payload replay; changed payload conflicts. Each period accepts at most 10,000 original receipts and one reversal per original, preserving correction capacity at the original limit. Further original events fail explicitly. Completion is emitted once through `completionCreated` and persisted on the instance; external dispatchers must use the stable completion ID for idempotency. `InMemoryMissionStore` is a unit-test adapter; use `@croco/gamification-drizzle` for durable PostgreSQL storage.
+
+Publication requires matching authenticated actor, reason, consecutive revision and idempotency key. Versions are immutable, and an idempotency key replays only the exact publication payload, including its original timestamp. Scope omission grants no access.

@@ -1,3 +1,4 @@
+import { MIN_LIMIT } from "@croco/pagination-core";
 import type { CursorPageFull } from "@croco/pagination-core";
 import type { ProblemDetails } from "@croco/problems-core";
 
@@ -106,14 +107,27 @@ export function createAdminDataTableState<TData>(
     };
   }
 
+  const pagination = input.pagination ?? listResult.pagination ?? { mode: "none" };
+  const paginationProblem =
+    pagination.mode === "cursor"
+      ? invalidCursorPaginationLimitProblem(pagination.limit)
+      : undefined;
+
+  if (paginationProblem) {
+    return {
+      ...base,
+      kind: "problem",
+      partialRows: materialized.rows,
+      problem: paginationProblem,
+    };
+  }
+
   if (input.loading) {
     return {
       ...base,
       kind: "loading",
     };
   }
-
-  const pagination = input.pagination ?? listResult.pagination ?? { mode: "none" };
 
   if (materialized.rows.length === 0) {
     return {
@@ -178,19 +192,27 @@ export function createAdminDataTableListResultFromOffsetPage<TData>(
 
 export function createAdminDataTableListResultFromCursorPage<TData>(
   page: AdminDataTableCursorPageInput<TData>,
-  options?: {
-    readonly limit?: number;
+  options: {
+    readonly limit: number;
     readonly problem?: ProblemDetails;
     readonly source?: AdminDataTableListSource;
   },
 ): AdminDataTableListResult<TData> {
+  const paginationProblem = invalidCursorPaginationLimitProblem(options?.limit);
+  if (paginationProblem) {
+    return createAdminDataTableListResult(page.data, {
+      problem: options?.problem ?? paginationProblem,
+      source: options?.source ?? "cursor-page",
+    });
+  }
+
   const fullPage = isCursorPageFull(page) ? page : undefined;
 
   return createAdminDataTableListResult(page.data, {
     pagination: {
       hasMore: page.hasMore,
       hasPrevious: fullPage?.hasPrevious,
-      limit: options?.limit,
+      limit: options.limit,
       mode: "cursor",
       nextCursor: page.nextCursor,
       prevCursor: fullPage?.prevCursor,
@@ -254,4 +276,18 @@ function isCursorPageFull<TData>(
   page: AdminDataTableCursorPageInput<TData>,
 ): page is CursorPageFull<TData> {
   return "hasPrevious" in page || "prevCursor" in page;
+}
+
+function invalidCursorPaginationLimitProblem(limit: unknown): ProblemDetails | undefined {
+  if (typeof limit === "number" && Number.isInteger(limit) && limit >= MIN_LIMIT) {
+    return undefined;
+  }
+
+  return createCoreProblemDetails({
+    code: "admin-table/invalid-pagination-limit",
+    detail: `Cursor pagination requires an integer page size of at least ${MIN_LIMIT}`,
+    source: "admin-react",
+    status: 500,
+    title: "Invalid Admin Table Pagination Limit",
+  });
 }

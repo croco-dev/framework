@@ -42,7 +42,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts src/experience-console.ts src/experiment-console.ts --format esm,cjs --minify --clean --dts --external react --external react-dom --external @croco/admin-core --external @croco/admin-ops --external @croco/billing-core --external @croco/entitlements-core --external @croco/impersonation-core --external @croco/lifecycle-core --external @croco/metering-core --external @croco/onboarding-core --external @croco/pagination-core --external @croco/problems-core --external @croco/search-core --external @croco/tenant-core",
+    "build": "tsup src/index.ts src/experience-console.ts src/experiment-console.ts --format esm,cjs --minify --clean --dts --external react --external react-dom --external @croco/admin-core --external @croco/admin-ops --external @croco/billing-core --external @croco/entitlements-core --external @croco/impersonation-core --external @croco/lifecycle-core --external @croco/metering-core --external @croco/onboarding-core --external @croco/pagination-core --external @croco/problems-core --external @croco/search-core --external @croco/tenant-core --external @croco/gamification-core",
     "lint": "oxlint .",
     "test": "vitest run",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
@@ -59,6 +59,7 @@
     "@croco/entitlements-core": "workspace:*",
     "@croco/experience-core": "workspace:*",
     "@croco/frontend-react": "workspace:*",
+    "@croco/gamification-core": "workspace:*",
     "@croco/impersonation-core": "workspace:*",
     "@croco/lifecycle-core": "workspace:*",
     "@croco/metering-core": "workspace:*",

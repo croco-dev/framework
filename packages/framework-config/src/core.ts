@@ -7,6 +7,7 @@ import {
   InvalidBooleanEnvProblem,
   RuntimeEnvPresetBoundaryProblem,
 } from "./libs/problems/ConfigProblems";
+import { configDiagnostic } from "./libs/configDiagnostics";
 import { appConfig } from "./presets/app";
 import { databaseConfig } from "./presets/database";
 import { redisConfig } from "./presets/redis";
@@ -158,12 +159,24 @@ export function defineRuntimeEnv<
   }
   assertRuntimeEnvPresetBoundaries(presets, clientPrefix);
 
+  const runtimeInput = { ...process.env };
   const runtimeEnv = createEnv({
     server: mergeRuntimeEnvSection(presets, "server"),
     clientPrefix,
     client: mergeRuntimeEnvSection(presets, "client"),
     shared: mergeRuntimeEnvSection(presets, "shared"),
-    runtimeEnv: { ...process.env },
+    runtimeEnv: runtimeInput,
+    onValidationError: (issues) => {
+      throw new ConfigValidationProblem(
+        issues.map((issue) => {
+          const first = issue.path?.[0];
+          const key = typeof first === "object" ? first.key : first;
+          const path = typeof key === "string" ? key : "<root>";
+          const missing = typeof key === "string" && runtimeInput[key] === undefined;
+          return configDiagnostic(path, issue, missing);
+        }),
+      );
+    },
     emptyStringAsUndefined: true,
     skipValidation: parseOptionalBooleanEnv("SKIP_ENV_VALIDATION"),
   });

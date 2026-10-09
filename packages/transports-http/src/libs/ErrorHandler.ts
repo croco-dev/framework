@@ -58,6 +58,12 @@ export class ErrorHandler {
 
   private handleProblem(problem: Problem, ctx: CrocoHttpContext): Response {
     const body = this.createProblemResponseBody(problem, ctx);
+    if (problem.status >= 500) {
+      this.safelyReportError("Server problem:", {
+        problem,
+        ...this.createFailureMetadata(ctx),
+      });
+    }
     ctx.res.headers["content-type"] = "application/problem+json";
     return ctx.jsonResponse(body, body.status);
   }
@@ -92,7 +98,7 @@ export class ErrorHandler {
   }
 
   private handleGenericError(error: Error, ctx: CrocoHttpContext): Response {
-    this.safelyReportUnhandledError(error);
+    this.safelyReportError("Unhandled error:", error);
 
     return ctx.jsonResponse(
       {
@@ -106,10 +112,10 @@ export class ErrorHandler {
     );
   }
 
-  private safelyReportUnhandledError(error: Error): void {
+  private safelyReportError(message: string, context: Record<string, unknown> | Error): void {
     let loggingResult: unknown;
     try {
-      loggingResult = this.logger.error("Unhandled error:", error);
+      loggingResult = this.logger.error(message, context);
     } catch {
       return;
     }

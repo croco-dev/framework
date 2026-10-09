@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 957,
+  problemCount: 969,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -896,6 +896,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 154,
           column: 11,
           kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CROCO_META_VITE_API_ROUTE_PREFIX_REQUIRED",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#croco-meta-vite-api-route-prefix-required",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/routes/validateApiRoute.ts",
+          line: 5,
+          column: 1,
+          kind: "problem-class",
         },
       ],
     },
@@ -11153,7 +11185,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 1140,
+          line: 1144,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11343,7 +11375,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 1071,
+          line: 1075,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11407,7 +11439,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 1168,
+          line: 1172,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11593,7 +11625,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 1092,
+          line: 1096,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11814,7 +11846,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 1083,
+          line: 1087,
           column: 5,
           kind: "problem-constructor",
         },
@@ -11877,7 +11909,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/engagement-core/src/libs/EngagementService.ts",
-          line: 1113,
+          line: 1117,
           column: 5,
           kind: "problem-constructor",
         },
@@ -16087,6 +16119,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "gamification-core/access-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-access-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/problems.ts",
+          line: 10,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "gamification-core/challenge-access-denied",
       category: "Forbidden",
       status: 403,
@@ -16272,6 +16334,127 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "gamification-core/conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/problems.ts",
+          line: 24,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification-core/invalid-evidence",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-invalid-evidence",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/problems.ts",
+          line: 17,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification-core/invalid-policy",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-invalid-policy",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/problems.ts",
+          line: 3,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification-core/unavailable",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-unavailable",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/problems.ts",
+          line: 31,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "gamification-drizzle/persistence",
       category: "InternalServerError",
       status: 500,
@@ -16300,6 +16483,190 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 4,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "gamification-drizzle/persistence-failure",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#gamification-drizzle-persistence-failure",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-drizzle/src/libs/problems.ts",
+          line: 2,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification/access-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-access-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/MissionContracts.ts",
+          line: 18,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification/conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/MissionContracts.ts",
+          line: 11,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification/console-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-console-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/MissionConsole.ts",
+          line: 17,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "gamification/invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/MissionContracts.ts",
+          line: 4,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification/not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/MissionContracts.ts",
+          line: 25,
+          column: 1,
+          kind: "problem-class",
         },
       ],
     },
@@ -17813,7 +18180,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/build/routeManifest.ts",
-          line: 20,
+          line: 22,
           column: 1,
           kind: "problem-class",
         },
@@ -22217,7 +22584,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-core/src/libs/ContractGraph.ts",
-          line: 163,
+          line: 164,
           column: 5,
           kind: "problem-constructor",
         },
@@ -27614,7 +27981,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 126,
+          line: 127,
           column: 15,
           kind: "problem-factory",
         },
@@ -27846,7 +28213,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 74,
+          line: 75,
           column: 11,
           kind: "problem-factory",
         },
@@ -27980,7 +28347,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/transports-http/src/libs/RouteCompiler.ts",
-          line: 201,
+          line: 206,
           column: 17,
           kind: "problem-factory",
         },

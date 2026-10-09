@@ -106,6 +106,7 @@
         "@croco/experience-drizzle",
         "@croco/features-drizzle",
         "@croco/features-posthog",
+        "@croco/gamification-drizzle",
         "@croco/framework-routes",
         "@croco/frontend-cloudflare",
         "@croco/frontend-problems",

@@ -7,7 +7,8 @@ import {
   type ListExecutionsOptions,
   type ListRunningExecutionsOptions,
 } from "@croco/execution-core";
-import { describe, expect, it } from "vitest";
+import { Problem, ProblemCategory } from "@croco/problems-core";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import {
@@ -35,8 +36,22 @@ import {
   type CampaignExecutionPublisher,
   type CampaignMessageSender,
 } from "../libs/CampaignServices";
-import type { EngagementSendCommand, EngagementSendResult } from "../libs/EngagementService";
-import { defineMessage, type AnyMessage } from "../libs/MessageContracts";
+import {
+  EngagementService,
+  InMemoryMessageRendererResolver,
+  InMemoryRecipientDirectory,
+  RegistryEngagementMessageRenderer,
+  type EngagementSendCommand,
+  type EngagementSendResult,
+} from "../libs/EngagementService";
+import { InMemoryEngagementStore } from "../libs/InMemoryEngagementStore";
+import {
+  defineMessage,
+  MessageRendererRegistry,
+  Renders,
+  type AnyMessage,
+  type MessageRenderer,
+} from "../libs/MessageContracts";
 
 type TrialMember = Readonly<{
   recipient: Readonly<{ tenantId: string; userId: string }>;
@@ -81,6 +96,13 @@ const TrialEnding = defineMessage({
   channels: ["email"],
 });
 
+@Renders(TrialEnding)
+class CampaignTrialRenderer implements MessageRenderer<typeof TrialEnding> {
+  email() {
+    return { subject: "Trial ending", html: "<p>Trial ending</p>", text: "Trial ending" };
+  }
+}
+
 const TrialReminder = defineCampaign({
   id: "trial-reminder",
   version: "2026-09-01",
@@ -108,6 +130,14 @@ function trialMembers(count: number, tenantId = "tenant-1"): readonly TrialMembe
     firstName: `Member ${index}`,
     trialEndsAt: new Date("2026-09-30T00:00:00.000Z"),
   }));
+}
+
+class CampaignDependencyProblem extends Problem {
+  constructor(retryable: boolean) {
+    super("test/dependency-failed", ProblemCategory.InternalServerError, "dependency unavailable", {
+      extensions: { retryable },
+    });
+  }
 }
 
 class RecordingCampaignStore extends InMemoryCampaignStore {
@@ -324,6 +354,130 @@ function createFixture(
 }
 
 describe("CampaignServices", () => {
+  it.each([
+    { boundary: "store", retryable: false, expectedRetryable: false },
+    { boundary: "store", retryable: true, expectedRetryable: true },
+    { boundary: "directory", retryable: false, expectedRetryable: false },
+    { boundary: "directory", retryable: true, expectedRetryable: true },
+    { boundary: "suppression", retryable: false, expectedRetryable: false },
+    { boundary: "suppression", retryable: true, expectedRetryable: true },
+    { boundary: "render", retryable: true, expectedRetryable: false },
+    { boundary: "dispatch", retryable: false, expectedRetryable: false },
+    { boundary: "dispatch", retryable: true, expectedRetryable: true },
+    { boundary: "dispatch", retryable: undefined, expectedRetryable: true },
+  ] as const)(
+    "applies real engagement $boundary retry policy for cause retryable=$retryable",
+    async ({ boundary, retryable, expectedRetryable }) => {
+      const fixture = createFixture(trialMembers(1));
+      const directory = new InMemoryRecipientDirectory([
+        {
+          recipient: { tenantId: "tenant-1", userId: "user-0" },
+          email: { id: "email-0", address: "member@example.com" },
+          push: [],
+        },
+      ]);
+      const renderer = new CampaignTrialRenderer();
+      const registry = new MessageRendererRegistry();
+      registry.registerMessage(TrialEnding);
+      registry.registerRenderer(CampaignTrialRenderer);
+      registry.bootstrap();
+      const resolver = new InMemoryMessageRendererResolver();
+      resolver.register(TrialEnding, renderer);
+      const suppressions = { evaluate: vi.fn(async () => ({ suppressed: false })) };
+      const dispatch = vi.fn(async () => ({ executionId: "notification-1" }));
+      const engagementStore = new InMemoryEngagementStore();
+      const failure =
+        retryable === undefined
+          ? new Error("dependency unavailable")
+          : new CampaignDependencyProblem(retryable);
+      const lookup = vi.spyOn(directory, "resolve");
+      const findDispatch = vi.spyOn(engagementStore, "findByIdentity");
+      const render = vi.spyOn(renderer, "email");
+      switch (boundary) {
+        case "store":
+          findDispatch.mockRejectedValueOnce(failure);
+          break;
+        case "directory":
+          lookup.mockRejectedValueOnce(failure);
+          break;
+        case "suppression":
+          suppressions.evaluate.mockRejectedValueOnce(failure);
+          break;
+        case "render":
+          render.mockImplementationOnce(() => {
+            throw failure;
+          });
+          break;
+        case "dispatch":
+          dispatch.mockRejectedValueOnce(failure);
+          break;
+      }
+      const sender = new EngagementService(
+        directory,
+        new RegistryEngagementMessageRenderer(registry, resolver),
+        { prepareDispatch: () => ({ dispatch }) },
+        suppressions,
+        boundary === "store" ? engagementStore : undefined,
+      );
+      const send = vi.spyOn(sender, "send");
+      const broadcasts = new CampaignBroadcastService(
+        fixture.campaigns,
+        fixture.store,
+        fixture.executionManager,
+        sender,
+      );
+      const { snapshot } = await fixture.snapshots.createSnapshot(TrialReminder, {
+        tenantId: "tenant-1",
+      });
+      const execution = await broadcasts.createExecution(TrialReminder, TENANT_SCOPE, snapshot.id, {
+        pageSize: 1,
+        concurrency: 1,
+        maxAttempts: 2,
+      });
+
+      if (expectedRetryable) {
+        await expect(broadcasts.execute(execution.id)).rejects.toMatchObject({
+          extensions: { retryable: true },
+        });
+        await expect(fixture.executionManager.get(execution.id)).resolves.toMatchObject({
+          status: "retrying",
+          attempts: 1,
+        });
+      } else {
+        await expect(broadcasts.execute(execution.id)).resolves.toMatchObject({
+          execution: { status: "completed", attempts: 1 },
+          progress: { failed: 1, queued: 0, completed: 1 },
+        });
+      }
+      await expect(
+        fixture.store.getMemberOutcome(TENANT_SCOPE, snapshot.id, "subscription-0"),
+      ).resolves.toMatchObject({ status: "failed", retryable: expectedRetryable });
+
+      const result = await broadcasts.execute(execution.id);
+      expect(result.execution).toMatchObject({
+        status: "completed",
+        attempts: expectedRetryable ? 2 : 1,
+      });
+      expect(result.progress).toMatchObject({
+        queued: expectedRetryable ? 1 : 0,
+        failed: expectedRetryable ? 0 : 1,
+        completed: 1,
+        pending: 0,
+      });
+      expect(send).toHaveBeenCalledTimes(expectedRetryable ? 2 : 1);
+      expect(dispatch).toHaveBeenCalledTimes(
+        boundary === "dispatch" ? (expectedRetryable ? 2 : 1) : expectedRetryable ? 1 : 0,
+      );
+      expect(fixture.source.calls).toBe(1);
+      if (expectedRetryable) {
+        expect(send.mock.calls[1]?.[1].key).toBe(send.mock.calls[0]?.[1].key);
+        await expect(
+          fixture.store.getMemberOutcome(TENANT_SCOPE, snapshot.id, "subscription-0"),
+        ).resolves.toMatchObject({ status: "queued" });
+      }
+    },
+  );
+
   it("streams a complete immutable snapshot in bounded chunks and preserves invalid mappings", async () => {
     const members = [...trialMembers(6)];
     members[2] = { ...members[2], invalidData: true };

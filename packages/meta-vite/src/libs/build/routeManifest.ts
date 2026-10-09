@@ -1,4 +1,6 @@
 import { Problem, ProblemCategory } from "@croco/problems-core";
+import { PageRouteValidationError, validatePageRevalidate } from "../routes/validatePageRoute";
+import { validateApiRoute } from "../routes/validateApiRoute";
 
 import type { ServerActionContractIR } from "../actions/serverActions";
 import type { ApiMethod, ApiRouteIR, PageRouteIR, RenderMode } from "../routes/types";
@@ -167,6 +169,10 @@ function createPageRouteEntry(route: PageRouteIR, index: number): MetaVitePageRo
     throw new MetaViteRouteManifestError(route.path);
   }
 
+  if (route.revalidateMs !== undefined) {
+    validatePageRevalidate(route.path, route.revalidateMs);
+  }
+
   return {
     kind: "page",
     order: index,
@@ -207,6 +213,8 @@ function compareStrings(a: string, b: string): number {
 }
 
 function createApiRouteEntry(route: ApiRouteIR, index: number): MetaViteApiRouteManifestEntry {
+  validateApiRoute(route);
+
   return {
     kind: "api",
     order: index,
@@ -249,6 +257,14 @@ function getPageRuntimeCapabilities(route: PageRouteIR): readonly MetaViteRuntim
       return ["fetch", "react-ssr", "isr-cache"];
     case "rsc":
       return ["fetch", "react-ssr"];
+    default: {
+      const unsupportedMode: never = route.mode;
+      throw new PageRouteValidationError(
+        route.path,
+        "CROCO_META_VITE_ROUTE_MODE_UNSUPPORTED",
+        `unsupported render mode '${unsupportedMode}'`,
+      );
+    }
   }
 }
 
@@ -281,5 +297,13 @@ function getPageRuntimeRequirements(route: PageRouteIR): readonly MetaViteRuntim
       ];
     case "ssr":
       return [];
+    default: {
+      const unsupportedMode: never = route.mode;
+      throw new PageRouteValidationError(
+        route.path,
+        "CROCO_META_VITE_ROUTE_MODE_UNSUPPORTED",
+        `unsupported render mode '${unsupportedMode}'`,
+      );
+    }
   }
 }

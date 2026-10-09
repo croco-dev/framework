@@ -1,3 +1,4 @@
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import { describe, expect, it, vi } from "vitest";
 import {
   createEngagementStoreConformanceSuite,
@@ -7,6 +8,14 @@ import {
   InMemoryRecipientDirectory,
   StoreBackedRecipientDirectory,
 } from "../index";
+
+class PersistenceCauseProblem extends Problem {
+  constructor(retryable?: boolean) {
+    super("test/storage-failed", ProblemCategory.InternalServerError, "storage failed", {
+      extensions: retryable === undefined ? {} : { retryable },
+    });
+  }
+}
 
 describe("InMemoryEngagementStore", () => {
   const suite = createEngagementStoreConformanceSuite({
@@ -44,6 +53,53 @@ describe("InMemoryEngagementStore", () => {
 
     expect(caught).toBeInstanceOf(EngagementStoreValidationProblem);
     expect(JSON.stringify(caught)).not.toContain(tokenReference);
+  });
+
+  it.each([
+    { name: "unclassified Error", cause: new Error("storage"), expected: true },
+    {
+      name: "store validation Problem",
+      cause: new EngagementStoreValidationProblem("invalid endpoint"),
+      expected: false,
+    },
+    {
+      name: "nonboolean extension",
+      cause: Object.assign(new Error("storage"), { extensions: { retryable: "false" } }),
+      expected: true,
+    },
+    { name: "unclassified Problem", cause: new PersistenceCauseProblem(), expected: true },
+    { name: "Problem extension true", cause: new PersistenceCauseProblem(true), expected: true },
+    { name: "Problem extension false", cause: new PersistenceCauseProblem(false), expected: false },
+    {
+      name: "extension true",
+      cause: Object.assign(new Error("storage"), { extensions: { retryable: true } }),
+      expected: true,
+    },
+    {
+      name: "extension false",
+      cause: Object.assign(new Error("storage"), { extensions: { retryable: false } }),
+      expected: false,
+    },
+    {
+      name: "top-level true overrides extension false",
+      cause: Object.assign(new Error("storage"), {
+        retryable: true,
+        extensions: { retryable: false },
+      }),
+      expected: true,
+    },
+    {
+      name: "top-level false overrides extension true",
+      cause: Object.assign(new Error("storage"), {
+        retryable: false,
+        extensions: { retryable: true },
+      }),
+      expected: false,
+    },
+  ])("preserves persistence cause classification: $name", ({ cause, expected }) => {
+    const problem = new EngagementPersistenceProblem("save-endpoint", "tenant-1", cause);
+    expect(problem.cause).toBe(cause);
+    expect(problem.extensions?.retryable).toBe(expected);
   });
 
   it("keeps endpoint PII out of persistence Problem serialization", () => {

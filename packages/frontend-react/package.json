@@ -36,7 +36,7 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsup src/index.ts src/experience-slot.ts --format esm,cjs --minify --clean --dts --external react --external react-dom --external @croco/meta-vite --external @croco/problems-core --external @croco/onboarding-core --external @croco/promotions-core --external @croco/referral-core",
+    "build": "tsup src/index.ts src/experience-slot.ts --format esm,cjs --minify --clean --dts --external react --external react-dom --external @croco/meta-vite --external @croco/problems-core --external @croco/onboarding-core --external @croco/promotions-core --external @croco/gamification-core --external @croco/referral-core",
     "test": "vitest run",
     "test:evidence": "pnpm run test --maxWorkers=1 --reporter=json --outputFile=.turbo/croco-test-evidence.json",
     "typecheck": "tsc --noEmit",
@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "@croco/experience-core": "workspace:*",
+    "@croco/gamification-core": "workspace:*",
     "@croco/meta-vite": "workspace:*",
     "@croco/onboarding-core": "workspace:*",
     "@croco/problems-core": "workspace:*",

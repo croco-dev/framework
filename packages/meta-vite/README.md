@@ -70,6 +70,13 @@ const handler = createMetaFetchHandler({
 
 ### 4. SSR Page + API Route (combined)
 
+The `apiRoutes` option accepts `/api` and paths under `/api/`. Registration, route manifest
+creation, and fetch handler creation reject other paths with
+`CROCO_META_VITE_API_ROUTE_PREFIX_REQUIRED`, including the route path and HTTP method.
+A route registered at `/api` can handle `/api/*`; a request to exactly `/api` still follows
+the page handler flow. For paths outside this namespace, use the legacy `apiHandler` or
+provider adapter `apiHandlers.match`.
+
 ```typescript
 import {
   defineRoute,
@@ -331,8 +338,8 @@ Recovery diagnostics:
 Common errors and their diagnostics:
 
 - **Server-only leakage**: Importing `node:fs` or other server-only modules from a `'use client'` boundary produces an explicit error with the module path. This validation scans imported module specifiers and reports which server-only modules leaked across a client boundary.
-- **Invalid route**: Route without a `component` field or with an unsupported mode produces an error. The route path is included in the diagnostic.
-- **Invalid ISR revalidate**: `revalidate` without `mode: 'isr'` is silently ignored. A `revalidate` value that is not a positive integer produces a validation warning.
+- **Invalid route**: Registration rejects a missing or invalid `component` with `CROCO_META_VITE_ROUTE_COMPONENT_REQUIRED` and an unsupported mode with `CROCO_META_VITE_ROUTE_MODE_UNSUPPORTED`. Components must be functions or non-null objects (including React `memo` and `forwardRef` components). Both errors include the route path. Direct manifest creation also rejects unsupported modes.
+- **Invalid ISR revalidate**: Registration rejects NaN, ±Infinity, negative `revalidate`, and values that overflow when converted to milliseconds with `CROCO_META_VITE_ROUTE_REVALIDATE_INVALID` and the route path. Zero and finite positive fractions are allowed. Direct manifest creation rejects non-finite or negative `revalidateMs`. `revalidate` without `mode: 'isr'` remains silently ignored by rendering.
 - **Missing durable ISR configuration**: `evaluateIsrRuntimeSupport({ requireDurable: true })` reports `CROCO_META_VITE_ISR_LOCAL_CACHE_ONLY` for local-only stores and `CROCO_META_VITE_ISR_WORKER_STORE_UNSAFE` for Workers stores that are not explicitly Worker-safe.
 - **RSC rendering failure**: Returns a JSON diagnostic `{ error: 'RSC rendering failed', route: string, detail: string }` with status 500. For `Error` values, `detail` is redacted to `An internal server error occurred`.
 - **Render error (SSR)**: SSR rendering errors fall back to a generic `500 Internal Server Error` HTML response. Error details are not included in the HTML to prevent server-side information leakage.

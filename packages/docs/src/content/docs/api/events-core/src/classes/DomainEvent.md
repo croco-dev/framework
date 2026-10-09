@@ -26,6 +26,7 @@ title: "DomainEvent"
 - [`EntitlementDeniedEvent`](/api/entitlements-core/src/classes/entitlementdeniedevent/)
 - [`EntitlementOverageAllowedEvent`](/api/entitlements-core/src/classes/entitlementoverageallowedevent/)
 - [`EntitlementQuotaExceededEvent`](/api/entitlements-core/src/classes/entitlementquotaexceededevent/)
+- [`MissionCompletedDomainEvent`](/api/gamification-drizzle/src/classes/missioncompleteddomainevent/)
 - [`ImpersonationEndedEvent`](/api/impersonation-core/src/classes/impersonationendedevent/)
 - [`ImpersonationStartedEvent`](/api/impersonation-core/src/classes/impersonationstartedevent/)
 - [`DomainAutoJoinedEvent`](/api/invitation-core/src/classes/domainautojoinedevent/)
