@@ -3,6 +3,12 @@ import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { EnvironmentOptions, Plugin, UserConfig } from "vite";
 
 export type CrocoMetaVitePluginOptions = {
+  /**
+   * Enable the `rsc` Vite environment (real React Flight path). Opt-in:
+   * the default (`false`/omitted) configures only `client` + `ssr` so
+   * consumers without the optional `@vitejs/plugin-rsc` peer keep working.
+   * Pass `{ rsc: true }` only when the peer is installed.
+   */
   rsc?: boolean;
 };
 
@@ -40,8 +46,12 @@ const ENVIRONMENT_CONFIGS: Record<EnvironmentName, EnvironmentOptions> = {
 };
 
 export function crocoMetaVitePlugin(options: CrocoMetaVitePluginOptions = {}): Plugin[] {
+  // `rsc` is opt-in: enabling it unconditionally forces every consumer
+  // (including generated apps without the optional `@vitejs/plugin-rsc` peer)
+  // to fail in `configEnvironment`. Callers that need the real React Flight
+  // path pass `{ rsc: true }` explicitly.
   const environmentNames = ENVIRONMENT_NAMES.filter(
-    (name) => options.rsc !== false || name !== "rsc",
+    (name) => name !== "rsc" || options.rsc === true,
   );
   const environmentStates = new Map<EnvironmentName, EnvironmentState>(
     environmentNames.map((name) => [name, { modules: createVirtualModules(name) }]),
@@ -179,8 +189,11 @@ function assertRscPeerAvailable(): void {
   // required only for the `rsc` Vite environment. `createRequire` keeps the
   // check synchronous (Vite's `configEnvironment` contract) and out of the
   // SSR/client bundle, while the lockfile pins the supported version.
+  // NOTE: the tsup bundle rewrites `import.meta.url` to an empty shim, so
+  // resolve from the consumer root (`process.cwd()` = Vite project root)
+  // instead of the plugin module URL.
   try {
-    createRequire(import.meta.url).resolve("@vitejs/plugin-rsc");
+    createRequire(`${process.cwd()}/package.json`).resolve("@vitejs/plugin-rsc");
   } catch (error: unknown) {
     const reason = error instanceof Error ? error.message : String(error);
     throw new MissingRscPeerProblem(reason);

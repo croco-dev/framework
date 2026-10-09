@@ -38,7 +38,7 @@ pnpm add ioredis
 - **Route Manifest**: `createMetaViteRouteManifestFromRegistry()` emits deterministic build artifacts for page routes, API routes, server actions, component references, revalidation, and runtime capability requirements
 - **Frontend Action Manifest**: `createMetaViteFrontendActionManifestFromRegistry()` emits the shared action manifest for registered server actions, declared Problems, schema references, and invalidation hints
 - **Provider adapters**: Cloudflare Workers, AWS Lambda, Node.js with API-first/page-fallback composition
-- **Vite 6 plugin**: `crocoMetaVitePlugin` with client/ssr/rsc environment configuration
+- **Vite 6 plugin**: `crocoMetaVitePlugin` with client/ssr environment configuration (`rsc` opt-in via `{ rsc: true }` + optional `@vitejs/plugin-rsc` peer)
 
 ## Quick Start
 
@@ -486,7 +486,7 @@ should now read the Problem result shape: `ok === false`, `kind`, RFC 7807 field
 
 | Export                | Type     | Description                                                                    |
 | --------------------- | -------- | ------------------------------------------------------------------------------ |
-| `crocoMetaVitePlugin` | function | Vite 6 plugin that configures client/ssr/rsc environments and virtual modules. |
+| `crocoMetaVitePlugin` | function | Vite 6 plugin that configures client/ssr environments (rsc opt-in) and virtual modules. |
 
 ### Output Contract
 
