@@ -478,7 +478,7 @@ export class CloudinaryProvider extends BaseStorageProvider implements ImageProv
     }
 
     const now = Date.now();
-    const timestamp = Math.floor(now / 1000);
+    const timestamp = Math.floor(now / 1000) + ttl - CLOUDINARY_UPLOAD_SIGNATURE_VALIDITY_SECONDS;
     const signedFields = {
       public_id: resolvePublicId(key),
       timestamp,
