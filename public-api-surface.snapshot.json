@@ -9202,6 +9202,18 @@
               "declarationKind": "const"
             },
             {
+              "name": "PERSONALIZED_CACHE_DIMENSION_ALLOWLIST",
+              "exportKind": "named",
+              "source": "./libs/personalizedCache",
+              "declarationKind": "const"
+            },
+            {
+              "name": "PersonalizedCachePolicyProblem",
+              "exportKind": "named",
+              "source": "./libs/problems/PersonalizedCacheProblems",
+              "declarationKind": "class"
+            },
+            {
               "name": "UnknownCacheInvalidationEventProblem",
               "exportKind": "named",
               "source": "./libs/problems/CacheDecoratorProblems",
@@ -9244,6 +9256,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createPersonalizedCacheKey",
+              "exportKind": "named",
+              "source": "./libs/personalizedCache",
+              "declarationKind": "function"
+            },
+            {
               "name": "defineCacheInvalidationEvent",
               "exportKind": "named",
               "source": "./libs/CacheInvalidationGraph",
@@ -9274,6 +9292,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "definePersonalizedCachePolicy",
+              "exportKind": "named",
+              "source": "./libs/personalizedCache",
+              "declarationKind": "function"
+            },
+            {
               "name": "invalidateCacheForEvent",
               "exportKind": "named",
               "source": "./libs/CacheInvalidationGraph",
@@ -9289,6 +9313,18 @@
               "name": "invalidateCacheTag",
               "exportKind": "named",
               "source": "./libs/CacheInvalidationGraph",
+              "declarationKind": "function"
+            },
+            {
+              "name": "invalidatePersonalizedFragment",
+              "exportKind": "named",
+              "source": "./libs/personalizedCache",
+              "declarationKind": "function"
+            },
+            {
+              "name": "isPersonalizedCacheFresh",
+              "exportKind": "named",
+              "source": "./libs/personalizedCache",
               "declarationKind": "function"
             },
             {
@@ -9483,6 +9519,56 @@
               "name": "InvalidateCacheForEventOptions",
               "exportKind": "named",
               "source": "./libs/CacheInvalidationGraph"
+            },
+            {
+              "name": "PersonalizedCacheDependency",
+              "exportKind": "named",
+              "source": "./libs/personalizedCache"
+            },
+            {
+              "name": "PersonalizedCacheDimensionName",
+              "exportKind": "named",
+              "source": "./libs/personalizedCache"
+            },
+            {
+              "name": "PersonalizedCacheDimensionScope",
+              "exportKind": "named",
+              "source": "./libs/personalizedCache"
+            },
+            {
+              "name": "PersonalizedCacheFreshnessPolicy",
+              "exportKind": "named",
+              "source": "./libs/personalizedCache"
+            },
+            {
+              "name": "PersonalizedCachePolicy",
+              "exportKind": "named",
+              "source": "./libs/personalizedCache"
+            },
+            {
+              "name": "PersonalizedCachePolicyInput",
+              "exportKind": "named",
+              "source": "./libs/personalizedCache"
+            },
+            {
+              "name": "PersonalizedCacheZone",
+              "exportKind": "named",
+              "source": "./libs/personalizedCache"
+            },
+            {
+              "name": "PersonalizedCacheZonePolicyInput",
+              "exportKind": "named",
+              "source": "./libs/personalizedCache"
+            },
+            {
+              "name": "PersonalizedInvalidationScope",
+              "exportKind": "named",
+              "source": "./libs/personalizedCache"
+            },
+            {
+              "name": "ResolvedPersonalizedCacheZonePolicy",
+              "exportKind": "named",
+              "source": "./libs/personalizedCache"
             }
           ]
         }
@@ -25339,6 +25425,12 @@
               "declarationKind": "class"
             },
             {
+              "name": "PersonalizedFragmentProblem",
+              "exportKind": "named",
+              "source": "./libs/isr/personalizedFragments",
+              "declarationKind": "class"
+            },
+            {
               "name": "RenderServer",
               "exportKind": "named",
               "source": "./libs/render/renderServer",
@@ -25567,6 +25659,12 @@
               "declarationKind": "function"
             },
             {
+              "name": "createPrivateInput",
+              "exportKind": "named",
+              "source": "./libs/isr/personalizedFragments",
+              "declarationKind": "function"
+            },
+            {
               "name": "createServerAction",
               "exportKind": "named",
               "source": "./libs/actions/serverActions",
@@ -25627,15 +25725,39 @@
               "declarationKind": "function"
             },
             {
+              "name": "formatPersonalizedInspectEvent",
+              "exportKind": "named",
+              "source": "./libs/isr/personalizedFragments",
+              "declarationKind": "function"
+            },
+            {
+              "name": "hashPersonalizedCacheKey",
+              "exportKind": "named",
+              "source": "./libs/isr/personalizedFragments",
+              "declarationKind": "function"
+            },
+            {
               "name": "head",
               "exportKind": "named",
               "source": "./libs/routes/head",
               "declarationKind": "function"
             },
             {
+              "name": "loadPersonalizedFragments",
+              "exportKind": "named",
+              "source": "./libs/isr/personalizedFragments",
+              "declarationKind": "function"
+            },
+            {
               "name": "prerenderSsgRoutes",
               "exportKind": "named",
               "source": "./libs/build/ssgPrerender",
+              "declarationKind": "function"
+            },
+            {
+              "name": "renderPersonalizedResponse",
+              "exportKind": "named",
+              "source": "./libs/isr/personalizedFragments",
               "declarationKind": "function"
             },
             {
@@ -25907,6 +26029,51 @@
               "name": "PageRouteStreamDefinition",
               "exportKind": "named",
               "source": "./libs/routes/shell"
+            },
+            {
+              "name": "PersonalizedFragmentCacheOptions",
+              "exportKind": "named",
+              "source": "./libs/isr/personalizedFragments"
+            },
+            {
+              "name": "PersonalizedFragmentInspectEvent",
+              "exportKind": "named",
+              "source": "./libs/isr/personalizedFragments"
+            },
+            {
+              "name": "PersonalizedFragmentLoader",
+              "exportKind": "named",
+              "source": "./libs/isr/personalizedFragments"
+            },
+            {
+              "name": "PersonalizedFragmentResult",
+              "exportKind": "named",
+              "source": "./libs/isr/personalizedFragments"
+            },
+            {
+              "name": "PersonalizedFragmentStore",
+              "exportKind": "named",
+              "source": "./libs/isr/personalizedFragments"
+            },
+            {
+              "name": "PersonalizedPrivateInput",
+              "exportKind": "named",
+              "source": "./libs/isr/personalizedFragments"
+            },
+            {
+              "name": "PersonalizedPrivateLoader",
+              "exportKind": "named",
+              "source": "./libs/isr/personalizedFragments"
+            },
+            {
+              "name": "PersonalizedPublicInput",
+              "exportKind": "named",
+              "source": "./libs/isr/personalizedFragments"
+            },
+            {
+              "name": "PersonalizedRenderInput",
+              "exportKind": "named",
+              "source": "./libs/isr/personalizedFragments"
             },
             {
               "name": "RenderMode",

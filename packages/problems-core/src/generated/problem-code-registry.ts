@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 969,
+  problemCount: 971,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -9094,6 +9094,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "cache-core/personalized-cache-policy-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#cache-core-personalized-cache-policy-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cache-core/src/libs/problems/PersonalizedCacheProblems.ts",
+          line: 8,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "cloudflare/images-invalid-ttl",
       category: "InternalServerError",
       status: 500,
@@ -17995,6 +18026,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/lifecycle-core/src/libs/problems/LifecycleProblems.ts",
           line: 314,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "meta-vite/personalized-fragment-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-personalized-fragment-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/isr/personalizedFragmentProblems.ts",
+          line: 9,
           column: 1,
           kind: "problem-class",
         },

@@ -1170,6 +1170,43 @@ describe("CloudinaryProvider", () => {
       expect(Object.values(intent.fields ?? {})).not.toContain(mockConfig.apiSecret);
     });
 
+    it.each([1, 60, 120, 3599, 3600])(
+      "should end the signed upload window by expiresAt for TTL %i",
+      async (ttlInSeconds) => {
+        for (const milliseconds of [0, 999]) {
+          const now = 1_800_000_000_000 + milliseconds;
+          vi.spyOn(Date, "now").mockReturnValue(now);
+
+          const intent = await provider.getUploadIntent("test-key", { ttlInSeconds });
+          const timestamp = intent.fields?.timestamp;
+          const validUntil = (Number(timestamp) + 3600) * 1000;
+
+          expect(intent.expiresAt.getTime()).toBe(now + ttlInSeconds * 1000);
+          expect(validUntil).toBeLessThanOrEqual(intent.expiresAt.getTime());
+          expect(validUntil).toBeGreaterThan(now);
+          expect(Number(timestamp)).toBeLessThanOrEqual(Math.floor(now / 1000));
+          expect(intent.fields?.signature).toBe(
+            createHash("sha1")
+              .update(`public_id=test-key&timestamp=${timestamp}${mockConfig.apiSecret}`)
+              .digest("hex"),
+          );
+        }
+      },
+    );
+
+    it("should apply the configured TTL to the signed upload window", async () => {
+      const now = 1_800_000_000_999;
+      vi.spyOn(Date, "now").mockReturnValue(now);
+      const configuredProvider = new CloudinaryProvider({ ...mockConfig, ttl: 60 });
+
+      const intent = await configuredProvider.getUploadIntent("test-key");
+
+      expect(intent.expiresAt.getTime()).toBe(now + 60 * 1000);
+      expect((Number(intent.fields?.timestamp) + 3600) * 1000).toBe(
+        Math.floor(now / 1000) * 1000 + 60 * 1000,
+      );
+    });
+
     it("should apply ttlInSeconds option to upload intent", async () => {
       const now = Date.now();
       vi.spyOn(Date, "now").mockReturnValue(now);

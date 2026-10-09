@@ -13,8 +13,10 @@
   "dependencies": {
     "@croco/admin-core": "workspace:*",
     "@croco/admin-react": "workspace:*",
+    "@croco/cache-core": "workspace:*",
     "@croco/credits-core": "workspace:*",
     "@croco/frontend-react": "workspace:*",
+    "@croco/meta-vite": "workspace:*",
     "@croco/problems-core": "workspace:*",
     "@croco/promotions-core": "workspace:*",
     "@croco/promotions-drizzle": "workspace:*",

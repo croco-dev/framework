@@ -44,6 +44,12 @@
       "owner": "repo:examples"
     },
     {
+      "path": "examples/promotion-offers/src/tests/personalized-pdp.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/promotion-offers/src/tests/promotion-offers.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -1125,6 +1131,12 @@
     },
     {
       "path": "packages/cache-core/src/tests/InMemoryCacheStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/cache-core"
+    },
+    {
+      "path": "packages/cache-core/src/tests/PersonalizedCache.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/cache-core"
@@ -3291,6 +3303,12 @@
     },
     {
       "path": "packages/meta-vite/src/tests/output-contract.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
+      "path": "packages/meta-vite/src/tests/personalized-fragments.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/meta-vite"
