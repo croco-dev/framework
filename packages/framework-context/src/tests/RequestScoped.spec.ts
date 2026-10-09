@@ -262,4 +262,69 @@ describe("request scope cleanup failure", () => {
     }
     expectCleanupProblem(failure, ["string cleanup failure"]);
   });
+
+  const nonCoercibleFailures = [
+    { name: "null-prototype object", create: () => Object.create(null) },
+    {
+      name: "object with throwing primitive conversion",
+      create: () => ({
+        [Symbol.toPrimitive]() {
+          throw new Error("primitive conversion failed");
+        },
+      }),
+    },
+  ];
+
+  it.each(nonCoercibleFailures)(
+    "reports cleanup as 500 for a $name after success",
+    ({ create }) => {
+      const resolveProviders = installRequestDisposables([
+        () => {
+          throw create();
+        },
+      ]);
+      let failure: unknown;
+      try {
+        Context.run({ requestId: "non-coercible-success" }, resolveProviders);
+      } catch (error) {
+        failure = error;
+      }
+      expectCleanupProblem(failure, ["Non-Error object thrown during request provider cleanup."]);
+    },
+  );
+
+  for (const mode of ["sync", "async"] as const) {
+    it.each(nonCoercibleFailures)(
+      `preserves ${mode} primary failure when cleanup throws a $name`,
+      async ({ create }) => {
+        const resolveProviders = installRequestDisposables([
+          () => {
+            throw create();
+          },
+        ]);
+        const primary = new Error("handler failed");
+        const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+        const callback = () => {
+          resolveProviders();
+          throw primary;
+        };
+        let failure: unknown;
+        try {
+          await Context.run(
+            { requestId: "non-coercible-failure" },
+            mode === "async" ? async () => callback() : callback,
+          );
+        } catch (error) {
+          failure = error;
+        }
+        expect(failure).toBe(primary);
+        expect(consoleError).toHaveBeenCalledTimes(1);
+        const details = consoleError.mock.calls[0][1];
+        expect(details.primaryError).toBe(primary);
+        expectCleanupProblem(details.cleanupFailure, [
+          "Non-Error object thrown during request provider cleanup.",
+        ]);
+      },
+    );
+  }
 });

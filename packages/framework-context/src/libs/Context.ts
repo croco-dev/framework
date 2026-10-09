@@ -110,7 +110,12 @@ export class Context {
         cause: failures.find((error): error is Error => error instanceof Error),
         extensions: {
           cleanupFailures: failures.map((error) => ({
-            message: error instanceof Error ? error.message : String(error),
+            message:
+              error instanceof Error
+                ? error.message
+                : error !== null && (typeof error === "object" || typeof error === "function")
+                  ? `Non-Error ${typeof error} thrown during request provider cleanup.`
+                  : String(error),
           })),
         },
       },
