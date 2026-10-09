@@ -284,8 +284,8 @@ healthChecks.registerReadiness("database", async () => ({ status: "up" }));
 ## Operational Endpoints
 
 `/health`, `/health/live`, `/health/ready`, `/ready`, `/metrics`는 내장 GET endpoint의 예약 경로입니다.
-현재 설정에서 diagnostics 또는 dev inspector가 켜져 있으면 `/diagnostics`, `/health/diagnostics`,
-`/dev/inspector`도 예약됩니다. 같은 경로에 컨트롤러의 `GET` 또는 `ALL` 라우트를 선언하면
+현재 설정에서 diagnostics가 켜져 있으면 `/diagnostics`와 `/health/diagnostics`도 예약됩니다.
+Dev inspector가 켜져 있으면 `/dev/inspector`가 예약됩니다. 같은 경로에 컨트롤러의 `GET` 또는 `ALL` 라우트를 선언하면
 부팅이 `transports-http/duplicate-route-definition` Problem으로 실패하며 충돌 경로와 컨트롤러 메서드를
 알려 줍니다. diagnostics·dev inspector가 꺼져 있으면 해당 경로를 사용할 수 있습니다.
 `POST` 등 다른 HTTP 메서드와 `/ops/metrics` 같은 별도 경로는 영향을 받지 않습니다.

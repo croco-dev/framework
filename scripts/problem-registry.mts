@@ -4187,7 +4187,7 @@ const recoveryMetadataByCode = {
     cause:
       "REST controller routes collide with each other or with an enabled built-in operational GET endpoint.",
     userAction:
-      "Use an application build where every route decorator has a unique HTTP method and path combination.",
+      "Use an application build where controller routes have unique HTTP method and path combinations and GET or ALL routes avoid enabled built-in operational paths.",
     operatorAction:
       "Inspect the duplicate-route diagnostic for the conflicting controller method and the existing controller route or built-in operational endpoint, then rename the controller path or change its HTTP method.",
     retryability: "not-retryable",

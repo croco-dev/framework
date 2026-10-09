@@ -17184,7 +17184,7 @@ Sources:
 - Redaction policy: `operator-only`
 - Lifecycle: `active`
 - Cause: REST controller routes collide with each other or with an enabled built-in operational GET endpoint.
-- User action: Use an application build where every route decorator has a unique HTTP method and path combination.
+- User action: Use an application build where controller routes have unique HTTP method and path combinations and GET or ALL routes avoid enabled built-in operational paths.
 - Operator action: Inspect the duplicate-route diagnostic for the conflicting controller method and the existing controller route or built-in operational endpoint, then rename the controller path or change its HTTP method.
 - Telemetry: `croco.problem.error` (error) with `problem.code`, `problem.category`, `problem.status`
 
