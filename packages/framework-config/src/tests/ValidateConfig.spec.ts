@@ -20,6 +20,16 @@ describe("validateConfig", () => {
     process.env = originalEnv;
   });
 
+  it("preserves multiple-of diagnostic codes", () => {
+    expect(() =>
+      validateConfig(z.object({ PORT: z.coerce.number().multipleOf(2) }), { PORT: "3" }),
+    ).toThrow(
+      expect.objectContaining({
+        detail: "Config validation failed: PORT: not_multiple_of: Invalid value",
+      }),
+    );
+  });
+
   describe("with valid config", () => {
     it("should return validated config when all required fields are present", () => {
       const schema = z.object({

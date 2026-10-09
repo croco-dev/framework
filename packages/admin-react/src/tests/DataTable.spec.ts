@@ -6,12 +6,15 @@ import { describe, expect, it } from "vitest";
 import { AdminDataTable } from "../libs/DataTable";
 import {
   createAdminDataTableListResult,
+  createAdminDataTableListResultFromCursorPage,
   createAdminDataTableListResultFromOffsetPage,
   createAdminDataTableListResultFromSearchResult,
   createAdminDataTableState,
 } from "../libs/dataTableSnapshot";
 import type {
   AdminDataTableListQuery,
+  AdminDataTablePageChangeEvent,
+  AdminDataTablePaginationSummary,
   AdminDataTableResource,
   AdminDataTableState,
 } from "../libs/dataTableTypes";
@@ -406,5 +409,121 @@ describe("AdminDataTable", () => {
 
     expect(duplicateState.problem.code).toBe("admin-table/invalid-row-id");
     expect(duplicateState.problem.detail).toContain("duplicate 'user-1'");
+  });
+});
+
+describe("AdminDataTable cursor pagination", () => {
+  const page = {
+    data: generatedClientUsers,
+    hasMore: true,
+    hasPrevious: true,
+    nextCursor: "cursor-next",
+    prevCursor: "cursor-prev",
+  };
+
+  it("requires cursor helper options and a declared limit at compile time and runtime", () => {
+    const results = [
+      // @ts-expect-error cursor pages must declare the requested page size
+      createAdminDataTableListResultFromCursorPage(page),
+      // @ts-expect-error cursor helper options must include the requested page size
+      createAdminDataTableListResultFromCursorPage(page, {}),
+    ];
+    // @ts-expect-error cursor summaries must declare the requested page size
+    const pagination: AdminDataTablePaginationSummary = {
+      mode: "cursor",
+      hasMore: true,
+      nextCursor: "cursor-next",
+    };
+    expect(pagination.mode).toBe("cursor");
+
+    for (const result of results) {
+      expect(result.problem?.code).toBe("admin-table/invalid-pagination-limit");
+      const state = createAdminDataTableState({
+        grantedPermissions: ["users:read"],
+        resource: usersResource,
+        result,
+      });
+      expect(state.kind).toBe("problem");
+    }
+  });
+
+  it.each([undefined, 0, -1, 0.5, 1.5, Number.NaN, Infinity, -Infinity])(
+    "rejects invalid cursor limit %s at every state input boundary",
+    (limit) => {
+      const pagination = {
+        mode: "cursor",
+        hasMore: true,
+        hasPrevious: true,
+        limit,
+        nextCursor: "cursor-next",
+        prevCursor: "cursor-prev",
+      } as AdminDataTablePaginationSummary;
+      const helperResult = createAdminDataTableListResultFromCursorPage(page, {
+        limit: limit as number,
+      });
+      expect(helperResult.problem?.code).toBe("admin-table/invalid-pagination-limit");
+      const inputs = [
+        { result: helperResult },
+        { result: { rows: page.data, source: "manual" as const, pagination } },
+        { rows: page.data, pagination },
+      ];
+      for (const input of inputs) {
+        const state = createAdminDataTableState({
+          ...input,
+          grantedPermissions: ["users:read"],
+          resource: usersResource,
+        });
+        expect(state.kind).toBe("problem");
+        if (state.kind !== "problem") {
+          continue;
+        }
+        expect(state.problem.code).toBe("admin-table/invalid-pagination-limit");
+        const events: AdminDataTablePageChangeEvent<AdminUser>[] = [];
+        const buttons = collectElements(
+          AdminDataTable({ onPageChange: (event) => events.push(event), state }),
+          "button",
+        );
+        expect(
+          buttons.filter((button) => ["Previous", "Next"].includes(String(button.props.children))),
+        ).toHaveLength(0);
+        expect(events).toEqual([]);
+      }
+    },
+  );
+
+  it.each([
+    { count: 25, limit: 25 },
+    { count: 7, limit: 25 },
+    { count: 0, limit: 25 },
+    { count: 1, limit: 1 },
+    { count: 0, limit: 1 },
+  ])("preserves limit $limit in both directions with $count rendered rows", ({ count, limit }) => {
+    const rows: AdminUser[] = Array.from({ length: count }, (_, index) => ({
+      createdAt: generatedAt,
+      email: `cursor-user-${index}@example.com`,
+      id: `cursor-user-${index}`,
+      name: `User ${index}`,
+      status: "active",
+    }));
+    const state = createAdminDataTableState({
+      grantedPermissions: ["users:read"],
+      resource: usersResource,
+      result: createAdminDataTableListResultFromCursorPage({ ...page, data: rows }, { limit }),
+    });
+    expect(state.kind).toBe(count === 0 ? "empty" : "ready");
+    const events: AdminDataTablePageChangeEvent<AdminUser>[] = [];
+    const buttons = collectElements(
+      AdminDataTable({ onPageChange: (event) => events.push(event), state }),
+      "button",
+    );
+    for (const label of ["Previous", "Next"]) {
+      const button = findElementByText(buttons, label);
+      expect(button.props.disabled).toBe(false);
+      invokeHandler(button, "onClick");
+    }
+    expect(events.map((event) => event.pagination)).toEqual([
+      { cursor: "cursor-prev", direction: "backward", limit, mode: "cursor" },
+      { cursor: "cursor-next", direction: "forward", limit, mode: "cursor" },
+    ]);
   });
 });

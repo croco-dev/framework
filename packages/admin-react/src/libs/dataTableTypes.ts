@@ -117,7 +117,7 @@ export type AdminDataTablePaginationSummary =
   | {
       readonly hasMore: boolean;
       readonly hasPrevious?: boolean;
-      readonly limit?: number;
+      readonly limit: number;
       readonly mode: "cursor";
       readonly nextCursor: string | null;
       readonly prevCursor?: string | null;
