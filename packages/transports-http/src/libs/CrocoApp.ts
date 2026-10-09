@@ -54,7 +54,11 @@ import {
   type SecurityMiddlewareCapability,
   type SecurityMiddlewareExportName,
 } from "./middleware/SecurityMiddlewareMarker";
-import { type CompileOptions, RouteCompiler } from "./RouteCompiler";
+import {
+  assertNoOperationalRouteConflicts,
+  type CompileOptions,
+  RouteCompiler,
+} from "./RouteCompiler";
 import { type RuntimeContextInit, withRuntimeContextEnv } from "./runtimeContext";
 import type {
   AppConfig,
@@ -236,20 +240,7 @@ export class CrocoApp {
       ...(this.config.globalPipes === undefined ? {} : { globalPipes: this.config.globalPipes }),
     });
 
-    for (const route of this.routes) {
-      const method = route.method.toUpperCase();
-      if ((method === "GET" || method === "ALL") && systemRoutes.has(route.path)) {
-        throw ProblemFactory.internalServerError(
-          "transports-http/duplicate-route-definition",
-          [
-            `Duplicate route definition detected for ${method} ${route.path}.`,
-            `Existing route: built-in operational endpoint (GET ${route.path}).`,
-            `Conflicting route: ${route.pipelineGraphConfig?.handlerLabel} (${method} ${route.path}).`,
-            "Recovery: give the controller route a unique HTTP method or path before starting the HTTP transport.",
-          ].join(" "),
-        );
-      }
-    }
+    assertNoOperationalRouteConflicts(this.routes, systemRoutes);
 
     for (const [path, handler] of systemRoutes) {
       this.hono.get(path, handler);

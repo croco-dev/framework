@@ -1494,7 +1494,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:326:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:336:11` (problem-factory)
 
 <a id="croco-http-security-002"></a>
 
@@ -17136,7 +17136,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:368:11` (problem-factory)
+- `packages/transports-http/src/libs/CrocoApp.ts:378:11` (problem-factory)
 
 <a id="transports-http-diagnostics-invalid-configuration"></a>
 
@@ -17190,7 +17190,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/RouteCompiler.ts:127:15` (problem-factory)
+- `packages/transports-http/src/libs/RouteCompiler.ts:331:10` (problem-factory)
 
 <a id="transports-http-graceful-shutdown-configuration"></a>
 
@@ -17388,7 +17388,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/RouteCompiler.ts:206:17` (problem-factory)
+- `packages/transports-http/src/libs/RouteCompiler.ts:205:17` (problem-factory)
 
 <a id="transports-http-runtime-capability-invalid"></a>
 
@@ -17424,7 +17424,7 @@ Sources:
 
 Sources:
 
-- `packages/transports-http/src/libs/CrocoApp.ts:99:55` (problem-metadata)
+- `packages/transports-http/src/libs/CrocoApp.ts:103:55` (problem-metadata)
 
 <a id="transports-http-unsupported-media-type"></a>
 
