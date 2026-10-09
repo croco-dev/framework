@@ -79,6 +79,66 @@ export function createCreditLedgerStoreConformanceSuite(
         },
       },
       {
+        name: "isolates idempotency keys by tenant while preserving replay and wallet conflicts",
+        run: async () => {
+          const service = await createService();
+          const accountIds = new Set<string>();
+
+          for (const tenantId of ["tenant-key-scope-a", "tenant-key-scope-b"]) {
+            const openInput = {
+              tenantId,
+              walletKey: "first",
+              idempotencyKey: "open-tenant-key-scope",
+              reference: reference("open-tenant-key-scope"),
+            };
+            const opened = await service.openAccount(openInput);
+            assert.equal(opened.replayed, false);
+            assert.equal(opened.account.tenantId, tenantId);
+            assert.equal(accountIds.has(opened.account.id), false);
+            accountIds.add(opened.account.id);
+            const openReplay = await service.openAccount(openInput);
+            assert.equal(openReplay.replayed, true);
+            assert.equal(openReplay.account.id, opened.account.id);
+            await assert.rejects(
+              () => service.openAccount({ ...openInput, walletKey: "second" }),
+              CreditDuplicateConflictProblem,
+            );
+
+            const second = await service.openAccount({
+              ...openInput,
+              walletKey: "second",
+              idempotencyKey: "open-tenant-key-scope-second",
+            });
+            const grantInput = {
+              accountId: opened.account.id,
+              amount: creditAmount("10"),
+              idempotencyKey: "grant-tenant-key-scope",
+              reference: reference("grant-tenant-key-scope"),
+            };
+            const granted = await service.grantCredits(grantInput);
+            assert.equal(granted.replayed, false);
+            const balance = await service.getBalance(opened.account.id);
+            const secondBalance = await service.getBalance(second.account.id);
+            assert.equal(balance.available, "10");
+            assert.equal(secondBalance.available, "0");
+            const grantReplay = await service.grantCredits(grantInput);
+            assert.equal(grantReplay.replayed, true);
+            assert.deepEqual(grantReplay.transactions, granted.transactions);
+            for (const conflicting of [
+              { ...grantInput, amount: creditAmount("11") },
+              { ...grantInput, accountId: second.account.id },
+            ]) {
+              await assert.rejects(
+                () => service.grantCredits(conflicting),
+                CreditDuplicateConflictProblem,
+              );
+            }
+            assert.deepEqual(await service.getBalance(opened.account.id), balance);
+            assert.deepEqual(await service.getBalance(second.account.id), secondBalance);
+          }
+        },
+      },
+      {
         name: "rejects an idempotency conflict matrix across semantic command fields",
         run: async () => {
           const service = await createService();

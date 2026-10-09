@@ -12,6 +12,7 @@ import {
 import { CreditLedgerStore } from "./CreditLedgerStore";
 import {
   cloneCreditLedgerEventIntent,
+  createCreditIdempotencyIdentity,
   createCreditLedgerEventIntent,
   type CreditLedgerEventIntent,
   type ClaimedCreditLedgerEventIntent,
@@ -274,8 +275,13 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
 
   async execute(command: CreditLedgerCommand): Promise<CreditCommandResult> {
     this.validateCommand(command);
+    const tenantId =
+      command.operation === "open"
+        ? command.tenantId
+        : this.requireAccount(command.accountId).account.tenantId;
+    const idempotencyIdentity = createCreditIdempotencyIdentity(tenantId, command.idempotencyKey);
     const fingerprint = stableSerialize(semanticCommand(command));
-    const existing = this.idempotency.get(command.idempotencyKey);
+    const existing = this.idempotency.get(idempotencyIdentity);
     if (existing) {
       if (existing.fingerprint !== fingerprint) {
         throw new CreditDuplicateConflictProblem(command.idempotencyKey);
@@ -288,7 +294,7 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
       command.operation === "open"
         ? this.openAccount(command)
         : this.executeOnAccountAtomically(this.requireAccount(command.accountId), command);
-    this.idempotency.set(command.idempotencyKey, {
+    this.idempotency.set(idempotencyIdentity, {
       fingerprint,
       result: cloneResult(result),
     });
