@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { RbacEngine } from "@croco/auth-core";
+import { RbacEngine, RoleRegistry } from "@croco/auth-core";
 import type { AuthProvider } from "@croco/auth-core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { BetterAuthFactory } from "../libs/BetterAuthFactory";
@@ -206,6 +206,83 @@ describe("BetterAuthProvider", () => {
       expect(Array.isArray(result?.permissions)).toBe(true);
     });
 
+    it.each([
+      ["admin,support", ["admin", "support"]],
+      ["admin, support", ["admin", "support"]],
+      ["admin,", ["admin"]],
+      [" , admin, ,support,admin, ", ["admin", "support"]],
+      ["admin", ["admin"]],
+      [" , ", []],
+      [undefined, []],
+      [
+        ["admin,support", "member", 42],
+        ["admin,support", "member"],
+      ],
+    ])("should normalize the trusted singular role %j to %j", async (role, roles) => {
+      provider = new BetterAuthProvider(
+        createMockBetterAuthFactory({ user: { id: "user-roles", role } }),
+      );
+
+      expect((await provider.authenticate(createMockRequest()))?.roles).toEqual(roles);
+    });
+
+    it("should merge singular roles without splitting plural roles or permission claims", async () => {
+      provider = new BetterAuthProvider(
+        createMockBetterAuthFactory({
+          user: {
+            id: "user-claims",
+            roles: ["member", "admin", "literal,role"],
+            role: "admin, support,member",
+            permissions: "project:read,project:write",
+            permission: ["tickets:read,tickets:write", "project:read,project:write"],
+          },
+        }),
+        { trustedUserFields: ["roles", "permissions", "permission"] },
+      );
+
+      const user = await provider.authenticate(createMockRequest());
+      expect(user?.roles).toEqual(["member", "admin", "literal,role", "support"]);
+      expect(user?.permissions).toEqual([
+        "project:read,project:write",
+        "tickets:read,tickets:write",
+      ]);
+    });
+
+    it("should grant each admin plugin role's permissions", async () => {
+      provider = new BetterAuthProvider(
+        createMockBetterAuthFactory({ user: { id: "user-rbac", role: "admin,support" } }),
+      );
+      const registry = new RoleRegistry();
+      registry.register({ name: "admin", permissions: ["users:manage"] });
+      registry.register({ name: "support", permissions: ["tickets:read"] });
+      const rbac = new RbacEngine(registry);
+      const user = await provider.authenticate(createMockRequest());
+
+      expect(user).not.toBeNull();
+      if (!user) throw new Error("Expected an authenticated user");
+      expect(rbac.hasPermission(user, "users:manage")).toBe(true);
+      expect(rbac.hasPermission(user, "tickets:read")).toBe(true);
+      expect(rbac.hasPermission(user, "billing:manage")).toBe(false);
+    });
+
+    it("should normalize explicitly trusted metadata roles while ignoring untrusted roles", async () => {
+      provider = new BetterAuthProvider(
+        createMockBetterAuthFactory({
+          user: {
+            id: "user-metadata",
+            serverClaims: { role: " support, member, " },
+            publicMetadata: { role: "admin,owner" },
+          },
+        }),
+        { trustedMetadataKeys: ["serverClaims"] },
+      );
+
+      expect((await provider.authenticate(createMockRequest()))?.roles).toEqual([
+        "support",
+        "member",
+      ]);
+    });
+
     it("should preserve roles and permissions from user fields", async () => {
       const mockSession = {
         user: {
@@ -232,7 +309,7 @@ describe("BetterAuthProvider", () => {
       async (source) => {
         const claims = {
           roles: ["injected-admin"],
-          role: "injected-owner",
+          role: "injected-owner,injected-admin",
           permissions: ["injected:*"],
           permission: "injected:write",
           tenantId: "injected-tenant",

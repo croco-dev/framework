@@ -61,6 +61,10 @@ const user = await provider.authenticate(request);
 #### 권한 claim 신뢰 설정과 마이그레이션
 
 기본 설정은 Better Auth admin plugin이 관리하는 최상위 `user.role`만 권한 claim으로 신뢰합니다.
+신뢰한 단수 `role` 문자열은 쉼표로 나누고 앞뒤 공백과 빈 값을 제거합니다. 예를 들어
+`role: "admin, support"`는 `AuthUser.roles`의 `["admin", "support"]`로 변환됩니다.
+`roles`와 합칠 때 중복 역할은 제거하며, `roles` 배열과 `permissions`·`permission` claim의 문자열은
+쉼표로 나누지 않습니다.
 그 밖의 최상위 claim은 `trustedUserFields`에 명시해야 합니다. `trustedMetadataKeys`의 기본값은
 `[]`이며, `metadata`, `userMetadata`, `publicMetadata`, `privateMetadata`, `rbac` 등 중첩 객체의
 claim은 기본적으로 권한·테넌트 매핑에서 제외됩니다.
