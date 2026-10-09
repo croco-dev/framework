@@ -235,7 +235,7 @@ SDK 자체가 종료를 거부해 `TELEMETRY_RUNTIME_ERROR`가 발생한 경우�
 - `TelemetryRuntime`: `init`, `forceFlush`, `shutdown`, `isInitialized`, `isEnabled`, `getConfig`
 - `TelemetryDiagnosticsProvider`: optional/required telemetry 상태와 초기화 실패 진단
 - `lambdaPreset`: Lambda 환경 기본 설정 생성
-- `ProbabilitySampler`: 확률 기반 샘플링 구현체
+- `ProbabilitySampler`: 확률 기반 샘플링 구현체. 유효한 부모 span context가 있으면 sampled 여부와 관계없이 부모 결정을 따르고, 확률 판단은 부모가 없는 root span에만 적용
 - 자동 계측: `normalizeAutoInstrumentationConfig`, `LAMBDA_DEFAULT_MODULES`, `NODE_DEFAULT_MODULES`
 - Problem: `OtlpEndpointRequiredProblem`, `SamplerProblem`, `TelemetryAutoInstrumentationProblem`,
   `TelemetryBatchConfigurationProblem`, `TelemetryShutdownTimeoutInvalidProblem`, `TelemetryShutdownTimeoutProblem`
