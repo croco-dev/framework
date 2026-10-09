@@ -23,7 +23,7 @@ import {
   type Constructor,
 } from "@croco/protocols-rest";
 import type { Http2Bindings, HttpBindings } from "@hono/node-server";
-import { type Context, Hono } from "hono";
+import { type Context, type Handler, Hono } from "hono";
 import { getMimeType } from "hono/utils/mime";
 import { CrocoLambdaAdapter, type LambdaHandlerOptions } from "./CrocoLambdaAdapter";
 import { CrocoRouteRegistrar } from "./CrocoRouteRegistrar";
@@ -213,7 +213,7 @@ export class CrocoApp {
     this.restoreControllerRegistrations();
     const diValidationMode = this.validateDiBootstrapContract();
 
-    this.registerSystemRoutes();
+    const systemRoutes = this.createSystemRoutes();
 
     const compiler = new RouteCompiler(
       this.logger,
@@ -235,6 +235,25 @@ export class CrocoApp {
         : { globalFilters: this.config.globalFilters }),
       ...(this.config.globalPipes === undefined ? {} : { globalPipes: this.config.globalPipes }),
     });
+
+    for (const route of this.routes) {
+      const method = route.method.toUpperCase();
+      if ((method === "GET" || method === "ALL") && systemRoutes.has(route.path)) {
+        throw ProblemFactory.internalServerError(
+          "transports-http/duplicate-route-definition",
+          [
+            `Duplicate route definition detected for ${method} ${route.path}.`,
+            `Existing route: built-in operational endpoint (GET ${route.path}).`,
+            `Conflicting route: ${route.pipelineGraphConfig?.handlerLabel} (${method} ${route.path}).`,
+            "Recovery: give the controller route a unique HTTP method or path before starting the HTTP transport.",
+          ].join(" "),
+        );
+      }
+    }
+
+    for (const [path, handler] of systemRoutes) {
+      this.hono.get(path, handler);
+    }
 
     const registrationRoutes = [...this.routes].sort(compareRoutePathSpecificity);
 
@@ -491,15 +510,16 @@ export class CrocoApp {
     return "enforce";
   }
 
-  private registerSystemRoutes(): void {
-    this.hono.get("/health", async (c) => {
+  private createSystemRoutes(): ReadonlyMap<string, Handler> {
+    const routes = new Map<string, Handler>();
+    routes.set("/health", async (c) => {
       const result = sanitizeHealthCheckResult(
         await this.healthCheckRegistry.check({ signal: c.req.raw.signal }),
       );
       return c.json(result, result.status === "up" ? 200 : 503);
     });
 
-    this.hono.get("/health/live", (c) => c.json({ status: "ok" }, 200));
+    routes.set("/health/live", (c) => c.json({ status: "ok" }, 200));
 
     const readinessHandler = async (c: Context) => {
       if (isGracefulShutdownActive(this.config.middlewares)) {
@@ -514,8 +534,8 @@ export class CrocoApp {
       return c.json(result, result.status === "up" ? 200 : 503);
     };
 
-    this.hono.get("/health/ready", readinessHandler);
-    this.hono.get("/ready", readinessHandler);
+    routes.set("/health/ready", readinessHandler);
+    routes.set("/ready", readinessHandler);
 
     const diagnosticsPolicy = resolveDiagnosticsEndpointPolicy(this.config.diagnostics);
     if (diagnosticsPolicy.exposure !== "off") {
@@ -525,7 +545,7 @@ export class CrocoApp {
       const collector = this.diagnosticsCollector;
 
       const registerDiagnosticsRoute = (path: string): void => {
-        this.hono.get(path, async (c) => {
+        routes.set(path, async (c) => {
           if (!(await authorizeDiagnosticsRequest(c, diagnosticsPolicy))) {
             return c.json({ error: "Forbidden" }, 403, { "Cache-Control": "no-store" });
           }
@@ -547,7 +567,7 @@ export class CrocoApp {
       this.routeRegistrar.setRuntimeInspector(inspector);
       this.explicitHeadRouteRegistrar.setRuntimeInspector(inspector);
 
-      this.hono.get(DEV_INSPECTOR_ENDPOINT_PATH, async (c) => {
+      routes.set(DEV_INSPECTOR_ENDPOINT_PATH, async (c) => {
         if (!(await authorizeDevInspectorRequest(c, devInspectorPolicy))) {
           return c.json({ error: "Forbidden" }, 403, { "Cache-Control": "no-store" });
         }
@@ -556,13 +576,14 @@ export class CrocoApp {
       });
     }
 
-    this.hono.get(METRICS_ENDPOINT_PATH, (c) =>
+    routes.set(METRICS_ENDPOINT_PATH, (c) =>
       c.json(
         createOperationalMetricsResponse(this.healthCheckRegistry.getRegisteredCheckCount()),
         200,
         { "Cache-Control": "no-store" },
       ),
     );
+    return routes;
   }
 
   private recordDiagnosticsError(error: unknown, status: number): void {

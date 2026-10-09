@@ -283,6 +283,13 @@ healthChecks.registerReadiness("database", async () => ({ status: "up" }));
 
 ## Operational Endpoints
 
+`/health`, `/health/live`, `/health/ready`, `/ready`, `/metrics`는 내장 GET endpoint의 예약 경로입니다.
+현재 설정에서 diagnostics 또는 dev inspector가 켜져 있으면 `/diagnostics`, `/health/diagnostics`,
+`/dev/inspector`도 예약됩니다. 같은 경로에 컨트롤러의 `GET` 또는 `ALL` 라우트를 선언하면
+부팅이 `transports-http/duplicate-route-definition` Problem으로 실패하며 충돌 경로와 컨트롤러 메서드를
+알려 줍니다. diagnostics·dev inspector가 꺼져 있으면 해당 경로를 사용할 수 있습니다.
+`POST` 등 다른 HTTP 메서드와 `/ops/metrics` 같은 별도 경로는 영향을 받지 않습니다.
+
 `createApp()`는 별도 컨트롤러 없이 운영 endpoint를 등록합니다. Health와 readiness 실행은
 `@croco/health-core`의 `HealthCheckService`를 통해 수행되며, `HealthCheckRegistry`는 generic health와
 readiness를 독립된 이름 공간으로 등록하는 adapter입니다. `/health`는 `register()`로 등록한 체크를,
