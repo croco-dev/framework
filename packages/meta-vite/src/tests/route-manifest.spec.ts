@@ -18,7 +18,7 @@ import { createServerAction, createServerActionRegistry } from "../libs/actions/
 import { defineApiRoute } from "../libs/routes/defineApiRoute";
 import { defineRoute } from "../libs/routes/defineRoute";
 import { RouteRegistry } from "../libs/routes/routeRegistry";
-import type { RenderRouteComponentProps } from "../libs/routes/types";
+import type { PageRouteIR, RenderRouteComponentProps } from "../libs/routes/types";
 
 function Page({ request }: RenderRouteComponentProps) {
   return createElement("main", null, request.url);
@@ -65,6 +65,43 @@ describe("buffered route capabilities", () => {
 });
 
 describe("createMetaViteRouteManifestFromRegistry", () => {
+  it.each([NaN, Infinity, -Infinity, -1])(
+    "rejects invalid milliseconds %s in direct manifest input with a route diagnostic",
+    (revalidateMs) => {
+      expect(() =>
+        createMetaViteRouteManifest({
+          pages: [
+            { path: "/invalid-ttl", mode: "isr", componentRef: "src/Page.tsx#Page", revalidateMs },
+          ],
+        }),
+      ).toThrowError(
+        expect.objectContaining({
+          code: "CROCO_META_VITE_ROUTE_REVALIDATE_INVALID",
+          path: "/invalid-ttl",
+        }),
+      );
+    },
+  );
+
+  it("rejects an unsupported mode in direct manifest input with a route diagnostic", () => {
+    expect(() =>
+      createMetaViteRouteManifest({
+        pages: [
+          {
+            path: "/invalid-mode",
+            mode: "invalid",
+            componentRef: "src/Page.tsx#Page",
+          } as unknown as PageRouteIR,
+        ],
+      }),
+    ).toThrowError(
+      expect.objectContaining({
+        code: "CROCO_META_VITE_ROUTE_MODE_UNSUPPORTED",
+        path: "/invalid-mode",
+      }),
+    );
+  });
+
   it.each(["/webhooks/stripe", "/healthz", "/apix", "/apiary", "/API/foo", "/", ""])(
     "rejects API route outside the /api namespace: %j",
     (path) => {
