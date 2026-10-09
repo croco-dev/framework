@@ -112,7 +112,9 @@ export class CustomerHealthService {
     tenantId: string,
     days: number,
   ): Promise<{ trend: HealthTrend; changePercentage: number } | null> {
-    const history = await this.store.findHistory(tenantId, days + 1);
+    const now = new Date();
+    const startDate = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+    const history = await this.store.findHistoryByPeriod(tenantId, "day", startDate, now);
     if (history.length < 2) {
       return null;
     }
