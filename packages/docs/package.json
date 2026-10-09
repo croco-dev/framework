@@ -129,6 +129,8 @@
     "@croco/protocols-trpc": "workspace:*",
     "@croco/ratelimit-core": "workspace:*",
     "@croco/ratelimit-upstash": "workspace:*",
+    "@croco/referral-core": "workspace:*",
+    "@croco/referral-drizzle": "workspace:*",
     "@croco/repository-core": "workspace:*",
     "@croco/retry-core": "workspace:*",
     "@croco/rpc-codegen": "workspace:*",

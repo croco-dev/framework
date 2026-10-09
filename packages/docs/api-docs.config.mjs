@@ -597,6 +597,18 @@ export const apiDocPackages = [
     moduleName: "promotions-drizzle/src",
   },
   {
+    packageName: "@croco/referral-core",
+    directory: "referral-core",
+    entryPoint: "src/index.ts",
+    moduleName: "referral-core/src",
+  },
+  {
+    packageName: "@croco/referral-drizzle",
+    directory: "referral-drizzle",
+    entryPoint: "src/index.ts",
+    moduleName: "referral-drizzle/src",
+  },
+  {
     packageName: "@croco/protocol-codegen",
     directory: "protocol-codegen",
     entryPoint: "src/index.ts",

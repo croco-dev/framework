@@ -103,6 +103,8 @@
   "@croco/protocols-trpc": "plugins",
   "@croco/ratelimit-core": "contracts",
   "@croco/ratelimit-upstash": "plugins",
+  "@croco/referral-core": "contracts",
+  "@croco/referral-drizzle": "plugins",
   "@croco/repository-core": "contracts",
   "@croco/retry-core": "contracts",
   "@croco/rpc-codegen": "tooling",

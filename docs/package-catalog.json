@@ -1244,6 +1244,18 @@
       "subtype": "provider",
       "runtimes": ["node", "lambda"],
       "domain": "Promotions"
+    },
+    "referral-core": {
+      "role": "Contracts",
+      "subtype": "domain",
+      "runtimes": [],
+      "domain": "Referrals"
+    },
+    "referral-drizzle": {
+      "role": "Plugins",
+      "subtype": "provider",
+      "runtimes": ["node", "lambda"],
+      "domain": "Referrals"
     }
   },
   "groups": {
@@ -1313,7 +1325,8 @@
         "triggers-core",
         "warehouse-core",
         "workflow-core",
-        "promotions-core"
+        "promotions-core",
+        "referral-core"
       ]
     },
     "Provider": {
@@ -1355,7 +1368,8 @@
         "tasks-qstash",
         "triggers-qstash",
         "warehouse-postgres",
-        "promotions-drizzle"
+        "promotions-drizzle",
+        "referral-drizzle"
       ]
     },
     "Integration": {
@@ -1571,6 +1585,8 @@
         "warehouse-core",
         "promotions-core",
         "promotions-drizzle",
+        "referral-core",
+        "referral-drizzle",
         "gamification-core",
         "gamification-drizzle"
       ]
@@ -2248,6 +2264,18 @@
           "compare-and-set claim transitions",
           "deterministic idempotency receipts",
           "indeterminate grant reconciliation"
+        ]
+      },
+      "referral-drizzle": {
+        "domain": "Referrals",
+        "adapter": "PostgreSQL referral program, link-hash, attribution, and benefit-intent store",
+        "runtimes": ["node", "lambda"],
+        "requiredEnv": ["PostgreSQL connection supplied by app"],
+        "features": [
+          "hash-only referral links",
+          "first-valid attribution with held duplicates",
+          "atomic budget reservations",
+          "compare-and-set attribution and benefit transitions"
         ]
       },
       "admin-postgres": {
