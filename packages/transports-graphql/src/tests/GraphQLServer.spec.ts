@@ -9,7 +9,7 @@ import {
 } from "node:http";
 import type { Server } from "node:http";
 import { connect } from "node:net";
-import { Container } from "@croco/framework-context";
+import { Container, Context } from "@croco/framework-context";
 import { Logger } from "@croco/framework-logger";
 import { Problem, ProblemCategory } from "@croco/problems-core";
 import {
@@ -72,6 +72,50 @@ class UserResolver {
   async hello(): Promise<string> {
     return "Hello, GraphQL!";
   }
+}
+
+class RequestLedger {
+  readonly id = Math.random().toString(36).slice(2);
+}
+
+@Resolver()
+class RequestContextResolver {
+  @Query(() => String, { nullable: true })
+  requestId(): string | null {
+    return Context.getRequestId();
+  }
+
+  @Query(() => String, { nullable: true })
+  tenantId(): string | null {
+    return Context.getTenantId();
+  }
+
+  @Query(() => String, { nullable: true })
+  userId(): string | null {
+    return Context.getCurrentUser()?.id ?? null;
+  }
+
+  @Query(() => String)
+  ledgerId(): string {
+    return Container.get(RequestLedger).id;
+  }
+}
+
+function graphqlRequest(): Request {
+  return new Request("http://localhost/graphql", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ query: "{ requestId tenantId userId ledgerId }" }),
+  });
+}
+
+async function readRequestContextData(response: Response): Promise<Record<string, string | null>> {
+  const body = (await response.json()) as {
+    data?: Record<string, string | null>;
+    errors?: unknown;
+  };
+  if (!body.data) throw new Error(`GraphQL errors: ${JSON.stringify(body.errors)}`);
+  return body.data;
 }
 
 class TestGraphQLProblem extends Problem {
@@ -2026,3 +2070,46 @@ function sendChunkedRequest(
     request.end();
   });
 }
+
+describe("GraphQLServer request context", () => {
+  beforeEach(() => {
+    Container.reset();
+    Container.register(RequestLedger, "request");
+  });
+
+  it("keeps the active Croco request context when the handler runs inside it", async () => {
+    const server = new GraphQLServer({
+      schemaOptions: { resolvers: [RequestContextResolver], autoDiscover: false },
+    });
+    await server.initialize();
+    const handler = server.getHandler();
+
+    const result = await Context.run(
+      { requestId: "req-outer", tenantId: "tenant-a", user: { id: "user-7" } },
+      async () => {
+        const outerLedgerId = Container.get(RequestLedger).id;
+        const data = await readRequestContextData(await handler(graphqlRequest()));
+        return { outerLedgerId, data };
+      },
+    );
+
+    expect(result.data).toEqual({
+      requestId: "req-outer",
+      tenantId: "tenant-a",
+      userId: "user-7",
+      ledgerId: result.outerLedgerId,
+    });
+  });
+
+  it("propagates tenant and user resolved by the server context factory to Croco services", async () => {
+    const server = new GraphQLServer({
+      schemaOptions: { resolvers: [RequestContextResolver], autoDiscover: false },
+      context: () => ({ tenantId: "tenant-b", user: { id: "user-9" } }),
+    });
+    await server.initialize();
+
+    const data = await readRequestContextData(await server.getHandler()(graphqlRequest()));
+
+    expect(data).toMatchObject({ tenantId: "tenant-b", userId: "user-9" });
+  });
+});
