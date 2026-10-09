@@ -3854,6 +3854,18 @@
       "owner": "@croco/outbox-core"
     },
     {
+      "path": "packages/oxlint-rules/src/tests/NoCrossDomainImport.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/oxlint-rules"
+    },
+    {
+      "path": "packages/oxlint-rules/src/tests/NoDatasourceImport.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/oxlint-rules"
+    },
+    {
       "path": "packages/oxlint-rules/src/tests/decorator-binding.spec.ts",
       "lane": "fast",
       "qualifiers": [],

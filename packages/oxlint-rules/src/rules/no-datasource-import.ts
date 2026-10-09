@@ -1,23 +1,25 @@
 import path from "node:path";
 import type { Rule } from "eslint";
+import type { ImportDeclaration, ExportNamedDeclaration, ExportAllDeclaration } from "estree";
 
 const RESTRICTED_LAYERS = ["domain", "service", "application"] as const;
 
 type RestrictedLayer = (typeof RESTRICTED_LAYERS)[number];
 
 const getLibPathRest = (filePath: string): string | null => {
-  const match = filePath.replace(/\\/g, "/").match(/libs\/[^/]+\/(.*)/);
+  const match = filePath.replace(/\\/g, "/").match(/(?:^|\/)libs\/[^/]+(?:\/(.*))?$/);
 
   if (!match) {
     return null;
   }
 
-  return match[1];
+  return match[1] ?? "";
 };
 
 const getRestrictedLayer = (pathRest: string): RestrictedLayer | null => {
+  const segments = pathRest.split("/");
   for (const layer of RESTRICTED_LAYERS) {
-    if (pathRest.startsWith(`src/${layer}/`) || pathRest.includes(`/${layer}/`)) {
+    if (segments.includes(layer)) {
       return layer;
     }
   }
@@ -25,8 +27,7 @@ const getRestrictedLayer = (pathRest: string): RestrictedLayer | null => {
   return null;
 };
 
-const isDatasourcePath = (pathRest: string): boolean =>
-  pathRest.startsWith("src/datasource/") || pathRest.includes("/datasource/");
+const isDatasourcePath = (pathRest: string): boolean => pathRest.split("/").includes("datasource");
 
 const rule: Rule.RuleModule = {
   meta: {
@@ -40,38 +41,44 @@ const rule: Rule.RuleModule = {
     schema: [],
   },
   create(context) {
+    const checkSource = (
+      node: ImportDeclaration | ExportNamedDeclaration | ExportAllDeclaration,
+    ): void => {
+      const sourceValue = node.source?.value;
+      if (typeof sourceValue !== "string" || !sourceValue.startsWith(".")) {
+        return;
+      }
+
+      const sourceRest = getLibPathRest(context.filename);
+      if (!sourceRest) {
+        return;
+      }
+
+      const currentLayer = getRestrictedLayer(sourceRest);
+      if (!currentLayer) {
+        return;
+      }
+
+      const targetPath = path.resolve(path.dirname(context.filename), sourceValue);
+      const targetRest = getLibPathRest(targetPath);
+
+      if (!targetRest || !isDatasourcePath(targetRest)) {
+        return;
+      }
+
+      context.report({
+        node,
+        messageId: "noDatasourceImport",
+        data: {
+          layer: currentLayer,
+        },
+      });
+    };
+
     return {
-      ImportDeclaration(node) {
-        const sourceValue = node.source.value;
-        if (typeof sourceValue !== "string" || !sourceValue.startsWith(".")) {
-          return;
-        }
-
-        const sourceRest = getLibPathRest(context.filename);
-        if (!sourceRest) {
-          return;
-        }
-
-        const currentLayer = getRestrictedLayer(sourceRest);
-        if (!currentLayer) {
-          return;
-        }
-
-        const targetPath = path.resolve(path.dirname(context.filename), sourceValue);
-        const targetRest = getLibPathRest(targetPath);
-
-        if (!targetRest || !isDatasourcePath(targetRest)) {
-          return;
-        }
-
-        context.report({
-          node,
-          messageId: "noDatasourceImport",
-          data: {
-            layer: currentLayer,
-          },
-        });
-      },
+      ImportDeclaration: checkSource,
+      ExportNamedDeclaration: checkSource,
+      ExportAllDeclaration: checkSource,
     };
   },
 };
