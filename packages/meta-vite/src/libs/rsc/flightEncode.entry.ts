@@ -88,10 +88,20 @@ async function main(): Promise<void> {
   }
 }
 
-void main().catch((error: unknown) => {
-  const message = error instanceof Error ? (error.stack ?? error.message) : String(error);
-  process.stderr.write(`[croco-rsc-encode] ${message}\n`);
-  process.exitCode = 1;
-});
+// Only run when executed directly as the isolated encoder child process
+// (`node dist/libs/rsc/flightEncode.entry.js` with the JSON payload on
+// stdin). The package-entrypoint smoke `require()`s every published
+// entrypoint and must not trigger the encoder's stdin read + JSON.parse.
+const invokedDirectly = process.argv[1] !== undefined && invokedDirectlyAs(process.argv[1]);
 
-export type { RenderRouteIR };
+function invokedDirectlyAs(argv1: string): boolean {
+  return argv1.endsWith("flightEncode.entry.js") || argv1.endsWith("flightEncode.entry.mjs");
+}
+
+if (invokedDirectly) {
+  void main().catch((error: unknown) => {
+    const message = error instanceof Error ? (error.stack ?? error.message) : String(error);
+    process.stderr.write(`[croco-rsc-encode] ${message}\n`);
+    process.exitCode = 1;
+  });
+}

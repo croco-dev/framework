@@ -484,8 +484,8 @@ should now read the Problem result shape: `ok === false`, `kind`, RFC 7807 field
 
 ### Vite Plugin
 
-| Export                | Type     | Description                                                                    |
-| --------------------- | -------- | ------------------------------------------------------------------------------ |
+| Export                | Type     | Description                                                                             |
+| --------------------- | -------- | --------------------------------------------------------------------------------------- |
 | `crocoMetaVitePlugin` | function | Vite 6 plugin that configures client/ssr environments (rsc opt-in) and virtual modules. |
 
 ### Output Contract
