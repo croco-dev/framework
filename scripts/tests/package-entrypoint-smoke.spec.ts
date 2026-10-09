@@ -214,6 +214,27 @@ childProcess.spawnSync = (command, args, options) => {
     },
   );
 
+  it.each([
+    "interface Shape { value: string; }\nexport type { Shape as default };\n",
+    "export default interface Shape { value: string; }\n",
+  ])("accepts type-only default exports without a value import: %s", (declarationContent) => {
+    const root = createTempRoot();
+    writeImportablePackage(root, "type-only-default", {
+      declarationContent,
+      exportsValue: {
+        ".": {
+          types: { import: "./dist/index.d.mts", require: "./dist/index.d.ts" },
+          import: "./dist/index.mjs",
+          require: "./dist/index.js",
+        },
+      },
+    });
+
+    const result = runScript(root);
+
+    expect(result.status, result.stderr || result.stdout).toBe(0);
+  });
+
   it.each(["flat", "wrong-require", "fixed"] as const)(
     "checks Node16 CJS consumption of module packages: %s",
     (condition) => {

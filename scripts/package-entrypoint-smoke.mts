@@ -1690,11 +1690,12 @@ function declarationHasDefaultExport(packageInfo: PackedPackageInfo, target: Smo
   return source.statements.some(
     (statement) =>
       (ts.isExportAssignment(statement) && !statement.isExportEquals) ||
-      (ts.canHaveModifiers(statement) &&
+      ((ts.isClassDeclaration(statement) || ts.isFunctionDeclaration(statement)) &&
         ts
           .getModifiers(statement)
           ?.some((modifier) => modifier.kind === ts.SyntaxKind.DefaultKeyword)) ||
       (ts.isExportDeclaration(statement) &&
+        !statement.isTypeOnly &&
         statement.exportClause !== undefined &&
         ts.isNamedExports(statement.exportClause) &&
         statement.exportClause.elements.some(
