@@ -77,6 +77,7 @@ type AllocationOptions = {
   readonly account: AccountState;
   readonly amount: CreditAmount;
   readonly meterKey?: string;
+  readonly ignoreMeterRestrictions?: boolean;
   readonly asOf: Date;
 };
 
@@ -784,6 +785,7 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
             account,
             amount: command.amount,
             asOf: command.occurredAt,
+            ignoreMeterRestrictions: true,
           })
         : [];
     const grant = command.direction === "credit" ? (command.grant ?? {}) : undefined;
@@ -842,7 +844,7 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
       .filter(
         (lot) =>
           !isExpired(lot, options.asOf) &&
-          isMeterEligible(lot, options.meterKey) &&
+          (options.ignoreMeterRestrictions || isMeterEligible(lot, options.meterKey)) &&
           compareCreditAmounts(lot.available, ZERO_CREDIT_AMOUNT) > 0,
       )
       .sort(compareLots);
@@ -855,7 +857,7 @@ export class InMemoryCreditLedgerStore extends CreditLedgerStore {
         .filter(
           (lot) =>
             isExpired(lot, options.asOf) &&
-            isMeterEligible(lot, options.meterKey) &&
+            (options.ignoreMeterRestrictions || isMeterEligible(lot, options.meterKey)) &&
             compareCreditAmounts(lot.available, ZERO_CREDIT_AMOUNT) > 0,
         )
         .reduce((total, lot) => addCreditAmounts(total, lot.available), ZERO_CREDIT_AMOUNT);
