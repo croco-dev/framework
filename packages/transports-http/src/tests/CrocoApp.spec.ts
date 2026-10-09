@@ -1404,6 +1404,92 @@ describe("CrocoApp", () => {
     });
   });
 
+  it.each(["generic error", "server Problem", "client Problem"] as const)(
+    "should report a controller %s only when it produces a server failure",
+    async (failureKind) => {
+      Container.reset();
+      const errorLog = vi.fn();
+      const logger: ILogger = {
+        debug: vi.fn(),
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: errorLog,
+        fatal: vi.fn(),
+        child: () => logger,
+      };
+      Container.set(LOGGER_TOKEN, logger);
+      const cause = new Error("private database connection failure");
+      class ServerProblem extends Problem {
+        constructor() {
+          super(
+            "test/server-failure",
+            ProblemCategory.InternalServerError,
+            "private server detail",
+            {
+              cause,
+              extensions: { privateValue: "private extension" },
+            },
+          );
+        }
+      }
+      const failure =
+        failureKind === "generic error"
+          ? cause
+          : failureKind === "server Problem"
+            ? new ServerProblem()
+            : new TestProblem("Invalid request");
+
+      @Controller("/logging")
+      class LoggingController {
+        @Get("/failure")
+        fail() {
+          throw failure;
+        }
+      }
+      const app = createApp({ controllers: [LoggingController] });
+      const traceId = "4bf92f3577b34da6a3ce929d0e0e4736";
+      const requestId = "controller-failure-req";
+      const response = await app.fetch(
+        new Request("http://localhost/logging/failure", {
+          headers: {
+            traceparent: `00-${traceId}-00f067aa0ba902b7-01`,
+            "x-request-id": requestId,
+          },
+        }),
+      );
+      const body = (await response.json()) as ProblemCorrelationResponse;
+
+      expect(response.headers.get("content-type")).toContain("application/problem+json");
+      expect(body).toMatchObject({ traceId, requestId });
+      if (failureKind === "client Problem") {
+        expect(response.status).toBe(400);
+        expect(body.detail).toBe("Invalid request");
+        expect(errorLog).not.toHaveBeenCalled();
+        return;
+      }
+
+      expect(response.status).toBe(500);
+      expect(body.detail).toBe("An internal error occurred");
+      expect(body).not.toHaveProperty("cause");
+      expect(body).not.toHaveProperty("stack");
+      expect(body).not.toHaveProperty("privateValue");
+      if (failureKind === "generic error") {
+        expect(errorLog).toHaveBeenCalledExactlyOnceWith("Unhandled error:", cause);
+        return;
+      }
+
+      expect(body.instance).toBe("http://localhost/logging/failure");
+      expect(errorLog).toHaveBeenCalledExactlyOnceWith("Server problem:", {
+        problem: expect.any(Problem),
+        traceId: body.traceId,
+        requestId: body.requestId,
+      });
+      const loggedProblem = errorLog.mock.calls[0]?.[1].problem as Problem;
+      expect(loggedProblem.cause).toBe(cause);
+      expect(loggedProblem).toBe(failure);
+    },
+  );
+
   it("should run the Lambda handler flush callback after queued runtime work", async () => {
     const flush = vi.fn().mockResolvedValue(undefined);
     const app = createApp({ controllers: [LambdaController] });

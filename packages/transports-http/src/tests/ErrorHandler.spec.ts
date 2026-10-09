@@ -17,18 +17,24 @@ type TestProblemOptions = {
   detail?: string;
   extensions?: Record<string, unknown>;
   instance?: string;
+  cause?: Error;
+  status?: number;
 };
 
 class TestProblem extends Problem {
+  private readonly statusOverride?: number;
+
+  override get status(): number {
+    return this.statusOverride ?? super.status;
+  }
   constructor(options: TestProblemOptions = {}) {
     super(
       options.code ?? "test/error",
       options.category ?? ProblemCategory.BadRequest,
       options.detail,
-      options.extensions === undefined && options.instance === undefined
-        ? undefined
-        : { extensions: options.extensions, instance: options.instance },
+      { extensions: options.extensions, instance: options.instance, cause: options.cause },
     );
+    this.statusOverride = options.status;
   }
 }
 
@@ -43,7 +49,7 @@ describe("ErrorHandler", () => {
     mockLogger = {
       info: () => {},
       warn: () => {},
-      error: () => {},
+      error: vi.fn(),
       debug: () => {},
       fatal: vi.fn(),
       child: () => mockLogger,
@@ -269,6 +275,71 @@ describe("ErrorHandler", () => {
   });
 
   describe("handleProblem", () => {
+    it.each([500, 503, 599])(
+      "should log status %i with the original Problem and response correlation",
+      async (status) => {
+        const cause = new Error("upstream connection refused");
+        const problem = new TestProblem({
+          category: ProblemCategory.InternalServerError,
+          detail: "Provider failed",
+          cause,
+          status,
+        });
+        mockCtx.get = ((key: string) =>
+          key === HTTP_CONTEXT_KEYS.traceId
+            ? "trace-server"
+            : undefined) as CrocoHttpContext["get"];
+        const response = await FrameworkContext.run({ requestId: "request-server" }, () =>
+          errorHandler.handleError(problem, mockCtx),
+        );
+        const body = await response.json();
+
+        expect(response.status).toBe(status);
+        expect(response.headers.get("Content-Type")).toBe("application/problem+json");
+        expect(body).toMatchObject({
+          status,
+          detail: "An internal error occurred",
+          traceId: "trace-server",
+          requestId: "request-server",
+        });
+        expect(mockLogger.error).toHaveBeenCalledExactlyOnceWith("Server problem:", {
+          problem,
+          traceId: body.traceId,
+          requestId: body.requestId,
+        });
+        const [, context] = vi.mocked(mockLogger.error).mock.calls[0];
+        expect(context).toHaveProperty("problem", problem);
+        expect(problem.cause).toBe(cause);
+      },
+    );
+
+    it.each([400, 499])("should not log status %i", (status) => {
+      errorHandler.handleError(new TestProblem({ status }), mockCtx);
+      expect(mockLogger.error).not.toHaveBeenCalled();
+    });
+
+    it.each(["throw", "reject"])(
+      "should preserve the Problem response when logging fails by %s",
+      async (failure) => {
+        const problem = new TestProblem({
+          category: ProblemCategory.InternalServerError,
+          detail: "secret provider failure",
+        });
+        const expected = errorHandler.handleError(problem, mockCtx);
+        vi.mocked(mockLogger.error).mockClear();
+        vi.mocked(mockLogger.error).mockImplementation(() => {
+          const error = new Error("log sink failed");
+          if (failure === "throw") throw error;
+          return Promise.reject(error);
+        });
+        const response = errorHandler.handleError(problem, mockCtx);
+        expect(response.status).toBe(expected.status);
+        expect([...response.headers]).toEqual([...expected.headers]);
+        expect(await response.json()).toEqual(await expected.json());
+        expect(mockLogger.error).toHaveBeenCalledOnce();
+      },
+    );
+
     it.each([
       { name: "divergent source instance", sourceInstance: "/source-instance" },
       { name: "absent source instance", sourceInstance: undefined },
