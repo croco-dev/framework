@@ -3,7 +3,7 @@ import type { ProblemCodeRegistry } from "../libs/ProblemRegistry";
 
 export const CROCO_PROBLEM_CODE_REGISTRY = {
   version: "croco.problem-code-registry.v1",
-  problemCount: 947,
+  problemCount: 984,
   problems: [
     {
       code: "ACCESS_DENIED",
@@ -896,6 +896,38 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 154,
           column: 11,
           kind: "problem-factory",
+        },
+      ],
+    },
+    {
+      code: "CROCO_META_VITE_API_ROUTE_PREFIX_REQUIRED",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#croco-meta-vite-api-route-prefix-required",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/routes/validateApiRoute.ts",
+          line: 5,
+          column: 1,
+          kind: "problem-class",
         },
       ],
     },
@@ -4521,6 +4553,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "admin-core/referral-console-validation-failed",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#admin-core-referral-console-validation-failed",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/ReferralConsole.ts",
+          line: 25,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
       code: "admin-core/reminder-operation-invalid",
       category: "ValidationError",
       status: 422,
@@ -7632,6 +7695,128 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "billing/cancellation-action-unavailable",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-cancellation-action-unavailable",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/CancellationProblems.ts",
+          line: 27,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "billing/cancellation-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-cancellation-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/CancellationProblems.ts",
+          line: 18,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "billing/cancellation-invalid-input",
+      category: "BadRequest",
+      status: 400,
+      title: "Bad Request",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-cancellation-invalid-input",
+      recovery: {
+        cause: "The caller sent malformed input or unsupported request options.",
+        userAction: "Correct the request input and retry after validation passes.",
+        operatorAction:
+          "Inspect validation details and request logs; do not retry unchanged input.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/CancellationProblems.ts",
+          line: 4,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "billing/cancellation-ownership-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#billing-cancellation-ownership-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/billing-core/src/libs/problems/CancellationProblems.ts",
+          line: 11,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "billing/checkout-creation-failed",
       category: "InternalServerError",
       status: 500,
@@ -9025,6 +9210,37 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
         {
           file: "packages/cache-core/src/libs/problems/CacheDecoratorProblems.ts",
           line: 52,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "cache-core/personalized-cache-policy-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#cache-core-personalized-cache-policy-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/cache-core/src/libs/problems/PersonalizedCacheProblems.ts",
+          line: 8,
           column: 1,
           kind: "problem-class",
         },
@@ -16056,6 +16272,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "gamification-core/access-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-access-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/problems.ts",
+          line: 10,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "gamification-core/challenge-access-denied",
       category: "Forbidden",
       status: 403,
@@ -16241,6 +16487,127 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "gamification-core/conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/problems.ts",
+          line: 24,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification-core/invalid-evidence",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-invalid-evidence",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/problems.ts",
+          line: 17,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification-core/invalid-policy",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-invalid-policy",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/problems.ts",
+          line: 3,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification-core/unavailable",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-core-unavailable",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/problems.ts",
+          line: 31,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "gamification-drizzle/persistence",
       category: "InternalServerError",
       status: 500,
@@ -16269,6 +16636,190 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 4,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "gamification-drizzle/persistence-failure",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#gamification-drizzle-persistence-failure",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-drizzle/src/libs/problems.ts",
+          line: 2,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification/access-denied",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-access-denied",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/MissionContracts.ts",
+          line: 18,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification/conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/MissionContracts.ts",
+          line: 11,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification/console-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-console-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/admin-core/src/libs/MissionConsole.ts",
+          line: 17,
+          column: 5,
+          kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "gamification/invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/MissionContracts.ts",
+          line: 4,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "gamification/not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#gamification-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/gamification-core/src/libs/MissionContracts.ts",
+          line: 25,
+          column: 1,
+          kind: "problem-class",
         },
       ],
     },
@@ -17603,6 +18154,36 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       ],
     },
     {
+      code: "meta-vite/personalized-fragment-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#meta-vite-personalized-fragment-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/meta-vite/src/libs/isr/personalizedFragmentProblems.ts",
+          line: 9,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
       code: "meta-vite/rsc-client-manifest-mismatch",
       category: "BadRequest",
       status: 400,
@@ -17690,7 +18271,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/rsc/flightEncode.entry.ts",
-          line: 18,
+          line: 27,
           column: 1,
           kind: "problem-class",
         },
@@ -17784,7 +18365,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/vite/crocoMetaVitePlugin.ts",
-          line: 9,
+          line: 15,
           column: 1,
           kind: "problem-class",
         },
@@ -18064,7 +18645,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/meta-vite/src/libs/build/routeManifest.ts",
-          line: 20,
+          line: 22,
           column: 1,
           kind: "problem-class",
         },
@@ -23397,6 +23978,562 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
           line: 27,
           column: 5,
           kind: "problem-constructor",
+        },
+      ],
+    },
+    {
+      code: "referral-core/attribution-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-attribution-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 172,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/attribution-state-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath:
+        "/reference/problem-recovery-cookbook/#referral-core-attribution-state-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 182,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/benefit-failed",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-benefit-failed",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 210,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/budget-exhausted",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-budget-exhausted",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 158,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/duplicate-claim",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-duplicate-claim",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 130,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/existing-customer",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-existing-customer",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 102,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/link-expired",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-link-expired",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 64,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/link-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-link-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 44,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/link-revoked",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-link-revoked",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 54,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/novelty-unknown",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-novelty-unknown",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 116,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/other-tenant-link",
+      category: "Forbidden",
+      status: 403,
+      title: "Forbidden",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-other-tenant-link",
+      recovery: {
+        cause: "The authenticated caller is not allowed to perform the requested action.",
+        userAction: "Request the required permission or choose an allowed action.",
+        operatorAction: "Review policy, role, tenant, entitlement, and impersonation context.",
+        retryability: "not-retryable",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 88,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/program-conflict",
+      category: "Conflict",
+      status: 409,
+      title: "Conflict",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-program-conflict",
+      recovery: {
+        cause: "The request conflicts with current state or an idempotency constraint.",
+        userAction: "Refresh state, resolve the conflict, and retry with the updated intent.",
+        operatorAction: "Inspect concurrent writes, idempotency keys, and uniqueness constraints.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 30,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/program-invalid",
+      category: "ValidationError",
+      status: 422,
+      title: "Validation Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-program-invalid",
+      recovery: {
+        cause: "The request or generated contract failed schema or semantic validation.",
+        userAction: "Fix the invalid fields and retry with schema-conformant input.",
+        operatorAction: "Inspect schema diagnostics, generated contracts, and validation metadata.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 4,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/program-not-found",
+      category: "NotFound",
+      status: 404,
+      title: "Not Found",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-program-not-found",
+      recovery: {
+        cause: "The requested resource or route-visible record does not exist.",
+        userAction: "Verify the identifier and refresh the resource list before retrying.",
+        operatorAction:
+          "Confirm tenant scoping, data retention, and backing-store lookup behavior.",
+        retryability: "not-retryable",
+        redactionPolicy: "public",
+        telemetry: {
+          eventName: "croco.problem.info",
+          severity: "info",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 14,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/qualification-rejected",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-qualification-rejected",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 196,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/self-referral",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-self-referral",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 74,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-core/subject-limit-reached",
+      category: "BusinessRuleViolation",
+      status: 422,
+      title: "Business Rule Violation",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-core-subject-limit-reached",
+      recovery: {
+        cause: "The request is syntactically valid but violates a domain rule.",
+        userAction:
+          "Change the workflow state or request values so the business rule is satisfied.",
+        operatorAction: "Review domain policy, entitlement, quota, and lifecycle rule evidence.",
+        retryability: "conditional",
+        redactionPolicy: "safe-message",
+        telemetry: {
+          eventName: "croco.problem.warning",
+          severity: "warning",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-core/src/libs/problems.ts",
+          line: 144,
+          column: 1,
+          kind: "problem-class",
+        },
+      ],
+    },
+    {
+      code: "referral-drizzle/persistence-failure",
+      category: "InternalServerError",
+      status: 500,
+      title: "Internal Server Error",
+      cookbookPath: "/reference/problem-recovery-cookbook/#referral-drizzle-persistence-failure",
+      recovery: {
+        cause: "Croco or an upstream dependency failed after accepting the request.",
+        userAction:
+          "Retry later only when the operation is idempotent or the caller owns retry safety.",
+        operatorAction:
+          "Use traces, logs, and upstream diagnostics to isolate the failing boundary.",
+        retryability: "conditional",
+        redactionPolicy: "operator-only",
+        telemetry: {
+          eventName: "croco.problem.error",
+          severity: "error",
+          attributes: ["problem.code", "problem.category", "problem.status"],
+        },
+      },
+      lifecycle: {
+        status: "active",
+      },
+      sources: [
+        {
+          file: "packages/referral-drizzle/src/libs/PostgresReferralStore.ts",
+          line: 46,
+          column: 1,
+          kind: "problem-class",
         },
       ],
     },

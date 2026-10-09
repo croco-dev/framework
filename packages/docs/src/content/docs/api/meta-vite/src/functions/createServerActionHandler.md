@@ -5,7 +5,7 @@ prev: false
 title: "createServerActionHandler"
 ---
 
-> **createServerActionHandler**(`registry?`): `object`
+> **createServerActionHandler**(`registry?`, `options?`): `object`
 
 Create a fetch handler that dispatches Server Actions via HTTP.
 Integrates with composeHandler's apiRoutes dispatch:
@@ -29,6 +29,12 @@ const handler = createMetaFetchHandler({
 ### registry?
 
 [`ServerActionRegistry`](/api/meta-vite/src/classes/serveractionregistry/) = `globalServerActionRegistry`
+
+### options?
+
+#### allowedOrigins?
+
+readonly `string`[]
 
 ## Returns
 
