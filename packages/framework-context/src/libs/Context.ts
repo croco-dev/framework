@@ -102,11 +102,23 @@ export class Context {
     data.scopedDisposables.clear();
     data.scopedCache.clear();
     if (failures.length === 0) return;
-
+    const cause = failures.find((error): error is Error => error instanceof Error);
     const cleanupFailure = ProblemFactory.internalServerError(
       "framework-context/request-scope-disposal-failed",
       "Request-scoped provider cleanup failed.",
-      { extensions: { cleanupFailures: failures } },
+      {
+        ...(cause ? { cause } : {}),
+        extensions: {
+          cleanupFailures: failures.map((error) => ({
+            message:
+              error instanceof Error
+                ? error.message
+                : error !== null && (typeof error === "object" || typeof error === "function")
+                  ? `Non-Error ${typeof error} thrown during request provider cleanup.`
+                  : String(error),
+          })),
+        },
+      },
     );
     if (!failure) throw cleanupFailure;
     Context.reportRequestCleanupFailure(data.context, failure.error, cleanupFailure);
