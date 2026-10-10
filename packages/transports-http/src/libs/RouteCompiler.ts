@@ -124,8 +124,7 @@ export class RouteCompiler {
       const existingRoute = seenRoutes.get(routeKey);
 
       if (existingRoute) {
-        throw ProblemFactory.internalServerError(
-          "transports-http/duplicate-route-definition",
+        throw createDuplicateRouteDefinitionProblem(
           this.formatDuplicateRouteDetail(
             `${route.method.toUpperCase()} ${route.path}`,
             existingRoute,
@@ -307,4 +306,27 @@ export class RouteCompiler {
 
     return `${sourceLocation.path}${line}${column}`;
   }
+}
+
+export function assertNoOperationalRouteConflicts(
+  routes: readonly CompiledRoute[],
+  systemRoutes: ReadonlyMap<string, unknown>,
+): void {
+  for (const route of routes) {
+    const method = route.method.toUpperCase();
+    if ((method === "GET" || method === "ALL") && systemRoutes.has(route.path)) {
+      throw createDuplicateRouteDefinitionProblem(
+        [
+          `Duplicate route definition detected for ${method} ${route.path}.`,
+          `Existing route: built-in operational endpoint (GET ${route.path}).`,
+          `Conflicting route: ${route.pipelineGraphConfig?.handlerLabel} (${method} ${route.path}).`,
+          "Recovery: give the controller route a unique HTTP method or path before starting the HTTP transport.",
+        ].join(" "),
+      );
+    }
+  }
+}
+
+function createDuplicateRouteDefinitionProblem(detail: string) {
+  return ProblemFactory.internalServerError("transports-http/duplicate-route-definition", detail);
 }
