@@ -18,6 +18,7 @@ export type ServerActionProblemKind =
   | "invalid_content_type"
   | "malformed_body"
   | "validation"
+  | "forbidden_origin"
   | "domain_problem";
 
 export type ServerActionProblemContract<Code extends string = string> = {
@@ -84,6 +85,20 @@ export class ServerActionNotFoundProblem extends Problem {
   }
 }
 
+export class ServerActionDuplicateRegistrationProblem extends Problem {
+  readonly code = "meta-vite/server-action-duplicate-registration";
+  readonly category = ProblemCategory.Conflict;
+
+  constructor(actionName: string) {
+    super(
+      "meta-vite/server-action-duplicate-registration",
+      ProblemCategory.Conflict,
+      `Server action '${actionName}' is already registered`,
+      { extensions: { actionName } },
+    );
+  }
+}
+
 export class ServerActionInvalidPathProblem extends Problem {
   readonly code = "meta-vite/server-action-invalid-path";
   readonly category = ProblemCategory.BadRequest;
@@ -145,6 +160,22 @@ export class ServerActionInvalidContentTypeProblem extends Problem {
   }
 }
 
+export class ServerActionForbiddenOriginProblem extends Problem {
+  readonly code = "meta-vite/server-action-forbidden-origin";
+  readonly category = ProblemCategory.Forbidden;
+
+  constructor(origin: string | null, allowedOrigins: readonly string[]) {
+    super(
+      "meta-vite/server-action-forbidden-origin",
+      ProblemCategory.Forbidden,
+      "Server action request origin is not allowed",
+      {
+        extensions: { origin: origin ?? "missing", allowedOrigins: [...allowedOrigins] },
+      },
+    );
+  }
+}
+
 /**
  * Server Action configuration.
  * @example
@@ -184,13 +215,13 @@ export class ServerActionRegistry {
 
   /**
    * Register a server action in this registry.
-   * @throws Error if action name is already registered in this registry
+   * @throws ServerActionDuplicateRegistrationProblem if action name is already registered
    */
   register<TInput, TOutput, TProblemCode extends string>(
     config: ServerActionConfig<TInput, TOutput, TProblemCode>,
   ): void {
     if (this.actions.has(config.name)) {
-      throw new Error(`ServerAction '${config.name}' already registered`);
+      throw new ServerActionDuplicateRegistrationProblem(config.name);
     }
     this.actions.set(config.name, config as ServerActionConfig<unknown, unknown>);
   }
@@ -501,15 +532,23 @@ function createJsonResponse(
  */
 export function createServerActionHandler(
   registry: ServerActionRegistry = globalServerActionRegistry,
+  options: { allowedOrigins?: readonly string[] } = {},
 ): {
   path: string;
   method: "POST";
   handler: (request: Request, context?: RuntimeContext) => Promise<Response>;
 } {
+  const allowedOrigins = options.allowedOrigins ? [...options.allowedOrigins] : undefined;
   return {
     path: "/api/action",
     method: "POST",
     handler: async (request: Request, context?: RuntimeContext): Promise<Response> => {
+      if (allowedOrigins && !isAllowedOrigin(request, allowedOrigins)) {
+        return createServerActionProblemResponse(
+          new ServerActionForbiddenOriginProblem(request.headers.get("origin"), allowedOrigins),
+          "forbidden_origin",
+        );
+      }
       const url = new URL(request.url);
       const pathname = url.pathname;
 
@@ -557,6 +596,27 @@ export function createServerActionHandler(
 
 function isAbortError(error: unknown): boolean {
   return error instanceof Error && error.name === "AbortError";
+}
+
+function isAllowedOrigin(request: Request, allowedOrigins: readonly string[]): boolean {
+  const origin = request.headers.get("origin");
+  if (!origin) {
+    // Same-origin form posts without an Origin header stay allowed; only an
+    // explicit, non-allowlisted origin is rejected.
+    return true;
+  }
+  try {
+    const normalized = new URL(origin).origin;
+    return allowedOrigins.some((allowed) => {
+      try {
+        return new URL(allowed).origin === normalized;
+      } catch {
+        return allowed === normalized;
+      }
+    });
+  } catch {
+    return false;
+  }
 }
 
 function isFormContentType(contentType: string | null): boolean {

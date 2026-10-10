@@ -102,7 +102,7 @@ Register a server action in this registry.
 
 #### Throws
 
-Error if action name is already registered in this registry
+ServerActionDuplicateRegistrationProblem if action name is already registered
 
 ---
 

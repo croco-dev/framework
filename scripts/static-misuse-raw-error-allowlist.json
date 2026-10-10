@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baselineEntryCount": 40,
+  "baselineEntryCount": 39,
   "description": "Reviewed baseline for CROCO_STATIC_RAW_ERROR_RUNTIME_BOUNDARY. New production raw built-in Error throws must be converted or added with owner and unexpired expiresOn metadata.",
   "entries": [
     {
@@ -108,15 +108,6 @@
       "line": 405,
       "excerpt": "throw new Error(`Expected ${expected.name} to be thrown.`);",
       "reason": "Conformance and test-support assertions intentionally fail developer verification paths; migrate only if this becomes a user-facing runtime recovery boundary.",
-      "owner": "framework-error-handling",
-      "expiresOn": "2026-10-29"
-    },
-    {
-      "package": "@croco/meta-vite",
-      "file": "packages/meta-vite/src/libs/actions/serverActions.ts",
-      "line": 193,
-      "excerpt": "throw new Error(`ServerAction '${config.name}' already registered`);",
-      "reason": "Reviewed pre-existing internal runtime assertion; future user-facing failures in this file must use Problem-shaped or diagnostic-coded errors.",
       "owner": "framework-error-handling",
       "expiresOn": "2026-10-29"
     },

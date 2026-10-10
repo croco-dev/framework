@@ -3410,6 +3410,12 @@
       "owner": "@croco/meta-vite"
     },
     {
+      "path": "packages/meta-vite/src/tests/rsc-flight.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/meta-vite"
+    },
+    {
       "path": "packages/meta-vite/src/tests/rsc-route.spec.ts",
       "lane": "fast",
       "qualifiers": [],

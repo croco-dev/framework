@@ -47,6 +47,15 @@ scope.run(() => Container.installGeneratedGraph(graph));
 
 const loaderStarted = Promise.withResolvers();
 const loaderRelease = Promise.withResolvers();
+function flightStream(text) {
+  const bytes = new TextEncoder().encode(text);
+  return new ReadableStream({
+    start(controller) {
+      controller.enqueue(bytes);
+      controller.close();
+    },
+  });
+}
 const bufferedRoute = {
   path: "/buffered",
   mode: "rsc",
@@ -58,27 +67,44 @@ const bufferedRoute = {
   },
 };
 const renderFailure = new Error("private renderer failure");
-const server = new RenderServer([
-  bufferedRoute,
-  ...["ssr", "rsc"].map((mode) => ({
-    path: `/${mode}-failure`,
-    mode,
-    componentLoader: async () => {
+const server = new RenderServer(
+  [
+    bufferedRoute,
+    ...["ssr", "rsc"].map((mode) => ({
+      path: `/${mode}-failure`,
+      mode,
+      componentLoader: async () => {
+        throw renderFailure;
+      },
+    })),
+    {
+      path: "/page",
+      mode: "ssr",
+      componentLoader: async () => ({
+        default: ({ context }) => {
+          const service = Container.get(RequestService);
+          assert.equal(Container.get(RequestService), service);
+          return createElement("main", null, `${service.requestId}:${context.platform}`);
+        },
+      }),
+    },
+  ],
+  {
+    // Real Flight path in the packed consumer: encode official Flight bytes
+    // per route instead of embedding an HTML-JSON payload disguised as Flight.
+    // The `/buffered` encoder preserves the loader-gating contract (the HTML
+    // shell still awaits the complete component); `/rsc-failure` surfaces the
+    // redacted render failure.
+    encodeFlight: async (route) => {
+      if (route.path === "/buffered") {
+        loaderStarted.resolve();
+        await loaderRelease.promise;
+        return flightStream('0:["$","main",null,{"children":"Complete buffered content"}]\n');
+      }
       throw renderFailure;
     },
-  })),
-  {
-    path: "/page",
-    mode: "ssr",
-    componentLoader: async () => ({
-      default: ({ context }) => {
-        const service = Container.get(RequestService);
-        assert.equal(Container.get(RequestService), service);
-        return createElement("main", null, `${service.requestId}:${context.platform}`);
-      },
-    }),
   },
-]);
+);
 const host = createNodeComposedHandler({
   apiHandlers: [],
   pageHandler: (request, context) =>
@@ -109,13 +135,13 @@ try {
   const pages = [bufferedRoute];
   const manifest = createMetaViteRouteManifest({
     pages,
-    requiredCapabilities: ["fetch", "react-ssr"],
+    requiredCapabilities: ["fetch", "react-server-components"],
   });
   assert.equal(manifest.pages[0].mode, bufferedRoute.mode);
-  assert.deepEqual(manifest.pages[0].runtimeCapabilities, ["fetch", "react-ssr"]);
+  assert.deepEqual(manifest.pages[0].runtimeCapabilities, ["fetch", "react-server-components"]);
   const routeRegistry = { getPageRoutes: () => pages, getApiRoutes: () => [] };
   assert.deepEqual(createMetaViteRouteManifestFromRegistry({ routeRegistry }), manifest);
-  for (const capability of ["react-server-components", "streaming-response"]) {
+  for (const capability of ["streaming-response"]) {
     for (const createManifest of [
       () => createMetaViteRouteManifest({ pages, requiredCapabilities: [capability] }),
       () =>
@@ -152,13 +178,10 @@ try {
   assert.ok(html.startsWith("<!DOCTYPE html>"));
   assert.ok(html.endsWith("</html>"));
   assert.ok(html.includes("<main>Complete buffered content</main>"));
-  const payload = html.match(/<script type="text\/x-component">(.*?)<\/script>/s);
-  assert.ok(payload, "legacy payload must be embedded in the complete HTML response");
-  assert.deepEqual(JSON.parse(payload[1]), {
-    nodeType: "rsc-flight",
-    path: bufferedRoute.path,
-    content: "<main>Complete buffered content</main>",
-  });
+  // Real Flight: official Flight rows travel out-of-band (`text/x-component`),
+  // never as an inline `text/x-component` script disguising SSR HTML as Flight.
+  assert.ok(!html.includes('type="text/x-component"'));
+  assert.ok(html.includes('id="croco-rsc-manifest"'));
 
   const observedErrors = [];
   const originalConsoleError = console.error;

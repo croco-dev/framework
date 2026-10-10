@@ -11,7 +11,7 @@ title: "crocoMetaVitePlugin"
 
 ### options?
 
-`CrocoMetaVitePluginOptions` = `{}`
+[`CrocoMetaVitePluginOptions`](/api/meta-vite/src/type-aliases/crocometavitepluginoptions/) = `{}`
 
 ## Returns
 

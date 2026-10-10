@@ -1,8 +1,29 @@
+import { createRequire } from "node:module";
+import { Problem, ProblemCategory } from "@croco/problems-core";
 import type { EnvironmentOptions, Plugin, UserConfig } from "vite";
 
 export type CrocoMetaVitePluginOptions = {
+  /**
+   * Enable the `rsc` Vite environment (real React Flight path). Opt-in:
+   * the default (`false`/omitted) configures only `client` + `ssr` so
+   * consumers without the optional `@vitejs/plugin-rsc` peer keep working.
+   * Pass `{ rsc: true }` only when the peer is installed.
+   */
   rsc?: boolean;
 };
+
+export class MissingRscPeerProblem extends Problem {
+  readonly code = "meta-vite/rsc-peer-missing";
+  readonly category = ProblemCategory.NotImplemented;
+
+  constructor(reason: string) {
+    super(
+      "meta-vite/rsc-peer-missing",
+      ProblemCategory.NotImplemented,
+      `crocoMetaVitePlugin: the 'rsc' environment requires the optional peer '@vitejs/plugin-rsc': ${reason}`,
+    );
+  }
+}
 
 export type EnvironmentName = "client" | "ssr" | "rsc";
 
@@ -25,8 +46,12 @@ const ENVIRONMENT_CONFIGS: Record<EnvironmentName, EnvironmentOptions> = {
 };
 
 export function crocoMetaVitePlugin(options: CrocoMetaVitePluginOptions = {}): Plugin[] {
+  // `rsc` is opt-in: enabling it unconditionally forces every consumer
+  // (including generated apps without the optional `@vitejs/plugin-rsc` peer)
+  // to fail in `configEnvironment`. Callers that need the real React Flight
+  // path pass `{ rsc: true }` explicitly.
   const environmentNames = ENVIRONMENT_NAMES.filter(
-    (name) => options.rsc !== false || name !== "rsc",
+    (name) => name !== "rsc" || options.rsc === true,
   );
   const environmentStates = new Map<EnvironmentName, EnvironmentState>(
     environmentNames.map((name) => [name, { modules: createVirtualModules(name) }]),
@@ -62,6 +87,12 @@ export function crocoMetaVitePlugin(options: CrocoMetaVitePluginOptions = {}): P
       }
 
       getState(name);
+      // The `rsc` environment is the React Flight path. Fail fast with an
+      // explicit diagnostic when the optional `@vitejs/plugin-rsc` peer is
+      // missing — never silently fall back to a non-Flight implementation.
+      if (name === "rsc") {
+        assertRscPeerAvailable();
+      }
       return { ...ENVIRONMENT_CONFIGS[name] };
     },
 
@@ -151,4 +182,20 @@ function isEnvironmentName(name: string | undefined): name is EnvironmentName {
 
 function isVirtualModuleKind(kind: string | undefined): kind is VirtualModuleKind {
   return kind === "routes" || kind === "entry";
+}
+
+function assertRscPeerAvailable(): void {
+  // `@vitejs/plugin-rsc` is an optional peer of `@croco/meta-vite`: it is
+  // required only for the `rsc` Vite environment. `createRequire` keeps the
+  // check synchronous (Vite's `configEnvironment` contract) and out of the
+  // SSR/client bundle, while the lockfile pins the supported version.
+  // NOTE: the tsup bundle rewrites `import.meta.url` to an empty shim, so
+  // resolve from the consumer root (`process.cwd()` = Vite project root)
+  // instead of the plugin module URL.
+  try {
+    createRequire(`${process.cwd()}/package.json`).resolve("@vitejs/plugin-rsc");
+  } catch (error: unknown) {
+    const reason = error instanceof Error ? error.message : String(error);
+    throw new MissingRscPeerProblem(reason);
+  }
 }

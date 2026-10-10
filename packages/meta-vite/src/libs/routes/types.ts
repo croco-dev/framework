@@ -43,6 +43,7 @@ export type PageRouteIR = {
 export type RenderRouteIR = {
   path: string;
   mode: RenderMode;
+  componentRef?: string;
   componentLoader: () => Promise<{ default: React.ComponentType<RenderRouteComponentProps> }>;
   head?: () => HeadMetadata;
   revalidateMs?: number;

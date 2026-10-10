@@ -12,11 +12,21 @@ type PluginResolveIdHook = NonNullable<Plugin["resolveId"]>;
 type PluginLoadHook = NonNullable<Plugin["load"]>;
 
 describe("crocoMetaVitePlugin environments", () => {
-  it("should configure client, ssr, and rsc environments", () => {
+  it("should configure client and ssr environments by default (rsc is opt-in)", () => {
     const plugin = getPlugin();
     const config = callConfig(plugin);
 
     expect(config).toBeDefined();
+    expect(config?.environments).toEqual({
+      client: { consumer: "client" },
+      ssr: { consumer: "server" },
+    });
+  });
+
+  it("should configure the rsc environment only when explicitly enabled", () => {
+    const plugin = getPlugin({ rsc: true });
+    const config = callConfig(plugin);
+
     expect(config?.environments).toEqual({
       client: { consumer: "client" },
       ssr: { consumer: "server" },
@@ -36,7 +46,7 @@ describe("crocoMetaVitePlugin environments", () => {
   });
 
   it("should resolve virtual module IDs separately per environment", () => {
-    const plugin = getPlugin();
+    const plugin = getPlugin({ rsc: true });
 
     const clientId = callResolveId(plugin, "client", "virtual:croco/routes");
     const rscId = callResolveId(plugin, "rsc", "virtual:croco/routes");
@@ -49,7 +59,7 @@ describe("crocoMetaVitePlugin environments", () => {
   });
 
   it("should keep environment-specific virtual modules from colliding", () => {
-    const plugin = getPlugin();
+    const plugin = getPlugin({ rsc: true });
 
     const clientRoutes = callLoad(plugin, "client", "virtual:croco/client-routes");
     const rscRoutes = callLoad(plugin, "rsc", "virtual:croco/rsc-routes");
@@ -64,8 +74,8 @@ describe("crocoMetaVitePlugin environments", () => {
   });
 });
 
-function getPlugin(): Plugin {
-  return crocoMetaVitePlugin()[0];
+function getPlugin(options?: Parameters<typeof crocoMetaVitePlugin>[0]): Plugin {
+  return crocoMetaVitePlugin(options)[0];
 }
 
 function callConfig(plugin: Plugin): UserConfig | undefined {

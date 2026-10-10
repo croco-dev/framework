@@ -20,6 +20,10 @@ Combines page IR with resolved module references for the render core.
 
 `Promise`\<\{ `default`: `React.ComponentType`\<[`RenderRouteComponentProps`](/api/meta-vite/src/type-aliases/renderroutecomponentprops/)\>; \}\>
 
+### componentRef?
+
+> `optional` **componentRef?**: `string`
+
 ### head?
 
 > `optional` **head?**: () => [`HeadMetadata`](/api/meta-vite/src/type-aliases/headmetadata/)
