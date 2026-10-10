@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 import { createCrocoCommandRuntime, runWithCrocoCommandRuntime } from "../libs/cliRuntime.js";
 import { runCreateDomain } from "../commands/createDomain.js";
@@ -154,6 +155,19 @@ describe("runCreateDomain", () => {
     await expect(fs.access(path.join(domainDir, "UserService.ts"))).rejects.toThrow();
     await expect(fs.access(path.join(domainDir, "UserRepository.ts"))).rejects.toThrow();
   });
+
+  it("registers the generated controller in the production-app application controller list", async () => {
+    const cwd = await createProductionAppWorkspace();
+
+    const result = await runCreateDomain("Invoice", { cwd });
+    const appSource = await fs.readFile(path.join(cwd, "apps/api-server/src/app.ts"), "utf-8");
+
+    expect(result?.registration).toMatchObject({ status: "updated" });
+    expect(appSource).toMatch(/const controllers = \[[^\]]*InvoiceController/);
+    expect(appSource).toMatch(
+      /import \{ InvoiceController \} from ["']\.\/domains\/invoice\/InvoiceController["']/,
+    );
+  });
 });
 
 async function createWorkspace(options: { apiServerManifest?: string } = {}): Promise<string> {
@@ -193,4 +207,32 @@ function apiServerManifest(packageNames: readonly string[]): string {
     null,
     2,
   );
+}
+
+const spaBackendTemplateSrc = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../../create-croco-app/templates/spa-be-split/apps/api-server/src",
+);
+
+async function createProductionAppWorkspace(): Promise<string> {
+  const cwd = await fs.mkdtemp(path.join(os.tmpdir(), "croco-cli-domain-spa-be-split-"));
+  const src = path.join(cwd, "apps", "api-server", "src");
+  await fs.mkdir(src, { recursive: true });
+  await fs.writeFile(path.join(cwd, "pnpm-workspace.yaml"), 'packages:\n  - "apps/*"\n');
+  await fs.writeFile(
+    path.join(cwd, "apps", "api-server", "package.json"),
+    JSON.stringify({
+      dependencies: {
+        "@croco/framework-context": "workspace:*",
+        "@croco/protocols-rest": "workspace:*",
+        "@croco/repository-core": "workspace:*",
+        "@croco/transports-http": "workspace:*",
+        zod: "^3.23.8",
+      },
+    }),
+  );
+  for (const file of ["index.ts", "app.ts"]) {
+    await fs.copyFile(path.join(spaBackendTemplateSrc, file), path.join(src, file));
+  }
+  return cwd;
 }
