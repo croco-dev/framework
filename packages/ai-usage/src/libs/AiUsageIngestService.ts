@@ -485,6 +485,9 @@ export class AiUsageIngestService {
     if (!Number.isFinite(requestedUsage) || requestedUsage < 0) {
       throw new AiUsageQuotaExceededProblem(meterId, requestedUsage, quotaLimit);
     }
+    if (typeof quotaLimit !== "number" || Number.isNaN(quotaLimit) || quotaLimit < 0) {
+      throw new AiUsageQuotaExceededProblem(meterId, requestedUsage, quotaLimit);
+    }
 
     const currentUsage = await this.meteringService.getUsage({
       tenantId,
