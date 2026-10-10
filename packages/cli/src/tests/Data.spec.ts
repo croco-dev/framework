@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -90,6 +90,65 @@ describe("data CLI", () => {
     expect(JSON.parse(readFileSync(join(cwd, "generated", "manifest.json"), "utf8")).nodes).toEqual(
       [],
     );
+  });
+  it.each([
+    { reason: "modified-owned-file", file: "manifest.json" },
+    { reason: "unowned-file-conflict", file: "schema/index.ts" },
+    { reason: "migration-id-conflict", file: "migrations/initial.sql" },
+  ])("reports $reason and retains existing files", async ({ reason, file }) => {
+    const config = {
+      connections: [{ id: "primary", env: "DATABASE_URL" }],
+      sources: [],
+      pipelines: [],
+      models: [
+        {
+          backend: "postgres",
+          connection: "primary",
+          location: { file: "data.config.ts", line: 5, column: 3 },
+          fact: {
+            name: "payments",
+            version: 1,
+            kind: "transaction",
+            scope: "tenant",
+            description: "Payments",
+            grain: { description: "One payment", key: ["id"] },
+            columns: { id: { type: "id" }, at: { type: "instant", precision: "millisecond" } },
+            time: { event: "at" },
+            write: { mode: "append", duplicate: "ignore-identical", conflict: "reject" },
+            sourceRefs: [],
+          },
+        },
+      ],
+    };
+    const cwd = fixture(`export default ${JSON.stringify(config)};`);
+    const output = join(cwd, "generated");
+    const args = ["--output", "generated", "--migration-id", "initial"];
+    if (reason === "unowned-file-conflict") {
+      mkdirSync(join(output, "schema"), { recursive: true });
+      writeFileSync(join(output, file), "private manual contents");
+    } else {
+      expect((await invoke(cwd, "generate", args)).exitCode).toBe(0);
+      if (reason === "modified-owned-file")
+        writeFileSync(join(output, file), "private manual contents");
+      else {
+        config.models[0].fact.description = "Updated payment documentation";
+        writeFileSync(join(cwd, "data.config.ts"), `export default ${JSON.stringify(config)};`);
+      }
+    }
+    const retained = readFileSync(join(output, file), "utf8");
+    writeFileSync(join(output, ".env"), "PRIVATE_SECRET=private-secret-value");
+    const result = await invoke(cwd, "generate", args);
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toEqual([]);
+    expect(JSON.parse(result.stderr[0])).toEqual({
+      code: "warehouse-tooling/generation-failed",
+      reason,
+      file,
+    });
+    expect(result.stderr.join()).not.toContain(cwd);
+    expect(result.stderr.join()).not.toContain("private");
+    expect(readFileSync(join(output, file), "utf8")).toBe(retained);
+    expect(readFileSync(join(output, ".env"), "utf8")).toBe("PRIVATE_SECRET=private-secret-value");
   });
   it("denies reads outside the project and installed tooling", async () => {
     const outside = fixture("private file content");

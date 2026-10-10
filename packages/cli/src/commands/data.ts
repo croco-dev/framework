@@ -21,6 +21,13 @@ class DataCommandProblem extends Problem {
   }
 }
 
+function invalidDataArgumentsProblem(): DataCommandProblem {
+  return new DataCommandProblem(DATA_COMMAND_INVALID_ARGUMENTS);
+}
+function dataConfigWorkerFailedProblem(): DataCommandProblem {
+  return new DataCommandProblem(DATA_CONFIG_WORKER_FAILED);
+}
+
 // Config is trusted repository code. These guards prevent accidental online work,
 // not deliberate attempts by hostile JavaScript to escape a sandbox.
 const OFFLINE_WORKER = `
@@ -108,7 +115,7 @@ export function compileOfflineConfig(
       });
     child.on("error", () => {
       clearTimeout(timeout);
-      reject(new DataCommandProblem(DATA_CONFIG_WORKER_FAILED));
+      reject(dataConfigWorkerFailedProblem());
     });
     child.on("close", (code) => {
       clearTimeout(timeout);
@@ -138,7 +145,7 @@ export function compileOfflineConfig(
             ),
           );
       } catch {
-        reject(new DataCommandProblem(DATA_CONFIG_WORKER_FAILED));
+        reject(dataConfigWorkerFailedProblem());
       }
     });
   });
@@ -184,7 +191,7 @@ function createDataAction(action: "validate" | "generate") {
           const [flag, inline] = token.split(/=([\s\S]*)/);
           const value = inline ?? rawArgs[++index];
           if (!allowed.has(flag ?? "") || !value?.trim() || value.startsWith("--"))
-            throw new DataCommandProblem(DATA_COMMAND_INVALID_ARGUMENTS);
+            throw invalidDataArgumentsProblem();
         }
         const cwd = typeof args.cwd === "string" ? resolve(runtime.cwd, args.cwd) : runtime.cwd;
         const compiled = await compileOfflineConfig(
@@ -216,6 +223,24 @@ function createDataAction(action: "validate" | "generate") {
           runtime.setExitCode(1);
           return;
         }
+        if (error instanceof DataGenerationProblem && /^[a-z-]{1,80}$/.test(error.reason)) {
+          const file =
+            typeof error.file === "string" &&
+            /^[a-zA-Z0-9_./-]+$/.test(error.file) &&
+            !error.file.startsWith("/") &&
+            error.file.split("/").every((part) => part !== "" && part !== "." && part !== "..")
+              ? error.file
+              : undefined;
+          runtime.stderr(
+            JSON.stringify({
+              code: "warehouse-tooling/generation-failed",
+              reason: error.reason,
+              ...(file ? { file } : {}),
+            }),
+          );
+          runtime.setExitCode(1);
+          return;
+        }
         const message =
           error instanceof Error && /^DATA_[A-Z_]+$|^ERR_ACCESS_DENIED$/.test(error.message)
             ? error.message
@@ -238,7 +263,7 @@ function createDataAction(action: "validate" | "generate") {
 export const data = defineCommand({
   meta: { name: "data", description: "Validate and generate offline data artifacts" },
   setup({ rawArgs }) {
-    if (rawArgs[0]?.startsWith("-")) throw new DataCommandProblem(DATA_COMMAND_INVALID_ARGUMENTS);
+    if (rawArgs[0]?.startsWith("-")) throw invalidDataArgumentsProblem();
   },
   subCommands: { validate: createDataAction("validate"), generate: createDataAction("generate") },
 });
