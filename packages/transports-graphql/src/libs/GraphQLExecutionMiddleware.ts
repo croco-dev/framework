@@ -32,12 +32,14 @@ export function createGraphQLExecutionMiddleware(
   resolverTypes: readonly Function[],
 ): MiddlewareFn<Record<string, unknown>> {
   const resolverTypeSet = new Set(resolverTypes);
+  const resolverClasses = getMetadataStorage().resolverClasses.map(({ target }) => target);
 
   return async (resolverData, next) => {
     const resolverMethod = getResolverMethod(
       resolverData.info.parentType.name,
       resolverData.info.fieldName,
       resolverTypeSet,
+      resolverClasses,
     );
 
     if (!resolverMethod) {
@@ -82,9 +84,15 @@ export function bindGraphQLSubscriptionPolicies(
   }
 
   const resolverTypeSet = new Set(resolverTypes);
+  const resolverClasses = getMetadataStorage().resolverClasses.map(({ target }) => target);
 
   for (const [fieldName, field] of Object.entries(subscriptionType.getFields())) {
-    const resolverMethod = getResolverMethod("Subscription", fieldName, resolverTypeSet);
+    const resolverMethod = getResolverMethod(
+      "Subscription",
+      fieldName,
+      resolverTypeSet,
+      resolverClasses,
+    );
     const subscribe = field.subscribe;
 
     if (!resolverMethod || !subscribe) {
@@ -109,19 +117,21 @@ function getResolverMethod(
   parentTypeName: string,
   fieldName: string,
   resolverTypes: ReadonlySet<Function>,
+  resolverClasses: readonly Function[],
 ): { prototype: object; methodName: string } | undefined {
   const storage = getMetadataStorage();
   const methods = getResolverMethods(parentTypeName, storage);
   let resolverMethod: { prototype: object; methodName: string } | undefined;
 
   for (const method of methods) {
-    if (method.schemaName !== fieldName || !matchesParentType(method, parentTypeName, storage)) {
+    if (!matchesField(method, parentTypeName, fieldName, storage)) {
       continue;
     }
 
+    // TypeGraphQL remaps all decorated resolver classes before filtering selected resolvers.
     let resolverType = method.target;
-    for (const { target } of storage.resolverClasses) {
-      if (resolverTypes.has(target) && Object.prototype.isPrototypeOf.call(resolverType, target)) {
+    for (const target of resolverClasses) {
+      if (Object.prototype.isPrototypeOf.call(resolverType, target)) {
         resolverType = target;
       }
     }
@@ -139,9 +149,10 @@ function getResolverMethod(
   return resolverMethod;
 }
 
-function matchesParentType(
+function matchesField(
   method: ResolverMethodMetadata,
   parentTypeName: string,
+  fieldName: string,
   storage: ReturnType<typeof getMetadataStorage>,
 ): boolean {
   if (
@@ -149,17 +160,28 @@ function matchesParentType(
     parentTypeName === "Mutation" ||
     parentTypeName === "Subscription"
   ) {
-    return true;
+    return method.schemaName === fieldName;
   }
 
-  const objectType = method.getObjectType?.();
-  if (!objectType) {
-    return false;
+  let parentMetadata = [...storage.objectTypes, ...storage.interfaceTypes].find(
+    ({ name }) => name === parentTypeName,
+  );
+  while (parentMetadata) {
+    const fields = [
+      ...(parentMetadata.interfaceClasses ?? []).flatMap(
+        (target) => storage.interfaceTypesCache.get(target)?.fields ?? [],
+      ),
+      ...(parentMetadata.fields ?? []),
+    ];
+    const field = fields.reverse().find(({ schemaName }) => schemaName === fieldName);
+    if (field) {
+      return method.getObjectType?.() === field.target && method.methodName === field.name;
+    }
+    const parentTarget = Object.getPrototypeOf(parentMetadata.target);
+    parentMetadata =
+      storage.objectTypesCache.get(parentTarget) ?? storage.interfaceTypesCache.get(parentTarget);
   }
-
-  const objectMetadata =
-    storage.objectTypesCache.get(objectType) ?? storage.interfaceTypesCache.get(objectType);
-  return objectMetadata?.name === parentTypeName;
+  return false;
 }
 
 function getResolverMethods(

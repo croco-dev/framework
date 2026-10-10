@@ -5,6 +5,7 @@ import {
   Field,
   FieldResolver,
   ObjectType,
+  Mutation,
   Query,
   Resolver,
   Roles,
@@ -17,7 +18,11 @@ import type * as GraphQL from "graphql";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { SchemaCompiler } from "../libs/SchemaCompiler";
 
-const { graphql } = createRequire(import.meta.url)("graphql") as typeof GraphQL;
+const {
+  graphql,
+  parse,
+  subscribe: subscribeGraphQL,
+} = createRequire(import.meta.url)("graphql") as typeof GraphQL;
 const calls: string[] = [];
 
 class Uppercase implements GraphQLInterceptor {
@@ -202,9 +207,10 @@ describe("GraphQL execution metadata inheritance", () => {
     }
     @Resolver(() => InheritedPerson)
     class BasePersonResolver {
-      @FieldResolver(() => String, { name: "name" })
+      @FieldResolver(() => String)
       @UseInterceptors(Uppercase)
-      displayName() {
+      name() {
+        calls.push("person:handler");
         return "person";
       }
     }
@@ -212,9 +218,10 @@ describe("GraphQL execution metadata inheritance", () => {
     class ChildPersonResolver extends BasePersonResolver {}
     @Resolver(() => UnrelatedOrganization)
     class OrganizationResolver {
-      @FieldResolver(() => String, { name: "name" })
+      @FieldResolver(() => String)
       @UseInterceptors(ChildTransform)
-      displayName() {
+      name() {
+        calls.push("organization:handler");
         return "organization";
       }
     }
@@ -222,11 +229,11 @@ describe("GraphQL execution metadata inheritance", () => {
     class QueryResolver {
       @Query(() => InheritedPerson)
       person() {
-        return { name: "person" };
+        return { name: "person-property-sentinel" };
       }
       @Query(() => UnrelatedOrganization)
       organization() {
-        return { name: "organization" };
+        return { name: "organization-property-sentinel" };
       }
     }
 
@@ -238,7 +245,143 @@ describe("GraphQL execution metadata inheritance", () => {
     ).toEqual({
       data: { person: { name: "PERSON" }, organization: { name: "child:organization" } },
     });
-    expect(calls.sort()).toEqual(["child", "uppercase"]);
+    expect(calls.sort()).toEqual(["child", "organization:handler", "person:handler", "uppercase"]);
+  });
+
+  it("keeps the actual root handler's guard when an unselected sibling owns inherited metadata", async () => {
+    class DenyGuard {
+      canActivate() {
+        calls.push("guard");
+        return false;
+      }
+    }
+    Container.set(DenyGuard, new DenyGuard());
+    @Resolver()
+    class ActualResolver {
+      @Query(() => String)
+      @UseGuards(DenyGuard)
+      value() {
+        calls.push("actual:handler");
+        return "secret";
+      }
+    }
+    @Resolver()
+    class BaseResolver {
+      @Query(() => String)
+      @UseInterceptors(Uppercase)
+      value() {
+        calls.push("base:handler");
+        return "hello";
+      }
+    }
+    Resolver()(class FirstResolver extends BaseResolver {});
+    @Resolver()
+    class SecondResolver extends BaseResolver {}
+
+    const result = await execute([ActualResolver, SecondResolver], "{ value }");
+    expect(result.data).toBeNull();
+    expect(result.errors?.[0]?.originalError).toMatchObject({
+      code: "protocols-graphql/guard-denied",
+    });
+    expect(calls).toEqual(["guard"]);
+  });
+
+  it("keeps the actual object handler's guard when another method aliases its field", async () => {
+    class DenyGuard {
+      canActivate() {
+        calls.push("guard");
+        return false;
+      }
+    }
+    Container.set(DenyGuard, new DenyGuard());
+    @ObjectType()
+    class GuardedPerson {
+      @Field(() => String)
+      name!: string;
+    }
+    @Resolver(() => GuardedPerson)
+    class BaseResolver {
+      @FieldResolver(() => String, { name: "name" })
+      @UseInterceptors(Uppercase)
+      displayName() {
+        calls.push("alias:handler");
+        return "unused";
+      }
+    }
+    @Resolver(() => GuardedPerson)
+    class ChildResolver extends BaseResolver {}
+    @Resolver(() => GuardedPerson)
+    class ActualResolver {
+      @FieldResolver(() => String)
+      @UseGuards(DenyGuard)
+      name() {
+        calls.push("actual:handler");
+        return "secret";
+      }
+    }
+    @Resolver()
+    class QueryResolver {
+      @Query(() => GuardedPerson)
+      person() {
+        return { name: "source-property-sentinel" };
+      }
+    }
+
+    const result = await execute(
+      [QueryResolver, ChildResolver, ActualResolver],
+      "{ person { name } }",
+    );
+    expect(result.data).toBeNull();
+    expect(result.errors?.[0]?.originalError).toMatchObject({
+      code: "protocols-graphql/guard-denied",
+    });
+    expect(calls).toEqual(["guard"]);
+  });
+
+  it("matches aliased and synthesized fields inherited from an object type", async () => {
+    @ObjectType()
+    class ParentFields {
+      @Field(() => String, { name: "visible" })
+      original!: string;
+    }
+    @ObjectType()
+    class ChildFields extends ParentFields {}
+    @Resolver(() => ParentFields)
+    class BaseResolver {
+      @FieldResolver(() => String, { name: "visible" })
+      @UseInterceptors(Uppercase)
+      original() {
+        calls.push("original:handler");
+        return "original";
+      }
+      @FieldResolver(() => String, { name: "generated" })
+      @UseInterceptors(Uppercase)
+      computed() {
+        calls.push("computed:handler");
+        return "computed";
+      }
+    }
+    @Resolver(() => ParentFields)
+    class ChildResolver extends BaseResolver {}
+    @Resolver()
+    class QueryResolver {
+      @Query(() => ChildFields)
+      item() {
+        return { original: "property-sentinel" };
+      }
+    }
+
+    expect(await execute([QueryResolver, ChildResolver], "{ item { visible generated } }")).toEqual(
+      {
+        data: { item: { visible: "ORIGINAL", generated: "COMPUTED" } },
+      },
+    );
+    expect(calls.sort()).toEqual([
+      "computed:handler",
+      "original:handler",
+      "uppercase",
+      "uppercase",
+    ]);
   });
 
   it("preserves inherited guard denial before executing a resolver", async () => {
@@ -268,6 +411,28 @@ describe("GraphQL execution metadata inheritance", () => {
     expect(calls).toEqual([]);
   });
 
+  it("executes an inherited mutation interceptor once", async () => {
+    @Resolver()
+    class BaseResolver {
+      @Query(() => String)
+      health() {
+        return "ok";
+      }
+      @Mutation(() => String)
+      @UseInterceptors(Uppercase)
+      inherited() {
+        return "hello";
+      }
+    }
+    @Resolver()
+    class ChildResolver extends BaseResolver {}
+
+    expect(await execute([ChildResolver], "mutation { inherited }")).toEqual({
+      data: { inherited: "HELLO" },
+    });
+    expect(calls).toEqual(["uppercase"]);
+  });
+
   it("enforces inherited roles before a subscription acquires an iterator", async () => {
     @Resolver()
     class BaseResolver {
@@ -277,6 +442,7 @@ describe("GraphQL execution metadata inheritance", () => {
       }
       @Subscription(() => String, { topics: "update" })
       @Roles("admin")
+      @UseInterceptors(Uppercase)
       update() {
         return "hello";
       }
@@ -307,5 +473,19 @@ describe("GraphQL execution metadata inheritance", () => {
       code: "protocols-graphql/guard-denied",
     });
     expect(calls).toEqual([]);
+
+    const result = await subscribeGraphQL({
+      schema,
+      document: parse("subscription { update }"),
+      contextValue: { user: { roles: ["admin"] } },
+    });
+    if (!(Symbol.asyncIterator in result)) {
+      throw new Error("Expected an authorized subscription iterator");
+    }
+    for await (const event of result) {
+      expect(event).toEqual({ data: { update: "HELLO" } });
+      break;
+    }
+    expect(calls).toEqual(["subscribe", "uppercase"]);
   });
 });
