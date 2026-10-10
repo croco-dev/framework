@@ -229,6 +229,7 @@ export class RouteCompiler {
       method: routeIR.httpMethod,
       path: fullPath,
       ...(routeIR.successStatus === undefined ? {} : { successStatus: routeIR.successStatus }),
+      ...(routeIR.outputSchema === null ? {} : { hasResponseBody: true }),
       handler,
       controllerInstance: undefined,
       methodName: routeIR.methodName,
