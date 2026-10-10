@@ -138,7 +138,9 @@ export function createControllerProject(
   const outputPaths = new Map(
     emittableSourceFiles.map((sourceFile) => [
       normalizePath(sourceFile.getFilePath()),
-      getEmittedFilePath(sourceRoot, emitDir, sourceFile.getFilePath()),
+      path.basename(sourceFile.getFilePath()) === "package.json"
+        ? path.join(fs.mkdtempSync(path.join(emitDir, "croco-json-")), "package.json")
+        : getEmittedFilePath(sourceRoot, emitDir, sourceFile.getFilePath()),
     ]),
   );
 
@@ -158,7 +160,18 @@ export function createControllerProject(
     emit(): void {
       assertActive(disposed);
       for (const context of emitContexts) {
-        for (const sourceFile of context.sourceFiles) sourceFile.emitSync();
+        for (const sourceFile of context.sourceFiles) {
+          const sourcePath = sourceFile.getFilePath();
+          if (path.basename(sourcePath) === "package.json") {
+            const outputPath = outputPaths.get(normalizePath(sourcePath));
+            if (!outputPath) {
+              throw new ControllerProjectStateProblem(`Missing JSON output path: ${sourcePath}`);
+            }
+            fs.copyFileSync(sourcePath, outputPath);
+          } else {
+            sourceFile.emitSync();
+          }
+        }
         rewriteRuntimeSpecifiers(context, sourceRoot, emitDir, outputPaths);
         writeModuleBoundaries(context, sourceRoot, emitDir);
       }

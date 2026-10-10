@@ -166,6 +166,38 @@ describe("createControllerProject", () => {
     expect(readJson(path.join(root, "src", "config.json"))).toEqual({ title: "local-json" });
   });
 
+  it("preserves imported package.json data separately from the CommonJS module boundary", async () => {
+    const root = createTemporaryDirectory();
+    writeJson(path.join(root, "tsconfig.json"), {
+      compilerOptions: {
+        target: "ES2022",
+        module: "CommonJS",
+        resolveJsonModule: true,
+        esModuleInterop: true,
+      },
+    });
+    const metadata = { name: "controller-data", version: "7.2.1", type: "module" };
+    writeJson(path.join(root, "src", "package.json"), metadata);
+    writeFile(
+      path.join(root, "src", "Controller.ts"),
+      "import metadata from './package.json'; export class Controller { static metadata = metadata; }",
+    );
+    const session = createControllerProject({ cwd: root, controllers: "src/Controller.ts" });
+
+    try {
+      expect(session.getPreEmitDiagnostics()).toEqual([]);
+      session.emit();
+      const [moduleExports] = await session.importControllerModules();
+      expect((moduleExports.Controller as { metadata: typeof metadata }).metadata).toEqual(
+        metadata,
+      );
+      expect(readJson(path.join(session.emitDir, "package.json"))).toEqual({ type: "commonjs" });
+    } finally {
+      session.dispose();
+    }
+    expect(readJson(path.join(root, "src", "package.json"))).toEqual(metadata);
+  });
+
   it("emits a nested JSON path alias outside the controller directory", async () => {
     const root = createTemporaryDirectory();
     writeJson(path.join(root, "tsconfig.json"), {
