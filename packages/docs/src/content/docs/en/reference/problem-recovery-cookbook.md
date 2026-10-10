@@ -14454,7 +14454,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:92:1` (problem-class)
+- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:99:1` (problem-class)
 
 <a id="protocols-trpc-execution-context-missing"></a>
 
@@ -14472,7 +14472,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:216:13` (problem-factory)
+- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:224:13` (problem-factory)
 
 <a id="protocols-trpc-provider-container-required"></a>
 
@@ -14490,7 +14490,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:76:1` (problem-class)
+- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:83:1` (problem-class)
 
 <a id="protocols-trpc-request-normalization-failed"></a>
 
@@ -14544,7 +14544,7 @@ Sources:
 
 Sources:
 
-- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:63:1` (problem-class)
+- `packages/protocols-trpc/src/libs/createTrpcRouter.ts:70:1` (problem-class)
 
 <a id="ratelimit-core-duplicate-default-policy"></a>
 
