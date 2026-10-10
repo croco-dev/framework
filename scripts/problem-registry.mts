@@ -3747,6 +3747,17 @@ const recoveryMetadataByCode = {
     redactionPolicy: "operator-only",
     severity: "error",
   }),
+  "framework-context/request-scope-disposed": recovery({
+    cause:
+      "A request provider was resolved or an instance was tracked after its request scope began cleanup.",
+    userAction:
+      "Capture the values needed by background work while the request scope is active and pass them explicitly.",
+    operatorAction:
+      "Inspect waitUntil and other asynchronous continuations for request provider access after Context.run() settles; do not reuse disposed provider instances.",
+    retryability: "not-retryable",
+    redactionPolicy: "safe-message",
+    severity: "error",
+  }),
   "framework-context/shutdown-hook-registration-closed": recovery({
     cause:
       "Shutdown hook registration was attempted after the current manager started shutting down.",

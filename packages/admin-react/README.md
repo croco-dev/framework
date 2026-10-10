@@ -614,3 +614,9 @@ does not execute browser code or SQL and does not expose individual historical r
 
 Run the synthetic HTTP example in `examples/targeting-impact` to exercise comparison,
 save/re-read, export, and failure recovery without a campaign execution engine or DB.
+
+### Retention offer console
+
+`RetentionOfferConsole` consumes a `RetentionOfferView` from `RetentionOfferOperations`. It edits registered offer labels, display order and billing-period/refund-group targets, with a required audit reason. `canWrite` disables the editing surface; authenticated server operations enforce authority independently. `onSave` receives `RetentionOfferEdit`, and `onRefresh` loads the latest revision after saves or uncertain outcomes. The built-in direct cancellation action is independent of this offer policy.
+
+The console reports initial and renewal sessions grouped by policy, subscription age at session creation and exact authoritative quote amount/currency. Scheduled cancellation, ended access and confirmed refunds are separate counts. Loading, empty, denied, error and partial-history states are explicit.

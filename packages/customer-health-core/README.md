@@ -129,6 +129,10 @@ pending 상태로 남깁니다. 호출자 커밋 후 `publishPendingEvents` 또�
 
 ### 추세 분석
 
+`getTrend(tenantId, days)`의 `days`는 레코드 개수가 아닌 기간입니다. 현재 시각에서 `days × 24시간` 전부터
+현재 시각까지(양 끝 포함)의 가장 오래된 점수와 최신 점수를 비교하며, 구간 안의 점수가 2건 미만이면
+`null`을 반환합니다.
+
 ```typescript
 import type { TrendPeriod, HealthTrendAnalysis } from "@croco/customer-health-core";
 

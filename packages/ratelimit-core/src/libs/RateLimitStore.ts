@@ -227,7 +227,9 @@ export abstract class SlidingWindowStore extends DistributedRateLimitStore {
     timestamp: number,
     receiptId?: string,
   ): Promise<void>;
+  /** Returns timestamps strictly after `since`; timestamps at or below the window start are expired. */
   protected abstract getTimestamps(key: string, since: number): Promise<number[]>;
+  /** Removes timestamps at or before `before`, including the window start. */
   protected abstract removeTimestamps(key: string, before: number): Promise<void>;
 
   async checkSlidingWindow(key: string, policy: SlidingWindowPolicy): Promise<RateLimitResult> {

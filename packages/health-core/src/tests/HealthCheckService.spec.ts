@@ -570,6 +570,76 @@ describe("HealthCheckService", () => {
     expect(didAbort).toBe(true);
   });
 
+  describe.each(["health", "readiness"] as const)("%s timeout settlement", (kind) => {
+    it.each(["resolve", "reject"] as const)(
+      "preserves timeout when the abort listener settles with %s",
+      async (settlement) => {
+        vi.useFakeTimers();
+        const timedService = new HealthCheckService({ timeout: 100 });
+        const onAbort = vi.fn();
+        const check = (signal?: AbortSignal): Promise<HealthIndicatorResult> =>
+          new Promise((resolve, reject) => {
+            signal?.addEventListener(
+              "abort",
+              () => {
+                onAbort();
+                if (settlement === "resolve") {
+                  resolve({ name: "cleanup", status: "up" });
+                } else {
+                  reject(new Error("cleanup failed"));
+                }
+              },
+              { once: true },
+            );
+          });
+        if (kind === "health") {
+          timedService.register("cooperative", { check });
+        } else {
+          timedService.registerReadiness("cooperative", { check, isReady: check });
+        }
+
+        const pending = kind === "health" ? timedService.check() : timedService.checkReadiness();
+        await vi.advanceTimersByTimeAsync(100);
+
+        expect(await pending).toEqual({
+          status: "down",
+          results: [
+            {
+              name: "cooperative",
+              status: "down",
+              details: { error: "Health check timeout for cooperative" },
+            },
+          ],
+        });
+        expect(onAbort).toHaveBeenCalledTimes(1);
+        expect(vi.getTimerCount()).toBe(0);
+      },
+    );
+
+    it("clears the timeout after a successful check", async () => {
+      vi.useFakeTimers();
+      const timedService = new HealthCheckService({ timeout: 100 });
+      const onAbort = vi.fn();
+      const check = async (signal?: AbortSignal): Promise<HealthIndicatorResult> => {
+        signal?.addEventListener("abort", onAbort, { once: true });
+        return { name: "fast", status: "up" };
+      };
+      if (kind === "health") {
+        timedService.register("fast", { check });
+      } else {
+        timedService.registerReadiness("fast", { check, isReady: check });
+      }
+
+      const result = await (kind === "health"
+        ? timedService.check()
+        : timedService.checkReadiness());
+      expect(result).toEqual({ status: "up", results: [{ name: "fast", status: "up" }] });
+      expect(vi.getTimerCount()).toBe(0);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(onAbort).not.toHaveBeenCalled();
+    });
+  });
+
   it("does not start health or readiness indicators for an aborted caller", async () => {
     const controller = new AbortController();
     controller.abort();

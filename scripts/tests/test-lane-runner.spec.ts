@@ -1076,11 +1076,13 @@ describe("test lane runner", () => {
     expect(report.diagnostics).toEqual([]);
     expect(exampleCommands).not.toHaveLength(0);
     expect(resolveTurboPackageFilters(root, exampleCommands)).toEqual([
+      "@croco-example/cancellation-flow",
       "@croco-example/experiment-runtime",
       "@croco-example/first-party-plugin-composition",
       "@croco-example/growth-analysis",
       "@croco-example/lifecycle-journey",
       "@croco-example/promotion-offers",
+      "@croco-example/referral-program",
       "@croco-example/saas-billing-golden-path",
       "@croco-example/saved-intents",
       "@croco-example/targeting-impact",

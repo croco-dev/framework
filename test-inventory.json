@@ -2,6 +2,12 @@
   "version": 1,
   "tests": [
     {
+      "path": "examples/cancellation-flow/src/tests/RequestValidation.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
       "path": "examples/experiment-runtime/src/tests/CohortEligibility.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -51,6 +57,12 @@
     },
     {
       "path": "examples/promotion-offers/src/tests/promotion-offers.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "repo:examples"
+    },
+    {
+      "path": "examples/referral-program/src/tests/referral-program.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "repo:examples"
@@ -260,7 +272,19 @@
       "owner": "@croco/admin-core"
     },
     {
+      "path": "packages/admin-core/src/tests/ReferralConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
       "path": "packages/admin-core/src/tests/ReminderOperations.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-core"
+    },
+    {
+      "path": "packages/admin-core/src/tests/RetentionOfferOperations.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-core"
@@ -536,7 +560,19 @@
       "owner": "@croco/admin-react"
     },
     {
+      "path": "packages/admin-react/src/tests/ReferralProgramConsole.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
       "path": "packages/admin-react/src/tests/ReminderOperationsPanel.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/admin-react"
+    },
+    {
+      "path": "packages/admin-react/src/tests/RetentionOfferConsole.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/admin-react"
@@ -962,6 +998,12 @@
       "owner": "@croco/batch-qstash"
     },
     {
+      "path": "packages/billing-core/src/tests/BillingCancellationAction.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/billing-core"
+    },
+    {
       "path": "packages/billing-core/src/tests/BillingProblems.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -975,6 +1017,12 @@
     },
     {
       "path": "packages/billing-core/src/tests/BillingService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/billing-core"
+    },
+    {
+      "path": "packages/billing-core/src/tests/CancellationService.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/billing-core"
@@ -1026,6 +1074,18 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/billing-core"
+    },
+    {
+      "path": "packages/billing-drizzle/src/tests/DrizzleBillingStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/billing-drizzle"
+    },
+    {
+      "path": "packages/billing-drizzle/src/tests/DrizzleCancellationStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/billing-drizzle"
     },
     {
       "path": "packages/billing-polar/src/tests/PolarBillingDiagnosticsProvider.spec.ts",
@@ -2792,6 +2852,12 @@
       "owner": "@croco/frontend-problems"
     },
     {
+      "path": "packages/frontend-react/src/tests/CancellationFlow.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
       "path": "packages/frontend-react/src/tests/ExperienceSlot.spec.tsx",
       "lane": "fast",
       "qualifiers": [],
@@ -2817,6 +2883,12 @@
     },
     {
       "path": "packages/frontend-react/src/tests/OfferCard.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/frontend-react"
+    },
+    {
+      "path": "packages/frontend-react/src/tests/ReferralCards.spec.ts",
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/frontend-react"
@@ -3788,6 +3860,12 @@
       "owner": "@croco/onboarding-drizzle"
     },
     {
+      "path": "packages/onboarding-drizzle/src/tests/DrizzleOnboardingStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/onboarding-drizzle"
+    },
+    {
       "path": "packages/onboarding-drizzle/src/tests/DrizzleOnboardingStore.spec.ts",
       "lane": "fast",
       "qualifiers": [],
@@ -3852,6 +3930,18 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/outbox-core"
+    },
+    {
+      "path": "packages/oxlint-rules/src/tests/NoCrossDomainImport.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/oxlint-rules"
+    },
+    {
+      "path": "packages/oxlint-rules/src/tests/NoDatasourceImport.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/oxlint-rules"
     },
     {
       "path": "packages/oxlint-rules/src/tests/decorator-binding.spec.ts",
@@ -4350,6 +4440,24 @@
       "lane": "fast",
       "qualifiers": [],
       "owner": "@croco/ratelimit-upstash"
+    },
+    {
+      "path": "packages/referral-core/src/tests/ReferralService.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/referral-core"
+    },
+    {
+      "path": "packages/referral-drizzle/src/tests/PostgresReferralStore.postgres.spec.ts",
+      "lane": "live",
+      "qualifiers": [],
+      "owner": "@croco/referral-drizzle"
+    },
+    {
+      "path": "packages/referral-drizzle/src/tests/PostgresReferralStore.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/referral-drizzle"
     },
     {
       "path": "packages/repository-core/src/tests/BatchLoadProblems.spec.ts",

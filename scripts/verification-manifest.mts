@@ -290,9 +290,18 @@ function packageAccountabilitySelection(context: VerificationContext): {
         }),
       ),
     ].sort();
+    const fullEvidence = relevantFiles.some((path) => !/^(?:apps|examples|packages)\//.test(path));
+    if (packages.length === 0 && !fullEvidence) {
+      return {
+        applicable: false,
+        fullEvidence: false,
+        packages,
+        reason: `Skipped because no package under packages/ changed: ${relevantFiles.join(", ")}.`,
+      };
+    }
     return {
       applicable: true,
-      fullEvidence: relevantFiles.some((path) => !/^(?:apps|examples|packages)\//.test(path)),
+      fullEvidence,
       packages,
       reason: `Selected because package accountability inputs changed: ${relevantFiles.join(", ")}.`,
     };

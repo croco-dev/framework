@@ -889,6 +889,47 @@ export function createEngagementStoreConformanceSuite(
         },
       },
       {
+        name: "returns every mixed-case dispatch exactly once when paging through tied history",
+        run: async () => {
+          const store = await options.createStore();
+          const messageIds = ["a", "B", "c"];
+          for (const messageId of messageIds) {
+            await store.recordDispatch({
+              ...identity(
+                "tenant-tied-history",
+                "recipient-tied-history",
+                messageId,
+                "email",
+                "same-batch",
+              ),
+              topic: "system.receipt",
+              targets: [],
+              outcome: { kind: "unavailable", reason: "no-endpoint" },
+              recordedAt: instant(10),
+            });
+          }
+
+          const seen: string[] = [];
+          let after: { updatedAt: Date; dispatchId: string } | undefined;
+          for (let page = 0; page <= messageIds.length; page += 1) {
+            const result = await store.listByRecipient(
+              "tenant-tied-history",
+              "recipient-tied-history",
+              {
+                limit: 1,
+                ...(after === undefined ? {} : { after }),
+              },
+            );
+            assert.equal(result.items.length, 1);
+            seen.push(...result.items.map((item) => item.messageId));
+            if (result.nextCursor === undefined) break;
+            after = result.nextCursor;
+          }
+
+          assert.deepEqual(seen.sort(), [...messageIds].sort());
+        },
+      },
+      {
         name: "keeps provider and network failures distinct from policy outcomes",
         run: async () => {
           const store = await options.createStore();

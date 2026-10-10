@@ -20,7 +20,7 @@ the schedules with QStash. It handles:
 
 decorated methods
 
-- Updating existing schedules when cron expressions change
+- Updating existing schedules when cron expressions or destinations change
 - Deleting schedules that are no longer in code
 - Generating unique schedule IDs based on target class and method name
 

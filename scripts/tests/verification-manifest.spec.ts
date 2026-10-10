@@ -821,6 +821,24 @@ describe("verification manifest", () => {
     expect(command?.command).toEqual(expect.arrayContaining(["--owner", owner]));
   });
 
+  it("skips package accountability gates when only apps or examples change", () => {
+    for (const path of ["examples/example/src/index.ts", "apps/web/src/index.ts"]) {
+      const byId = new Map(
+        createVerificationManifest("spine", {
+          base: "origin/trunk",
+          changedFiles: [path],
+          head: "HEAD",
+        }).map((command) => [command.id, command]),
+      );
+
+      for (const id of ["production-ready", "spine-promotion"]) {
+        expect(byId.get(id)?.applicable, `${id}: ${path}`).toBe(false);
+        expect(byId.get(id)?.selectionReason, `${id}: ${path}`).toContain(path);
+      }
+      expect(byId.get("spine-promotion")?.command, path).not.toContain("--package");
+    }
+  });
+
   it("selects package accountability checks for scoped certified, spine, and catalog changes", () => {
     for (const path of [
       "packages/telemetry-api/src/index.ts",

@@ -317,3 +317,38 @@ export type {
   Subscription,
   SubscriptionStatus,
 } from "./types";
+
+/** Durable cancellation choices, policy, source validation, and command receipts. */
+export type {
+  CancellationEvidence,
+  CancellationScope,
+  CancellationIdentity,
+  CancellationQuote,
+  CancellationSnapshot,
+  CancellationActionKind,
+  RegisteredCancellationChoice,
+  ChoicePolicyEntry,
+  ChoicePolicy,
+  CancellationChoice,
+  CancellationDecision,
+  CancellationCommandReceipt,
+  CancellationSession,
+  ChoicePolicyAudit,
+  CancellationStore,
+  CancellationAuthority,
+  CancellationAction,
+} from "./libs/Cancellation";
+export {
+  CancellationService,
+  validateCancellationScope,
+  validateCancellationSnapshot,
+  validateCancellationDecision,
+} from "./libs/CancellationService";
+export type { CancellationServiceDependencies } from "./libs/CancellationService";
+export { BillingCancellationAction } from "./libs/BillingCancellationAction";
+export {
+  CancellationInputProblem,
+  CancellationAuthorizationProblem,
+  CancellationConflictProblem,
+  CancellationUnavailableProblem,
+} from "./libs/problems/CancellationProblems";

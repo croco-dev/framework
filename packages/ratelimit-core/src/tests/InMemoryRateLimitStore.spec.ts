@@ -27,6 +27,92 @@ describe("InMemoryRateLimitStore", () => {
     store.close();
   });
 
+  describe.each([SlidingWindowInMemoryStore, InMemoryRateLimitStore])(
+    "%s window boundary",
+    (Store) => {
+      it("allows a request at the resetAtMs reported when denying", async () => {
+        let now = 10_000;
+        const slidingStore = new Store({ now: () => now, pruneIntervalMs: 0 });
+        const boundaryPolicy: SlidingWindowPolicy = { ...policy, limit: 1, windowMs: 1000 };
+
+        expect((await slidingStore.check("user:boundary", boundaryPolicy)).success).toBe(true);
+        now = 10_999;
+        const denied = await slidingStore.check("user:boundary", boundaryPolicy);
+        expect(denied.success).toBe(false);
+        expect(denied.resetAtMs).toBe(11_000);
+
+        now = denied.resetAtMs;
+        const atReset = await slidingStore.check("user:boundary", boundaryPolicy);
+        expect(atReset.success).toBe(true);
+        expect(atReset.remaining).toBe(0);
+        expect(atReset.resetAtMs).toBe(12_000);
+        expect((await slidingStore.check("user:boundary", boundaryPolicy)).success).toBe(false);
+        slidingStore.close();
+      });
+
+      it("does not refund an expired receipt at the window boundary", async () => {
+        let now = 10_000;
+        const slidingStore = new Store({ now: () => now, pruneIntervalMs: 0 });
+        const boundaryPolicy: SlidingWindowPolicy = { ...policy, limit: 2, windowMs: 1000 };
+        const expired = await slidingStore.check("user:boundary", boundaryPolicy);
+        now = 10_001;
+        const active = await slidingStore.check("user:boundary", boundaryPolicy);
+
+        now = 11_000;
+        const refund = await slidingStore.refund(
+          "user:boundary",
+          boundaryPolicy,
+          expired.refundReceipt,
+        );
+        expect(refund.refunded).toBe(false);
+        expect(refund.remaining).toBe(1);
+        expect(refund.resetAtMs).toBe(11_001);
+        expect(await slidingStore.getStats()).toEqual({ allowed: 2, denied: 0, total: 2 });
+        expect(
+          (await slidingStore.refund("user:boundary", boundaryPolicy, active.refundReceipt))
+            .refunded,
+        ).toBe(true);
+        slidingStore.close();
+      });
+
+      it("prunes timestamps at the window boundary while retaining newer requests", async () => {
+        let now = 10_000;
+        const slidingStore = new Store({ now: () => now, pruneIntervalMs: 0 });
+        const boundaryPolicy: SlidingWindowPolicy = { ...policy, limit: 2, windowMs: 1000 };
+        await slidingStore.check("user:boundary", boundaryPolicy);
+        now = 10_001;
+        await slidingStore.check("user:boundary", boundaryPolicy);
+
+        now = 10_999;
+        expect(await slidingStore.pruneExpired()).toBe(0);
+        now = 11_000;
+        expect(await slidingStore.pruneExpired()).toBe(1);
+        expect(await slidingStore.pruneExpired()).toBe(0);
+        now = 11_001;
+        expect(await slidingStore.pruneExpired()).toBe(1);
+        slidingStore.close();
+      });
+    },
+  );
+
+  it("reads only timestamps strictly after the sliding window start", async () => {
+    class ReadableSlidingWindowStore extends SlidingWindowInMemoryStore {
+      readTimestamps(key: string, since: number): Promise<number[]> {
+        return this.getTimestamps(key, since);
+      }
+    }
+    let now = 10_000;
+    const slidingStore = new ReadableSlidingWindowStore({ now: () => now, pruneIntervalMs: 0 });
+    await slidingStore.check("user:boundary", policy);
+    now = 10_001;
+    await slidingStore.check("user:boundary", policy);
+
+    expect(await slidingStore.readTimestamps("user:boundary", 9999)).toEqual([10_000, 10_001]);
+    expect(await slidingStore.readTimestamps("user:boundary", 10_000)).toEqual([10_001]);
+    expect(await slidingStore.readTimestamps("user:boundary", 10_001)).toEqual([]);
+    slidingStore.close();
+  });
+
   it.each([Number.NaN, Number.POSITIVE_INFINITY, 2_147_483_648])(
     "rejects unsupported native prune intervals (%s) with a stable Problem",
     (pruneIntervalMs) => {

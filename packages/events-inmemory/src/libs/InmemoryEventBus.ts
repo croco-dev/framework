@@ -246,7 +246,10 @@ export class InMemoryEventBus<TEvent extends DomainEvent = DomainEvent>
     this.assertIntakeOpen();
     const eventName = event.eventName;
     const traceInfo = getActiveTraceInfo();
-    const baseEvent = this.createEventWithTraceContext(event, traceInfo);
+    const eventTrace = event.metadata.traceContext;
+    const handlerTrace =
+      eventTrace?.isValid && eventTrace.traceId && eventTrace.spanId ? eventTrace : traceInfo;
+    const baseEvent = this.createEventWithTraceContext(event, handlerTrace);
     const subscribers = this.resolveSubscribers(eventName);
     const inspector = this.resolveRuntimeInspector();
     const startedAt = Date.now();

@@ -1835,7 +1835,7 @@ export class Container {
     if (provider.scope === "singleton" && singletons.has(provider)) {
       return singletons.get(provider) as T;
     }
-    const requestCache = provider.scope === "request" ? Context.getCache() : undefined;
+    const requestCache = provider.scope !== "singleton" ? Context.getCache() : undefined;
     if (provider.scope === "request" && !requestCache) {
       throw Container.createRequestScopeOutsideContextProblem();
     }
@@ -1879,7 +1879,7 @@ export class Container {
       (typeof instance === "object" && instance !== null) ||
       typeof instance === "function"
     ) {
-      if (Context.getCache()) {
+      if (requestCache) {
         trackRequestInstance(instance, () => destroyGeneratedInstance(instance));
       } else {
         Container.getGeneratedTransients().add(instance);

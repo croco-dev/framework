@@ -1,20 +1,19 @@
 import path from "node:path";
 import type { Rule } from "eslint";
+import type { ImportDeclaration, ExportNamedDeclaration, ExportAllDeclaration } from "estree";
 
-const DATASOURCE_SEGMENT = "/datasource/";
 const SHARED_DOMAIN = "shared";
 
-const isDatasourcePath = (pathRest: string): boolean =>
-  pathRest.startsWith("src/datasource/") || pathRest.includes(DATASOURCE_SEGMENT);
+const isDatasourcePath = (pathRest: string): boolean => pathRest.split("/").includes("datasource");
 
 const getLibPathParts = (filePath: string): readonly [string, string] | null => {
-  const match = filePath.replace(/\\/g, "/").match(/libs\/([^/]+)\/(.*)/);
+  const match = filePath.replace(/\\/g, "/").match(/(?:^|\/)libs\/([^/]+)(?:\/(.*))?$/);
 
   if (!match) {
     return null;
   }
 
-  return [match[1], match[2]];
+  return [match[1], match[2] ?? ""];
 };
 
 const rule: Rule.RuleModule = {
@@ -30,47 +29,53 @@ const rule: Rule.RuleModule = {
     schema: [],
   },
   create(context) {
+    const checkSource = (
+      node: ImportDeclaration | ExportNamedDeclaration | ExportAllDeclaration,
+    ): void => {
+      const sourceValue = node.source?.value;
+      if (typeof sourceValue !== "string" || !sourceValue.startsWith(".")) {
+        return;
+      }
+
+      const sourceParts = getLibPathParts(context.filename);
+      if (!sourceParts) {
+        return;
+      }
+
+      const [sourceDomain, sourceRest] = sourceParts;
+      const sourceIsDatasource = isDatasourcePath(sourceRest);
+      const targetPath = path.resolve(path.dirname(context.filename), sourceValue);
+      const targetParts = getLibPathParts(targetPath);
+
+      if (!targetParts) {
+        return;
+      }
+
+      const [targetDomain, targetRest] = targetParts;
+      const targetIsDatasource = isDatasourcePath(targetRest);
+
+      if (sourceDomain === targetDomain || targetDomain === SHARED_DOMAIN) {
+        return;
+      }
+
+      if (sourceIsDatasource && targetIsDatasource) {
+        return;
+      }
+
+      context.report({
+        node,
+        messageId: "crossDomainImport",
+        data: {
+          sourceDomain,
+          targetDomain,
+        },
+      });
+    };
+
     return {
-      ImportDeclaration(node) {
-        const sourceValue = node.source.value;
-        if (typeof sourceValue !== "string" || !sourceValue.startsWith(".")) {
-          return;
-        }
-
-        const sourceParts = getLibPathParts(context.filename);
-        if (!sourceParts) {
-          return;
-        }
-
-        const [sourceDomain, sourceRest] = sourceParts;
-        const sourceIsDatasource = isDatasourcePath(sourceRest);
-        const targetPath = path.resolve(path.dirname(context.filename), sourceValue);
-        const targetParts = getLibPathParts(targetPath);
-
-        if (!targetParts) {
-          return;
-        }
-
-        const [targetDomain, targetRest] = targetParts;
-        const targetIsDatasource = isDatasourcePath(targetRest);
-
-        if (sourceDomain === targetDomain || targetDomain === SHARED_DOMAIN) {
-          return;
-        }
-
-        if (sourceIsDatasource && targetIsDatasource) {
-          return;
-        }
-
-        context.report({
-          node,
-          messageId: "crossDomainImport",
-          data: {
-            sourceDomain,
-            targetDomain,
-          },
-        });
-      },
+      ImportDeclaration: checkSource,
+      ExportNamedDeclaration: checkSource,
+      ExportAllDeclaration: checkSource,
     };
   },
 };

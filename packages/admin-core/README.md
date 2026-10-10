@@ -357,3 +357,9 @@ covers only validated historical rows; its denominator is not the entire snapsho
 Queued outcomes never become dispatches, and current traits, costs, touchpoints or
 outcomes are never substituted for missing evidence. No dispatch or campaign
 mutation method is called.
+
+### Retention offer operations
+
+`RetentionOfferOperations` wraps `CancellationService` with a server-resolved actor. `load(scope)` authorizes through the service before reading policy and reporting sessions. `save(scope, edit)` delegates registered choice validation, revision comparison, idempotency and atomic audit persistence to the cancellation service/store. Browser edits contain only entries, reason, expected revision and idempotency key; actor and audit time come from the server.
+
+`summarizeRetentionOffers` groups by policy version, subscription age in whole days at session creation, initial/renewal billing period and the authoritative refund kind, decimal amount and currency. Choice counts, scheduled cancellations, ended subscriptions, confirmed refunds and unresolved provider outcomes remain separate. These session counts are operational results, not causal retention estimates or a conversion denominator.

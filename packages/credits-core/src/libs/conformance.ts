@@ -79,6 +79,69 @@ export function createCreditLedgerStoreConformanceSuite(
         },
       },
       {
+        name: "isolates idempotency keys by tenant while preserving replay and wallet conflicts",
+        run: async () => {
+          const service = await createService();
+          const accountIds = new Set<string>();
+
+          for (const tenantId of ["tenant-key-scope-a", "tenant-key-scope-b"]) {
+            const openInput = {
+              tenantId,
+              walletKey: "first",
+              idempotencyKey: "open-tenant-key-scope",
+              reference: reference("open-tenant-key-scope"),
+            };
+            const opened = await service.openAccount(openInput);
+            assert.equal(opened.replayed, false);
+            assert.equal(opened.account.tenantId, tenantId);
+            assert.equal(accountIds.has(opened.account.id), false);
+            accountIds.add(opened.account.id);
+            const openReplay = await service.openAccount(openInput);
+            assert.equal(openReplay.replayed, true);
+            assert.equal(openReplay.account.id, opened.account.id);
+            await assert.rejects(
+              () => service.openAccount({ ...openInput, walletKey: "second" }),
+              CreditDuplicateConflictProblem,
+            );
+
+            const second = await service.openAccount({
+              ...openInput,
+              walletKey: "second",
+              idempotencyKey: "open-tenant-key-scope-second",
+            });
+            const grantInput = {
+              accountId: opened.account.id,
+              amount: creditAmount("10"),
+              idempotencyKey: "grant-tenant-key-scope",
+              reference: reference("grant-tenant-key-scope"),
+            };
+            const granted = await service.grantCredits(grantInput);
+            assert.equal(granted.replayed, false);
+            const balance = await service.getBalance(opened.account.id);
+            const secondBalance = await service.getBalance(second.account.id);
+            assert.equal(balance.available, "10");
+            assert.equal(secondBalance.available, "0");
+            const grantReplay = await service.grantCredits(grantInput);
+            assert.equal(grantReplay.replayed, true);
+            assert.deepEqual(
+              grantReplay.transactions.map((transaction) => transaction.id),
+              granted.transactions.map((transaction) => transaction.id),
+            );
+            for (const conflicting of [
+              { ...grantInput, amount: creditAmount("11") },
+              { ...grantInput, accountId: second.account.id },
+            ]) {
+              await assert.rejects(
+                () => service.grantCredits(conflicting),
+                CreditDuplicateConflictProblem,
+              );
+            }
+            assert.deepEqual(await service.getBalance(opened.account.id), balance);
+            assert.deepEqual(await service.getBalance(second.account.id), secondBalance);
+          }
+        },
+      },
+      {
         name: "rejects an idempotency conflict matrix across semantic command fields",
         run: async () => {
           const service = await createService();
@@ -396,6 +459,176 @@ export function createCreditLedgerStoreConformanceSuite(
             expired: "0",
             lifetimeGranted: "0",
             netAdjusted: "5",
+          });
+        },
+      },
+      {
+        name: "debits meter-restricted grants exactly once with adjustment history and balance",
+        run: async () => {
+          const service = await createService();
+          const opened = await service.openAccount({
+            tenantId: "tenant-restricted-adjustment",
+            idempotencyKey: "open",
+            reference: reference("open"),
+          });
+          const accountId = opened.account.id;
+          const granted = await service.grantCredits({
+            accountId,
+            amount: creditAmount("10"),
+            meterKeys: ["tokens"],
+            idempotencyKey: "grant",
+            reference: reference("grant"),
+          });
+          const input = {
+            accountId,
+            amount: creditAmount("3"),
+            direction: "debit" as const,
+            idempotencyKey: "debit",
+            reference: reference("debit"),
+          };
+          const debited = await service.adjustCredits(input);
+          const transaction = debited.transactions[0];
+          assert.ok(transaction);
+          assert.equal(transaction.kind, "adjustment");
+          assert.equal(transaction.adjustmentDirection, "debit");
+          assert.equal(transaction.amount, "3");
+          assert.deepEqual(transaction.allocations, [
+            { grantTransactionId: granted.transactions[0]?.id, amount: "3" },
+          ]);
+          const replayed = await service.adjustCredits(input);
+          assert.equal(replayed.replayed, true);
+          assert.deepEqual(replayed.transactions, debited.transactions);
+          assert.deepEqual(await service.getBalance(accountId), {
+            accountId,
+            position: 2,
+            available: "7",
+            reserved: "0",
+            consumed: "0",
+            expired: "0",
+            lifetimeGranted: "10",
+            netAdjusted: "-3",
+          });
+          const history = await service.getHistory(accountId);
+          assert.equal(history.transactions.length, 2);
+          const historyEntry = history.transactions.find((entry) => entry.id === transaction.id);
+          assert.ok(historyEntry);
+          assert.equal(historyEntry.kind, "adjustment");
+          assert.equal(historyEntry.adjustmentDirection, "debit");
+          assert.equal(historyEntry.amount, "3");
+          assert.deepEqual(historyEntry.allocations, transaction.allocations);
+          assert.equal((await service.getBalance(accountId, 1)).available, "10");
+        },
+      },
+      {
+        name: "debit adjustments allocate mixed meter lots by expiry then grant position",
+        run: async () => {
+          const service = await createService();
+          const opened = await service.openAccount({
+            tenantId: "tenant-mixed-adjustment",
+            idempotencyKey: "open",
+            reference: reference("open"),
+          });
+          const accountId = opened.account.id;
+          const grants: CreditCommandResult[] = [];
+          for (const [id, expiresAt, meterKeys] of [
+            ["unrestricted", undefined, undefined],
+            ["later", "2026-07-28T00:00:00.000Z", ["tokens"]],
+            ["first", "2026-07-27T00:00:00.000Z", ["requests"]],
+            ["second", "2026-07-27T00:00:00.000Z", ["tokens"]],
+          ] as const) {
+            grants.push(
+              await service.grantCredits({
+                accountId,
+                amount: creditAmount("2"),
+                expiresAt: expiresAt === undefined ? undefined : new Date(expiresAt),
+                meterKeys,
+                idempotencyKey: id,
+                reference: reference(id),
+              }),
+            );
+          }
+          const debited = await service.adjustCredits({
+            accountId,
+            amount: creditAmount("7"),
+            direction: "debit",
+            idempotencyKey: "debit",
+            reference: reference("debit"),
+          });
+          assert.deepEqual(debited.transactions[0]?.allocations, [
+            { grantTransactionId: grants[2]?.transactions[0]?.id, amount: "2" },
+            { grantTransactionId: grants[3]?.transactions[0]?.id, amount: "2" },
+            { grantTransactionId: grants[1]?.transactions[0]?.id, amount: "2" },
+            { grantTransactionId: grants[0]?.transactions[0]?.id, amount: "1" },
+          ]);
+          assert.equal((await service.getBalance(accountId)).available, "1");
+        },
+      },
+      {
+        name: "debit adjustments exclude expired restricted lots and fail atomically with expiry classification",
+        run: async () => {
+          let now = new Date("2026-07-26T00:00:00.000Z");
+          const service = await createService(() => now);
+          const opened = await service.openAccount({
+            tenantId: "tenant-expired-adjustment",
+            idempotencyKey: "open",
+            reference: reference("open"),
+          });
+          const accountId = opened.account.id;
+          await service.grantCredits({
+            accountId,
+            amount: creditAmount("5"),
+            meterKeys: ["tokens"],
+            expiresAt: new Date("2026-07-27T00:00:00.000Z"),
+            idempotencyKey: "expired",
+            reference: reference("expired"),
+          });
+          const active = await service.grantCredits({
+            accountId,
+            amount: creditAmount("3"),
+            meterKeys: ["requests"],
+            idempotencyKey: "active",
+            reference: reference("active"),
+          });
+          now = new Date("2026-07-27T00:00:00.000Z");
+          const balanceBefore = await service.getBalance(accountId);
+          const historyBefore = await service.getHistory(accountId);
+          for (const [amount, problem] of [
+            ["4", ExpiredGrantProblem],
+            ["9", InsufficientCreditsProblem],
+          ] as const) {
+            await assert.rejects(
+              () =>
+                service.adjustCredits({
+                  accountId,
+                  amount: creditAmount(amount),
+                  direction: "debit",
+                  idempotencyKey: `failed-${amount}`,
+                  reference: reference(`failed-${amount}`),
+                }),
+              problem,
+            );
+            assert.deepEqual(await service.getBalance(accountId), balanceBefore);
+            assert.deepEqual(await service.getHistory(accountId), historyBefore);
+          }
+          const debited = await service.adjustCredits({
+            accountId,
+            amount: creditAmount("3"),
+            direction: "debit",
+            idempotencyKey: "debit-active",
+            reference: reference("debit-active"),
+          });
+          assert.deepEqual(debited.transactions[0]?.allocations, [
+            { grantTransactionId: active.transactions[0]?.id, amount: "3" },
+          ]);
+          assert.deepEqual(await service.getBalance(accountId), {
+            accountId,
+            position: 3,
+            available: "5",
+            reserved: "0",
+            consumed: "0",
+            expired: "0",
+            lifetimeGranted: "8",
+            netAdjusted: "-3",
           });
         },
       },

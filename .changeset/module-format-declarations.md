@@ -125,6 +125,9 @@
 "@croco/warehouse-postgres": patch
 "@croco/webhooks-core": patch
 "@croco/workflow-core": patch
+"@croco/billing-drizzle": patch
+"@croco/referral-core": patch
+"@croco/referral-drizzle": patch
 ---
 
 Resolve ESM and CommonJS consumers to declaration files matching each published implementation format.

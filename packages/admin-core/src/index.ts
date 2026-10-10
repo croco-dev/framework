@@ -48,6 +48,46 @@ export {
   resolveOfferConsoleSubject,
   validateOfferPolicyEditor,
 } from "./libs/OfferConsole";
+export {
+  assertReferralConsoleActionRequest,
+  assertReferralConsoleCancelBenefitRequest,
+  assertReferralConsoleReturnBenefitRequest,
+  createReferralConsoleActions,
+  createReferralConsoleAttributionView,
+  createReferralConsoleLinkView,
+  createReferralConsoleLoadingState,
+  createReferralConsoleProgramView,
+  createReferralConsoleReadyState,
+  loadReferralConsole,
+  maskReferralSubjectId,
+  REFERRAL_CONSOLE_PII_PERMISSION,
+  REFERRAL_CONSOLE_READ_PERMISSION,
+  REFERRAL_CONSOLE_RESOLVE_PERMISSION,
+  REFERRAL_CONSOLE_WRITE_PERMISSION,
+  ReferralConsoleValidationProblem,
+  resolveReferralConsoleSubject,
+  summarizeReferralConsoleQualifiedRecipients,
+  validateReferralProgramEditor,
+} from "./libs/ReferralConsole";
+export type {
+  ReferralConsoleAction,
+  ReferralConsoleActionKind,
+  ReferralConsoleActionRequest,
+  ReferralConsoleAttributionView,
+  ReferralConsoleCancelBenefitRequest,
+  ReferralConsoleLinkView,
+  ReferralConsoleProgramView,
+  ReferralConsoleQualifiedRecipient,
+  ReferralConsoleReadyState,
+  ReferralConsoleReturnBenefitRequest,
+  ReferralConsoleSnapshot,
+  ReferralConsoleSource,
+  ReferralConsoleSourceResult,
+  ReferralConsoleState,
+  ReferralConsoleSubjectView,
+  ReferralProgramEditorDraft,
+  ReferralProgramEditorResult,
+} from "./libs/ReferralConsole";
 export type {
   OfferConsoleAction,
   OfferConsoleActionKind,
@@ -493,3 +533,13 @@ export type { RewardAdminAccess } from "./libs/RewardOperations";
 
 export { assertMissionPublication, MissionConsoleInvalidProblem } from "./libs/MissionConsole";
 export type { MissionConsoleAccess, MissionConsoleState } from "./libs/MissionConsole";
+export {
+  RetentionOfferOperations,
+  summarizeRetentionOffers,
+} from "./libs/RetentionOfferOperations";
+export type {
+  RetentionOfferEdit,
+  RetentionOfferReport,
+  RetentionOfferView,
+  RetentionOfferConsoleState,
+} from "./libs/RetentionOfferOperations";

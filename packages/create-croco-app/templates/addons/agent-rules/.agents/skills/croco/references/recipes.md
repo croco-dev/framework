@@ -40,6 +40,15 @@ Start from `@croco/auth-core/AuthProvider`. Choose a listed auth plugin only whe
 
 Start from `@croco/billing-core/BillingGateway`. Inspect the provider's capability metadata as well as its package maturity; a provider can support checkout while omitting another billing capability. Keep webhook validation, idempotency, and retry behavior in the verification scope.
 
+For standalone cancellation, compose `CancellationService` with an authenticated application-owned
+subscription/quote authority and `BillingCancellationAction` for the existing cancel/resume commands.
+Use `@croco/billing-drizzle` for durable billing commands, sessions and audited choice policies; apply
+its reviewed SQL migration before startup. The adapter is alpha and uncertified. The
+`examples/cancellation-flow` composition pairs the API with `CancellationFlow` and
+`RetentionOfferConsole` without promotions, surveys, experiments or shared slots. Its browser server
+is a synthetic local sandbox. Refund quotes are source evidence; scheduled cancellation never proves
+termination or refund completion. Unsupported registered plan actions remain unavailable.
+
 ## Persistence and transactions
 
 Start from `@croco/tx-core/TxManager` and compose the transaction plugin through the application. An empty runtime list in the catalog means compatibility is unclaimed, not universal. Confirm the database driver and deployment runtime before selection.

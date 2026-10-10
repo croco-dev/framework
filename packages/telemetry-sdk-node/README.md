@@ -71,7 +71,10 @@ await telemetry.init({
 ### 자동 계측
 
 `trace.autoInstrumentation`을 설정하면 Node 환경에서는 HTTP/HTTPS, Express, DNS, Net 계측이 기본으로
-`NodeSDK`에 전달됩니다. `lambdaPreset()`은 HTTP/HTTPS, AWS SDK, AWS Lambda 계측을 자동으로 활성화합니다.
+`NodeSDK`에 전달됩니다. `lambdaPreset()`은 HTTP/HTTPS, AWS SDK 계측을 자동으로 활성화합니다.
+핸들러 모듈 전역 스코프에서 초기화하면 계측 등록 전에 핸들러가 로드되므로 `aws-lambda` 계측은 사용할 수 없습니다.
+`modules`에 `"aws-lambda"`를 명시하면 SDK 시작 전에 `TelemetryAutoInstrumentationProblem`으로 실패하며,
+`excludeModules: ["aws-lambda"]`는 허용됩니다.
 OpenTelemetry가 HTTP와 HTTPS에 하나의 공용 계측기를 제공하므로 `http`와 `https`는 항상 함께 선택하거나 함께
 제외해야 하며, 부분 선택은 초기화 전에 명시적으로 실패합니다.
 
@@ -232,7 +235,7 @@ SDK 자체가 종료를 거부해 `TELEMETRY_RUNTIME_ERROR`가 발생한 경우�
 - `TelemetryRuntime`: `init`, `forceFlush`, `shutdown`, `isInitialized`, `isEnabled`, `getConfig`
 - `TelemetryDiagnosticsProvider`: optional/required telemetry 상태와 초기화 실패 진단
 - `lambdaPreset`: Lambda 환경 기본 설정 생성
-- `ProbabilitySampler`: 확률 기반 샘플링 구현체
+- `ProbabilitySampler`: 확률 기반 샘플링 구현체. 유효한 부모 span context가 있으면 sampled 여부와 관계없이 부모 결정을 따르고, 확률 판단은 부모가 없는 root span에만 적용
 - 자동 계측: `normalizeAutoInstrumentationConfig`, `LAMBDA_DEFAULT_MODULES`, `NODE_DEFAULT_MODULES`
 - Problem: `OtlpEndpointRequiredProblem`, `SamplerProblem`, `TelemetryAutoInstrumentationProblem`,
   `TelemetryBatchConfigurationProblem`, `TelemetryShutdownTimeoutInvalidProblem`, `TelemetryShutdownTimeoutProblem`

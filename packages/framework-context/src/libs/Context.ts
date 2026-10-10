@@ -12,8 +12,13 @@ import type {
 interface ContextData {
   context: RequestContext;
   createdAt: number;
-  scopedCache: Map<unknown, unknown>;
-  scopedDisposables: Map<object, () => void>;
+  scope: RequestScope;
+}
+
+interface RequestScope {
+  cache: Map<unknown, unknown>;
+  disposables: Map<object, () => void>;
+  disposed: boolean;
 }
 
 export type ContextRunOptions = {
@@ -30,8 +35,18 @@ export function trackRequestInstance(instance: object, dispose: () => void): voi
       "A request instance cannot be tracked outside a request context.",
     );
   }
-  if (!data.scopedDisposables.has(instance)) {
-    data.scopedDisposables.set(instance, dispose);
+  assertRequestScopeActive(data.scope);
+  if (!data.scope.disposables.has(instance)) {
+    data.scope.disposables.set(instance, dispose);
+  }
+}
+
+function assertRequestScopeActive(scope: RequestScope): void {
+  if (scope.disposed) {
+    throw ProblemFactory.internalServerError(
+      "framework-context/request-scope-disposed",
+      "Request-scoped dependencies cannot be resolved or tracked after request scope disposal.",
+    );
   }
 }
 
@@ -54,8 +69,7 @@ export class Context {
     const data: ContextData = {
       context,
       createdAt: parentData?.createdAt ?? Date.now(),
-      scopedCache: parentData?.scopedCache ?? new Map(),
-      scopedDisposables: parentData?.scopedDisposables ?? new Map(),
+      scope: parentData?.scope ?? { cache: new Map(), disposables: new Map(), disposed: false },
     };
     const ownsScope = parentData === undefined;
     return Context.STORAGE.run(data, () => {
@@ -91,16 +105,17 @@ export class Context {
     data: ContextData,
     failure?: { readonly error: unknown },
   ): void {
+    data.scope.disposed = true;
     const failures: unknown[] = [];
-    for (const dispose of [...data.scopedDisposables.values()].reverse()) {
+    for (const dispose of [...data.scope.disposables.values()].reverse()) {
       try {
         dispose();
       } catch (error) {
         failures.push(error);
       }
     }
-    data.scopedDisposables.clear();
-    data.scopedCache.clear();
+    data.scope.disposables.clear();
+    data.scope.cache.clear();
     if (failures.length === 0) return;
     const cause = failures.find((error): error is Error => error instanceof Error);
     const cleanupFailure = ProblemFactory.internalServerError(
@@ -189,7 +204,10 @@ export class Context {
   }
 
   static getCache(): Map<unknown, unknown> | undefined {
-    return Context.STORAGE.getStore()?.scopedCache;
+    const data = Context.STORAGE.getStore();
+    if (!data) return undefined;
+    assertRequestScopeActive(data.scope);
+    return data.scope.cache;
   }
 
   /**

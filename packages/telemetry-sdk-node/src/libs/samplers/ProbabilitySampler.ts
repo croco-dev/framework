@@ -37,6 +37,7 @@ class ProbabilitySampler implements Sampler {
       if (spanContext.traceFlags & TraceFlags.SAMPLED) {
         return { decision: SamplingDecision.RECORD_AND_SAMPLED };
       }
+      return { decision: SamplingDecision.NOT_RECORD };
     }
 
     if (!isValidTraceId(traceId)) {
