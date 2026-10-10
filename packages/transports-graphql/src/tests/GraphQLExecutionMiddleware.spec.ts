@@ -4,6 +4,7 @@ import { Container } from "@croco/framework-context";
 import {
   Field,
   FieldResolver,
+  InterfaceType,
   ObjectType,
   Mutation,
   Query,
@@ -382,6 +383,52 @@ describe("GraphQL execution metadata inheritance", () => {
       "uppercase",
       "uppercase",
     ]);
+  });
+
+  it("matches interface fields in declaration order when implements lists them in reverse", async () => {
+    @InterfaceType()
+    abstract class FirstInterface {
+      @Field(() => String, { name: "value" })
+      first!: string;
+    }
+    @InterfaceType()
+    abstract class SecondInterface {
+      @Field(() => String, { name: "value" })
+      second!: string;
+    }
+    @ObjectType({ implements: [SecondInterface, FirstInterface] })
+    class InterfaceObject {}
+    @Resolver(() => FirstInterface)
+    class FirstResolver {
+      @FieldResolver(() => String, { name: "value" })
+      @UseInterceptors(Uppercase)
+      first() {
+        calls.push("first:handler");
+        return "first";
+      }
+    }
+    @Resolver(() => SecondInterface)
+    class SecondResolver {
+      @FieldResolver(() => String, { name: "value" })
+      second() {
+        calls.push("second:handler");
+        return "second";
+      }
+    }
+    @Resolver()
+    class QueryResolver {
+      @Query(() => InterfaceObject)
+      item() {
+        return { first: "first-property-sentinel", second: "second-property-sentinel" };
+      }
+    }
+
+    expect(
+      await execute([QueryResolver, FirstResolver, SecondResolver], "{ item { value } }"),
+    ).toEqual({
+      data: { item: { value: "second" } },
+    });
+    expect(calls).toEqual(["second:handler"]);
   });
 
   it("preserves inherited guard denial before executing a resolver", async () => {

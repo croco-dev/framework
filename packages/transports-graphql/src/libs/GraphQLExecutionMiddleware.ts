@@ -167,10 +167,11 @@ function matchesField(
     ({ name }) => name === parentTypeName,
   );
   while (parentMetadata) {
+    const interfaces = parentMetadata.interfaceClasses;
     const fields = [
-      ...(parentMetadata.interfaceClasses ?? []).flatMap(
-        (target) => storage.interfaceTypesCache.get(target)?.fields ?? [],
-      ),
+      ...storage.interfaceTypes
+        .filter(({ target }) => interfaces?.includes(target))
+        .flatMap(({ fields }) => fields ?? []),
       ...(parentMetadata.fields ?? []),
     ];
     const field = fields.reverse().find(({ schemaName }) => schemaName === fieldName);
