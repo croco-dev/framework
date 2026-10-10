@@ -23461,7 +23461,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
-          line: 92,
+          line: 99,
           column: 1,
           kind: "problem-class",
         },
@@ -23494,7 +23494,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
-          line: 216,
+          line: 224,
           column: 13,
           kind: "problem-factory",
         },
@@ -23527,7 +23527,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
-          line: 76,
+          line: 83,
           column: 1,
           kind: "problem-class",
         },
@@ -23625,7 +23625,7 @@ export const CROCO_PROBLEM_CODE_REGISTRY = {
       sources: [
         {
           file: "packages/protocols-trpc/src/libs/createTrpcRouter.ts",
-          line: 63,
+          line: 70,
           column: 1,
           kind: "problem-class",
         },
