@@ -168,8 +168,12 @@ function attachGraphToApplicationRuntime(
     true,
     entryPoint.endsWith(".tsx") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
   );
-  const factoryNames = new Set<string>();
-  const namespaceNames = new Set<string>();
+  const compilerOptions: ts.CompilerOptions = { noResolve: true, noLib: true, types: [] };
+  const host = ts.createCompilerHost(compilerOptions);
+  host.getSourceFile = (fileName) => (fileName === entryPoint ? sourceFile : undefined);
+  const checker = ts.createProgram([entryPoint], compilerOptions, host).getTypeChecker();
+  const factorySymbols = new Set<ts.Symbol>();
+  const namespaceSymbols = new Set<ts.Symbol>();
   const identifiers = new Set<string>();
   const collectIdentifiers = (node: ts.Node): void => {
     if (ts.isIdentifier(node)) identifiers.add(node.text);
@@ -191,25 +195,34 @@ function attachGraphToApplicationRuntime(
     if (bindings && ts.isNamedImports(bindings)) {
       for (const element of bindings.elements) {
         if ((element.propertyName?.text ?? element.name.text) === "createApplicationRuntime") {
-          factoryNames.add(element.name.text);
+          const symbol = checker.getSymbolAtLocation(element.name);
+          if (symbol) factorySymbols.add(symbol);
         }
       }
     } else if (bindings && ts.isNamespaceImport(bindings)) {
-      namespaceNames.add(bindings.name.text);
+      const symbol = checker.getSymbolAtLocation(bindings.name);
+      if (symbol) namespaceSymbols.add(symbol);
     }
   }
 
   const insertions: Array<{ readonly position: number; readonly text: string }> = [];
+  const referencesBinding = (
+    identifier: ts.Identifier,
+    symbols: ReadonlySet<ts.Symbol>,
+  ): boolean => {
+    const symbol = checker.getSymbolAtLocation(identifier);
+    return symbol !== undefined && symbols.has(symbol);
+  };
   let foundRuntime = false;
   const visit = (node: ts.Node): void => {
     if (ts.isCallExpression(node)) {
       const directFactory =
-        ts.isIdentifier(node.expression) && factoryNames.has(node.expression.text);
+        ts.isIdentifier(node.expression) && referencesBinding(node.expression, factorySymbols);
       const namespaceFactory =
         ts.isPropertyAccessExpression(node.expression) &&
         node.expression.name.text === "createApplicationRuntime" &&
         ts.isIdentifier(node.expression.expression) &&
-        namespaceNames.has(node.expression.expression.text);
+        referencesBinding(node.expression.expression, namespaceSymbols);
       if (directFactory || namespaceFactory) {
         foundRuntime = true;
         if (node.arguments.length < 2)
