@@ -55,6 +55,17 @@ The location schemas run before the controller method. `@Ctx()` and `@Raw()` bot
 unmodified tRPC procedure context and are not client input. For HTTP adapters, include the raw
 request or other transport envelope fields in `createContext` when a controller needs them.
 
+`@UsePipes` runs class pipes before method pipes on each body, path, query, or header argument,
+inside the interceptor-wrapped handler and the Croco request DI boundary. Async transformations
+are awaited; pipe failures reach the existing Problem/filter pipeline. Pipes receive REST
+argument metadata (`body`, `param`, `query`, or `header`, plus the parameter name when declared).
+Context and authentication arguments are preserved.
+
+tRPC validates its input schema before running these pipes. HTTP runs route pipes before
+parameter-level validation pipes, while contract-bound path/query schemas are parsed before
+route pipes. A tRPC pipe therefore receives schema-parsed input and cannot repair input that
+the tRPC schema rejects. The existing body-only and location-envelope shapes are preserved.
+
 ## Verification
 
 ```bash
