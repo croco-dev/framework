@@ -233,7 +233,7 @@ function createDataAction(action: "validate" | "generate") {
               : undefined;
           runtime.stderr(
             JSON.stringify({
-              code: "warehouse-tooling/generation-failed",
+              code: "DATA_GENERATION_FAILED",
               reason: error.reason,
               ...(file ? { file } : {}),
             }),

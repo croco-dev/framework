@@ -141,7 +141,7 @@ describe("data CLI", () => {
     expect(result.exitCode).toBe(1);
     expect(result.stdout).toEqual([]);
     expect(JSON.parse(result.stderr[0])).toEqual({
-      code: "warehouse-tooling/generation-failed",
+      code: "DATA_GENERATION_FAILED",
       reason,
       file,
     });
