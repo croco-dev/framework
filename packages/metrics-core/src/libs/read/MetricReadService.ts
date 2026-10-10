@@ -105,10 +105,12 @@ export type RegisteredMetricQuery = {
   readonly filter: string;
   readonly requiredFields: readonly string[];
   readonly requiresRaw: boolean;
+  /** Withhold partial data unless this registered query explicitly permits authorized partial results. */
+  readonly partialDataPolicy?: "withhold" | "authorized";
   readonly limits: MetricReadBudget;
   readonly inputSchema: { parse(input: unknown): unknown };
   readonly outputSchema: { parse(output: unknown): unknown };
-  readonly inputKey: (input: unknown) => string;
+  readonly inputKey: (input: unknown) => string | Promise<string>;
   readonly readExecutor: (request: {
     readonly input: unknown;
     readonly window: MetricWindow;
@@ -146,10 +148,12 @@ export type MetricReadEvidence = Omit<
 export type VerifiedReportOutcome =
   | { readonly status: "verified"; readonly report: VerifiedMetricReport }
   | {
-      readonly status: "partial" | "stale";
+      readonly status: "partial";
       readonly reportId: string;
       readonly evidence: MetricReadEvidence;
+      readonly result?: MetricReadResult;
     }
+  | { readonly status: "stale"; readonly reportId: string; readonly evidence: MetricReadEvidence }
   | { readonly status: "denied" | "unavailable"; readonly reportId?: string };
 export type RegisteredQueryOutcome =
   | {
@@ -158,10 +162,12 @@ export type RegisteredQueryOutcome =
       readonly result: MetricReadResult;
     }
   | {
-      readonly status: "partial" | "stale";
+      readonly status: "partial";
       readonly evidence: MetricReadEvidence;
       readonly reportId?: string;
+      readonly result?: MetricReadResult;
     }
+  | { readonly status: "stale"; readonly reportId?: string; readonly evidence: MetricReadEvidence }
   | { readonly status: "denied" | "unavailable"; readonly reportId?: string };
 export type RegisteredQueryReadOptions = {
   readonly expectedVersion?: number;
@@ -526,6 +532,7 @@ export class MetricReadService {
           status: (status = "partial"),
           reportId: report.reportId,
           evidence: report.evidence,
+          ...(report.result ? { result: report.result } : {}),
         };
       if (report.status === "denied")
         return { status: (status = "denied"), reportId: report.reportId };
@@ -593,7 +600,11 @@ export class MetricReadService {
         if (result.quality.freshness === "stale")
           return { status: (status = "stale"), evidence: metricEvidence(result) };
         if (!sufficientQuality(result.quality))
-          return { status: (status = "partial"), evidence: metricEvidence(result) };
+          return {
+            status: (status = "partial"),
+            evidence: metricEvidence(result),
+            ...(query.partialDataPolicy === "authorized" ? { result } : {}),
+          };
         status = "verified";
         return { status, source: "executor", result };
       } catch (error) {
@@ -784,7 +795,8 @@ export class MetricReadService {
   ): Promise<VerifiedReportOutcome> {
     if (!this.reports) return { status: "unavailable" };
     const sources = this.scopedSources(query, context);
-    const key = query.inputKey(input);
+    const key = await query.inputKey(input);
+    this.checkAbort(signal);
     const candidates = await this.reports.readCandidates(query.id, key, context.principal, signal);
     this.checkAbort(signal);
     let degraded: VerifiedReportOutcome = { status: "unavailable" };
@@ -841,6 +853,7 @@ export class MetricReadService {
           status: "partial",
           reportId: report.id,
           evidence: metricEvidence(report.result),
+          ...(query.partialDataPolicy === "authorized" ? { result: report.result } : {}),
         };
         continue;
       }

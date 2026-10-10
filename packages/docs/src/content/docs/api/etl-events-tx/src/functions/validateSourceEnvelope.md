@@ -5,7 +5,7 @@ prev: false
 title: "validateSourceEnvelope"
 ---
 
-> **validateSourceEnvelope**(`message`, `expectedSourceRef`): [`EventSourceEnvelope`](/api/etl-core/src/type-aliases/eventsourceenvelope/)
+> **validateSourceEnvelope**(`message`, `expectedSourceRef`): `EventSourceEnvelope`
 
 ## Parameters
 
@@ -19,4 +19,4 @@ title: "validateSourceEnvelope"
 
 ## Returns
 
-[`EventSourceEnvelope`](/api/etl-core/src/type-aliases/eventsourceenvelope/)
+`EventSourceEnvelope`

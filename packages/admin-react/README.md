@@ -4,6 +4,10 @@ Provider-neutral React contracts and primitives for SaaS billing, entitlement,
 tenant switching, impersonation, and permission inspection administration.
 Also includes contract-aware admin resource tables.
 
+## Assigned net outcomes
+
+`NetOutcomePanel` renders the server-owned report from `@croco/admin-core`. Operators can refresh effective/known cutoffs and a revision, compare currency-specific totals and assigned denominators, and inspect at most 20 masked event records per page. Loading, empty, denied, failed and partial reports have distinct states; partial comparisons stay unavailable. The host supplies server-backed refresh and drilldown callbacks. The panel does not calculate money, infer assignments or establish causal uplift.
+
 ## Product event catalog
 
 `EventCatalogPanel` loads the scoped catalog through the `@croco/admin-core` source, shows the

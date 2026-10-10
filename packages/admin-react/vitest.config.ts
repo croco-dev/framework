@@ -14,6 +14,7 @@ export default defineConfig({
       "@croco/admin-core": resolve(currentDir, "../admin-core/src/index.ts"),
       "@croco/analytics-core": resolve(currentDir, "../analytics-core/src/index.ts"),
       "@croco/lifecycle-core": resolve(currentDir, "../lifecycle-core/src/index.ts"),
+      "@croco/metrics-core/runtime": resolve(currentDir, "../metrics-core/src/runtime.ts"),
       "@croco/metrics-core": resolve(currentDir, "../metrics-core/src/index.ts"),
       "@croco/problems-core": resolve(currentDir, "../problems-core/src/index.ts"),
     },
