@@ -21,6 +21,7 @@ import {
   Controller,
   Get,
   Head,
+  HttpExceptionFilter,
   Options,
   Param,
   type ParamMetadata,
@@ -32,6 +33,7 @@ import {
   REST_PARAMS_KEY,
   REST_ROUTES_KEY,
   type RouteMetadata,
+  UseFilters,
 } from "@croco/protocols-rest";
 import {
   createSlidingWindowPolicy,
@@ -3145,6 +3147,45 @@ describe("CrocoApp", () => {
       },
       awsRequestId: "req-123",
     });
+  });
+
+  @Controller("/reports")
+  class ReportController {
+    @Get("/error")
+    reportError(): string {
+      throw new Error("database pool exhausted");
+    }
+
+    @Get("/thrown-value")
+    reportThrownValue(): string {
+      throw "unexpected";
+    }
+
+    @Get("/filtered")
+    @UseFilters(HttpExceptionFilter)
+    reportFiltered(): string {
+      throw new Error("database pool exhausted");
+    }
+  }
+
+  it("uses the same code for the default ErrorHandler and HttpExceptionFilter fallbacks", async () => {
+    const app = createApp({ controllers: [ReportController] });
+    const filtered = await app.fetch(new Request("http://localhost/reports/filtered"));
+    const filteredBody = (await filtered.json()) as Record<string, unknown>;
+    expect(filteredBody).toMatchObject({ status: 500, code: "INTERNAL_SERVER_ERROR" });
+
+    for (const path of ["/reports/error", "/reports/thrown-value"]) {
+      const response = await app.fetch(new Request(`http://localhost${path}`));
+      const body = (await response.json()) as Record<string, unknown>;
+
+      expect(response.status).toBe(500);
+      expect({ path, code: body.code, hasProblemCode: typeof body.code === "string" }).toEqual({
+        path,
+        code: filteredBody.code,
+        hasProblemCode: true,
+      });
+      expect(body.detail).not.toContain("database pool exhausted");
+    }
   });
 
   it("should expose lambda event and context through exported helpers", async () => {
