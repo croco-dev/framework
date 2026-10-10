@@ -220,7 +220,7 @@ describe.skipIf(process.env.CROCO_TEST_REAL_RESOURCES !== "1")(
       const checkpoint = vi
         .spyOn(store.runtime.executions, "checkpointAttempt")
         .mockImplementation(async (...args) => {
-          checkpointCount++;
+          if (args[1] === "payments.cursor") checkpointCount++;
           if (checkpointCount === 2) throw new Error("checkpoint fault after durable write");
           return saveCheckpoint(...args);
         });
