@@ -1,9 +1,9 @@
 import { defineCommand } from "citty";
-import { existsSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { CliError } from "../libs/CliError.js";
 import { registerController } from "../libs/codemods/registerController.js";
 import type { RegisterControllerResult } from "../libs/codemods/registerController.js";
+import { resolveControllerRegistrationTarget } from "../libs/controllerRegistrationTarget.js";
 import type { WriteResult } from "../libs/fileWriter.js";
 import { write as fileWriterWrite } from "../libs/fileWriter.js";
 import { getCrocoCommandRuntime, logWriteResult } from "../libs/cliRuntime.js";
@@ -105,11 +105,9 @@ export async function runCreateDomain(
   );
 
   const apiServerSrc = join(workspace.root, workspace.apiServerDir, "src");
-  const indexPath = join(apiServerSrc, "index.ts");
-  const entryPath = existsSync(indexPath) ? indexPath : join(apiServerSrc, "app.ts");
   const registration = register
     ? await registerController({
-        entryPath,
+        ...resolveControllerRegistrationTarget(apiServerSrc),
         importPath: `./domains/${kebab}/${className}Controller`,
         className: `${className}Controller`,
         dryRun,
