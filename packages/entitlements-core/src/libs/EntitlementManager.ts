@@ -153,9 +153,10 @@ export class EntitlementManager {
     }
 
     const usageKey = rule.meterId ?? featureKey;
-    const meterQuota = rule.meterId
-      ? await this.meterLookup.getMeterQuota(tenantId, rule.meterId)
-      : null;
+    const meterQuota =
+      rule.quota === undefined && rule.meterId !== undefined
+        ? await this.meterLookup.getMeterQuota(tenantId, rule.meterId)
+        : null;
     const quota = rule.quota ?? meterQuota;
 
     if (quota == null) {
