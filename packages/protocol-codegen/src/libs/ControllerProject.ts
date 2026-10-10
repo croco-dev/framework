@@ -221,7 +221,7 @@ function resolveProjectSourceDependencies(project: Project): void {
         if (
           ts.isCallExpression(node) &&
           node.expression.kind === ts.SyntaxKind.ImportKeyword &&
-          node.arguments.length === 1 &&
+          node.arguments.length >= 1 &&
           ts.isStringLiteral(node.arguments[0])
         ) {
           const resolvedPath = ts.resolveModuleName(
@@ -478,7 +478,7 @@ function rewriteRuntimeSpecifiers(
 
   for (const sourceFile of context.sourceFiles) {
     const sourcePath = sourceFile.getFilePath();
-    if (!isEmittableSourcePath(sourcePath)) continue;
+    if (!isEmittableSourcePath(sourcePath) || sourcePath.endsWith(".json")) continue;
     const emittedPath = getEmittedFilePath(sourceRoot, emitDir, sourcePath);
     if (!fs.existsSync(emittedPath)) continue;
     const emittedText = fs.readFileSync(emittedPath, "utf8");
@@ -778,6 +778,7 @@ function writeModuleBoundaries(context: ProjectContext, sourceRoot: string, emit
 
   for (const sourceFile of context.sourceFiles) {
     const sourcePath = sourceFile.getFilePath();
+    if (sourcePath.endsWith(".json")) continue;
     const emittedPath = getEmittedFilePath(sourceRoot, emitDir, sourcePath);
     if (!fs.existsSync(emittedPath)) continue;
     const isEsm = isEsmModuleKind(moduleKind, sourcePath);
@@ -829,7 +830,7 @@ function findModuleResolutionRoot(sourceDirectory: string, fallback: string): st
 
 function isEmittableSourcePath(filePath: string): boolean {
   return (
-    /\.[cm]?tsx?$/.test(filePath) &&
+    /(?:\.[cm]?tsx?|\.json)$/.test(filePath) &&
     !/\.d\.[cm]?ts$/.test(filePath) &&
     !filePath.split(path.sep).includes("node_modules")
   );

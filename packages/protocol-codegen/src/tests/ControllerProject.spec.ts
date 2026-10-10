@@ -133,6 +133,130 @@ describe("createControllerProject", () => {
     }
   });
 
+  it("emits a same-directory CommonJS JSON dependency and removes it on dispose", async () => {
+    const root = createTemporaryDirectory();
+    writeJson(path.join(root, "tsconfig.json"), {
+      compilerOptions: {
+        target: "ES2022",
+        module: "CommonJS",
+        resolveJsonModule: true,
+        esModuleInterop: true,
+      },
+    });
+    writeJson(path.join(root, "src", "config.json"), { title: "local-json" });
+    writeJson(path.join(root, "src", "unrelated.json"), { secret: "not-a-dependency" });
+    writeFile(
+      path.join(root, "src", "Controller.ts"),
+      "import config from './config.json'; export class Controller { static title = config.title; }",
+    );
+    const session = createControllerProject({ cwd: root, controllers: "src/Controller.ts" });
+
+    try {
+      expect(session.getPreEmitDiagnostics()).toEqual([]);
+      session.emit();
+      const [moduleExports] = await session.importControllerModules();
+      expect((moduleExports.Controller as { title: string }).title).toBe("local-json");
+      expect(readJson(path.join(session.emitDir, "config.json"))).toEqual({ title: "local-json" });
+      expect(fs.existsSync(path.join(session.emitDir, "unrelated.json"))).toBe(false);
+      expect(fs.existsSync(path.join(session.emitDir, "tsconfig.json"))).toBe(false);
+    } finally {
+      session.dispose();
+    }
+    expect(fs.existsSync(session.emitDir)).toBe(false);
+    expect(readJson(path.join(root, "src", "config.json"))).toEqual({ title: "local-json" });
+  });
+
+  it("emits a nested JSON path alias outside the controller directory", async () => {
+    const root = createTemporaryDirectory();
+    writeJson(path.join(root, "tsconfig.json"), {
+      compilerOptions: {
+        target: "ES2022",
+        module: "CommonJS",
+        resolveJsonModule: true,
+        esModuleInterop: true,
+        baseUrl: ".",
+        paths: { "@config/*": ["config/*"] },
+      },
+    });
+    writeJson(path.join(root, "config", "nested", "settings.json"), { title: "aliased-json" });
+    writeJson(path.join(root, "config", "nested", "unrelated.json"), { secret: "unused" });
+    writeFile(
+      path.join(root, "src", "controllers", "Controller.ts"),
+      "import config from '@config/nested/settings.json'; export class Controller { static title = config.title; }",
+    );
+    const session = createControllerProject({ cwd: root, controllers: "src/controllers/*.ts" });
+
+    try {
+      expect(session.getPreEmitDiagnostics()).toEqual([]);
+      session.emit();
+      const [moduleExports] = await session.importControllerModules();
+      expect((moduleExports.Controller as { title: string }).title).toBe("aliased-json");
+      expect(session.sourceRoot).toBe(root);
+      expect(readJson(path.join(session.emitDir, "config", "nested", "settings.json"))).toEqual({
+        title: "aliased-json",
+      });
+      const emitted = fs.readFileSync(
+        path.join(session.emitDir, "src", "controllers", "Controller.js"),
+        "utf8",
+      );
+      expect(emitted).toContain("../../config/nested/settings.json");
+      expect(emitted).not.toContain("@config/");
+      expect(fs.existsSync(path.join(session.emitDir, "config", "nested", "unrelated.json"))).toBe(
+        false,
+      );
+    } finally {
+      session.dispose();
+    }
+  });
+
+  it.each(["static", "dynamic"] as const)(
+    "preserves NodeNext %s JSON import attributes when emitting a local dependency",
+    async (importKind) => {
+      const root = createTemporaryDirectory();
+      writeJson(path.join(root, "package.json"), { type: "module" });
+      writeJson(path.join(root, "tsconfig.json"), {
+        compilerOptions: {
+          target: "ES2022",
+          module: "NodeNext",
+          moduleResolution: "NodeNext",
+          resolveJsonModule: true,
+          baseUrl: ".",
+          paths: { "@config/*": ["config/*"] },
+        },
+      });
+      writeJson(path.join(root, "config", "settings.json"), { title: "esm-json" });
+      writeFile(
+        path.join(root, "src", "Controller.ts"),
+        importKind === "static"
+          ? "import config from '@config/settings.json' with { type: 'json' }; export class Controller { static title = config.title; }"
+          : "export class Controller { static async title() { return (await import('@config/settings.json', { with: { type: 'json' } })).default.title; } }",
+      );
+      const session = createControllerProject({ cwd: root, controllers: "src/Controller.ts" });
+
+      try {
+        expect(session.getPreEmitDiagnostics().map((diagnostic) => diagnostic.getCode())).toEqual(
+          importKind === "static" ? [2856] : [],
+        );
+        session.emit();
+        const [moduleExports] = await session.importControllerModules();
+        const Controller = moduleExports.Controller as { title: string | (() => Promise<string>) };
+        expect(
+          typeof Controller.title === "function" ? await Controller.title() : Controller.title,
+        ).toBe("esm-json");
+        expect(readJson(path.join(session.emitDir, "config", "settings.json"))).toEqual({
+          title: "esm-json",
+        });
+        const emitted = fs.readFileSync(path.join(session.emitDir, "src", "Controller.js"), "utf8");
+        expect(emitted).toContain("../config/settings.json");
+        expect(emitted).toMatch(/type: ["']json["']/);
+        expect(emitted).toContain("with");
+        expect(emitted).not.toContain("@config/");
+      } finally {
+        session.dispose();
+      }
+    },
+  );
+
   it("preserves NodeNext module resolution and imports emitted ESM controllers", async () => {
     const root = createTemporaryDirectory();
     writeJson(path.join(root, "package.json"), { type: "module" });
