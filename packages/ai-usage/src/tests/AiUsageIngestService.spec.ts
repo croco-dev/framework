@@ -680,6 +680,32 @@ describe("AiUsageIngestService", () => {
       ).rejects.toThrow(AiUsageQuotaExceededProblem);
       expect(mockMeteringCore.getUsage).not.toHaveBeenCalled();
     });
+
+    it.each([
+      ["a NaN quota limit", Number.NaN],
+      ["a missing quota limit", undefined as unknown as number],
+      ["a negative quota limit", -1],
+    ])("should reject %s instead of treating it as unlimited", async (_label, quotaLimit) => {
+      (mockMeteringCore.getUsage as Mock).mockClear();
+
+      await expect(
+        meteringService.checkQuota("tenant-123", "llm.prompt_tokens", quotaLimit, 1_000),
+      ).rejects.toThrow(AiUsageQuotaExceededProblem);
+      expect(mockMeteringCore.getUsage).not.toHaveBeenCalled();
+    });
+
+    it("should allow an explicit Infinity quota limit", async () => {
+      (mockMeteringCore.getUsage as Mock).mockResolvedValue(5_000_000);
+
+      const result = await meteringService.checkQuota(
+        "tenant-123",
+        "llm.prompt_tokens",
+        Number.POSITIVE_INFINITY,
+        1_000,
+      );
+
+      expect(result).toBe(true);
+    });
   });
 
   describe("trackCost", () => {
