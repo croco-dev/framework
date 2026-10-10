@@ -112,18 +112,31 @@ function getResolverMethod(
 ): { prototype: object; methodName: string } | undefined {
   const storage = getMetadataStorage();
   const methods = getResolverMethods(parentTypeName, storage);
-  const method = methods.find(
-    (candidate) =>
-      resolverTypes.has(candidate.target) &&
-      candidate.schemaName === fieldName &&
-      matchesParentType(candidate, parentTypeName, storage),
-  );
+  let resolverMethod: { prototype: object; methodName: string } | undefined;
 
-  if (!method || typeof method.target.prototype !== "object") {
-    return undefined;
+  for (const method of methods) {
+    if (method.schemaName !== fieldName || !matchesParentType(method, parentTypeName, storage)) {
+      continue;
+    }
+
+    let resolverType = method.target;
+    for (const { target } of storage.resolverClasses) {
+      if (resolverTypes.has(target) && Object.prototype.isPrototypeOf.call(resolverType, target)) {
+        resolverType = target;
+      }
+    }
+    if (!resolverTypes.has(resolverType) || typeof resolverType.prototype !== "object") {
+      continue;
+    }
+
+    resolverMethod = { prototype: resolverType.prototype, methodName: method.methodName };
+    // TypeGraphQL selects the first object-field resolver, but the last root handler.
+    if (methods === storage.fieldResolvers) {
+      return resolverMethod;
+    }
   }
 
-  return { prototype: method.target.prototype, methodName: method.methodName };
+  return resolverMethod;
 }
 
 function matchesParentType(

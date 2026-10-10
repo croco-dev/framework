@@ -5210,6 +5210,12 @@
       "owner": "@croco/transports-cloudflare-workers"
     },
     {
+      "path": "packages/transports-graphql/src/tests/GraphQLExecutionMiddleware.spec.ts",
+      "lane": "fast",
+      "qualifiers": [],
+      "owner": "@croco/transports-graphql"
+    },
+    {
       "path": "packages/transports-graphql/src/tests/GraphQLServer.lazy-import.spec.ts",
       "lane": "fast",
       "qualifiers": [],
