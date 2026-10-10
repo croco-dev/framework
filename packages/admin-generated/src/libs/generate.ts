@@ -877,12 +877,7 @@ function zodTypeToTypeScript(schema: unknown, mode: "input" | "output" = "output
 
   if (schemaName === "ZodArray") {
     const elementSchema = getArrayElementSchema(schema);
-    const elementType = zodTypeToTypeScript(elementSchema, mode);
-    const needsParentheses =
-      mode === "input" &&
-      elementType.includes(" | ") &&
-      elementType !== zodTypeToTypeScript(elementSchema, "output");
-    return `${needsParentheses ? `(${elementType})` : elementType}[]`;
+    return `${getArrayElementTypeScript(zodTypeToTypeScript(elementSchema, mode))}[]`;
   }
 
   if (schemaName === "ZodRecord") {
@@ -1095,6 +1090,10 @@ function getObjectShape(schema: unknown): Record<string, unknown> {
   const shape = typeof definition.shape === "function" ? definition.shape() : definition.shape;
 
   return shape && typeof shape === "object" ? (shape as Record<string, unknown>) : {};
+}
+
+function getArrayElementTypeScript(type: string): string {
+  return type.includes(" | ") ? `(${type})` : type;
 }
 
 function unionTypes(types: readonly string[]): string {

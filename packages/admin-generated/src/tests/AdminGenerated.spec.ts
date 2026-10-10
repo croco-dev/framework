@@ -17,6 +17,7 @@ import {
   ResponseSchema,
 } from "@croco/protocols-rest";
 import { describe, expect, it, vi } from "vitest";
+import ts from "typescript";
 import { z } from "zod";
 import {
   AdminGeneratedContractProblem,
@@ -26,6 +27,27 @@ import {
   generateAdminResourceSourceFromContractGraph,
   getAdminGeneratedDiagnostics,
 } from "../libs/generate";
+
+function typecheckSource(source: string): string[] {
+  const fileName = "/virtual/admin-members.ts";
+  const host = ts.createCompilerHost({ strict: true, noEmit: true });
+  const readFile = host.readFile.bind(host);
+  const getSourceFile = host.getSourceFile.bind(host);
+  host.readFile = (name) => (name === fileName ? source : readFile(name));
+  host.fileExists = (name) => name === fileName || ts.sys.fileExists(name);
+  host.getSourceFile = (name, version, ...rest) =>
+    name === fileName
+      ? ts.createSourceFile(name, source, version)
+      : getSourceFile(name, version, ...rest);
+  const program = ts.createProgram(
+    [fileName],
+    { strict: true, noEmit: true, lib: ["lib.es2022.d.ts"] },
+    host,
+  );
+  return ts
+    .getPreEmitDiagnostics(program)
+    .map((diagnostic) => ts.flattenDiagnosticMessageText(diagnostic.messageText, " "));
+}
 
 const ENTITLEMENT_REQUIREMENTS_KEY = Symbol.for("croco:entitlements:requirements");
 
@@ -176,10 +198,10 @@ describe("admin-generated", () => {
       buildContractGraph([DefaultsController]),
     );
     expect(source).toContain(
-      "export type DefaultsControllerCreateDefaultsInput = { defaultOptional?: string | undefined; items: { size?: number; }[]; label?: string; legacyNullableItems: string | null[]; nested: { count?: number; }; nullable?: string | undefined | null; numbers: (number | undefined)[]; optional?: string; optionalDefault?: string | undefined; pageSize?: number; readonly?: number | undefined; refined?: string | undefined; settings?: { enabled?: boolean; }; values: Record<string, { size?: number; }>; variants: { size?: number; } | string; wrappedDefaultOptional?: string | undefined | undefined; wrappedOptional: string | undefined; };",
+      "export type DefaultsControllerCreateDefaultsInput = { defaultOptional?: string | undefined; items: { size?: number; }[]; label?: string; legacyNullableItems: (string | null)[]; nested: { count?: number; }; nullable?: string | undefined | null; numbers: (number | undefined)[]; optional?: string; optionalDefault?: string | undefined; pageSize?: number; readonly?: number | undefined; refined?: string | undefined; settings?: { enabled?: boolean; }; values: Record<string, { size?: number; }>; variants: { size?: number; } | string; wrappedDefaultOptional?: string | undefined | undefined; wrappedOptional: string | undefined; };",
     );
     expect(source).toContain(
-      "export type DefaultsControllerCreateDefaultsOutput = { defaultOptional?: string; items: { size: number; }[]; label: string; legacyNullableItems: string | null[]; nested: { count: number; }; nullable: string | null; numbers: number[]; optional?: string; optionalDefault: string | undefined; pageSize: number; readonly: number; refined: string; settings: { enabled: boolean; }; values: Record<string, { size: number; }>; variants: { size: number; } | string; wrappedDefaultOptional: string | undefined; wrappedOptional: string | undefined; };",
+      "export type DefaultsControllerCreateDefaultsOutput = { defaultOptional?: string; items: { size: number; }[]; label: string; legacyNullableItems: (string | null)[]; nested: { count: number; }; nullable: string | null; numbers: number[]; optional?: string; optionalDefault: string | undefined; pageSize: number; readonly: number; refined: string; settings: { enabled: boolean; }; values: Record<string, { size: number; }>; variants: { size: number; } | string; wrappedDefaultOptional: string | undefined; wrappedOptional: string | undefined; };",
     );
     expect(source).toContain(
       "readonly input: DefaultsControllerCreateDefaultsInput; readonly output: DefaultsControllerCreateDefaultsOutput;",
@@ -220,6 +242,46 @@ describe("admin-generated", () => {
     expect(source).toContain(
       "export type UnionDefaultsControllerCreateOutput = { mode: string | number; nested: number | boolean | string; objectBranch: { value: string; } | number; optionalBranch: string | undefined | number; wrapped: number | string | null; };",
     );
+  });
+
+  it("keeps array-of-union response fields assignable from real response data", () => {
+    const memberSchema = z.object({
+      id: z.string(),
+      roles: z.array(z.enum(["admin", "member"])),
+      aliases: z.array(z.string().nullable()),
+      nicknames: z.array(z.string().optional()),
+      contacts: z.array(
+        z.union([z.object({ kind: z.literal("email"), address: z.string() }), z.string()]),
+      ),
+    });
+
+    @Controller("/admin/members")
+    class MembersController {
+      @Get("/")
+      @ResponseSchema(z.array(memberSchema))
+      listMembers(): z.infer<typeof memberSchema>[] {
+        return [];
+      }
+    }
+
+    const generated = generateAdminResourceSourceFromContractGraph(
+      buildContractGraph([MembersController]),
+    );
+    const outputType = generated
+      .split("\n")
+      .find((line) => line.startsWith("export type MembersControllerListMembersOutput"));
+    if (!outputType) throw new Error("output type was not generated");
+
+    expect(outputType).toContain("roles: ('admin' | 'member')[]");
+    expect(outputType).toContain("aliases: (string | null)[]");
+    expect(outputType).toContain("nicknames: (string | undefined)[]");
+    expect(outputType).toContain("contacts: ({ address: string; kind: 'email'; } | string)[]");
+
+    expect(
+      typecheckSource(
+        `${outputType}\nexport const sample: MembersControllerListMembersOutput = [{ id: "m_1", roles: ["admin", "member"], aliases: ["ada", null], nicknames: ["ada", undefined], contacts: [{ kind: "email" as const, address: "ada@example.com" }, "ext-member"] }];\n`,
+      ),
+    ).toEqual([]);
   });
 
   it("should generate typed admin resource config from Contract Graph routes", () => {
