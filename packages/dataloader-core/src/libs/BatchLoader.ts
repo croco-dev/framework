@@ -15,6 +15,7 @@ type BatchCallback<V> = {
 type BatchItem<K, V> = {
   key: K;
   callbacks: Array<BatchCallback<V>>;
+  cachePromise?: Promise<V | null>;
 };
 
 const noopLogger: ILogger = {
@@ -57,15 +58,11 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
       }
     }
 
+    const existingBatchItem = this.queuedKeyMap.get(key);
+    const item: BatchItem<K, V> = existingBatchItem ?? { key, callbacks: [] };
     const promise = new Promise<V | null>((resolve, reject) => {
-      const existingBatchItem = this.queuedKeyMap.get(key);
-      if (existingBatchItem) {
-        existingBatchItem.callbacks.push({ resolve, reject });
-      } else {
-        const item: BatchItem<K, V> = {
-          key,
-          callbacks: [{ resolve, reject }],
-        };
+      item.callbacks.push({ resolve, reject });
+      if (!existingBatchItem) {
         this.queuedKeyMap.set(key, item);
         this.queue.push(item);
 
@@ -77,6 +74,7 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
 
     if (this.options.cache) {
       this.cache.set(key, promise);
+      item.cachePromise = promise;
     }
 
     return promise;
@@ -116,6 +114,12 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
     process.nextTick(() => {
       void context.with(activeContext, () => this.dispatch());
     });
+  }
+
+  private clearFailedItem(item: BatchItem<K, V>): void {
+    if (item.cachePromise && this.cache.get(item.key) === item.cachePromise) {
+      this.cache.delete(item.key);
+    }
   }
 
   private async dispatch(): Promise<void> {
@@ -171,7 +175,7 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
               code: SpanStatusCode.ERROR,
               message: result.message,
             });
-            this.clear(item.key);
+            this.clearFailedItem(item);
             for (const callback of item.callbacks) {
               callback.reject(result);
             }
@@ -190,7 +194,7 @@ export class BatchLoaderImpl<K, V> implements BatchLoader<K, V> {
         });
 
         batchItems.forEach((item) => {
-          this.clear(item.key);
+          this.clearFailedItem(item);
           item.callbacks.forEach((callback) => {
             callback.reject(err);
           });
